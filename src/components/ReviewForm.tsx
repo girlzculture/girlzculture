@@ -1,0 +1,329 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type BookingRecord = {
+  id?: string;
+  salon_id?: string | null;
+  customer_id?: string | null;
+  status?: string | null;
+  appointment_datetime?: string | null;
+};
+
+type SalonRecord = {
+  id?: string;
+  name?: string | null;
+  neighborhood?: string | null;
+};
+
+type ReviewPayload = {
+  booking_id?: string | null;
+  salon_id?: string | null;
+  customer_id?: string | null;
+  overall_rating?: number | null;
+  price_accuracy_rating?: number | null;
+  punctuality_rating?: number | null;
+  quality_rating?: number | null;
+  cleanliness_rating?: number | null;
+  would_return?: boolean | null;
+  comments?: string | null;
+  photos?: string[] | null;
+};
+
+const starOptions = [1, 2, 3, 4, 5];
+
+function renderStars(value: number) {
+  return Array.from({ length: 5 }, (_, index) => (
+    <span key={index} className={index < value ? "text-amber" : "text-ink/25"}>
+      ★
+    </span>
+  ));
+}
+
+export default function ReviewForm({ booking, salon }: { booking: BookingRecord; salon: SalonRecord }) {
+  const [overallRating, setOverallRating] = useState(5);
+  const [priceAccuracy, setPriceAccuracy] = useState(5);
+  const [punctuality, setPunctuality] = useState(5);
+  const [quality, setQuality] = useState(5);
+  const [cleanliness, setCleanliness] = useState(5);
+  const [wouldReturn, setWouldReturn] = useState(true);
+  const [comments, setComments] = useState("");
+  const [photos, setPhotos] = useState<FileList | null>(null);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bookingStatus, setBookingStatus] = useState(booking.status || "");
+  const [completeSuccess, setCompleteSuccess] = useState<string | null>(null);
+
+  const isCompleted = bookingStatus?.toLowerCase() === "completed";
+  const bookingDate = booking.appointment_datetime ? new Date(booking.appointment_datetime).toLocaleString() : "Upcoming appointment";
+
+  const setFiles = (files: FileList | null) => {
+    setPhotos(files);
+    if (!files) {
+      setPreviews([]);
+      return;
+    }
+
+    const urls = Array.from(files).map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+  };
+
+  const canSubmit = useMemo(
+    () => isCompleted && comments.trim().length >= 10,
+    [isCompleted, comments],
+  );
+
+  const markBookingCompleted = async () => {
+    setError(null);
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status: "Completed" })
+      .eq("id", booking.id)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      setError(error.message);
+      setSaving(false);
+      return;
+    }
+
+    setBookingStatus("Completed");
+    setCompleteSuccess("Booking marked completed. You can now leave your review.");
+    setSaving(false);
+  };
+
+  const submitReview = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    if (!isCompleted) {
+      setError("This review can only be submitted after the booking is completed.");
+      return;
+    }
+
+    if (!comments.trim()) {
+      setError("Please add a short review before submitting.");
+      return;
+    }
+
+    setSaving(true);
+
+    const photoNames = photos ? Array.from(photos).map((file) => file.name) : null;
+    const payload: ReviewPayload = {
+      booking_id: booking.id ?? null,
+      salon_id: salon.id ?? null,
+      customer_id: booking.customer_id ?? null,
+      overall_rating: overallRating,
+      price_accuracy_rating: priceAccuracy,
+      punctuality_rating: punctuality,
+      quality_rating: quality,
+      cleanliness_rating: cleanliness,
+      would_return: wouldReturn,
+      comments: comments.trim(),
+      photos: photoNames?.length ? photoNames : null,
+    };
+
+    const { data, error: insertError } = await supabase
+      .from("reviews")
+      .insert(payload)
+      .select()
+      .maybeSingle();
+
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
+
+    const { data: salonReviews } = await supabase
+      .from("reviews")
+      .select("overall_rating")
+      .eq("salon_id", salon.id);
+
+    const ratings = salonReviews || [];
+    const count = ratings.length;
+    const average = count ? ratings.reduce((sum, item) => sum + (item.overall_rating ?? 0), 0) / count : 0;
+
+    await supabase
+      .from("salons")
+      .update({ rating_overall: average, review_count: count })
+      .eq("id", salon.id);
+
+    setSaving(false);
+    setSubmitted(true);
+  };
+
+  if (!booking || !salon) {
+    return <div className="rounded-[24px] border border-plum/10 bg-white/80 p-6 text-center text-sm text-ink/70">Booking or salon not found.</div>;
+  }
+
+  if (submitted) {
+    return (
+      <div className="rounded-[32px] border border-plum/10 bg-blush/50 p-8 text-center shadow-sm">
+        <div className="text-amber text-5xl">⭐</div>
+        <h2 className="mt-4 font-serif text-3xl font-semibold text-plum">Thanks for your review</h2>
+        <p className="mt-3 text-sm leading-7 text-ink/80">Your feedback helps the Girlz Culture community find the best salons and styles.</p>
+        <a href={`/salon/${salon.id}`} className="mt-6 inline-flex rounded-full bg-magenta px-6 py-3 text-sm font-semibold text-white">See salon reviews</a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-[32px] border border-plum/10 bg-white/80 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.35em] text-magenta">Write a review</div>
+            <h1 className="mt-2 font-serif text-4xl font-semibold text-plum">{salon.name}</h1>
+            <p className="mt-2 text-sm text-ink/70">Booking ID: {booking.id}</p>
+          </div>
+          <div className="rounded-full bg-blush/60 px-4 py-2 text-sm font-semibold text-plum">{bookingDate}</div>
+        </div>
+      </div>
+
+      {!isCompleted ? (
+        <div className="rounded-[24px] border border-amber/20 bg-amber/10 p-6 text-sm text-ink/80">
+          <p className="font-semibold text-plum">This booking must be completed before leaving a review.</p>
+          <p className="mt-2">For testing, mark the booking completed and submit your review.</p>
+          <button
+            type="button"
+            onClick={markBookingCompleted}
+            disabled={saving}
+            className="mt-4 inline-flex rounded-full bg-magenta px-5 py-3 text-sm font-semibold text-white transition hover:bg-magenta/90"
+          >
+            {saving ? "Updating…" : "Mark booking completed"}
+          </button>
+          {completeSuccess ? <p className="mt-3 text-sm text-ink/70">{completeSuccess}</p> : null}
+          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+        </div>
+      ) : null}
+
+      <form onSubmit={submitReview} className="rounded-[32px] border border-plum/10 bg-blush/30 p-6 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
+          <div className="space-y-6">
+            <div className="rounded-[24px] border border-plum/10 bg-white p-5">
+              <div className="font-semibold text-plum">Overall rating</div>
+              <div className="mt-4 flex gap-2">
+                {starOptions.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setOverallRating(value)}
+                    className={`rounded-full border px-4 py-2 text-lg ${overallRating === value ? "border-magenta bg-magenta/10 text-plum" : "border-ink/10 bg-white text-ink/80"}`}
+                  >
+                    {renderStars(value)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                { label: "Price accuracy", value: priceAccuracy, setter: setPriceAccuracy },
+                { label: "Punctuality", value: punctuality, setter: setPunctuality },
+                { label: "Quality", value: quality, setter: setQuality },
+                { label: "Cleanliness", value: cleanliness, setter: setCleanliness },
+              ].map((item) => (
+                <div key={item.label} className="rounded-[24px] border border-plum/10 bg-white p-5">
+                  <div className="font-semibold text-plum">{item.label}</div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {starOptions.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => item.setter(value)}
+                        className={`rounded-full border px-3 py-2 text-sm ${item.value === value ? "border-magenta bg-magenta/10 text-plum" : "border-ink/10 bg-cream text-ink/80"}`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded-[24px] border border-plum/10 bg-white p-5">
+              <div className="font-semibold text-plum">Would you return?</div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {[
+                  { label: "Yes", value: true },
+                  { label: "No", value: false },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => setWouldReturn(option.value)}
+                    className={`rounded-full border px-4 py-2 text-sm ${wouldReturn === option.value ? "border-magenta bg-magenta/10 text-plum" : "border-ink/10 bg-cream text-ink/80"}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="block rounded-[24px] border border-plum/10 bg-white p-5">
+              <span className="font-semibold text-plum">Write your review</span>
+              <textarea
+                value={comments}
+                onChange={(event) => setComments(event.target.value)}
+                rows={6}
+                placeholder="Share what made this experience great, or where there’s room to improve."
+                className="mt-3 w-full rounded-3xl border border-ink/10 bg-cream/50 px-4 py-3 text-sm text-ink/90 outline-none transition focus:border-magenta focus:ring-2 focus:ring-magenta/10"
+              />
+            </label>
+
+            <label className="block rounded-[24px] border border-plum/10 bg-white p-5">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-plum">Result photos</span>
+                <span className="text-xs uppercase tracking-[0.35em] text-ink/60">Optional</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => setFiles(event.target.files)}
+                className="mt-3 w-full text-sm text-ink/80"
+              />
+              {previews.length > 0 ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {previews.map((src, index) => (
+                    <div key={index} className="overflow-hidden rounded-3xl border border-ink/10 bg-cream">
+                      <img src={src} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-ink/60">Upload photos here if you want to show the final look.</p>
+              )}
+            </label>
+          </div>
+        </div>
+
+        {error ? <div className="mt-4 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-ink/70">
+            {isCompleted
+              ? "Your review is ready to submit." 
+              : "Complete the booking first, then submit your review."}
+          </div>
+          <button
+            type="submit"
+            disabled={!canSubmit || saving}
+            className="rounded-full bg-magenta px-6 py-3 text-sm font-semibold text-white transition hover:bg-magenta/90 disabled:cursor-not-allowed disabled:bg-magenta/50"
+          >
+            {saving ? "Submitting…" : "Submit review"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

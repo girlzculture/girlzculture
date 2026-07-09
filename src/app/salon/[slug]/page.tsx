@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import SalonBookingWizard from "@/components/SalonBookingWizard";
+import SalonReviews from "@/components/SalonReviews";
 import SalonStyles from "@/components/SalonStyles";
 import SalonStylists from "@/components/SalonStylists";
 
@@ -83,6 +84,26 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
     .eq("salon_id", data.id);
 
   const stylists = (stylistsData || []) as StylistRecord[];
+
+  const { data: reviewsData } = await supabase
+    .from("reviews")
+    .select("*")
+    .eq("salon_id", data.id)
+    .order("created_at", { ascending: false });
+
+  const reviews = (reviewsData || []) as {
+    id?: string;
+    overall_rating?: number | null;
+    price_accuracy_rating?: number | null;
+    punctuality_rating?: number | null;
+    quality_rating?: number | null;
+    cleanliness_rating?: number | null;
+    would_return?: boolean | null;
+    comments?: string | null;
+    photos?: string[] | null;
+    salon_reply?: string | null;
+    created_at?: string | null;
+  }[];
 
   const rating = typeof data.rating_overall === "number" ? data.rating_overall : 0;
   const reviewCount = typeof data.review_count === "number" ? data.review_count : 0;
@@ -235,7 +256,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
                       ["Tue", "9:00 AM – 7:00 PM"],
                       ["Wed", "9:00 AM – 7:00 PM"],
                       ["Thu", "9:00 AM – 7:00 PM"],
-                      ["Fri", "9:00 AM – 7:00 PM"],
+                      ["Fri", "9:00 AM – 6:00 PM"],
                       ["Sat", "9:00 AM – 6:00 PM"],
                       ["Sun", "Closed"],
                     ].map(([d, h]) => (
@@ -259,6 +280,8 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
             </div>
           </div>
         </section>
+
+        <SalonReviews salonId={data.id ?? ""} reviews={reviews} />
       </div>
     </main>
   );
