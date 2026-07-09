@@ -75,14 +75,14 @@ export default async function Home() {
               <div className="flex w-full gap-3">
                 <input aria-label="style" placeholder="What style are you looking for?" className="flex-1 rounded-full border border-ink/10 bg-white px-4 py-3 text-sm shadow-sm" />
                 <input aria-label="where" placeholder="Where? (neighborhood, city, or zip)" className="w-44 rounded-full border border-ink/10 bg-white px-4 py-3 text-sm shadow-sm" />
-                <button className="rounded-full bg-magenta px-5 py-3 text-sm font-semibold text-white">Search</button>
+                <a href="/search" className="rounded-full bg-magenta px-5 py-3 text-sm font-semibold text-white">Search</a>
               </div>
 
               <div className="mt-1 text-sm text-ink/70">Popular searches:
-                <span className="ml-3 mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Knotless Braids</span>
-                <span className="mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Box Braids</span>
-                <span className="mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Cornrows</span>
-                <span className="inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Locs</span>
+                <a href="/search?style=Knotless%20Braids" className="ml-3 mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Knotless Braids</a>
+                <a href="/search?style=Box%20Braids" className="mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Box Braids</a>
+                <a href="/search?style=Cornrows" className="mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Cornrows</a>
+                <a href="/search?style=Locs" className="inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Locs</a>
               </div>
             </div>
           </div>
@@ -102,10 +102,10 @@ export default async function Home() {
               "Cornrows",
               "Locs",
             ].map((name) => (
-              <div key={name} className="rounded-lg border border-plum/8 bg-white p-4 text-center shadow-sm">
+              <a key={name} href={`/search?style=${encodeURIComponent(name)}`} className="rounded-lg border border-plum/8 bg-white p-4 text-center shadow-sm">
                 <div className="mb-3 h-28 w-full rounded-md bg-cream/60" />
                 <div className="font-medium text-plum">{name}</div>
-              </div>
+              </a>
             ))}
 
             <div className="rounded-lg border border-plum/8 bg-blush/60 p-4 text-center shadow-sm">
