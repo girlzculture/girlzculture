@@ -10,18 +10,24 @@ export default function SalonLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const onLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
+    setInfoMsg(null);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
+    console.log('Supabase login result:', { data, error });
     if (error) {
       setErrorMsg(error.message);
       return;
     }
 
+    if (data?.session) {
+      setInfoMsg('Signed in successfully. Redirecting...');
+    }
     router.push('/salon/onboarding');
   };
 
@@ -37,6 +43,7 @@ export default function SalonLogin() {
       </div>
 
       {errorMsg ? <div className="text-sm text-red-600">{errorMsg}</div> : null}
+      {infoMsg ? <div className="text-sm text-emerald-700">{infoMsg}</div> : null}
 
       <div className="flex items-center justify-between">
         <button type="submit" disabled={loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">
