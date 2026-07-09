@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import SalonBookingWizard from "@/components/SalonBookingWizard";
 import SalonStyles from "@/components/SalonStyles";
 import SalonStylists from "@/components/SalonStylists";
 
@@ -152,9 +153,12 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
                 </p>
 
                 <div className="mt-2 w-full max-w-full">
-                  <button className="w-full rounded-full bg-magenta px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(214,24,107,0.23)] transition hover:-translate-y-0.5 hover:bg-magenta/90">
+                  <a
+                    href={`/salon/${data.slug}/book`}
+                    className="inline-flex w-full items-center justify-center rounded-full bg-magenta px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(214,24,107,0.23)] transition hover:-translate-y-0.5 hover:bg-magenta/90"
+                  >
                     Book Appointment
-                  </button>
+                  </a>
                 </div>
 
                 <div className="space-y-3 text-sm leading-7 text-ink/80">
