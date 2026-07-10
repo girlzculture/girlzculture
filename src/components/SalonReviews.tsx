@@ -1,65 +1,73 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import SafeImage from "@/components/site/SafeImage";
 
 type ReviewRecord = {
   id?: string;
-  overall_rating?: number | null;
-  price_accuracy_rating?: number | null;
-  punctuality_rating?: number | null;
-  quality_rating?: number | null;
-  cleanliness_rating?: number | null;
+  rating_overall?: number | null;
+  rating_price_accuracy?: number | null;
+  rating_punctuality?: number | null;
+  rating_quality?: number | null;
+  rating_cleanliness?: number | null;
   would_return?: boolean | null;
-  comments?: string | null;
-  photos?: string[] | null;
+  written_review?: string | null;
+  result_photos?: string[] | null;
   salon_reply?: string | null;
   created_at?: string | null;
+  customer?: { name?: string | null } | null;
 };
 
 type Props = {
-  salonId: string;
   reviews: ReviewRecord[];
+  salonRating: number;
+  salonReviewCount: number;
+  fallbackPhotos: string[];
 };
 
 function renderStars(value: number) {
   return Array.from({ length: 5 }, (_, index) => (
-    <span key={index} className={index < value ? "text-amber" : "text-ink/25"}>
-      ★
-    </span>
+    <Star key={index} size={12} className={index < Math.round(value) ? "fill-amber text-amber" : "fill-transparent text-ink/20"} />
   ));
 }
 
-export default function SalonReviews({ salonId, reviews }: Props) {
+export default function SalonReviews({ reviews, salonRating, salonReviewCount, fallbackPhotos }: Props) {
   const searchParams = useSearchParams();
   const canReply = searchParams.get("reply") === "1";
+  const [activeIndex, setActiveIndex] = useState(0);
   const [activeReply, setActiveReply] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState<string>("");
+  const [replyText, setReplyText] = useState("");
   const [replySaving, setReplySaving] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
   const [localReviews, setLocalReviews] = useState(reviews);
 
-  const reviewCount = localReviews.length;
   const averages = useMemo(() => {
-    if (!reviewCount) return null;
-
-    const average = (key: keyof ReviewRecord) => {
-      const values = localReviews
-        .map((review) => review[key])
-        .filter((value): value is number => typeof value === "number");
-      if (!values.length) return 0;
-      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    const average = (key: keyof ReviewRecord, fallback = salonRating) => {
+      const values = localReviews.map((review) => review[key]).filter((value): value is number => typeof value === "number");
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : fallback;
     };
 
     return {
-      overall: average("overall_rating"),
-      price_accuracy: average("price_accuracy_rating"),
-      punctuality: average("punctuality_rating"),
-      quality: average("quality_rating"),
-      cleanliness: average("cleanliness_rating"),
+      overall: average("rating_overall"),
+      quality: average("rating_quality"),
+      professionalism: average("rating_price_accuracy"),
+      punctuality: average("rating_punctuality"),
+      cleanliness: average("rating_cleanliness"),
     };
-  }, [localReviews, reviewCount]);
+  }, [localReviews, salonRating]);
+
+  const reviewBreakdown = [
+    { label: "Overall Experience", value: averages.overall },
+    { label: "Quality of Style", value: averages.quality },
+    { label: "Professionalism", value: averages.professionalism },
+    { label: "Time Management", value: averages.punctuality },
+    { label: "Cleanliness", value: averages.cleanliness },
+  ];
+
+  const activeReview = localReviews[activeIndex] || null;
 
   const submitReply = async (reviewId: string) => {
     if (!replyText.trim()) {
@@ -69,161 +77,112 @@ export default function SalonReviews({ salonId, reviews }: Props) {
 
     setReplySaving(true);
     setReplyError(null);
+    const { data: saved, error } = await supabase.rpc("reply_to_review", {
+      target_review_id: reviewId,
+      reply_text: replyText.trim(),
+    });
 
-    const { error } = await supabase
-      .from("reviews")
-      .update({ salon_reply: replyText.trim() })
-      .eq("id", reviewId);
-
-    if (error) {
-      setReplyError(error.message);
+    if (error || !saved) {
+      setReplyError(error?.message || "That reply could not be saved. Please make sure you are signed in to the correct salon.");
       setReplySaving(false);
       return;
     }
 
-    setLocalReviews((current) =>
-      current.map((review) =>
-        review.id === reviewId ? { ...review, salon_reply: replyText.trim() } : review,
-      ),
-    );
+    setLocalReviews((current) => current.map((review) => review.id === reviewId ? { ...review, salon_reply: replyText.trim() } : review));
     setActiveReply(null);
     setReplyText("");
     setReplySaving(false);
   };
 
-  if (reviewCount === 0) {
-    return (
-      <section className="rounded-[24px] border border-plum/10 bg-white/80 p-6 shadow-sm sm:p-8">
-        <div className="text-center">
-          <div className="text-lg font-semibold text-plum">Reviews</div>
-          <p className="mt-3 text-sm text-ink/70">New to Girlz Culture — be the first to review this salon.</p>
-          <p className="mt-2 text-sm text-ink/70">Once a completed booking is reviewed, this salon will earn a rating and community feedback.</p>
-        </div>
-      </section>
-    );
-  }
+  const showPrevious = () => setActiveIndex((current) => current === 0 ? Math.max(0, localReviews.length - 1) : current - 1);
+  const showNext = () => setActiveIndex((current) => localReviews.length ? (current + 1) % localReviews.length : 0);
 
   return (
-    <section className="rounded-[24px] border border-plum/10 bg-white/80 p-6 shadow-sm sm:p-8">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-magenta">Reviews</p>
-          <h2 className="mt-2 font-serif text-3xl font-semibold text-plum">Community feedback</h2>
+    <section className="h-full min-w-0 rounded-[12px] border border-plum/10 bg-white/80 p-4 shadow-[0_5px_18px_rgba(26,18,32,0.05)] sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-serif text-[22px] font-semibold text-ink">Reviews</h2>
+          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span>
+          <span className="text-[9px] text-ink/50">({salonReviewCount} reviews)</span>
         </div>
-        <div className="rounded-full bg-blush/60 px-4 py-2 text-sm font-semibold text-plum">{reviewCount} reviews</div>
+        <a href="#reviews" className="text-[9px] font-semibold text-magenta">View all</a>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Overall", value: averages?.overall ?? 0 },
-          { label: "Price", value: averages?.price_accuracy ?? 0 },
-          { label: "Punctuality", value: averages?.punctuality ?? 0 },
-          { label: "Quality", value: averages?.quality ?? 0 },
-        ].map((item) => (
-          <div key={item.label} className="rounded-[24px] border border-plum/10 bg-blush/30 p-4 text-center">
-            <div className="text-sm font-medium uppercase tracking-[0.2em] text-ink/60">{item.label}</div>
-            <div className="mt-3 text-3xl font-semibold text-plum">{item.value.toFixed(1)}</div>
-            <div className="mt-2 text-amber">{renderStars(Math.round(item.value))}</div>
+      <div className="mt-4 space-y-3">
+        {reviewBreakdown.map((item) => (
+          <div key={item.label} className="grid grid-cols-[92px_1fr_24px] items-center gap-2 text-[9px] text-ink/65">
+            <span>{item.label}</span>
+            <span className="h-1.5 overflow-hidden rounded-full bg-blush/60"><span className="block h-full rounded-full bg-magenta" style={{ width: `${Math.min(100, (item.value / 5) * 100)}%` }} /></span>
+            <span className="text-right font-semibold text-ink">{item.value.toFixed(1)}</span>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 space-y-6">
-        {localReviews.map((review) => {
-          const createdAt = review.created_at ? new Date(review.created_at).toLocaleDateString() : "Recent";
-          return (
-            <article key={review.id} className="rounded-[24px] border border-plum/10 bg-cream/60 p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-sm font-semibold uppercase tracking-[0.25em] text-ink/60">{createdAt}</div>
-                  <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-plum">
-                    {renderStars(review.overall_rating ?? 0)}
-                    <span>{(review.overall_rating ?? 0).toFixed(1)}</span>
-                  </div>
-                </div>
-                <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-plum">{review.would_return ? "Would return" : "Would not return"}</div>
+      <div id="reviews" className="mt-5">
+        {activeReview ? (
+          <article className="rounded-[10px] border border-plum/10 bg-blush/35 p-4">
+            <div className="flex items-start gap-3">
+              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white">
+                <SafeImage src={activeReview.result_photos?.[0]} fallbackSrc={fallbackPhotos[activeIndex % fallbackPhotos.length]} alt="Verified client" className="h-full w-full object-cover" />
               </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="rounded-full bg-plum px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.08em] text-white">Verified</span>
+                    <h3 className="mt-1 text-[10px] font-semibold text-ink">{activeReview.customer?.name || "Verified Client"}</h3>
+                  </div>
+                  <time className="text-[8px] text-ink/45">{activeReview.created_at ? new Date(activeReview.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent"}</time>
+                </div>
+                <div className="mt-2 flex gap-0.5">{renderStars(activeReview.rating_overall ?? salonRating)}</div>
+              </div>
+            </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  { label: "Price accuracy", value: review.price_accuracy_rating },
-                  { label: "Punctuality", value: review.punctuality_rating },
-                  { label: "Quality", value: review.quality_rating },
-                  { label: "Cleanliness", value: review.cleanliness_rating },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-3xl border border-plum/10 bg-white p-4 text-sm">
-                    <div className="font-semibold text-plum">{item.label}</div>
-                    <div className="mt-2 text-amber">{renderStars(item.value ?? 0)}</div>
+            <p className="mt-3 text-[11px] leading-[1.55] text-ink/75">{activeReview.written_review || "This verified client rated their completed appointment."}</p>
+
+            {activeReview.result_photos?.length ? (
+              <div className="mt-3 grid grid-cols-4 gap-1.5">
+                {activeReview.result_photos.slice(0, 4).map((photo, index) => (
+                  <div key={`${photo}-${index}`} className="relative h-12 overflow-hidden rounded-[6px] bg-white">
+                    <SafeImage src={photo} fallbackSrc={fallbackPhotos[index % fallbackPhotos.length]} alt={`Review result ${index + 1}`} className="h-full w-full object-cover" />
                   </div>
                 ))}
               </div>
+            ) : null}
 
-              <div className="mt-5 space-y-4 text-sm text-ink/80">
-                <p>{review.comments}</p>
-                {review.photos?.length ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {review.photos.map((photo, index) => (
-                      <div key={index} className="overflow-hidden rounded-3xl border border-ink/10 bg-white">
-                        <div className="h-28 w-full bg-cream/70 p-4 text-center text-ink/60">{photo}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
+            {activeReview.salon_reply ? (
+              <div className="mt-3 rounded-[8px] bg-white/80 p-3 text-[10px] leading-4 text-ink/70"><strong className="text-plum">Salon reply:</strong> {activeReview.salon_reply}</div>
+            ) : canReply ? (
+              <div className="mt-3">
+                {activeReply === activeReview.id ? (
+                  <>
+                    <textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} rows={3} placeholder="Write a reply" className="w-full rounded-[8px] border border-plum/10 bg-white px-3 py-2 text-[10px] outline-none" />
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => submitReply(activeReview.id || "")} disabled={replySaving} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">{replySaving ? "Saving…" : "Save reply"}</button>
+                      <button type="button" onClick={() => { setActiveReply(null); setReplyText(""); }} className="rounded-full border border-magenta px-3 py-1.5 text-[9px] text-magenta">Cancel</button>
+                    </div>
+                    {replyError ? <p className="mt-2 text-[9px] text-red-700">{replyError}</p> : null}
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setActiveReply(activeReview.id || null)} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">Reply as salon</button>
+                )}
               </div>
-
-              {review.salon_reply ? (
-                <div className="mt-5 rounded-[24px] border border-plum/10 bg-white p-5 text-sm text-ink/80">
-                  <div className="mb-2 font-semibold text-plum">Salon reply</div>
-                  <p>{review.salon_reply}</p>
-                </div>
-              ) : canReply ? (
-                <div className="mt-5 rounded-[24px] border border-magenta/20 bg-magenta/10 p-5">
-                  {activeReply === review.id ? (
-                    <>
-                      <textarea
-                        value={replyText}
-                        onChange={(event) => setReplyText(event.target.value)}
-                        rows={4}
-                        placeholder="Write a reply for this review"
-                        className="w-full rounded-3xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink/90 outline-none"
-                      />
-                      <div className="mt-3 flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={() => submitReply(review.id || "")}
-                          disabled={replySaving}
-                          className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white"
-                        >
-                          {replySaving ? "Saving…" : "Save reply"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveReply(null);
-                            setReplyText("");
-                          }}
-                          className="rounded-full border border-magenta px-4 py-2 text-sm text-magenta"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                      {replyError ? <p className="mt-2 text-sm text-red-700">{replyError}</p> : null}
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setActiveReply(review.id || null)}
-                      className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white"
-                    >
-                      Reply as salon
-                    </button>
-                  )}
-                </div>
-              ) : null}
-            </article>
-          );
-        })}
+            ) : null}
+          </article>
+        ) : (
+          <div className="rounded-[10px] border border-dashed border-plum/20 bg-blush/25 p-5 text-center">
+            <div className="text-[10px] font-semibold text-plum">Verified review details are being added</div>
+            <p className="mt-2 text-[9px] leading-4 text-ink/55">Reviews from completed bookings will appear here automatically.</p>
+          </div>
+        )}
       </div>
+
+      {localReviews.length > 1 ? (
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <button type="button" onClick={showPrevious} aria-label="Previous review" className="text-plum"><ChevronLeft size={14} /></button>
+          {localReviews.map((review, index) => <button key={review.id || index} type="button" onClick={() => setActiveIndex(index)} aria-label={`Show review ${index + 1}`} className={`h-1.5 w-1.5 rounded-full ${index === activeIndex ? "bg-magenta" : "bg-ink/20"}`} />)}
+          <button type="button" onClick={showNext} aria-label="Next review" className="text-plum"><ChevronRight size={14} /></button>
+        </div>
+      ) : null}
     </section>
   );
 }
