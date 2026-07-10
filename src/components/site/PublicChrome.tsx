@@ -31,7 +31,7 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
 export function PublicHeader() {
   return (
     <header className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-[1360px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12">
+      <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         <details className="group relative md:hidden">
           <summary
             aria-label="Open navigation menu"
@@ -140,7 +140,7 @@ const trustItems = [
 export function TrustStrip() {
   return (
     <section aria-label="Why clients trust Girlz Culture" className="hidden bg-[linear-gradient(110deg,#24102b_0%,#35123b_50%,#211027_100%)] text-white md:block">
-      <div className="mx-auto grid w-full max-w-[1360px] gap-0 px-5 py-5 sm:grid-cols-3 sm:px-8 lg:px-12">
+      <div className="mx-auto grid w-full max-w-[1760px] gap-0 px-5 py-5 sm:grid-cols-3 sm:px-8 lg:px-12 2xl:px-16">
         {trustItems.map((item, index) => {
           const Icon = item.icon;
           return (
@@ -170,7 +170,7 @@ const footerGroups = [
 export function PublicFooter() {
   return (
     <footer className="hidden bg-[#211027] text-white md:block">
-      <div className="mx-auto grid w-full max-w-[1360px] grid-cols-[1.2fr_repeat(4,0.7fr)_1.35fr] gap-8 px-10 py-9 xl:px-12">
+      <div className="mx-auto grid w-full max-w-[1760px] grid-cols-[1.2fr_repeat(4,0.7fr)_1.35fr] gap-8 px-10 py-9 xl:px-12 2xl:px-16">
         <div>
           <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>
           <p className="mt-3 max-w-[200px] text-[11px] leading-5 text-white/70">The trusted beauty booking marketplace for braided styles.</p>

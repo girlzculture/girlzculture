@@ -21,19 +21,13 @@ type Salon = {
   review_count: number | null;
   cover_photo_url: string | null;
   badges: string[] | string | null;
+  subscription_tier: string | null;
 };
 
 type StylePrice = {
   salon_id: string | null;
   price_display_min: number | null;
 };
-
-const styleTiles = [
-  { name: "Knotless Braids", shortName: "Knotless\nBraids", count: "120+ salons", image: "/images/braids-cornrows.jpg", position: "50% 30%" },
-  { name: "Box Braids", shortName: "Box\nBraids", count: "150+ salons", image: "/images/braids-box.jpg", position: "50% 68%" },
-  { name: "Cornrows", shortName: "Cornrows", count: "110+ salons", image: "/images/hero-braids.jpg", position: "50% 30%" },
-  { name: "Locs", shortName: "Locs", count: "80+ salons", image: "/images/braids-knotless.jpg", position: "48% 36%" },
-];
 
 const salonFallbackImages = [
   "/images/salon-blush.jpg",
@@ -46,18 +40,100 @@ function formatRating(value: number | null) {
   return typeof value === "number" && value > 0 ? value.toFixed(1) : "New";
 }
 
+// Centralized so paid-placement rules can be adjusted without touching the UI.
+// When coordinates are available, distance can be added as the next comparison
+// within each subscription tier.
+const SUBSCRIPTION_TIER_PRIORITY: Record<string, number> = {
+  platinum: 4,
+  growth: 3,
+  basic: 2,
+  "free-seed": 1,
+  free: 1,
+};
+
+function getSubscriptionTierPriority(tier: string | null) {
+  const normalizedTier = tier?.trim().toLowerCase().replace(/\s+/g, "-") || "";
+  return SUBSCRIPTION_TIER_PRIORITY[normalizedTier] || 0;
+}
+
+function rankSalonsForNearbyDiscovery(salons: Salon[]) {
+  return [...salons].sort((left, right) => {
+    const tierDifference = getSubscriptionTierPriority(right.subscription_tier) - getSubscriptionTierPriority(left.subscription_tier);
+    if (tierDifference) return tierDifference;
+
+    const reviewDifference = (right.review_count || 0) - (left.review_count || 0);
+    if (reviewDifference) return reviewDifference;
+
+    return (right.rating_overall || 0) - (left.rating_overall || 0);
+  });
+}
+
+function SalonCard({
+  salon,
+  index,
+  price,
+  ctaLabel,
+  prominent = false,
+}: {
+  salon: Salon;
+  index: number;
+  price: number | null | undefined;
+  ctaLabel: "View salon" | "View times";
+  prominent?: boolean;
+}) {
+  const image = salon.cover_photo_url || salonFallbackImages[index % salonFallbackImages.length];
+  const salonHref = salon.slug ? `/salon/${salon.slug}` : "/search";
+  const imageHeight = prominent ? "h-[126px] lg:h-[118px] 2xl:h-[132px]" : "h-[112px] lg:h-[98px]";
+
+  return (
+    <article className="w-[72vw] max-w-[280px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-[#fffdfa] shadow-[0_4px_16px_rgba(26,18,32,0.06)] sm:w-auto sm:max-w-none">
+      <Link href={salonHref} className="group block">
+        <div className={`relative overflow-hidden bg-blush ${imageHeight}`}>
+          <Image src={image} alt={`${salon.name || "Salon"} interior`} fill sizes="(max-width: 640px) 72vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.02]" />
+          <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">Verified</span>
+          <span className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm backdrop-blur"><Heart size={17} /></span>
+        </div>
+        <div className="p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>
+              <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "New York"}</p>
+            </div>
+            <p className="shrink-0 text-[10px] text-ink/60"><span className="text-amber">★</span> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-plum/10 pt-2">
+            <p className="text-[10px] text-ink/55">From <strong className="font-serif text-[17px] text-ink">{typeof price === "number" ? `$${price}` : "—"}</strong></p>
+            <span className="rounded-[8px] border border-magenta px-3 py-1.5 text-[9px] font-bold text-magenta">{ctaLabel}</span>
+          </div>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+function SalonPlaceholder({ prominent = false }: { prominent?: boolean }) {
+  return (
+    <article className={`flex w-[72vw] max-w-[280px] shrink-0 snap-start flex-col items-center justify-center rounded-[14px] border border-dashed border-plum/20 bg-blush/20 p-5 text-center sm:w-auto sm:max-w-none ${prominent ? "min-h-[214px]" : "min-h-[184px]"}`}>
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-magenta shadow-sm"><Sparkles size={22} /></span>
+      <h3 className="mt-4 font-serif text-[19px] font-semibold text-plum">New salons joining soon</h3>
+      <p className="mt-2 text-[11px] leading-5 text-ink/60">We are carefully onboarding trusted braiders near you.</p>
+    </article>
+  );
+}
+
 export default async function Home() {
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
-    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges")
+    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier")
     .order("review_count", { ascending: false })
-    .limit(12);
+    .limit(50);
 
-  const salons = ((salonsData || []) as Salon[]).filter(
+  const availableSalons = (salonsData || []) as Salon[];
+  const salons = availableSalons.filter(
     (salon) => (salon.review_count || 0) > 0 || (salon.rating_overall || 0) > 0 || Boolean(salon.cover_photo_url),
   );
 
-  const salonIds = salons.map((salon) => salon.id);
+  const salonIds = availableSalons.map((salon) => salon.id);
   const startingPrices: Record<string, number | null> = {};
 
   if (salonIds.length) {
@@ -74,6 +150,7 @@ export default async function Home() {
     }
   }
 
+  const nearbySalons = rankSalonsForNearbyDiscovery(availableSalons).slice(0, 4);
   const featuredSalons = salons.slice(0, 4);
   const heroSalon = featuredSalons[0];
   const heroRating = heroSalon?.rating_overall || 4.9;
@@ -84,7 +161,7 @@ export default async function Home() {
       <PublicHeader />
 
       <section className="relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(243,217,228,0.64),transparent_31%),linear-gradient(105deg,#fbf4ee_0%,#fffaf6_55%,#f7e6df_100%)]">
-        <div className="relative mx-auto grid w-full max-w-[1360px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12">
+        <div className="relative mx-auto grid w-full max-w-[1760px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12 2xl:px-16">
           <div className="relative z-20 flex flex-col justify-center pb-6 pt-9 lg:pb-2 lg:pt-4">
             <p className="max-w-[235px] text-[9px] font-bold uppercase leading-[1.7] tracking-[0.14em] text-[#6c3f50] sm:text-[11px] lg:max-w-none">
               Real prices. Real reviews. <span className="text-magenta">♥</span><br />Real work. Real availability.
@@ -130,32 +207,23 @@ export default async function Home() {
         </div>
       </section>
 
-      <div className="mx-auto w-full max-w-[1360px] px-4 sm:px-6 lg:px-10 xl:px-12">
-        <section className="py-2 sm:py-3 lg:py-2">
-          <SectionHeading title="Browse by Style" href="/search" linkLabel="View all styles" />
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 lg:grid-cols-5 lg:gap-4">
-            {styleTiles.map((style) => (
-              <Link
-                key={style.name}
-                href={`/search?style=${encodeURIComponent(style.name)}`}
-                className="group relative h-[128px] overflow-hidden rounded-[12px] bg-plum sm:h-[160px] lg:h-[145px]"
-              >
-                <Image src={style.image} alt={`${style.name} style`} fill sizes="(max-width: 640px) 50vw, 20vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" style={{ objectPosition: style.position }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/10 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4">
-                  <h3 className="whitespace-pre-line font-serif text-[14px] font-semibold leading-[0.92] sm:text-[20px]">{style.shortName}</h3>
-                  <p className="mt-1 hidden text-[9px] text-white/80 sm:block sm:text-[10px]">{style.count}</p>
-                </div>
-              </Link>
-            ))}
-            <Link href="/search" className="group relative hidden h-[145px] items-center justify-center overflow-hidden rounded-[12px] bg-[radial-gradient(circle_at_50%_35%,#5b1a6b,#25102d_70%)] text-center text-white lg:flex">
-              <div>
-                <span className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-amber/40 text-amber"><Sparkles aria-hidden="true" size={21} /></span>
-                <h3 className="mt-3 font-serif text-[19px] font-semibold leading-[0.95]">Explore<br />All Styles</h3>
-                <p className="mt-2 inline-flex items-center gap-1 text-[9px] text-white/75">See everything <ArrowRight size={11} /></p>
-              </div>
-            </Link>
-          </div>
+      <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
+        <section className="py-3 sm:py-5">
+          <SectionHeading title="Salons Near You" description="Discover trusted braiders ready to book." href="/search" linkLabel="View all salons" />
+
+          {salonsError ? (
+            <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">Nearby salons are taking a quick beauty break. Try again shortly.</div>
+          ) : (
+            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">
+              {nearbySalons.map((salon, index) => (
+                <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel="View salon" prominent />
+              ))}
+
+              {Array.from({ length: Math.max(0, 4 - nearbySalons.length) }, (_, index) => (
+                <SalonPlaceholder key={`nearby-joining-${index}`} prominent />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="pb-5 sm:pb-6">
@@ -165,41 +233,12 @@ export default async function Home() {
             <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">Featured salons are taking a quick beauty break. Try again shortly.</div>
           ) : (
             <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
-              {featuredSalons.map((salon, index) => {
-                const price = startingPrices[salon.id];
-                const image = salon.cover_photo_url || salonFallbackImages[index % salonFallbackImages.length];
-                return (
-                  <article key={salon.id} className="w-[72vw] max-w-[280px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-[#fffdfa] shadow-[0_4px_16px_rgba(26,18,32,0.06)] sm:w-auto sm:max-w-none">
-                    <Link href={`/salon/${salon.slug}`} className="group block">
-                      <div className="relative h-[112px] overflow-hidden bg-blush lg:h-[98px]">
-                        <Image src={image} alt={`${salon.name || "Salon"} interior`} fill sizes="(max-width: 640px) 72vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.02]" />
-                        <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">Verified</span>
-                        <span className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm backdrop-blur"><Heart size={17} /></span>
-                      </div>
-                      <div className="p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>
-                            <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "New York"}</p>
-                          </div>
-                          <p className="shrink-0 text-[10px] text-ink/60"><span className="text-amber">★</span> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between border-t border-plum/10 pt-2">
-                          <p className="text-[10px] text-ink/55">From <strong className="font-serif text-[17px] text-ink">{price ? `$${price}` : "—"}</strong></p>
-                          <span className="rounded-[8px] border border-magenta px-3 py-1.5 text-[9px] font-bold text-magenta">View times</span>
-                        </div>
-                      </div>
-                    </Link>
-                  </article>
-                );
-              })}
+              {featuredSalons.map((salon, index) => (
+                <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel="View times" />
+              ))}
 
               {Array.from({ length: Math.max(0, 4 - featuredSalons.length) }, (_, index) => (
-                <article key={`joining-${index}`} className="flex min-h-[184px] w-[72vw] max-w-[280px] shrink-0 snap-start flex-col items-center justify-center rounded-[14px] border border-dashed border-plum/20 bg-blush/20 p-5 text-center sm:w-auto sm:max-w-none">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-magenta shadow-sm"><Sparkles size={22} /></span>
-                  <h3 className="mt-4 font-serif text-[19px] font-semibold text-plum">New salons joining soon</h3>
-                  <p className="mt-2 text-[11px] leading-5 text-ink/60">We are carefully onboarding trusted braiders near you.</p>
-                </article>
+                <SalonPlaceholder key={`joining-${index}`} />
               ))}
             </div>
           )}
