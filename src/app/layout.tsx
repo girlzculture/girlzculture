@@ -14,8 +14,13 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Girlz Culture",
-  description: "A stylish landing page for Girlz Culture.",
+  title: {
+    default: "Girlz Culture — Book braids with confidence",
+    template: "%s | Girlz Culture",
+  },
+  description: "Discover trusted braiding salons, compare real prices and reviews, and book with confidence.",
+  applicationName: "Girlz Culture",
+  keywords: ["hair braiding", "braiding salons", "knotless braids", "box braids", "beauty booking"],
 };
 
 export default function RootLayout({
