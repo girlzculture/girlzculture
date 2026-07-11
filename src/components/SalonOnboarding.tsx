@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -222,8 +223,6 @@ export default function SalonOnboarding() {
       console.error('finish called without salonId');
       return;
     }
-
-    const slug = slugify(name || 'salon');
 
     // Verify salon exists and slug is generated
     const { data, error } = await supabase

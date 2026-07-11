@@ -22,7 +22,7 @@ export type DiscoverySalon = {
   longitude?: number | null;
 };
 
-const rank: Record<string, number> = { premium: 4, pro: 4, essentials: 3, featured: 3, basic: 2, free: 1 };
+const rank: Record<string, number> = { premium: 3, platinum: 3, growth: 2, pro: 2, essentials: 2, basic: 1, free: 0, "free-seed": 0 };
 
 export default function SalonDiscovery({ initialSalons, initialStyle = "", initialLocation = "" }: { initialSalons: DiscoverySalon[]; initialStyle?: string; initialLocation?: string }) {
   const [style, setStyle] = useState(initialStyle);
@@ -87,7 +87,7 @@ export default function SalonDiscovery({ initialSalons, initialStyle = "", initi
 
 function SalonResultCard({ salon }: { salon: DiscoverySalon }) {
   return <article className="grid min-w-0 overflow-hidden rounded-[11px] border border-plum/10 bg-white/80 shadow-[0_5px_18px_rgba(26,18,32,0.05)] sm:grid-cols-[215px_1fr]">
-    <div className="relative h-44 bg-blush sm:h-full"><SafeImage src={salon.image} fallbackSrc="/images/salon-warm.jpg" alt={salon.name} className="h-full w-full object-cover" /><span className="absolute left-2 top-2 rounded-full bg-plum px-2.5 py-1 text-[8px] font-bold uppercase text-white">Verified</span><button aria-label={`Favorite ${salon.name}`} className="absolute right-2 top-2 rounded-full bg-white/85 p-2"><Heart size={16} /></button></div>
+    <div className="relative h-44 bg-blush sm:h-full"><SafeImage src={salon.image} fallbackSrc="/images/salon-warm.jpg" alt={salon.name} className="h-full w-full object-cover" /><span className="absolute left-2 top-2 rounded-full bg-plum px-2.5 py-1 text-[8px] font-bold uppercase text-white">{salon.tier.toLowerCase()==="premium"?"Premium · Verified":"Verified"}</span><button aria-label={`Favorite ${salon.name}`} className="absolute right-2 top-2 rounded-full bg-white/85 p-2"><Heart size={16} /></button></div>
     <div className="grid gap-3 p-4 sm:grid-cols-[1fr_auto]">
       <div className="min-w-0"><h3 className="font-serif text-xl font-semibold text-ink">{salon.name}</h3><p className="mt-0.5 text-[10px] text-ink/60">{salon.neighborhood}, {salon.city}</p><div className="mt-2 flex items-center gap-2 text-[10px]"><Star size={14} className="fill-amber text-amber" /><b>{salon.rating.toFixed(1)}</b><span className="text-ink/50">({salon.reviewCount})</span><span className="truncate text-ink/50">• {salon.styles.slice(0, 3).join(" • ")}</span></div><p className="mt-2 text-xs">From <b className="text-base">${salon.startingPrice}</b></p><div className="mt-2 flex flex-wrap gap-2"><Badge icon={<ShieldCheck size={12} />} label="Verified" /><Badge icon={<Tag size={12} />} label="Transparent Pricing" /></div><p className="mt-2 text-[10px] font-semibold text-magenta">◷ {salon.nextAvailability}</p></div>
       <div className="flex min-w-[105px] items-end"><Link href={`/salon/${salon.slug}`} className="inline-flex min-h-10 w-full items-center justify-center rounded-[7px] bg-magenta px-4 text-[11px] font-bold text-white">View salon</Link></div>

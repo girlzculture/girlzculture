@@ -1,18 +1,5 @@
+import { normalizePlan } from "@/lib/plans";
+import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request) {
-  try {
-    const { userId, email, phone } = await request.json();
-    const admin = getSupabaseAdmin();
-    const { data } = await admin.auth.admin.getUserById(userId);
-    if (!data.user || data.user.email?.toLowerCase() !== String(email).toLowerCase()) return Response.json({ error: "Invalid account" }, { status: 403 });
-    const { data: existing } = await admin.from("salons").select("id,status").eq("user_id", userId).maybeSingle();
-    if (existing) return Response.json({ salon: existing });
-    const slug = `pending-${userId.slice(0,8)}`;
-    const { data: salon, error } = await admin.from("salons").insert({ user_id: userId, email, phone, name: "Pending salon application", slug, status: "Pending", verification_status: "Pending", subscription_tier: "Basic" }).select("id,status").single();
-    if (error) throw error;
-    return Response.json({ salon });
-  } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Unable to create salon" }, { status: 500 });
-  }
-}
+export async function POST(request:Request){try{enforceRateLimit(request,"salon-bootstrap",8,10*60_000);const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"");if(!token)throw new Error("Unauthorized");const admin=getSupabaseAdmin();const {data,error:authError}=await admin.auth.getUser(token);if(authError||!data.user)throw new Error("Unauthorized");if(data.user.user_metadata?.role!=="salon_owner")throw new Error("This account is not a salon-owner account.");const body=await request.json() as Record<string,unknown>;const plan=normalizePlan(body.selected_plan||data.user.user_metadata?.selected_plan);const {data:existing,error:existingError}=await admin.from("salons").select("id,status,subscription_tier").eq("user_id",data.user.id).maybeSingle();if(existingError)throw existingError;if(existing)return Response.json({salon:existing});const slug=`pending-${data.user.id.slice(0,8)}`;const {data:salon,error}=await admin.from("salons").insert({user_id:data.user.id,email:data.user.email,phone:cleanText(body.phone||data.user.user_metadata?.phone,30),name:"Pending salon application",slug,status:"Pending",verification_status:"Pending",subscription_tier:plan,subscription_status:"inactive"}).select("id,status,subscription_tier").single();if(error)throw error;return Response.json({salon});}catch(error){console.error("Salon bootstrap failed",error);return errorResponse(error,"Unable to create salon");}}

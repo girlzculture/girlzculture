@@ -1,13 +1,14 @@
 "use client";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, LockKeyhole, Mail, Phone, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { salonSupabase as supabase } from "@/lib/supabase";
+import { normalizePlan } from "@/lib/plans";
 
 export default function SalonSignup() {
-  const router=useRouter(); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [phone,setPhone]=useState(""); const [show,setShow]=useState(false); const [loading,setLoading]=useState(false); const [message,setMessage]=useState("");
-  async function submit(event:FormEvent){event.preventDefault();setLoading(true);setMessage("");const {data,error}=await supabase.auth.signUp({email,password,options:{data:{role:"salon_owner",phone}}});if(error){setMessage(error.message);setLoading(false);return;}if(data.user){const response=await fetch("/api/salon/bootstrap",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:data.user.id,email,phone})});if(!response.ok){const body=await response.json();setMessage(body.error||"Account created, but the application could not be started.");setLoading(false);return;}}setLoading(false);if(data.session){router.push("/salon/apply");router.refresh();}else setMessage("Account created. Confirm your email, then log in to complete your salon application.");}
+  const router=useRouter(); const searchParams=useSearchParams(); const selectedPlan=normalizePlan(searchParams.get("plan")||"Growth"); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [phone,setPhone]=useState(""); const [show,setShow]=useState(false); const [loading,setLoading]=useState(false); const [message,setMessage]=useState("");
+  async function submit(event:FormEvent){event.preventDefault();setLoading(true);setMessage("");const {data,error}=await supabase.auth.signUp({email,password,options:{data:{role:"salon_owner",phone,selected_plan:selectedPlan}}});if(error){setMessage(error.message);setLoading(false);return;}if(data.user&&data.session){const response=await fetch("/api/salon/bootstrap",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify({phone,selected_plan:selectedPlan})});if(!response.ok){const body=await response.json();setMessage(body.error||"Account created, but the application could not be started.");setLoading(false);return;}}setLoading(false);if(data.session){router.push(`/salon/apply?plan=${selectedPlan.toLowerCase()}`);router.refresh();}else setMessage("Account created. Confirm your email, then log in to complete your salon application.");}
   return <form onSubmit={submit} className="space-y-5">
     <Field label="Email" icon={Mail}><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="Enter your email address" className="w-full bg-transparent outline-none"/></Field>
     <Field label="Password" icon={LockKeyhole}><input type={show?"text":"password"} required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Create a strong password" className="w-full bg-transparent outline-none"/><button type="button" onClick={()=>setShow(!show)} aria-label="Show password"><Eye size={18}/></button></Field>

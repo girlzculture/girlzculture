@@ -1,17 +1,6 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
+import PwaRegistration from "@/components/PwaRegistration";
 
 export const metadata: Metadata = {
   title: {
@@ -21,6 +10,10 @@ export const metadata: Metadata = {
   description: "Discover trusted braiding salons, compare real prices and reviews, and book with confidence.",
   applicationName: "Girlz Culture",
   keywords: ["hair braiding", "braiding salons", "knotless braids", "box braids", "beauty booking"],
+  manifest:"/manifest.webmanifest",
+  appleWebApp:{capable:true,statusBarStyle:"default",title:"Girlz Culture"},
+  formatDetection:{telephone:false},
+  robots:process.env.NEXT_PUBLIC_ALLOW_INDEXING==="true"?{index:true,follow:true}:{index:false,follow:false,noarchive:true,nosnippet:true},
 };
 
 export default function RootLayout({
@@ -29,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col">{children}<PwaRegistration /></body>
     </html>
   );
 }

@@ -1,15 +1,17 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { cleanEmail, cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 
 export async function POST(request: Request) {
   try {
+    enforceRateLimit(request,"public-support",5,10*60_000);
     const body = await request.json() as Record<string, unknown>;
-    const name = String(body.name || "").trim();
-    const email = String(body.email || "").trim().toLowerCase();
-    const subject = String(body.subject || "").trim();
-    const category = String(body.category || "General").trim();
-    const message = String(body.message || "").trim();
-    if (body.website) return Response.json({ ok: true });
-    if (name.length < 2 || !/^\S+@\S+\.\S+$/.test(email) || subject.length < 3 || message.length < 10) {
+    rejectBot(body);
+    const name = cleanText(body.name,120);
+    const email = cleanEmail(body.email);
+    const subject = cleanText(body.subject,180);
+    const category = cleanText(body.category || "General",80);
+    const message = cleanText(body.message,5000);
+    if (name.length < 2 || subject.length < 3 || message.length < 10) {
       return Response.json({ error: "Please complete every field with valid information." }, { status: 400 });
     }
     const { data, error } = await getSupabaseAdmin().from("support_tickets").insert({ requester_name: name, requester_email: email, subject, category, message, status: "Open", priority: category === "Safety concern" ? "High" : "Normal" }).select("id").single();
@@ -18,6 +20,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, ticketId: data.id });
   } catch (error) {
     console.error("Public support request failed", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Unable to submit your request" }, { status: 500 });
+    return errorResponse(error,"Unable to submit your request");
   }
 }

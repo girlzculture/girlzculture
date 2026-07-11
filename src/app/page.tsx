@@ -46,11 +46,13 @@ function formatRating(value: number | null) {
 // When coordinates are available, distance can be added as the next comparison
 // within each subscription tier.
 const SUBSCRIPTION_TIER_PRIORITY: Record<string, number> = {
-  platinum: 4,
-  growth: 3,
-  basic: 2,
-  "free-seed": 1,
-  free: 1,
+  premium: 3,
+  platinum: 3,
+  growth: 2,
+  essentials: 2,
+  basic: 1,
+  "free-seed": 0,
+  free: 0,
 };
 
 function getSubscriptionTierPriority(tier: string | null) {
@@ -92,7 +94,7 @@ function SalonCard({
       <Link href={salonHref} className="group block">
         <div className={`relative overflow-hidden bg-blush ${imageHeight}`}>
           <Image src={image} alt={`${salon.name || "Salon"} interior`} fill sizes="(max-width: 640px) 72vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.02]" />
-          <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">Verified</span>
+          <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">{salon.subscription_tier?.toLowerCase()==="premium"?"Premium · Verified":"Verified"}</span>
           <span className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm backdrop-blur"><Heart size={17} /></span>
         </div>
         <div className="p-3">
@@ -154,7 +156,8 @@ export default async function Home() {
   }
 
   const nearbySalons = rankSalonsForNearbyDiscovery(availableSalons).slice(0, 4);
-  const featuredSalons = salons.slice(0, 4);
+  const paidFeaturedPool = rankSalonsForNearbyDiscovery(salons.filter((salon) => getSubscriptionTierPriority(salon.subscription_tier) >= 2));
+  const featuredSalons = (paidFeaturedPool.length ? paidFeaturedPool : salons).slice(0, 4);
   const heroSalon = featuredSalons[0];
   const heroRating = heroSalon?.rating_overall || 4.9;
   const heroReviewCount = heroSalon?.review_count || 128;

@@ -13,6 +13,17 @@ export async function GET(request: Request) {
       if (result.error) throw result.error;
       payload[sources[index][0]] = result.data || [];
     });
+    const applications = payload.salon_applications as Array<Record<string, unknown>>;
+    await Promise.all(applications.map(async (application) => {
+      const paths = Array.isArray(application.document_urls) ? application.document_urls.map(String) : [];
+      const signed = await Promise.all(paths.map(async (path) => {
+        if (/^https?:\/\//i.test(path)) return path;
+        const { data, error } = await admin.storage.from("application-documents").createSignedUrl(path, 3600);
+        if (error) { console.error("Application document signing failed", { applicationId: application.id, path, error }); return null; }
+        return data.signedUrl;
+      }));
+      application.document_urls = signed.filter(Boolean);
+    }));
     return Response.json(payload);
   } catch (error) {
     console.error("Admin data load failed", error);

@@ -1,8 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
   --background: #fbf4ee;
   --foreground: #1a1220;
+  --font-inter: "Inter", Arial, Helvetica, sans-serif;
+  --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
 @theme inline {

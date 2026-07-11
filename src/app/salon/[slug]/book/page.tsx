@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import SalonBookingWizard from "@/components/SalonBookingWizard";
 
@@ -25,9 +26,9 @@ type StyleRecord = {
   price_display_max?: number | null;
   duration_min_hours?: number | null;
   duration_max_hours?: number | null;
-  length_options?: any | null;
-  size_options?: any | null;
-  addons?: any | null;
+  length_options?: unknown;
+  size_options?: unknown;
+  addons?: unknown;
 };
 
 type StylistRecord = {
@@ -69,5 +70,5 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
   const styles = (stylesData || []) as StyleRecord[];
   const stylists = (stylistsData || []) as StylistRecord[];
 
-  return <SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} />;
+  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} /></Suspense>;
 }

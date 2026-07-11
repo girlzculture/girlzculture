@@ -27,8 +27,12 @@ export default function SalonLogin() {
 
     if (data?.session) {
       try {
-        const response = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}` } });
-        const destination = await response.json() as { path?: string; role?: string };
+        let response = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}` } });
+        let destination = await response.json() as { path?: string; role?: string };
+        if(destination.role!=="salon_owner"&&data.user.user_metadata?.role==="salon_owner"){
+          const bootstrap=await fetch("/api/salon/bootstrap",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify({phone:data.user.user_metadata?.phone,selected_plan:data.user.user_metadata?.selected_plan})});
+          if(bootstrap.ok){response=await fetch("/api/auth/destination",{method:"POST",headers:{Authorization:`Bearer ${data.session.access_token}`}});destination=await response.json() as {path?:string;role?:string};}
+        }
         if (!response.ok || destination.role !== "salon_owner") {
           await supabase.auth.signOut({ scope: "local" });
           setErrorMsg(destination.role === "admin"
