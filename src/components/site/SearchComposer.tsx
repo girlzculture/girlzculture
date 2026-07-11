@@ -4,7 +4,7 @@ import { MapPin, Search } from "lucide-react";
 export default function SearchComposer({ compact = false }: { compact?: boolean }) {
   return (
     <form
-      action="/search"
+      action="/salons"
       method="get"
       className={`border border-plum/10 bg-[#fffdfa] shadow-[0_12px_34px_rgba(26,18,32,0.10)] ${compact ? "rounded-[14px] p-2.5" : "rounded-[16px] p-2.5 sm:p-3 md:p-1.5"}`}
     >
@@ -47,7 +47,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
             ["Locs", "Locs"],
             ["Box Braids", "Box Braids"],
           ].map(([value, label], index) => (
-            <Link key={value} href={`/search?style=${encodeURIComponent(value)}`} className={`shrink-0 rounded-full border border-plum/10 bg-cream px-3 py-1 font-semibold text-ink/70 hover:border-magenta/30 hover:text-magenta ${index === 4 ? "hidden sm:inline-flex" : ""}`}>
+            <Link key={value} href={`/salons?style=${encodeURIComponent(value)}`} className={`shrink-0 rounded-full border border-plum/10 bg-cream px-3 py-1 font-semibold text-ink/70 hover:border-magenta/30 hover:text-magenta ${index === 4 ? "hidden sm:inline-flex" : ""}`}>
               {label}
             </Link>
           ))}

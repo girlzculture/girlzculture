@@ -28,7 +28,7 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function PublicHeader() {
+export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" }) {
   return (
     <header className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
@@ -40,9 +40,9 @@ export function PublicHeader() {
             <Menu aria-hidden="true" size={23} strokeWidth={1.8} />
           </summary>
           <nav aria-label="Mobile navigation" className="absolute left-0 top-12 w-64 overflow-hidden rounded-[14px] border border-plum/10 bg-[#fffdfa] p-2 text-sm font-semibold text-ink shadow-[0_18px_42px_rgba(26,18,32,0.16)]">
-            <Link href="/search" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Browse Styles</Link>
-            <Link href="/search" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Find Salons</Link>
-            <Link href="/#how-it-works" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">How It Works</Link>
+            <Link href="/styles" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Browse Styles</Link>
+            <Link href="/salons" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Find Salons</Link>
+            <Link href="/how-it-works" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">How It Works</Link>
             <Link href="/salon/signup" className="block rounded-[10px] px-4 py-3 text-magenta hover:bg-blush/45">For Professionals</Link>
             <div className="my-1 border-t border-plum/10" />
             <Link href="/salon/login" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Log in</Link>
@@ -55,9 +55,9 @@ export function PublicHeader() {
         </div>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-8 text-[13px] font-semibold text-ink md:flex lg:gap-10">
-          <Link href="/search" className="transition-colors hover:text-magenta">Browse Styles</Link>
-          <Link href="/search" className="transition-colors hover:text-magenta">Find Salons</Link>
-          <Link href="/#how-it-works" className="transition-colors hover:text-magenta">How It Works</Link>
+          <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}>Browse Styles</Link>
+          <Link href="/salons" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "salons" ? "border-magenta text-magenta" : "border-transparent"}`}>Find Salons</Link>
+          <Link href="/how-it-works" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "how" ? "border-magenta text-magenta" : "border-transparent"}`}>How It Works</Link>
           <Link href="/salon/signup" className="inline-flex items-center gap-2 transition-colors hover:text-magenta">
             For Professionals
             <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">New</span>
@@ -87,7 +87,7 @@ export function PublicHeader() {
 export function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
   const items = [
     { id: "home" as const, label: "Home", href: "/", icon: Home },
-    { id: "search" as const, label: "Search", href: "/search", icon: Search },
+    { id: "search" as const, label: "Search", href: "/salons", icon: Search },
     { id: "bookings" as const, label: "Bookings", href: "/account", icon: CalendarDays },
     { id: "inbox" as const, label: "Inbox", href: "/account", icon: MessageSquare },
     { id: "profile" as const, label: "Profile", href: "/account", icon: UserRound },

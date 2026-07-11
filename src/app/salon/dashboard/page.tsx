@@ -1,11 +1,6 @@
 import SalonDashboard from "@/components/SalonDashboard";
 
-export default function SalonDashboardPage() {
-  return (
-    <main className="min-h-screen bg-cream px-4 py-8 text-ink sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-[1200px]">
-        <SalonDashboard />
-      </div>
-    </main>
-  );
+export default async function SalonDashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string }> }) {
+  const { preview } = await searchParams;
+  return <SalonDashboard preview={process.env.NODE_ENV === "development" && preview === "1"} />;
 }

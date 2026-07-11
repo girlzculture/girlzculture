@@ -6,6 +6,7 @@ import {
   Clock3,
   MapPin,
   Navigation,
+  Package,
   ShieldCheck,
   Sparkles,
   Star,
@@ -96,6 +97,15 @@ type ReviewRecord = {
   customer?: { name?: string | null } | null;
 };
 
+type ProductRecord = {
+  id?: string;
+  name?: string | null;
+  description?: string | null;
+  price?: number | null;
+  photo_url?: string | null;
+  is_visible?: boolean | null;
+};
+
 const galleryFallbacks = [
   "/images/braids-cornrows.jpg",
   "/images/braids-knotless.jpg",
@@ -167,14 +177,16 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   if (salonError) throw salonError;
   if (!salon) notFound();
 
-  const [stylesResult, stylistsResult, reviewsWithCustomerResult] = await Promise.all([
+  const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult] = await Promise.all([
     supabase.from("styles").select("*").eq("salon_id", salon.id).order("created_at", { ascending: true }),
     supabase.from("stylists").select("*").eq("salon_id", salon.id).order("created_at", { ascending: true }),
     supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).order("created_at", { ascending: false }),
+    supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
   ]);
 
   const styles = (stylesResult.data || []) as StyleRecord[];
   const stylists = ((stylistsResult.data || []) as StylistRecord[]).filter((stylist) => stylist.is_active !== false);
+  const products = (productsResult.data || []) as ProductRecord[];
 
   let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
   if (reviewsWithCustomerResult.error) {
@@ -284,6 +296,13 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
 
           <SalonReviews reviews={reviews} salonRating={rating} salonReviewCount={reviewCount} fallbackPhotos={galleryItems} />
         </section>
+
+        {products.length ? (
+          <section className="mb-4 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
+            <div className="flex items-end justify-between gap-3"><div><h2 className="flex items-center gap-2 font-serif text-[22px] font-semibold text-ink"><Package size={20} className="text-magenta" />Salon Products</h2><p className="mt-1 text-[9px] text-ink/55">Available for in-person purchase at your appointment.</p></div><span className="text-[9px] font-semibold text-plum">No online checkout</span></div>
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{products.map((product, index) => <article key={product.id || index} className="min-w-[150px] max-w-[180px] overflow-hidden rounded-[10px] border border-plum/10 bg-white"><SafeImage src={product.photo_url} fallbackSrc={galleryItems[index % galleryItems.length]} alt={product.name || "Salon product"} className="aspect-square w-full object-cover" /><div className="p-3"><h3 className="text-[11px] font-semibold">{product.name}</h3><p className="mt-1 line-clamp-2 text-[9px] leading-4 text-ink/55">{product.description}</p><p className="mt-2 text-xs font-bold">${Number(product.price || 0).toFixed(2)}</p></div></article>)}</div>
+          </section>
+        ) : null}
 
         <section className="mb-5 grid gap-5 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5 lg:grid-cols-[0.92fr_0.82fr_1.35fr]">
           <div>
