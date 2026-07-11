@@ -62,12 +62,41 @@ export default function SalonOnboarding() {
       return;
     }
     setLoading(true);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user?.id) {
+      setLoading(false);
+      setErrorMessage('You must be signed in before creating a salon.');
+      return;
+    }
+
+    const { data: existingSalon, error: existingSalonError } = await supabase
+      .from("salons")
+      .select("id")
+      .eq("user_id", userData.user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingSalonError) {
+      setLoading(false);
+      setErrorMessage(existingSalonError.message);
+      return;
+    }
+
+    if (existingSalon?.id) {
+      setLoading(false);
+      router.replace("/salon/dashboard");
+      router.refresh();
+      return;
+    }
+
     const slug = slugify(name || "salon");
     const payload: any = {
       name,
       description,
       phone,
       email,
+      user_id: userData.user.id,
       address_street: addressStreet,
       address_city: addressCity,
       address_state: addressState,
@@ -78,15 +107,12 @@ export default function SalonOnboarding() {
       status: 'New',
     };
 
-    console.log('Saving salon basics payload:', payload);
     const { data, error } = await supabase.from('salons').insert(payload).select().maybeSingle();
     setLoading(false);
     if (error) {
-      console.error('Supabase salons insert error:', error);
       setErrorMessage(error.message);
       return;
     }
-    console.log('Salon basics saved:', data);
     setSalonId((data as any)?.id || null);
     setInfoMessage('Salon basics saved successfully.');
     next();

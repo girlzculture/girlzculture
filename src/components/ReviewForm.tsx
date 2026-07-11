@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import ImageUpload from "@/components/ImageUpload";
 
 type BookingRecord = {
   id?: string;
@@ -21,14 +22,14 @@ type ReviewPayload = {
   booking_id?: string | null;
   salon_id?: string | null;
   customer_id?: string | null;
-  overall_rating?: number | null;
-  price_accuracy_rating?: number | null;
-  punctuality_rating?: number | null;
-  quality_rating?: number | null;
-  cleanliness_rating?: number | null;
+  rating_overall?: number | null;
+  rating_price_accuracy?: number | null;
+  rating_punctuality?: number | null;
+  rating_quality?: number | null;
+  rating_cleanliness?: number | null;
   would_return?: boolean | null;
-  comments?: string | null;
-  photos?: string[] | null;
+  written_review?: string | null;
+  result_photos?: string[] | null;
 };
 
 const starOptions = [1, 2, 3, 4, 5];
@@ -49,54 +50,17 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
   const [cleanliness, setCleanliness] = useState(5);
   const [wouldReturn, setWouldReturn] = useState(true);
   const [comments, setComments] = useState("");
-  const [photos, setPhotos] = useState<FileList | null>(null);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bookingStatus, setBookingStatus] = useState(booking.status || "");
-  const [completeSuccess, setCompleteSuccess] = useState<string | null>(null);
-
-  const isCompleted = bookingStatus?.toLowerCase() === "completed";
+  const isCompleted = booking.status?.toLowerCase() === "completed";
   const bookingDate = booking.appointment_datetime ? new Date(booking.appointment_datetime).toLocaleString() : "Upcoming appointment";
-
-  const setFiles = (files: FileList | null) => {
-    setPhotos(files);
-    if (!files) {
-      setPreviews([]);
-      return;
-    }
-
-    const urls = Array.from(files).map((file) => URL.createObjectURL(file));
-    setPreviews(urls);
-  };
 
   const canSubmit = useMemo(
     () => isCompleted && comments.trim().length >= 10,
     [isCompleted, comments],
   );
-
-  const markBookingCompleted = async () => {
-    setError(null);
-    setSaving(true);
-
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "Completed" })
-      .eq("id", booking.id)
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      setError(error.message);
-      setSaving(false);
-      return;
-    }
-
-    setBookingStatus("Completed");
-    setCompleteSuccess("Booking marked completed. You can now leave your review.");
-    setSaving(false);
-  };
 
   const submitReview = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -114,22 +78,21 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
 
     setSaving(true);
 
-    const photoNames = photos ? Array.from(photos).map((file) => file.name) : null;
     const payload: ReviewPayload = {
       booking_id: booking.id ?? null,
       salon_id: salon.id ?? null,
       customer_id: booking.customer_id ?? null,
-      overall_rating: overallRating,
-      price_accuracy_rating: priceAccuracy,
-      punctuality_rating: punctuality,
-      quality_rating: quality,
-      cleanliness_rating: cleanliness,
+      rating_overall: overallRating,
+      rating_price_accuracy: priceAccuracy,
+      rating_punctuality: punctuality,
+      rating_quality: quality,
+      rating_cleanliness: cleanliness,
       would_return: wouldReturn,
-      comments: comments.trim(),
-      photos: photoNames?.length ? photoNames : null,
+      written_review: comments.trim(),
+      result_photos: photoUrls.length ? photoUrls : null,
     };
 
-    const { data, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from("reviews")
       .insert(payload)
       .select()
@@ -140,20 +103,6 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
       setSaving(false);
       return;
     }
-
-    const { data: salonReviews } = await supabase
-      .from("reviews")
-      .select("overall_rating")
-      .eq("salon_id", salon.id);
-
-    const ratings = salonReviews || [];
-    const count = ratings.length;
-    const average = count ? ratings.reduce((sum, item) => sum + (item.overall_rating ?? 0), 0) / count : 0;
-
-    await supabase
-      .from("salons")
-      .update({ rating_overall: average, review_count: count })
-      .eq("id", salon.id);
 
     setSaving(false);
     setSubmitted(true);
@@ -190,16 +139,7 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
       {!isCompleted ? (
         <div className="rounded-[24px] border border-amber/20 bg-amber/10 p-6 text-sm text-ink/80">
           <p className="font-semibold text-plum">This booking must be completed before leaving a review.</p>
-          <p className="mt-2">For testing, mark the booking completed and submit your review.</p>
-          <button
-            type="button"
-            onClick={markBookingCompleted}
-            disabled={saving}
-            className="mt-4 inline-flex rounded-full bg-magenta px-5 py-3 text-sm font-semibold text-white transition hover:bg-magenta/90"
-          >
-            {saving ? "Updating…" : "Mark booking completed"}
-          </button>
-          {completeSuccess ? <p className="mt-3 text-sm text-ink/70">{completeSuccess}</p> : null}
+          <p className="mt-2">Your salon marks the appointment complete. Your verified review form will unlock automatically after that.</p>
           {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
         </div>
       ) : null}
@@ -280,30 +220,18 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
               />
             </label>
 
-            <label className="block rounded-[24px] border border-plum/10 bg-white p-5">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-plum">Result photos</span>
-                <span className="text-xs uppercase tracking-[0.35em] text-ink/60">Optional</span>
-              </div>
-              <input
-                type="file"
-                accept="image/*"
+            <div className="rounded-[24px] border border-plum/10 bg-white p-5">
+              <ImageUpload
+                bucket="review-photos"
                 multiple
-                onChange={(event) => setFiles(event.target.files)}
-                className="mt-3 w-full text-sm text-ink/80"
+                maxFiles={6}
+                folder="reviews"
+                label="Result photos"
+                helperText="Upload before-and-after or final look photos. JPG and PNG only."
+                value={photoUrls}
+                onChange={(value) => setPhotoUrls(Array.isArray(value) ? value : value ? [value] : [])}
               />
-              {previews.length > 0 ? (
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {previews.map((src, index) => (
-                    <div key={index} className="overflow-hidden rounded-3xl border border-ink/10 bg-cream">
-                      <img src={src} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-ink/60">Upload photos here if you want to show the final look.</p>
-              )}
-            </label>
+            </div>
           </div>
         </div>
 

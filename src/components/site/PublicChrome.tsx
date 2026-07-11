@@ -43,10 +43,10 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
             <Link href="/styles" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Browse Styles</Link>
             <Link href="/salons" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Find Salons</Link>
             <Link href="/how-it-works" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">How It Works</Link>
-            <Link href="/salon/signup" className="block rounded-[10px] px-4 py-3 text-magenta hover:bg-blush/45">For Professionals</Link>
+            <Link href="/partner" className="block rounded-[10px] px-4 py-3 text-magenta hover:bg-blush/45">Partner With Us</Link>
             <div className="my-1 border-t border-plum/10" />
-            <Link href="/salon/login" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Log in</Link>
-            <Link href="/salon/signup" className="block rounded-[10px] bg-magenta px-4 py-3 text-center text-white">Sign up</Link>
+            <Link href="/login" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Log in</Link>
+            <Link href="/login" className="block rounded-[10px] bg-magenta px-4 py-3 text-center text-white">Sign up</Link>
           </nav>
         </details>
 
@@ -58,8 +58,8 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
           <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}>Browse Styles</Link>
           <Link href="/salons" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "salons" ? "border-magenta text-magenta" : "border-transparent"}`}>Find Salons</Link>
           <Link href="/how-it-works" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "how" ? "border-magenta text-magenta" : "border-transparent"}`}>How It Works</Link>
-          <Link href="/salon/signup" className="inline-flex items-center gap-2 transition-colors hover:text-magenta">
-            For Professionals
+          <Link href="/partner" className="inline-flex items-center gap-2 transition-colors hover:text-magenta">
+            Partner With Us
             <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">New</span>
           </Link>
         </nav>
@@ -72,10 +72,10 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
           >
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
           </Link>
-          <Link href="/salon/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta md:inline-flex">
+          <Link href="/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta md:inline-flex">
             Log in
           </Link>
-          <Link href="/salon/signup" className="hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(214,24,107,0.18)] transition hover:-translate-y-0.5 hover:bg-[#bb145d] md:inline-flex">
+          <Link href="/login" className="hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(214,24,107,0.18)] transition hover:-translate-y-0.5 hover:bg-[#bb145d] md:inline-flex">
             Sign up
           </Link>
         </div>

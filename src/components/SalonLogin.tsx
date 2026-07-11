@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { getSalonDestinationForUserId } from "@/lib/salonRedirect";
 
 export default function SalonLogin() {
   const router = useRouter();
@@ -19,16 +20,29 @@ export default function SalonLogin() {
     setInfoMsg(null);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    console.log('Supabase login result:', { data, error });
     if (error) {
       setErrorMsg(error.message);
       return;
     }
 
     if (data?.session) {
-      setInfoMsg('Signed in successfully. Redirecting...');
+      try {
+        const destination = await getSalonDestinationForUserId(data.session.user.id);
+        setInfoMsg(destination.reason === "matched-salon"
+          ? "Signed in successfully. Redirecting to your dashboard..."
+          : "Signed in successfully. No salon was linked to this account yet, so you are being sent to onboarding...");
+        router.replace(destination.path);
+        router.refresh();
+        return;
+      } catch {
+        setInfoMsg("Signed in successfully. Redirecting to onboarding...");
+        router.replace("/salon/onboarding");
+        router.refresh();
+        return;
+      }
     }
-    router.push('/salon/onboarding');
+
+    setErrorMsg('Sign in succeeded, but no active session was returned. Please try again.');
   };
 
   return (

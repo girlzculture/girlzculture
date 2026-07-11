@@ -53,6 +53,10 @@ textarea {
   font: inherit;
 }
 
+section {
+  min-width: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
