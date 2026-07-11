@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Heart, Search, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SearchComposer from "@/components/site/SearchComposer";
+import { getContentPage } from "@/lib/content";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -122,6 +123,7 @@ function SalonPlaceholder({ prominent = false }: { prominent?: boolean }) {
 }
 
 export default async function Home() {
+  const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "The beauty booking marketplace for braided styles. Real salons. Real people. Real results.", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
     .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier")
@@ -167,10 +169,10 @@ export default async function Home() {
               Real prices. Real reviews. <span className="text-magenta">♥</span><br />Real work. Real availability.
             </p>
             <h1 className="mt-3 max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:mt-2 lg:max-w-[610px] lg:text-[58px]">
-              Book with<br />Confidence<span className="text-magenta">.</span>
+              {homeContent.hero_title}
             </h1>
             <p className="mt-4 max-w-[245px] text-[13px] leading-[1.45] text-ink/75 sm:text-[15px] lg:mt-3 lg:max-w-[470px]">
-              The beauty booking marketplace for braided styles.<br className="hidden sm:block" /><span className="hidden sm:inline"> Real salons. Real people. Real results.</span>
+              {homeContent.hero_subtitle}
             </p>
 
             <div className="relative z-30 mt-5 w-full max-w-[760px] lg:mt-4">
@@ -180,7 +182,7 @@ export default async function Home() {
 
           <div className="pointer-events-none absolute right-0 top-0 h-[225px] w-[53%] lg:inset-y-0 lg:h-auto lg:w-[52%]">
             <Image
-              src="/images/braids-knotless.jpg"
+              src={homeContent.hero_image_url || "/images/braids-knotless.jpg"}
               alt="Client wearing a long braided style"
               fill
               priority

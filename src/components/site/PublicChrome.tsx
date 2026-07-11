@@ -28,7 +28,7 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" }) {
+export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" | "about" | "blog" }) {
   return (
     <header className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
@@ -43,6 +43,8 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
             <Link href="/styles" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Browse Styles</Link>
             <Link href="/salons" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Find Salons</Link>
             <Link href="/how-it-works" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">How It Works</Link>
+            <Link href="/about" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">About Us</Link>
+            <Link href="/blog" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Blog</Link>
             <Link href="/partner" className="block rounded-[10px] px-4 py-3 text-magenta hover:bg-blush/45">Partner With Us</Link>
             <div className="my-1 border-t border-plum/10" />
             <Link href="/login" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Log in</Link>
@@ -58,6 +60,8 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
           <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}>Browse Styles</Link>
           <Link href="/salons" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "salons" ? "border-magenta text-magenta" : "border-transparent"}`}>Find Salons</Link>
           <Link href="/how-it-works" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "how" ? "border-magenta text-magenta" : "border-transparent"}`}>How It Works</Link>
+          <Link href="/about" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta lg:inline-flex ${active === "about" ? "border-magenta text-magenta" : "border-transparent"}`}>About Us</Link>
+          <Link href="/blog" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta xl:inline-flex ${active === "blog" ? "border-magenta text-magenta" : "border-transparent"}`}>Blog</Link>
           <Link href="/partner" className="inline-flex items-center gap-2 transition-colors hover:text-magenta">
             Partner With Us
             <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">New</span>
@@ -161,16 +165,16 @@ export function TrustStrip() {
 }
 
 const footerGroups = [
-  { title: "Company", links: ["About Us", "Careers", "Press", "Blog"] },
-  { title: "Support", links: ["Help Center", "Safety", "Cancellation Policy", "Contact Us"] },
-  { title: "For Professionals", links: ["List Your Salon", "Tools & Resources", "Success Stories"] },
-  { title: "Legal", links: ["Terms of Service", "Privacy Policy", "Accessibility"] },
+  { title: "Company", links: [["About Us","/about"], ["Careers","/careers"], ["Press","/press"], ["Blog","/blog"]] },
+  { title: "Support", links: [["Help Center","/help"], ["Safety","/safety"], ["Cancellation Policy","/cancellation-policy"], ["Contact Us","/contact"]] },
+  { title: "For Professionals", links: [["Partner With Us","/partner"], ["Tools & Resources","/tools"], ["Success Stories","/success-stories"]] },
+  { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Accessibility","/accessibility"]] },
 ];
 
 export function PublicFooter() {
   return (
-    <footer className="hidden bg-[#211027] text-white md:block">
-      <div className="mx-auto grid w-full max-w-[1760px] grid-cols-[1.2fr_repeat(4,0.7fr)_1.35fr] gap-8 px-10 py-9 xl:px-12 2xl:px-16">
+    <footer className="bg-[#211027] text-white">
+      <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.2fr_repeat(4,0.7fr)_1.35fr] lg:px-10 xl:px-12 2xl:px-16">
         <div>
           <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>
           <p className="mt-3 max-w-[200px] text-[11px] leading-5 text-white/70">The trusted beauty booking marketplace for braided styles.</p>
@@ -183,11 +187,11 @@ export function PublicFooter() {
           <div key={group.title}>
             <h2 className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{group.title}</h2>
             <ul className="mt-3 space-y-2 text-[11px] text-white/65">
-              {group.links.map((link) => <li key={link}><span>{link}</span></li>)}
+              {group.links.map(([label,href]) => <li key={href}><Link href={href} className="hover:text-white">{label}</Link></li>)}
             </ul>
           </div>
         ))}
-        <div>
+        <div className="col-span-2 lg:col-span-1">
           <h2 className="font-serif text-[17px] font-semibold">Stay in the loop</h2>
           <p className="mt-2 text-[11px] leading-5 text-white/65">Tips, new salons, and exclusive offers.</p>
           <form className="mt-4 flex overflow-hidden rounded-[8px] border border-white/20 bg-white/5">
