@@ -14,7 +14,7 @@ export async function requireAdmin(request: Request) {
   const admin = getSupabaseAdmin();
   const { data } = await admin.auth.getUser(token);
   if (!data.user) throw new Error("Unauthorized");
-  const { data: row } = await admin.from("admin_users").select("id,email").eq("email", data.user.email).maybeSingle();
+  const { data: row } = await admin.from("admin_users").select("email,role,status").eq("email", data.user.email).eq("status", "Active").maybeSingle();
   const master = process.env.ADMIN_EMAIL?.toLowerCase();
   if (!row && data.user.email?.toLowerCase() !== master) throw new Error("Forbidden");
   return { admin, user: data.user };

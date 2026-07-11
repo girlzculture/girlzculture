@@ -18,6 +18,10 @@ alter table public.bookings add column if not exists guest_email text;
 alter table public.bookings add column if not exists guest_phone text;
 alter table public.bookings add column if not exists source text not null default 'Website';
 alter table public.bookings add column if not exists notifications_sent_at timestamptz;
+alter table public.admin_users add column if not exists role text not null default 'Admin';
+alter table public.admin_users add column if not exists permissions jsonb not null default '{}'::jsonb;
+alter table public.admin_users add column if not exists status text not null default 'Active';
+create unique index if not exists admin_users_email_unique_idx on public.admin_users(lower(email));
 
 create table if not exists public.salon_applications (
   id uuid primary key default gen_random_uuid(),
