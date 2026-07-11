@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
 import { createStoragePath, getImageUploadError, MAX_IMAGE_UPLOAD_BYTES, optimizeImageFile } from "@/lib/imageUpload";
 
 type ImageUploadProps = {
@@ -15,6 +15,7 @@ type ImageUploadProps = {
   maxFiles?: number;
   disabled?: boolean;
   className?: string;
+  authScope?: AuthScope;
 };
 
 function UploadSlot({ onClick, disabled, label, helper }: { onClick: () => void; disabled?: boolean; label: string; helper: string }) {
@@ -51,7 +52,9 @@ export default function ImageUpload({
   maxFiles = 8,
   disabled = false,
   className,
+  authScope = "customer",
 }: ImageUploadProps) {
+  const supabase = getSupabaseForScope(authScope);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [userReady, setUserReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -76,7 +79,7 @@ export default function ImageUpload({
     return () => {
       active = false;
     };
-  }, []);
+  }, [supabase]);
 
   const openPicker = () => {
     setError(null);

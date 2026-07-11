@@ -3,7 +3,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, LockKeyhole, Mail, Phone, ShieldCheck, Sparkles, Star } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { salonSupabase as supabase } from "@/lib/supabase";
 
 export default function SalonSignup() {
   const router=useRouter(); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [phone,setPhone]=useState(""); const [show,setShow]=useState(false); const [loading,setLoading]=useState(false); const [message,setMessage]=useState("");

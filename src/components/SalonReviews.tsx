@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { salonSupabase as supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 
 type ReviewRecord = {

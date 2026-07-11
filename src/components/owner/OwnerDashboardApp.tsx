@@ -3,12 +3,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, CircleDollarSign, Clock3, Crown, Eye, ImagePlus, Megaphone, Package, Plus, Sparkles, UserPlus, UsersRound } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import ImageUpload from "@/components/ImageUpload";
+import { getSessionForScope, salonSupabase as supabase } from "@/lib/supabase";
+import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
+import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
 import OwnerDashboardShell, { DashboardSection } from "@/components/owner/OwnerDashboardShell";
 
 type Row = Record<string, unknown> & { id?: string; salon_id?: string; name?: string; created_at?: string };
+const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="salon" />;
 type Salon = Row & { slug?: string; status?: string; description?: string; neighborhood?: string; email?: string; phone?: string; address_street?: string; address_city?: string; address_state?: string; address_zip?: string; cover_photo_url?: string; gallery_photos?: string[]; hours?: Record<string,string>; languages?: string[]; trust_info?: Record<string,boolean>; media_consent?: boolean; notification_preferences?: Record<string,boolean>; rating_overall?: number; review_count?: number; subscription_tier?: string; stripe_account_id?: string };
 
 const fallbackPhotos = ["/images/braids-cornrows.jpg","/images/braids-knotless.jpg","/images/braids-box.jpg","/images/hero-braids.jpg"];
@@ -25,7 +27,56 @@ export default function OwnerDashboardApp({ section, preview = false }: { sectio
   const [notifications,setNotifications]=useState<Row[]>(preview?[{id:"n1",title:"New booking received",body:"Knotless Braids requested for Jul 16 at 10:00 AM",read_at:null}]:[]);
   const [selectedStyle,setSelectedStyle]=useState<string|null>(preview?"s1":null); const [selectedStylist,setSelectedStylist]=useState<string|null>(preview?"t1":null); const [selectedProduct,setSelectedProduct]=useState<string|null>(null);
 
-  useEffect(()=>{if(preview)return;let live=true;(async()=>{const sessionResult=await Promise.race([supabase.auth.getSession(),new Promise<null>((resolve)=>window.setTimeout(()=>resolve(null),2500))]);const userId=sessionResult?.data.session?.user?.id||"";if(!live)return;if(!userId){setError("Please sign in with your salon-owner account to open the dashboard.");setLoading(false);return;}const {data:s,error:sErr}=await supabase.from("salons").select("*").eq("user_id",userId).limit(1).maybeSingle();if(sErr||!s){setError(sErr?.message||"No salon is linked to this account yet. Complete onboarding first.");setLoading(false);return;}setSalon(s as Salon);const results=await Promise.all(["bookings","reviews","styles","stylists","salon_products","salon_promotions","subscriptions","notifications"].map((table)=>supabase.from(table).select("*").eq("salon_id",s.id).order("created_at",{ascending:false})));if(!live)return;setBookings((results[0].data||[]) as Row[]);setReviews((results[1].data||[]) as Row[]);setStyles((results[2].data||[]) as Row[]);setStylists((results[3].data||[]) as Row[]);setProducts((results[4].data||[]) as Row[]);setPromotions((results[5].data||[]) as Row[]);setSubscription(((results[6].data||[])[0]||null) as Row|null);setNotifications((results[7].data||[]) as Row[]);setSelectedStyle(results[2].data?.[0]?.id||null);setSelectedStylist(results[3].data?.[0]?.id||null);setSelectedProduct(results[4].data?.[0]?.id||null);setLoading(false);const channel=supabase.channel(`owner-${s.id}`).on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:`salon_id=eq.${s.id}`},payload=>setNotifications(current=>[payload.new as Row,...current])).on("postgres_changes",{event:"INSERT",schema:"public",table:"bookings",filter:`salon_id=eq.${s.id}`},payload=>setBookings(current=>[payload.new as Row,...current])).subscribe();return()=>supabase.removeChannel(channel);})().catch((loadError)=>{if(!live)return;setError(loadError instanceof Error?loadError.message:"Unable to load the dashboard.");setLoading(false)});return()=>{live=false};},[preview]);
+  useEffect(() => {
+    if (preview) return;
+    let live = true;
+    let removeRealtime: (() => Promise<void>) | null = null;
+
+    async function loadDashboard() {
+      const session = await Promise.race([getSessionForScope("salon"), new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 2500))]);
+      const userId = session?.user?.id || "";
+      if (!live) return;
+      if (!userId) {
+        setError("Sign in with your salon-owner account. Admin and salon sessions are kept separate, so an admin login will not replace this session.");
+        setLoading(false);
+        return;
+      }
+      const { data: s, error: sErr } = await supabase.from("salons").select("*").eq("user_id", userId).limit(1).maybeSingle();
+      if (!live) return;
+      if (sErr || !s) {
+        setError(sErr?.message || "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.");
+        setLoading(false);
+        return;
+      }
+      setSalon(s as Salon);
+      const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications"].map((table) => supabase.from(table).select("*").eq("salon_id", s.id).order("created_at", { ascending: false })));
+      if (!live) return;
+      setBookings((results[0].data || []) as Row[]); setReviews((results[1].data || []) as Row[]); setStyles((results[2].data || []) as Row[]); setStylists((results[3].data || []) as Row[]);
+      setProducts((results[4].data || []) as Row[]); setPromotions((results[5].data || []) as Row[]); setSubscription(((results[6].data || [])[0] || null) as Row | null); setNotifications((results[7].data || []) as Row[]);
+      setSelectedStyle(results[2].data?.[0]?.id || null); setSelectedStylist(results[3].data?.[0]?.id || null); setSelectedProduct(results[4].data?.[0]?.id || null); setLoading(false);
+
+      removeRealtime = subscribeToOwnerUpdates({
+        client: supabase,
+        salonId: s.id,
+        onNotification: (row) => { if (live) setNotifications((current) => [row as Row, ...current]); },
+        onBooking: (row) => { if (live) setBookings((current) => [row as Row, ...current]); },
+        onStatus: (status) => { if (status === "CHANNEL_ERROR" && live) console.error("Salon realtime channel failed", { salonId: s.id, status }); },
+      });
+      if (!live && removeRealtime) await removeRealtime();
+    }
+
+    void loadDashboard().catch((loadError) => {
+      if (!live) return;
+      console.error("Salon dashboard load failed", loadError);
+      setError(loadError instanceof Error ? loadError.message : "Unable to load the dashboard.");
+      setLoading(false);
+    });
+
+    return () => {
+      live = false;
+      if (removeRealtime) void removeRealtime();
+    };
+  }, [preview]);
 
   async function updateSalon(patch: Record<string,unknown>) { if(!salon?.id)return; const {error:updateError}=await supabase.from("salons").update(patch).eq("id",salon.id); if(updateError){setNotice(updateError.message);return;} setSalon(current=>current?{...current,...patch}:current);setNotice("Changes saved to your public salon page."); }
   async function saveRecord(table:string, values:Record<string,unknown>, id?:string) { if(!salon?.id)return null; const query=id?supabase.from(table).update(values).eq("id",id).select().single():supabase.from(table).insert({...values,salon_id:salon.id}).select().single(); const {data,error:saveError}=await query; if(saveError){setNotice(saveError.message);return null;} setNotice("Saved successfully.");return data as Row; }

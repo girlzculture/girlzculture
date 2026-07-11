@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { Mail, MessageSquare, Send } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Ticket = Record<string, string | null>;
 

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { salonSupabase as supabase } from "@/lib/supabase";
 
 type SalonDestinationResult = {
   path: "/salon/dashboard" | "/salon/onboarding" | "/salon/apply";

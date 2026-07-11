@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import Link from "next/link";
+import { salonSupabase as supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { getSalonDestinationForUserId } from "@/lib/salonRedirect";
 
 export default function SalonLogin() {
   const router = useRouter();
@@ -27,17 +27,25 @@ export default function SalonLogin() {
 
     if (data?.session) {
       try {
-        const destination = await getSalonDestinationForUserId(data.session.user.id);
-        setInfoMsg(destination.reason === "matched-salon"
+        const response = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}` } });
+        const destination = await response.json() as { path?: string; role?: string };
+        if (!response.ok || destination.role !== "salon_owner") {
+          await supabase.auth.signOut({ scope: "local" });
+          setErrorMsg(destination.role === "admin"
+            ? "That is a platform-admin account. Use the separate Admin Login; your salon-owner session will remain independent."
+            : "This account is not linked to a salon-owner profile.");
+          return;
+        }
+        setInfoMsg(destination.path === "/salon/dashboard"
           ? "Signed in successfully. Redirecting to your dashboard..."
-          : "Signed in successfully. No salon was linked to this account yet, so you are being sent to onboarding...");
-        router.replace(destination.path);
+          : "Signed in successfully. Redirecting to finish your salon setup...");
+        router.replace(destination.path || "/salon/onboarding");
         router.refresh();
         return;
-      } catch {
-        setInfoMsg("Signed in successfully. Redirecting to onboarding...");
-        router.replace("/salon/onboarding");
-        router.refresh();
+      } catch (roleError) {
+        console.error("Salon role verification failed", roleError);
+        await supabase.auth.signOut({ scope: "local" });
+        setErrorMsg("We could not verify this salon-owner account. Please try again.");
         return;
       }
     }
@@ -63,7 +71,7 @@ export default function SalonLogin() {
         <button type="submit" disabled={loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
-        <a className="text-sm text-ink/70 hover:text-plum" href="/salon/signup">Need an account?</a>
+        <Link className="text-sm text-ink/70 hover:text-plum" href="/salon/signup">Need an account?</Link>
       </div>
     </form>
   );

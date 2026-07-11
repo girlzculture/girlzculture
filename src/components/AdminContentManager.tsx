@@ -3,10 +3,11 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { FileText, Plus, Trash2 } from "lucide-react";
-import ImageUpload from "@/components/ImageUpload";
-import { supabase } from "@/lib/supabase";
+import BaseImageUpload from "@/components/ImageUpload";
+import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Row = Record<string, any>;
+const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
 const defaultSlugs = ["home", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 
