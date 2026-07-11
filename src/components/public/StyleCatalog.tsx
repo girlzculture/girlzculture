@@ -60,7 +60,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
         <button type="button" onClick={() => { setQuery(""); setLength("Length"); setMaintenance("Maintenance"); setPrice("Price"); }} className="ml-auto shrink-0 text-xs font-bold text-magenta">View all</button>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {filtered.map((item, index) => (
           <Link key={item.name} href={`/salons?style=${encodeURIComponent(item.name)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(26,18,32,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(26,18,32,0.12)]">
             <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">

@@ -13,6 +13,7 @@ import {
   Tag,
   UserRound,
 } from "lucide-react";
+import NewsletterForm from "@/components/site/NewsletterForm";
 
 type ActiveTab = "home" | "search" | "bookings" | "inbox" | "profile";
 
@@ -165,9 +166,9 @@ export function TrustStrip() {
 }
 
 const footerGroups = [
-  { title: "Company", links: [["About Us","/about"], ["Careers","/careers"], ["Press","/press"], ["Blog","/blog"]] },
-  { title: "Support", links: [["Help Center","/help"], ["Safety","/safety"], ["Cancellation Policy","/cancellation-policy"], ["Contact Us","/contact"]] },
-  { title: "For Professionals", links: [["Partner With Us","/partner"], ["Tools & Resources","/tools"], ["Success Stories","/success-stories"]] },
+  { title: "Company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
+  { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"]] },
+  { title: "For Professionals", links: [["Partner With Us","/partner"]] },
   { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Accessibility","/accessibility"]] },
 ];
 
@@ -194,11 +195,7 @@ export function PublicFooter() {
         <div className="col-span-2 lg:col-span-1">
           <h2 className="font-serif text-[17px] font-semibold">Stay in the loop</h2>
           <p className="mt-2 text-[11px] leading-5 text-white/65">Tips, new salons, and exclusive offers.</p>
-          <form className="mt-4 flex overflow-hidden rounded-[8px] border border-white/20 bg-white/5">
-            <label htmlFor="footer-email" className="sr-only">Email address</label>
-            <input id="footer-email" type="email" placeholder="Enter your email" className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[11px] text-white outline-none placeholder:text-white/40" />
-            <button type="submit" className="bg-magenta px-4 text-[10px] font-bold text-white">Subscribe</button>
-          </form>
+          <NewsletterForm />
           <p className="mt-5 text-[9px] text-white/45">© {new Date().getFullYear()} Girlz Culture, Inc. All rights reserved.</p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Heart, Search, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+export const dynamic = "force-dynamic";
 import SearchComposer from "@/components/site/SearchComposer";
 import { getContentPage } from "@/lib/content";
 import {

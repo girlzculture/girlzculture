@@ -11,6 +11,22 @@ const fallback: StyleCatalogItem[] = [
   { name: "Feed-in Braids", count: 150, image: "/images/braids-cornrows.jpg", length: "Mid-back", maintenance: "Low", price: 140 },
   { name: "Boho Braids", count: 140, image: "/images/braids-box.jpg", length: "Waist", maintenance: "High", price: 240 },
   { name: "Twists", count: 110, image: "/images/braids-knotless.jpg", length: "Shoulder", maintenance: "Medium", price: 130 },
+  { name: "Passion Twists", count: 96, image: "/images/hero-braids.jpg", length: "Waist", maintenance: "Medium", price: 190 },
+  { name: "Senegalese Twists", count: 84, image: "/images/braids-box.jpg", length: "Mid-back", maintenance: "Low", price: 175 },
+  { name: "Marley Twists", count: 72, image: "/images/braids-knotless.jpg", length: "Shoulder", maintenance: "Medium", price: 160 },
+  { name: "Fulani Braids", count: 125, image: "/images/braids-cornrows.jpg", length: "Mid-back", maintenance: "Medium", price: 185 },
+  { name: "Stitch Braids", count: 118, image: "/images/braids-cornrows.jpg", length: "Shoulder", maintenance: "Low", price: 140 },
+  { name: "Lemonade Braids", count: 102, image: "/images/braids-cornrows.jpg", length: "Waist", maintenance: "Medium", price: 170 },
+  { name: "Tribal Braids", count: 91, image: "/images/hero-braids.jpg", length: "Mid-back", maintenance: "Medium", price: 180 },
+  { name: "Micro Braids", count: 78, image: "/images/braids-box.jpg", length: "Waist", maintenance: "High", price: 260 },
+  { name: "Crochet Braids", count: 115, image: "/images/braids-knotless.jpg", length: "Mid-back", maintenance: "Low", price: 135 },
+  { name: "Faux Locs", count: 108, image: "/images/hero-braids.jpg", length: "Waist", maintenance: "Medium", price: 220 },
+  { name: "Butterfly Locs", count: 94, image: "/images/hero-braids.jpg", length: "Shoulder", maintenance: "Medium", price: 195 },
+  { name: "Soft Locs", count: 88, image: "/images/braids-knotless.jpg", length: "Mid-back", maintenance: "Low", price: 205 },
+  { name: "Bantu Knots", count: 64, image: "/images/braids-box.jpg", length: "Shoulder", maintenance: "Medium", price: 95 },
+  { name: "Braided Ponytail", count: 83, image: "/images/braids-cornrows.jpg", length: "Waist", maintenance: "Low", price: 150 },
+  { name: "Kids Braids", count: 138, image: "/images/braids-knotless.jpg", length: "Shoulder", maintenance: "Low", price: 90 },
+  { name: "Natural Hair Braids", count: 106, image: "/images/hero-braids.jpg", length: "Shoulder", maintenance: "Medium", price: 120 },
 ];
 
 export default async function StylesPage() {

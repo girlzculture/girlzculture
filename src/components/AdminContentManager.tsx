@@ -7,7 +7,8 @@ import ImageUpload from "@/components/ImageUpload";
 import { supabase } from "@/lib/supabase";
 
 type Row = Record<string, any>;
-const defaultSlugs = ["home", "about", "careers", "press", "help", "safety", "cancellation-policy", "terms", "privacy", "accessibility"];
+const defaultSlugs = ["home", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
+const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 
 export default function AdminContentManager() {
   const [tab, setTab] = useState<"pages" | "blog">("pages");
@@ -16,17 +17,56 @@ export default function AdminContentManager() {
   const [page, setPage] = useState<Row | null>(null);
   const [post, setPost] = useState<Row | null>(null);
   const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  async function authHeaders() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Your admin session has expired. Please sign in again.");
+    return { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" };
+  }
+
+  async function loadContent(selectFirst = true) {
+    try {
+      const response = await fetch("/api/admin/content", { headers: await authHeaders(), cache: "no-store" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to load content");
+      setPages(body.pages || []);
+      setPosts(body.posts || []);
+      if (selectFirst) {
+        const visiblePages = (body.pages || []).filter((item: Row) => !hiddenSlugs.has(item.slug));
+        setPage(visiblePages[0] || null);
+        setPost(body.posts?.[0] || null);
+      }
+      return body as { pages: Row[]; posts: Row[] };
+    } catch (error) {
+      console.error("Content Management load error", error);
+      setNotice(error instanceof Error ? error.message : "Unable to load content");
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("content_pages").select("*").order("slug"),
-      supabase.from("blog_posts").select("*").order("updated_at", { ascending: false }),
-    ]).then(([pageResult, postResult]) => {
-      setPages(pageResult.data || []);
-      setPage(pageResult.data?.[0] || null);
-      setPosts(postResult.data || []);
-      setPost(postResult.data?.[0] || null);
-    });
+    let active = true;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Your admin session has expired. Please sign in again.");
+        const response = await fetch("/api/admin/content", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Unable to load content");
+        if (!active) return;
+        setPages(body.pages || []); setPosts(body.posts || []);
+        const visiblePages = (body.pages || []).filter((item: Row) => !hiddenSlugs.has(item.slug));
+        setPage(visiblePages[0] || null); setPost(body.posts?.[0] || null);
+      } catch (error) {
+        console.error("Content Management load error", error);
+        if (active) setNotice(error instanceof Error ? error.message : "Unable to load content");
+      } finally { if (active) setLoading(false); }
+    })();
+    return () => { active = false; };
   }, []);
 
   async function savePage(event: FormEvent<HTMLFormElement>) {
@@ -45,11 +85,22 @@ export default function AdminContentManager() {
       seo_description: form.get("seo_description"), status: form.get("status"), sections,
       updated_at: new Date().toISOString(),
     };
-    const { data, error } = await supabase.from("content_pages").upsert(payload).select().single();
-    if (error) return setNotice(error.message);
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "page", payload }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Page save failed");
+      const data = body.data;
+      const reloaded = await loadContent(false);
+      const persisted = reloaded.pages.find((row) => row.slug === data.slug);
+      if (!persisted || persisted.updated_at !== data.updated_at) throw new Error("The page was sent but could not be verified after saving.");
     setPage(data);
     setPages(rows => rows.some(row => row.slug === data.slug) ? rows.map(row => row.slug === data.slug ? data : row) : [...rows, data]);
-    setNotice("Page saved. Public content is now updated.");
+      setNotice("Page saved, verified in Supabase, and published content is updated.");
+    } catch (error) {
+      console.error("Content Management page save error", { slug: page.slug, error });
+      setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Page save failed");
+    } finally { setSaving(false); }
   }
 
   async function savePost(event: FormEvent<HTMLFormElement>) {
@@ -63,18 +114,37 @@ export default function AdminContentManager() {
       featured: form.get("featured") === "on", published_at: post.published_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    const { data, error } = await supabase.from("blog_posts").upsert(payload).select().single();
-    if (error) return setNotice(error.message);
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "post", payload }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Post save failed");
+      const data = body.data;
+      const reloaded = await loadContent(false);
+      const persisted = reloaded.posts.find((row) => row.id === data.id);
+      if (!persisted || persisted.updated_at !== data.updated_at) throw new Error("The post was sent but could not be verified after saving.");
     setPost(data);
     setPosts(rows => rows.some(row => row.id === data.id) ? rows.map(row => row.id === data.id ? data : row) : [data, ...rows]);
-    setNotice("Blog post saved and synced.");
+      setNotice("Blog post saved and verified in Supabase.");
+    } catch (error) {
+      console.error("Content Management blog save error", { slug: post.slug, error });
+      setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Post save failed");
+    } finally { setSaving(false); }
   }
 
   async function removePost() {
     if (!post?.id || !confirm("Delete this blog post?")) return;
-    await supabase.from("blog_posts").delete().eq("id", post.id);
-    setPosts(rows => rows.filter(row => row.id !== post.id));
-    setPost(null);
+    try {
+      const response = await fetch("/api/admin/content", { method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id: post.id }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Delete failed");
+      setPosts(rows => rows.filter(row => row.id !== post.id));
+      setPost(null);
+      setNotice("Blog post deleted.");
+    } catch (error) {
+      console.error("Content Management delete error", error);
+      setNotice(error instanceof Error ? error.message : "Delete failed");
+    }
   }
 
   function createNew() {
@@ -86,7 +156,9 @@ export default function AdminContentManager() {
     if (slug) setPage({ slug, title: slug.replaceAll("-", " "), hero_title: "New page", sections: [], status: "Draft" });
   }
 
-  const slugs = [...new Set([...defaultSlugs, ...pages.map(item => item.slug)])];
+  const slugs = [...new Set([...defaultSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
+
+  if (loading) return <div className="rounded-xl border border-plum/10 bg-white p-8 text-sm text-ink/60">Loading editable content…</div>;
 
   return (
     <div>
@@ -97,6 +169,7 @@ export default function AdminContentManager() {
         <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : "Post"}</button>
       </div>
       {notice ? <p className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
+      {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
       {tab === "pages" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[250px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">
