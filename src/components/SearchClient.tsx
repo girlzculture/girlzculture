@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -26,7 +26,7 @@ export default function SearchClient() {
   const [startingMap, setStartingMap] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(true);
 
-  const fetchSalons = async (styleQuery?: string) => {
+  const fetchSalons = async () => {
     setLoading(true);
     const { data: salonsData, error } = await supabase.from("salons").select("*");
     if (error) {
@@ -59,8 +59,8 @@ export default function SearchClient() {
   };
 
   useEffect(() => {
-    fetchSalons();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchSalons();
   }, []);
 
   const resultCount = salons.length;
@@ -71,7 +71,7 @@ export default function SearchClient() {
     if (style) qs.set("style", style);
     if (location) qs.set("location", location);
     router.push(`/search?${qs.toString()}`);
-    fetchSalons(style);
+    void fetchSalons();
   };
 
   return (

@@ -1,14 +1,10 @@
-import { Suspense } from "react";
-import SearchClient from "@/components/SearchClient";
+import { redirect } from "next/navigation";
 
-export default function SearchPage() {
-  return (
-    <main className="min-h-screen bg-cream text-ink">
-      <div className="mx-auto w-full max-w-[1200px] px-4 py-8">
-        <Suspense fallback={<div className="text-center text-sm text-ink/70">Loading search...</div>}>
-          <SearchClient />
-        </Suspense>
-      </div>
-    </main>
-  );
+export default async function SearchPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const values = await searchParams;
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === "string") query.set(key, value);
+  }
+  redirect(`/salons${query.size ? `?${query.toString()}` : ""}`);
 }

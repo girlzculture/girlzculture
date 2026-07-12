@@ -1,8 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
   --background: #fbf4ee;
   --foreground: #1a1220;
+  --font-inter: "Inter", Arial, Helvetica, sans-serif;
+  --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
@@ -24,6 +27,7 @@
 
 html {
   scroll-behavior: smooth;
+  background: var(--background);
 }
 
 body {
@@ -31,4 +35,42 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #f3d9e4;
+  color: #5b1a6b;
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 3px solid rgba(91, 26, 107, 0.42);
+  outline-offset: 3px;
+}
+
+button,
+summary,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+section {
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

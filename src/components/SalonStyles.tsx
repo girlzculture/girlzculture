@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useMemo, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 
 type StyleRecord = {
   id?: string;
@@ -9,120 +10,179 @@ type StyleRecord = {
   price_display_max?: number | null;
   duration_min_hours?: number | null;
   duration_max_hours?: number | null;
-  length_options?: any | null;
-  size_options?: any | null;
-  addons?: any | null;
+  base_price?: number | null;
+  workmanship_base_price?: number | null;
+  length_options?: unknown;
+  size_options?: unknown;
+  material_options?: unknown;
+  addons?: unknown;
+  hair_included?: boolean | null;
 };
 
-export default function SalonStyles({ styles }: { styles: StyleRecord[] }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+type StyleMaterialRecord = {
+  id?: string;
+  style_id?: string | null;
+  name?: string | null;
+  price?: number | null;
+  longevity?: string | null;
+  quality_note?: string | null;
+};
 
-  function fmtPrice(min?: number | null, max?: number | null) {
-    if (min == null && max == null) return "—";
-    if (min != null && max != null) return `$${min} – $${max}`;
-    return `$${min ?? max}`;
+type OptionRecord = Record<string, unknown>;
+
+type SalonStylesProps = {
+  styles: StyleRecord[];
+  styleMaterialsByStyleId: Record<string, StyleMaterialRecord[]>;
+  salonSlug: string;
+};
+
+const fallbackMaterials: StyleMaterialRecord[] = [
+  { id: "kanekalon-standard", name: "Kanekalon (Standard)", price: 0, longevity: "4–6 wks", quality_note: "Good" },
+  { id: "xpression-premium", name: "X-Pression (Premium)", price: 20, longevity: "6–8 wks", quality_note: "Better" },
+  { id: "human-hair-premium", name: "Human Hair (Premium)", price: 80, longevity: "8+ wks", quality_note: "Luxury" },
+];
+
+function normalizeOptions(value: unknown): OptionRecord[] {
+  if (Array.isArray(value)) return value.filter((entry): entry is OptionRecord => Boolean(entry) && typeof entry === "object");
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).map(([key, entry]) => ({
+      label: key,
+      ...(entry && typeof entry === "object" ? entry as OptionRecord : {}),
+    }));
   }
+  return [];
+}
 
-  function fmtDuration(min?: number | null, max?: number | null) {
-    if (min == null && max == null) return "—";
-    if (min != null && max != null) return `${min}–${max} hrs`;
-    return `${min ?? max} hrs`;
+function optionLabel(option: OptionRecord) {
+  const label = option.label ?? option.name;
+  return typeof label === "string" && label.trim() ? label : "Option";
+}
+
+function optionPrice(option: OptionRecord) {
+  const value = option.price_add ?? option.price;
+  return typeof value === "number" ? value : 0;
+}
+
+function formatRange(min?: number | null, max?: number | null) {
+  if (min == null && max == null) return "Custom quote";
+  if (min != null && max != null) return `$${min} – $${max}`;
+  return `From $${min ?? max}`;
+}
+
+function formatDuration(min?: number | null, max?: number | null) {
+  if (min == null && max == null) return "Time varies";
+  if (min != null && max != null) return `${min} – ${max} hrs`;
+  return `${min ?? max} hrs`;
+}
+
+function formatAddOnPrice(value: number) {
+  return value > 0 ? `+$${value}` : "$0";
+}
+
+export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonStylesProps) {
+  const defaultOpenId = styles[1]?.id || styles[1]?.name || styles[0]?.id || styles[0]?.name || null;
+  const [openId, setOpenId] = useState<string | null>(defaultOpenId);
+
+  const styleCards = useMemo(() => styles.map((style, index) => {
+    const id = style.id || style.name || `style-${index}`;
+    const savedMaterials = styleMaterialsByStyleId[id] || [];
+    const inlineMaterials = normalizeOptions(style.material_options).map((option, materialIndex) => ({
+      id: `${id}-inline-material-${materialIndex}`,
+      style_id: id,
+      name: optionLabel(option),
+      price: optionPrice(option),
+      longevity: typeof option.longevity === "string" ? option.longevity : null,
+      quality_note: typeof option.quality_note === "string" ? option.quality_note : null,
+    }));
+
+    return {
+      id,
+      style,
+      basePrice: style.workmanship_base_price ?? style.base_price ?? style.price_display_min ?? style.price_display_max ?? 0,
+      lengthOptions: normalizeOptions(style.length_options),
+      addons: normalizeOptions(style.addons),
+      materials: savedMaterials.length ? savedMaterials : inlineMaterials.length ? inlineMaterials : fallbackMaterials,
+    };
+  }), [styles, styleMaterialsByStyleId]);
+
+  if (!styleCards.length) {
+    return <div className="rounded-[12px] border border-dashed border-plum/20 bg-blush/25 p-5 text-sm text-ink/65">This salon has not published its styles yet.</div>;
   }
 
   return (
-    <div className="space-y-4">
-      {styles.length === 0 ? (
-        <div className="rounded-lg border border-plum/10 bg-blush/40 p-4 text-sm text-ink/70">No styles listed yet.</div>
-      ) : (
-        styles.map((s) => {
-          const id = s.id || s.name || Math.random().toString(36).slice(2, 7);
-          const isOpen = openId === id;
-          return (
-            <div key={id} className="overflow-hidden rounded-lg border border-plum/10 bg-white p-4 shadow-sm">
-              <button
-                onClick={() => setOpenId(isOpen ? null : id)}
-                className="flex w-full items-center justify-between gap-4 text-left"
-              >
-                <div>
-                  <div className="flex items-baseline gap-3">
-                    <h4 className="font-serif text-base font-semibold text-plum">{s.name}</h4>
-                    <span className="text-sm text-ink/60">{fmtDuration(s.duration_min_hours, s.duration_max_hours)}</span>
+    <div className="overflow-hidden rounded-[12px] border border-plum/10 bg-white/70">
+      {styleCards.map((card) => {
+        const isOpen = openId === card.id;
+        return (
+          <div key={card.id} className="border-b border-plum/10 last:border-b-0">
+            <button
+              type="button"
+              onClick={() => setOpenId(isOpen ? null : card.id)}
+              aria-expanded={isOpen}
+              className={`grid w-full grid-cols-[minmax(0,1fr)_auto_48px_14px] items-center gap-2 px-4 py-3 text-left transition sm:grid-cols-[minmax(0,1fr)_auto_auto_18px] sm:gap-3 sm:px-5 ${isOpen ? "bg-blush/45 text-magenta" : "bg-white/70 text-ink hover:bg-cream/70"}`}
+            >
+              <span className="truncate text-[12px] font-semibold sm:text-[13px]">{card.style.name || "Style"}</span>
+              <span className="whitespace-nowrap text-[11px] font-semibold text-ink/75">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span>
+              <span className={`whitespace-nowrap text-right text-[8px] sm:min-w-20 sm:text-[10px] ${isOpen ? "text-magenta" : "text-ink/50"}`}>{formatDuration(card.style.duration_min_hours, card.style.duration_max_hours)}</span>
+              <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${isOpen ? "rotate-180 text-magenta" : "text-ink/55"}`} />
+            </button>
+
+            {isOpen ? (
+              <div className="bg-[linear-gradient(105deg,rgba(243,217,228,0.55),rgba(251,244,238,0.65))] px-4 py-4 sm:px-5">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5 xl:grid-cols-[0.78fr_0.72fr_1.45fr_0.95fr]">
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-bold text-plum">Length</h4>
+                    <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
+                      {(card.lengthOptions.length ? card.lengthOptions : [{ label: "Standard", price_add: 0 }]).map((option, index) => (
+                        <li key={`${optionLabel(option)}-${index}`} className="flex items-center justify-between gap-3">
+                          <span>{optionLabel(option)}</span>
+                          <span className="font-semibold text-ink">${card.basePrice + optionPrice(option)}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="text-sm text-ink/70">{fmtPrice(s.price_display_min, s.price_display_max)}</div>
+
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-bold text-plum">Add-ons</h4>
+                    <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
+                      {(card.addons.length ? card.addons : [{ label: "Consultation", price_add: 0 }]).map((option, index) => (
+                        <li key={`${optionLabel(option)}-${index}`} className="flex items-center justify-between gap-3">
+                          <span>{optionLabel(option)}</span>
+                          <span className="font-semibold text-ink">{formatAddOnPrice(optionPrice(option))}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="col-span-2 min-w-0 xl:col-span-1">
+                    <h4 className="text-[11px] font-bold text-plum">Hair / Material Options</h4>
+                    <ul className="mt-3 space-y-2 text-[9px] text-ink/70">
+                      {card.materials.slice(0, 4).map((material) => (
+                        <li key={material.id || material.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-plum/10 pb-2 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:gap-2">
+                          <span className="min-w-0 truncate font-medium text-ink">{material.name || "Material"}</span>
+                          <span className="font-semibold text-ink">{formatAddOnPrice(material.price || 0)}</span>
+                          <span className="whitespace-nowrap text-ink/55 max-sm:col-start-1">{material.longevity || "Varies"}</span>
+                          <span className="whitespace-nowrap text-plum max-sm:text-right">{material.quality_note || "Quality"}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="col-span-2 min-w-0 xl:col-span-1">
+                    <h4 className="text-[11px] font-bold text-plum">What&apos;s Included</h4>
+                    <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
+                      {["Wash & blow dry", "Scalp treatment", "Premium hair", "Style & finish", "Aftercare tips"].map((item) => (
+                        <li key={item} className="flex items-start gap-2"><Check aria-hidden="true" size={13} className="mt-0.5 shrink-0 text-magenta" /><span>{item}</span></li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div className="text-2xl text-ink/40">{isOpen ? "−" : "+"}</div>
-              </button>
-
-              {isOpen ? (
-                <div className="mt-3 border-t pt-3 text-sm text-ink/80">
-                  {s.length_options && (
-                    <div className="mb-3">
-                          <div className="font-semibold text-plum">Length</div>
-                          <ul className="mt-2 space-y-2">
-                        {Array.isArray(s.length_options)
-                          ? s.length_options.map((lo: any, i: number) => (
-                                  <li key={i} className="flex justify-between py-1">
-                                    <span className="text-sm">{lo.label || lo.name || lo}</span>
-                                    <span className="text-sm text-ink/70">{lo.price ? `$${lo.price}` : ""}</span>
-                                  </li>
-                            ))
-                          : Object.entries(s.length_options).map(([k, v]: any) => (
-                                  <li key={k} className="flex justify-between py-1">
-                                    <span className="text-sm">{k}</span>
-                                    <span className="text-sm text-ink/70">{v?.price ? `$${v.price}` : ""}</span>
-                                  </li>
-                            ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {s.size_options && (
-                    <div className="mb-3">
-                      <div className="font-semibold text-plum">Size</div>
-                      <ul className="mt-2 space-y-2">
-                        {Array.isArray(s.size_options)
-                          ? s.size_options.map((so: any, i: number) => (
-                              <li key={i} className="flex justify-between py-1">
-                                <span className="text-sm">{so.label || so.name || so}</span>
-                                <span className="text-sm text-ink/70">{so.price ? `$${so.price}` : ""}</span>
-                              </li>
-                            ))
-                          : Object.entries(s.size_options).map(([k, v]: any) => (
-                              <li key={k} className="flex justify-between py-1">
-                                <span className="text-sm">{k}</span>
-                                <span className="text-sm text-ink/70">{v?.price ? `$${v.price}` : ""}</span>
-                              </li>
-                            ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {s.addons && (
-                    <div>
-                      <div className="font-semibold text-plum">Add-ons</div>
-                      <ul className="mt-2 space-y-2">
-                        {Array.isArray(s.addons)
-                          ? s.addons.map((a: any, i: number) => (
-                              <li key={i} className="flex justify-between py-1">
-                                <span className="text-sm">{a.label || a.name || a}</span>
-                                <span className="text-sm text-ink/70">{a.price ? `$${a.price}` : ""}</span>
-                              </li>
-                            ))
-                          : Object.entries(s.addons).map(([k, v]: any) => (
-                              <li key={k} className="flex justify-between py-1">
-                                <span className="text-sm">{k}</span>
-                                <span className="text-sm text-ink/70">{v?.price ? `$${v.price}` : ""}</span>
-                              </li>
-                            ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          );
-        })
-      )}
+                <p className="mt-4 text-[9px] font-medium text-magenta">Price may vary based on hair density and length.</p>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

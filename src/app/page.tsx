@@ -1,236 +1,282 @@
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, CalendarDays, Heart, Search, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+export const dynamic = "force-dynamic";
+import SearchComposer from "@/components/site/SearchComposer";
+import { getContentPage } from "@/lib/content";
+import {
+  CustomerBottomNav,
+  PublicFooter,
+  PublicHeader,
+  SectionHeading,
+  TrustStrip,
+} from "@/components/site/PublicChrome";
 
 type Salon = {
-  id?: string;
-  name?: string | null;
-  slug?: string | null;
-  neighborhood?: string | null;
-  rating_overall?: number | null;
-  review_count?: number | null;
+  id: string;
+  name: string | null;
+  slug: string | null;
+  neighborhood: string | null;
+  address_city: string | null;
+  rating_overall: number | null;
+  review_count: number | null;
+  cover_photo_url: string | null;
+  badges: string[] | string | null;
+  subscription_tier: string | null;
 };
 
-type Style = {
-  salon_id?: string | null;
-  price_display_min?: number | null;
+type StylePrice = {
+  salon_id: string | null;
+  price_display_min: number | null;
 };
 
-export default async function Home() {
-  const { data: salonsData, error: salonsError } = await supabase.from("salons").select("*").limit(8);
+const salonFallbackImages = [
+  "/images/salon-blush.jpg",
+  "/images/salon-modern.jpg",
+  "/images/salon-warm.jpg",
+  "/images/salon-dark.jpg",
+];
 
-  if (salonsError) console.error("Supabase salons fetch error:", salonsError);
+function formatRating(value: number | null) {
+  return typeof value === "number" && value > 0 ? value.toFixed(1) : "New";
+}
 
-  const salons = (salonsData || []) as Salon[];
+// Centralized so paid-placement rules can be adjusted without touching the UI.
+// When coordinates are available, distance can be added as the next comparison
+// within each subscription tier.
+const SUBSCRIPTION_TIER_PRIORITY: Record<string, number> = {
+  premium: 3,
+  platinum: 3,
+  growth: 2,
+  essentials: 2,
+  basic: 1,
+  "free-seed": 0,
+  free: 0,
+};
 
-  const salonIds = salons.map((s) => s.id).filter(Boolean) as string[];
+function getSubscriptionTierPriority(tier: string | null) {
+  const normalizedTier = tier?.trim().toLowerCase().replace(/\s+/g, "-") || "";
+  return SUBSCRIPTION_TIER_PRIORITY[normalizedTier] || 0;
+}
 
-  let startingMap: Record<string, number | null> = {};
+function rankSalonsForNearbyDiscovery(salons: Salon[]) {
+  return [...salons].sort((left, right) => {
+    const tierDifference = getSubscriptionTierPriority(right.subscription_tier) - getSubscriptionTierPriority(left.subscription_tier);
+    if (tierDifference) return tierDifference;
 
-  if (salonIds.length > 0) {
-    const { data: stylesData } = await supabase
-      .from("styles")
-      .select("salon_id, price_display_min")
-      .in("salon_id", salonIds) as { data?: Style[] };
+    const reviewDifference = (right.review_count || 0) - (left.review_count || 0);
+    if (reviewDifference) return reviewDifference;
 
-    const styles = stylesData || [];
-    startingMap = salonIds.reduce((acc, id) => {
-      const prices = styles.filter((st) => st.salon_id === id).map((s) => s.price_display_min).filter(Boolean) as number[];
-      acc[id] = prices.length ? Math.min(...prices) : null;
-      return acc;
-    }, {} as Record<string, number | null>);
-  }
+    return (right.rating_overall || 0) - (left.rating_overall || 0);
+  });
+}
+
+function SalonCard({
+  salon,
+  index,
+  price,
+  ctaLabel,
+  prominent = false,
+}: {
+  salon: Salon;
+  index: number;
+  price: number | null | undefined;
+  ctaLabel: "View salon" | "View times";
+  prominent?: boolean;
+}) {
+  const image = salon.cover_photo_url || salonFallbackImages[index % salonFallbackImages.length];
+  const salonHref = salon.slug ? `/salon/${salon.slug}` : "/search";
+  const imageHeight = prominent ? "h-[126px] lg:h-[118px] 2xl:h-[132px]" : "h-[112px] lg:h-[98px]";
 
   return (
-    <main className="min-h-screen bg-cream text-ink">
-      <div className="mx-auto w-full max-w-[1200px] px-4 py-8">
-        {/* Top nav */}
-        <header className="mb-8 flex w-full items-center justify-between">
-          <div className="flex items-center gap-6">
-            <a href="/" className="flex items-baseline gap-2">
-              <span className="font-serif text-2xl font-semibold text-plum">Girlz</span>
-              <span className="font-serif text-2xl font-semibold text-magenta">Culture</span>
-            </a>
-
-            <nav className="hidden gap-6 text-sm font-medium md:flex">
-              <a className="text-ink/80 hover:text-plum">Browse Styles</a>
-              <a className="text-ink/80 hover:text-plum">Find Salons</a>
-              <a className="text-ink/80 hover:text-plum">How It Works</a>
-              <a className="text-ink/80 hover:text-plum">For Professionals</a>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button className="hidden rounded-full px-4 py-2 text-sm font-medium text-plum md:inline-block">Log in</button>
-            <button className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(214,24,107,0.18)]">Sign up</button>
-          </div>
-        </header>
-
-        {/* Hero */}
-        <section className="mb-10 grid gap-6 md:grid-cols-2 md:items-center">
-          <div>
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-ink/70">REAL PRICES. REAL REVIEWS. REAL WORK.</p>
-            <h1 className="font-serif mb-4 text-4xl font-semibold leading-tight text-plum sm:text-5xl">Book with Confidence.</h1>
-            <p className="mb-6 max-w-xl text-lg text-ink/80">The beauty booking marketplace for braided styles. Real salons. Real people. Real results.</p>
-
-            <div className="space-y-3">
-              <div className="flex w-full gap-3">
-                <input aria-label="style" placeholder="What style are you looking for?" className="flex-1 rounded-full border border-ink/10 bg-white px-4 py-3 text-sm shadow-sm" />
-                <input aria-label="where" placeholder="Where? (neighborhood, city, or zip)" className="w-44 rounded-full border border-ink/10 bg-white px-4 py-3 text-sm shadow-sm" />
-                <a href="/search" className="rounded-full bg-magenta px-5 py-3 text-sm font-semibold text-white">Search</a>
-              </div>
-
-              <div className="mt-1 text-sm text-ink/70">Popular searches:
-                <a href="/search?style=Knotless%20Braids" className="ml-3 mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Knotless Braids</a>
-                <a href="/search?style=Box%20Braids" className="mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Box Braids</a>
-                <a href="/search?style=Cornrows" className="mr-2 inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Cornrows</a>
-                <a href="/search?style=Locs" className="inline-block rounded-full bg-blush px-3 py-1 text-xs font-medium text-plum">Locs</a>
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden md:flex">
-            <div className="ml-auto h-72 w-full max-w-[520px] rounded-lg bg-[url('/hero-placeholder.jpg')] bg-cover bg-center shadow-sm" />
-          </div>
-        </section>
-
-        {/* Browse by Style */}
-        <section className="mb-10">
-          <h2 className="font-serif mb-4 text-2xl text-plum">Browse by Style</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {[
-              "Knotless Braids",
-              "Box Braids",
-              "Cornrows",
-              "Locs",
-            ].map((name) => (
-              <a key={name} href={`/search?style=${encodeURIComponent(name)}`} className="rounded-lg border border-plum/8 bg-white p-4 text-center shadow-sm">
-                <div className="mb-3 h-28 w-full rounded-md bg-cream/60" />
-                <div className="font-medium text-plum">{name}</div>
-              </a>
-            ))}
-
-            <div className="rounded-lg border border-plum/8 bg-blush/60 p-4 text-center shadow-sm">
-              <div className="mb-3 h-28 w-full rounded-md bg-cream/60 flex items-center justify-center text-plum">Explore</div>
-              <div className="font-medium text-plum">Explore all styles</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Salons */}
-        <section className="mb-10">
-          <div className="flex items-center justify-between">
-            <h2 className="font-serif text-2xl text-plum">Featured Salons</h2>
-            <a className="text-sm text-ink/70 hover:text-plum">View all</a>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {salons.map((salon) => (
-              <div key={salon.id} className="rounded-lg border border-plum/10 bg-white p-4 shadow-sm">
-                <div className="mb-3 h-40 w-full rounded-md bg-cream/60" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-plum">{salon.name}</div>
-                    <div className="text-sm text-ink/70">{salon.neighborhood}</div>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-ink/80">
-                      <div className="flex text-amber">{Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={i < Math.round(salon.rating_overall || 0) ? "text-amber" : "text-ink/20"}>★</span>
-                      ))}</div>
-                      <div>{(salon.rating_overall || 0).toFixed(1)} · {salon.review_count || 0} reviews</div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="rounded-full bg-amber/10 px-3 py-1 text-xs font-semibold text-amber">Verified</div>
-                    <div className="text-sm text-ink/80">From {startingMap[salon.id || ""] ? `$${startingMap[salon.id || ""]}` : "—"}</div>
-                    <button className="mt-2 rounded-full bg-magenta px-4 py-2 text-xs font-semibold text-white">View times</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section className="mb-10 rounded-lg border border-plum/10 bg-white p-6 shadow-sm">
-          <h2 className="font-serif mb-4 text-2xl text-plum">How it works</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { title: "Find", text: "Search styles and salons near you." },
-              { title: "Book", text: "See real availability and prices, book instantly." },
-              { title: "Go", text: "Show up, slay, and leave a review." },
-            ].map((s) => (
-              <div key={s.title} className="rounded-lg bg-blush/30 p-4 text-center">
-                <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-cream text-plum">✓</div>
-                <div className="font-semibold text-plum">{s.title}</div>
-                <div className="mt-2 text-sm text-ink/80">{s.text}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Trust strip */}
-        <section className="mb-10 rounded-lg bg-ink/95 p-6 text-white">
-          <div className="mx-auto grid max-w-[1000px] grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="text-center">
-              <div className="font-semibold">Verified Salons</div>
-              <div className="mt-1 text-sm text-cream/90">Identity & license confirmed</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold">Real Reviews</div>
-              <div className="mt-1 text-sm text-cream/90">Genuine customer feedback</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold">Transparent Pricing</div>
-              <div className="mt-1 text-sm text-cream/90">No surprises, ever</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="rounded-lg border border-plum/10 bg-white p-6 text-sm text-ink/80">
-          <div className="mb-6 flex items-start justify-between">
+    <article className="w-[72vw] max-w-[280px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-[#fffdfa] shadow-[0_4px_16px_rgba(26,18,32,0.06)] sm:w-auto sm:max-w-none">
+      <Link href={salonHref} className="group block">
+        <div className={`relative overflow-hidden bg-blush ${imageHeight}`}>
+          <Image src={image} alt={`${salon.name || "Salon"} interior`} fill sizes="(max-width: 640px) 72vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.02]" />
+          <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">{salon.subscription_tier?.toLowerCase()==="premium"?"Premium · Verified":"Verified"}</span>
+          <span className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm backdrop-blur"><Heart size={17} /></span>
+        </div>
+        <div className="p-3">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-serif text-xl font-semibold text-plum">Girlz</span>
-                <span className="font-serif text-xl font-semibold text-magenta">Culture</span>
-              </div>
-              <div className="mt-2 text-sm text-ink/70">The beauty booking marketplace for braided styles.</div>
+              <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>
+              <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "New York"}</p>
             </div>
+            <p className="shrink-0 text-[10px] text-ink/60"><span className="text-amber">★</span> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-plum/10 pt-2">
+            <p className="text-[10px] text-ink/55">From <strong className="font-serif text-[17px] text-ink">{typeof price === "number" ? `$${price}` : "—"}</strong></p>
+            <span className="rounded-[8px] border border-magenta px-3 py-1.5 text-[9px] font-bold text-magenta">{ctaLabel}</span>
+          </div>
+        </div>
+      </Link>
+    </article>
+  );
+}
 
-            <div className="hidden gap-8 md:flex">
-              <div>
-                <div className="mb-2 font-semibold">Company</div>
-                <div className="space-y-1">
-                  <div>About</div>
-                  <div>Careers</div>
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 font-semibold">Support</div>
-                <div className="space-y-1">
-                  <div>Help Center</div>
-                  <div>Contact</div>
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 font-semibold">Legal</div>
-                <div className="space-y-1">
-                  <div>Terms</div>
-                  <div>Privacy</div>
-                </div>
-              </div>
+function SalonPlaceholder({ prominent = false }: { prominent?: boolean }) {
+  return (
+    <article className={`flex w-[72vw] max-w-[280px] shrink-0 snap-start flex-col items-center justify-center rounded-[14px] border border-dashed border-plum/20 bg-blush/20 p-5 text-center sm:w-auto sm:max-w-none ${prominent ? "min-h-[214px]" : "min-h-[184px]"}`}>
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-magenta shadow-sm"><Sparkles size={22} /></span>
+      <h3 className="mt-4 font-serif text-[19px] font-semibold text-plum">New salons joining soon</h3>
+      <p className="mt-2 text-[11px] leading-5 text-ink/60">We are carefully onboarding trusted braiders near you.</p>
+    </article>
+  );
+}
+
+export default async function Home() {
+  const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "The beauty booking marketplace for braided styles. Real salons. Real people. Real results.", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
+  const { data: salonsData, error: salonsError } = await supabase
+    .from("salons")
+    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier")
+    .order("review_count", { ascending: false })
+    .limit(50);
+
+  const availableSalons = (salonsData || []) as Salon[];
+  const salons = availableSalons.filter(
+    (salon) => (salon.review_count || 0) > 0 || (salon.rating_overall || 0) > 0 || Boolean(salon.cover_photo_url),
+  );
+
+  const salonIds = availableSalons.map((salon) => salon.id);
+  const startingPrices: Record<string, number | null> = {};
+
+  if (salonIds.length) {
+    const { data: styleData } = await supabase
+      .from("styles")
+      .select("salon_id,price_display_min")
+      .in("salon_id", salonIds);
+
+    for (const salonId of salonIds) {
+      const prices = ((styleData || []) as StylePrice[])
+        .filter((style) => style.salon_id === salonId && typeof style.price_display_min === "number")
+        .map((style) => style.price_display_min as number);
+      startingPrices[salonId] = prices.length ? Math.min(...prices) : null;
+    }
+  }
+
+  const nearbySalons = rankSalonsForNearbyDiscovery(availableSalons).slice(0, 4);
+  const paidFeaturedPool = rankSalonsForNearbyDiscovery(salons.filter((salon) => getSubscriptionTierPriority(salon.subscription_tier) >= 2));
+  const featuredSalons = (paidFeaturedPool.length ? paidFeaturedPool : salons).slice(0, 4);
+  const heroSalon = featuredSalons[0];
+  const heroRating = heroSalon?.rating_overall || 4.9;
+  const heroReviewCount = heroSalon?.review_count || 128;
+
+  return (
+    <main className="min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0">
+      <PublicHeader />
+
+      <section className="relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(243,217,228,0.64),transparent_31%),linear-gradient(105deg,#fbf4ee_0%,#fffaf6_55%,#f7e6df_100%)]">
+        <div className="relative mx-auto grid w-full max-w-[1760px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12 2xl:px-16">
+          <div className="relative z-20 flex flex-col justify-center pb-6 pt-9 lg:pb-2 lg:pt-4">
+            <p className="max-w-[235px] text-[9px] font-bold uppercase leading-[1.7] tracking-[0.14em] text-[#6c3f50] sm:text-[11px] lg:max-w-none">
+              Real prices. Real reviews. <span className="text-magenta">♥</span><br />Real work. Real availability.
+            </p>
+            <h1 className="mt-3 max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:mt-2 lg:max-w-[610px] lg:text-[58px]">
+              {homeContent.hero_title}
+            </h1>
+            <p className="mt-4 max-w-[245px] text-[13px] leading-[1.45] text-ink/75 sm:text-[15px] lg:mt-3 lg:max-w-[470px]">
+              {homeContent.hero_subtitle}
+            </p>
+
+            <div className="relative z-30 mt-5 w-full max-w-[760px] lg:mt-4">
+              <SearchComposer />
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-ink/60">© {new Date().getFullYear()} Girlz Culture</div>
-            <div className="flex items-center gap-3 text-ink/60">
-              <div className="h-6 w-6 rounded-full bg-ink/10" />
-              <div className="h-6 w-6 rounded-full bg-ink/10" />
-              <div className="h-6 w-6 rounded-full bg-ink/10" />
-            </div>
+          <div className="pointer-events-none absolute right-0 top-0 h-[225px] w-[53%] lg:inset-y-0 lg:h-auto lg:w-[52%]">
+            <Image
+              src={homeContent.hero_image_url || "/images/braids-knotless.jpg"}
+              alt="Client wearing a long braided style"
+              fill
+              priority
+              sizes="(max-width: 1023px) 53vw, 52vw"
+              className="object-cover object-[44%_38%] lg:object-[48%_38%]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#fffaf6] via-[#fffaf6]/30 to-transparent lg:inset-y-0 lg:left-0 lg:right-auto lg:w-1/3 lg:via-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-cream/80 to-transparent lg:h-20 lg:from-cream/70" />
           </div>
-        </footer>
+
+          <div className="absolute right-[3%] top-[49%] z-20 hidden w-[168px] rounded-[16px] bg-[linear-gradient(145deg,#35123b,#211027)] p-4 text-white shadow-[0_18px_40px_rgba(26,18,32,0.22)] lg:block">
+            <div className="text-[14px] font-bold text-amber">★★★★★ <span className="ml-1 text-white">{heroRating.toFixed(1)}</span></div>
+            <div className="mt-1 text-[11px] text-white/80">{heroReviewCount.toLocaleString()}+ reviews</div>
+            <div className="mt-3 flex -space-x-2">
+              {["braids-cornrows.jpg", "braids-box.jpg", "hero-braids.jpg"].map((image) => (
+                <span key={image} className="relative h-7 w-7 overflow-hidden rounded-full border-2 border-[#35123b]">
+                  <Image src={`/images/${image}`} alt="" fill sizes="28px" className="object-cover" />
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] leading-4 text-white/85">Real reviews from real clients</p>
+          </div>
+
+        </div>
+      </section>
+
+      <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
+        <section className="py-3 sm:py-5">
+          <SectionHeading title="Salons Near You" description="Discover trusted braiders ready to book." href="/search" linkLabel="View all salons" />
+
+          {salonsError ? (
+            <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">Nearby salons are taking a quick beauty break. Try again shortly.</div>
+          ) : (
+            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">
+              {nearbySalons.map((salon, index) => (
+                <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel="View salon" prominent />
+              ))}
+
+              {Array.from({ length: Math.max(0, 4 - nearbySalons.length) }, (_, index) => (
+                <SalonPlaceholder key={`nearby-joining-${index}`} prominent />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="pb-5 sm:pb-6">
+          <SectionHeading title="Featured Salons" description="Handpicked top-rated salons near you." href="/search" linkLabel="View all salons" />
+
+          {salonsError ? (
+            <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">Featured salons are taking a quick beauty break. Try again shortly.</div>
+          ) : (
+            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+              {featuredSalons.map((salon, index) => (
+                <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel="View times" />
+              ))}
+
+              {Array.from({ length: Math.max(0, 4 - featuredSalons.length) }, (_, index) => (
+                <SalonPlaceholder key={`joining-${index}`} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section id="how-it-works" className="mb-3 rounded-[16px] bg-[linear-gradient(105deg,#fff7f3,#f8e1e7)] px-4 py-4 sm:px-7 lg:grid lg:grid-cols-[200px_1fr] lg:items-center lg:gap-7">
+          <h2 className="font-serif text-[22px] font-semibold tracking-[-0.03em] text-ink">How it works</h2>
+          <div className="mt-4 grid grid-cols-3 gap-3 lg:mt-0">
+            {[
+              { title: "Find", description: "Search styles or salons near you.", icon: Search },
+              { title: "Book", description: "See real availability and prices.", icon: CalendarDays },
+              { title: "Go", description: "Show up, slay, and leave a review.", icon: Heart },
+            ].map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.title} className="relative flex flex-col items-center text-center sm:flex-row sm:text-left">
+                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-magenta shadow-sm"><Icon size={23} strokeWidth={1.9} /></span>
+                  <span className="mt-2 sm:ml-3 sm:mt-0">
+                    <span className="block font-serif text-[16px] font-semibold text-ink">{step.title}</span>
+                    <span className="mt-1 hidden max-w-[145px] text-[10px] leading-4 text-ink/60 sm:block">{step.description}</span>
+                  </span>
+                  {index < 2 ? <ArrowRight aria-hidden="true" size={16} className="absolute -right-2 top-4 hidden text-plum/35 lg:block" /> : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </div>
+
+      <TrustStrip />
+      <PublicFooter />
+      <CustomerBottomNav active="home" />
     </main>
   );
 }
