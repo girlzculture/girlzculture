@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Crown, Sparkles } from "lucide-react";
+import { BadgeCheck, Check, Crown } from "lucide-react";
 import { PLAN_ORDER, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 
@@ -18,7 +18,7 @@ export default function PlansPage() {
           const popular = name === "Growth";
           return <article key={name} className={`relative rounded-[20px] border bg-white/80 p-7 shadow-[0_18px_55px_rgba(26,18,32,.06)] ${popular ? "border-magenta ring-2 ring-magenta/10" : "border-plum/10"}`}>
             {popular ? <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-magenta px-4 py-1.5 text-[10px] font-bold uppercase tracking-[.1em] text-white">Most Popular</span> : null}
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-blush text-plum">{name === "Premium" ? <Crown /> : <Sparkles />}</span>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-blush text-plum">{name === "Premium" ? <Crown /> : <BadgeCheck />}</span>
             <h2 className="mt-5 font-serif text-3xl font-semibold text-plum">{name}</h2>
             <p className="mt-2 min-h-12 text-sm leading-6 text-ink/60">{plan.description}</p>
             <p className="mt-6 font-serif text-4xl font-semibold text-ink">${plan.monthlyPrice.toFixed(2)}<span className="font-sans text-xs font-normal text-ink/50"> / month</span></p>

@@ -104,7 +104,7 @@ function SalonCard({
               <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>
               <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "Location not provided"}</p>
             </div>
-            <p className="shrink-0 text-[10px] text-ink/60"><span className="text-amber">★</span> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
+            <p className="flex shrink-0 items-center gap-1 text-[10px] text-ink/60"><Star size={12} className="fill-amber text-amber" aria-hidden="true" /> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-plum/10 pt-2">
             <p className="text-[10px] text-ink/55">From <strong className="font-serif text-[17px] text-ink">{typeof price === "number" ? `$${price}` : "—"}</strong></p>
@@ -159,7 +159,7 @@ export default async function Home() {
         <div className="relative mx-auto grid w-full max-w-[1760px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12 2xl:px-16">
           <div className="relative z-20 flex flex-col justify-center pb-6 pt-9 lg:pb-2 lg:pt-4">
             <p className="max-w-[235px] text-[9px] font-bold uppercase leading-[1.7] tracking-[0.14em] text-[#6c3f50] sm:text-[11px] lg:max-w-none">
-              Real prices. Real reviews. <span className="text-magenta">♥</span><br />Real work. Real availability.
+              Real prices. Real reviews. <Heart size={13} className="inline fill-magenta text-magenta" aria-hidden="true" /><br />Real work. Real availability.
             </p>
             <h1 className="mt-3 max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:mt-2 lg:max-w-[610px] lg:text-[58px]">
               {homeContent.hero_title}
@@ -187,7 +187,6 @@ export default async function Home() {
           </div>
 
           {socialProofLabels.length ? <div className="absolute right-[3%] top-[49%] z-20 hidden w-[190px] rounded-[16px] bg-[linear-gradient(145deg,#35123b,#211027)] p-4 text-white shadow-[0_18px_40px_rgba(26,18,32,0.22)] lg:block">
-            <Star size={18} className="text-amber" />
             {socialProofLabels.map((label, index) => <p key={label} className={index === 0 ? "mt-2 font-serif text-lg font-semibold" : "mt-1 text-[10px] leading-4 text-white/80"}>{label}</p>)}
           </div> : null}
 

@@ -2,7 +2,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, LockKeyhole, Mail, Phone, ShieldCheck, Sparkles, Star } from "lucide-react";
+import { BadgeCheck, Eye, LockKeyhole, Mail, Phone, ShieldCheck, UsersRound } from "lucide-react";
 import { salonSupabase as supabase } from "@/lib/supabase";
 import { normalizePlan } from "@/lib/plans";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
@@ -18,7 +18,7 @@ export default function SalonSignup() {
     <button disabled={loading} className="w-full rounded-[9px] bg-magenta py-4 font-bold text-white">{loading?"Creating account…":"Join Now"}</button>
     <div className="rounded-[12px] bg-blush/45 p-4 text-sm text-plum">After you sign up, you’ll complete a short application to list your salon.</div>
     <p className="text-center text-sm">Already have an account? <Link href="/salon/login" className="font-semibold text-magenta">Log in</Link></p>
-    <div className="grid grid-cols-3 gap-3 border-t border-plum/10 pt-5 text-center text-[10px] text-ink/70">{[[ShieldCheck,"Secure & Private"],[Sparkles,"Quality Community"],[Star,"Built for Stylists"]].map(([Icon,label])=><div key={label as string}><Icon className="mx-auto mb-2 text-amber" size={23}/>{label as string}</div>)}</div>
+    <div className="grid grid-cols-3 gap-3 border-t border-plum/10 pt-5 text-center text-[10px] text-ink/70">{[[ShieldCheck,"Secure & Private"],[UsersRound,"Quality Community"],[BadgeCheck,"Built for Stylists"]].map(([Icon,label])=><div key={label as string}><Icon className="mx-auto mb-2 text-amber" size={23}/>{label as string}</div>)}</div>
   </form>;
 }
 function Field({label,icon:Icon,children}:{label:string;icon:typeof Mail;children:React.ReactNode}){return <label className="block"><span className="mb-2 block text-sm font-semibold">{label}</span><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 bg-white px-4 py-3.5"><Icon size={19} className="text-ink/55"/>{children}</span></label>}

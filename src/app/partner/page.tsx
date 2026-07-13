@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CreditCard, Heart, Search, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
+import { BadgeCheck as Sparkles, CalendarDays, CreditCard, Heart, Search, ShieldCheck, UsersRound } from "lucide-react";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { PLAN_ORDER, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { getContentPage } from "@/lib/content";

@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, LockKeyhole, Mail, ShieldCheck, Star, UserRound } from "lucide-react";
+import { BadgeCheck as Star, Eye, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 

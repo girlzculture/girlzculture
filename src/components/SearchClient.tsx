@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 
 type Salon = {
   id?: string;
@@ -120,16 +121,13 @@ export default function SearchClient() {
                     <div className="font-semibold text-plum">{s.name}</div>
                     <div className="text-sm text-ink/70">{s.neighborhood}</div>
                     <div className="mt-2 flex items-center gap-2 text-sm text-ink/80">
-                      <div className="flex">{Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={i < Math.round(s.rating_overall || 0) ? "text-amber" : "text-ink/20"}>★</span>
-                      ))}</div>
-                      <div>{(s.rating_overall || 0).toFixed(1)} · {s.review_count || 0} reviews</div>
+                      {Number(s.review_count || 0) > 0 ? <><Star size={15} className="fill-amber text-amber" aria-hidden="true" /><div>{Number(s.rating_overall || 0).toFixed(1)} · {s.review_count} reviews</div></> : <div>New (0 reviews)</div>}
                     </div>
-                    <div className="mt-2 text-sm text-ink/80">{Array.isArray(s.badges) ? s.badges.join(" • ") : s.badges}</div>
+                    <div className="mt-2 text-sm text-ink/80">{Array.isArray(s.badges) ? s.badges.join(", ") : s.badges}</div>
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    <div className="text-sm text-ink/80">From {startingMap[s.id || ""] ? `$${startingMap[s.id || ""]}` : "—"}</div>
+                    <div className="text-sm text-ink/80">{startingMap[s.id || ""] ? `From $${startingMap[s.id || ""]}` : "Price not listed"}</div>
                     <a href={`/salon/${s.slug}`} className="rounded-full bg-magenta px-4 py-2 text-xs font-semibold text-white">View salon</a>
                   </div>
                 </div>
