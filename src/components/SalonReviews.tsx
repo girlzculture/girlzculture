@@ -102,7 +102,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount, f
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-serif text-[22px] font-semibold text-ink">Reviews</h2>
-          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span>
+          {salonReviewCount > 0 && salonRating > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span> : <span className="text-[12px] font-semibold text-ink">New</span>}
           <span className="text-[9px] text-ink/50">({salonReviewCount} reviews)</span>
         </div>
         <a href="#reviews" className="text-[9px] font-semibold text-magenta">View all</a>
@@ -169,10 +169,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount, f
             ) : null}
           </article>
         ) : (
-          <div className="rounded-[10px] border border-dashed border-plum/20 bg-blush/25 p-5 text-center">
-            <div className="text-[10px] font-semibold text-plum">Verified review details are being added</div>
-            <p className="mt-2 text-[9px] leading-4 text-ink/55">Reviews from completed bookings will appear here automatically.</p>
-          </div>
+          <p className="py-5 text-center text-[10px] leading-5 text-ink/55">No reviews yet. Reviews from completed bookings will appear here automatically.</p>
         )}
       </div>
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import ImageUpload from "@/components/ImageUpload";
+import { BadgeCheck, Star } from "lucide-react";
 
 type BookingRecord = {
   id?: string;
@@ -36,9 +37,7 @@ const starOptions = [1, 2, 3, 4, 5];
 
 function renderStars(value: number) {
   return Array.from({ length: 5 }, (_, index) => (
-    <span key={index} className={index < value ? "text-amber" : "text-ink/25"}>
-      ★
-    </span>
+    <Star key={index} size={20} className={index < value ? "fill-amber text-amber" : "text-ink/25"} aria-hidden="true" />
   ));
 }
 
@@ -115,7 +114,7 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
   if (submitted) {
     return (
       <div className="rounded-[32px] border border-plum/10 bg-blush/50 p-8 text-center shadow-sm">
-        <div className="text-amber text-5xl">⭐</div>
+        <BadgeCheck size={48} className="mx-auto text-amber" aria-hidden="true" />
         <h2 className="mt-4 font-serif text-3xl font-semibold text-plum">Thanks for your review</h2>
         <p className="mt-3 text-sm leading-7 text-ink/80">Your feedback helps the Girlz Culture community find the best salons and styles.</p>
         <a href={`/salon/${salon.id}`} className="mt-6 inline-flex rounded-full bg-magenta px-6 py-3 text-sm font-semibold text-white">See salon reviews</a>

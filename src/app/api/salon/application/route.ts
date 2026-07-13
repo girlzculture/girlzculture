@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizePlan } from "@/lib/plans";
-import { cleanEmail, cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
+import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 
 export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const slugBase = cleanText(body.business_name, 120).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "salon";
     const salonPatch = {
       user_id: user.id, name: cleanText(body.business_name, 120), owner_name: cleanText(body.owner_name, 120),
-      email: cleanEmail(body.business_email), phone: cleanText(body.phone, 30),
+      email: cleanEmail(body.business_email), phone: cleanUsPhone(body.phone),
       address_street: cleanText(body.street_address, 180), address_city: cleanText(body.city, 100), address_state: cleanText(body.state, 50),
       address_zip: cleanText(body.zip_code, 12), neighborhood: cleanText(body.neighborhood, 100),
       business_type: cleanText(body.business_type, 80), application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",

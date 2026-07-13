@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, CreditCard, Search, ShieldCheck, Sparkles, Star, Tags, UserRoundCheck } from "lucide-react";
+import { BadgeCheck, CalendarClock, CreditCard, Search, ShieldCheck, Star, Tags, UserRoundCheck } from "lucide-react";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 
 const steps = [
@@ -7,7 +7,7 @@ const steps = [
   { title: "Compare real prices & reviews", text: "See transparent pricing and verified reviews before you book.", icon: Star },
   { title: "Pick your stylist & time", text: "Choose your stylist and an available appointment slot.", icon: CalendarClock },
   { title: "Book with a small deposit", text: "Pay a 10% reservation deposit to secure your appointment. The balance is paid at the salon.", icon: CreditCard },
-  { title: "Show up & slay", text: "Go to your appointment, enjoy your service, then leave a review.", icon: Sparkles },
+  { title: "Show up & slay", text: "Go to your appointment, enjoy your service, then leave a review.", icon: BadgeCheck },
 ];
 const benefits = [
   { title: "Verified Salons", text: "Every salon is identity-verified and reviewed for quality and professionalism.", icon: ShieldCheck },

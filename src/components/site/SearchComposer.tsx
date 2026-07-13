@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MapPin, Search } from "lucide-react";
 
 export default function SearchComposer({ compact = false }: { compact?: boolean }) {
@@ -37,22 +36,6 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
           Search
         </button>
       </div>
-      {!compact ? (
-        <div className="mt-1 flex items-center gap-2 overflow-x-auto px-2 pb-0.5 text-[9px] [scrollbar-width:none] md:mt-0 [&::-webkit-scrollbar]:hidden">
-          <span className="shrink-0 font-semibold text-ink/65">Popular searches:</span>
-          {[
-            ["Knotless Braids", "Knotless"],
-            ["Boho Braids", "Boho"],
-            ["Cornrows", "Cornrows"],
-            ["Locs", "Locs"],
-            ["Box Braids", "Box Braids"],
-          ].map(([value, label], index) => (
-            <Link key={value} href={`/salons?style=${encodeURIComponent(value)}`} className={`shrink-0 rounded-full border border-plum/10 bg-cream px-3 py-1 font-semibold text-ink/70 hover:border-magenta/30 hover:text-magenta ${index === 4 ? "hidden sm:inline-flex" : ""}`}>
-              {label}
-            </Link>
-          ))}
-        </div>
-      ) : null}
     </form>
   );
 }

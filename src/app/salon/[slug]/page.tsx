@@ -2,16 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   BadgeCheck,
-  CheckCircle2,
   Clock3,
   MapPin,
   Navigation,
   Package,
   ShieldCheck,
-  Sparkles,
   Star,
   Tag,
-  Users,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SalonReviews from "@/components/SalonReviews";
@@ -20,6 +17,7 @@ import SalonStylists from "@/components/SalonStylists";
 import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome";
 import SafeImage from "@/components/site/SafeImage";
 import SalonProfileActions from "@/components/site/SalonProfileActions";
+import { getContentPage } from "@/lib/content";
 
 type SalonRecord = {
   id: string;
@@ -172,6 +170,7 @@ function renderStars(rating: number) {
 
 export default async function SalonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase.from("salons").select("*").eq("slug", slug).maybeSingle<SalonRecord>();
 
   if (salonError) throw salonError;
@@ -210,7 +209,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   const galleryItems = [...uploadedGallery, ...galleryFallbacks].filter((photo, index, list) => list.indexOf(photo) === index).slice(0, 5);
   while (galleryItems.length < 5) galleryItems.push(galleryFallbacks[galleryItems.length % galleryFallbacks.length]);
   const remainingPhotos = Math.max(0, uploadedGallery.length - 5);
-  const morePhotoLabel = remainingPhotos ? `+${remainingPhotos} more` : "+24 more";
+  const morePhotoLabel = remainingPhotos ? `+${remainingPhotos} more` : null;
   const locationLine = [salon.neighborhood, salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
   const addressLine = [salon.address_street, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
   const mapQuery = salon.latitude != null && salon.longitude != null ? `${salon.latitude},${salon.longitude}` : addressLine;
@@ -219,11 +218,8 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   const hours = normalizeHours(salon.hours);
   const isVerified = salon.verification_status?.toLowerCase().startsWith("verified") ?? false;
 
-  const trustBadges = [
-    { title: "Verified", subtitle: "Identity & license confirmed", icon: ShieldCheck },
-    { title: "Transparent Pricing", subtitle: "No surprises, ever", icon: Tag },
-    { title: "Time Respected", subtitle: "On-time, every time", icon: Clock3 },
-  ];
+  const trustIcons = [ShieldCheck, Tag, Clock3];
+  const trustLabels = [pageContent.labels?.trust_label_1, pageContent.labels?.trust_label_2, pageContent.labels?.trust_label_3].filter(Boolean) as string[];
 
   return (
     <main className="min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0">
@@ -243,7 +239,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
               {galleryItems.slice(1, 5).map((photo, index) => (
                 <div key={`${photo}-${index}`} className="relative overflow-hidden rounded-[7px] bg-blush">
                   <SafeImage src={photo} fallbackSrc={galleryFallbacks[(index + 1) % galleryFallbacks.length]} alt={`${salon.name || "Salon"} gallery ${index + 2}`} className="h-full w-full object-cover" />
-                  {index === 3 ? <span className="absolute inset-0 flex items-center justify-center whitespace-pre-line bg-ink/55 text-center font-serif text-[18px] font-semibold leading-5 text-white">{morePhotoLabel.replace(" ", "\n")}</span> : null}
+                  {index === 3 && morePhotoLabel ? <span className="absolute inset-0 flex items-center justify-center whitespace-pre-line bg-ink/55 text-center font-serif text-[18px] font-semibold leading-5 text-white">{morePhotoLabel.replace(" ", "\n")}</span> : null}
                 </div>
               ))}
             </div>
@@ -253,27 +249,21 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
             <div><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]"><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span><span className="text-ink/55">({reviewCount} reviews)</span></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span></> : <strong>New</strong>}<span className="text-ink/55">({reviewCount} reviews)</span></div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {trustBadges.map((badge) => {
-                const Icon = badge.icon;
+            {trustLabels.length ? <div className="mt-4 grid grid-cols-3 gap-2">
+              {trustLabels.map((label, index) => {
+                const Icon = trustIcons[index] || ShieldCheck;
                 return (
-                  <div key={badge.title} className="flex min-h-[58px] items-center gap-2 rounded-[11px] border border-plum/10 bg-white/65 px-2.5 py-2">
+                  <div key={label} className="flex min-h-[58px] items-center gap-2 rounded-[11px] border border-plum/10 bg-white/65 px-2.5 py-2">
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f9ece5] text-amber"><Icon size={16} /></span>
-                    <span className="min-w-0"><span className="block text-[9px] font-semibold leading-tight text-ink">{badge.title}</span><span className="mt-1 hidden text-[8px] leading-[1.25] text-ink/55 sm:block">{badge.subtitle}</span></span>
+                    <span className="min-w-0 text-[9px] font-semibold leading-tight text-ink">{label}</span>
                   </div>
                 );
               })}
-            </div>
+            </div> : null}
 
-            <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description || "A welcoming salon specializing in beautiful, healthy, long-lasting protective styles."}</p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[9px] text-ink/55">
-              <span className="inline-flex items-center gap-1.5"><Users size={13} />Licensed Professionals</span>
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={13} />Clean & Safe Studio</span>
-              <span className="inline-flex items-center gap-1.5"><Sparkles size={13} />Trusted by {Math.max(2300, reviewCount).toLocaleString()}+ Clients</span>
-            </div>
+            <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description || "This salon has not added a description yet."}</p>
 
             <div className="mt-4 flex items-center gap-2">
               <Link href={`/salon/${salon.slug || slug}/book`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>

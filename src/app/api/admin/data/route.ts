@@ -4,10 +4,19 @@ export async function GET(request: Request) {
   try {
     const { admin } = await requireAdmin(request);
     const sources = [
-      ["salons", "name"], ["salon_applications", "submitted_at"], ["customers", "created_at"],
-      ["bookings", "appointment_datetime"], ["reviews", "created_at"], ["support_tickets", "created_at"],
+      ["salons", "name", true], ["salon_applications", "submitted_at", true], ["customers", "created_at", true],
+      ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
+      ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
+      ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false],
     ] as const;
-    const results = await Promise.all(sources.map(([table, order]) => admin.from(table).select("*").order(order, { ascending: false }).limit(500)));
+    const results = await Promise.all(sources.map(async ([table, order, required]) => {
+      const result = await admin.from(table).select("*").order(order, { ascending: false }).limit(500);
+      if (result.error && !required) {
+        console.warn("Optional admin data source unavailable", { table, error: result.error.message });
+        return { data: [], error: null };
+      }
+      return result;
+    }));
     const payload: Record<string, unknown[]> = {};
     results.forEach((result, index) => {
       if (result.error) throw result.error;
