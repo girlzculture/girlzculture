@@ -36,12 +36,6 @@ type SalonStylesProps = {
   salonSlug: string;
 };
 
-const fallbackMaterials: StyleMaterialRecord[] = [
-  { id: "kanekalon-standard", name: "Kanekalon (Standard)", price: 0, longevity: "4–6 wks", quality_note: "Good" },
-  { id: "xpression-premium", name: "X-Pression (Premium)", price: 20, longevity: "6–8 wks", quality_note: "Better" },
-  { id: "human-hair-premium", name: "Human Hair (Premium)", price: 80, longevity: "8+ wks", quality_note: "Luxury" },
-];
-
 function normalizeOptions(value: unknown): OptionRecord[] {
   if (Array.isArray(value)) return value.filter((entry): entry is OptionRecord => Boolean(entry) && typeof entry === "object");
   if (value && typeof value === "object") {
@@ -101,7 +95,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
       basePrice: style.workmanship_base_price ?? style.base_price ?? style.price_display_min ?? style.price_display_max ?? 0,
       lengthOptions: normalizeOptions(style.length_options),
       addons: normalizeOptions(style.addons),
-      materials: savedMaterials.length ? savedMaterials : inlineMaterials.length ? inlineMaterials : fallbackMaterials,
+      materials: savedMaterials.length ? savedMaterials : inlineMaterials,
     };
   }), [styles, styleMaterialsByStyleId]);
 

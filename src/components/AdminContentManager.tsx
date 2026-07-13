@@ -8,8 +8,13 @@ import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Row = Record<string, any>;
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
-const defaultSlugs = ["home", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
+const defaultSlugs = ["home", "salon-profile", "partner", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
+const labelSlots: Record<string, Array<[string, string]>> = {
+  home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"]],
+  "salon-profile": [["trust_label_1", "Salon trust label 1"], ["trust_label_2", "Salon trust label 2"], ["trust_label_3", "Salon trust label 3"]],
+  partner: [["stat_label_1", "Partner photo label 1"], ["stat_label_2", "Partner photo label 2"], ["stat_label_3", "Partner photo label 3"]],
+};
 
 export default function AdminContentManager() {
   const [tab, setTab] = useState<"pages" | "blog">("pages");
@@ -79,11 +84,12 @@ export default function AdminContentManager() {
       title: String(form.get(`section_title_${index}`) || ""),
       body: String(form.get(`section_body_${index}`) || ""),
     }));
+    const labels = Object.fromEntries((labelSlots[page.slug] || []).map(([key]) => [key, String(form.get(`label_${key}`) || "").trim()]));
     const payload = {
       ...page,
       title: form.get("title"), eyebrow: form.get("eyebrow"), hero_title: form.get("hero_title"),
       hero_subtitle: form.get("hero_subtitle"), seo_title: form.get("seo_title"),
-      seo_description: form.get("seo_description"), status: form.get("status"), sections,
+      seo_description: form.get("seo_description"), status: form.get("status"), sections, labels,
       updated_at: new Date().toISOString(),
     };
     setSaving(true); setNotice("");
@@ -190,7 +196,27 @@ export default function AdminContentManager() {
 }
 
 function PageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
-  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 lg:grid-cols-2"><Field label="Page title" name="title" value={page.title} /><Field label="Eyebrow" name="eyebrow" value={page.eyebrow} /><div className="lg:col-span-2"><Field label="Hero heading" name="hero_title" value={page.hero_title} /></div><Area label="Hero description" name="hero_subtitle" value={page.hero_subtitle} rows={3} /><ImageUpload bucket="content-media" value={page.hero_image_url} onChange={value => setPage(row => ({ ...row, hero_image_url: value }))} label="Hero image" folder={page.slug} /><ImageUpload bucket="content-media" value={page.background_image_url} onChange={value => setPage(row => ({ ...row, background_image_url: value }))} label="Background image" folder={page.slug} /></div><h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2><div className="mt-3 space-y-3">{(page.sections || []).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div><button type="button" onClick={() => setPage(row => ({ ...row, sections: [...(row?.sections || []), { title: "New Section", body: "" }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button><div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div><button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button></form>;
+  const slots = labelSlots[page.slug] || [];
+  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Field label="Page title" name="title" value={page.title} />
+      <Field label="Eyebrow" name="eyebrow" value={page.eyebrow} />
+      <div className="lg:col-span-2"><Field label="Hero heading" name="hero_title" value={page.hero_title} /></div>
+      <Area label="Hero description" name="hero_subtitle" value={page.hero_subtitle} rows={3} />
+      <ImageUpload bucket="content-media" value={page.hero_image_url} onChange={value => setPage(row => ({ ...row, hero_image_url: value }))} label="Hero image" folder={page.slug} />
+      <ImageUpload bucket="content-media" value={page.background_image_url} onChange={value => setPage(row => ({ ...row, background_image_url: value }))} label="Background image" folder={page.slug} />
+    </div>
+    {slots.length ? <>
+      <h2 className="mt-6 font-serif text-2xl text-plum">Optional page labels</h2>
+      <p className="mt-1 text-xs text-ink/55">These labels remain hidden until you add text. Clear a field to remove it from the public page.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">{slots.map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]} />)}</div>
+    </> : null}
+    <h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2>
+    <div className="mt-3 space-y-3">{(page.sections || []).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div>
+    <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...(row?.sections || []), { title: "New Section", body: "" }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
+    <div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div>
+    <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button>
+  </form>;
 }
 
 function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void }) {

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Heart, Search, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarDays, Heart, Search, Star } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 import SearchComposer from "@/components/site/SearchComposer";
@@ -24,6 +24,7 @@ type Salon = {
   cover_photo_url: string | null;
   badges: string[] | string | null;
   subscription_tier: string | null;
+  verification_status: string | null;
 };
 
 type StylePrice = {
@@ -94,14 +95,14 @@ function SalonCard({
       <Link href={salonHref} className="group block">
         <div className={`relative overflow-hidden bg-blush ${imageHeight}`}>
           <Image src={image} alt={`${salon.name || "Salon"} interior`} fill sizes="(max-width: 640px) 72vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.02]" />
-          <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">{salon.subscription_tier?.toLowerCase()==="premium"?"Premium · Verified":"Verified"}</span>
+          {salon.subscription_tier?.toLowerCase() === "premium" || salon.verification_status?.toLowerCase() === "verified" ? <span className="absolute left-3 top-3 rounded-full bg-plum/95 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white">{salon.subscription_tier?.toLowerCase() === "premium" ? "Premium" : "Verified"}</span> : null}
           <span className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm backdrop-blur"><Heart size={17} /></span>
         </div>
         <div className="p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>
-              <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "New York"}</p>
+              <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "Location not provided"}</p>
             </div>
             <p className="shrink-0 text-[10px] text-ink/60"><span className="text-amber">★</span> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
           </div>
@@ -115,21 +116,11 @@ function SalonCard({
   );
 }
 
-function SalonPlaceholder({ prominent = false }: { prominent?: boolean }) {
-  return (
-    <article className={`flex w-[72vw] max-w-[280px] shrink-0 snap-start flex-col items-center justify-center rounded-[14px] border border-dashed border-plum/20 bg-blush/20 p-5 text-center sm:w-auto sm:max-w-none ${prominent ? "min-h-[214px]" : "min-h-[184px]"}`}>
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-magenta shadow-sm"><Sparkles size={22} /></span>
-      <h3 className="mt-4 font-serif text-[19px] font-semibold text-plum">New salons joining soon</h3>
-      <p className="mt-2 text-[11px] leading-5 text-ink/60">We are carefully onboarding trusted braiders near you.</p>
-    </article>
-  );
-}
-
 export default async function Home() {
   const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "The beauty booking marketplace for braided styles. Real salons. Real people. Real results.", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
-    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier")
+    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier,verification_status")
     .order("review_count", { ascending: false })
     .limit(50);
 
@@ -158,9 +149,7 @@ export default async function Home() {
   const nearbySalons = rankSalonsForNearbyDiscovery(availableSalons).slice(0, 4);
   const paidFeaturedPool = rankSalonsForNearbyDiscovery(salons.filter((salon) => getSubscriptionTierPriority(salon.subscription_tier) >= 2));
   const featuredSalons = (paidFeaturedPool.length ? paidFeaturedPool : salons).slice(0, 4);
-  const heroSalon = featuredSalons[0];
-  const heroRating = heroSalon?.rating_overall || 4.9;
-  const heroReviewCount = heroSalon?.review_count || 128;
+  const socialProofLabels = [homeContent.labels?.social_proof_heading, homeContent.labels?.social_proof_subheading, homeContent.labels?.social_proof_note].filter(Boolean) as string[];
 
   return (
     <main className="min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0">
@@ -197,18 +186,10 @@ export default async function Home() {
             <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-cream/80 to-transparent lg:h-20 lg:from-cream/70" />
           </div>
 
-          <div className="absolute right-[3%] top-[49%] z-20 hidden w-[168px] rounded-[16px] bg-[linear-gradient(145deg,#35123b,#211027)] p-4 text-white shadow-[0_18px_40px_rgba(26,18,32,0.22)] lg:block">
-            <div className="text-[14px] font-bold text-amber">★★★★★ <span className="ml-1 text-white">{heroRating.toFixed(1)}</span></div>
-            <div className="mt-1 text-[11px] text-white/80">{heroReviewCount.toLocaleString()}+ reviews</div>
-            <div className="mt-3 flex -space-x-2">
-              {["braids-cornrows.jpg", "braids-box.jpg", "hero-braids.jpg"].map((image) => (
-                <span key={image} className="relative h-7 w-7 overflow-hidden rounded-full border-2 border-[#35123b]">
-                  <Image src={`/images/${image}`} alt="" fill sizes="28px" className="object-cover" />
-                </span>
-              ))}
-            </div>
-            <p className="mt-3 text-[10px] leading-4 text-white/85">Real reviews from real clients</p>
-          </div>
+          {socialProofLabels.length ? <div className="absolute right-[3%] top-[49%] z-20 hidden w-[190px] rounded-[16px] bg-[linear-gradient(145deg,#35123b,#211027)] p-4 text-white shadow-[0_18px_40px_rgba(26,18,32,0.22)] lg:block">
+            <Star size={18} className="text-amber" />
+            {socialProofLabels.map((label, index) => <p key={label} className={index === 0 ? "mt-2 font-serif text-lg font-semibold" : "mt-1 text-[10px] leading-4 text-white/80"}>{label}</p>)}
+          </div> : null}
 
         </div>
       </section>
@@ -220,15 +201,12 @@ export default async function Home() {
           {salonsError ? (
             <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">Nearby salons are taking a quick beauty break. Try again shortly.</div>
           ) : (
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">
+            nearbySalons.length ? <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">
               {nearbySalons.map((salon, index) => (
                 <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel="View salon" prominent />
               ))}
 
-              {Array.from({ length: Math.max(0, 4 - nearbySalons.length) }, (_, index) => (
-                <SalonPlaceholder key={`nearby-joining-${index}`} prominent />
-              ))}
-            </div>
+            </div> : <MarketplaceEmpty title="No salons are listed yet" body="Approved salons will appear here as soon as they publish their profiles." />
           )}
         </section>
 
@@ -238,15 +216,12 @@ export default async function Home() {
           {salonsError ? (
             <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">Featured salons are taking a quick beauty break. Try again shortly.</div>
           ) : (
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+            featuredSalons.length ? <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
               {featuredSalons.map((salon, index) => (
                 <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel="View times" />
               ))}
 
-              {Array.from({ length: Math.max(0, 4 - featuredSalons.length) }, (_, index) => (
-                <SalonPlaceholder key={`joining-${index}`} />
-              ))}
-            </div>
+            </div> : <MarketplaceEmpty title="No featured salons yet" body="Featured placements will appear after eligible salons are approved." />
           )}
         </section>
 
@@ -279,4 +254,8 @@ export default async function Home() {
       <CustomerBottomNav active="home" />
     </main>
   );
+}
+
+function MarketplaceEmpty({ title, body }: { title: string; body: string }) {
+  return <div className="rounded-[16px] border border-dashed border-plum/20 bg-white/60 px-6 py-9 text-center"><h3 className="font-serif text-xl text-plum">{title}</h3><p className="mt-2 text-sm text-ink/60">{body}</p></div>;
 }

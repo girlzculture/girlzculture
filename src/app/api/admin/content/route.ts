@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/supabaseAdmin";
 
-const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "sections", "seo_title", "seo_description", "status"] as const;
+const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "sections", "labels", "seo_title", "seo_description", "status"] as const;
 const postFields = ["id", "slug", "title", "excerpt", "content", "category", "cover_image_url", "author", "featured", "status", "published_at"] as const;
 
 function pick(payload: Record<string, unknown>, fields: readonly string[]) {

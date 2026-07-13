@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Flame, Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 
 export type StyleCatalogItem = {
@@ -14,14 +14,13 @@ export type StyleCatalogItem = {
   price?: number;
 };
 
-const chips = ["Knotless Braids", "Boho Braids", "Cornrows", "Goddess Locs", "Feed-in Braids"];
-
 export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
   const [query, setQuery] = useState("");
   const [length, setLength] = useState("Length");
   const [maintenance, setMaintenance] = useState("Maintenance");
   const [price, setPrice] = useState("Price");
   const [sort, setSort] = useState("Popularity");
+  const chips = useMemo(() => [...items].sort((left, right) => right.count - left.count).slice(0, 5), [items]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -55,20 +54,20 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
       </div>
 
       <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <span className="shrink-0 text-xs font-semibold text-ink">Trending styles</span>
-        {chips.map((chip) => <button key={chip} type="button" onClick={() => setQuery(chip)} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-plum/10 bg-white/75 px-3 py-1.5 text-[11px] font-semibold text-ink/75"><Flame size={12} className="text-magenta" />{chip}</button>)}
+        <span className="shrink-0 text-xs font-semibold text-ink">Available styles</span>
+        {chips.map((chip) => <button key={chip.name} type="button" onClick={() => setQuery(chip.name)} className="inline-flex shrink-0 items-center rounded-full border border-plum/10 bg-white/75 px-3 py-1.5 text-[11px] font-semibold text-ink/75">{chip.name}</button>)}
         <button type="button" onClick={() => { setQuery(""); setLength("Length"); setMaintenance("Maintenance"); setPrice("Price"); }} className="ml-auto shrink-0 text-xs font-bold text-magenta">View all</button>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {filtered.map((item, index) => (
+        {filtered.map((item) => (
           <Link key={item.name} href={`/salons?style=${encodeURIComponent(item.name)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(26,18,32,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(26,18,32,0.12)]">
             <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
               <SafeImage src={item.image} fallbackSrc="/images/braids-knotless.jpg" alt={`${item.name} hairstyle`} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
             </div>
             <div className="px-3 py-3 sm:px-4">
               <h2 className="font-serif text-[15px] font-semibold leading-tight text-ink sm:text-[18px]">{item.name}</h2>
-              <p className="mt-1 text-[10px] font-semibold text-magenta sm:text-xs">{item.count || 100 + index * 10}+ salons</p>
+              <p className="mt-1 text-[10px] font-semibold text-magenta sm:text-xs">{item.count} {item.count === 1 ? "salon" : "salons"}</p>
             </div>
           </Link>
         ))}
