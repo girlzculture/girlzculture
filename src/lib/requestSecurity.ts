@@ -1,4 +1,5 @@
 type RateEntry = { count: number; resetAt: number };
+import { isValidEmail, normalizeEmail, normalizeUsPhone } from "@/lib/validation";
 const rateEntries = new Map<string, RateEntry>();
 
 export function clientAddress(request: Request) {
@@ -29,9 +30,14 @@ export function cleanText(value: unknown, maxLength = 500) {
 }
 
 export function cleanEmail(value: unknown) {
-  const email = cleanText(value, 254).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
+  const email = normalizeEmail(value);
+  if (!isValidEmail(email)) throw new Error("Please enter a valid email address (name@example.com).");
   return email;
+}
+
+export function cleanUsPhone(value: unknown, required = true) {
+  if (!cleanText(value, 30) && !required) return "";
+  return normalizeUsPhone(value);
 }
 
 export function rejectBot(body: Record<string, unknown>) {

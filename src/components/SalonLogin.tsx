@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { salonSupabase as supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 
 export default function SalonLogin() {
   const router = useRouter();
@@ -18,7 +19,8 @@ export default function SalonLogin() {
     setLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!isValidEmail(email)) { setLoading(false); setErrorMsg("Please enter a valid email address (name@example.com)."); return; }
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password });
     setLoading(false);
     if (error) {
       setErrorMsg(error.message);
@@ -61,7 +63,7 @@ export default function SalonLogin() {
     <form onSubmit={onLogin} className="space-y-4">
       <div>
         <label className="mb-1 block text-sm font-medium text-ink/80">Email</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full rounded-md border border-ink/10 bg-white px-3 py-2" />
+        <input type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full rounded-md border border-ink/10 bg-white px-3 py-2" />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-ink/80">Password</label>
@@ -70,6 +72,7 @@ export default function SalonLogin() {
 
       {errorMsg ? <div className="text-sm text-red-600">{errorMsg}</div> : null}
       {infoMsg ? <div className="text-sm text-emerald-700">{infoMsg}</div> : null}
+      <Link className="block text-right text-sm font-semibold text-magenta" href="/forgot-password">Forgot password?</Link>
 
       <div className="flex items-center justify-between">
         <button type="submit" disabled={loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">

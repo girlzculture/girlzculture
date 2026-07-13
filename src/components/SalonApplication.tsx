@@ -7,6 +7,7 @@ import { Building2, Check, FileUp, LockKeyhole } from "lucide-react";
 import { salonSupabase as supabase } from "@/lib/supabase";
 import { normalizePlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
 import BaseImageUpload from "@/components/ImageUpload";
+import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
 const states = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","District of Columbia"];
 const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", city:"", state:"New York", zip_code:"", neighborhood:"", business_type:"Braiding Studio", referral_source:"" };
@@ -57,6 +58,8 @@ export default function SalonApplication() {
     event.preventDefault();
     if (!checks.every(Boolean)) { setMessage("Please accept all three confirmations."); return; }
     if (!userId) { setMessage("Your account is not ready. Please sign in again."); return; }
+    if (!isValidEmail(form.business_email)) { setMessage("Please enter a valid email address (name@example.com)."); return; }
+    if (!isValidUsPhone(form.phone)) { setMessage("Please enter a US phone number."); return; }
     setSaving(true); setMessage("");
     try {
       const {data:{session}} = await supabase.auth.getSession();
@@ -79,8 +82,8 @@ export default function SalonApplication() {
     <div className="grid gap-4 sm:grid-cols-2">
       <Input label="Business / Salon Name" value={form.business_name} onChange={(value)=>update("business_name",value)} />
       <Input label="Owner / Contact Full Name" value={form.owner_name} onChange={(value)=>update("owner_name",value)} />
-      <Input label="Business Email" type="email" value={form.business_email} onChange={(value)=>update("business_email",value)} />
-      <Input label="Phone Number" type="tel" value={form.phone} onChange={(value)=>update("phone",value)} />
+      <Input label="Business Email" type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={form.business_email} onChange={(value)=>update("business_email",value)} />
+      <Input label="Phone Number" type="tel" pattern={US_PHONE_PATTERN} title="Please enter a US phone number" value={form.phone} onChange={(value)=>update("phone",formatUsPhoneInput(value))} placeholder="+1 (555) 123-4567" />
       <div className="sm:col-span-2"><Input label="Street Address" value={form.street_address} onChange={(value)=>update("street_address",value)} /></div>
       <Input label="City" value={form.city} onChange={(value)=>update("city",value)} />
       <label><span className="mb-2 block text-xs font-bold">State *</span><select required value={form.state} onChange={(event)=>update("state",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{states.map((state)=><option key={state}>{state}</option>)}</select></label>
@@ -98,6 +101,6 @@ export default function SalonApplication() {
   </form>;
 }
 
-function Input({label,value,onChange,required=true,type="text"}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;type?:string}) {
-  return <label className="block"><span className="mb-2 block text-xs font-bold">{label}{required?" *":""}</span><input required={required} type={type} value={value} onChange={(event)=>onChange(event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"/></label>;
+function Input({label,value,onChange,required=true,type="text",pattern,title,placeholder}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;type?:string;pattern?:string;title?:string;placeholder?:string}) {
+  return <label className="block"><span className="mb-2 block text-xs font-bold">{label}{required?" *":""}</span><input required={required} type={type} pattern={pattern} title={title} placeholder={placeholder} inputMode={type==="tel"?"tel":undefined} value={value} onChange={(event)=>onChange(event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"/></label>;
 }
