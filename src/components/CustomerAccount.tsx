@@ -41,7 +41,7 @@ export default function CustomerAccount() {
       }
       const [profileResult, bookingResult, favoriteResult] = await Promise.all([
         supabase.from("customers").select("*").eq("id", data.user.id).maybeSingle(),
-        supabase.from("bookings").select("*,salon:salons(name,slug,neighborhood,cover_photo_url),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
+        supabase.from("bookings").select("*,salon:salons(name,slug,neighborhood,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
         supabase.from("customer_favorites").select("salon:salons(*)").eq("customer_id", data.user.id).limit(50),
       ]);
       if (!active) return;
@@ -94,7 +94,7 @@ function Overview({ upcoming, past, favorites }: { upcoming: Row[]; past: Row[];
 }
 
 function BookingPanel({ title, rows, empty, past = false }: { title: string; rows: Row[]; empty: string; past?: boolean }) {
-  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><h2 className="font-serif text-2xl font-semibold text-plum">{title}</h2><Link href={`/account?tab=${past ? "past" : "upcoming"}`} className="text-sm font-bold text-magenta">View all</Link></div><div className="mt-4 divide-y divide-plum/10">{rows.map((booking) => <article key={booking.id} className="grid grid-cols-[74px_1fr_auto] gap-3 py-4"><SafeImage src={booking.salon?.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(booking.salon?.name || "Salon")} className="h-16 w-[74px] rounded-lg object-cover"/><div><h3 className="font-serif font-semibold">{String(booking.salon?.name || "Girlz Culture Salon")}</h3><p className="mt-1 text-xs text-ink/60">{String(booking.style?.name || "Braiding appointment")}</p><p className="mt-1 text-[11px]">{formatDate(booking.appointment_datetime)}</p></div><div className="text-right"><Status value={booking.status}/>{past && String(booking.status).toLowerCase() === "completed" ? <Link href={`/review/${booking.id}`} className="mt-3 block rounded-lg border border-magenta px-3 py-2 text-[10px] font-bold text-magenta">Leave Review</Link> : <Link href={`/salon/${booking.salon?.slug}`} className="mt-3 block text-[10px] font-bold text-magenta">View salon</Link>}</div></article>)}{!rows.length ? <p className="py-10 text-center text-sm text-ink/50">{empty}</p> : null}</div></section>;
+  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><h2 className="font-serif text-2xl font-semibold text-plum">{title}</h2><Link href={`/account?tab=${past ? "past" : "upcoming"}`} className="text-sm font-bold text-magenta">View all</Link></div><div className="mt-4 divide-y divide-plum/10">{rows.map((booking) => <article key={booking.id} className="grid grid-cols-[74px_1fr_auto] gap-3 py-4"><SafeImage src={booking.salon?.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(booking.salon?.name || "Salon")} className="h-16 w-[74px] rounded-lg object-cover"/><div><h3 className="font-serif font-semibold">{String(booking.salon?.name || "Girlz Culture Salon")}</h3><p className="mt-1 text-xs text-ink/60">{String(booking.style?.name || "Braiding appointment")}</p><p className="mt-1 text-[11px]">{formatDate(booking.appointment_datetime, booking.salon?.time_zone)}</p></div><div className="text-right"><Status value={booking.status}/>{past && String(booking.status).toLowerCase() === "completed" ? <Link href={`/review/${booking.id}`} className="mt-3 block rounded-lg border border-magenta px-3 py-2 text-[10px] font-bold text-magenta">Leave Review</Link> : <Link href={`/salon/${booking.salon?.slug}`} className="mt-3 block text-[10px] font-bold text-magenta">View salon</Link>}</div></article>)}{!rows.length ? <p className="py-10 text-center text-sm text-ink/50">{empty}</p> : null}</div></section>;
 }
 
 function FavoritePanel({ favorites }: { favorites: Row[] }) {
@@ -115,8 +115,8 @@ function Status({ value }: { value?: string }) {
   return <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${color}`}>{label}</span>;
 }
 
-function formatDate(value?: string) {
+function formatDate(value?: string, timeZone?: unknown) {
   if (!value) return "Date not recorded";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Date not recorded" : date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(date.getTime()) ? "Date not recorded" : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: String(timeZone || "America/New_York") });
 }
