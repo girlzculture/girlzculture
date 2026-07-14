@@ -7,6 +7,7 @@ import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Sear
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
+import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -14,6 +15,10 @@ type Row = Record<string, unknown> & {
   appointment_datetime?: string;
   salon?: Record<string, unknown>;
   style?: Record<string, unknown>;
+  is_closed_override?: boolean | null;
+  closed_override_date?: string | null;
+  time_zone?: string | null;
+  hours?: unknown;
 };
 type AccountTab = "overview" | "upcoming" | "past" | "favorites" | "reviews" | "inbox" | "payments" | "settings";
 const tabs: Array<[AccountTab, string, typeof Home]> = [
@@ -99,7 +104,7 @@ function BookingPanel({ title, rows, empty, past = false }: { title: string; row
 }
 
 function FavoritePanel({ favorites }: { favorites: Row[] }) {
-  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><div><h2 className="font-serif text-2xl font-semibold text-plum">Your Favorite Salons</h2><p className="text-sm text-ink/60">Quick access to the salons you love.</p></div><Link href="/salons" className="text-sm font-bold text-magenta">Find salons</Link></div><div className="mt-5 flex gap-4 overflow-x-auto">{favorites.map((salon) => { const reviews = Number(salon.review_count || 0); return <article key={salon.id} className="min-w-56 overflow-hidden rounded-[14px] border border-plum/10 bg-white"><SafeImage src={salon.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(salon.name)} className="h-28 w-full object-cover"/><div className="p-3"><h3 className="font-serif font-semibold">{String(salon.name)}</h3>{reviews > 0 ? <p className="mt-1 flex items-center gap-1 text-xs text-amber"><Star size={13} className="fill-amber" aria-hidden="true"/>{Number(salon.rating_overall || 0).toFixed(1)} ({reviews})</p> : <span className="mt-1 inline-flex rounded-full bg-blush px-2 py-1 text-xs font-bold text-plum">New</span>}<Link href={`/salon/${salon.slug}`} className="mt-3 block rounded-lg border border-magenta py-2 text-center text-xs font-bold text-magenta">View salon</Link></div></article>; })}{!favorites.length ? <p className="py-10 text-sm text-ink/50">Save salons with the heart button to see them here.</p> : null}</div></section>;
+  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><div><h2 className="font-serif text-2xl font-semibold text-plum">Your Favorite Salons</h2><p className="text-sm text-ink/60">Quick access to the salons you love.</p></div><Link href="/salons" className="text-sm font-bold text-magenta">Find salons</Link></div><div className="mt-5 flex gap-4 overflow-x-auto">{favorites.map((salon) => { const reviews = Number(salon.review_count || 0); const closed=isSalonClosedToday(salon); return <article key={salon.id} className="min-w-56 overflow-hidden rounded-[14px] border border-plum/10 bg-white"><SafeImage src={salon.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(salon.name)} className="h-28 w-full object-cover"/><div className="p-3"><h3 className="font-serif font-semibold">{String(salon.name)}</h3><span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold ${closed?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}>{getSalonStatusLabel(salon)}</span>{reviews > 0 ? <p className="mt-1 flex items-center gap-1 text-xs text-amber"><Star size={13} className="fill-amber" aria-hidden="true"/>{Number(salon.rating_overall || 0).toFixed(1)} ({reviews})</p> : <span className="mt-1 inline-flex rounded-full bg-blush px-2 py-1 text-xs font-bold text-plum">New</span>}<Link href={`/salon/${salon.slug}`} className="mt-3 block rounded-lg border border-magenta py-2 text-center text-xs font-bold text-magenta">View salon</Link></div></article>; })}{!favorites.length ? <p className="py-10 text-sm text-ink/50">Save salons with the heart button to see them here.</p> : null}</div></section>;
 }
 
 function EmptyState({ title, text, action, href }: { title: string; text: string; action: string; href: string }) {
