@@ -18,8 +18,8 @@ type Salon = {
   id: string;
   name: string | null;
   slug: string | null;
-  neighborhood: string | null;
   address_city: string | null;
+  address_state: string | null;
   rating_overall: number | null;
   review_count: number | null;
   cover_photo_url: string | null;
@@ -106,9 +106,9 @@ function SalonCard({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>{isSalonClosedToday(salon) ? <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-1 text-[9px] font-bold text-red-700">Closed today</span> : null}
-              <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "Location not provided"}</p>
+              <p className="mt-1 text-[10px] text-ink/55">{[salon.address_city,salon.address_state].filter(Boolean).join(", ") || "Location not provided"}</p>
             </div>
-            <p className="flex shrink-0 items-center gap-1 text-[10px] text-ink/60"><Star size={12} className="fill-amber text-amber" aria-hidden="true" /> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
+            {(salon.review_count||0)>0 ? <p className="flex shrink-0 items-center gap-1 text-[10px] text-ink/60"><Star size={12} className="fill-amber text-amber" aria-hidden="true" /> {formatRating(salon.rating_overall)} <span>({salon.review_count})</span></p> : <span className="shrink-0 rounded-full bg-blush px-2 py-1 text-[9px] font-bold text-plum">New</span>}
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-plum/10 pt-2">
             <p className="text-[10px] text-ink/55">From <strong className="font-serif text-[17px] text-ink">{typeof price === "number" ? `$${price}` : "—"}</strong></p>
@@ -124,7 +124,7 @@ export default async function Home() {
   const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "The beauty booking marketplace for braided styles. Real salons. Real people. Real results.", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
-    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier,verification_status,is_closed_override,closed_override_date,time_zone")
+    .select("id,name,slug,address_city,address_state,rating_overall,review_count,cover_photo_url,badges,subscription_tier,verification_status,is_closed_override,closed_override_date,time_zone")
     .order("review_count", { ascending: false })
     .limit(50);
 

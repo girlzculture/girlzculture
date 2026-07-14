@@ -7,8 +7,8 @@ type SalonRecord = {
   id?: string;
   name?: string | null;
   slug?: string | null;
-  neighborhood?: string | null;
   address_street?: string | null;
+  address_line2?: string | null;
   address_city?: string | null;
   address_state?: string | null;
   address_zip?: string | null;

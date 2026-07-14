@@ -5,16 +5,16 @@ import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 
-type Salon = { id: string; name?: string | null; slug?: string | null; neighborhood?: string | null; address_city?: string | null; address_state?: string | null };
+type Salon = { id: string; name?: string | null; slug?: string | null; address_city?: string | null; address_state?: string | null };
 type Product = { id: string; name?: string | null; description?: string | null; price?: number | null; photo_url?: string | null; in_person_only?: boolean | null };
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string; productId: string }> }) {
   const { slug, productId } = await params;
-  const { data: salon } = await supabase.from("salons").select("id,name,slug,neighborhood,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
+  const { data: salon } = await supabase.from("salons").select("id,name,slug,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
   if (!salon) notFound();
   const { data: product } = await supabase.from("salon_products").select("*").eq("id", productId).eq("salon_id", salon.id).eq("is_visible", true).maybeSingle<Product>();
   if (!product) notFound();
-  const location = [salon.neighborhood, salon.address_city, salon.address_state].filter(Boolean).join(", ");
+  const location = [salon.address_city, salon.address_state].filter(Boolean).join(", ");
 
   return (
     <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0">

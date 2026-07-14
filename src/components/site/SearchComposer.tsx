@@ -26,7 +26,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
             <input
               name="location"
               type="search"
-              placeholder="Neighborhood, city, or zip code"
+              placeholder="City, state, or ZIP code"
               className="min-h-6 min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none placeholder:text-ink/40"
             />
             <MapPin aria-hidden="true" size={18} className="shrink-0 text-magenta" />

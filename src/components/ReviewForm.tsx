@@ -16,7 +16,6 @@ type BookingRecord = {
 type SalonRecord = {
   id?: string;
   name?: string | null;
-  neighborhood?: string | null;
 };
 
 type ReviewPayload = {

@@ -6,6 +6,7 @@ import { salonSupabase as supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 import { ADD_ON_OPTIONS, LENGTH_OPTIONS, SIZE_OPTIONS, STORE_TIME_OPTIONS, WEEK_DAYS } from "@/lib/salonPresets";
+import { isValidUsZip, normalizeUsZip, US_STATES } from "@/lib/usStates";
 
 function slugify(name: string) {
   return name
@@ -28,10 +29,10 @@ export default function SalonOnboarding() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [addressStreet, setAddressStreet] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
   const [addressCity, setAddressCity] = useState("");
-  const [addressState, setAddressState] = useState("");
+  const [addressState, setAddressState] = useState("NY");
   const [addressZip, setAddressZip] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>(() => Object.fromEntries(WEEK_DAYS.map((day) => [day, { open: "09:00", close: "17:00", closed: day === "Sun" }])));
 
   const [salonId, setSalonId] = useState<string | null>(null);
@@ -75,6 +76,10 @@ export default function SalonOnboarding() {
     }
     if (!isValidEmail(email)) { setErrorMessage("Please enter a valid email address (name@example.com)."); return; }
     if (!isValidUsPhone(phone)) { setErrorMessage("Please enter a US phone number."); return; }
+    if (!addressStreet.trim() || !addressCity.trim() || !addressState || !isValidUsZip(addressZip)) {
+      setErrorMessage("Please enter a complete US address with a valid state and ZIP code.");
+      return;
+    }
     setLoading(true);
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user?.id) {
@@ -111,11 +116,11 @@ export default function SalonOnboarding() {
       phone: normalizeUsPhone(phone),
       email: normalizeEmail(email),
       user_id: userData.user.id,
-      address_street: addressStreet,
-      address_city: addressCity,
+      address_street: addressStreet.trim(),
+      address_line2: addressLine2.trim() || null,
+      address_city: addressCity.trim(),
       address_state: addressState,
-      address_zip: addressZip,
-      neighborhood,
+      address_zip: normalizeUsZip(addressZip),
       hours,
       slug,
       status: 'New',
@@ -292,16 +297,14 @@ export default function SalonOnboarding() {
             <input type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="rounded-md border border-ink/10 px-3 py-2" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-ink/80">Address</label>
-            <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Street" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
+            <label className="block text-sm font-medium text-ink/80">Business address</label>
+            <input required value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Address line 1" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
+            <input value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Address line 2 (suite, floor, or unit)" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="City" className="rounded-md border border-ink/10 px-3 py-2" />
-              <input value={addressState} onChange={(e) => setAddressState(e.target.value)} placeholder="State" className="rounded-md border border-ink/10 px-3 py-2" />
-              <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} placeholder="Zip" className="rounded-md border border-ink/10 px-3 py-2" />
+              <input required value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="City" className="rounded-md border border-ink/10 px-3 py-2" />
+              <select required aria-label="State" value={addressState} onChange={(e) => setAddressState(e.target.value)} className="rounded-md border border-ink/10 bg-white px-3 py-2">{US_STATES.map(([code, stateName]) => <option key={code} value={code}>{stateName}</option>)}</select>
+              <input required inputMode="numeric" pattern="\d{5}(-\d{4})?" title="Use 12345 or 12345-6789 format" value={addressZip} onChange={(e) => setAddressZip(e.target.value)} placeholder="ZIP code" className="rounded-md border border-ink/10 px-3 py-2" />
             </div>
-          </div>
-          <div>
-            <input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Neighborhood (optional)" className="w-full rounded-md border border-ink/10 px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium text-ink/80">Store hours</label>

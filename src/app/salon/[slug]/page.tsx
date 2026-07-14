@@ -28,11 +28,11 @@ type SalonRecord = {
   closed_override_date?: string | null;
   time_zone?: string | null;
   slug?: string | null;
-  neighborhood?: string | null;
   description?: string | null;
   phone?: string | null;
   email?: string | null;
   address_street?: string | null;
+  address_line2?: string | null;
   address_city?: string | null;
   address_state?: string | null;
   address_zip?: string | null;
@@ -218,8 +218,8 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   const galleryItems = Array.from({ length: 5 }, (_, index) => uploadedGallery[index] || null);
   const remainingPhotos = Math.max(0, uploadedGallery.length - 5);
   const morePhotoLabel = remainingPhotos ? `+${remainingPhotos} more` : null;
-  const locationLine = [salon.neighborhood, salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
-  const addressLine = [salon.address_street, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
+  const locationLine = [salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
+  const addressLine = [salon.address_street, salon.address_line2, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
   const mapQuery = salon.latitude != null && salon.longitude != null ? `${salon.latitude},${salon.longitude}` : addressLine;
   const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
@@ -258,7 +258,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
             <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span>{closedToday ? <span className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1.5 text-[9px] font-bold text-red-700"><Clock3 size={14}/>Closed today</span> : null}</div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span></> : <strong>New</strong>}<span className="text-ink/55">({reviewCount} reviews)</span></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span><span className="text-ink/55">({reviewCount} reviews)</span></> : <span className="rounded-full bg-blush px-2.5 py-1 font-bold text-plum">New</span>}</div>
 
             {trustLabels.length ? <div className="mt-4 grid grid-cols-3 gap-2">
               {trustLabels.map((label, index) => {
@@ -272,7 +272,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
               })}
             </div> : null}
 
-            <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description || "This salon has not added a description yet."}</p>
+            {salon.description?.trim() ? <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description}</p> : null}
 
             <div className="mt-4 flex items-center gap-2">
               <Link href={`/salon/${salon.slug || slug}/book`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>
@@ -320,7 +320,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
 
           <div className="border-plum/10 lg:border-l lg:pl-5">
             <h2 className="flex items-center gap-2 text-[11px] font-semibold text-plum"><MapPin size={17} />Address</h2>
-            <p className="mt-3 text-[10px] font-medium leading-5 text-ink/75">{salon.address_street || "Address coming soon"}<br />{[salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(" ")}</p>
+            <p className="mt-3 text-[10px] font-medium leading-5 text-ink/75">{salon.address_street || "Address coming soon"}{salon.address_line2 ? <><br />{salon.address_line2}</> : null}<br />{[salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(" ")}</p>
             <p className="mt-1 text-[9px] text-ink/45">Directions available</p>
             <a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-8 w-full items-center justify-center gap-2 rounded-[7px] border border-magenta/25 bg-blush/25 px-4 text-[9px] font-semibold text-magenta">Get Directions <Navigation size={12} /></a>
           </div>
