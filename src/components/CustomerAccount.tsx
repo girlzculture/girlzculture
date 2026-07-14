@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, LogOut, MessageSquare, Search, Settings, Star, UserRound } from "lucide-react";
+import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Star, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
+import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -68,17 +69,17 @@ export default function CustomerAccount() {
 
   const name = String(customer?.name || "Girlz Culture Member");
   const firstName = name.split(" ")[0];
-  return <div className="min-h-screen bg-cream pb-20 text-ink lg:pb-0">
+  return <div className="min-h-screen bg-cream pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
     <header className="flex h-20 items-center justify-between border-b border-plum/10 bg-white/80 px-5 lg:px-10">
       <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
       <nav className="hidden gap-10 text-sm md:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
-      <div className="flex items-center gap-4"><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span></div>
+      <div className="flex items-center gap-4"><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
     </header>
     <div className="mx-auto grid max-w-[1720px] lg:grid-cols-[270px_1fr]">
       <aside className="hidden min-h-[calc(100vh-80px)] bg-[linear-gradient(150deg,#4b0b58,#22092b)] p-6 text-white lg:flex lg:flex-col">
         <div className="flex items-center gap-4"><SafeImage src={customer?.avatar_url as string} fallbackSrc="/images/braids-knotless.jpg" alt={name} className="h-20 w-20 rounded-full object-cover"/><div><h2 className="font-serif text-xl">{name}</h2><p className="mt-1 flex items-center gap-1.5 text-sm text-amber"><Crown size={15} aria-hidden="true" />{String(customer?.membership_tier || "Member")}</p></div></div>
         <nav className="mt-7 space-y-2">{tabs.map(([id, label, Icon]) => <Link key={id} href={`/account?tab=${id}`} className={`flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm ${tab === id ? "bg-magenta/55" : "hover:bg-white/10"}`}><Icon size={20}/>{label}</Link>)}</nav>
-        <button onClick={() => void supabase.auth.signOut().then(() => location.href = "/")} className="mt-auto flex items-center gap-3 px-4 py-3"><LogOut/>Log Out</button>
+        <RoleLogoutButton scope="customer" className="mt-auto flex items-center gap-3 rounded-[10px] px-4 py-3 hover:bg-white/10" />
       </aside>
       <main className="min-w-0 p-4 sm:p-8 lg:p-10">
         <section className="rounded-[18px] bg-plum p-6 text-white lg:bg-transparent lg:p-0 lg:text-ink"><p className="text-sm lg:hidden">Welcome back,</p><h1 className="font-serif text-3xl font-semibold lg:text-4xl lg:text-plum">{tab === "overview" ? `Welcome back, ${firstName}!` : tabs.find(([id]) => id === tab)?.[1]}</h1><p className="mt-2 text-sm opacity-70">Manage your bookings, favorites, reviews, and account details.</p></section>

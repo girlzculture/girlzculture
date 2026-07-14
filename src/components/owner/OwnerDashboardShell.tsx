@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Bell, CalendarDays, ChevronDown, CircleDollarSign, Crown, ExternalLink, Home, Images, Menu, Megaphone, Package, Scissors, Settings, Star, UserRound, UsersRound } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
+import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 
 export type DashboardSection = "overview" | "my-page" | "photos" | "styles" | "stylists" | "products" | "availability" | "bookings" | "reviews" | "earnings" | "promotions" | "subscription" | "settings";
 
@@ -13,11 +14,12 @@ const nav = [
 const hrefFor = (section: string) => section === "overview" ? "/salon/dashboard" : `/salon/dashboard/${section}`;
 
 export default function OwnerDashboardShell({ children, section, salonName, salonSlug, avatar, notifications = [] }: { children: React.ReactNode; section: DashboardSection; salonName: string; salonSlug: string; avatar?: string | null; notifications?: Array<{id?:string;title?:string;body?:string;action_url?:string;read_at?:string|null}> }) {
-  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
+  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]"><RoleSessionBoundary scope="salon" />
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] overflow-y-auto bg-[radial-gradient(circle_at_60%_20%,#6b176f,#2b0835_70%)] px-4 py-5 text-white lg:block">
       <Link href="/salon/dashboard" className="block px-3 font-serif text-[31px] font-bold leading-none">Girlz<span className="block pl-1 text-[10px] uppercase tracking-[0.35em] text-amber">Culture</span></Link>
       <nav aria-label="Salon owner navigation" className="mt-7 space-y-1">{nav.map(([id,label,Icon]) => { const active=section===id; return <Link key={id} href={hrefFor(id)} aria-current={active?"page":undefined} className={`flex min-h-10 items-center gap-3 rounded-[9px] px-3 text-[12px] font-medium transition ${active?"bg-magenta/70 text-white shadow-[0_8px_24px_rgba(214,24,107,.2)]":"text-white/85 hover:bg-white/10"}`}><Icon size={18} strokeWidth={1.7}/>{label}</Link>; })}</nav>
       <div className="mt-7 overflow-hidden rounded-[12px] border border-white/15 bg-white/5 p-4"><p className="font-serif text-base">Grow your brand<br />with Girlz Culture</p><p className="mt-3 text-[10px] leading-4 text-white/70">Reach more clients and build your beauty empire.</p><div className="mt-4 h-28 rounded-[10px] bg-[url('/images/hero-braids.jpg')] bg-cover bg-[center_20%]" /><Link href="/salon/dashboard/promotions" className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-[#ff68aa]">Learn more →</Link></div>
+      <RoleLogoutButton scope="salon" className="mt-5 flex w-full items-center gap-3 rounded-[9px] px-3 py-3 text-sm text-white/85 hover:bg-white/10" />
     </aside>
     <div className="min-w-0 lg:col-start-2">
       <header className="sticky top-0 z-40 flex h-[74px] items-center justify-between border-b border-plum/10 bg-[#fffdfa]/95 px-4 backdrop-blur lg:px-8">
