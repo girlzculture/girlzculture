@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { salonSupabase as supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
+import { ADD_ON_OPTIONS, LENGTH_OPTIONS, SIZE_OPTIONS, STORE_TIME_OPTIONS, WEEK_DAYS } from "@/lib/salonPresets";
 
 function slugify(name: string) {
   return name
@@ -31,7 +32,7 @@ export default function SalonOnboarding() {
   const [addressState, setAddressState] = useState("");
   const [addressZip, setAddressZip] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
-  const [hours, setHours] = useState("");
+  const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>(() => Object.fromEntries(WEEK_DAYS.map((day) => [day, { open: "09:00", close: "17:00", closed: day === "Sun" }])));
 
   const [salonId, setSalonId] = useState<string | null>(null);
 
@@ -40,21 +41,30 @@ export default function SalonOnboarding() {
   const [stylists, setStylists] = useState<any[]>([]);
 
   // temporary inputs for adding style/stylist
-  const [styleName, setStyleName] = useState("");
-  const [styleCategory, setStyleCategory] = useState("");
+  const [masterStyles, setMasterStyles] = useState<any[]>([]);
+  const [styleMasterId, setStyleMasterId] = useState("");
   const [stylePriceMin, setStylePriceMin] = useState("");
   const [stylePriceMax, setStylePriceMax] = useState("");
   const [styleDuration, setStyleDuration] = useState("");
-  const [styleLengths, setStyleLengths] = useState("");
-  const [styleSizes, setStyleSizes] = useState("");
-  const [styleAddons, setStyleAddons] = useState("");
+  const [styleLengths, setStyleLengths] = useState<string[]>([]);
+  const [styleSizes, setStyleSizes] = useState<string[]>([]);
+  const [styleAddons, setStyleAddons] = useState<string[]>([]);
 
   const [stylistName, setStylistName] = useState("");
-  const [stylistSpecialties, setStylistSpecialties] = useState("");
+  const [stylistSpecialties, setStylistSpecialties] = useState<string[]>([]);
   const [stylistBio, setStylistBio] = useState("");
 
   const next = () => setStep((s) => Math.min(3, s + 1));
   const back = () => setStep((s) => Math.max(1, s - 1));
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("master_styles").select("id,name,category").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => {
+      if (!active) return;
+      if (error) setErrorMessage(error.message); else setMasterStyles(data || []);
+    });
+    return () => { active = false; };
+  }, []);
 
   const saveBasics = async () => {
     setErrorMessage(null);
@@ -123,30 +133,32 @@ export default function SalonOnboarding() {
   };
 
   const addStyleLocal = () => {
-    if (!styleName) {
-      setErrorMessage('Please enter a style name before adding.');
+    const master = masterStyles.find((item) => item.id === styleMasterId);
+    if (!master) {
+      setErrorMessage('Please choose a style before adding.');
       return;
     }
     setErrorMessage(null);
     setStyles((s) => [
       ...s,
       {
-        name: styleName,
-        category: styleCategory || 'Braids',
+        master_style_id: master.id,
+        name: master.name,
+        category: master.category,
         price_display_min: Number(stylePriceMin || 0),
         price_display_max: Number(stylePriceMax || 0),
         duration_min_hours: Number(styleDuration || 0),
         duration_max_hours: Number(styleDuration || 0),
-        length_options: styleLengths ? styleLengths.split(',').map((item) => item.trim()) : [],
-        size_options: styleSizes ? styleSizes.split(',').map((item) => item.trim()) : [],
-        addons: styleAddons ? styleAddons.split(',').map((item) => item.trim()) : [],
+        length_options: styleLengths.map((label) => ({ label, price_add: 0 })),
+        size_options: styleSizes.map((label) => ({ label, price_add: 0 })),
+        addons: styleAddons.filter((label) => label !== "Other").map((label) => ({ label, price_add: 0 })),
       },
     ]);
-    setStyleName("");
-    setStyleCategory("");
+    setStyleMasterId("");
     setStylePriceMin("");
     setStylePriceMax("");
     setStyleDuration("");
+    setStyleLengths([]); setStyleSizes([]); setStyleAddons([]);
   };
 
   const saveStyles = async () => {
@@ -179,9 +191,9 @@ export default function SalonOnboarding() {
 
   const addStylistLocal = () => {
     if (!stylistName) return;
-    setStylists((s) => [...s, { name: stylistName, specialties: stylistSpecialties.split(',').map((x) => x.trim()).filter(Boolean), bio: stylistBio }]);
+    setStylists((s) => [...s, { name: stylistName, specialties: stylistSpecialties, bio: stylistBio.slice(0, 250) }]);
     setStylistName("");
-    setStylistSpecialties("");
+    setStylistSpecialties([]);
     setStylistBio("");
   };
 
@@ -292,8 +304,9 @@ export default function SalonOnboarding() {
             <input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Neighborhood (optional)" className="w-full rounded-md border border-ink/10 px-3 py-2" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-ink/80">Hours (simple text)</label>
-            <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="e.g. Mon-Fri 9am-6pm" className="w-full rounded-md border border-ink/10 px-3 py-2" />
+            <label className="block text-sm font-medium text-ink/80">Store hours</label>
+            <p className="mt-1 text-xs text-ink/55">Choose opening and closing times in 15-minute increments.</p>
+            <div className="mt-3 space-y-2">{WEEK_DAYS.map((day) => <div key={day} className="grid grid-cols-[36px_1fr_1fr] gap-2 rounded-lg border border-ink/10 p-2 text-xs"><b>{day}</b><select value={hours[day].open} onChange={(event) => setHours((current) => ({ ...current, [day]: { ...current[day], open: event.target.value } }))} className="min-w-0 rounded-md border border-ink/10 bg-white px-2">{STORE_TIME_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><select value={hours[day].close} onChange={(event) => setHours((current) => ({ ...current, [day]: { ...current[day], close: event.target.value } }))} className="min-w-0 rounded-md border border-ink/10 bg-white px-2">{STORE_TIME_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><label className="col-span-3 flex justify-end gap-2"><input type="checkbox" checked={hours[day].closed} onChange={(event) => setHours((current) => ({ ...current, [day]: { ...current[day], closed: event.target.checked } }))} className="accent-magenta" />Closed</label></div>)}</div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -306,19 +319,16 @@ export default function SalonOnboarding() {
         <div className="space-y-4">
           <div className="rounded-md border border-ink/10 p-3">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <input value={styleName} onChange={(e) => setStyleName(e.target.value)} placeholder="Style name" className="rounded-md border border-ink/10 px-3 py-2" />
-              <input value={styleCategory} onChange={(e) => setStyleCategory(e.target.value)} placeholder="Category" className="rounded-md border border-ink/10 px-3 py-2" />
+              <select value={styleMasterId} onChange={(e) => setStyleMasterId(e.target.value)} className="rounded-md border border-ink/10 bg-white px-3 py-2"><option value="">Choose style</option>{masterStyles.map((style) => <option key={style.id} value={style.id}>{style.name}</option>)}</select>
+              <input value={masterStyles.find((style) => style.id === styleMasterId)?.category || "Category is set automatically"} readOnly className="rounded-md border border-ink/10 bg-blush/20 px-3 py-2 text-ink/55" />
               <input value={styleDuration} onChange={(e) => setStyleDuration(e.target.value)} placeholder="Duration (hours)" className="rounded-md border border-ink/10 px-3 py-2" />
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 mt-2">
               <input value={stylePriceMin} onChange={(e) => setStylePriceMin(e.target.value)} placeholder="Min price" className="rounded-md border border-ink/10 px-3 py-2" />
               <input value={stylePriceMax} onChange={(e) => setStylePriceMax(e.target.value)} placeholder="Max price" className="rounded-md border border-ink/10 px-3 py-2" />
-              <input value={styleLengths} onChange={(e) => setStyleLengths(e.target.value)} placeholder="Length options" className="rounded-md border border-ink/10 px-3 py-2" />
+              <span className="rounded-md border border-ink/10 bg-blush/20 px-3 py-2 text-xs text-ink/60">Select options below</span>
             </div>
-            <div className="mt-2">
-              <input value={styleSizes} onChange={(e) => setStyleSizes(e.target.value)} placeholder="Size options" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
-              <input value={styleAddons} onChange={(e) => setStyleAddons(e.target.value)} placeholder="Add-ons" className="w-full rounded-md border border-ink/10 px-3 py-2" />
-            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">{[["Sizes", SIZE_OPTIONS, styleSizes, setStyleSizes], ["Lengths", LENGTH_OPTIONS, styleLengths, setStyleLengths], ["Add-ons", ADD_ON_OPTIONS.filter((item) => item !== "Other"), styleAddons, setStyleAddons]].map(([label, options, values, setter]) => <fieldset key={label as string} className="rounded-lg border border-ink/10 p-3"><legend className="px-1 text-xs font-bold text-plum">{label as string}</legend>{(options as readonly string[]).map((option) => <label key={option} className="mt-2 flex gap-2 text-xs"><input type="checkbox" checked={(values as string[]).includes(option)} onChange={() => (setter as React.Dispatch<React.SetStateAction<string[]>>)((current) => current.includes(option) ? current.filter((item) => item !== option) : [...current, option])} className="accent-magenta" />{option}</label>)}</fieldset>)}</div>
             <div className="mt-3 flex gap-2">
               <button onClick={addStyleLocal} className="rounded-full bg-plum px-3 py-1 text-white text-sm">Add style</button>
               <button onClick={saveStyles} className="rounded-full bg-magenta px-3 py-1 text-white text-sm">Save styles</button>
@@ -345,8 +355,8 @@ export default function SalonOnboarding() {
         <div className="space-y-4">
           <div className="rounded-md border border-ink/10 p-3">
             <input value={stylistName} onChange={(e) => setStylistName(e.target.value)} placeholder="Stylist name" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
-            <input value={stylistSpecialties} onChange={(e) => setStylistSpecialties(e.target.value)} placeholder="Specialties (comma separated)" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
-            <textarea value={stylistBio} onChange={(e) => setStylistBio(e.target.value)} placeholder="Bio" className="w-full rounded-md border border-ink/10 px-3 py-2" />
+            <fieldset className="mb-2 grid gap-2 rounded-lg border border-ink/10 p-3 sm:grid-cols-2"><legend className="px-1 text-xs font-bold text-plum">Specialties</legend>{masterStyles.map((style) => <label key={style.id} className="flex gap-2 text-xs"><input type="checkbox" checked={stylistSpecialties.includes(style.name)} onChange={() => setStylistSpecialties((current) => current.includes(style.name) ? current.filter((item) => item !== style.name) : [...current, style.name])} className="accent-magenta" />{style.name}</label>)}</fieldset>
+            <label className="block text-xs font-bold">Bio<textarea value={stylistBio} maxLength={250} onChange={(e) => setStylistBio(e.target.value)} placeholder="Bio" className="mt-1 w-full rounded-md border border-ink/10 px-3 py-2 font-normal" /><span className="mt-1 block text-right font-normal text-ink/50">{stylistBio.length}/250</span></label>
             <div className="mt-2 flex gap-2">
               <button onClick={addStylistLocal} className="rounded-full bg-plum px-3 py-1 text-white text-sm">Add stylist</button>
               <button onClick={saveStylists} className="rounded-full bg-magenta px-3 py-1 text-white text-sm">Save stylists</button>

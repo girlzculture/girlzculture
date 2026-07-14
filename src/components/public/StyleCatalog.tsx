@@ -62,9 +62,9 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {filtered.map((item) => (
           <Link key={item.name} href={`/salons?style=${encodeURIComponent(item.name)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(26,18,32,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(26,18,32,0.12)]">
-            <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
-              <SafeImage src={item.image} fallbackSrc="/images/braids-knotless.jpg" alt={`${item.name} hairstyle`} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-            </div>
+            {item.image ? <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
+              <SafeImage src={item.image} fallbackSrc={item.image} alt={`${item.name} hairstyle`} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+            </div> : null}
             <div className="px-3 py-3 sm:px-4">
               <h2 className="font-serif text-[15px] font-semibold leading-tight text-ink sm:text-[18px]">{item.name}</h2>
               <p className="mt-1 text-[10px] font-semibold text-magenta sm:text-xs">{item.count} {item.count === 1 ? "salon" : "salons"}</p>

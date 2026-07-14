@@ -14,13 +14,15 @@ function validSlug(value: unknown) {
 export async function GET(request: Request) {
   try {
     const { admin } = await requireAdmin(request);
-    const [pages, posts] = await Promise.all([
+    const [pages, posts, masterStyles] = await Promise.all([
       admin.from("content_pages").select("*").order("slug"),
       admin.from("blog_posts").select("*").order("updated_at", { ascending: false }),
+      admin.from("master_styles").select("*").order("sort_order").order("name"),
     ]);
     if (pages.error) throw pages.error;
     if (posts.error) throw posts.error;
-    return Response.json({ pages: pages.data || [], posts: posts.data || [] });
+    if (masterStyles.error) throw masterStyles.error;
+    return Response.json({ pages: pages.data || [], posts: posts.data || [], masterStyles: masterStyles.data || [] });
   } catch (error) {
     console.error("Admin content load failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load content" }, { status: 403 });
@@ -30,8 +32,24 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const { admin, user } = await requireAdmin(request);
-    const { type, payload } = await request.json() as { type: "page" | "post"; payload: Record<string, unknown> };
-    if (!payload || !validSlug(payload.slug)) return Response.json({ error: "Enter a valid lowercase page slug." }, { status: 400 });
+    const { type, payload } = await request.json() as { type: "page" | "post" | "master_style"; payload: Record<string, unknown> };
+    if (!payload) return Response.json({ error: "Content payload is required." }, { status: 400 });
+
+    if (type === "master_style") {
+      const name = String(payload.name || "").trim().slice(0, 100);
+      const category = String(payload.category || "").trim().slice(0, 80);
+      if (!name || !category) return Response.json({ error: "Style name and category are required." }, { status: 400 });
+      const record = { name, category, is_active: payload.is_active !== false, sort_order: Math.max(0, Number(payload.sort_order || 0)), updated_at: new Date().toISOString() };
+      const query = payload.id
+        ? admin.from("master_styles").update(record).eq("id", payload.id).select().single()
+        : admin.from("master_styles").insert(record).select().single();
+      const { data, error } = await query;
+      if (error) throw error;
+      console.info("Admin master style saved", { styleId: data.id, name: data.name, admin: user.email });
+      return Response.json({ data });
+    }
+
+    if (!validSlug(payload.slug)) return Response.json({ error: "Enter a valid lowercase page slug." }, { status: 400 });
 
     if (type === "page") {
       const record = { ...pick(payload, pageFields), updated_by: user.id, updated_at: new Date().toISOString() };

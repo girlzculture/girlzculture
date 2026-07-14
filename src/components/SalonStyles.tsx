@@ -17,6 +17,7 @@ type StyleRecord = {
   material_options?: unknown;
   addons?: unknown;
   hair_included?: boolean | null;
+  included_items?: unknown;
 };
 
 type StyleMaterialRecord = {
@@ -96,6 +97,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
       lengthOptions: normalizeOptions(style.length_options),
       addons: normalizeOptions(style.addons),
       materials: savedMaterials.length ? savedMaterials : inlineMaterials,
+      includedItems: Array.isArray(style.included_items) ? style.included_items.map(String).filter(Boolean) : [],
     };
   }), [styles, styleMaterialsByStyleId]);
 
@@ -127,24 +129,26 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                   <div className="min-w-0">
                     <h4 className="text-[11px] font-bold text-plum">Length</h4>
                     <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
-                      {(card.lengthOptions.length ? card.lengthOptions : [{ label: "Standard", price_add: 0 }]).map((option, index) => (
+                      {card.lengthOptions.map((option, index) => (
                         <li key={`${optionLabel(option)}-${index}`} className="flex items-center justify-between gap-3">
                           <span>{optionLabel(option)}</span>
                           <span className="font-semibold text-ink">${card.basePrice + optionPrice(option)}</span>
                         </li>
                       ))}
+                      {!card.lengthOptions.length ? <li className="text-ink/45">No length choices published</li> : null}
                     </ul>
                   </div>
 
                   <div className="min-w-0">
                     <h4 className="text-[11px] font-bold text-plum">Add-ons</h4>
                     <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
-                      {(card.addons.length ? card.addons : [{ label: "Consultation", price_add: 0 }]).map((option, index) => (
+                      {card.addons.map((option, index) => (
                         <li key={`${optionLabel(option)}-${index}`} className="flex items-center justify-between gap-3">
                           <span>{optionLabel(option)}</span>
                           <span className="font-semibold text-ink">{formatAddOnPrice(optionPrice(option))}</span>
                         </li>
                       ))}
+                      {!card.addons.length ? <li className="text-ink/45">No add-ons published</li> : null}
                     </ul>
                   </div>
 
@@ -159,15 +163,17 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                           <span className="whitespace-nowrap text-plum max-sm:text-right">{material.quality_note || "Quality"}</span>
                         </li>
                       ))}
+                      {!card.materials.length ? <li className="text-ink/45">No material choices published</li> : null}
                     </ul>
                   </div>
 
                   <div className="col-span-2 min-w-0 xl:col-span-1">
                     <h4 className="text-[11px] font-bold text-plum">What&apos;s Included</h4>
                     <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
-                      {["Wash & blow dry", "Scalp treatment", "Premium hair", "Style & finish", "Aftercare tips"].map((item) => (
+                      {card.includedItems.map((item) => (
                         <li key={item} className="flex items-start gap-2"><Check aria-hidden="true" size={13} className="mt-0.5 shrink-0 text-magenta" /><span>{item}</span></li>
                       ))}
+                      {!card.includedItems.length ? <li className="text-ink/45">No inclusions published</li> : null}
                     </ul>
                   </div>
                 </div>
