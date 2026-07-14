@@ -152,9 +152,16 @@ function normalizeHours(value: unknown) {
 
   const record = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
   return dayLabels.map(([key, label]) => {
-    const slot = record[key];
+    const slot = record[key] ?? record[label];
     if (Array.isArray(slot) && slot.length >= 2 && typeof slot[0] === "string" && typeof slot[1] === "string") {
       return { label, hours: `${formatClock(slot[0])} – ${formatClock(slot[1])}` };
+    }
+    if (slot && typeof slot === "object" && !Array.isArray(slot)) {
+      const structured = slot as Record<string, unknown>;
+      if (structured.closed === true) return { label, hours: "Closed" };
+      if (typeof structured.open === "string" && typeof structured.close === "string") {
+        return { label, hours: `${formatClock(structured.open)} – ${formatClock(structured.close)}` };
+      }
     }
     if (typeof slot === "string" && slot.trim()) return { label, hours: slot };
     return { label, hours: "Contact salon" };

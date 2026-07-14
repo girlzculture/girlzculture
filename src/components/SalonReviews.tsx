@@ -50,7 +50,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
     return {
       overall: average("rating_overall"),
       quality: average("rating_quality"),
-      professionalism: average("rating_price_accuracy"),
+      priceAccuracy: average("rating_price_accuracy"),
       punctuality: average("rating_punctuality"),
       cleanliness: average("rating_cleanliness"),
     };
@@ -59,7 +59,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
   const reviewBreakdown = [
     { label: "Overall Experience", value: averages.overall },
     { label: "Quality of Style", value: averages.quality },
-    { label: "Professionalism", value: averages.professionalism },
+    { label: "Price Accuracy", value: averages.priceAccuracy },
     { label: "Time Management", value: averages.punctuality },
     { label: "Cleanliness", value: averages.cleanliness },
   ];
