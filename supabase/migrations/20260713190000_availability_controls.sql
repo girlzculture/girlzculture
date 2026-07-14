@@ -16,14 +16,13 @@ with conflicts as (
   select newer.id booking_id, min(older.id::text)::uuid conflicting_booking_id
   from public.bookings newer
   join public.bookings older
-    on older.id <> newer.id
+   on older.id <> newer.id
    and older.salon_id = newer.salon_id
    and (older.stylist_id is null or newer.stylist_id is null)
-   and tstzrange(older.appointment_datetime, older.blocked_until, '[)')
-       && tstzrange(newer.appointment_datetime, newer.blocked_until, '[)')
+   and older.booking_window && newer.booking_window
    and (older.created_at, older.id) < (newer.created_at, newer.id)
-  where lower(coalesce(newer.status, '')) not in ('cancelled','canceled')
-    and lower(coalesce(older.status, '')) not in ('cancelled','canceled')
+  where newer.is_active_booking
+    and older.is_active_booking
   group by newer.id
 ), logged as (
   insert into public.booking_integrity_conflicts(booking_id, conflicting_booking_id, conflict_type, original_status)
@@ -42,7 +41,7 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if lower(coalesce(new.status, '')) in ('cancelled','canceled') then
+  if not new.is_active_booking then
     return new;
   end if;
   perform pg_advisory_xact_lock(hashtextextended('salon-booking:' || new.salon_id::text, 0));
@@ -50,10 +49,9 @@ begin
     select 1 from public.bookings existing
     where existing.salon_id = new.salon_id
       and existing.id <> new.id
-      and lower(coalesce(existing.status, '')) not in ('cancelled','canceled')
+      and existing.is_active_booking
       and (new.stylist_id is null or existing.stylist_id is null)
-      and tstzrange(existing.appointment_datetime, existing.blocked_until, '[)')
-          && tstzrange(new.appointment_datetime, new.blocked_until, '[)')
+      and existing.booking_window && new.booking_window
   ) then
     raise exception using errcode = '23P01', message = 'SALON_WIDE_BOOKING_CONFLICT';
   end if;
@@ -72,26 +70,24 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if new.status <> 'Pending' then
+  if not new.is_pending_intent then
     return new;
   end if;
   perform pg_advisory_xact_lock(hashtextextended('salon-booking:' || new.salon_id::text, 0));
   if exists (
     select 1 from public.bookings booking
     where booking.salon_id = new.salon_id
-      and lower(coalesce(booking.status, '')) not in ('cancelled','canceled')
+      and booking.is_active_booking
       and (new.stylist_id is null or booking.stylist_id is null)
-      and tstzrange(booking.appointment_datetime, booking.blocked_until, '[)')
-          && tstzrange(new.appointment_datetime, new.blocked_until, '[)')
+      and booking.booking_window && new.checkout_window
   ) or exists (
     select 1 from public.booking_checkout_intents intent
     where intent.salon_id = new.salon_id
       and intent.id <> new.id
-      and intent.status = 'Pending'
+      and intent.is_pending_intent
       and intent.expires_at > now()
       and (new.stylist_id is null or intent.stylist_id is null)
-      and tstzrange(intent.appointment_datetime, intent.blocked_until, '[)')
-          && tstzrange(new.appointment_datetime, new.blocked_until, '[)')
+      and intent.checkout_window && new.checkout_window
   ) then
     raise exception using errcode = '23P01', message = 'SALON_WIDE_BOOKING_CONFLICT';
   end if;
