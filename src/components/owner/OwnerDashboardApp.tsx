@@ -13,6 +13,7 @@ import { EMAIL_PATTERN, isValidEmail, isValidUsPhone, normalizeEmail, normalizeU
 import { dateKeyInTimeZone } from "@/lib/dateTime";
 import { STORE_TIME_OPTIONS } from "@/lib/salonPresets";
 import { StructuredStylesEditor, StructuredStylistsEditor } from "@/components/owner/StructuredCatalogEditors";
+import RoleLogoutButton from "@/components/auth/RoleLogoutButton";
 
 type Row = Record<string, unknown> & { id?: string; salon_id?: string; name?: string; created_at?: string };
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="salon" />;
@@ -98,7 +99,7 @@ function DashboardContent({section,context:c}:{section:DashboardSection;context:
   if(section==="subscription")return <SubscriptionV2 c={c}/>;
   if(!c.subscriptionActive)return <SubscriptionRequired c={c}/>;
   if(section==="promotions"&&!hasPlanFeature(c.plan,"promotions"))return <UpgradeRequired feature="Promotions" plan="Growth"/>;
-  if(section==="overview")return <Overview c={c}/>; if(section==="my-page")return <><MyPage c={c}/><SalonLogoEditor c={c}/></>; if(section==="photos")return <Photos c={c}/>; if(section==="styles")return <StructuredStylesEditor c={c}/>; if(section==="stylists")return <StructuredStylistsEditor c={c}/>; if(section==="products")return <TruthfulProducts c={c}/>; if(section==="availability")return <Availability c={c}/>; if(section==="bookings")return <Bookings c={c}/>; if(section==="reviews")return <Reviews c={c}/>; if(section==="earnings")return <Earnings c={c}/>; if(section==="promotions")return <Promotions c={c}/>; return <SettingsPage c={c}/>;
+  if(section==="overview")return <Overview c={c}/>; if(section==="my-page")return <><MyPage c={c}/><SalonLogoEditor c={c}/></>; if(section==="photos")return <Photos c={c}/>; if(section==="styles")return <StructuredStylesEditor c={c}/>; if(section==="stylists")return <StructuredStylistsEditor c={c}/>; if(section==="products")return <TruthfulProducts c={c}/>; if(section==="availability")return <Availability c={c}/>; if(section==="bookings")return <Bookings c={c}/>; if(section==="reviews")return <Reviews c={c}/>; if(section==="earnings")return <Earnings c={c}/>; if(section==="promotions")return <Promotions c={c}/>; return <><SettingsPage c={c}/><div className="mt-4 rounded-[14px] border border-magenta/20 bg-white p-5 lg:hidden"><p className="mb-3 text-sm leading-6 text-plum">Two-factor authentication is required for salon accounts and uses SMS with email fallback.</p><RoleLogoutButton scope="salon" className="flex items-center gap-2 font-bold text-magenta" /></div></>;
 }
 
 function SubscriptionRequired({c}:{c:Ctx}){return <div className="mx-auto max-w-3xl py-16 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta"><Crown size={30}/></span><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Activate your salon plan</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">Your salon is approved, but the business workspace remains locked until a subscription is active. Your selected {c.plan} plan can be activated in Stripe test mode.</p><Link href="/salon/dashboard/subscription" className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white">Activate subscription</Link></div>}

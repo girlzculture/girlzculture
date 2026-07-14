@@ -107,7 +107,23 @@ function EmptyState({ title, text, action, href }: { title: string; text: string
 }
 
 function SettingsPanel({ customer }: { customer: Row | null }) {
-  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-6"><h2 className="font-serif text-2xl text-plum">Profile settings</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-xs font-bold">Name<input readOnly value={String(customer?.name || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label><label className="text-xs font-bold">Email<input readOnly value={String(customer?.email || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label></div><Link href="/forgot-password" className="mt-5 inline-flex text-sm font-bold text-magenta">Reset password</Link></section>;
+  const [mfa, setMfa] = useState(false);
+  const [securityMessage, setSecurityMessage] = useState("");
+  useEffect(() => { void supabase.auth.getSession().then(async ({ data }) => {
+    if (!data.session) return;
+    const response = await fetch("/api/auth/mfa/settings", { headers: { Authorization: `Bearer ${data.session.access_token}` } });
+    if (response.ok) { const body = await response.json(); setMfa(Boolean(body.mfa_enabled)); }
+  }); }, []);
+  async function saveMfa(enabled: boolean) {
+    setSecurityMessage("");
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) { setSecurityMessage("Sign in again to change security settings."); return; }
+    const response = await fetch("/api/auth/mfa/settings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ mfa_enabled: enabled, preferred_channel: "email" }) });
+    const body = await response.json();
+    if (!response.ok) { setSecurityMessage(body.error || "Unable to save 2FA."); return; }
+    setMfa(enabled); setSecurityMessage(enabled ? "Email two-factor authentication is now enabled." : "Two-factor authentication is now optional for this customer account.");
+  }
+  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-6"><h2 className="font-serif text-2xl text-plum">Profile settings</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm font-bold">Name<input readOnly value={String(customer?.name || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label><label className="text-sm font-bold">Email<input readOnly value={String(customer?.email || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label></div><div className="mt-6 rounded-[12px] border border-magenta/20 bg-blush/20 p-4"><div className="flex items-center justify-between gap-4"><div><h3 className="font-semibold text-plum">Email two-factor authentication</h3><p className="mt-1 text-sm leading-6 text-ink/70">Optional for customers. When enabled, every new sign-in requires a six-digit email code.</p></div><input type="checkbox" checked={mfa} onChange={(event) => void saveMfa(event.target.checked)} className="h-5 w-5 accent-magenta" aria-label="Enable email two-factor authentication" /></div>{securityMessage ? <p className="mt-3 text-sm text-plum">{securityMessage}</p> : null}</div><div className="mt-5 flex flex-wrap gap-5"><Link href="/forgot-password" className="inline-flex text-sm font-bold text-magenta">Reset password</Link><RoleLogoutButton scope="customer" className="flex items-center gap-2 text-sm font-bold text-magenta" /></div></section>;
 }
 
 function Status({ value }: { value?: string }) {
