@@ -39,7 +39,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || "Girlz Culture <notifications@girlzculture.com>", to, subject, html }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || "Girlz Culture <bookings@notifications.girlzculture.com>", to, subject, html }),
   });
   if (!response.ok) throw new Error(`Email delivery failed: ${await response.text()}`);
   return response.json();
