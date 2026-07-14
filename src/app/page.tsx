@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 import SearchComposer from "@/components/site/SearchComposer";
 import { getContentPage } from "@/lib/content";
+import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -25,6 +26,9 @@ type Salon = {
   badges: string[] | string | null;
   subscription_tier: string | null;
   verification_status: string | null;
+  is_closed_override: boolean | null;
+  closed_override_date: string | null;
+  time_zone: string | null;
 };
 
 type StylePrice = {
@@ -101,7 +105,7 @@ function SalonCard({
         <div className="p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>
+              <h3 className="font-serif text-[15px] font-semibold leading-tight text-ink">{salon.name || "Salon"}</h3>{isSalonClosedToday(salon) ? <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-1 text-[9px] font-bold text-red-700">Closed today</span> : null}
               <p className="mt-1 text-[10px] text-ink/55">{salon.neighborhood || salon.address_city || "Location not provided"}</p>
             </div>
             <p className="flex shrink-0 items-center gap-1 text-[10px] text-ink/60"><Star size={12} className="fill-amber text-amber" aria-hidden="true" /> {formatRating(salon.rating_overall)} <span>({salon.review_count || 0})</span></p>
@@ -120,7 +124,7 @@ export default async function Home() {
   const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "The beauty booking marketplace for braided styles. Real salons. Real people. Real results.", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
-    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier,verification_status")
+    .select("id,name,slug,neighborhood,address_city,rating_overall,review_count,cover_photo_url,badges,subscription_tier,verification_status,is_closed_override,closed_override_date,time_zone")
     .order("review_count", { ascending: false })
     .limit(50);
 

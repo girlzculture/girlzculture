@@ -19,10 +19,14 @@ import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome"
 import SafeImage from "@/components/site/SafeImage";
 import SalonProfileActions from "@/components/site/SalonProfileActions";
 import { getContentPage } from "@/lib/content";
+import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 
 type SalonRecord = {
   id: string;
   name?: string | null;
+  is_closed_override?: boolean | null;
+  closed_override_date?: string | null;
+  time_zone?: string | null;
   slug?: string | null;
   neighborhood?: string | null;
   description?: string | null;
@@ -208,6 +212,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   }
 
   const rating = typeof salon.rating_overall === "number" ? salon.rating_overall : 0;
+  const closedToday = isSalonClosedToday(salon);
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
   const uploadedGallery = [salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)].filter((photo): photo is string => Boolean(photo));
   const galleryItems = Array.from({ length: 5 }, (_, index) => uploadedGallery[index] || null);
@@ -250,7 +255,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
-            <div><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span></div>
+            <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span>{closedToday ? <span className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1.5 text-[9px] font-bold text-red-700"><Clock3 size={14}/>Closed today</span> : null}</div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span></> : <strong>New</strong>}<span className="text-ink/55">({reviewCount} reviews)</span></div>

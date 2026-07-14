@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { addMinutesToLocal, salonTimeZone, slotLabel, zonedLocalToUtc } from "@/lib/dateTime";
+import { isSalonClosedOn } from "@/lib/salonOpenStatus";
 
 type Row = Record<string, unknown>;
 type HoursRange = { open: string; close: string; closed: boolean };
@@ -51,11 +52,12 @@ function overlaps(start: number, end: number, otherStart: unknown, otherEnd: unk
 export async function bookingAvailability(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; date: string; excludeBookingId?: string | null }) {
   const admin = getSupabaseAdmin();
   const [{ data: salon }, { data: style }, { data: stylists }] = await Promise.all([
-    admin.from("salons").select("id,time_zone,hours,booking_settings").eq("id", input.salonId).single(),
+    admin.from("salons").select("id,time_zone,hours,booking_settings,is_closed_override,closed_override_date").eq("id", input.salonId).single(),
     admin.from("styles").select("id,salon_id,duration_min_hours,buffer_minutes").eq("id", input.styleId).eq("salon_id", input.salonId).single(),
     admin.from("stylists").select("id,availability,is_active").eq("salon_id", input.salonId).eq("is_active", true),
   ]);
   if (!salon || !style) throw new Error("Salon or style not found.");
+  if (isSalonClosedOn(salon, input.date)) return { slots: [], timeZone: salonTimeZone(salon.time_zone), reason: "This salon is closed today. Choose another date." };
   const timeZone = salonTimeZone(salon.time_zone);
   const dateStart = zonedLocalToUtc(`${input.date}T00:00`, timeZone);
   const following = addMinutesToLocal(input.date, "00:00", 24 * 60);

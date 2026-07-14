@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Star } from "lucide-react";
+import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 
 type Salon = {
   id?: string;
@@ -13,6 +14,9 @@ type Salon = {
   rating_overall?: number | null;
   review_count?: number | null;
   badges?: string[] | string | null;
+  is_closed_override?: boolean | null;
+  closed_override_date?: string | null;
+  time_zone?: string | null;
 };
 
 export default function SearchClient() {
@@ -118,7 +122,7 @@ export default function SearchClient() {
                 <div className="mb-3 h-36 w-full rounded-md bg-cream/60" />
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold text-plum">{s.name}</div>
+                    <div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-plum">{s.name}</span>{isSalonClosedToday(s) ? <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-700">Closed today</span> : null}</div>
                     <div className="text-sm text-ink/70">{s.neighborhood}</div>
                     <div className="mt-2 flex items-center gap-2 text-sm text-ink/80">
                       {Number(s.review_count || 0) > 0 ? <><Star size={15} className="fill-amber text-amber" aria-hidden="true" /><div>{Number(s.rating_overall || 0).toFixed(1)} · {s.review_count} reviews</div></> : <div>New (0 reviews)</div>}
