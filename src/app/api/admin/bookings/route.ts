@@ -1,12 +1,12 @@
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
-import { deliverBookingNotifications, requireAdmin } from "@/lib/supabaseAdmin";
+import { deliverBookingNotifications, requireAdminPermission } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   try {
     enforceRateLimit(request, "admin-manual-booking", 30, 10 * 60_000);
-    const { admin, user } = await requireAdmin(request);
+    const { admin, user } = await requireAdminPermission(request, "bookings");
     const body = await request.json() as Record<string, unknown>;
     const salonId = cleanText(body.salon_id, 50);
     const guestName = cleanText(body.guest_name, 120);

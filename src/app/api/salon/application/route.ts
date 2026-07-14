@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizePlan } from "@/lib/plans";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 
@@ -33,8 +34,8 @@ export async function POST(request: Request) {
     const salonPatch = {
       user_id: user.id, name: cleanText(body.business_name, 120), owner_name: cleanText(body.owner_name, 120),
       email: cleanEmail(body.business_email), phone: cleanUsPhone(body.phone),
-      address_street: cleanText(body.street_address, 180), address_city: cleanText(body.city, 100), address_state: cleanText(body.state, 50),
-      address_zip: cleanText(body.zip_code, 12), neighborhood: cleanText(body.neighborhood, 100),
+      address_street: cleanText(body.street_address, 180), address_line2: cleanText(body.address_line2, 120) || null, address_city: cleanText(body.city, 100), address_state: normalizeUsState(body.state),
+      address_zip: normalizeUsZip(body.zip_code),
       business_type: cleanText(body.business_type, 80), application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",
       logo_url: applicationMediaUrl(body.logo_url),
     };
@@ -54,9 +55,9 @@ export async function POST(request: Request) {
 
     const application = {
       salon_id: salon.id, user_id: user.id, business_name: salonPatch.name, owner_name: salonPatch.owner_name,
-      business_email: salonPatch.email, phone: salonPatch.phone, street_address: salonPatch.address_street,
+      business_email: salonPatch.email, phone: salonPatch.phone, street_address: salonPatch.address_street, address_line2: salonPatch.address_line2,
       city: salonPatch.address_city, state: salonPatch.address_state, zip_code: salonPatch.address_zip,
-      neighborhood: salonPatch.neighborhood, business_type: salonPatch.business_type, referral_source: cleanText(body.referral_source, 120), selected_plan: selectedPlan,
+      neighborhood: null, business_type: salonPatch.business_type, referral_source: cleanText(body.referral_source, 120), selected_plan: selectedPlan,
       logo_url: salonPatch.logo_url, photo_urls: Array.isArray(body.photo_urls) ? body.photo_urls : [], document_urls: Array.isArray(body.document_urls) ? body.document_urls : [],
       consent_authorized: true, consent_terms: true, consent_photos: true, status: "Pending", rejection_reason: null,
     };

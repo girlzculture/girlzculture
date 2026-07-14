@@ -11,12 +11,39 @@ alter table public.styles
   add column if not exists buffer_minutes integer not null default 15
   check (buffer_minutes between 0 and 180);
 
+-- The original schema stored UTC ISO values in a timestamp-without-time-zone
+-- column. Convert those UTC clock values to real instants before constructing
+-- any booking ranges. The type check keeps this safe to rerun.
+do $$
+declare
+  appointment_type text;
+begin
+  select data_type into appointment_type
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'bookings'
+    and column_name = 'appointment_datetime';
+
+  if appointment_type = 'timestamp without time zone' then
+    execute $ddl$
+      alter table public.bookings
+      alter column appointment_datetime type timestamptz
+      using appointment_datetime at time zone 'UTC'
+    $ddl$;
+  elsif appointment_type is distinct from 'timestamp with time zone' then
+    raise exception 'Unsupported bookings.appointment_datetime type: %', appointment_type;
+  end if;
+end;
+$$;
+
 alter table public.bookings
   add column if not exists buffer_minutes integer not null default 15,
   add column if not exists appointment_ends_at timestamptz,
   add column if not exists blocked_until timestamptz,
   add column if not exists booking_resource_id uuid,
-  add column if not exists normalized_guest_email text;
+  add column if not exists normalized_guest_email text,
+  add column if not exists booking_window tstzrange,
+  add column if not exists is_active_booking boolean not null default true;
 
 -- Backfill durable range fields before enforcing constraints. Trigger below keeps them current.
 update public.bookings
@@ -27,11 +54,20 @@ set duration_hours = greatest(coalesce(duration_hours, 0.25), 0.25),
     booking_resource_id = coalesce(stylist_id, salon_id),
     normalized_guest_email = nullif(lower(trim(guest_email)), '');
 
+-- Materialize the overlap window and active-state predicate. PostgreSQL requires
+-- every expression used by an exclusion index (including its predicate) to be
+-- immutable. Keeping these values as ordinary stored columns also avoids an
+-- implicit timestamp -> timestamptz cast inside the GiST index expression.
+update public.bookings
+set booking_window = tstzrange(appointment_datetime, blocked_until, '[)'),
+    is_active_booking = lower(coalesce(status, '')) not in ('cancelled','canceled');
+
 alter table public.bookings
   alter column duration_hours set not null,
   alter column appointment_ends_at set not null,
   alter column blocked_until set not null,
-  alter column booking_resource_id set not null;
+  alter column booking_resource_id set not null,
+  alter column booking_window set not null;
 
 alter table public.bookings drop constraint if exists bookings_duration_positive;
 alter table public.bookings add constraint bookings_duration_positive check (duration_hours >= 0.25 and duration_hours <= 24);
@@ -50,13 +86,15 @@ begin
     + make_interval(mins => new.buffer_minutes);
   new.booking_resource_id := coalesce(new.stylist_id, new.salon_id);
   new.normalized_guest_email := nullif(lower(trim(new.guest_email)), '');
+  new.booking_window := tstzrange(new.appointment_datetime, new.blocked_until, '[)');
+  new.is_active_booking := lower(coalesce(new.status, '')) not in ('cancelled','canceled');
   return new;
 end;
 $$;
 
 drop trigger if exists bookings_integrity_fields on public.bookings;
 create trigger bookings_integrity_fields
-before insert or update of salon_id, stylist_id, appointment_datetime, duration_hours, buffer_minutes, guest_email
+before insert or update
 on public.bookings for each row execute function public.set_booking_integrity_fields();
 
 create table if not exists public.booking_integrity_conflicts (
@@ -75,13 +113,12 @@ with conflicts as (
   select newer.id booking_id, min(older.id::text)::uuid conflicting_booking_id, 'resource_overlap'::text conflict_type
   from public.bookings newer
   join public.bookings older
-    on older.id <> newer.id
+   on older.id <> newer.id
    and older.booking_resource_id = newer.booking_resource_id
-   and tstzrange(older.appointment_datetime, older.blocked_until, '[)')
-       && tstzrange(newer.appointment_datetime, newer.blocked_until, '[)')
+   and older.booking_window && newer.booking_window
    and (older.created_at, older.id) < (newer.created_at, newer.id)
-  where lower(coalesce(newer.status, '')) not in ('cancelled','canceled')
-    and lower(coalesce(older.status, '')) not in ('cancelled','canceled')
+  where newer.is_active_booking
+    and older.is_active_booking
   group by newer.id
 ), logged as (
   insert into public.booking_integrity_conflicts(booking_id, conflicting_booking_id, conflict_type, original_status)
@@ -99,11 +136,10 @@ with conflicts as (
     on older.id <> newer.id
    and older.normalized_guest_email = newer.normalized_guest_email
    and newer.normalized_guest_email is not null
-   and tstzrange(older.appointment_datetime, older.blocked_until, '[)')
-       && tstzrange(newer.appointment_datetime, newer.blocked_until, '[)')
+   and older.booking_window && newer.booking_window
    and (older.created_at, older.id) < (newer.created_at, newer.id)
-  where lower(coalesce(newer.status, '')) not in ('cancelled','canceled')
-    and lower(coalesce(older.status, '')) not in ('cancelled','canceled')
+  where newer.is_active_booking
+    and older.is_active_booking
   group by newer.id
 ), logged as (
   insert into public.booking_integrity_conflicts(booking_id, conflicting_booking_id, conflict_type, original_status)
@@ -121,11 +157,10 @@ with conflicts as (
     on older.id <> newer.id
    and older.customer_id = newer.customer_id
    and newer.customer_id is not null
-   and tstzrange(older.appointment_datetime, older.blocked_until, '[)')
-       && tstzrange(newer.appointment_datetime, newer.blocked_until, '[)')
+   and older.booking_window && newer.booking_window
    and (older.created_at, older.id) < (newer.created_at, newer.id)
-  where lower(coalesce(newer.status, '')) not in ('cancelled','canceled')
-    and lower(coalesce(older.status, '')) not in ('cancelled','canceled')
+  where newer.is_active_booking
+    and older.is_active_booking
   group by newer.id
 ), logged as (
   insert into public.booking_integrity_conflicts(booking_id, conflicting_booking_id, conflict_type, original_status)
@@ -140,22 +175,22 @@ alter table public.bookings drop constraint if exists bookings_resource_no_overl
 alter table public.bookings add constraint bookings_resource_no_overlap
 exclude using gist (
   booking_resource_id with =,
-  tstzrange(appointment_datetime, blocked_until, '[)') with &&
-) where (lower(coalesce(status, '')) not in ('cancelled','canceled'));
+  booking_window with &&
+) where (is_active_booking);
 
 alter table public.bookings drop constraint if exists bookings_customer_email_no_overlap;
 alter table public.bookings add constraint bookings_customer_email_no_overlap
 exclude using gist (
   normalized_guest_email with =,
-  tstzrange(appointment_datetime, blocked_until, '[)') with &&
-) where (normalized_guest_email is not null and lower(coalesce(status, '')) not in ('cancelled','canceled'));
+  booking_window with &&
+) where (is_active_booking and normalized_guest_email is not null);
 
 alter table public.bookings drop constraint if exists bookings_customer_id_no_overlap;
 alter table public.bookings add constraint bookings_customer_id_no_overlap
 exclude using gist (
   customer_id with =,
-  tstzrange(appointment_datetime, blocked_until, '[)') with &&
-) where (customer_id is not null and lower(coalesce(status, '')) not in ('cancelled','canceled'));
+  booking_window with &&
+) where (is_active_booking and customer_id is not null);
 
 alter table public.booking_checkout_intents
   add column if not exists stylist_id uuid references public.stylists(id) on delete cascade,
@@ -165,17 +200,55 @@ alter table public.booking_checkout_intents
   add column if not exists duration_hours numeric(6,2),
   add column if not exists buffer_minutes integer not null default 15,
   add column if not exists booking_resource_id uuid,
-  add column if not exists blocked_until timestamptz;
+  add column if not exists blocked_until timestamptz,
+  add column if not exists normalized_guest_email text,
+  add column if not exists checkout_window tstzrange,
+  add column if not exists is_pending_intent boolean not null default true;
 
-create index if not exists booking_checkout_intents_resource_idx
+create or replace function public.set_booking_checkout_integrity_fields()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.normalized_guest_email := nullif(lower(trim(new.guest_email)), '');
+  new.checkout_window := case
+    when new.appointment_datetime is not null and new.blocked_until is not null
+      then tstzrange(new.appointment_datetime, new.blocked_until, '[)')
+    else null
+  end;
+  new.is_pending_intent := coalesce(new.status, '') = 'Pending';
+  return new;
+end;
+$$;
+
+drop trigger if exists booking_checkout_integrity_fields on public.booking_checkout_intents;
+create trigger booking_checkout_integrity_fields
+before insert or update
+on public.booking_checkout_intents for each row execute function public.set_booking_checkout_integrity_fields();
+
+update public.booking_checkout_intents
+set normalized_guest_email = nullif(lower(trim(guest_email)), ''),
+    checkout_window = case
+      when appointment_datetime is not null and blocked_until is not null
+        then tstzrange(appointment_datetime, blocked_until, '[)')
+      else null
+    end,
+    is_pending_intent = coalesce(status, '') = 'Pending';
+
+drop index if exists public.booking_checkout_intents_resource_idx;
+drop index if exists public.booking_checkout_intents_email_idx;
+drop index if exists public.booking_checkout_intents_customer_idx;
+
+create index booking_checkout_intents_resource_idx
   on public.booking_checkout_intents(booking_resource_id, appointment_datetime)
-  where status = 'Pending';
-create index if not exists booking_checkout_intents_email_idx
-  on public.booking_checkout_intents(lower(guest_email), appointment_datetime)
-  where status = 'Pending';
-create index if not exists booking_checkout_intents_customer_idx
+  where is_pending_intent;
+create index booking_checkout_intents_email_idx
+  on public.booking_checkout_intents(normalized_guest_email, appointment_datetime)
+  where is_pending_intent and normalized_guest_email is not null;
+create index booking_checkout_intents_customer_idx
   on public.booking_checkout_intents(customer_id, appointment_datetime)
-  where status = 'Pending' and customer_id is not null;
+  where is_pending_intent and customer_id is not null;
 
 create or replace function public.reserve_booking_checkout(
   p_salon_id uuid,
@@ -222,15 +295,13 @@ begin
   if exists (
     select 1 from public.bookings b
     where b.booking_resource_id = v_resource_id
-      and lower(coalesce(b.status, '')) not in ('cancelled','canceled')
-      and tstzrange(b.appointment_datetime, b.blocked_until, '[)')
-          && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
+      and b.is_active_booking
+      and b.booking_window && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
   ) or exists (
     select 1 from public.booking_checkout_intents i
-    where i.status = 'Pending' and i.expires_at > now()
+    where i.is_pending_intent and i.expires_at > now()
       and i.booking_resource_id = v_resource_id
-      and tstzrange(i.appointment_datetime, i.blocked_until, '[)')
-          && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
+      and i.checkout_window && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
   ) then
     raise exception using errcode = '23P01', message = 'BOOKING_RESOURCE_CONFLICT';
   end if;
@@ -239,15 +310,13 @@ begin
     exists (
       select 1 from public.bookings b
       where b.normalized_guest_email = v_email
-        and lower(coalesce(b.status, '')) not in ('cancelled','canceled')
-        and tstzrange(b.appointment_datetime, b.blocked_until, '[)')
-            && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
+        and b.is_active_booking
+        and b.booking_window && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
     ) or exists (
       select 1 from public.booking_checkout_intents i
-      where i.status = 'Pending' and i.expires_at > now()
-        and lower(i.guest_email) = v_email
-        and tstzrange(i.appointment_datetime, i.blocked_until, '[)')
-            && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
+      where i.is_pending_intent and i.expires_at > now()
+        and i.normalized_guest_email = v_email
+        and i.checkout_window && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
     )
   ) then
     raise exception using errcode = '23P01', message = 'CUSTOMER_BOOKING_CONFLICT';
@@ -257,15 +326,13 @@ begin
     exists (
       select 1 from public.bookings b
       where b.customer_id = p_customer_id
-        and lower(coalesce(b.status, '')) not in ('cancelled','canceled')
-        and tstzrange(b.appointment_datetime, b.blocked_until, '[)')
-            && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
+        and b.is_active_booking
+        and b.booking_window && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
     ) or exists (
       select 1 from public.booking_checkout_intents i
-      where i.status = 'Pending' and i.expires_at > now()
+      where i.is_pending_intent and i.expires_at > now()
         and i.customer_id = p_customer_id
-        and tstzrange(i.appointment_datetime, i.blocked_until, '[)')
-            && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
+        and i.checkout_window && tstzrange(p_appointment_datetime, v_blocked_until, '[)')
     )
   ) then
     raise exception using errcode = '23P01', message = 'CUSTOMER_BOOKING_CONFLICT';

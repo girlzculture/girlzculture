@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { addMinutesToLocal, salonTimeZone, slotLabel, zonedLocalToUtc } from "@/lib/dateTime";
+import { isSalonClosedOn } from "@/lib/salonOpenStatus";
 
 type Row = Record<string, unknown>;
 type HoursRange = { open: string; close: string; closed: boolean };
@@ -48,14 +49,15 @@ function overlaps(start: number, end: number, otherStart: unknown, otherEnd: unk
   return Number.isFinite(left) && Number.isFinite(right) && start < right && end > left;
 }
 
-export async function bookingAvailability(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; date: string }) {
+export async function bookingAvailability(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; date: string; excludeBookingId?: string | null }) {
   const admin = getSupabaseAdmin();
   const [{ data: salon }, { data: style }, { data: stylists }] = await Promise.all([
-    admin.from("salons").select("id,time_zone,hours,booking_settings").eq("id", input.salonId).single(),
+    admin.from("salons").select("id,time_zone,hours,booking_settings,is_closed_override,closed_override_date").eq("id", input.salonId).single(),
     admin.from("styles").select("id,salon_id,duration_min_hours,buffer_minutes").eq("id", input.styleId).eq("salon_id", input.salonId).single(),
     admin.from("stylists").select("id,availability,is_active").eq("salon_id", input.salonId).eq("is_active", true),
   ]);
   if (!salon || !style) throw new Error("Salon or style not found.");
+  if (isSalonClosedOn(salon, input.date)) return { slots: [], timeZone: salonTimeZone(salon.time_zone), reason: "This salon is closed today. Choose another date." };
   const timeZone = salonTimeZone(salon.time_zone);
   const dateStart = zonedLocalToUtc(`${input.date}T00:00`, timeZone);
   const following = addMinutesToLocal(input.date, "00:00", 24 * 60);
@@ -73,8 +75,8 @@ export async function bookingAvailability(input: { salonId: string; styleId: str
     normalizedEmail ? admin.from("booking_checkout_intents").select("id,appointment_datetime,blocked_until,status,expires_at").eq("guest_email", normalizedEmail).eq("status", "Pending").gt("expires_at", new Date().toISOString()).lt("appointment_datetime", dateEnd.toISOString()).gt("blocked_until", dateStart.toISOString()) : Promise.resolve({ data: [] }),
   ];
   const customerResults = await Promise.all(customerBookingQueries);
-  const customerBusy = customerResults.flatMap((result) => result.data || []).filter((row) => !["cancelled", "canceled"].includes(String(row.status).toLowerCase()));
-  const activeBookings = (bookings || []).filter((row) => !["cancelled", "canceled"].includes(String(row.status).toLowerCase()));
+  const customerBusy = customerResults.flatMap((result) => result.data || []).filter((row) => row.id !== input.excludeBookingId && !["cancelled", "canceled"].includes(String(row.status).toLowerCase()));
+  const activeBookings = (bookings || []).filter((row) => row.id !== input.excludeBookingId && !["cancelled", "canceled"].includes(String(row.status).toLowerCase()));
   const activeIntents = intents || [];
   const roster = (stylists || []) as Row[];
   const requested = input.stylistId ? roster.filter((row) => row.id === input.stylistId) : roster;
@@ -115,7 +117,7 @@ export async function bookingAvailability(input: { salonId: string; styleId: str
   return { slots, timeZone, durationMinutes, bufferMinutes, reason: slots.length ? "" : "No open times remain for this day." };
 }
 
-export async function nextAvailableSlot(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; afterDate: string; afterTime?: string }) {
+export async function nextAvailableSlot(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; afterDate: string; afterTime?: string; excludeBookingId?: string | null }) {
   let cursor = input.afterDate;
   for (let day = 0; day < 45; day += 1) {
     const availability = await bookingAvailability({ ...input, date: cursor });

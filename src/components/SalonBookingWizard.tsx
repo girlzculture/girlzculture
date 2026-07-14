@@ -8,6 +8,7 @@ import { BriefcaseBusiness, CalendarDays, Check, Clock3, LockKeyhole, ShieldChec
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
+import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 
 type Row = Record<string, any>;
 type Props = { salon: Row; styles: Row[]; stylists: Row[] };
@@ -22,6 +23,7 @@ function options(raw: any) {
 
 const money = (value: number) => `$${value.toFixed(2)}`;
 export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
+  const closedToday = isSalonClosedToday(salon);
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [styleId, setStyleId] = useState(styles[0]?.id || "");
@@ -34,7 +36,7 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const [addons, setAddons] = useState<string[]>([]);
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
   const [consent, setConsent] = useState(false);
-  const [message, setMessage] = useState(searchParams.get("payment") === "cancelled" ? "Checkout was cancelled. Your appointment was not booked." : "");
+  const [message, setMessage] = useState(searchParams.get("payment") === "cancelled" ? "Checkout was cancelled. Your appointment was not booked." : closedToday ? "This salon is closed today. You can still choose a future date." : "");
   const [saving, setSaving] = useState(false);
   const [confirmed, setConfirmed] = useState<Row | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);

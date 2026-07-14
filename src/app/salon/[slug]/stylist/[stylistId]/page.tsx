@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 
-type Salon = { id: string; name?: string | null; slug?: string | null; neighborhood?: string | null; address_city?: string | null; address_state?: string | null };
+type Salon = { id: string; name?: string | null; slug?: string | null; address_city?: string | null; address_state?: string | null };
 type Stylist = { id: string; name?: string | null; bio?: string | null; specialties?: string[] | string | null; avatar_url?: string | null; photos?: string[] | string | null; years_experience?: number | null; rating?: number | null };
 
 function normalizeList(value: string[] | string | null | undefined) {
@@ -23,7 +23,7 @@ function normalizeList(value: string[] | string | null | undefined) {
 
 export default async function StylistProfilePage({ params }: { params: Promise<{ slug: string; stylistId: string }> }) {
   const { slug, stylistId } = await params;
-  const { data: salon } = await supabase.from("salons").select("id,name,slug,neighborhood,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
+  const { data: salon } = await supabase.from("salons").select("id,name,slug,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
   if (!salon) notFound();
 
   const { data: stylist } = await supabase.from("stylists").select("*").eq("id", stylistId).eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).maybeSingle<Stylist>();
@@ -33,7 +33,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
   const portfolio = normalizeList(stylist.photos);
   const experience = Number(stylist.years_experience || 0);
   const rating = Number(stylist.rating || 0);
-  const location = [salon.neighborhood, salon.address_city, salon.address_state].filter(Boolean).join(", ");
+  const location = [salon.address_city, salon.address_state].filter(Boolean).join(", ");
 
   return (
     <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0">

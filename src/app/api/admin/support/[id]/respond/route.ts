@@ -1,8 +1,8 @@
-import { requireAdmin, sendEmail } from "@/lib/supabaseAdmin";
+import { requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request, context: RouteContext<"/api/admin/support/[id]/respond">) {
   try {
-    const { admin, user } = await requireAdmin(request);
+    const { admin, user } = await requireAdminPermission(request, "support");
     const { id } = await context.params;
     const { response, status = "Resolved" } = await request.json() as { response?: string; status?: string };
     if (!response?.trim()) return Response.json({ error: "Write a response before sending." }, { status: 400 });

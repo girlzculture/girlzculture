@@ -92,8 +92,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="font-serif text-[24px] font-semibold text-ink">Reviews</h2>
-          {salonReviewCount > 0 && salonRating > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span> : <span className="text-[12px] font-semibold">New</span>}
-          <span className="text-[10px] text-ink/50">({salonReviewCount})</span>
+          {salonReviewCount > 0 && salonRating > 0 ? <><span className="inline-flex items-center gap-1 text-[12px] font-semibold"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span><span className="text-[10px] text-ink/50">({salonReviewCount})</span></> : <span className="rounded-full bg-blush px-2.5 py-1 text-[12px] font-semibold text-plum">New</span>}
         </div>
         {localReviews.length > 1 ? <div className="flex items-center gap-2"><button type="button" onClick={showPrevious} aria-label="Previous review" className="grid h-8 w-8 place-items-center rounded-full border border-plum/10 text-plum"><ChevronLeft size={15} /></button><button type="button" onClick={showNext} aria-label="Next review" className="grid h-8 w-8 place-items-center rounded-full border border-plum/10 text-plum"><ChevronRight size={15} /></button></div> : null}
       </div>

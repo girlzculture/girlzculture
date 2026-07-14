@@ -35,7 +35,51 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Readability floor for the marketplace and both dashboards. Several early
+ * mockup-derived components used 7-11px utility values that became illegible
+ * on real devices. These global floors preserve their hierarchy while keeping
+ * support text, metadata, labels, and controls at accessible reading sizes.
+ */
+:where([class~="text-[7px]"], [class~="text-[8px]"], [class~="text-[9px]"]) {
+  font-size: 0.75rem !important;
+  line-height: 1.15rem !important;
+}
+
+:where([class~="text-[10px]"], [class~="text-[11px]"], [class~="text-[12px]"], [class~="text-xs"]) {
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+}
+
+:where([class~="text-ink/20"], [class~="text-ink/25"], [class~="text-ink/35"], [class~="text-ink/40"], [class~="text-ink/45"], [class~="text-ink/50"], [class~="text-ink/55"]) {
+  color: #625868 !important;
+}
+
+:where(input, select, textarea) {
+  color: var(--foreground);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+:where(input, textarea)::placeholder {
+  color: #716676;
+  opacity: 1;
+}
+
+:where(table) {
+  font-size: 0.8125rem;
+  line-height: 1.35rem;
+}
+
+:where(small) {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
 }
 
 ::selection {

@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, LogOut, MessageSquare, Search, Settings, Star, UserRound } from "lucide-react";
+import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Star, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
+import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
+import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -13,6 +15,10 @@ type Row = Record<string, unknown> & {
   appointment_datetime?: string;
   salon?: Record<string, unknown>;
   style?: Record<string, unknown>;
+  is_closed_override?: boolean | null;
+  closed_override_date?: string | null;
+  time_zone?: string | null;
+  hours?: unknown;
 };
 type AccountTab = "overview" | "upcoming" | "past" | "favorites" | "reviews" | "inbox" | "payments" | "settings";
 const tabs: Array<[AccountTab, string, typeof Home]> = [
@@ -41,7 +47,7 @@ export default function CustomerAccount() {
       }
       const [profileResult, bookingResult, favoriteResult] = await Promise.all([
         supabase.from("customers").select("*").eq("id", data.user.id).maybeSingle(),
-        supabase.from("bookings").select("*,salon:salons(name,slug,neighborhood,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
+        supabase.from("bookings").select("*,salon:salons(name,slug,address_city,address_state,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
         supabase.from("customer_favorites").select("salon:salons(*)").eq("customer_id", data.user.id).limit(50),
       ]);
       if (!active) return;
@@ -68,17 +74,17 @@ export default function CustomerAccount() {
 
   const name = String(customer?.name || "Girlz Culture Member");
   const firstName = name.split(" ")[0];
-  return <div className="min-h-screen bg-cream pb-20 text-ink lg:pb-0">
+  return <div className="min-h-screen bg-cream pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
     <header className="flex h-20 items-center justify-between border-b border-plum/10 bg-white/80 px-5 lg:px-10">
       <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
       <nav className="hidden gap-10 text-sm md:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
-      <div className="flex items-center gap-4"><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span></div>
+      <div className="flex items-center gap-4"><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
     </header>
     <div className="mx-auto grid max-w-[1720px] lg:grid-cols-[270px_1fr]">
       <aside className="hidden min-h-[calc(100vh-80px)] bg-[linear-gradient(150deg,#4b0b58,#22092b)] p-6 text-white lg:flex lg:flex-col">
         <div className="flex items-center gap-4"><SafeImage src={customer?.avatar_url as string} fallbackSrc="/images/braids-knotless.jpg" alt={name} className="h-20 w-20 rounded-full object-cover"/><div><h2 className="font-serif text-xl">{name}</h2><p className="mt-1 flex items-center gap-1.5 text-sm text-amber"><Crown size={15} aria-hidden="true" />{String(customer?.membership_tier || "Member")}</p></div></div>
         <nav className="mt-7 space-y-2">{tabs.map(([id, label, Icon]) => <Link key={id} href={`/account?tab=${id}`} className={`flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm ${tab === id ? "bg-magenta/55" : "hover:bg-white/10"}`}><Icon size={20}/>{label}</Link>)}</nav>
-        <button onClick={() => void supabase.auth.signOut().then(() => location.href = "/")} className="mt-auto flex items-center gap-3 px-4 py-3"><LogOut/>Log Out</button>
+        <RoleLogoutButton scope="customer" className="mt-auto flex items-center gap-3 rounded-[10px] px-4 py-3 hover:bg-white/10" />
       </aside>
       <main className="min-w-0 p-4 sm:p-8 lg:p-10">
         <section className="rounded-[18px] bg-plum p-6 text-white lg:bg-transparent lg:p-0 lg:text-ink"><p className="text-sm lg:hidden">Welcome back,</p><h1 className="font-serif text-3xl font-semibold lg:text-4xl lg:text-plum">{tab === "overview" ? `Welcome back, ${firstName}!` : tabs.find(([id]) => id === tab)?.[1]}</h1><p className="mt-2 text-sm opacity-70">Manage your bookings, favorites, reviews, and account details.</p></section>
@@ -98,7 +104,7 @@ function BookingPanel({ title, rows, empty, past = false }: { title: string; row
 }
 
 function FavoritePanel({ favorites }: { favorites: Row[] }) {
-  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><div><h2 className="font-serif text-2xl font-semibold text-plum">Your Favorite Salons</h2><p className="text-sm text-ink/60">Quick access to the salons you love.</p></div><Link href="/salons" className="text-sm font-bold text-magenta">Find salons</Link></div><div className="mt-5 flex gap-4 overflow-x-auto">{favorites.map((salon) => { const reviews = Number(salon.review_count || 0); return <article key={salon.id} className="min-w-56 overflow-hidden rounded-[14px] border border-plum/10 bg-white"><SafeImage src={salon.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(salon.name)} className="h-28 w-full object-cover"/><div className="p-3"><h3 className="font-serif font-semibold">{String(salon.name)}</h3>{reviews > 0 ? <p className="mt-1 flex items-center gap-1 text-xs text-amber"><Star size={13} className="fill-amber" aria-hidden="true"/>{Number(salon.rating_overall || 0).toFixed(1)} ({reviews})</p> : <p className="mt-1 text-xs text-ink/55">New (0 reviews)</p>}<Link href={`/salon/${salon.slug}`} className="mt-3 block rounded-lg border border-magenta py-2 text-center text-xs font-bold text-magenta">View salon</Link></div></article>; })}{!favorites.length ? <p className="py-10 text-sm text-ink/50">Save salons with the heart button to see them here.</p> : null}</div></section>;
+  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><div><h2 className="font-serif text-2xl font-semibold text-plum">Your Favorite Salons</h2><p className="text-sm text-ink/60">Quick access to the salons you love.</p></div><Link href="/salons" className="text-sm font-bold text-magenta">Find salons</Link></div><div className="mt-5 flex gap-4 overflow-x-auto">{favorites.map((salon) => { const reviews = Number(salon.review_count || 0); const closed=isSalonClosedToday(salon); return <article key={salon.id} className="min-w-56 overflow-hidden rounded-[14px] border border-plum/10 bg-white"><SafeImage src={salon.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(salon.name)} className="h-28 w-full object-cover"/><div className="p-3"><h3 className="font-serif font-semibold">{String(salon.name)}</h3><span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold ${closed?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}>{getSalonStatusLabel(salon)}</span>{reviews > 0 ? <p className="mt-1 flex items-center gap-1 text-xs text-amber"><Star size={13} className="fill-amber" aria-hidden="true"/>{Number(salon.rating_overall || 0).toFixed(1)} ({reviews})</p> : <span className="mt-1 inline-flex rounded-full bg-blush px-2 py-1 text-xs font-bold text-plum">New</span>}<Link href={`/salon/${salon.slug}`} className="mt-3 block rounded-lg border border-magenta py-2 text-center text-xs font-bold text-magenta">View salon</Link></div></article>; })}{!favorites.length ? <p className="py-10 text-sm text-ink/50">Save salons with the heart button to see them here.</p> : null}</div></section>;
 }
 
 function EmptyState({ title, text, action, href }: { title: string; text: string; action: string; href: string }) {
@@ -106,7 +112,23 @@ function EmptyState({ title, text, action, href }: { title: string; text: string
 }
 
 function SettingsPanel({ customer }: { customer: Row | null }) {
-  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-6"><h2 className="font-serif text-2xl text-plum">Profile settings</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-xs font-bold">Name<input readOnly value={String(customer?.name || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label><label className="text-xs font-bold">Email<input readOnly value={String(customer?.email || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label></div><Link href="/forgot-password" className="mt-5 inline-flex text-sm font-bold text-magenta">Reset password</Link></section>;
+  const [mfa, setMfa] = useState(false);
+  const [securityMessage, setSecurityMessage] = useState("");
+  useEffect(() => { void supabase.auth.getSession().then(async ({ data }) => {
+    if (!data.session) return;
+    const response = await fetch("/api/auth/mfa/settings", { headers: { Authorization: `Bearer ${data.session.access_token}` } });
+    if (response.ok) { const body = await response.json(); setMfa(Boolean(body.mfa_enabled)); }
+  }); }, []);
+  async function saveMfa(enabled: boolean) {
+    setSecurityMessage("");
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) { setSecurityMessage("Sign in again to change security settings."); return; }
+    const response = await fetch("/api/auth/mfa/settings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ mfa_enabled: enabled, preferred_channel: "email" }) });
+    const body = await response.json();
+    if (!response.ok) { setSecurityMessage(body.error || "Unable to save 2FA."); return; }
+    setMfa(enabled); setSecurityMessage(enabled ? "Email two-factor authentication is now enabled." : "Two-factor authentication is now optional for this customer account.");
+  }
+  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-6"><h2 className="font-serif text-2xl text-plum">Profile settings</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm font-bold">Name<input readOnly value={String(customer?.name || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label><label className="text-sm font-bold">Email<input readOnly value={String(customer?.email || "")} className="mt-2 w-full rounded-lg border border-plum/10 bg-cream/40 p-3 font-normal"/></label></div><div className="mt-6 rounded-[12px] border border-magenta/20 bg-blush/20 p-4"><div className="flex items-center justify-between gap-4"><div><h3 className="font-semibold text-plum">Email two-factor authentication</h3><p className="mt-1 text-sm leading-6 text-ink/70">Optional for customers. When enabled, every new sign-in requires a six-digit email code.</p></div><input type="checkbox" checked={mfa} onChange={(event) => void saveMfa(event.target.checked)} className="h-5 w-5 accent-magenta" aria-label="Enable email two-factor authentication" /></div>{securityMessage ? <p className="mt-3 text-sm text-plum">{securityMessage}</p> : null}</div><div className="mt-5 flex flex-wrap gap-5"><Link href="/forgot-password" className="inline-flex text-sm font-bold text-magenta">Reset password</Link><RoleLogoutButton scope="customer" className="flex items-center gap-2 text-sm font-bold text-magenta" /></div></section>;
 }
 
 function Status({ value }: { value?: string }) {

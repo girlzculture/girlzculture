@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "sections", "labels", "seo_title", "seo_description", "status"] as const;
 const postFields = ["id", "slug", "title", "excerpt", "content", "category", "cover_image_url", "author", "featured", "status", "published_at"] as const;
@@ -13,7 +13,7 @@ function validSlug(value: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const { admin } = await requireAdmin(request);
+    const { admin } = await requireAdminPermission(request, "content");
     const [pages, posts, masterStyles] = await Promise.all([
       admin.from("content_pages").select("*").order("slug"),
       admin.from("blog_posts").select("*").order("updated_at", { ascending: false }),
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { admin, user } = await requireAdmin(request);
+    const { admin, user } = await requireAdminPermission(request, "content");
     const { type, payload } = await request.json() as { type: "page" | "post" | "master_style"; payload: Record<string, unknown> };
     if (!payload) return Response.json({ error: "Content payload is required." }, { status: 400 });
 
@@ -76,7 +76,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const { admin, user } = await requireAdmin(request);
+    const { admin, user } = await requireAdminPermission(request, "content");
     const { id } = await request.json() as { id?: string };
     if (!id) return Response.json({ error: "Post ID is required" }, { status: 400 });
     const { error } = await admin.from("blog_posts").delete().eq("id", id);

@@ -9,14 +9,16 @@ export async function POST(request: Request) {
     if (authError || !authData.user) return Response.json({ path: "/login", role: "anonymous" }, { status: 401 });
     const user = authData.user;
     const email = user.email?.trim().toLowerCase() || "";
-    const [{ data: adminRows, error: adminError }, { data: salon, error: salonError }] = await Promise.all([
-      admin.from("admin_users").select("email,status,role").ilike("email", email),
+    const [{ data: adminRows, error: adminError }, { data: salon, error: salonError }, { data: teamMember, error: teamError }] = await Promise.all([
+      admin.from("admin_users").select("email,status,role,permissions,is_super_admin").ilike("email", email),
       admin.from("salons").select("id,status").eq("user_id", user.id).limit(1).maybeSingle(),
+      admin.from("salon_team_members").select("id,salon_id,status,permissions,role,stylist_id").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle(),
     ]);
     if (adminError) throw adminError;
     if (salonError) throw salonError;
+    if (teamError) throw teamError;
     const isAdmin = (adminRows || []).some((row) => row.email?.trim().toLowerCase() === email && row.status !== "Inactive");
-    if (isAdmin) return Response.json({ path: "/admin", role: "admin", roleConflict: Boolean(salon) });
+    if (isAdmin) { const row = (adminRows || []).find((item) => item.email?.trim().toLowerCase() === email); return Response.json({ path: "/admin", role: "admin", permissions: row?.permissions || {}, is_super_admin: Boolean(row?.is_super_admin), roleConflict: Boolean(salon || teamMember) }); }
     if (salon) {
       let path = "/salon/dashboard";
       if (salon.status?.toLowerCase() === "pending") {
@@ -24,6 +26,10 @@ export async function POST(request: Request) {
         path = application?.id ? "/salon/dashboard" : "/salon/apply";
       }
       return Response.json({ path, role: "salon_owner" });
+    }
+    if (teamMember) {
+      if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);
+      return Response.json({ path: "/salon/dashboard", role: "salon_owner", salon_id: teamMember.salon_id, permissions: teamMember.permissions || {}, team_role: teamMember.role, stylist_id: teamMember.stylist_id });
     }
     return Response.json({ path: "/account", role: "customer" });
   } catch (error) {

@@ -13,7 +13,6 @@ type BookingRecord = {
 type SalonRecord = {
   id?: string;
   name?: string | null;
-  neighborhood?: string | null;
 };
 
 export default async function ReviewPage({ params }: { params: Promise<{ bookingId: string }> }) {
@@ -35,7 +34,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ booking
 
   const { data: salonData, error: salonError } = await supabase
     .from("salons")
-    .select("id, name, neighborhood")
+    .select("id, name")
     .eq("id", bookingData.salon_id)
     .maybeSingle<SalonRecord>();
 

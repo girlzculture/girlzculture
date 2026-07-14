@@ -6,10 +6,12 @@ import { CalendarDays, Heart, List, Map, MapPin, Search, ShieldCheck, SlidersHor
 import SafeImage from "@/components/site/SafeImage";
 
 export type DiscoverySalon = {
-  id: string; name: string; slug: string; neighborhood: string; city: string;
+  id: string; name: string; slug: string; city: string; state: string; zip: string;
   rating: number; reviewCount: number; image: string; startingPrice: number | null;
   tier: string; verified: boolean; styles: string[]; nextAvailability: string | null;
+  statusLabel: string;
   latitude?: number | null; longitude?: number | null;
+  closedToday?: boolean;
 };
 
 const rank: Record<string, number> = { premium: 3, platinum: 3, growth: 2, pro: 2, essentials: 2, basic: 1, free: 0, "free-seed": 0 };
@@ -27,7 +29,7 @@ export default function SalonDiscovery({ initialSalons, initialStyle = "", initi
     const styleTerm = submittedStyle.trim().toLowerCase();
     const locationTerm = submittedLocation.trim().toLowerCase();
     if (styleTerm && !`${salon.name} ${salon.styles.join(" ")}`.toLowerCase().includes(styleTerm)) return false;
-    if (locationTerm && !`${salon.neighborhood} ${salon.city}`.toLowerCase().includes(locationTerm)) return false;
+    if (locationTerm && !`${salon.city} ${salon.state} ${salon.zip}`.toLowerCase().includes(locationTerm)) return false;
     if (price !== "Any price" && salon.startingPrice == null) return false;
     if (price === "Under $150" && (salon.startingPrice ?? Infinity) >= 150) return false;
     if (price === "$150–$250" && ((salon.startingPrice ?? 0) < 150 || (salon.startingPrice ?? Infinity) > 250)) return false;
@@ -51,7 +53,7 @@ export default function SalonDiscovery({ initialSalons, initialStyle = "", initi
     <form onSubmit={submit} className="sticky top-0 z-30 rounded-[14px] border border-plum/10 bg-white/95 p-3 shadow-[0_12px_34px_rgba(26,18,32,0.10)] backdrop-blur md:static md:max-w-[1050px]">
       <div className="grid gap-2 md:grid-cols-[1.25fr_0.85fr_auto]">
         <label className="flex min-h-12 items-center gap-3 rounded-[9px] border border-plum/10 px-4"><Search size={19} className="text-magenta" /><input value={style} onChange={(event) => setStyle(event.target.value)} placeholder="Describe the style you want" className="min-w-0 flex-1 bg-transparent text-xs outline-none sm:text-sm" /></label>
-        <label className="flex min-h-12 items-center gap-3 rounded-[9px] border border-plum/10 px-4"><MapPin size={19} className="text-magenta" /><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Neighborhood, city, or zip code" className="min-w-0 flex-1 bg-transparent text-xs outline-none sm:text-sm" /></label>
+        <label className="flex min-h-12 items-center gap-3 rounded-[9px] border border-plum/10 px-4"><MapPin size={19} className="text-magenta" /><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City, state, or ZIP code" className="min-w-0 flex-1 bg-transparent text-xs outline-none sm:text-sm" /></label>
         <button className="min-h-12 rounded-[9px] bg-magenta px-8 text-sm font-bold text-white">Search</button>
       </div>
     </form>
@@ -80,7 +82,7 @@ function SalonResultCard({ salon }: { salon: DiscoverySalon }) {
   return <article className="grid min-w-0 overflow-hidden rounded-[11px] border border-plum/10 bg-white/80 shadow-[0_5px_18px_rgba(26,18,32,0.05)] sm:grid-cols-[215px_1fr]">
     <div className="relative h-44 bg-blush sm:h-full"><SafeImage src={salon.image} fallbackSrc="/images/salon-warm.jpg" alt={salon.name} className="h-full w-full object-cover" />{salon.tier.toLowerCase() === "premium" || salon.verified ? <span className="absolute left-2 top-2 rounded-full bg-plum px-2.5 py-1 text-[8px] font-bold uppercase text-white">{salon.tier.toLowerCase() === "premium" ? "Premium" : "Verified"}</span> : null}<button aria-label={`Favorite ${salon.name}`} className="absolute right-2 top-2 rounded-full bg-white/85 p-2"><Heart size={16} /></button></div>
     <div className="grid gap-3 p-4 sm:grid-cols-[1fr_auto]">
-      <div className="min-w-0"><h3 className="font-serif text-xl font-semibold text-ink">{salon.name}</h3><p className="mt-0.5 text-[10px] text-ink/60">{[salon.neighborhood, salon.city].filter(Boolean).join(", ")}</p><div className="mt-2 flex items-center gap-2 text-[10px]">{salon.reviewCount > 0 && salon.rating > 0 ? <><Star size={14} className="fill-amber text-amber" /><b>{salon.rating.toFixed(1)}</b></> : <b>New</b>}<span className="text-ink/50">({salon.reviewCount})</span>{salon.styles.length ? <span className="truncate text-ink/50">· {salon.styles.slice(0, 3).join(" · ")}</span> : null}</div><p className="mt-2 text-xs">{salon.startingPrice == null ? <span className="text-ink/55">Pricing not posted</span> : <>From <b className="text-base">${salon.startingPrice}</b></>}</p><div className="mt-2 flex flex-wrap gap-2">{salon.verified ? <Badge icon={<ShieldCheck size={12} />} label="Verified" /> : null}{salon.startingPrice != null ? <Badge icon={<Tag size={12} />} label="Pricing available" /> : null}</div><p className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-magenta"><CalendarDays size={12} />{salon.nextAvailability || "Availability not posted"}</p></div>
+      <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-serif text-xl font-semibold text-ink">{salon.name}</h3><span className={`rounded-full px-2 py-1 text-xs font-bold ${salon.closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}>{salon.statusLabel}</span></div><p className="mt-0.5 text-[10px] text-ink/60">{[salon.city, salon.state].filter(Boolean).join(", ") || "Location not provided"}</p><div className="mt-2 flex items-center gap-2 text-[10px]">{salon.reviewCount > 0 && salon.rating > 0 ? <><Star size={14} className="fill-amber text-amber" /><b>{salon.rating.toFixed(1)}</b><span className="text-ink/50">({salon.reviewCount})</span></> : <span className="rounded-full bg-blush px-2 py-1 font-bold text-plum">New</span>}{salon.styles.length ? <span className="truncate text-ink/50">· {salon.styles.slice(0, 3).join(" · ")}</span> : null}</div><p className="mt-2 text-xs">{salon.startingPrice == null ? <span className="text-ink/55">Pricing not posted</span> : <>From <b className="text-base">${salon.startingPrice}</b></>}</p><div className="mt-2 flex flex-wrap gap-2">{salon.verified ? <Badge icon={<ShieldCheck size={12} />} label="Verified" /> : null}{salon.startingPrice != null ? <Badge icon={<Tag size={12} />} label="Pricing available" /> : null}</div><p className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-magenta"><CalendarDays size={12} />{salon.closedToday ? "Bookings resume with normal hours tomorrow" : salon.nextAvailability || "Availability not posted"}</p></div>
       <div className="flex min-w-[105px] items-end"><Link href={`/salon/${salon.slug}`} className="inline-flex min-h-10 w-full items-center justify-center rounded-[7px] bg-magenta px-4 text-[11px] font-bold text-white">View salon</Link></div>
     </div>
   </article>;

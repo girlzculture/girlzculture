@@ -9,8 +9,8 @@ import { normalizePlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } 
 import BaseImageUpload from "@/components/ImageUpload";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
-const states = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","District of Columbia"];
-const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", city:"", state:"New York", zip_code:"", neighborhood:"", business_type:"Braiding Studio", referral_source:"" };
+import { isValidUsZip, US_STATES } from "@/lib/usStates";
+const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", address_line2:"", city:"", state:"NY", zip_code:"", business_type:"Braiding Studio", referral_source:"" };
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="salon" />;
 
 export default function SalonApplication() {
@@ -60,6 +60,7 @@ export default function SalonApplication() {
     if (!userId) { setMessage("Your account is not ready. Please sign in again."); return; }
     if (!isValidEmail(form.business_email)) { setMessage("Please enter a valid email address (name@example.com)."); return; }
     if (!isValidUsPhone(form.phone)) { setMessage("Please enter a US phone number."); return; }
+    if (!isValidUsZip(form.zip_code)) { setMessage("Please enter a valid ZIP code (12345 or 12345-6789)."); return; }
     setSaving(true); setMessage("");
     try {
       const {data:{session}} = await supabase.auth.getSession();
@@ -84,11 +85,10 @@ export default function SalonApplication() {
       <Input label="Owner / Contact Full Name" value={form.owner_name} onChange={(value)=>update("owner_name",value)} />
       <Input label="Business Email" type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={form.business_email} onChange={(value)=>update("business_email",value)} />
       <Input label="Phone Number" type="tel" pattern={US_PHONE_PATTERN} title="Please enter a US phone number" value={form.phone} onChange={(value)=>update("phone",formatUsPhoneInput(value))} placeholder="+1 (555) 123-4567" />
-      <div className="sm:col-span-2"><Input label="Street Address" value={form.street_address} onChange={(value)=>update("street_address",value)} /></div>
+      <div className="sm:col-span-2"><Input label="Address Line 1" value={form.street_address} onChange={(value)=>update("street_address",value)} /></div><div className="sm:col-span-2"><Input label="Address Line 2" value={form.address_line2} onChange={(value)=>update("address_line2",value)} required={false} /></div>
       <Input label="City" value={form.city} onChange={(value)=>update("city",value)} />
-      <label><span className="mb-2 block text-xs font-bold">State *</span><select required value={form.state} onChange={(event)=>update("state",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{states.map((state)=><option key={state}>{state}</option>)}</select></label>
-      <Input label="Zip Code" value={form.zip_code} onChange={(value)=>update("zip_code",value)} />
-      <Input label="Neighborhood" value={form.neighborhood} onChange={(value)=>update("neighborhood",value)} required={false} />
+      <label><span className="mb-2 block text-xs font-bold">State *</span><select required value={form.state} onChange={(event)=>update("state",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{US_STATES.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
+      <Input label="ZIP Code" pattern="\d{5}(-\d{4})?" title="Use 12345 or 12345-6789 format" value={form.zip_code} onChange={(value)=>update("zip_code",value)} />
       <label><span className="mb-2 block text-xs font-bold">Type of Business *</span><select value={form.business_type} onChange={(event)=>update("business_type",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{["Hair Salon","Beauty Shop","Barber Shop","Braiding Studio","Other"].map((item)=><option key={item}>{item}</option>)}</select></label>
       <div className="sm:col-span-2"><Input label="How did you hear about us?" value={form.referral_source} onChange={(value)=>update("referral_source",value)} required={false} /></div>
     </div>
