@@ -16,11 +16,18 @@ export async function requireAdmin(request: Request) {
   const { data } = await admin.auth.getUser(token);
   if (!data.user) throw new Error("Unauthorized");
   const normalizedEmail = data.user.email?.trim().toLowerCase() || "";
-  const { data: rows } = await admin.from("admin_users").select("email,role,status").ilike("email", normalizedEmail);
+  const { data: rows } = await admin.from("admin_users").select("id,user_id,email,role,status,permissions,is_super_admin").ilike("email", normalizedEmail);
   const row = (rows || []).find((candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail && candidate.status === "Active");
   const master = process.env.ADMIN_EMAIL?.toLowerCase();
   if (!row && normalizedEmail !== master) throw new Error("Forbidden");
-  return { admin, user: data.user };
+  return { admin, user: data.user, adminUser: row || { email: normalizedEmail, role: "Super Admin", status: "Active", permissions: {}, is_super_admin: true } };
+}
+
+export async function requireAdminPermission(request: Request, permission: string) {
+  const context = await requireAdmin(request);
+  const row = context.adminUser as { is_super_admin?: boolean; permissions?: Record<string, boolean> };
+  if (!row.is_super_admin && !row.permissions?.[permission]) throw new Error("Forbidden: this admin role does not have access to this section.");
+  return context;
 }
 
 export async function requireSalonOwner(request: Request) {
@@ -29,9 +36,19 @@ export async function requireSalonOwner(request: Request) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) throw new Error("Unauthorized");
-  const { data: salon, error: salonError } = await admin.from("salons").select("*").eq("user_id", data.user.id).limit(1).maybeSingle();
-  if (salonError || !salon) throw new Error("This account is not linked to a salon.");
-  return { admin, user: data.user, salon };
+  const { data: ownedSalon, error: salonError } = await admin.from("salons").select("*").eq("user_id", data.user.id).limit(1).maybeSingle();
+  if (salonError) throw salonError;
+  if (ownedSalon) return { admin, user: data.user, salon: ownedSalon, teamMember: null, isOwner: true };
+  const { data: teamMember, error: teamError } = await admin.from("salon_team_members").select("*,salon:salons(*)").eq("user_id", data.user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle();
+  if (teamError || !teamMember?.salon) throw new Error("This account is not linked to a salon.");
+  if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);
+  return { admin, user: data.user, salon: teamMember.salon, teamMember, isOwner: false };
+}
+
+export async function requireSalonPermission(request: Request, permission: string) {
+  const context = await requireSalonOwner(request);
+  if (!context.isOwner && !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission]) throw new Error("Forbidden: this salon role does not have access to this section.");
+  return context;
 }
 
 export async function sendEmail(to: string, subject: string, html: string) {

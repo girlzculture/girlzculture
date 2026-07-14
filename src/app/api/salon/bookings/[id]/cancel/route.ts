@@ -1,5 +1,5 @@
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
-import { deliverCancellationNotifications, requireSalonOwner } from "@/lib/supabaseAdmin";
+import { deliverCancellationNotifications, requireSalonPermission } from "@/lib/supabaseAdmin";
 import { stripeRequest } from "@/lib/stripeServer";
 
 const reasons = new Set(["Fully booked", "Walk-in took the slot", "Stylist unavailable", "Salon closed", "Other"]);
@@ -8,7 +8,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     enforceRateLimit(request, "salon-booking-cancel", 20, 10 * 60_000);
     const { id } = await context.params;
-    const { admin, user, salon } = await requireSalonOwner(request);
+    const { admin, user, salon, teamMember } = await requireSalonPermission(request, "bookings");
     const body = await request.json() as Record<string, unknown>;
     const reason = cleanText(body.reason, 80);
     const detail = cleanText(body.detail, 300);
@@ -16,6 +16,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (reason === "Other" && !detail) throw new Error("Add a short explanation for Other.");
     const { data: booking, error: bookingError } = await admin.from("bookings").select("*").eq("id", id).eq("salon_id", salon.id).maybeSingle();
     if (bookingError || !booking) throw new Error("Booking not found.");
+    if (teamMember?.stylist_id && booking.stylist_id !== teamMember.stylist_id) throw new Error("Stylists can only cancel their own appointments.");
     if (String(booking.status).toLowerCase() === "cancelled") return Response.json({ ok: true, booking, already_cancelled: true });
     if (["completed", "refunded"].includes(String(booking.status).toLowerCase())) throw new Error("This booking can no longer be cancelled.");
 

@@ -1,13 +1,13 @@
 import { addMinutesToLocal, dateKeyInTimeZone, salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
-import { requireSalonOwner } from "@/lib/supabaseAdmin";
+import { requireSalonPermission } from "@/lib/supabaseAdmin";
 
 const modes = new Set(["stylist_three_hours", "stylist_today", "stylist_until", "salon_today", "salon_until"]);
 
 export async function POST(request: Request) {
   try {
     enforceRateLimit(request, "salon-availability-block", 40, 10 * 60_000);
-    const { admin, user, salon } = await requireSalonOwner(request);
+    const { admin, user, salon } = await requireSalonPermission(request, "availability");
     const body = await request.json() as Record<string, unknown>;
     const mode = cleanText(body.mode, 40);
     if (!modes.has(mode)) throw new Error("Choose a valid availability override.");
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     enforceRateLimit(request, "salon-availability-unblock", 40, 10 * 60_000);
-    const { admin, salon } = await requireSalonOwner(request);
+    const { admin, salon } = await requireSalonPermission(request, "availability");
     const id = cleanText(new URL(request.url).searchParams.get("id"), 50);
     if (!id) throw new Error("Blockout id is required.");
     const { error } = await admin.from("salon_blockouts").delete().eq("id", id).eq("salon_id", salon.id);

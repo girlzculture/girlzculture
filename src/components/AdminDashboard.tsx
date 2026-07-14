@@ -11,6 +11,7 @@ import { adminSupabase as supabase, getSessionForScope } from "@/lib/supabase";
 import AdminContentManager from "@/components/AdminContentManager";
 import AdminSupportInbox from "@/components/AdminSupportInbox";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
+import TeamUserManager from "@/components/auth/TeamUserManager";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "subscriptions" | "settings";
 type Row = Record<string, any>;
@@ -34,6 +35,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   const [data, setData] = useState<DataState>(emptyData);
   const [selected, setSelected] = useState<Row | null>(null);
   const [notice, setNotice] = useState("");
+  const [access, setAccess] = useState<Record<string, boolean> | null>(null);
 
   async function load() {
     const session = await getSessionForScope("admin");
@@ -41,7 +43,9 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     const headers = { Authorization: `Bearer ${session.access_token}` };
     const verification = await fetch("/api/admin/verify", { method: "POST", headers });
     if (!verification.ok) throw new Error("This saved admin session is no longer authorized. Sign in with an active platform-admin account.");
-    const response = await fetch("/api/admin/data", { headers, cache: "no-store" });
+    const verified = await verification.json() as { permissions?: Record<string,boolean>; is_super_admin?: boolean };
+    setAccess(verified.is_super_admin ? null : verified.permissions || {});
+    const response = await fetch(`/api/admin/data?section=${encodeURIComponent(section)}`, { headers, cache: "no-store" });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
     const next: DataState = {
@@ -62,6 +66,8 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
+  // The selected section is fixed for each route-mounted dashboard instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function decide(id: string, decision: "approve" | "reject" | "activate") {
@@ -85,14 +91,15 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   if (loading) return <div className="min-h-screen bg-cream p-12 text-center text-plum">Loading platform administration…</div>;
   if (error) return <div className="grid min-h-screen place-items-center bg-cream p-5"><div className="rounded-2xl bg-white p-8 text-center"><h1 className="font-serif text-3xl text-plum">Admin access</h1><p className="mt-3">{error}</p><Link href="/admin/login" className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">Go to admin login</Link></div></div>;
 
-  return <AdminShell section={section}><RoleSessionBoundary scope="admin" />
+  return <AdminShell section={section} access={access}><RoleSessionBoundary scope="admin" />
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-[40px] font-semibold leading-none text-plum">{navigation.find((item) => item[0] === section)?.[1]}</h1><p className="mt-2 text-sm text-ink/55">{subtitle(section)}</p></div><div className="flex items-center gap-3 rounded-[11px] border border-plum/10 bg-white px-4 py-3 text-xs"><Search size={17} /><input className="w-64 bg-transparent outline-none" placeholder="Search platform records" /><Bell size={19} /></div></div>
     {notice ? <div className="mb-4 rounded-lg bg-blush/55 p-3 text-sm text-plum">{notice}</div> : null}
     <AdminSectionView section={section} data={data} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} />
   </AdminShell>;
 }
 
-function AdminShell({ section, children }: { section: AdminSection; children: React.ReactNode }) {
+function AdminShell({ section, children, access }: { section: AdminSection; children: React.ReactNode; access: Record<string,boolean>|null }) {
+  void access;
   return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-[linear-gradient(160deg,#25102d,#16081d)] p-4 text-white lg:block"><Link href="/admin" className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{navigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:hidden"><details><summary className="list-none"><Menu /></summary><nav className="absolute left-4 z-50 mt-3 w-72 rounded-xl bg-white p-2 shadow-2xl">{navigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm"><Icon size={17} />{label}</Link>)}</nav></details><b className="font-serif text-xl text-plum">Girlz Culture</b><div className="flex items-center gap-2"><Bell /><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush" /></div></header>{children}</main><nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-plum/10 bg-white p-2 lg:hidden">{[["overview", "Overview", Home], ["bookings", "Bookings", CalendarDays], ["submissions", "Alerts", Bell], ["quality", "Reports", BarChart3], ["settings", "More", Menu]].map(([id, label, Icon]) => <Link key={id as string} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label as string}</Link>)}</nav></div>;
 }
 
@@ -220,7 +227,8 @@ function Subscriptions(p: any) {
 }
 
 function SettingsTeam(p: any) {
-  return <div className="grid gap-5 lg:grid-cols-2"><Panel title="Platform Settings"><p className="text-sm leading-6 text-ink/60">Platform settings are managed through environment variables and Content Management. No database-backed settings have been configured yet.</p><Link href="/admin/content" className="mt-4 inline-flex rounded-lg bg-magenta px-6 py-3 font-bold text-white">Open Content Management</Link></Panel><Panel title="Admin Team">{p.admins.length ? p.admins.map((admin: Row) => <Line key={admin.id || admin.email} label={admin.email || "Admin"} meta={admin.role || "Admin"} />) : <EmptyState title="No admin team records" body="Authorized admin accounts will appear here." />}</Panel><Panel title="Email Templates"><EmptyState title="No template records" body="Transactional email templates are managed in the email provider until a template table is added." /></Panel><Panel title="Roles & Permissions"><p className="text-sm leading-6 text-ink/60">Admin authorization is enforced by the admin_users table and server-side route checks.</p></Panel></div>;
+  void p;
+  return <div className="space-y-5"><Panel title="Platform Settings"><p className="text-sm leading-6 text-ink/70">Public content is managed in Content Management. Secrets and infrastructure settings remain server-side environment variables.</p><Link href="/admin/content" className="mt-4 inline-flex rounded-lg bg-magenta px-6 py-3 font-bold text-white">Open Content Management</Link></Panel><TeamUserManager scope="admin" /></div>;
 }
 
 function recentActivity(p: DataState) {

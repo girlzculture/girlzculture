@@ -1,14 +1,22 @@
-import { requireAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 export async function GET(request: Request) {
   try {
-    const { admin } = await requireAdmin(request);
-    const sources = [
+    const section = new URL(request.url).searchParams.get("section") || "overview";
+    const { admin } = await requireAdminPermission(request, section);
+    const allSources = [
       ["salons", "name", true], ["salon_applications", "submitted_at", true], ["customers", "created_at", true],
       ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
       ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
       ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
     ] as const;
+    const needed: Record<string, string[]> = {
+      overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: ["salons"],
+      customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
+      reviews: ["reviews", "salons"], finance: ["subscriptions", "bookings", "salons"], marketing: ["salon_promotions", "blog_posts", "salons"],
+      content: [], support: ["support_tickets"], subscriptions: ["subscriptions", "salons"], settings: ["admin_users", "admin_settings"],
+    };
+    const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));
     const results = await Promise.all(sources.map(async ([table, order, required]) => {
       const result = await admin.from(table).select("*").order(order, { ascending: false }).limit(500);
       if (result.error && !required) {

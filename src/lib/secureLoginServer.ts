@@ -57,12 +57,13 @@ export async function signInAndVerifyRole(email: string, password: string, expec
 async function resolveUserRole(user: User): Promise<LoginScope> {
   const admin = getSupabaseAdmin();
   const email = user.email?.trim().toLowerCase() || "";
-  const [{ data: adminRows }, { data: salon }] = await Promise.all([
+  const [{ data: adminRows }, { data: salon }, { data: teamMember }] = await Promise.all([
     admin.from("admin_users").select("id,email,status").ilike("email", email),
     admin.from("salons").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
+    admin.from("salon_team_members").select("id").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle(),
   ]);
   if ((adminRows || []).some((row) => row.email?.trim().toLowerCase() === email && row.status !== "Inactive")) return "admin";
-  if (salon) return "salon";
+  if (salon || teamMember) return "salon";
   return "customer";
 }
 

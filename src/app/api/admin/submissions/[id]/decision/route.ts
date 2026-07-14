@@ -1,11 +1,11 @@
 import { normalizePlan } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
-import { requireAdmin, sendEmail } from "@/lib/supabaseAdmin";
+import { requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request, context: RouteContext<"/api/admin/submissions/[id]/decision">) {
   try {
     enforceRateLimit(request,"admin-submission-decision",30,60_000);
-    const {admin,user}=await requireAdmin(request);
+    const {admin,user}=await requireAdminPermission(request,"submissions");
     const {id}=await context.params;
     const body=await request.json() as Record<string,unknown>;
     const decision=cleanText(body.decision,20);

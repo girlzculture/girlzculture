@@ -14,6 +14,7 @@ import { dateKeyInTimeZone } from "@/lib/dateTime";
 import { STORE_TIME_OPTIONS } from "@/lib/salonPresets";
 import { StructuredStylesEditor, StructuredStylistsEditor } from "@/components/owner/StructuredCatalogEditors";
 import RoleLogoutButton from "@/components/auth/RoleLogoutButton";
+import TeamUserManager from "@/components/auth/TeamUserManager";
 
 type Row = Record<string, unknown> & { id?: string; salon_id?: string; name?: string; created_at?: string };
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="salon" />;
@@ -25,6 +26,7 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
   const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
   const [salon,setSalon]=useState<Salon|null>(null); const [bookings,setBookings]=useState<Row[]>([]); const [reviews,setReviews]=useState<Row[]>([]); const [styles,setStyles]=useState<Row[]>([]); const [stylists,setStylists]=useState<Row[]>([]); const [products,setProducts]=useState<Row[]>([]); const [promotions,setPromotions]=useState<Row[]>([]); const [subscription,setSubscription]=useState<Row|null>(null);
   const [notifications,setNotifications]=useState<Row[]>([]); const [blockouts,setBlockouts]=useState<Row[]>([]);
+  const [teamPermissions,setTeamPermissions]=useState<Record<string,boolean>|null>(null);
   const [selectedStyle,setSelectedStyle]=useState<string|null>(null); const [selectedStylist,setSelectedStylist]=useState<string|null>(null); const [selectedProduct,setSelectedProduct]=useState<string|null>(null);
 
   useEffect(() => {
@@ -40,7 +42,10 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
         setLoading(false);
         return;
       }
-      const { data: s, error: sErr } = await supabase.from("salons").select("*").eq("user_id", userId).limit(1).maybeSingle();
+      const destinationResponse = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${session?.access_token}` } });
+      const destination = await destinationResponse.json() as { salon_id?: string; permissions?: Record<string,boolean> };
+      const salonQuery = supabase.from("salons").select("*");
+      const { data: s, error: sErr } = destination.salon_id ? await salonQuery.eq("id", destination.salon_id).limit(1).maybeSingle() : await salonQuery.eq("user_id", userId).limit(1).maybeSingle();
       if (!live) return;
       if (sErr || !s) {
         setError(sErr?.message || "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.");
@@ -48,6 +53,7 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
         return;
       }
       setSalon(s as Salon);
+      setTeamPermissions(destination.salon_id ? destination.permissions || {} : null);
       const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications", "salon_blockouts"].map((table) => supabase.from(table).select("*").eq("salon_id", s.id).order("created_at", { ascending: false })));
       if (!live) return;
       setBookings((results[0].data || []) as Row[]); setReviews((results[1].data || []) as Row[]); setStyles((results[2].data || []) as Row[]); setStylists((results[3].data || []) as Row[]);
@@ -88,6 +94,8 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
 
   const plan=normalizePlan(subscription?.tier||salon.subscription_tier);
   const subscriptionActive=isSubscriptionActive(subscription?.status,subscription?.current_period_end);
+  const permissionKey=section.replace("-", "_");
+  if(teamPermissions&&!teamPermissions[permissionKey])return <OwnerDashboardShell section={section} salonName={salon.name||"Your Salon"} salonSlug={salon.slug||""} avatar={salon.logo_url||null} notifications={notifications}><div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center"><LockKeyhole className="mx-auto text-magenta"/><h1 className="mt-4 font-serif text-3xl text-plum">Access not assigned</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-ink/70">The salon owner has not granted this account access to this dashboard section.</p><Link href="/salon/dashboard" className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white">Return to Overview</Link></div></OwnerDashboardShell>;
   const context={salon,bookings,reviews,styles,stylists,products,promotions,blockouts,subscription,plan,subscriptionActive,initialBookingId,selectedStyle,selectedStylist,selectedProduct,setSelectedStyle,setSelectedStylist,setSelectedProduct,setStyles,setStylists,setProducts,setPromotions,setBookings,setBlockouts,updateSalon,saveRecord,removeRecord,setNotice};
   return <OwnerDashboardShell section={section} salonName={salon.name||"Your Salon"} salonSlug={salon.slug||""} avatar={salon.logo_url||null} notifications={notifications}>{notice?<div role="status" className="mb-4 flex items-center justify-between rounded-[10px] border border-magenta/20 bg-blush/45 px-4 py-3 text-xs text-plum"><span>{notice}</span><button onClick={()=>setNotice("")}>×</button></div>:null}<DashboardContent section={section} context={context}/></OwnerDashboardShell>;
 }
@@ -99,7 +107,7 @@ function DashboardContent({section,context:c}:{section:DashboardSection;context:
   if(section==="subscription")return <SubscriptionV2 c={c}/>;
   if(!c.subscriptionActive)return <SubscriptionRequired c={c}/>;
   if(section==="promotions"&&!hasPlanFeature(c.plan,"promotions"))return <UpgradeRequired feature="Promotions" plan="Growth"/>;
-  if(section==="overview")return <Overview c={c}/>; if(section==="my-page")return <><MyPage c={c}/><SalonLogoEditor c={c}/></>; if(section==="photos")return <Photos c={c}/>; if(section==="styles")return <StructuredStylesEditor c={c}/>; if(section==="stylists")return <StructuredStylistsEditor c={c}/>; if(section==="products")return <TruthfulProducts c={c}/>; if(section==="availability")return <Availability c={c}/>; if(section==="bookings")return <Bookings c={c}/>; if(section==="reviews")return <Reviews c={c}/>; if(section==="earnings")return <Earnings c={c}/>; if(section==="promotions")return <Promotions c={c}/>; return <><SettingsPage c={c}/><div className="mt-4 rounded-[14px] border border-magenta/20 bg-white p-5 lg:hidden"><p className="mb-3 text-sm leading-6 text-plum">Two-factor authentication is required for salon accounts and uses SMS with email fallback.</p><RoleLogoutButton scope="salon" className="flex items-center gap-2 font-bold text-magenta" /></div></>;
+  if(section==="overview")return <Overview c={c}/>; if(section==="my-page")return <><MyPage c={c}/><SalonLogoEditor c={c}/></>; if(section==="photos")return <Photos c={c}/>; if(section==="styles")return <StructuredStylesEditor c={c}/>; if(section==="stylists")return <StructuredStylistsEditor c={c}/>; if(section==="products")return <TruthfulProducts c={c}/>; if(section==="availability")return <Availability c={c}/>; if(section==="bookings")return <Bookings c={c}/>; if(section==="reviews")return <Reviews c={c}/>; if(section==="earnings")return <Earnings c={c}/>; if(section==="promotions")return <Promotions c={c}/>; return <><SettingsPage c={c}/><div className="mt-5"><TeamUserManager scope="salon" /></div><div className="mt-4 rounded-[14px] border border-magenta/20 bg-white p-5 lg:hidden"><p className="mb-3 text-sm leading-6 text-plum">Two-factor authentication is required for salon accounts and uses SMS with email fallback.</p><RoleLogoutButton scope="salon" className="flex items-center gap-2 font-bold text-magenta" /></div></>;
 }
 
 function SubscriptionRequired({c}:{c:Ctx}){return <div className="mx-auto max-w-3xl py-16 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta"><Crown size={30}/></span><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Activate your salon plan</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">Your salon is approved, but the business workspace remains locked until a subscription is active. Your selected {c.plan} plan can be activated in Stripe test mode.</p><Link href="/salon/dashboard/subscription" className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white">Activate subscription</Link></div>}
