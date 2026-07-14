@@ -14,14 +14,14 @@ import { dateKeyInTimeZone } from "@/lib/dateTime";
 
 type Row = Record<string, unknown> & { id?: string; salon_id?: string; name?: string; created_at?: string };
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="salon" />;
-type Salon = Row & { slug?: string; status?: string; subscription_status?: string; description?: string; neighborhood?: string; email?: string; phone?: string; address_street?: string; address_city?: string; address_state?: string; address_zip?: string; cover_photo_url?: string; gallery_photos?: string[]; hours?: Record<string,string>; languages?: string[]; trust_info?: Record<string,boolean>; media_consent?: boolean; notification_preferences?: Record<string,boolean>; rating_overall?: number; review_count?: number; subscription_tier?: string; stripe_account_id?: string; time_zone?: string };
+type Salon = Row & { slug?: string; status?: string; subscription_status?: string; description?: string; neighborhood?: string; email?: string; phone?: string; address_street?: string; address_city?: string; address_state?: string; address_zip?: string; cover_photo_url?: string; gallery_photos?: string[]; hours?: Record<string,unknown>; booking_settings?: Record<string,unknown>; languages?: string[]; trust_info?: Record<string,boolean>; media_consent?: boolean; notification_preferences?: Record<string,boolean>; rating_overall?: number; review_count?: number; subscription_tier?: string; stripe_account_id?: string; time_zone?: string };
 
 const fallbackPhotos = ["/images/braids-cornrows.jpg","/images/braids-knotless.jpg","/images/braids-box.jpg","/images/hero-braids.jpg"];
 const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 export default function OwnerDashboardApp({ section }: { section: DashboardSection; preview?: boolean }) {
   const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
   const [salon,setSalon]=useState<Salon|null>(null); const [bookings,setBookings]=useState<Row[]>([]); const [reviews,setReviews]=useState<Row[]>([]); const [styles,setStyles]=useState<Row[]>([]); const [stylists,setStylists]=useState<Row[]>([]); const [products,setProducts]=useState<Row[]>([]); const [promotions,setPromotions]=useState<Row[]>([]); const [subscription,setSubscription]=useState<Row|null>(null);
-  const [notifications,setNotifications]=useState<Row[]>([]);
+  const [notifications,setNotifications]=useState<Row[]>([]); const [blockouts,setBlockouts]=useState<Row[]>([]);
   const [selectedStyle,setSelectedStyle]=useState<string|null>(null); const [selectedStylist,setSelectedStylist]=useState<string|null>(null); const [selectedProduct,setSelectedProduct]=useState<string|null>(null);
 
   useEffect(() => {
@@ -45,10 +45,10 @@ export default function OwnerDashboardApp({ section }: { section: DashboardSecti
         return;
       }
       setSalon(s as Salon);
-      const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications"].map((table) => supabase.from(table).select("*").eq("salon_id", s.id).order("created_at", { ascending: false })));
+      const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications", "salon_blockouts"].map((table) => supabase.from(table).select("*").eq("salon_id", s.id).order("created_at", { ascending: false })));
       if (!live) return;
       setBookings((results[0].data || []) as Row[]); setReviews((results[1].data || []) as Row[]); setStyles((results[2].data || []) as Row[]); setStylists((results[3].data || []) as Row[]);
-      setProducts((results[4].data || []) as Row[]); setPromotions((results[5].data || []) as Row[]); setSubscription(((results[6].data || [])[0] || null) as Row | null); setNotifications((results[7].data || []) as Row[]);
+      setProducts((results[4].data || []) as Row[]); setPromotions((results[5].data || []) as Row[]); setSubscription(((results[6].data || [])[0] || null) as Row | null); setNotifications((results[7].data || []) as Row[]); setBlockouts((results[8].data || []) as Row[]);
       setSelectedStyle(results[2].data?.[0]?.id || null); setSelectedStylist(results[3].data?.[0]?.id || null); setSelectedProduct(results[4].data?.[0]?.id || null); setLoading(false);
 
       removeRealtime = subscribeToOwnerUpdates({
@@ -85,11 +85,11 @@ export default function OwnerDashboardApp({ section }: { section: DashboardSecti
 
   const plan=normalizePlan(subscription?.tier||salon.subscription_tier);
   const subscriptionActive=isSubscriptionActive(subscription?.status,subscription?.current_period_end);
-  const context={salon,bookings,reviews,styles,stylists,products,promotions,subscription,plan,subscriptionActive,selectedStyle,selectedStylist,selectedProduct,setSelectedStyle,setSelectedStylist,setSelectedProduct,setStyles,setStylists,setProducts,setPromotions,setBookings,updateSalon,saveRecord,removeRecord,setNotice};
+  const context={salon,bookings,reviews,styles,stylists,products,promotions,blockouts,subscription,plan,subscriptionActive,selectedStyle,selectedStylist,selectedProduct,setSelectedStyle,setSelectedStylist,setSelectedProduct,setStyles,setStylists,setProducts,setPromotions,setBookings,setBlockouts,updateSalon,saveRecord,removeRecord,setNotice};
   return <OwnerDashboardShell section={section} salonName={salon.name||"Your Salon"} salonSlug={salon.slug||""} avatar={stylists[0]?.avatar_url as string|undefined} notifications={notifications}>{notice?<div role="status" className="mb-4 flex items-center justify-between rounded-[10px] border border-magenta/20 bg-blush/45 px-4 py-3 text-xs text-plum"><span>{notice}</span><button onClick={()=>setNotice("")}>×</button></div>:null}<DashboardContent section={section} context={context}/></OwnerDashboardShell>;
 }
 
-type Ctx = {salon:Salon;bookings:Row[];reviews:Row[];styles:Row[];stylists:Row[];products:Row[];promotions:Row[];subscription:Row|null;plan:SubscriptionPlan;subscriptionActive:boolean;selectedStyle:string|null;selectedStylist:string|null;selectedProduct:string|null;setSelectedStyle:(id:string|null)=>void;setSelectedStylist:(id:string|null)=>void;setSelectedProduct:(id:string|null)=>void;setStyles:React.Dispatch<React.SetStateAction<Row[]>>;setStylists:React.Dispatch<React.SetStateAction<Row[]>>;setProducts:React.Dispatch<React.SetStateAction<Row[]>>;setPromotions:React.Dispatch<React.SetStateAction<Row[]>>;setBookings:React.Dispatch<React.SetStateAction<Row[]>>;updateSalon:(patch:Record<string,unknown>)=>Promise<void>;saveRecord:(table:string,values:Record<string,unknown>,id?:string)=>Promise<Row|null>;removeRecord:(table:string,id:string,setter:React.Dispatch<React.SetStateAction<Row[]>>)=>Promise<void>;setNotice:(text:string)=>void};
+type Ctx = {salon:Salon;bookings:Row[];reviews:Row[];styles:Row[];stylists:Row[];products:Row[];promotions:Row[];blockouts:Row[];subscription:Row|null;plan:SubscriptionPlan;subscriptionActive:boolean;selectedStyle:string|null;selectedStylist:string|null;selectedProduct:string|null;setSelectedStyle:(id:string|null)=>void;setSelectedStylist:(id:string|null)=>void;setSelectedProduct:(id:string|null)=>void;setStyles:React.Dispatch<React.SetStateAction<Row[]>>;setStylists:React.Dispatch<React.SetStateAction<Row[]>>;setProducts:React.Dispatch<React.SetStateAction<Row[]>>;setPromotions:React.Dispatch<React.SetStateAction<Row[]>>;setBookings:React.Dispatch<React.SetStateAction<Row[]>>;setBlockouts:React.Dispatch<React.SetStateAction<Row[]>>;updateSalon:(patch:Record<string,unknown>)=>Promise<void>;saveRecord:(table:string,values:Record<string,unknown>,id?:string)=>Promise<Row|null>;removeRecord:(table:string,id:string,setter:React.Dispatch<React.SetStateAction<Row[]>>)=>Promise<void>;setNotice:(text:string)=>void};
 
 function DashboardContent({section,context:c}:{section:DashboardSection;context:Ctx}){
   if(section==="subscription")return <SubscriptionV2 c={c}/>;
@@ -128,28 +128,69 @@ function Products({c}:{c:Ctx}){const active=c.products.find(p=>p.id===c.selected
 
 function Availability({c}:{c:Ctx}) {
   const hours=c.salon.hours||{};
+  const settings=c.salon.booking_settings||{};
   const timeZone=c.salon.time_zone||"America/New_York";
   const week=salonWeek(timeZone);
   const activeBookings=c.bookings.filter((booking)=>!["cancelled","declined","refunded"].includes(String(booking.status||"").toLowerCase()));
-  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await c.updateSalon({hours:Object.fromEntries(days.map(day=>[day,String(f.get(day)||"Closed")]))})}
+  const [stylistId,setStylistId]=useState(c.stylists[0]?.id||"");
+  const [until,setUntil]=useState("17:00");
+  const [busy,setBusy]=useState("");
+  const [renderedAt]=useState(()=>Date.now());
+  const activeStylist=c.stylists.find((stylist)=>stylist.id===stylistId)||null;
+  const activeBlockouts=c.blockouts.filter((blockout)=>new Date(String(blockout.ends_at||0)).getTime()>renderedAt);
+
+  async function saveHours(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await c.updateSalon({hours:Object.fromEntries(days.map(day=>[day,String(f.get(day)||"Closed")]))})}
+  async function saveBookingSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await c.updateSalon({booking_settings:{...settings,slot_minutes:Number(f.get("slot")),buffer_minutes:Number(f.get("buffer")),any_available_stylist:true}})}
+  async function saveStylistSchedule(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();
+    if(!activeStylist?.id)return;
+    const form=new FormData(e.currentTarget);
+    const availability=Object.fromEntries(days.map(day=>{const working=form.get(`${day}_working`)==="on";return [day,{open:String(form.get(`${day}_open`)||"09:00"),close:String(form.get(`${day}_close`)||"17:00"),closed:!working}]}));
+    const {data,error}=await supabase.from("stylists").update({availability}).eq("id",activeStylist.id).eq("salon_id",c.salon.id).select("*").single();
+    if(error){c.setNotice(error.message);return;}
+    c.setStylists((rows)=>rows.map((row)=>row.id===activeStylist.id?data as Row:row));
+    c.setNotice(`${activeStylist.name||"Stylist"} availability saved.`);
+  }
+  async function block(mode:string,targetStylistId?:string){
+    setBusy(`${mode}:${targetStylistId||"salon"}`);
+    try{
+      const session=await getSessionForScope("salon");
+      if(!session)throw new Error("Please sign in again.");
+      const response=await fetch("/api/salon/availability/block",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({mode,stylist_id:targetStylistId||null,until})});
+      const body=await response.json();
+      if(!response.ok)throw new Error(body.error||"Unable to block availability.");
+      c.setBlockouts((rows)=>[body.blockout as Row,...rows]);
+      c.setNotice("Availability blocked immediately. Customers can no longer book that window.");
+    }catch(error){c.setNotice(error instanceof Error?error.message:"Unable to block availability.");}finally{setBusy("");}
+  }
+  async function unblock(id:string){
+    setBusy(`delete:${id}`);
+    try{
+      const session=await getSessionForScope("salon");
+      if(!session)throw new Error("Please sign in again.");
+      const response=await fetch(`/api/salon/availability/block?id=${encodeURIComponent(id)}`,{method:"DELETE",headers:{Authorization:`Bearer ${session.access_token}`}});
+      const body=await response.json();
+      if(!response.ok)throw new Error(body.error||"Unable to restore availability.");
+      c.setBlockouts((rows)=>rows.filter((row)=>row.id!==id));
+      c.setNotice("Availability restored.");
+    }catch(error){c.setNotice(error instanceof Error?error.message:"Unable to restore availability.");}finally{setBusy("");}
+  }
+
   return <>
     <Title title="Availability & Calendar" subtitle={`Appointments are shown in ${timeZone.replaceAll("_"," ")}.`}/>
+    <Panel className="mb-4 border-magenta/20 bg-blush/25"><div className="flex flex-col gap-4 lg:flex-row lg:items-end"><div className="flex-1"><h2 className="font-serif text-xl text-plum">Salon is full right now</h2><p className="mt-1 text-xs text-ink/60">Stop all new bookings immediately when walk-ins fill every chair.</p></div><button disabled={Boolean(busy)} onClick={()=>void block("salon_today")} className="min-h-11 rounded-[8px] bg-plum px-5 text-xs font-bold text-white disabled:opacity-60">Mark salon full today</button><label className="text-[10px] font-bold">Booked until<div className="mt-1 flex"><input type="time" value={until} onChange={(event)=>setUntil(event.target.value)} className="min-h-11 rounded-l-[8px] border border-plum/15 px-3"/><button disabled={Boolean(busy)} onClick={()=>void block("salon_until")} className="rounded-r-[8px] bg-magenta px-4 text-white disabled:opacity-60">Block</button></div></label></div></Panel>
     <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-      <Panel className="overflow-x-auto">
-        <div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">
-          {week.map((date)=><section key={date.key} className="min-h-[430px] border-r border-plum/10 bg-cream/20 last:border-r-0">
-            <header className="border-b border-plum/10 bg-white/80 px-2 py-3 text-center"><b className="block text-[10px] uppercase tracking-wide text-plum">{date.label}</b><span className="mt-1 block font-serif text-lg">{date.day}</span></header>
-            <div className="space-y-2 p-2">{activeBookings.filter((booking)=>dateKeyInTimeZone(String(booking.appointment_datetime||""),timeZone)===date.key).sort((a,b)=>String(a.appointment_datetime).localeCompare(String(b.appointment_datetime))).map((booking,index)=><article key={booking.id||index} className="rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-[9px] leading-4"><b className="block text-plum">{bookingTime(booking.appointment_datetime,timeZone)}</b><span className="font-semibold">{styleName(c,booking.style_id)}</span><span className="block text-ink/60">{stylistName(c,booking.stylist_id)}</span></article>)}
-              {!activeBookings.some((booking)=>dateKeyInTimeZone(String(booking.appointment_datetime||""),timeZone)===date.key)?<p className="py-5 text-center text-[9px] text-ink/35">No appointments</p>:null}
-            </div>
-          </section>)}
-        </div>
-      </Panel>
+      <Panel className="overflow-x-auto"><div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">{week.map((date)=><section key={date.key} className="min-h-[430px] border-r border-plum/10 bg-cream/20 last:border-r-0"><header className="border-b border-plum/10 bg-white/80 px-2 py-3 text-center"><b className="block text-[10px] uppercase tracking-wide text-plum">{date.label}</b><span className="mt-1 block font-serif text-lg">{date.day}</span></header><div className="space-y-2 p-2">{activeBookings.filter((booking)=>dateKeyInTimeZone(String(booking.appointment_datetime||""),timeZone)===date.key).sort((a,b)=>String(a.appointment_datetime).localeCompare(String(b.appointment_datetime))).map((booking,index)=><article key={booking.id||index} className="rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-[9px] leading-4"><b className="block text-plum">{bookingTime(booking.appointment_datetime,timeZone)}</b><span className="font-semibold">{styleName(c,booking.style_id)}</span><span className="block text-ink/60">{stylistName(c,booking.stylist_id)}</span></article>)}{!activeBookings.some((booking)=>dateKeyInTimeZone(String(booking.appointment_datetime||""),timeZone)===date.key)?<p className="py-5 text-center text-[9px] text-ink/35">No appointments</p>:null}</div></section>)}</div></Panel>
       <div className="space-y-4">
-        <Panel><h2 className="font-serif text-xl text-plum">Store Hours</h2><form onSubmit={submit} className="mt-3 space-y-2">{days.map(day=><label key={day} className="grid grid-cols-[35px_1fr] items-center gap-2 text-xs"><span>{day}</span><input name={day} defaultValue={hours[day]||"Closed"} className="rounded-[7px] border border-plum/10 px-3 py-2"/></label>)}<button className="min-h-10 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save hours</button></form></Panel>
-        <Panel><h2 className="font-serif text-xl text-plum">Bookable Time Slots</h2><div className="mt-3 grid grid-cols-2 gap-2"><Field label="Slot length" name="slot" defaultValue="30 min"/><Field label="Buffer time" name="buffer" defaultValue="15 min"/></div></Panel>
-        <Panel><h2 className="font-serif text-xl text-plum">Per-Stylist Availability</h2><div className="mt-3 space-y-2">{c.stylists.map((s,i)=><div key={s.id} className="flex items-center gap-2 text-xs"><SafeImage src={s.avatar_url as string} fallbackSrc={fallbackPhotos[i%4]} alt={s.name||"Stylist"} className="h-7 w-7 rounded-full object-cover"/><span className="flex-1">{s.name}</span><span className="text-ink/50">{s.availability?"Schedule set":"Availability not set"}</span></div>)}{!c.stylists.length?<Empty text="Add a stylist to set individual availability."/>:null}</div></Panel>
+        <Panel><h2 className="font-serif text-xl text-plum">Store Hours</h2><form onSubmit={saveHours} className="mt-3 space-y-2">{days.map(day=><label key={day} className="grid grid-cols-[35px_1fr] items-center gap-2 text-xs"><span>{day}</span><input name={day} defaultValue={typeof hours[day]==="string"?String(hours[day]):"Closed"} className="rounded-[7px] border border-plum/10 px-3 py-2"/></label>)}<button className="min-h-10 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save hours</button></form></Panel>
+        <Panel><h2 className="font-serif text-xl text-plum">Bookable Time Slots</h2><form onSubmit={saveBookingSettings} className="mt-3 grid grid-cols-2 gap-2"><label className="text-[10px] font-bold">Slot interval<select name="slot" defaultValue={Number(settings.slot_minutes||30)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-2"><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option></select></label><label className="text-[10px] font-bold">Default buffer<select name="buffer" defaultValue={Number(settings.buffer_minutes||15)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-2"><option value="0">No buffer</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select></label><button className="col-span-2 min-h-10 rounded-[8px] border border-magenta text-xs font-bold text-magenta">Save booking settings</button></form></Panel>
       </div>
+    </div>
+    <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+      <Panel><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-serif text-xl text-plum">Per-Stylist Availability</h2><p className="mt-1 text-xs text-ink/55">A stylist only appears for customers inside these working hours.</p></div>{c.stylists.length?<select value={stylistId} onChange={(event)=>setStylistId(event.target.value)} className="min-h-10 rounded-[8px] border border-plum/15 px-3 text-xs">{c.stylists.map((stylist)=><option key={stylist.id} value={stylist.id}>{stylist.name}</option>)}</select>:null}</div>
+        {activeStylist?<><div className="mt-4 grid gap-2 sm:grid-cols-3"><button disabled={Boolean(busy)} onClick={()=>void block("stylist_three_hours",activeStylist.id)} className="min-h-11 rounded-[8px] bg-plum px-3 text-xs font-bold text-white disabled:opacity-60">Block next 3 hours</button><button disabled={Boolean(busy)} onClick={()=>void block("stylist_today",activeStylist.id)} className="min-h-11 rounded-[8px] bg-magenta px-3 text-xs font-bold text-white disabled:opacity-60">Unavailable today</button><div className="flex"><input type="time" value={until} onChange={(event)=>setUntil(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-l-[8px] border border-plum/15 px-2"/><button disabled={Boolean(busy)} onClick={()=>void block("stylist_until",activeStylist.id)} className="rounded-r-[8px] border border-magenta px-3 text-[10px] font-bold text-magenta disabled:opacity-60">Until</button></div></div><form key={activeStylist.id} onSubmit={saveStylistSchedule} className="mt-5 space-y-2">{days.map((day)=>{const schedule=(activeStylist.availability as Record<string,Row>|undefined)?.[day];const working=schedule?.closed!==true&&Boolean(schedule?.open&&schedule?.close);return <div key={day} className="grid grid-cols-[42px_22px_1fr_1fr] items-center gap-2 rounded-[8px] border border-plum/10 p-2 text-xs"><b>{day}</b><input type="checkbox" name={`${day}_working`} defaultChecked={working} className="accent-magenta"/><input aria-label={`${day} opening time`} type="time" name={`${day}_open`} defaultValue={String(schedule?.open||"09:00")} className="min-w-0 rounded-[6px] border border-plum/10 p-2"/><input aria-label={`${day} closing time`} type="time" name={`${day}_close`} defaultValue={String(schedule?.close||"17:00")} className="min-w-0 rounded-[6px] border border-plum/10 p-2"/></div>})}<button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save {activeStylist.name||"stylist"} schedule</button></form></>:<div className="mt-4 rounded-[10px] border border-amber/30 bg-amber/10 p-5"><h3 className="font-serif text-lg text-plum">No stylists listed: the salon is the booking resource</h3><p className="mt-2 text-xs leading-5 text-ink/65">This is supported intentionally. Every appointment blocks the entire salon for the service duration plus buffer. Use the salon-full controls above for walk-in overrides.</p></div>}
+      </Panel>
+      <Panel><h2 className="font-serif text-xl text-plum">Active Blocks</h2><div className="mt-3 space-y-2">{activeBlockouts.map((blockout)=><div key={blockout.id} className="rounded-[8px] border border-plum/10 p-3 text-xs"><div className="flex items-start justify-between gap-3"><span><b>{blockout.stylist_id?stylistName(c,blockout.stylist_id):"Whole salon"}</b><span className="mt-1 block text-ink/55">Until {dateText(blockout.ends_at,timeZone)}</span></span><button disabled={busy===`delete:${blockout.id}`} onClick={()=>void unblock(String(blockout.id))} className="font-bold text-magenta">Release</button></div></div>)}{!activeBlockouts.length?<Empty text="No active availability blocks."/>:null}</div></Panel>
     </div>
   </>
 }

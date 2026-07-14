@@ -98,14 +98,15 @@ export async function bookingAvailability(input: { salonId: string; styleId: str
     const availableResource = resources.find((resource) => {
       const resourceId = resource.id ? String(resource.id) : null;
       const stylistHours = resourceId ? hoursRange((resource.availability as Row | null)?.[day]) : null;
+      if (resourceId && !stylistHours) return false;
       if (stylistHours?.closed) return false;
       if (stylistHours) {
         const stylistOpen = minutes(stylistHours.open) ?? 0;
         const stylistClose = minutes(stylistHours.close) ?? 0;
         if (cursor < stylistOpen || cursor + durationMinutes + bufferMinutes > stylistClose) return false;
       }
-      const busyBooking = activeBookings.some((row) => (resourceId ? row.stylist_id === resourceId : !row.stylist_id) && overlaps(start, end, row.appointment_datetime, row.blocked_until));
-      const busyIntent = activeIntents.some((row) => (resourceId ? row.stylist_id === resourceId : !row.stylist_id) && overlaps(start, end, row.appointment_datetime, row.blocked_until));
+      const busyBooking = activeBookings.some((row) => (!row.stylist_id || (resourceId ? row.stylist_id === resourceId : !resourceId)) && overlaps(start, end, row.appointment_datetime, row.blocked_until));
+      const busyIntent = activeIntents.some((row) => (!row.stylist_id || (resourceId ? row.stylist_id === resourceId : !resourceId)) && overlaps(start, end, row.appointment_datetime, row.blocked_until));
       const blocked = (blockouts || []).some((row) => (!row.stylist_id || row.stylist_id === resourceId) && overlaps(start, end, row.starts_at, row.ends_at));
       return !busyBooking && !busyIntent && !blocked;
     });
