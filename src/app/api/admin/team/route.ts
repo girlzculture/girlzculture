@@ -17,7 +17,15 @@ export async function POST(request: Request) {
     const email = cleanEmail(body.email); const phone = cleanUsPhone(body.phone); const name = cleanText(body.name, 120); const role = cleanText(body.role, 80) || "Admin";
     if (!name) throw new Error("Name is required.");
     const invited = await inviteOrFindUser(admin, email, "admin");
-    const { data, error } = await admin.from("admin_users").upsert({ id: invited.user.id, user_id: invited.user.id, name, email, phone, role, status: invited.user.last_sign_in_at ? "Active" : "Invited", permissions: permissions(body.permissions), is_super_admin: false, invited_by: user.id, invited_at: new Date().toISOString(), activated_at: invited.user.last_sign_in_at || null }).select().single();
+    const requestedStatus = cleanText(body.status, 20) === "Inactive" ? "Inactive" : invited.user.last_sign_in_at ? "Active" : "Invited";
+    const { data: existing, error: existingError } = await admin.from("admin_users").select("id,is_super_admin").ilike("email", email).limit(1).maybeSingle();
+    if (existingError) throw existingError;
+    if (existing?.is_super_admin) throw new Error("A Super Admin cannot be replaced from this form.");
+    const values = { user_id: invited.user.id, name, email, phone, role, status: requestedStatus, permissions: permissions(body.permissions), is_super_admin: false, invited_by: user.id, activated_at: invited.user.last_sign_in_at || null };
+    const saved = existing?.id
+      ? await admin.from("admin_users").update(values).eq("id", existing.id).select().single()
+      : await admin.from("admin_users").insert({ id: invited.user.id, ...values, invited_at: new Date().toISOString() }).select().single();
+    const { data, error } = saved;
     if (error) throw error; return Response.json({ user: data, invitation_sent: invited.invited });
   } catch (error) { console.error("Admin team invitation failed", error); return errorResponse(error, "Unable to invite admin user."); }
 }

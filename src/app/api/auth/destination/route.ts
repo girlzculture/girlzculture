@@ -29,7 +29,18 @@ export async function POST(request: Request) {
     }
     if (teamMember) {
       if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);
-      return Response.json({ path: "/salon/dashboard", role: "salon_owner", salon_id: teamMember.salon_id, permissions: teamMember.permissions || {}, team_role: teamMember.role, stylist_id: teamMember.stylist_id });
+      const [{ data: parentSubscription, error: subscriptionError }, { data: parentSalon, error: parentSalonError }] = await Promise.all([
+        admin.from("subscriptions").select("*").eq("salon_id", teamMember.salon_id).limit(1).maybeSingle(),
+        admin.from("salons").select("subscription_status,subscription_tier").eq("id", teamMember.salon_id).maybeSingle(),
+      ]);
+      if (subscriptionError) throw subscriptionError;
+      if (parentSalonError) throw parentSalonError;
+      return Response.json({
+        path: "/salon/dashboard", role: "salon_owner", salon_id: teamMember.salon_id,
+        permissions: teamMember.permissions || {}, team_role: teamMember.role,
+        stylist_id: teamMember.stylist_id, is_team_member: true,
+        parent_subscription: parentSubscription || (parentSalon ? { status: parentSalon.subscription_status, tier: parentSalon.subscription_tier } : null),
+      });
     }
     return Response.json({ path: "/account", role: "customer" });
   } catch (error) {

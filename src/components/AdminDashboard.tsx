@@ -22,6 +22,7 @@ type DataState = {
 };
 
 const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [] };
+const rows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
   ["customers", "Customers", UsersRound], ["bookings", "Bookings", CalendarDays], ["quality", "Quality & Performance", Star],
@@ -37,6 +38,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   const [selected, setSelected] = useState<Row | null>(null);
   const [notice, setNotice] = useState("");
   const [access, setAccess] = useState<Record<string, boolean> | null>(null);
+  const [denied, setDenied] = useState(false);
 
   async function load() {
     const session = await getSessionForScope("admin");
@@ -45,15 +47,23 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     const verification = await fetch("/api/admin/verify", { method: "POST", headers });
     if (!verification.ok) throw new Error("This saved admin session is no longer authorized. Sign in with an active platform-admin account.");
     const verified = await verification.json() as { permissions?: Record<string,boolean>; is_super_admin?: boolean };
-    setAccess(verified.is_super_admin ? null : verified.permissions || {});
+    const verifiedAccess = verified.is_super_admin ? null : verified.permissions || {};
+    setAccess(verifiedAccess);
+    if (verifiedAccess !== null && !verifiedAccess[section]) {
+      setDenied(true);
+      setData(emptyData);
+      setSelected(null);
+      return;
+    }
+    setDenied(false);
     const response = await fetch(`/api/admin/data?section=${encodeURIComponent(section)}`, { headers, cache: "no-store" });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
     const next: DataState = {
-      salons: body.salons || [], applications: body.salon_applications || [], customers: body.customers || [],
-      bookings: body.bookings || [], reviews: body.reviews || [], tickets: body.support_tickets || [],
-      subscriptions: body.subscriptions || [], complaints: body.complaints_log || [], admins: body.admin_users || [],
-      promotions: body.salon_promotions || [], posts: body.blog_posts || [], settings: body.admin_settings || [],
+      salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
+      bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
+      subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
+      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings),
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
@@ -91,6 +101,11 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
 
   if (loading) return <div className="min-h-screen bg-cream p-12 text-center text-plum">Loading platform administration…</div>;
   if (error) return <div className="grid min-h-screen place-items-center bg-cream p-5"><div className="rounded-2xl bg-white p-8 text-center"><h1 className="font-serif text-3xl text-plum">Admin access</h1><p className="mt-3">{error}</p><Link href="/admin/login" className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">Go to admin login</Link></div></div>;
+  if (denied) {
+    const firstAllowed = navigation.find(([id]) => access?.[id])?.[0];
+    const firstAllowedHref = firstAllowed === "overview" ? "/admin" : firstAllowed ? `/admin/${firstAllowed}` : "/admin/login";
+    return <AdminShell section={section} access={access}><RoleSessionBoundary scope="admin" /><div className="mx-auto max-w-2xl rounded-[18px] border border-plum/10 bg-white p-10 text-center"><Settings className="mx-auto text-magenta" /><h1 className="mt-4 font-serif text-3xl text-plum">Access not assigned</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-ink/70">Your platform-admin role does not include this section. Ask a Super Admin to update your permissions.</p><Link href={firstAllowedHref} className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white">Open an assigned section</Link></div></AdminShell>;
+  }
 
   return <AdminShell section={section} access={access}><RoleSessionBoundary scope="admin" />
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-[40px] font-semibold leading-none text-plum">{navigation.find((item) => item[0] === section)?.[1]}</h1><p className="mt-2 text-sm text-ink/55">{subtitle(section)}</p></div><div className="flex items-center gap-3 rounded-[11px] border border-plum/10 bg-white px-4 py-3 text-xs"><Search size={17} /><input className="w-64 bg-transparent outline-none" placeholder="Search platform records" /><Bell size={19} /></div></div>
@@ -110,7 +125,15 @@ function AdminShell({ section, children, access }: { section: AdminSection; chil
 }
 
 function AdminSectionView({ section, data, selected, setSelected, decide, update, onCreated }: { section: AdminSection; data: DataState; selected: Row | null; setSelected: (row: Row) => void; decide: (id: string, decision: "approve" | "reject" | "activate") => void; update: (table: string, id: string, changes: Row) => Promise<void>; onCreated: () => Promise<void> }) {
-  const props = { ...data, selected, setSelected, decide, update, onCreated };
+  // Missing API arrays are normalized here as a final render guard. Every
+  // section can now show its existing empty state instead of crashing.
+  const safeData: DataState = {
+    salons: rows(data?.salons), applications: rows(data?.applications), customers: rows(data?.customers),
+    bookings: rows(data?.bookings), reviews: rows(data?.reviews), tickets: rows(data?.tickets),
+    subscriptions: rows(data?.subscriptions), complaints: rows(data?.complaints), admins: rows(data?.admins),
+    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings),
+  };
+  const props = { ...safeData, selected, setSelected, decide, update, onCreated };
   switch (section) {
     case "overview": return <Overview {...props} />;
     case "submissions": return <Submissions {...props} />;
@@ -122,7 +145,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "finance": return <Finance {...props} />;
     case "marketing": return <Marketing {...props} />;
     case "content": return <AdminContentManager />;
-    case "support": return <AdminSupportInbox initialTickets={data.tickets} />;
+    case "support": return <AdminSupportInbox initialTickets={safeData.tickets} />;
     case "subscriptions": return <Subscriptions {...props} />;
     default: return <SettingsTeam {...props} />;
   }

@@ -7,6 +7,7 @@ import BaseImageUpload from "@/components/ImageUpload";
 import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Row = Record<string, any>;
+const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
 const defaultSlugs = ["home", "salon-profile", "partner", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
@@ -39,16 +40,19 @@ export default function AdminContentManager() {
       const response = await fetch("/api/admin/content", { headers: await authHeaders(), cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load content");
-      setPages(body.pages || []);
-      setPosts(body.posts || []);
-      setMasterStyles(body.masterStyles || []);
+      const loadedPages = asRows(body.pages);
+      const loadedPosts = asRows(body.posts);
+      const loadedStyles = asRows(body.masterStyles);
+      setPages(loadedPages);
+      setPosts(loadedPosts);
+      setMasterStyles(loadedStyles);
       if (selectFirst) {
-        const visiblePages = (body.pages || []).filter((item: Row) => !hiddenSlugs.has(item.slug));
+        const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null);
-        setPost(body.posts?.[0] || null);
-        setMasterStyle(body.masterStyles?.[0] || null);
+        setPost(loadedPosts[0] || null);
+        setMasterStyle(loadedStyles[0] || null);
       }
-      return body as { pages: Row[]; posts: Row[]; masterStyles: Row[] };
+      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles };
     } catch (error) {
       console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -68,9 +72,10 @@ export default function AdminContentManager() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load content");
         if (!active) return;
-        setPages(body.pages || []); setPosts(body.posts || []); setMasterStyles(body.masterStyles || []);
-        const visiblePages = (body.pages || []).filter((item: Row) => !hiddenSlugs.has(item.slug));
-        setPage(visiblePages[0] || null); setPost(body.posts?.[0] || null); setMasterStyle(body.masterStyles?.[0] || null);
+        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles);
+        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles);
+        const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
+        setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
         console.error("Content Management load error", error);
         if (active) setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -83,7 +88,7 @@ export default function AdminContentManager() {
     event.preventDefault();
     if (!page) return;
     const form = new FormData(event.currentTarget);
-    const sections = (page.sections || []).map((section: Row, index: number) => ({
+    const sections = asRows(page.sections).map((section: Row, index: number) => ({
       ...section,
       title: String(form.get(`section_title_${index}`) || ""),
       body: String(form.get(`section_body_${index}`) || ""),
@@ -245,7 +250,7 @@ function PageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatc
       <div className="mt-3 grid gap-3 sm:grid-cols-2">{slots.map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]} />)}</div>
     </> : null}
     <h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2>
-    <div className="mt-3 space-y-3">{(page.sections || []).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div>
+    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div>
     <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...(row?.sections || []), { title: "New Section", body: "" }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
     <div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div>
     <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button>
