@@ -181,21 +181,33 @@ export function StructuredStylistsEditor({ c }: { c: Context }) {
   const [years, setYears] = useState(0);
   const [avatar, setAvatar] = useState("");
   const [portfolio, setPortfolio] = useState<string[]>([]);
+  const [creatingDraft, setCreatingDraft] = useState(false);
 
   useEffect(() => { let live = true; supabase.from("master_styles").select("id,name").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => { if (!live) return; if (error) c.setNotice(error.message); else setMasters((data || []) as MasterStyle[]); }); return () => { live = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setName(String(active?.name || "")); setBio(String(active?.bio || "").slice(0, 250)); setSpecialties(Array.isArray(active?.specialties) ? active.specialties.map(String) : []); setYears(Number(active?.years_experience || 0)); setAvatar(String(active?.avatar_url || "")); setPortfolio(Array.isArray(active?.photos) ? active.photos.map(String) : []); }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const saved = await c.saveRecord("stylists", { name: name.trim(), bio: bio.slice(0, 250), specialties, years_experience: years, avatar_url: avatar || null, photos: portfolio, is_active: true }, active?.id);
+    const saved = await c.saveRecord("stylists", { name: name.trim(), bio: bio.slice(0, 250), specialties, years_experience: years, avatar_url: avatar || null, photos: portfolio, is_active: true, is_draft: false }, active?.id);
     if (!saved) return;
     c.setStylists((rows) => active ? rows.map((row) => row.id === active.id ? saved : row) : [saved, ...rows]);
     c.setSelectedStylist(saved.id || null);
   }
 
+  async function addDraft() {
+    setCreatingDraft(true);
+    const { data, error } = await supabase.rpc("create_stylist_draft", { p_salon_id: c.salon.id });
+    setCreatingDraft(false);
+    if (error) { c.setNotice(error.message); return; }
+    const draft = data as Row;
+    c.setStylists((rows) => rows.some((row) => row.id === draft.id) ? rows.map((row) => row.id === draft.id ? draft : row) : [draft, ...rows]);
+    c.setSelectedStylist(draft.id || null);
+    c.setNotice("Secure stylist draft created. You can upload photos or fill details in any order.");
+  }
+
   const selectedNames = useMemo(() => new Set(specialties), [specialties]);
   return <>
-    <EditorTitle title="Stylists" subtitle="Manage your team with consistent specialties drawn from the platform style list." action={<button type="button" onClick={() => c.setSelectedStylist(null)} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16} />Add Stylist</button>} />
+    <EditorTitle title="Stylists" subtitle="Manage your team with consistent specialties drawn from the platform style list." action={<button type="button" disabled={creatingDraft} onClick={() => void addDraft()} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white disabled:opacity-60"><Plus className="mr-1 inline" size={16} />{creatingDraft ? "Creating…" : "Add Stylist"}</button>} />
     <div className="flex gap-3 overflow-x-auto pb-4">{c.stylists.map((stylist) => <button key={stylist.id} type="button" onClick={() => c.setSelectedStylist(stylist.id || null)} className={`min-w-[190px] rounded-[11px] border p-4 text-left ${active?.id === stylist.id ? "border-magenta bg-blush/30" : "border-plum/10 bg-white"}`}>{stylist.avatar_url ? <Image unoptimized width={80} height={80} src={String(stylist.avatar_url)} alt={stylist.name || "Stylist"} className="h-20 w-20 rounded-full object-cover" /> : <span className="grid h-20 w-20 place-items-center rounded-full bg-blush text-plum"><UserRound size={30} /></span>}<p className="mt-3 font-serif text-xl text-plum">{stylist.name || "New stylist"}</p><p className="mt-1 text-[10px] text-ink/55">{Number(stylist.years_experience || 0)} years experience</p><p className="mt-2 line-clamp-2 text-[10px] text-ink/55">{Array.isArray(stylist.specialties) && stylist.specialties.length ? stylist.specialties.join(" · ") : "No specialties selected"}</p></button>)}</div>
     <form key={active?.id || "new"} onSubmit={save}><EditorPanel><h2 className="font-serif text-xl text-plum">{active ? "Edit Stylist" : "Add Stylist"}</h2><div className="mt-4 grid gap-5 xl:grid-cols-[.75fr_1fr_1.25fr]"><div>{active?.id ? <ImageUpload bucket="stylist-photos" folder={`stylists/${active.id}`} label="Profile photo" value={avatar} onChange={(value) => setAvatar(typeof value === "string" ? value : "")} /> : <div className="rounded-[12px] border border-dashed border-plum/20 bg-blush/25 p-5 text-center text-xs text-plum">Save the new stylist once to create their secure photo folder.</div>}</div><div className="space-y-4"><label className="block text-[10px] font-bold">Name<input required value={name} onChange={(event) => setName(event.target.value.slice(0, 120))} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label><label className="block text-[10px] font-bold">Bio / Description<textarea value={bio} maxLength={250} onChange={(event) => setBio(event.target.value)} rows={6} className="mt-1 w-full rounded-[7px] border border-plum/15 p-3 font-normal" /><span className="mt-1 block text-right font-normal text-ink/45">{bio.length}/250</span></label><NumberField label="Years of Experience" value={years} onChange={setYears} step="1" /><button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save Stylist</button></div><div><h3 className="font-serif text-lg text-plum">Specialties</h3><p className="mt-1 text-[10px] text-ink/55">Select from the centrally managed style list.</p><div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded-[10px] border border-plum/10 p-3 sm:grid-cols-2">{masters.map((master) => <label key={master.id} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={selectedNames.has(master.name)} onChange={() => setSpecialties((current) => current.includes(master.name) ? current.filter((item) => item !== master.name) : [...current, master.name])} className="accent-magenta" />{master.name}</label>)}</div>{active?.id ? <div className="mt-5"><ImageUpload bucket="stylist-photos" multiple maxFiles={10} folder={`stylists/${active.id}/portfolio`} label="Work Portfolio" value={portfolio} onChange={(value) => setPortfolio(Array.isArray(value) ? value : [])} /></div> : null}</div></div></EditorPanel></form>
   </>;

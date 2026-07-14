@@ -18,7 +18,7 @@ export async function POST(request: Request, context: RouteContext<"/api/admin/s
     const reviewedAt=new Date().toISOString();
     const {error:applicationError}=await admin.from("salon_applications").update({status,rejection_reason:decision==="reject"?safeReason:null,reviewed_by:user.id,reviewed_at:reviewedAt}).eq("id",id);
     if(applicationError)throw applicationError;
-    const {error:salonError}=await admin.from("salons").update({status,subscription_tier:plan,subscription_status:"inactive",rejection_reason:decision==="reject"?safeReason:null,approved_at:decision==="activate"?reviewedAt:null}).eq("id",application.salon_id);
+    const {error:salonError}=await admin.from("salons").update({status,subscription_tier:plan,subscription_status:"inactive",logo_url:application.logo_url||null,rejection_reason:decision==="reject"?safeReason:null,approved_at:decision==="activate"?reviewedAt:null}).eq("id",application.salon_id);
     if(salonError)throw salonError;
     const base=process.env.NEXT_PUBLIC_SITE_URL||"http://localhost:3000";
     const subject=decision==="activate"?"Your Girlz Culture store is active":decision==="approve"?"Your Girlz Culture application is approved":"Update on your Girlz Culture application";

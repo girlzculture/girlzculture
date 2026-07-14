@@ -35,6 +35,7 @@ type SalonRecord = {
   longitude?: number | string | null;
   hours?: unknown;
   languages?: string[] | string | null;
+  logo_url?: string | null;
   cover_photo_url?: string | null;
   gallery_photos?: string[] | string | null;
   verification_status?: string | null;
@@ -246,6 +247,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
           </div>
 
           <div className="flex flex-col justify-center lg:py-1">
+            {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
             <div><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>

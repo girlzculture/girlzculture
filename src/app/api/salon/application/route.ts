@@ -2,6 +2,15 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizePlan } from "@/lib/plans";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 
+function applicationMediaUrl(value: unknown) {
+  const text = cleanText(value, 1000);
+  if (!text) return null;
+  const supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || "http://invalid.local").origin;
+  const parsed = new URL(text);
+  if (parsed.origin !== supabaseOrigin || !parsed.pathname.includes("/storage/v1/object/public/application-media/")) throw new Error("Upload the salon logo through the application form.");
+  return parsed.toString();
+}
+
 export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
   let createdSalonId: string | null = null;
@@ -27,6 +36,7 @@ export async function POST(request: Request) {
       address_street: cleanText(body.street_address, 180), address_city: cleanText(body.city, 100), address_state: cleanText(body.state, 50),
       address_zip: cleanText(body.zip_code, 12), neighborhood: cleanText(body.neighborhood, 100),
       business_type: cleanText(body.business_type, 80), application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",
+      logo_url: applicationMediaUrl(body.logo_url),
     };
     const salonResult = await admin.from("salons").select("id,slug").eq("user_id", user.id).maybeSingle();
     let salon = salonResult.data;
@@ -47,7 +57,7 @@ export async function POST(request: Request) {
       business_email: salonPatch.email, phone: salonPatch.phone, street_address: salonPatch.address_street,
       city: salonPatch.address_city, state: salonPatch.address_state, zip_code: salonPatch.address_zip,
       neighborhood: salonPatch.neighborhood, business_type: salonPatch.business_type, referral_source: cleanText(body.referral_source, 120), selected_plan: selectedPlan,
-      logo_url: body.logo_url || null, photo_urls: Array.isArray(body.photo_urls) ? body.photo_urls : [], document_urls: Array.isArray(body.document_urls) ? body.document_urls : [],
+      logo_url: salonPatch.logo_url, photo_urls: Array.isArray(body.photo_urls) ? body.photo_urls : [], document_urls: Array.isArray(body.document_urls) ? body.document_urls : [],
       consent_authorized: true, consent_terms: true, consent_photos: true, status: "Pending", rejection_reason: null,
     };
     const { data: saved, error: applicationError } = await admin.from("salon_applications").upsert(application, { onConflict: "salon_id" }).select("id,state,status").single();
