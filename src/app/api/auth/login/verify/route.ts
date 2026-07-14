@@ -1,8 +1,9 @@
-import { cleanText, errorResponse } from "@/lib/requestSecurity";
+import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayload, signInAndVerifyRole, verifyMfaChallenge, type LoginScope } from "@/lib/secureLoginServer";
 
 export async function POST(request: Request) {
   try {
+    enforceRateLimit(request, "login-verify", 15, 15 * 60_000);
     const body = await request.json() as Record<string, unknown>;
     const role = cleanText(body.role, 20) as LoginScope;
     if (!(["customer", "salon", "admin"] as string[]).includes(role)) throw new Error("Invalid login destination.");

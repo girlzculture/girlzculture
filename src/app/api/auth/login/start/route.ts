@@ -1,8 +1,9 @@
-import { cleanText, errorResponse, rejectBot } from "@/lib/requestSecurity";
+import { cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, createMfaChallenge, LoginLockedError, recordLoginAttempt, requiresMfa, sessionPayload, signInAndVerifyRole, type LoginScope } from "@/lib/secureLoginServer";
 
 export async function POST(request: Request) {
   try {
+    enforceRateLimit(request, "login-start", 10, 15 * 60_000);
     const body = await request.json() as Record<string, unknown>;
     rejectBot(body);
     const role = cleanText(body.role, 20) as LoginScope;

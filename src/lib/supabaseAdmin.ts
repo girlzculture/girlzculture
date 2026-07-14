@@ -16,8 +16,14 @@ export async function requireAdmin(request: Request) {
   const { data } = await admin.auth.getUser(token);
   if (!data.user) throw new Error("Unauthorized");
   const normalizedEmail = data.user.email?.trim().toLowerCase() || "";
-  const { data: rows } = await admin.from("admin_users").select("id,user_id,email,role,status,permissions,is_super_admin").ilike("email", normalizedEmail);
-  const row = (rows || []).find((candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail && candidate.status === "Active");
+  const { data: rows } = await admin.from("admin_users").select("id,user_id,email,role,status,permissions,is_super_admin,activated_at").ilike("email", normalizedEmail);
+  let row = (rows || []).find((candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail && ["Active", "Invited"].includes(candidate.status));
+  if (row?.status === "Invited") {
+    const activatedAt = new Date().toISOString();
+    const { error: activationError } = await admin.from("admin_users").update({ status: "Active", activated_at: activatedAt }).eq("id", row.id).eq("status", "Invited");
+    if (activationError) throw activationError;
+    row = { ...row, status: "Active", activated_at: activatedAt };
+  }
   const master = process.env.ADMIN_EMAIL?.toLowerCase();
   if (!row && normalizedEmail !== master) throw new Error("Forbidden");
   return { admin, user: data.user, adminUser: row || { email: normalizedEmail, role: "Super Admin", status: "Active", permissions: {}, is_super_admin: true } };
@@ -76,7 +82,7 @@ export async function sendSms(to: string, body: string) {
   return response.json();
 }
 
-type DeliveryTask = { recipientType: "salon" | "customer"; channel: "email" | "sms"; destination: string; run: () => Promise<unknown> };
+type DeliveryTask = { recipientType: "salon" | "customer" | "stylist"; channel: "email" | "sms"; destination: string; run: () => Promise<unknown> };
 
 function escapeHtml(value: unknown) {
   return String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] || character);
@@ -89,10 +95,21 @@ async function bookingNotificationContext(bookingId: string) {
   const [{ data: salon }, { data: style }, { data: stylist }] = await Promise.all([
     admin.from("salons").select("name,email,phone,time_zone,slug").eq("id", booking.salon_id).single(),
     admin.from("styles").select("name").eq("id", booking.style_id).maybeSingle(),
-    booking.stylist_id ? admin.from("stylists").select("name").eq("id", booking.stylist_id).maybeSingle() : Promise.resolve({ data: null }),
+    booking.stylist_id ? admin.from("stylists").select("id,name,user_id").eq("id", booking.stylist_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   if (!salon) throw new Error("Salon not found");
-  return { admin, booking, salon, style, stylist };
+  let stylistContact: { email: string; phone: string; userId: string } | null = null;
+  if (stylist?.id) {
+    const { data: member } = await admin.from("salon_team_members").select("user_id,email,phone").eq("salon_id", booking.salon_id).eq("stylist_id", stylist.id).eq("status", "Active").maybeSingle();
+    const userId = String(stylist.user_id || member?.user_id || "");
+    const authResult = userId ? await admin.auth.admin.getUserById(userId) : null;
+    stylistContact = {
+      email: String(member?.email || authResult?.data.user?.email || ""),
+      phone: String(member?.phone || authResult?.data.user?.user_metadata?.phone || ""),
+      userId,
+    };
+  }
+  return { admin, booking, salon, style, stylist, stylistContact };
 }
 
 async function runDeliveries(bookingId: string, eventType: "booking_confirmed" | "booking_cancelled", tasks: DeliveryTask[]) {
@@ -116,7 +133,7 @@ async function runDeliveries(bookingId: string, eventType: "booking_confirmed" |
 }
 
 export async function deliverBookingNotifications(bookingId: string) {
-  const { admin, booking, salon, style, stylist } = await bookingNotificationContext(bookingId);
+  const { admin, booking, salon, style, stylist, stylistContact } = await bookingNotificationContext(bookingId);
   if (booking.notifications_sent_at) return { alreadySent: true };
   const when = formatInTimeZone(booking.appointment_datetime, salon.time_zone);
   const duration = `${Number(booking.duration_hours || 0)} hour${Number(booking.duration_hours || 0) === 1 ? "" : "s"}`;
@@ -134,6 +151,8 @@ export async function deliverBookingNotifications(bookingId: string) {
     { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), "Your Girlz Culture appointment is confirmed", `<h1>Your appointment is confirmed</h1><p>${escapeHtml(customerSummary)}</p><p>Confirmation code: ${escapeHtml(booking.confirmation_code)}</p><p><a href="${accountUrl}">View your booking</a></p>`) },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), `Girlz Culture: ${customerSummary} Confirmation ${booking.confirmation_code || ""}. ${accountUrl}`) },
   ];
+  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "A Girlz Culture booking was assigned to you", `<h1>New assigned booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open your appointment</a></p>`) });
+  if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture assigned booking: ${salonSummary} ${dashboardUrl}`) });
   const deliveries = await runDeliveries(bookingId, "booking_confirmed", tasks);
   const delivered = deliveries.every((item) => item.status === "delivered");
   if (delivered) await admin.from("bookings").update({ notifications_sent_at: new Date().toISOString() }).eq("id", bookingId).is("notifications_sent_at", null);
@@ -142,16 +161,21 @@ export async function deliverBookingNotifications(bookingId: string) {
 }
 
 export async function deliverCancellationNotifications(bookingId: string, reason: string) {
-  const { booking, salon, style, stylist } = await bookingNotificationContext(bookingId);
+  const { booking, salon, style, stylist, stylistContact } = await bookingNotificationContext(bookingId);
   const when = formatInTimeZone(booking.appointment_datetime, salon.time_zone);
   const service = String(style?.name || "Braiding service");
   const refundMessage = booking.refund_status === "Succeeded"
     ? `Your $${Number(booking.refund_amount || 0).toFixed(2)} reservation deposit was refunded in full.`
     : "No deposit refund was due for this booking.";
-  const message = `Your ${service} appointment at ${salon.name} for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled by the salon. Reason: ${reason}. ${refundMessage}`;
+  const message = `Your ${service} appointment at ${salon.name} for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled. Reason: ${reason}. ${refundMessage}`;
+  const businessMessage = `${String(booking.guest_name || "A customer")}'s ${service} appointment for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled. Reason: ${reason}.`;
   const tasks: DeliveryTask[] = [
     { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), "Your Girlz Culture appointment was cancelled", `<h1>Appointment cancelled</h1><p>${escapeHtml(message)}</p><p>We are sorry for the disruption. Visit Girlz Culture to find another available salon.</p>`) },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), `Girlz Culture: ${message}`) },
+    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), "Girlz Culture booking cancelled", `<h1>Booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`) },
+    { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), `Girlz Culture: ${businessMessage}`) },
   ];
+  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "An assigned Girlz Culture booking was cancelled", `<h1>Assigned booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`) });
+  if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture: ${businessMessage}`) });
   return { deliveries: await runDeliveries(bookingId, "booking_cancelled", tasks) };
 }

@@ -77,12 +77,14 @@ export async function requiresMfa(user: User, role: LoginScope) {
 export async function createMfaChallenge(user: User, role: LoginScope) {
   const admin = getSupabaseAdmin();
   const email = user.email?.trim().toLowerCase() || "";
-  const [{ data: security }, { data: salon }] = await Promise.all([
+  const [{ data: security }, { data: salon }, { data: teamMember }, { data: adminUser }] = await Promise.all([
     admin.from("account_security_settings").select("preferred_channel,verified_phone").eq("user_id", user.id).maybeSingle(),
     role === "salon" ? admin.from("salons").select("phone").eq("user_id", user.id).limit(1).maybeSingle() : Promise.resolve({ data: null }),
+    role === "salon" ? admin.from("salon_team_members").select("phone").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle() : Promise.resolve({ data: null }),
+    role === "admin" ? admin.from("admin_users").select("phone").eq("user_id", user.id).limit(1).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const requestedChannel = role === "salon" ? "sms" : security?.preferred_channel || "email";
-  const phone = String(security?.verified_phone || salon?.phone || user.phone || "");
+  const phone = String(security?.verified_phone || salon?.phone || teamMember?.phone || adminUser?.phone || user.phone || "");
   const id = randomUUID();
   const code = String(randomInt(100000, 1000000));
   let channel: "email" | "sms" = requestedChannel === "sms" && phone ? "sms" : "email";
