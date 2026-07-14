@@ -12,6 +12,7 @@ import AdminContentManager from "@/components/AdminContentManager";
 import AdminSupportInbox from "@/components/AdminSupportInbox";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import TeamUserManager from "@/components/auth/TeamUserManager";
+import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "subscriptions" | "settings";
 type Row = Record<string, any>;
@@ -159,7 +160,8 @@ function Customers(p: any) {
 
 function Bookings(p: any) {
   const [manual, setManual] = useState(false);
-  return <><div className="mb-4 flex justify-end"><button onClick={() => setManual(!manual)} className="rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">{manual ? "Close booking form" : "Create booking manually"}</button></div>{manual ? <ManualBooking salons={p.salons} onCreated={p.onCreated} /> : null}<Panel title="All Bookings"><DataTable headers={["Booking ID", "Salon", "Customer", "Date & Time", "Status", "Deposit", "Source"]}>{p.bookings.length ? p.bookings.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <tr key={booking.id} className="border-b"><Td>{String(booking.id).slice(0, 10)}</Td><Td>{salon?.name || "Salon unavailable"}</Td><Td>{booking.guest_name || "Customer"}</Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}</Td><Td><Badge value={booking.status} /></Td><Td>{money(Number(booking.deposit_amount || 0))}</Td><Td>{booking.source || "Website"}</Td></tr>; }) : <EmptyTable columns={7} text="No bookings yet." />}</DataTable></Panel></>;
+  const [editing, setEditing] = useState<string|null>(null);
+  return <>{editing ? <AdminBookingEditor bookingId={editing} close={() => setEditing(null)} saved={p.onCreated} /> : null}<div className="mb-4 flex justify-end"><button onClick={() => setManual(!manual)} className="rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">{manual ? "Close booking form" : "Create booking manually"}</button></div>{manual ? <ManualBooking salons={p.salons} onCreated={p.onCreated} /> : null}<Panel title="All Bookings"><DataTable headers={["Booking ID", "Salon", "Customer", "Date & Time", "Status", "Deposit", "Source", "Actions"]}>{p.bookings.length ? p.bookings.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <tr key={booking.id} className="border-b"><Td>{String(booking.id).slice(0, 10)}</Td><Td>{salon?.name || "Salon unavailable"}</Td><Td>{booking.guest_name || "Customer"}</Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}</Td><Td><Badge value={booking.status} /></Td><Td>{money(Number(booking.deposit_amount || 0))}</Td><Td>{booking.source || "Website"}</Td><Td><button type="button" onClick={() => setEditing(String(booking.id))} className="rounded-lg border border-magenta px-3 py-2 font-bold text-magenta">Manage</button></Td></tr>; }) : <EmptyTable columns={8} text="No bookings yet." />}</DataTable></Panel></>;
 }
 
 function ManualBooking({ salons, onCreated }: { salons: Row[]; onCreated: () => Promise<void> }) {
