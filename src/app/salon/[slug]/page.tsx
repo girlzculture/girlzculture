@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   BadgeCheck,
   Clock3,
+  ImageOff,
   MapPin,
   Navigation,
   Package,
@@ -35,6 +36,7 @@ type SalonRecord = {
   longitude?: number | string | null;
   hours?: unknown;
   languages?: string[] | string | null;
+  logo_url?: string | null;
   cover_photo_url?: string | null;
   gallery_photos?: string[] | string | null;
   verification_status?: string | null;
@@ -69,6 +71,9 @@ type StylistRecord = {
   avatar_url?: string | null;
   photos?: string[] | string | null;
   is_active?: boolean | null;
+  is_draft?: boolean | null;
+  years_experience?: number | null;
+  rating?: number | null;
 };
 
 type StyleMaterialRecord = {
@@ -103,14 +108,6 @@ type ProductRecord = {
   photo_url?: string | null;
   is_visible?: boolean | null;
 };
-
-const galleryFallbacks = [
-  "/images/braids-cornrows.jpg",
-  "/images/braids-knotless.jpg",
-  "/images/braids-box.jpg",
-  "/images/hero-braids.jpg",
-  "/images/braids-cornrows.jpg",
-];
 
 const dayLabels = [
   ["mon", "Mon"],
@@ -155,9 +152,16 @@ function normalizeHours(value: unknown) {
 
   const record = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
   return dayLabels.map(([key, label]) => {
-    const slot = record[key];
+    const slot = record[key] ?? record[label];
     if (Array.isArray(slot) && slot.length >= 2 && typeof slot[0] === "string" && typeof slot[1] === "string") {
       return { label, hours: `${formatClock(slot[0])} – ${formatClock(slot[1])}` };
+    }
+    if (slot && typeof slot === "object" && !Array.isArray(slot)) {
+      const structured = slot as Record<string, unknown>;
+      if (structured.closed === true) return { label, hours: "Closed" };
+      if (typeof structured.open === "string" && typeof structured.close === "string") {
+        return { label, hours: `${formatClock(structured.open)} – ${formatClock(structured.close)}` };
+      }
     }
     if (typeof slot === "string" && slot.trim()) return { label, hours: slot };
     return { label, hours: "Contact salon" };
@@ -184,7 +188,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   ]);
 
   const styles = (stylesResult.data || []) as StyleRecord[];
-  const stylists = ((stylistsResult.data || []) as StylistRecord[]).filter((stylist) => stylist.is_active !== false);
+  const stylists = ((stylistsResult.data || []) as StylistRecord[]).filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
   const products = (productsResult.data || []) as ProductRecord[];
 
   let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
@@ -206,8 +210,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
   const rating = typeof salon.rating_overall === "number" ? salon.rating_overall : 0;
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
   const uploadedGallery = [salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)].filter((photo): photo is string => Boolean(photo));
-  const galleryItems = [...uploadedGallery, ...galleryFallbacks].filter((photo, index, list) => list.indexOf(photo) === index).slice(0, 5);
-  while (galleryItems.length < 5) galleryItems.push(galleryFallbacks[galleryItems.length % galleryFallbacks.length]);
+  const galleryItems = Array.from({ length: 5 }, (_, index) => uploadedGallery[index] || null);
   const remainingPhotos = Math.max(0, uploadedGallery.length - 5);
   const morePhotoLabel = remainingPhotos ? `+${remainingPhotos} more` : null;
   const locationLine = [salon.neighborhood, salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
@@ -233,12 +236,12 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
         <section className="grid gap-5 pb-5 pt-3 md:pt-0 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8">
           <div className="grid h-[232px] grid-cols-[1.2fr_1fr] gap-1.5 overflow-hidden rounded-[10px] sm:h-[330px] lg:h-[356px]">
             <div className="relative overflow-hidden rounded-[8px] bg-blush">
-              <SafeImage src={galleryItems[0]} fallbackSrc={galleryFallbacks[0]} alt={`${salon.name || "Salon"} featured work`} priority className="h-full w-full object-cover" />
+              {galleryItems[0] ? <SafeImage src={galleryItems[0]} fallbackSrc={galleryItems[0]} alt={`${salon.name || "Salon"} featured work`} priority className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-plum/30"><ImageOff size={46} strokeWidth={1.2} aria-hidden="true" /><span className="sr-only">No salon photo uploaded</span></span>}
             </div>
             <div className="grid grid-cols-2 grid-rows-2 gap-1.5">
               {galleryItems.slice(1, 5).map((photo, index) => (
-                <div key={`${photo}-${index}`} className="relative overflow-hidden rounded-[7px] bg-blush">
-                  <SafeImage src={photo} fallbackSrc={galleryFallbacks[(index + 1) % galleryFallbacks.length]} alt={`${salon.name || "Salon"} gallery ${index + 2}`} className="h-full w-full object-cover" />
+                <div key={`${photo || "empty"}-${index}`} className="relative overflow-hidden rounded-[7px] bg-blush">
+                  {photo ? <SafeImage src={photo} fallbackSrc={photo} alt={`${salon.name || "Salon"} gallery ${index + 2}`} className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-plum/25"><ImageOff size={28} strokeWidth={1.2} aria-hidden="true" /><span className="sr-only">No salon photo uploaded</span></span>}
                   {index === 3 && morePhotoLabel ? <span className="absolute inset-0 flex items-center justify-center whitespace-pre-line bg-ink/55 text-center font-serif text-[18px] font-semibold leading-5 text-white">{morePhotoLabel.replace(" ", "\n")}</span> : null}
                 </div>
               ))}
@@ -246,6 +249,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
           </div>
 
           <div className="flex flex-col justify-center lg:py-1">
+            {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
             <div><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>
@@ -272,7 +276,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
           </div>
         </section>
 
-        <section className="grid gap-4 border-t border-plum/10 py-4 lg:grid-cols-[1.35fr_0.95fr_0.7fr]">
+        <section className="grid gap-4 border-t border-plum/10 py-4 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <h2 className="font-serif text-[22px] font-semibold text-ink">Styles & Pricing</h2>
             <p className="mt-1 text-[9px] text-ink/55">Select a style to see full pricing and time details.</p>
@@ -281,16 +285,23 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
 
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-[22px] font-semibold text-ink">Our Stylists</h2><p className="mt-1 text-[9px] text-ink/55">Meet the pros behind your perfect style.</p></div><a href="#stylists" className="text-[9px] font-semibold text-magenta">View all</a></div>
-            <div id="stylists" className="mt-3"><SalonStylists stylists={stylists} salonRating={rating} fallbackPhotos={galleryItems} /></div>
+            <div id="stylists" className="mt-4"><SalonStylists stylists={stylists} salonSlug={salon.slug || slug} /></div>
           </div>
-
-          <SalonReviews reviews={reviews} salonRating={rating} salonReviewCount={reviewCount} fallbackPhotos={galleryItems} />
         </section>
 
+        <div className="mb-4"><SalonReviews reviews={reviews} salonRating={rating} salonReviewCount={reviewCount} /></div>
+
         {products.length ? (
-          <section className="mb-4 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
-            <div className="flex items-end justify-between gap-3"><div><h2 className="flex items-center gap-2 font-serif text-[22px] font-semibold text-ink"><Package size={20} className="text-magenta" />Salon Products</h2><p className="mt-1 text-[9px] text-ink/55">Available for in-person purchase at your appointment.</p></div><span className="text-[9px] font-semibold text-plum">No online checkout</span></div>
-            <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{products.map((product, index) => <article key={product.id || index} className="min-w-[150px] max-w-[180px] overflow-hidden rounded-[10px] border border-plum/10 bg-white"><SafeImage src={product.photo_url} fallbackSrc={galleryItems[index % galleryItems.length]} alt={product.name || "Salon product"} className="aspect-square w-full object-cover" /><div className="p-3"><h3 className="text-[11px] font-semibold">{product.name}</h3><p className="mt-1 line-clamp-2 text-[9px] leading-4 text-ink/55">{product.description}</p><p className="mt-2 text-xs font-bold">${Number(product.price || 0).toFixed(2)}</p></div></article>)}</div>
+          <section id="products" className="mb-4 rounded-[15px] border border-plum/10 bg-white/65 p-4 sm:p-5">
+            <div className="flex items-end justify-between gap-3"><div><h2 className="flex items-center gap-2 font-serif text-[24px] font-semibold text-ink"><Package size={21} className="text-magenta" />Our Products</h2><p className="mt-1 text-[11px] text-ink/55">Explore products available for in-person purchase at your appointment.</p></div><span className="hidden text-[10px] font-semibold text-plum sm:block">No online checkout</span></div>
+            <div className="mt-5 -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+              {products.map((product, index) => (
+                <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(26,18,32,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
+                  <div className="relative aspect-[4/3] w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}</div>
+                  <div className="p-4"><div className="flex items-start justify-between gap-3"><h3 className="font-serif text-[19px] font-semibold leading-tight text-ink">{product.name}</h3><p className="shrink-0 text-[13px] font-bold">${Number(product.price || 0).toFixed(2)}</p></div><p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/55">{product.description || "Available at the salon."}</p><p className="mt-3 text-[11px] font-bold text-magenta">View product details</p></div>
+                </Link>
+              ))}
+            </div>
           </section>
         ) : null}
 

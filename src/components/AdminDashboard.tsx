@@ -15,10 +15,10 @@ export type AdminSection = "overview" | "submissions" | "salons" | "customers" |
 type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
-  subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[];
+  subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[]; settings: Row[];
 };
 
-const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [] };
+const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [] };
 const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
   ["customers", "Customers", UsersRound], ["bookings", "Bookings", CalendarDays], ["quality", "Quality & Performance", Star],
@@ -47,7 +47,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       salons: body.salons || [], applications: body.salon_applications || [], customers: body.customers || [],
       bookings: body.bookings || [], reviews: body.reviews || [], tickets: body.support_tickets || [],
       subscriptions: body.subscriptions || [], complaints: body.complaints_log || [], admins: body.admin_users || [],
-      promotions: body.salon_promotions || [], posts: body.blog_posts || [],
+      promotions: body.salon_promotions || [], posts: body.blog_posts || [], settings: body.admin_settings || [],
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
@@ -75,7 +75,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   }
 
   async function update(table: string, id: string, changes: Row) {
-    const { error: updateError } = await supabase.from(table).update(changes).eq("id", id);
+    const { error: updateError } = await supabase.from(table).update(changes).eq(table === "admin_settings" ? "key" : "id", id);
     if (updateError) { console.error("Admin record update failed", { table, id, updateError }); setNotice(updateError.message); return; }
     await load();
     setNotice("Saved.");
@@ -151,27 +151,49 @@ function Customers(p: any) {
 
 function Bookings(p: any) {
   const [manual, setManual] = useState(false);
-  return <><div className="mb-4 flex justify-end"><button onClick={() => setManual(!manual)} className="rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">{manual ? "Close booking form" : "Create booking manually"}</button></div>{manual ? <ManualBooking salons={p.salons} onCreated={p.onCreated} /> : null}<Panel title="All Bookings"><DataTable headers={["Booking ID", "Salon", "Customer", "Date & Time", "Status", "Deposit", "Source"]}>{p.bookings.length ? p.bookings.map((booking: Row) => <tr key={booking.id} className="border-b"><Td>{String(booking.id).slice(0, 10)}</Td><Td>{p.salons.find((salon: Row) => salon.id === booking.salon_id)?.name || "Salon unavailable"}</Td><Td>{booking.guest_name || "Customer"}</Td><Td>{dateTime(booking.appointment_datetime)}</Td><Td><Badge value={booking.status} /></Td><Td>{money(Number(booking.deposit_amount || 0))}</Td><Td>{booking.source || "Website"}</Td></tr>) : <EmptyTable columns={7} text="No bookings yet." />}</DataTable></Panel></>;
+  return <><div className="mb-4 flex justify-end"><button onClick={() => setManual(!manual)} className="rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">{manual ? "Close booking form" : "Create booking manually"}</button></div>{manual ? <ManualBooking salons={p.salons} onCreated={p.onCreated} /> : null}<Panel title="All Bookings"><DataTable headers={["Booking ID", "Salon", "Customer", "Date & Time", "Status", "Deposit", "Source"]}>{p.bookings.length ? p.bookings.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <tr key={booking.id} className="border-b"><Td>{String(booking.id).slice(0, 10)}</Td><Td>{salon?.name || "Salon unavailable"}</Td><Td>{booking.guest_name || "Customer"}</Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}</Td><Td><Badge value={booking.status} /></Td><Td>{money(Number(booking.deposit_amount || 0))}</Td><Td>{booking.source || "Website"}</Td></tr>; }) : <EmptyTable columns={7} text="No bookings yet." />}</DataTable></Panel></>;
 }
 
 function ManualBooking({ salons, onCreated }: { salons: Row[]; onCreated: () => Promise<void> }) {
   const [message, setMessage] = useState(""); const [saving, setSaving] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setMessage("");
-    try { const form = new FormData(event.currentTarget); const session = await getSessionForScope("admin"); if (!session) throw new Error("Your admin session has expired."); const response = await fetch("/api/admin/bookings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ salon_id: form.get("salon"), guest_name: form.get("name"), guest_email: form.get("email"), guest_phone: form.get("phone"), appointment_datetime: form.get("date") }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to create booking."); setMessage("Booking created and synced to the salon calendar."); event.currentTarget.reset(); await onCreated(); }
+    try { const form = new FormData(event.currentTarget); const session = await getSessionForScope("admin"); if (!session) throw new Error("Your admin session has expired."); const response = await fetch("/api/admin/bookings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ salon_id: form.get("salon"), guest_name: form.get("name"), guest_email: form.get("email"), guest_phone: form.get("phone"), appointment_local: form.get("date") }) }); const body = await response.json(); if (!response.ok) throw new Error(body.next_available ? `${body.error} Next available: ${body.next_available.date} at ${body.next_available.label}.` : body.error || "Unable to create booking."); setMessage("Booking created and synced to the salon calendar."); event.currentTarget.reset(); await onCreated(); }
     catch (submitError) { setMessage(submitError instanceof Error ? submitError.message : "Unable to create booking."); }
     finally { setSaving(false); }
   }
-  return <form onSubmit={submit} className="mb-5 grid gap-3 rounded-[14px] border border-magenta/20 bg-blush/20 p-5 sm:grid-cols-2 lg:grid-cols-6"><select name="salon" required className="rounded-lg border p-3"><option value="">Choose salon</option>{salons.map((salon) => <option value={salon.id} key={salon.id}>{salon.name}</option>)}</select><input name="name" required placeholder="Customer name" className="rounded-lg border p-3" /><input name="email" type="email" required placeholder="name@example.com" className="rounded-lg border p-3" /><input name="phone" type="tel" placeholder="+1 (555) 123-4567" className="rounded-lg border p-3" /><input name="date" type="datetime-local" required className="rounded-lg border p-3" /><button disabled={saving} className="rounded-lg bg-plum px-3 font-bold text-white disabled:opacity-60">{saving ? "Creating…" : "Create booking"}</button>{message ? <p className="col-span-full text-sm text-plum">{message}</p> : null}</form>;
+  return <form onSubmit={submit} className="mb-5 grid gap-3 rounded-[14px] border border-magenta/20 bg-blush/20 p-5 sm:grid-cols-2 lg:grid-cols-6"><select name="salon" required className="rounded-lg border p-3"><option value="">Choose salon</option>{salons.map((salon) => <option value={salon.id} key={salon.id}>{salon.name}</option>)}</select><input name="name" required placeholder="Customer name" className="rounded-lg border p-3" /><input name="email" type="email" required placeholder="name@example.com" className="rounded-lg border p-3" /><input name="phone" type="tel" required placeholder="+1 (555) 123-4567" className="rounded-lg border p-3" /><input name="date" type="datetime-local" required className="rounded-lg border p-3" /><button disabled={saving} className="rounded-lg bg-plum px-3 font-bold text-white disabled:opacity-60">{saving ? "Creating…" : "Create booking"}</button>{message ? <p className="col-span-full text-sm text-plum">{message}</p> : null}</form>;
 }
 
 function Quality(p: any) {
   const rated = p.salons.filter((salon: Row) => Number(salon.review_count || 0) > 0);
-  const ranked = [...rated].sort((left: Row, right: Row) => Number(right.rating_overall) - Number(left.rating_overall));
   const average = rated.length ? rated.reduce((sum: number, salon: Row) => sum + Number(salon.rating_overall || 0), 0) / rated.length : 0;
   const lateness = p.reviews.filter((review: Row) => /late|wait|delay/i.test(review.written_review || ""));
   const qualitySeries = dailySeries(p.reviews, "created_at", (review) => Number(review.rating_overall || 0));
-  return <><div className="grid gap-4 sm:grid-cols-4"><Stat label="Platform Average Rating" value={average.toFixed(1)} /><Stat label="Salons Below Threshold" value={rated.filter((salon: Row) => Number(salon.rating_overall) < 3.5).length} /><Stat label="Active Complaints" value={p.complaints.filter((item: Row) => !/closed|resolved/i.test(item.status || "")).length} /><Stat label="Published Reviews" value={p.reviews.length} /></div><div className="mt-5 grid gap-5 lg:grid-cols-3"><Panel title="Best-Performing Partners">{ranked.length ? ranked.slice(0, 5).map((salon: Row) => <Line key={salon.id} label={salon.name} meta={Number(salon.rating_overall).toFixed(1)} />) : <EmptyState title="No rated salons" body="Rankings begin after verified reviews are published." />}</Panel><Panel title="Salons Needing Attention">{ranked.filter((salon: Row) => Number(salon.rating_overall) < 3.5).length ? ranked.filter((salon: Row) => Number(salon.rating_overall) < 3.5).map((salon: Row) => <Line key={salon.id} label={salon.name} meta={Number(salon.rating_overall).toFixed(1)} />) : <EmptyState title="No salons below threshold" body="Only salons with published reviews are evaluated." />}</Panel><Panel title="Complaint Patterns"><Line label="Lateness or long waits" meta={`${lateness.length} reviews`} /><Line label="Appointment changes" meta={`${p.reviews.filter((review: Row) => /cancel|reschedul/i.test(review.written_review || "")).length} reviews`} /></Panel></div><div className="mt-5"><DataChart title="Review Rating Activity" values={qualitySeries} empty="No review activity yet." /></div></>;
+  const setting=p.settings.find((item:Row)=>item.key==="quality_thresholds");
+  const storedThreshold=Number(setting?.value?.salon_cancellation_rate_percent||10);
+  const [threshold,setThreshold]=useState(storedThreshold);
+  const metrics=p.salons.map((salon:Row)=>{
+    const bookings=p.bookings.filter((booking:Row)=>booking.salon_id===salon.id);
+    const salonCancellations=bookings.filter((booking:Row)=>booking.cancellation_initiated_by==="Salon").length;
+    const cancellationRate=bookings.length?salonCancellations/bookings.length*100:0;
+    const measured=bookings.filter((booking:Row)=>booking.service_started_at);
+    const onTime=measured.filter((booking:Row)=>new Date(booking.service_started_at).getTime()<=new Date(booking.appointment_datetime).getTime()+15*60_000).length;
+    const onTimeRate=measured.length?onTime/measured.length*100:null;
+    const bookingIds=new Set(bookings.map((booking:Row)=>booking.id));
+    const activeComplaints=p.complaints.filter((complaint:Row)=>bookingIds.has(complaint.booking_id)&&!/closed|resolved/i.test(complaint.status||"")).length;
+    const complaintFree=bookings.length?Math.max(0,100-Math.min(100,activeComplaints/bookings.length*100)):null;
+    let weighted=0;let weight=0;
+    if(Number(salon.review_count||0)>0){weighted+=Math.min(100,Number(salon.rating_overall||0)*20)*.4;weight+=.4;}
+    if(bookings.length){weighted+=(100-cancellationRate)*.3;weight+=.3;}
+    if(onTimeRate!==null){weighted+=onTimeRate*.2;weight+=.2;}
+    if(complaintFree!==null){weighted+=complaintFree*.1;weight+=.1;}
+    return {...salon,totalBookings:bookings.length,salonCancellations,cancellationRate,onTimeRate,activeComplaints,qualityScore:weight?weighted/weight:null,flagged:cancellationRate>threshold};
+  });
+  const ranked=[...metrics].filter((salon:Row)=>salon.qualityScore!==null).sort((left:Row,right:Row)=>Number(right.qualityScore)-Number(left.qualityScore));
+  const flagged=metrics.filter((salon:Row)=>salon.flagged);
+  async function saveThreshold(){await p.update("admin_settings","quality_thresholds",{value:{...(setting?.value||{}),salon_cancellation_rate_percent:threshold}})}
+  return <><div className="grid gap-4 sm:grid-cols-4"><Stat label="Platform Average Rating" value={average.toFixed(1)} /><Stat label="Cancellation Flags" value={flagged.length} /><Stat label="Active Complaints" value={p.complaints.filter((item: Row) => !/closed|resolved/i.test(item.status || "")).length} /><Stat label="Published Reviews" value={p.reviews.length} /></div><div className="mt-5 grid gap-5 lg:grid-cols-3"><Panel title="Best-Performing Partners">{ranked.length ? ranked.slice(0, 5).map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Quality ${Number(salon.qualityScore).toFixed(1)} · cancellations ${Number(salon.cancellationRate).toFixed(1)}%`} />) : <EmptyState title="No quality data" body="Composite scores begin after bookings or verified reviews are recorded." />}</Panel><Panel title="Salons Needing Attention">{flagged.length?flagged.map((salon:Row)=><Line key={salon.id} label={salon.name} meta={`${Number(salon.cancellationRate).toFixed(1)}% salon cancellations (${salon.salonCancellations}/${salon.totalBookings})`}/>):<EmptyState title="No cancellation flags" body={`No salon exceeds the current ${threshold}% threshold.`}/>}</Panel><Panel title="Quality Threshold"><p className="text-xs leading-5 text-ink/60">Auto-flag salons when salon-initiated cancellations exceed this percentage of all bookings.</p><div className="mt-4 flex items-end gap-2"><label className="flex-1 text-[10px] font-bold">Cancellation rate %<input type="number" min="1" max="100" value={threshold} onChange={(event)=>setThreshold(Number(event.target.value))} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label><button onClick={()=>void saveThreshold()} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white">Save</button></div><Line label="Lateness or long waits" meta={`${lateness.length} reviews`} /><Line label="On-time performance" meta={metrics.some((salon:Row)=>salon.onTimeRate!==null)?"Measured from recorded service start times":"Not measured yet"}/></Panel></div><div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_.8fr]"><DataChart title="Review Rating Activity" values={qualitySeries} empty="No review activity yet." /><Panel title="Cancellation Monitoring">{metrics.filter((salon:Row)=>salon.totalBookings>0).sort((a:Row,b:Row)=>Number(b.cancellationRate)-Number(a.cancellationRate)).slice(0,8).map((salon:Row)=><Line key={salon.id} label={salon.name} meta={`${Number(salon.cancellationRate).toFixed(1)}% · ${salon.salonCancellations} salon cancellations`}/>)}</Panel></div></>;
 }
 
 function Reviews(p: any) {
@@ -226,5 +248,5 @@ function Badge({ value }: { value?: string }) { const label = value || "Pending"
 function DataChart({ title, values, empty, moneyValues = false }: { title: string; values: number[]; empty: string; moneyValues?: boolean }) { const max = Math.max(...values, 0); return <Panel title={title}>{max === 0 ? <EmptyState title="No data yet" body={empty} /> : <><div className="flex h-48 items-end gap-2 border-b border-l border-plum/10 px-4">{values.map((value, index) => <span key={index} title={moneyValues ? money(value) : String(value)} className="w-full rounded-t bg-magenta" style={{ height: `${Math.max(3, (value / max) * 100)}%` }} />)}</div><p className="mt-3 text-center text-xs text-ink/50">Last 14 days · database records only</p></>}</Panel>; }
 function money(value: number) { return value.toLocaleString("en-US", { style: "currency", currency: "USD" }); }
 function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—"; }
-function dateTime(value?: string) { return value ? new Date(value).toLocaleString() : "—"; }
+function dateTime(value?: string, timeZone?: string) { return value ? new Date(value).toLocaleString("en-US", { timeZone: timeZone || "America/New_York", dateStyle: "medium", timeStyle: "short" }) : "—"; }
 function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Track recorded subscriptions, deposits, payouts, and refunds.", marketing: "Manage real placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage support requests submitted by customers.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }

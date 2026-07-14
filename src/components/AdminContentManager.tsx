@@ -17,11 +17,13 @@ const labelSlots: Record<string, Array<[string, string]>> = {
 };
 
 export default function AdminContentManager() {
-  const [tab, setTab] = useState<"pages" | "blog">("pages");
+  const [tab, setTab] = useState<"pages" | "blog" | "styles">("pages");
   const [pages, setPages] = useState<Row[]>([]);
   const [posts, setPosts] = useState<Row[]>([]);
   const [page, setPage] = useState<Row | null>(null);
   const [post, setPost] = useState<Row | null>(null);
+  const [masterStyles, setMasterStyles] = useState<Row[]>([]);
+  const [masterStyle, setMasterStyle] = useState<Row | null>(null);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,12 +41,14 @@ export default function AdminContentManager() {
       if (!response.ok) throw new Error(body.error || "Unable to load content");
       setPages(body.pages || []);
       setPosts(body.posts || []);
+      setMasterStyles(body.masterStyles || []);
       if (selectFirst) {
         const visiblePages = (body.pages || []).filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null);
         setPost(body.posts?.[0] || null);
+        setMasterStyle(body.masterStyles?.[0] || null);
       }
-      return body as { pages: Row[]; posts: Row[] };
+      return body as { pages: Row[]; posts: Row[]; masterStyles: Row[] };
     } catch (error) {
       console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -64,9 +68,9 @@ export default function AdminContentManager() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load content");
         if (!active) return;
-        setPages(body.pages || []); setPosts(body.posts || []);
+        setPages(body.pages || []); setPosts(body.posts || []); setMasterStyles(body.masterStyles || []);
         const visiblePages = (body.pages || []).filter((item: Row) => !hiddenSlugs.has(item.slug));
-        setPage(visiblePages[0] || null); setPost(body.posts?.[0] || null);
+        setPage(visiblePages[0] || null); setPost(body.posts?.[0] || null); setMasterStyle(body.masterStyles?.[0] || null);
       } catch (error) {
         console.error("Content Management load error", error);
         if (active) setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -154,7 +158,31 @@ export default function AdminContentManager() {
     }
   }
 
+  async function saveMasterStyle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!masterStyle) return;
+    const form = new FormData(event.currentTarget);
+    const payload = { ...masterStyle, name: form.get("name"), category: form.get("category"), sort_order: Number(form.get("sort_order") || 0), is_active: form.get("is_active") === "on" };
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "master_style", payload }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Style save failed");
+      const data = body.data;
+      const reloaded = await loadContent(false);
+      const persisted = reloaded.masterStyles.find((row) => row.id === data.id);
+      if (!persisted) throw new Error("The style could not be verified after saving.");
+      setMasterStyle(data);
+      setMasterStyles((rows) => rows.some((row) => row.id === data.id) ? rows.map((row) => row.id === data.id ? data : row) : [...rows, data]);
+      setNotice("Master style saved and available to salon owners.");
+    } catch (error) {
+      console.error("Master style save error", error);
+      setNotice(error instanceof Error ? error.message : "Style save failed");
+    } finally { setSaving(false); }
+  }
+
   function createNew() {
+    if (tab === "styles") { setMasterStyle({ name: "", category: "Braids", sort_order: masterStyles.length * 10 + 10, is_active: true }); return; }
     if (tab === "blog") {
       setPost({ slug: "new-post", title: "New Blog Post", excerpt: "", content: "", category: "Braided Styles", status: "Draft", featured: false });
       return;
@@ -171,9 +199,9 @@ export default function AdminContentManager() {
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-lg border border-plum/10 bg-white p-1">
-          {(["pages", "blog"] as const).map(value => <button key={value} onClick={() => setTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : "Blog"}</button>)}
+          {(["pages", "blog", "styles"] as const).map(value => <button key={value} onClick={() => setTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "blog" ? "Blog" : "Style Catalog"}</button>)}
         </div>
-        <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : "Post"}</button>
+        <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Style"}</button>
       </div>
       {notice ? <p className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
@@ -185,10 +213,15 @@ export default function AdminContentManager() {
           </aside>
           {page ? <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} /> : null}
         </div>
-      ) : (
+      ) : tab === "blog" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">{posts.map(item => <button key={item.id} onClick={() => setPost(item)} className={`mb-1 w-full rounded-lg p-3 text-left ${post?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.title}</b><small>{item.status} · {item.category}</small></button>)}</aside>
           {post ? <PostEditor key={post.id || "new"} post={post} setPost={setPost} save={savePost} remove={removePost} /> : null}
+        </div>
+      ) : (
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
+          <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3">{masterStyles.map((item) => <button key={item.id} onClick={() => setMasterStyle(item)} className={`mb-1 w-full rounded-lg p-3 text-left ${masterStyle?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.name}</b><small>{item.category} · {item.is_active ? "Active" : "Hidden"}</small></button>)}</aside>
+          {masterStyle ? <form key={masterStyle.id || "new-style"} onSubmit={saveMasterStyle} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Managed Style</h2><p className="mt-1 text-xs leading-5 text-ink/55">Salon owners select from this catalog. Renaming an item updates its name on linked salon services.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Style name" name="name" value={masterStyle.name} /><Field label="Category" name="category" value={masterStyle.category} /><Field label="Sort order" name="sort_order" value={String(masterStyle.sort_order || 0)} /><label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={masterStyle.is_active !== false} className="accent-magenta" />Available to salon owners</label></div><button disabled={saving} className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">Save Master Style</button></form> : null}
         </div>
       )}
     </div>

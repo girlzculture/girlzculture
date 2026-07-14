@@ -7,7 +7,7 @@ export async function GET(request: Request) {
       ["salons", "name", true], ["salon_applications", "submitted_at", true], ["customers", "created_at", true],
       ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
       ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
-      ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false],
+      ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
     ] as const;
     const results = await Promise.all(sources.map(async ([table, order, required]) => {
       const result = await admin.from(table).select("*").order(order, { ascending: false }).limit(500);

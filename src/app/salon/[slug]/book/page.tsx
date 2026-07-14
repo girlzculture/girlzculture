@@ -38,6 +38,11 @@ type StylistRecord = {
   specialties?: string[] | null;
   bio?: string | null;
   avatar_url?: string | null;
+  photos?: string[] | string | null;
+  years_experience?: number | null;
+  rating?: number | null;
+  is_active?: boolean | null;
+  is_draft?: boolean | null;
 };
 
 export default async function SalonBookingPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -65,7 +70,9 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
   const { data: stylistsData } = await supabase
     .from("stylists")
     .select("*")
-    .eq("salon_id", salonData.id);
+    .eq("salon_id", salonData.id)
+    .eq("is_active", true)
+    .eq("is_draft", false);
 
   const styles = (stylesData || []) as StyleRecord[];
   const stylists = (stylistsData || []) as StylistRecord[];

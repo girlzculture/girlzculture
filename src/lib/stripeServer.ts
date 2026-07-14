@@ -6,14 +6,14 @@ export function stripeConfigured() {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET);
 }
 
-export async function stripeRequest<T>(path: string, values: Record<string, string | number | boolean | null | undefined>) {
+export async function stripeRequest<T>(path: string, values: Record<string, string | number | boolean | null | undefined>, options?: { idempotencyKey?: string }) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
   const form = new URLSearchParams();
   Object.entries(values).forEach(([key, value]) => { if (value !== null && value !== undefined) form.set(key, String(value)); });
   const response = await fetch(`${STRIPE_API}${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/x-www-form-urlencoded", ...(options?.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}) },
     body: form,
     cache: "no-store",
   });
