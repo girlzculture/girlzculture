@@ -1,7 +1,7 @@
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
-import { requireAdmin } from "@/lib/supabaseAdmin";
+import { deliverBookingNotifications, requireAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const salonId = cleanText(body.salon_id, 50);
     const guestName = cleanText(body.guest_name, 120);
     const guestEmail = cleanEmail(body.guest_email);
-    const guestPhone = cleanUsPhone(body.guest_phone, false);
+    const guestPhone = cleanUsPhone(body.guest_phone, true);
     const appointmentLocal = cleanText(body.appointment_local, 20);
     const [localDate, localTime] = appointmentLocal.split("T");
     if (!salonId || !guestName || !/^\d{4}-\d{2}-\d{2}$/.test(localDate || "") || !/^\d{2}:\d{2}$/.test(localTime || "")) throw new Error("Salon, customer name, and a valid local appointment time are required.");
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       if (error.code === "23P01") return Response.json({ error: "That appointment overlaps an existing booking." }, { status: 409 });
       throw error;
     }
+    await deliverBookingNotifications(data.id).catch((notificationError) => console.error("Admin booking notification delivery failed", { bookingId: data.id, notificationError }));
     console.info("Admin manual booking created", { bookingId: data.id, salonId, adminUserId: user.id });
     return Response.json({ ok: true, booking: data });
   } catch (error) {

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     const guestName = cleanText(body.guest_name, 120);
     const guestEmail = cleanEmail(body.guest_email);
-    const guestPhone = cleanUsPhone(body.guest_phone, false);
+    const guestPhone = cleanUsPhone(body.guest_phone, true);
     if (!guestName) throw new Error("Enter your name.");
     const appointmentLocal = cleanText(body.appointment_local, 20);
     const [localDate, localTime] = appointmentLocal.split("T");
