@@ -93,8 +93,8 @@ export async function createMfaChallenge(user: User, role: LoginScope) {
     if (result?.skipped) channel = "email";
   }
   if (channel === "email") {
-    const result = await sendEmail(email, "Your Girlz Culture verification code", `<h1>Verify your sign-in</h1><p>Your one-time code is <strong style="font-size:24px;letter-spacing:4px">${code}</strong>.</p><p>It expires in ${CHALLENGE_MINUTES} minutes. If you did not try to sign in, reset your password.</p>`) as { skipped?: boolean };
-    if (result?.skipped) throw new Error("Two-factor delivery is not configured. Add RESEND_API_KEY and EMAIL_FROM to the server environment.");
+    const result = await sendEmail(email, "Your Girlz Culture verification code", `<h1>Verify your sign-in</h1><p>Your one-time code is <strong style="font-size:24px;letter-spacing:4px">${code}</strong>.</p><p>It expires in ${CHALLENGE_MINUTES} minutes. If you did not try to sign in, reset your password.</p>`, "security") as { skipped?: boolean };
+    if (result?.skipped) throw new Error("Two-factor delivery is not configured. Add RESEND_API_KEY and EMAIL_FROM_SECURITY to the server environment.");
   }
   const { error } = await admin.from("auth_mfa_challenges").insert({ id, user_id: user.id, role_scope: role, email_normalized: email, channel, code_hash: hashCode(id, code), expires_at: new Date(Date.now() + CHALLENGE_MINUTES * 60_000).toISOString() });
   if (error) throw error;

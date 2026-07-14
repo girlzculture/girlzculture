@@ -58,12 +58,24 @@ export async function requireSalonPermission(request: Request, permission: strin
   return context;
 }
 
-export async function sendEmail(to: string, subject: string, html: string) {
+export type TransactionalEmailCategory = "security" | "bookings" | "account" | "support";
+
+function senderFor(category: TransactionalEmailCategory) {
+  const senders: Record<TransactionalEmailCategory, string> = {
+    security: process.env.EMAIL_FROM_SECURITY || "Girlz Culture Security <noreply@notifications.girlzculture.com>",
+    bookings: process.env.EMAIL_FROM_BOOKINGS || "Girlz Culture Bookings <bookings@notifications.girlzculture.com>",
+    account: process.env.EMAIL_FROM_ACCOUNT || "Girlz Culture <hello@notifications.girlzculture.com>",
+    support: process.env.EMAIL_FROM_SUPPORT || "Girlz Culture Support <support@notifications.girlzculture.com>",
+  };
+  return senders[category];
+}
+
+export async function sendEmail(to: string, subject: string, html: string, category: TransactionalEmailCategory = "account") {
   if (!process.env.RESEND_API_KEY || !to) return { skipped: true };
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || "Girlz Culture <bookings@notifications.girlzculture.com>", to, subject, html }),
+    body: JSON.stringify({ from: senderFor(category), to, subject, html }),
   });
   if (!response.ok) throw new Error(`Email delivery failed: ${await response.text()}`);
   return response.json();
@@ -147,14 +159,14 @@ export async function deliverBookingNotifications(bookingId: string) {
   const salonSummary = `${customer} booked ${service} for ${when}. Duration: ${duration}. Stylist: ${professional}.`;
   const customerSummary = `${service} at ${salon.name} is confirmed for ${when}. Stylist: ${professional}.`;
   const tasks: DeliveryTask[] = [
-    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), "New confirmed Girlz Culture booking", `<h1>New confirmed booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open this booking</a></p>`) },
+    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), "New confirmed Girlz Culture booking", `<h1>New confirmed booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open this booking</a></p>`, "bookings") },
     { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), `Girlz Culture confirmed booking: ${salonSummary} ${dashboardUrl}`) },
     { recipientType: "salon", channel: "push", destination: String(salon.user_id || ""), run: () => sendPushToUsers([String(salon.user_id || "")], { title: "New confirmed booking", body: salonSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) },
-    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), "Your Girlz Culture appointment is confirmed", `<h1>Your appointment is confirmed</h1><p>${escapeHtml(customerSummary)}</p><p>Confirmation code: ${escapeHtml(booking.confirmation_code)}</p><p><a href="${accountUrl}">View your booking</a></p>`) },
+    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), "Your Girlz Culture appointment is confirmed", `<h1>Your appointment is confirmed</h1><p>${escapeHtml(customerSummary)}</p><p>Confirmation code: ${escapeHtml(booking.confirmation_code)}</p><p><a href="${accountUrl}">View your booking</a></p>`, "bookings") },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), `Girlz Culture: ${customerSummary} Confirmation ${booking.confirmation_code || ""}. ${accountUrl}`) },
   ];
   if (booking.customer_id) tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: "Appointment confirmed", body: customerSummary, url: "/account?tab=upcoming", tag: `booking-${booking.id}` }) });
-  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "A Girlz Culture booking was assigned to you", `<h1>New assigned booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open your appointment</a></p>`) });
+  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "A Girlz Culture booking was assigned to you", `<h1>New assigned booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open your appointment</a></p>`, "bookings") });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture assigned booking: ${salonSummary} ${dashboardUrl}`) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: "A booking was assigned to you", body: salonSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
   const deliveries = await runDeliveries(bookingId, "booking_confirmed", tasks);
@@ -174,14 +186,14 @@ export async function deliverCancellationNotifications(bookingId: string, reason
   const message = `Your ${service} appointment at ${salon.name} for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled. Reason: ${reason}. ${refundMessage}`;
   const businessMessage = `${String(booking.guest_name || "A customer")}'s ${service} appointment for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled. Reason: ${reason}.`;
   const tasks: DeliveryTask[] = [
-    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), "Your Girlz Culture appointment was cancelled", `<h1>Appointment cancelled</h1><p>${escapeHtml(message)}</p><p>We are sorry for the disruption. Visit Girlz Culture to find another available salon.</p>`) },
+    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), "Your Girlz Culture appointment was cancelled", `<h1>Appointment cancelled</h1><p>${escapeHtml(message)}</p><p>We are sorry for the disruption. Visit Girlz Culture to find another available salon.</p>`, "bookings") },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), `Girlz Culture: ${message}`) },
-    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), "Girlz Culture booking cancelled", `<h1>Booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`) },
+    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), "Girlz Culture booking cancelled", `<h1>Booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`, "bookings") },
     { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), `Girlz Culture: ${businessMessage}`) },
     { recipientType: "salon", channel: "push", destination: String(salon.user_id || ""), run: () => sendPushToUsers([String(salon.user_id || "")], { title: "Booking cancelled", body: businessMessage, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) },
   ];
   if (booking.customer_id) tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: "Appointment cancelled", body: message, url: "/account?tab=past", tag: `booking-${booking.id}`, requireInteraction: true }) });
-  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "An assigned Girlz Culture booking was cancelled", `<h1>Assigned booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`) });
+  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "An assigned Girlz Culture booking was cancelled", `<h1>Assigned booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`, "bookings") });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture: ${businessMessage}`) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: "Assigned booking cancelled", body: businessMessage, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
   return { deliveries: await runDeliveries(bookingId, "booking_cancelled", tasks) };

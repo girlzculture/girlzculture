@@ -12,7 +12,7 @@ export async function POST(request: Request, context: RouteContext<"/api/admin/s
     const { data, error } = await admin.from("support_tickets").update(patch).eq("id", id).select().single();
     if (error) throw error;
     if (ticket.requester_email) {
-      await sendEmail(ticket.requester_email, `Re: ${ticket.subject}`, `<p>Hello ${ticket.requester_name || "there"},</p><p>${response.trim().replaceAll("\n", "<br/>")}</p><p>Girlz Culture Support</p>`);
+      await sendEmail(ticket.requester_email, `Re: ${ticket.subject}`, `<p>Hello ${ticket.requester_name || "there"},</p><p>${response.trim().replaceAll("\n", "<br/>")}</p><p>Girlz Culture Support</p>`, "support");
     }
     console.info("Support response saved", { ticketId: id, admin: user.email });
     return Response.json({ data });
