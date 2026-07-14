@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 import { ADD_ON_OPTIONS, LENGTH_OPTIONS, SIZE_OPTIONS, STORE_TIME_OPTIONS, WEEK_DAYS } from "@/lib/salonPresets";
 import { isValidUsZip, normalizeUsZip, US_STATES } from "@/lib/usStates";
+import PushSetup from "@/components/notifications/PushSetup";
 
 function slugify(name: string) {
   return name
@@ -22,6 +23,7 @@ export default function SalonOnboarding() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [pushReady, setPushReady] = useState(false);
 
   // Business basics
   const [name, setName] = useState("");
@@ -55,7 +57,7 @@ export default function SalonOnboarding() {
   const [stylistSpecialties, setStylistSpecialties] = useState<string[]>([]);
   const [stylistBio, setStylistBio] = useState("");
 
-  const next = () => setStep((s) => Math.min(3, s + 1));
+  const next = () => setStep((s) => Math.min(4, s + 1));
   const back = () => setStep((s) => Math.max(1, s - 1));
 
   useEffect(() => {
@@ -272,8 +274,8 @@ export default function SalonOnboarding() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div className="text-sm font-medium text-ink/80">Step {step} of 3</div>
-        <div className="text-sm text-ink/60">{step === 1 ? 'Business basics' : step === 2 ? 'Add styles' : 'Add stylists'}</div>
+        <div className="text-sm font-medium text-ink/80">Step {step} of 4</div>
+        <div className="text-sm text-ink/60">{step === 1 ? 'Business basics' : step === 2 ? 'Add styles' : step === 3 ? 'Add stylists' : 'Install & enable alerts'}</div>
       </div>
       {errorMessage ? (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{errorMessage}</div>
@@ -362,7 +364,6 @@ export default function SalonOnboarding() {
             <label className="block text-xs font-bold">Bio<textarea value={stylistBio} maxLength={250} onChange={(e) => setStylistBio(e.target.value)} placeholder="Bio" className="mt-1 w-full rounded-md border border-ink/10 px-3 py-2 font-normal" /><span className="mt-1 block text-right font-normal text-ink/50">{stylistBio.length}/250</span></label>
             <div className="mt-2 flex gap-2">
               <button onClick={addStylistLocal} className="rounded-full bg-plum px-3 py-1 text-white text-sm">Add stylist</button>
-              <button onClick={saveStylists} className="rounded-full bg-magenta px-3 py-1 text-white text-sm">Save stylists</button>
             </div>
           </div>
 
@@ -377,7 +378,21 @@ export default function SalonOnboarding() {
 
           <div className="flex items-center gap-3">
             <button onClick={back} className="rounded-full border border-ink/10 px-4 py-2 text-sm">Back</button>
-            <button onClick={finish} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">Finish and view salon</button>
+            <button onClick={saveStylists} disabled={loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">{loading ? "Saving…" : "Save & continue"}</button>
+          </div>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-5">
+          <div>
+            <h2 className="font-serif text-3xl text-plum">Never miss a booking.</h2>
+            <p className="mt-2 text-sm leading-6 text-ink/65">Salon partners must install the Girlz Culture app and enable time-sensitive booking alerts before completing setup. You can add more devices later.</p>
+          </div>
+          <PushSetup scope="salon" required onReady={setPushReady} />
+          <div className="flex items-center gap-3">
+            <button onClick={back} className="rounded-full border border-ink/10 px-4 py-2 text-sm">Back</button>
+            <button onClick={finish} disabled={!pushReady || loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">Finish and view salon</button>
           </div>
         </div>
       )}
