@@ -25,12 +25,19 @@ export async function GET(request: Request) {
       }
       return result;
     }));
-    const payload: Record<string, unknown[]> = {};
+    // Keep the response shape stable for every section. Most admin routes only
+    // fetch the tables they need, but every consumer can safely render an empty
+    // state when another dataset is absent.
+    const payload: Record<string, unknown[]> = Object.fromEntries(
+      allSources.map(([table]) => [table, []]),
+    );
     results.forEach((result, index) => {
       if (result.error) throw result.error;
       payload[sources[index][0]] = result.data || [];
     });
-    const applications = payload.salon_applications as Array<Record<string, unknown>>;
+    const applications = Array.isArray(payload.salon_applications)
+      ? payload.salon_applications as Array<Record<string, unknown>>
+      : [];
     await Promise.all(applications.map(async (application) => {
       const paths = Array.isArray(application.document_urls) ? application.document_urls.map(String) : [];
       const signed = await Promise.all(paths.map(async (path) => {

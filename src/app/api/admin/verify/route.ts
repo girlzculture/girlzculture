@@ -1,14 +1,19 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
-  const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"");
-  if(!token)return Response.json({isAdmin:false},{status:401});
-  const admin=getSupabaseAdmin();
-  const {data}=await admin.auth.getUser(token);
-  const email=data.user?.email?.trim().toLowerCase()||"";
-  const {data:rows}=await admin.from("admin_users").select("id,email,role,status,permissions,is_super_admin").ilike("email",email);
-  const found=(rows||[]).find(row=>row.email?.trim().toLowerCase()===email&&row.status!=="Inactive");
-  if(found?.status==="Invited")await admin.from("admin_users").update({status:"Active",activated_at:new Date().toISOString()}).eq("id",found.id).eq("status","Invited");
-  console.info("Admin login verification",{email,foundInAdminUsers:Boolean(found),result:found?"allowed":"denied"});
-  return Response.json({isAdmin:Boolean(found),email,role:found?.role||null,permissions:found?.permissions||{},is_super_admin:Boolean(found?.is_super_admin)},{status:found?200:403});
+  try {
+    const { adminUser } = await requireAdmin(request);
+    const row = adminUser as { email?: string; role?: string; permissions?: Record<string, boolean>; is_super_admin?: boolean };
+    console.info("Admin login verification", { email: row.email, result: "allowed", isSuperAdmin: Boolean(row.is_super_admin) });
+    return Response.json({
+      isAdmin: true,
+      email: row.email || null,
+      role: row.role || null,
+      permissions: row.permissions && typeof row.permissions === "object" ? row.permissions : {},
+      is_super_admin: Boolean(row.is_super_admin),
+    });
+  } catch (error) {
+    console.warn("Admin login verification denied", error);
+    return Response.json({ isAdmin: false }, { status: 403 });
+  }
 }

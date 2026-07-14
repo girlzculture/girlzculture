@@ -6,7 +6,8 @@ import { siteUrl, stripeRequest } from "@/lib/stripeServer";
 export async function POST(request: Request) {
   try {
     enforceRateLimit(request, "subscription-checkout", 8, 10 * 60_000);
-    const { admin, user, salon } = await requireSalonOwner(request);
+    const { admin, user, salon, isOwner } = await requireSalonOwner(request);
+    if (!isOwner) throw new Error("Only the salon owner can manage the salon subscription.");
     if (salon.status !== "Active") throw new Error("Your salon must be activated by Girlz Culture before subscribing.");
     const body = await request.json() as Record<string, unknown>;
     const plan = normalizePlan(cleanText(body.plan, 20));

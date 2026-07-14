@@ -6,9 +6,10 @@ import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Ticket = Record<string, string | null>;
 
-export default function AdminSupportInbox({ initialTickets }: { initialTickets: Ticket[] }) {
-  const [tickets, setTickets] = useState(initialTickets);
-  const [selectedId, setSelectedId] = useState(initialTickets[0]?.id || "");
+export default function AdminSupportInbox({ initialTickets = [] }: { initialTickets?: Ticket[] }) {
+  const safeInitialTickets = Array.isArray(initialTickets) ? initialTickets : [];
+  const [tickets, setTickets] = useState(safeInitialTickets);
+  const [selectedId, setSelectedId] = useState(safeInitialTickets[0]?.id || "");
   const [response, setResponse] = useState("");
   const [filter, setFilter] = useState("All");
   const [notice, setNotice] = useState("");

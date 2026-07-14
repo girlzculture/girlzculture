@@ -14,7 +14,7 @@ const nav = [
 const hrefFor = (section: string) => section === "overview" ? "/salon/dashboard" : `/salon/dashboard/${section}`;
 
 export default function OwnerDashboardShell({ children, section, salonName, salonSlug, avatar, notifications = [], access = null }: { children: React.ReactNode; section: DashboardSection; salonName: string; salonSlug: string; avatar?: string | null; notifications?: Array<{id?:string;title?:string;body?:string;action_url?:string;read_at?:string|null}>; access?: Record<string,boolean>|null }) {
-  const canAccess = (id: string) => access === null || Boolean(access[id.replace("-", "_")]);
+  const canAccess = (id: string) => access === null || (id !== "subscription" && Boolean(access[id.replace("-", "_")]));
   const visibleNav = nav.filter(([id]) => canAccess(id));
   const homeHref = visibleNav.length ? hrefFor(visibleNav[0][0]) : "/salon/login";
   const mobileNav = ([
