@@ -1,401 +1,68 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
-import { salonSupabase as supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
-import { ADD_ON_OPTIONS, LENGTH_OPTIONS, SIZE_OPTIONS, STORE_TIME_OPTIONS, WEEK_DAYS } from "@/lib/salonPresets";
-import { isValidUsZip, normalizeUsZip, US_STATES } from "@/lib/usStates";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { BellRing, Check, Clock3, ImagePlus, Paintbrush, RefreshCw, Scissors, Store, UserRound } from "lucide-react";
+import { getSessionForScope } from "@/lib/supabase";
 import PushSetup from "@/components/notifications/PushSetup";
 
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+type CheckKey = "logo" | "photos" | "style" | "stylist" | "hours" | "availability" | "alerts";
+type OnboardingState = {
+  salon: { name?: string; slug?: string; status?: string; subscription_status?: string };
+  checks: Record<CheckKey, boolean>;
+  progress: number;
+  checklist_complete: boolean;
+  discoverable: boolean;
+  eligibility: { active_status: boolean; active_subscription: boolean };
+};
+
+const items: Array<{ key: CheckKey; title: string; body: string; href: string; action: string; icon: typeof Store }> = [
+  { key: "logo", title: "Add your salon logo", body: "Use a clear business mark clients will recognize.", href: "/salon/dashboard/my-page", action: "Add logo", icon: Store },
+  { key: "photos", title: "Publish at least 3 photos", body: "Show your space and real examples of your work.", href: "/salon/dashboard/photos", action: "Manage photos", icon: ImagePlus },
+  { key: "style", title: "Add a priced service", body: "Publish at least one bookable service with a real starting price.", href: "/salon/dashboard/styles", action: "Add service", icon: Paintbrush },
+  { key: "stylist", title: "Add a stylist", body: "Create the professional clients can select while booking.", href: "/salon/dashboard/stylists", action: "Add stylist", icon: UserRound },
+  { key: "hours", title: "Set store hours", body: "Tell clients when your salon is normally open.", href: "/salon/dashboard/availability", action: "Set hours", icon: Clock3 },
+  { key: "availability", title: "Set bookable availability", body: "Add a working schedule so real appointment times can be offered.", href: "/salon/dashboard/availability", action: "Set availability", icon: Scissors },
+  { key: "alerts", title: "Install the app and enable alerts", body: "Required so new bookings and cancellations can always reach you.", href: "#booking-alerts", action: "Enable alerts", icon: BellRing },
+];
 
 export default function SalonOnboarding() {
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [pushReady, setPushReady] = useState(false);
+  const [state, setState] = useState<OnboardingState | null>(null);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Business basics
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [addressStreet, setAddressStreet] = useState("");
-  const [addressLine2, setAddressLine2] = useState("");
-  const [addressCity, setAddressCity] = useState("");
-  const [addressState, setAddressState] = useState("NY");
-  const [addressZip, setAddressZip] = useState("");
-  const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>(() => Object.fromEntries(WEEK_DAYS.map((day) => [day, { open: "09:00", close: "17:00", closed: day === "Sun" }])));
-
-  const [salonId, setSalonId] = useState<string | null>(null);
-
-  // Styles and stylists arrays
-  const [styles, setStyles] = useState<any[]>([]);
-  const [stylists, setStylists] = useState<any[]>([]);
-
-  // temporary inputs for adding style/stylist
-  const [masterStyles, setMasterStyles] = useState<any[]>([]);
-  const [styleMasterId, setStyleMasterId] = useState("");
-  const [stylePriceMin, setStylePriceMin] = useState("");
-  const [stylePriceMax, setStylePriceMax] = useState("");
-  const [styleDuration, setStyleDuration] = useState("");
-  const [styleLengths, setStyleLengths] = useState<string[]>([]);
-  const [styleSizes, setStyleSizes] = useState<string[]>([]);
-  const [styleAddons, setStyleAddons] = useState<string[]>([]);
-
-  const [stylistName, setStylistName] = useState("");
-  const [stylistSpecialties, setStylistSpecialties] = useState<string[]>([]);
-  const [stylistBio, setStylistBio] = useState("");
-
-  const next = () => setStep((s) => Math.min(4, s + 1));
-  const back = () => setStep((s) => Math.max(1, s - 1));
-
-  useEffect(() => {
-    let active = true;
-    supabase.from("master_styles").select("id,name,category").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => {
-      if (!active) return;
-      if (error) setErrorMessage(error.message); else setMasterStyles(data || []);
-    });
-    return () => { active = false; };
+  const refresh = useCallback(async (method: "GET" | "POST" = "GET") => {
+    const session = await getSessionForScope("salon");
+    if (!session) throw new Error("Sign in with the salon-owner account to continue.");
+    const response = await fetch("/api/salon/onboarding", { method, headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "Unable to load setup progress.");
+    setState(body);
+    setMessage(method === "POST" ? "Setup progress refreshed." : "");
   }, []);
 
-  const saveBasics = async () => {
-    setErrorMessage(null);
-    setInfoMessage(null);
-    if (!name || !email) {
-      setErrorMessage('Please enter both a business name and contact email.');
-      return;
-    }
-    if (!isValidEmail(email)) { setErrorMessage("Please enter a valid email address (name@example.com)."); return; }
-    if (!isValidUsPhone(phone)) { setErrorMessage("Please enter a US phone number."); return; }
-    if (!addressStreet.trim() || !addressCity.trim() || !addressState || !isValidUsZip(addressZip)) {
-      setErrorMessage("Please enter a complete US address with a valid state and ZIP code.");
-      return;
-    }
-    setLoading(true);
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user?.id) {
-      setLoading(false);
-      setErrorMessage('You must be signed in before creating a salon.');
-      return;
-    }
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh().catch((error) => setMessage(error instanceof Error ? error.message : "Unable to load setup.")).finally(() => setLoading(false)), 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
-    const { data: existingSalon, error: existingSalonError } = await supabase
-      .from("salons")
-      .select("id")
-      .eq("user_id", userData.user.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+  const handlePushReady = useCallback((ready: boolean) => {
+    if (ready) window.setTimeout(() => void refresh("POST").catch(console.error), 0);
+  }, [refresh]);
 
-    if (existingSalonError) {
-      setLoading(false);
-      setErrorMessage(existingSalonError.message);
-      return;
-    }
+  if (loading) return <div className="py-16 text-center text-plum">Checking your setup...</div>;
+  if (!state) return <div className="rounded-xl bg-red-50 p-5 text-sm text-red-700">{message || "Unable to load salon onboarding."}</div>;
 
-    if (existingSalon?.id) {
-      setLoading(false);
-      router.replace("/salon/dashboard");
-      router.refresh();
-      return;
-    }
+  return <div>
+    <section className={`rounded-[18px] p-5 text-white sm:p-7 ${state.discoverable ? "bg-emerald-700" : "bg-[linear-gradient(135deg,#2f1038,#5b1a6b)]"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-white/70">Marketplace setup</p><h1 className="mt-2 font-serif text-3xl font-semibold sm:text-4xl">{state.discoverable ? "Your salon is discoverable" : "Complete your public listing"}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">{state.discoverable ? "Clients can find your salon in homepage and search results." : "All seven items are required before the salon appears in discovery and search."}</p></div><b className="font-serif text-4xl">{state.progress}%</b></div>
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-magenta transition-all" style={{ width: `${state.progress}%` }}/></div>
+      {!state.eligibility.active_status || !state.eligibility.active_subscription ? <p className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-5">The checklist can be prepared now, but public discovery also requires an Active salon status and an active subscription.</p> : null}
+    </section>
 
-    const slug = slugify(name || "salon");
-    const payload: any = {
-      name,
-      description,
-      phone: normalizeUsPhone(phone),
-      email: normalizeEmail(email),
-      user_id: userData.user.id,
-      address_street: addressStreet.trim(),
-      address_line2: addressLine2.trim() || null,
-      address_city: addressCity.trim(),
-      address_state: addressState,
-      address_zip: normalizeUsZip(addressZip),
-      hours,
-      slug,
-      status: 'New',
-    };
+    <div className="mt-6 grid gap-3 sm:grid-cols-2">{items.map((item) => { const Icon = item.icon; const complete = state.checks[item.key]; return <article key={item.key} className={`rounded-[16px] border p-5 ${complete ? "border-emerald-200 bg-emerald-50" : "border-plum/10 bg-white"}`}><div className="flex items-start gap-4"><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${complete ? "bg-emerald-100 text-emerald-700" : "bg-blush text-magenta"}`}>{complete ? <Check size={21}/> : <Icon size={21}/>}</span><div className="min-w-0 flex-1"><h2 className="font-serif text-xl text-plum">{item.title}</h2><p className="mt-1 text-xs leading-5 text-ink/60">{item.body}</p>{complete ? <p className="mt-3 text-xs font-bold text-emerald-700">Complete</p> : <Link href={item.href} className="mt-3 inline-flex text-xs font-bold text-magenta">{item.action} →</Link>}</div></div></article>; })}</div>
 
-    const { data, error } = await supabase.from('salons').insert(payload).select().maybeSingle();
-    setLoading(false);
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
-    setSalonId((data as any)?.id || null);
-    setInfoMessage('Salon basics saved successfully.');
-    next();
-  };
-
-  const addStyleLocal = () => {
-    const master = masterStyles.find((item) => item.id === styleMasterId);
-    if (!master) {
-      setErrorMessage('Please choose a style before adding.');
-      return;
-    }
-    setErrorMessage(null);
-    setStyles((s) => [
-      ...s,
-      {
-        master_style_id: master.id,
-        name: master.name,
-        category: master.category,
-        price_display_min: Number(stylePriceMin || 0),
-        price_display_max: Number(stylePriceMax || 0),
-        duration_min_hours: Number(styleDuration || 0),
-        duration_max_hours: Number(styleDuration || 0),
-        length_options: styleLengths.map((label) => ({ label, price_add: 0 })),
-        size_options: styleSizes.map((label) => ({ label, price_add: 0 })),
-        addons: styleAddons.filter((label) => label !== "Other").map((label) => ({ label, price_add: 0 })),
-      },
-    ]);
-    setStyleMasterId("");
-    setStylePriceMin("");
-    setStylePriceMax("");
-    setStyleDuration("");
-    setStyleLengths([]); setStyleSizes([]); setStyleAddons([]);
-  };
-
-  const saveStyles = async () => {
-    if (!salonId) {
-      setErrorMessage('Salon not created yet. Please save business basics first.');
-      console.error('saveStyles called without salonId');
-      return;
-    }
-    setLoading(true);
-    setErrorMessage(null);
-    setInfoMessage(null);
-    const inserts = styles.map((s) => ({ ...s, salon_id: salonId }));
-    if (inserts.length) {
-      console.log('Inserting styles for salonId', salonId, inserts);
-      const { data, error } = await supabase.from('styles').insert(inserts).select();
-      setLoading(false);
-      if (error) {
-        console.error('Supabase styles insert error:', error);
-        setErrorMessage(error.message);
-        return;
-      }
-      console.log('Styles saved:', data);
-      setInfoMessage('Styles saved successfully.');
-    } else {
-      setLoading(false);
-      setInfoMessage('No styles added yet, but you can continue.');
-    }
-    next();
-  };
-
-  const addStylistLocal = () => {
-    if (!stylistName) return;
-    setStylists((s) => [...s, { name: stylistName, specialties: stylistSpecialties, bio: stylistBio.slice(0, 250) }]);
-    setStylistName("");
-    setStylistSpecialties([]);
-    setStylistBio("");
-  };
-
-  const saveStylists = async () => {
-    if (!salonId) {
-      setErrorMessage('Salon not created yet. Please save business basics first.');
-      console.error('saveStylists called without salonId');
-      return;
-    }
-    setLoading(true);
-    setErrorMessage(null);
-    setInfoMessage(null);
-    const inserts = stylists.map((s) => ({ ...s, salon_id: salonId }));
-    if (inserts.length) {
-      console.log('Inserting stylists for salonId', salonId, inserts);
-      const { data, error } = await supabase.from('stylists').insert(inserts).select();
-      setLoading(false);
-      if (error) {
-        console.error('Supabase stylists insert error:', error);
-        setErrorMessage(error.message);
-        return;
-      }
-      console.log('Stylists saved:', data);
-      setInfoMessage('Stylists saved successfully.');
-    } else {
-      setLoading(false);
-      setInfoMessage('No stylists added yet, but you can still finish.');
-    }
-    next();
-  };
-
-  const finish = async () => {
-    setErrorMessage(null);
-    setInfoMessage(null);
-    if (!name) {
-      setErrorMessage('Business name is required to generate a live salon page.');
-      return;
-    }
-
-    if (!salonId) {
-      setErrorMessage('Salon record not found. Please save your business profile first.');
-      console.error('finish called without salonId');
-      return;
-    }
-
-    // Verify salon exists and slug is generated
-    const { data, error } = await supabase
-      .from('salons')
-      .select('id, slug')
-      .eq('id', salonId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Supabase verify salon error:', error);
-      setErrorMessage(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!data || !data.slug) {
-      setErrorMessage('Salon record cannot be found or slug is missing.');
-      console.error('Salon verify returned no data or missing slug', data);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(false);
-    router.push(`/salon/${data.slug}`);
-  };
-
-  return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="text-sm font-medium text-ink/80">Step {step} of 4</div>
-        <div className="text-sm text-ink/60">{step === 1 ? 'Business basics' : step === 2 ? 'Add styles' : step === 3 ? 'Add stylists' : 'Install & enable alerts'}</div>
-      </div>
-      {errorMessage ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{errorMessage}</div>
-      ) : null}
-      {infoMessage ? (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{infoMessage}</div>
-      ) : null}
-
-      {step === 1 && (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-ink/80">Business name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-md border border-ink/10 px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-ink/80">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-md border border-ink/10 px-3 py-2" />
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input type="tel" inputMode="tel" pattern={US_PHONE_PATTERN} title="Please enter a US phone number" value={phone} onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))} placeholder="+1 (555) 123-4567" className="rounded-md border border-ink/10 px-3 py-2" />
-            <input type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="rounded-md border border-ink/10 px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-ink/80">Business address</label>
-            <input required value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Address line 1" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
-            <input value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Address line 2 (suite, floor, or unit)" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <input required value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="City" className="rounded-md border border-ink/10 px-3 py-2" />
-              <select required aria-label="State" value={addressState} onChange={(e) => setAddressState(e.target.value)} className="rounded-md border border-ink/10 bg-white px-3 py-2">{US_STATES.map(([code, stateName]) => <option key={code} value={code}>{stateName}</option>)}</select>
-              <input required inputMode="numeric" pattern="\d{5}(-\d{4})?" title="Use 12345 or 12345-6789 format" value={addressZip} onChange={(e) => setAddressZip(e.target.value)} placeholder="ZIP code" className="rounded-md border border-ink/10 px-3 py-2" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-ink/80">Store hours</label>
-            <p className="mt-1 text-xs text-ink/55">Choose opening and closing times in 15-minute increments.</p>
-            <div className="mt-3 space-y-2">{WEEK_DAYS.map((day) => <div key={day} className="grid grid-cols-[36px_1fr_1fr] gap-2 rounded-lg border border-ink/10 p-2 text-xs"><b>{day}</b><select value={hours[day].open} onChange={(event) => setHours((current) => ({ ...current, [day]: { ...current[day], open: event.target.value } }))} className="min-w-0 rounded-md border border-ink/10 bg-white px-2">{STORE_TIME_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><select value={hours[day].close} onChange={(event) => setHours((current) => ({ ...current, [day]: { ...current[day], close: event.target.value } }))} className="min-w-0 rounded-md border border-ink/10 bg-white px-2">{STORE_TIME_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><label className="col-span-3 flex justify-end gap-2"><input type="checkbox" checked={hours[day].closed} onChange={(event) => setHours((current) => ({ ...current, [day]: { ...current[day], closed: event.target.checked } }))} className="accent-magenta" />Closed</label></div>)}</div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={saveBasics} disabled={loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">{loading ? 'Saving…' : 'Save & continue'}</button>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div className="space-y-4">
-          <div className="rounded-md border border-ink/10 p-3">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <select value={styleMasterId} onChange={(e) => setStyleMasterId(e.target.value)} className="rounded-md border border-ink/10 bg-white px-3 py-2"><option value="">Choose style</option>{masterStyles.map((style) => <option key={style.id} value={style.id}>{style.name}</option>)}</select>
-              <input value={masterStyles.find((style) => style.id === styleMasterId)?.category || "Category is set automatically"} readOnly className="rounded-md border border-ink/10 bg-blush/20 px-3 py-2 text-ink/55" />
-              <input value={styleDuration} onChange={(e) => setStyleDuration(e.target.value)} placeholder="Duration (hours)" className="rounded-md border border-ink/10 px-3 py-2" />
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 mt-2">
-              <input value={stylePriceMin} onChange={(e) => setStylePriceMin(e.target.value)} placeholder="Min price" className="rounded-md border border-ink/10 px-3 py-2" />
-              <input value={stylePriceMax} onChange={(e) => setStylePriceMax(e.target.value)} placeholder="Max price" className="rounded-md border border-ink/10 px-3 py-2" />
-              <span className="rounded-md border border-ink/10 bg-blush/20 px-3 py-2 text-xs text-ink/60">Select options below</span>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">{[["Sizes", SIZE_OPTIONS, styleSizes, setStyleSizes], ["Lengths", LENGTH_OPTIONS, styleLengths, setStyleLengths], ["Add-ons", ADD_ON_OPTIONS.filter((item) => item !== "Other"), styleAddons, setStyleAddons]].map(([label, options, values, setter]) => <fieldset key={label as string} className="rounded-lg border border-ink/10 p-3"><legend className="px-1 text-xs font-bold text-plum">{label as string}</legend>{(options as readonly string[]).map((option) => <label key={option} className="mt-2 flex gap-2 text-xs"><input type="checkbox" checked={(values as string[]).includes(option)} onChange={() => (setter as React.Dispatch<React.SetStateAction<string[]>>)((current) => current.includes(option) ? current.filter((item) => item !== option) : [...current, option])} className="accent-magenta" />{option}</label>)}</fieldset>)}</div>
-            <div className="mt-3 flex gap-2">
-              <button onClick={addStyleLocal} className="rounded-full bg-plum px-3 py-1 text-white text-sm">Add style</button>
-              <button onClick={saveStyles} className="rounded-full bg-magenta px-3 py-1 text-white text-sm">Save styles</button>
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-2 font-semibold text-plum">Current styles</div>
-            <div className="space-y-2">
-              {styles.length === 0 ? <div className="text-ink/70">No styles added yet.</div> : styles.map((st, i) => (
-                <div key={i} className="rounded-md border border-ink/10 p-2">{st.name} — ${st.price_display_min}–${st.price_display_max} • {st.duration_min_hours} hrs</div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={back} className="rounded-full border border-ink/10 px-4 py-2 text-sm">Back</button>
-            <button onClick={saveStyles} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">Save & continue</button>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="space-y-4">
-          <div className="rounded-md border border-ink/10 p-3">
-            <input value={stylistName} onChange={(e) => setStylistName(e.target.value)} placeholder="Stylist name" className="mb-2 w-full rounded-md border border-ink/10 px-3 py-2" />
-            <fieldset className="mb-2 grid gap-2 rounded-lg border border-ink/10 p-3 sm:grid-cols-2"><legend className="px-1 text-xs font-bold text-plum">Specialties</legend>{masterStyles.map((style) => <label key={style.id} className="flex gap-2 text-xs"><input type="checkbox" checked={stylistSpecialties.includes(style.name)} onChange={() => setStylistSpecialties((current) => current.includes(style.name) ? current.filter((item) => item !== style.name) : [...current, style.name])} className="accent-magenta" />{style.name}</label>)}</fieldset>
-            <label className="block text-xs font-bold">Bio<textarea value={stylistBio} maxLength={250} onChange={(e) => setStylistBio(e.target.value)} placeholder="Bio" className="mt-1 w-full rounded-md border border-ink/10 px-3 py-2 font-normal" /><span className="mt-1 block text-right font-normal text-ink/50">{stylistBio.length}/250</span></label>
-            <div className="mt-2 flex gap-2">
-              <button onClick={addStylistLocal} className="rounded-full bg-plum px-3 py-1 text-white text-sm">Add stylist</button>
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-2 font-semibold text-plum">Current stylists</div>
-            <div className="space-y-2">
-              {stylists.length === 0 ? <div className="text-ink/70">No stylists added yet.</div> : stylists.map((st, i) => (
-                <div key={i} className="rounded-md border border-ink/10 p-2">{st.name} — {st.specialties?.join(' • ')}</div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={back} className="rounded-full border border-ink/10 px-4 py-2 text-sm">Back</button>
-            <button onClick={saveStylists} disabled={loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white">{loading ? "Saving…" : "Save & continue"}</button>
-          </div>
-        </div>
-      )}
-
-      {step === 4 && (
-        <div className="space-y-5">
-          <div>
-            <h2 className="font-serif text-3xl text-plum">Never miss a booking.</h2>
-            <p className="mt-2 text-sm leading-6 text-ink/65">Salon partners must install the Girlz Culture app and enable time-sensitive booking alerts before completing setup. You can add more devices later.</p>
-          </div>
-          <PushSetup scope="salon" required onReady={setPushReady} />
-          <div className="flex items-center gap-3">
-            <button onClick={back} className="rounded-full border border-ink/10 px-4 py-2 text-sm">Back</button>
-            <button onClick={finish} disabled={!pushReady || loading} className="rounded-full bg-magenta px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">Finish and view salon</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    <section id="booking-alerts" className="mt-6"><PushSetup scope="salon" required onReady={handlePushReady}/></section>
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-ink/55">{message}</p><div className="flex gap-3"><button type="button" onClick={() => void refresh("POST").catch((error) => setMessage(error instanceof Error ? error.message : "Unable to refresh."))} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta"><RefreshCw size={15}/>Refresh progress</button>{state.discoverable && state.salon.slug ? <Link href={`/salon/${state.salon.slug}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">View public salon</Link> : <Link href="/salon/dashboard" className="inline-flex min-h-11 items-center rounded-lg bg-plum px-5 text-xs font-bold text-white">Back to dashboard</Link>}</div></div>
+  </div>;
 }

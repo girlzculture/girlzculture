@@ -8,7 +8,7 @@ const fallbackImages = ["/images/salon-warm.jpg", "/images/salon-blush.jpg", "/i
 export default async function SalonsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
   const [{ data: salons }, { data: styles }] = await Promise.all([
-    supabase.from("salons").select("*"),
+    supabase.from("salons").select("*").eq("is_discoverable", true).eq("status", "Active").in("subscription_status", ["active", "trialing"]),
     supabase.from("styles").select("salon_id,name,price_display_min"),
   ]);
   const mapped: DiscoverySalon[] = (salons || []).map((salon, index) => {

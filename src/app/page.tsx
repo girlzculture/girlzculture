@@ -147,6 +147,9 @@ export default async function Home() {
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
     .select("id,name,slug,address_city,address_state,rating_overall,review_count,cover_photo_url,badges,subscription_tier,verification_status,is_closed_override,closed_override_date,time_zone,hours")
+    .eq("is_discoverable", true)
+    .eq("status", "Active")
+    .in("subscription_status", ["active", "trialing"])
     .order("review_count", { ascending: false })
     .limit(50);
 
