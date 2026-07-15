@@ -4,7 +4,7 @@ import { getContentPage } from "@/lib/content";
 
 const steps = [
   { title: "Find a style or salon", text: "Search or browse services and salons near you.", icon: Search },
-  { title: "Compare real prices & reviews", text: "See transparent pricing and verified reviews before you book.", icon: Star },
+  { title: "Compare prices & reviews", text: "See transparent pricing and verified reviews before you book.", icon: Star },
   { title: "Pick your stylist & time", text: "Choose your stylist and an available appointment slot.", icon: CalendarClock },
   { title: "Book with a small deposit", text: "Pay a 10% reservation deposit to secure your appointment. The balance is paid at the salon.", icon: CreditCard },
   { title: "Get Your Appointment Confirmed", text: "Receive confirmation instantly, then arrive ready for your service.", icon: BadgeCheck },
@@ -12,7 +12,7 @@ const steps = [
 const benefits = [
   { title: "Verified Salons", text: "Every salon is identity-verified and reviewed for quality and professionalism.", icon: ShieldCheck },
   { title: "Transparent Pricing", text: "Upfront pricing with no surprises. Know exactly what you will pay before you book.", icon: Tags },
-  { title: "Real Reviews", text: "Read honest reviews from real clients and see real results before you book.", icon: UserRoundCheck },
+  { title: "Booking-based Reviews", text: "Read reviews connected to completed appointments before you book.", icon: UserRoundCheck },
 ];
 const fallbackFaqs = [
   { title: "How much is the deposit?", body: "We require a 10% reservation deposit to secure your appointment. The remaining balance is paid directly at the salon after your service." },

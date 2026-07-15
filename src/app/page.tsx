@@ -41,10 +41,10 @@ type HomeSectionKey = "salons_near_you" | "featured_salons" | "trending_now" | "
 type HomeSection = { section_key: HomeSectionKey; title: string; description: string | null; is_visible: boolean; sort_order: number };
 type TrendingVideo = { slot: number; video_url: string; description: string; salon: { name?: string | null; slug?: string | null } | null };
 const DEFAULT_HOME_SECTIONS: HomeSection[] = [
-  { section_key: "salons_near_you", title: "Salons Near You", description: "Discover trusted professionals ready to book.", is_visible: true, sort_order: 1 },
-  { section_key: "featured_salons", title: "Featured Salons", description: "Handpicked top-rated salons near you.", is_visible: true, sort_order: 2 },
-  { section_key: "trending_now", title: "Trending Now", description: "Fresh work and salon stories from Girlz Culture.", is_visible: false, sort_order: 3 },
-  { section_key: "trending_picks", title: "Trending Picks This Week", description: "Popular appointments customers are booking now.", is_visible: true, sort_order: 4 },
+  { section_key: "salons_near_you", title: "Salons Near You", description: null, is_visible: true, sort_order: 1 },
+  { section_key: "featured_salons", title: "Featured Salons", description: null, is_visible: true, sort_order: 2 },
+  { section_key: "trending_now", title: "Trending Now", description: null, is_visible: false, sort_order: 3 },
+  { section_key: "trending_picks", title: "Trending Picks This Week", description: null, is_visible: true, sort_order: 4 },
 ];
 
 const salonFallbackImages = [
@@ -134,7 +134,7 @@ function SalonCard({
 }
 
 export default async function Home() {
-  const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "The beauty booking marketplace for braided styles. Real salons. Real people. Real results.", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
+  const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const [{ data: sectionData, error: sectionError }, { data: trendingData, error: trendingError }] = await Promise.all([
     supabase.from("homepage_sections").select("*").order("sort_order"),
     supabase.from("trending_videos").select("slot,video_url,description,salon:salons(name,slug)").eq("is_active", true).order("slot").limit(6),
@@ -142,7 +142,10 @@ export default async function Home() {
   if (sectionError) console.warn("Homepage section controls unavailable", sectionError.message);
   if (trendingError) console.warn("Trending video cards unavailable", trendingError.message);
   const sectionOverrides = new Map(((sectionData || []) as HomeSection[]).map((section) => [section.section_key, section]));
-  const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => sectionOverrides.get(section.section_key) || section).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
+  const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {
+    const override = sectionOverrides.get(section.section_key);
+    return override ? { ...override, description: null } : section;
+  }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const trendingVideos = (trendingData || []) as unknown as TrendingVideo[];
   const { data: salonsData, error: salonsError } = await supabase
     .from("salons")
@@ -187,16 +190,13 @@ export default async function Home() {
 
       <section className="relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(243,217,228,0.64),transparent_31%),linear-gradient(105deg,#fbf4ee_0%,#fffaf6_55%,#f7e6df_100%)]">
         <div className="relative mx-auto grid w-full max-w-[1760px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12 2xl:px-16">
-          <div className="relative z-20 flex flex-col justify-center pb-6 pt-9 lg:pb-2 lg:pt-4">
-            <p className="max-w-[235px] text-[9px] font-bold uppercase leading-[1.7] tracking-[0.14em] text-[#6c3f50] sm:text-[11px] lg:max-w-none">
-              Real prices. Real reviews. <Heart size={13} className="inline fill-magenta text-magenta" aria-hidden="true" /><br />Real work. Real availability.
-            </p>
-            <h1 className="mt-3 max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:mt-2 lg:max-w-[610px] lg:text-[58px]">
+          <div className="relative z-20 flex flex-col justify-center pb-5 pt-6 lg:pb-2 lg:pt-4">
+            <h1 className="max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:max-w-[610px] lg:text-[58px]">
               {homeContent.hero_title}
             </h1>
-            <p className="mt-4 max-w-[245px] text-[13px] leading-[1.45] text-ink/75 sm:text-[15px] lg:mt-3 lg:max-w-[470px]">
+            {homeContent.hero_subtitle ? <p className="mt-3 max-w-[245px] text-[13px] leading-[1.45] text-ink/75 sm:text-[15px] lg:max-w-[470px]">
               {homeContent.hero_subtitle}
-            </p>
+            </p> : null}
 
             <div className="relative z-30 mt-5 hidden w-full max-w-[760px] md:block lg:mt-4">
               <SearchComposer />
@@ -231,8 +231,8 @@ export default async function Home() {
           <div className="mt-4 grid grid-cols-3 gap-3 lg:mt-0">
             {[
               { title: "Find", description: "Search styles or salons near you.", icon: Search },
-              { title: "Book", description: "See real availability and prices.", icon: CalendarDays },
-              { title: "Go", description: "Show up, slay, and leave a review.", icon: Heart },
+              { title: "Book", description: "Choose an available time and review the price.", icon: CalendarDays },
+              { title: "Go", description: "Attend your appointment and leave a review.", icon: Heart },
             ].map((step, index) => {
               const Icon = step.icon;
               return (

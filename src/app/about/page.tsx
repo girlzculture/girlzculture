@@ -29,7 +29,7 @@ export default async function About() {
 
   const values = [
     [ShieldCheck, "Transparency", "Clear pricing, honest information, and no surprises."],
-    [Heart, "Trust", "Verified salons, real reviews, and secure bookings."],
+    [Heart, "Trust", "Verified salons, booking-based reviews, and secure bookings."],
     [Landmark, "Celebrating Braiding Culture", "Honoring tradition and elevating our heritage."],
     [UsersRound, "Empowering Salons", "Tools and visibility to help braid pros grow."],
   ] as const;

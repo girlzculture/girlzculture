@@ -111,8 +111,8 @@ const trustItems = [
     icon: ShieldCheck,
   },
   {
-    title: "Real Reviews",
-    description: "Real clients. Real feedback. No filters.",
+    title: "Booking-based Reviews",
+    description: "Reviews are connected to completed appointments.",
     icon: MessageSquare,
   },
   {
@@ -158,7 +158,6 @@ export function PublicFooter() {
       <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.2fr_repeat(4,0.7fr)_1.35fr] lg:px-10 xl:px-12 2xl:px-16">
         <div>
           <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>
-          <p className="mt-3 max-w-[200px] text-[11px] leading-5 text-white/70">The trusted beauty booking marketplace for braided styles.</p>
           <div className="mt-5 flex gap-3 text-white/75">
             <Camera aria-label="Instagram" size={17} />
             <Share2 aria-label="Social channels" size={17} />
