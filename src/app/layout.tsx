@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: "Girlz Culture — Book braids with confidence",
     template: "%s | Girlz Culture",
   },
-  description: "Discover trusted braiding salons, compare real prices and reviews, and book with confidence.",
+  description: "Discover braiding salons, compare services and prices, and book an appointment.",
   applicationName: "Girlz Culture",
   keywords: ["hair braiding", "braiding salons", "knotless braids", "box braids", "beauty booking"],
   manifest:"/manifest.webmanifest",

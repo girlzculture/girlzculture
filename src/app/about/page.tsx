@@ -3,6 +3,7 @@ import { Heart, Landmark, ShieldCheck, UsersRound } from "lucide-react";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import SafeImage from "@/components/site/SafeImage";
 import { getContentPage } from "@/lib/content";
+import PublicContentSections from "@/components/site/PublicContentSections";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +30,15 @@ export default async function About() {
 
   const values = [
     [ShieldCheck, "Transparency", "Clear pricing, honest information, and no surprises."],
-    [Heart, "Trust", "Verified salons, real reviews, and secure bookings."],
+    [Heart, "Trust", "Verified salons, booking-based reviews, and secure bookings."],
     [Landmark, "Celebrating Braiding Culture", "Honoring tradition and elevating our heritage."],
     [UsersRound, "Empowering Salons", "Tools and visibility to help braid pros grow."],
   ] as const;
+  const sections = page.sections || [];
+  const story = sections[0];
+  const communityCopy = sections[1];
+  const communityCarousel = sections.find((section) => section.type === "community_carousel");
+  const additionalSections = sections.filter((section, index) => index > 1 && section !== communityCarousel);
 
   return (
     <main className="min-h-screen bg-cream text-ink">
@@ -51,14 +57,14 @@ export default async function About() {
               <Link href="/partner" className="rounded-lg border border-white/50 px-6 py-3 text-sm font-bold">Partner with us</Link>
             </div>
           </div>
-          <SafeImage src={page.hero_image_url} fallbackSrc="/images/hero-braids.jpg" alt="Girlz Culture community" className="h-[330px] w-full rounded-[24px] object-cover object-top" />
+          <div className="h-[330px] overflow-hidden rounded-[24px]"><SafeImage src={page.hero_image_url} fallbackSrc="/images/hero-braids.jpg" alt="Girlz Culture community" className="h-full w-full object-cover" style={{ objectPosition: `${Number(page.hero_position_x ?? 50)}% ${Number(page.hero_position_y ?? 0)}%`, transform: `scale(${Number(page.hero_zoom ?? 1)})` }} /></div>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-[1600px] gap-6 px-5 py-8 lg:grid-cols-[.85fr_1.15fr]">
         <div>
-          <h2 className="font-serif text-3xl font-semibold text-plum">{page.sections?.[0]?.title}</h2>
-          <p className="mt-3 text-sm leading-7 text-ink/70">{page.sections?.[0]?.body}</p>
+          <h2 className="font-serif text-3xl font-semibold text-plum">{story?.title}</h2>
+          <p className="mt-3 text-sm leading-7 text-ink/70">{story?.body}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {values.map(([Icon, title, body]) => (
@@ -71,25 +77,9 @@ export default async function About() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-[1600px] items-center gap-6 px-5 pb-10 lg:grid-cols-[.7fr_1.3fr_.9fr]">
-        <div>
-          <h2 className="font-serif text-3xl font-semibold text-plum">{page.sections?.[1]?.title}</h2>
-          <p className="mt-3 text-sm leading-7 text-ink/70">{page.sections?.[1]?.body}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {["/images/braids-knotless.jpg", "/images/braids-box.jpg", "/images/braids-cornrows.jpg"].map((src) => (
-            <SafeImage key={src} src={src} fallbackSrc="/images/hero-braids.jpg" alt="Community" className="h-52 w-full rounded-xl object-cover" />
-          ))}
-        </div>
-        <div className="rounded-[18px] bg-blush/55 p-7">
-          <p className="text-xs text-amber">Join the Movement</p>
-          <h2 className="mt-2 font-serif text-3xl text-plum">Be part of something beautiful.</h2>
-          <div className="mt-5 flex gap-3">
-            <Link href="/salons" className="rounded-lg bg-magenta px-4 py-3 text-xs font-bold text-white">Find your salon</Link>
-            <Link href="/partner" className="rounded-lg border border-magenta px-4 py-3 text-xs font-bold text-magenta">Partner with us</Link>
-          </div>
-        </div>
-      </section>
+      {communityCopy ? <section className="mx-auto max-w-[1600px] px-5 pt-2"><h2 className="font-serif text-3xl font-semibold text-plum">{communityCopy.title}</h2>{communityCopy.body ? <p className="mt-3 max-w-3xl text-sm leading-7 text-ink/70">{communityCopy.body}</p> : null}</section> : null}
+      {communityCarousel ? <PublicContentSections sections={[communityCarousel]} /> : null}
+      <PublicContentSections sections={additionalSections} />
       <PublicFooter />
     </main>
   );

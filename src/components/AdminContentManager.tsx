@@ -2,23 +2,25 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, FileText, Plus, Trash2 } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
+import HeroImageFraming from "@/components/admin/HeroImageFraming";
 import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
-const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
+const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety"];
+const legalSlugs = ["terms", "privacy", "cookie-notice", "deposit-refund-policy", "salon-partner-agreement", "photo-content-consent", "message-monitoring-disclosure", "do-not-sell-or-share", "accessibility", "community-guidelines"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 const labelSlots: Record<string, Array<[string, string]>> = {
-  home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"]],
+  home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"], ["salons_near_you_subheading", "Salons Near You subheading"], ["featured_salons_subheading", "Featured Salons subheading"], ["trending_now_subheading", "Trending Now subheading"], ["trending_picks_subheading", "Trending Picks subheading"]],
   "salon-profile": [["trust_label_1", "Salon trust label 1"], ["trust_label_2", "Salon trust label 2"], ["trust_label_3", "Salon trust label 3"]],
   partner: [["stat_label_1", "Partner photo label 1"], ["stat_label_2", "Partner photo label 2"], ["stat_label_3", "Partner photo label 3"]],
 };
 
 export default function AdminContentManager() {
-  const [tab, setTab] = useState<"pages" | "blog" | "styles">("pages");
+  const [tab, setTab] = useState<"pages" | "legal" | "blog" | "styles">("pages");
   const [pages, setPages] = useState<Row[]>([]);
   const [posts, setPosts] = useState<Row[]>([]);
   const [page, setPage] = useState<Row | null>(null);
@@ -26,6 +28,7 @@ export default function AdminContentManager() {
   const [masterStyles, setMasterStyles] = useState<Row[]>([]);
   const [masterStyle, setMasterStyle] = useState<Row | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Row[]>([]);
+  const [linkTargets, setLinkTargets] = useState<Row[]>([]);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,17 +48,19 @@ export default function AdminContentManager() {
       const loadedPosts = asRows(body.posts);
       const loadedStyles = asRows(body.masterStyles);
       const loadedCategories = asRows(body.serviceCategories);
+      const loadedTargets = asRows(body.linkTargets);
       setPages(loadedPages);
       setPosts(loadedPosts);
       setMasterStyles(loadedStyles);
       setServiceCategories(loadedCategories);
+      setLinkTargets(loadedTargets);
       if (selectFirst) {
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null);
         setPost(loadedPosts[0] || null);
         setMasterStyle(loadedStyles[0] || null);
       }
-      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories };
+      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, linkTargets: loadedTargets };
     } catch (error) {
       console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -75,8 +80,8 @@ export default function AdminContentManager() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load content");
         if (!active) return;
-        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories);
-        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories);
+        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedTargets = asRows(body.linkTargets);
+        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setLinkTargets(loadedTargets);
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
@@ -95,6 +100,8 @@ export default function AdminContentManager() {
       ...section,
       title: String(form.get(`section_title_${index}`) || ""),
       body: String(form.get(`section_body_${index}`) || ""),
+      cta_label: String(form.get(`section_cta_label_${index}`) || section.cta_label || ""),
+      cta_href: String(form.get(`section_cta_href_${index}`) || section.cta_href || ""),
     }));
     const labels = Object.fromEntries((labelSlots[page.slug] || []).map(([key]) => [key, String(form.get(`label_${key}`) || "").trim()]));
     const payload = {
@@ -102,6 +109,7 @@ export default function AdminContentManager() {
       title: form.get("title"), eyebrow: form.get("eyebrow"), hero_title: form.get("hero_title"),
       hero_subtitle: form.get("hero_subtitle"), seo_title: form.get("seo_title"),
       seo_description: form.get("seo_description"), status: form.get("status"), sections, labels,
+      hero_position_x: Number(page.hero_position_x ?? 50), hero_position_y: Number(page.hero_position_y ?? 50), hero_zoom: Number(page.hero_zoom ?? 1),
       updated_at: new Date().toISOString(),
     };
     setSaving(true); setNotice("");
@@ -190,6 +198,7 @@ export default function AdminContentManager() {
   }
 
   function createNew() {
+    if (tab === "legal") return;
     if (tab === "styles") { setMasterStyle({ name: "", category: "Braids", category_id: serviceCategories[0]?.id || "", sort_order: masterStyles.length * 10 + 10, is_active: true }); return; }
     if (tab === "blog") {
       setPost({ slug: "new-post", title: "New Blog Post", excerpt: "", content: "", category: "Braided Styles", status: "Draft", featured: false });
@@ -199,7 +208,20 @@ export default function AdminContentManager() {
     if (slug) setPage({ slug, title: slug.replaceAll("-", " "), hero_title: "New page", sections: [], status: "Draft" });
   }
 
-  const slugs = [...new Set([...defaultSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
+  const allSlugs = [...new Set([...defaultSlugs, ...legalSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
+  const contentSlugs = allSlugs.filter((slug) => !legalSlugs.includes(slug));
+  const visibleSlugs = tab === "legal" ? legalSlugs : contentSlugs;
+
+  function switchTab(value: "pages" | "legal" | "blog" | "styles") {
+    setTab(value);
+    if (value === "legal") {
+      const slug = legalSlugs[0];
+      setPage(pages.find((item) => item.slug === slug) || { slug, title: "Terms of Service", hero_title: "Terms of Service", hero_subtitle: "", sections: [{ type: "text", title: "", body: "", is_visible: true }], page_group: "Legal", status: "Published" });
+    } else if (value === "pages" && page && legalSlugs.includes(page.slug)) {
+      const slug = contentSlugs[0];
+      setPage(pages.find((item) => item.slug === slug) || null);
+    }
+  }
 
   if (loading) return <div className="rounded-xl border border-plum/10 bg-white p-8 text-sm text-ink/60">Loading editable content…</div>;
 
@@ -207,19 +229,19 @@ export default function AdminContentManager() {
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-lg border border-plum/10 bg-white p-1">
-          {(["pages", "blog", "styles"] as const).map(value => <button key={value} onClick={() => setTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "blog" ? "Blog" : "Service Catalog"}</button>)}
+          {(["pages", "legal", "blog", "styles"] as const).map(value => <button key={value} onClick={() => switchTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "legal" ? "Legal" : value === "blog" ? "Blog" : "Service Catalog"}</button>)}
         </div>
-        <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Service"}</button>
+        {tab !== "legal" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Service"}</button> : null}
       </div>
       {notice ? <p className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
-      {tab === "pages" ? (
+      {tab === "pages" || tab === "legal" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[250px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">
-            <h2 className="px-2 py-2 font-serif text-xl text-plum">Public Pages</h2>
-            {slugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug, hero_title: slug, sections: [], status: "Draft" })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
+            <h2 className="px-2 py-2 font-serif text-xl text-plum">{tab === "legal" ? "Legal Pages" : "Public Pages"}</h2>
+            {visibleSlugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug.replaceAll("-", " "), hero_title: slug.replaceAll("-", " "), hero_subtitle: "", sections: tab === "legal" ? [{ type: "text", title: "", body: "", is_visible: true }] : [], page_group: tab === "legal" ? "Legal" : "Content", status: tab === "legal" ? "Published" : "Draft" })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
           </aside>
-          {page ? <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} /> : null}
+          {page ? tab === "legal" ? <LegalPageEditor key={page.slug} page={page} setPage={setPage} save={savePage} /> : <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} linkTargets={linkTargets} /> : null}
         </div>
       ) : tab === "blog" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
@@ -236,7 +258,25 @@ export default function AdminContentManager() {
   );
 }
 
-function PageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
+function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
+  const section = asRows(page.sections)[0] || { type: "text", title: "", body: "", is_visible: true };
+  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+    <h2 className="font-serif text-2xl text-plum">Edit Legal Page</h2>
+    <p className="mt-1 text-xs leading-5 text-ink/55">Use # for a large heading, ## or ### for smaller headings, - for bullets, and [label](/page) for a link. HTML is not accepted.</p>
+    <label className="mt-5 block text-xs font-bold">Page title<input name="title" value={page.title || ""} onChange={(event) => setPage((row) => ({ ...row, title: event.target.value, hero_title: event.target.value, page_group: "Legal" }))} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+    <input type="hidden" name="eyebrow" value="" readOnly />
+    <input type="hidden" name="hero_title" value={page.title || ""} readOnly />
+    <input type="hidden" name="hero_subtitle" value="" readOnly />
+    <input type="hidden" name="section_title_0" value={section.title || ""} readOnly />
+    <Area label="Rich-text body" name="section_body_0" value={section.body} rows={22} />
+    <input type="hidden" name="seo_title" value={page.seo_title || page.title || ""} readOnly />
+    <input type="hidden" name="seo_description" value={page.seo_description || ""} readOnly />
+    <input type="hidden" name="status" value="Published" readOnly />
+    <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save & Publish Legal Page</button>
+  </form>;
+}
+
+function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; linkTargets: Row[] }) {
   const slots = labelSlots[page.slug] || [];
   return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
     <div className="grid gap-4 lg:grid-cols-2">
@@ -247,17 +287,59 @@ function PageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatc
       <ImageUpload bucket="content-media" value={page.hero_image_url} onChange={value => setPage(row => ({ ...row, hero_image_url: value }))} label="Hero image" folder={page.slug} />
       <ImageUpload bucket="content-media" value={page.background_image_url} onChange={value => setPage(row => ({ ...row, background_image_url: value }))} label="Background image" folder={page.slug} />
     </div>
+    <HeroImageFraming imageUrl={page.hero_image_url} positionX={Number(page.hero_position_x ?? 50)} positionY={Number(page.hero_position_y ?? 50)} zoom={Number(page.hero_zoom ?? 1)} onChange={({ positionX, positionY, zoom }) => setPage(row => ({ ...row, hero_position_x: positionX, hero_position_y: positionY, hero_zoom: zoom }))} />
     {slots.length ? <>
       <h2 className="mt-6 font-serif text-2xl text-plum">Optional page labels</h2>
       <p className="mt-1 text-xs text-ink/55">These labels remain hidden until you add text. Clear a field to remove it from the public page.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">{slots.map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]} />)}</div>
     </> : null}
     <h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2>
-    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><div className="mb-2 flex justify-end"><button type="button" onClick={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button></div><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div>
-    <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...(row?.sections || []), { title: "New Section", body: "" }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
+    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number) => <SectionEditor key={section.id || index} section={section} index={index} linkTargets={linkTargets} update={(next) => setPage(row => ({ ...row, sections: asRows(row?.sections).map((item: Row, itemIndex: number) => itemIndex === index ? next : item) }))} remove={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} />)}</div>
+    <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...asRows(row?.sections), { id: crypto.randomUUID(), type: "card_grid", title: "New Section", body: "", is_visible: true, columns: 4, cards: [] }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
     <div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div>
     <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button>
   </form>;
+}
+
+function SectionEditor({ section, index, linkTargets, update, remove }: { section: Row; index: number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void }) {
+  const type = String(section.type || "text");
+  const cards = asRows(section.cards);
+  const maximum = type === "community_carousel" ? 20 : 12;
+  function resizeCards(count: number) {
+    const next = [...cards];
+    while (next.length < count) next.push({ id: crypto.randomUUID(), content_type: "image", title: "", body: "", media_url: "", href: "" });
+    update({ ...section, cards: next.slice(0, count) });
+  }
+  function updateCard(cardIndex: number, value: Row) { update({ ...section, cards: cards.map((card, itemIndex) => itemIndex === cardIndex ? value : card) }); }
+  function moveCard(cardIndex: number, direction: -1 | 1) {
+    const nextIndex = cardIndex + direction;
+    if (nextIndex < 0 || nextIndex >= cards.length) return;
+    const next = [...cards]; [next[cardIndex], next[nextIndex]] = [next[nextIndex], next[cardIndex]];
+    update({ ...section, cards: next });
+  }
+  return <div className="rounded-lg border border-plum/10 bg-blush/25 p-4">
+    <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="grid flex-1 gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">Layout<select value={type} onChange={(event) => update({ ...section, type: event.target.value, cards: ["card_grid", "carousel", "community_carousel"].includes(event.target.value) ? cards : [] })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="text">Text</option><option value="card_grid">Card grid</option><option value="carousel">Horizontal carousel</option><option value="community_carousel">Auto-scrolling community carousel</option><option value="banner">Banner</option></select></label>
+        {["card_grid", "carousel", "community_carousel"].includes(type) ? <label className="text-xs font-bold">Number of cards<input type="number" min="1" max={maximum} value={cards.length || 1} onChange={(event) => resizeCards(Math.max(1, Math.min(maximum, Number(event.target.value) || 1)))} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
+      </div>
+      <label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
+      <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button>
+    </div>
+    <Field label="Section heading" name={`section_title_${index}`} value={section.title} />
+    <Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} />
+    {type === "banner" ? <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Button label" name={`section_cta_label_${index}`} value={section.cta_label} /><Field label="Button destination" name={`section_cta_href_${index}`} value={section.cta_href} /></div> : null}
+    {type === "card_grid" ? <label className="mt-3 block text-xs font-bold">Columns<select value={Number(section.columns || 4)} onChange={(event) => update({ ...section, columns: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label> : null}
+    {cards.length ? <div className="mt-4 grid gap-4 xl:grid-cols-2">{cards.map((card, cardIndex) => <article key={card.id || cardIndex} className="rounded-xl border border-plum/10 bg-white p-4">
+      <div className="flex items-center justify-between gap-3"><b className="font-serif text-lg text-plum">Card {cardIndex + 1}</b><div className="flex gap-1"><button type="button" aria-label="Move card up" onClick={() => moveCard(cardIndex, -1)} disabled={cardIndex === 0} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label="Move card down" onClick={() => moveCard(cardIndex, 1)} disabled={cardIndex === cards.length - 1} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div></div>
+      <label className="mt-3 block text-xs font-bold">Card type<select value={card.content_type || "image"} onChange={(event) => updateCard(cardIndex, { ...card, content_type: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="image">Image</option><option value="video">Video</option><option value="link">Link</option></select></label>
+      {card.content_type === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://â€¦/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : <ImageUpload bucket="content-media" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label={card.content_type === "link" ? "Link card image" : "Card image"} folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
+      <label className="mt-3 block text-xs font-bold">Card title<input value={card.title || ""} onChange={(event) => updateCard(cardIndex, { ...card, title: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+      <label className="mt-3 block text-xs font-bold">Card text<textarea rows={3} value={card.body || ""} onChange={(event) => updateCard(cardIndex, { ...card, body: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+      <label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.map((target) => <option key={`${target.type}-${target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label>
+      <label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://â€¦" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+    </article>)}</div> : null}
+  </div>;
 }
 
 function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void }) {

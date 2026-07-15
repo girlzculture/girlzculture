@@ -1,6 +1,7 @@
 import { Quote } from "lucide-react";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { getContentPage } from "@/lib/content";
+import PublicContentSections from "@/components/site/PublicContentSections";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,8 @@ export default async function TestimonialsPage() {
     hero_subtitle: "Verified customer stories will be published here.",
     sections: [],
   });
-  const testimonials = page.sections || [];
+  const testimonials = (page.sections || []).filter((section) => !section.type || section.type === "text");
+  const customSections = (page.sections || []).filter((section) => section.type && section.type !== "text");
 
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader />
@@ -24,6 +26,7 @@ export default async function TestimonialsPage() {
         <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-white/70">{page.hero_subtitle}</p>
       </div>
     </section>
+    <PublicContentSections sections={customSections} />
     <section className="mx-auto grid w-full max-w-[1320px] gap-5 px-5 py-12 sm:px-8 md:grid-cols-2 lg:grid-cols-3 lg:py-16">
       {testimonials.map((testimonial, index) => <article key={`${testimonial.title}-${index}`} className="flex min-h-[280px] flex-col rounded-3xl border border-plum/10 bg-white p-6 shadow-[0_14px_45px_rgba(26,18,32,.06)]">
         <Quote className="text-magenta" size={30} />
