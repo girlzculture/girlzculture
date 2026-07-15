@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
+import BookingInbox from "@/components/BookingInbox";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -88,7 +89,7 @@ export default function CustomerAccount() {
       </aside>
       <main className="min-w-0 p-4 sm:p-8 lg:p-10">
         <section className="rounded-[18px] bg-plum p-6 text-white lg:bg-transparent lg:p-0 lg:text-ink"><p className="text-sm lg:hidden">Welcome back,</p><h1 className="font-serif text-3xl font-semibold lg:text-4xl lg:text-plum">{tab === "overview" ? `Welcome back, ${firstName}!` : tabs.find(([id]) => id === tab)?.[1]}</h1><p className="mt-2 text-sm opacity-70">Manage your bookings, favorites, reviews, and account details.</p></section>
-        <div className="mt-7">{tab === "overview" ? <Overview upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet."/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={past} empty="No completed appointments yet." past/> : tab === "favorites" ? <FavoritePanel favorites={favorites}/> : tab === "inbox" ? <EmptyState title="Inbox" text="Booking and support messages will appear here. For immediate help, contact the Girlz Culture support team." action="Contact support" href="/contact"/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action="Browse salons" href="/salons"/> : <SettingsPanel customer={customer}/>}</div>
+        <div className="mt-7">{tab === "overview" ? <Overview upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet."/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={past} empty="No completed appointments yet." past/> : tab === "favorites" ? <FavoritePanel favorites={favorites}/> : tab === "inbox" ? <BookingInbox scope="customer"/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action="Browse salons" href="/salons"/> : <SettingsPanel customer={customer}/>}</div>
       </main>
     </div>
     <nav className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-plum/10 bg-white p-2 lg:hidden">{[[Home, "Home", "/"], [Search, "Search", "/salons"], [CalendarDays, "Bookings", "/account?tab=upcoming"], [MessageSquare, "Inbox", "/account?tab=inbox"], [UserRound, "Profile", "/account"]].map(([Icon, label, href]) => <Link key={label as string} href={href as string} className="flex flex-col items-center gap-1 text-[10px]"><Icon size={21}/>{label as string}</Link>)}</nav>

@@ -1,24 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronDown, CircleDollarSign, Crown, ExternalLink, Home, Images, Menu, Megaphone, Package, Scissors, Settings, Star, UserRound, UsersRound } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, CircleDollarSign, Crown, ExternalLink, Home, Images, Menu, Megaphone, MessageSquare, Package, Scissors, Settings, Star, UserRound, UsersRound } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 
-export type DashboardSection = "overview" | "my-page" | "photos" | "styles" | "stylists" | "products" | "availability" | "bookings" | "reviews" | "earnings" | "promotions" | "subscription" | "settings";
+export type DashboardSection = "overview" | "my-page" | "photos" | "styles" | "stylists" | "products" | "availability" | "bookings" | "messages" | "reviews" | "earnings" | "promotions" | "subscription" | "settings";
 
 const nav = [
-  ["overview", "Overview", Home], ["my-page", "My Page", UserRound], ["photos", "Photos", Images], ["styles", "Styles & Pricing", Scissors], ["stylists", "Stylists", UsersRound], ["products", "Products", Package], ["availability", "Availability & Calendar", CalendarDays], ["bookings", "Bookings", CalendarDays], ["reviews", "Reviews", Star], ["earnings", "Earnings & Payouts", CircleDollarSign], ["promotions", "Promotions", Megaphone], ["subscription", "Subscription", Crown], ["settings", "Settings", Settings],
+  ["overview", "Overview", Home], ["my-page", "My Page", UserRound], ["photos", "Photos", Images], ["styles", "Styles & Pricing", Scissors], ["stylists", "Stylists", UsersRound], ["products", "Products", Package], ["availability", "Availability & Calendar", CalendarDays], ["bookings", "Bookings", CalendarDays], ["messages", "Messages", MessageSquare], ["reviews", "Reviews", Star], ["earnings", "Earnings & Payouts", CircleDollarSign], ["promotions", "Promotions", Megaphone], ["subscription", "Subscription", Crown], ["settings", "Settings", Settings],
 ] as const;
 
 const hrefFor = (section: string) => section === "overview" ? "/salon/dashboard" : `/salon/dashboard/${section}`;
 
 export default function OwnerDashboardShell({ children, section, salonName, salonSlug, avatar, notifications = [], access = null }: { children: React.ReactNode; section: DashboardSection; salonName: string; salonSlug: string; avatar?: string | null; notifications?: Array<{id?:string;title?:string;body?:string;action_url?:string;read_at?:string|null}>; access?: Record<string,boolean>|null }) {
-  const canAccess = (id: string) => access === null || (id !== "subscription" && Boolean(access[id.replace("-", "_")]));
+  const canAccess = (id: string) => access === null || (id !== "subscription" && Boolean(access[id === "messages" ? "bookings" : id.replace("-", "_")]));
   const visibleNav = nav.filter(([id]) => canAccess(id));
   const homeHref = visibleNav.length ? hrefFor(visibleNav[0][0]) : "/salon/login";
   const mobileNav = ([
-    ["overview","Overview",Home], ["bookings","Bookings",CalendarDays], ["availability","Calendar",CalendarDays], ["promotions","Marketing",Megaphone], ["settings","More",Menu],
+    ["overview","Overview",Home], ["bookings","Bookings",CalendarDays], ["availability","Calendar",CalendarDays], ["messages","Messages",MessageSquare], ["settings","More",Menu],
   ] as const).filter(([id]) => canAccess(id));
   return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]"><RoleSessionBoundary scope="salon" />
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] overflow-y-auto bg-[radial-gradient(circle_at_60%_20%,#6b176f,#2b0835_70%)] px-4 py-5 text-white lg:block">
@@ -35,6 +35,6 @@ export default function OwnerDashboardShell({ children, section, salonName, salo
       </header>
       <main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">{children}</main>
     </div>
-    <nav aria-label="Owner mobile navigation" className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white/95 px-1 pb-[max(7px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(26,18,32,.08)] backdrop-blur lg:hidden">{mobileNav.map(([id,label,Icon])=>{const active=section===id||(id==="settings"&&!['overview','bookings','availability','promotions'].includes(section));return <Link key={id} href={hrefFor(id)} className={`flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 text-[9px] font-semibold ${active?"text-magenta":"text-ink/70"}`}><Icon size={19}/>{label}</Link>;})}</nav>
+    <nav aria-label="Owner mobile navigation" className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white/95 px-1 pb-[max(7px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(26,18,32,.08)] backdrop-blur lg:hidden">{mobileNav.map(([id,label,Icon])=>{const active=section===id||(id==="settings"&&!['overview','bookings','availability','messages'].includes(section));return <Link key={id} href={hrefFor(id)} className={`flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 text-[9px] font-semibold ${active?"text-magenta":"text-ink/70"}`}><Icon size={19}/>{label}</Link>;})}</nav>
   </div>;
 }

@@ -13,6 +13,7 @@ import AdminSupportInbox from "@/components/AdminSupportInbox";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import TeamUserManager from "@/components/auth/TeamUserManager";
 import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
+import BookingInbox from "@/components/BookingInbox";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "subscriptions" | "settings";
 type Row = Record<string, any>;
@@ -145,7 +146,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "finance": return <Finance {...props} />;
     case "marketing": return <Marketing {...props} />;
     case "content": return <AdminContentManager />;
-    case "support": return <AdminSupportInbox initialTickets={safeData.tickets} />;
+    case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} /><BookingInbox scope="admin" /></div>;
     case "subscriptions": return <Subscriptions {...props} />;
     default: return <SettingsTeam {...props} />;
   }

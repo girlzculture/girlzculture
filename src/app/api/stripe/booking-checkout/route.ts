@@ -63,10 +63,14 @@ export async function POST(request: Request) {
       if (!material) throw new Error("The selected material is not available.");
       total += Number(material.price || 0);
     }
-    total = Math.round(total * 100) / 100;
+    const clientProvidesMaterial = body.client_provides_material === true;
+    const materialPriceAdjustment = clientProvidesMaterial ? Math.max(0, Number(style.own_material_price_reduction || 0)) : 0;
+    const materialDurationAdjustmentMinutes = clientProvidesMaterial ? Math.max(0, Math.round(Number(style.own_material_duration_reduction_minutes || 0))) : 0;
+    if (clientProvidesMaterial) total -= materialPriceAdjustment;
+    total = Math.max(1, Math.round(total * 100) / 100);
     if (!(total > 0) || total > 5000) throw new Error("The booking total could not be verified.");
     const deposit = Math.round(total * 10) / 100;
-    const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0));
+    const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) - materialDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload = {
       customer_id: customerId,
@@ -77,6 +81,10 @@ export async function POST(request: Request) {
       selected_length: selectedLength || null,
       selected_material_id: materialId,
       selected_addons: selectedAddons,
+      client_notes: cleanText(body.client_notes, 1000) || null,
+      client_provides_material: clientProvidesMaterial,
+      material_price_adjustment: clientProvidesMaterial ? -materialPriceAdjustment : 0,
+      material_duration_adjustment_minutes: clientProvidesMaterial ? -materialDurationAdjustmentMinutes : 0,
       appointment_datetime: appointment.toISOString(),
       duration_hours: durationHours,
       buffer_minutes: bufferMinutes,
