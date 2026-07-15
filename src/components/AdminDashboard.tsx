@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3, Bell, Building2, CalendarDays, CircleDollarSign, ClipboardList, CreditCard,
-  FileText, Headphones, Home, Menu, MessageSquare, Search, Settings, Star, UsersRound,
+  FileText, Flag, Headphones, Home, Menu, MessageSquare, Search, Settings, Star, UsersRound,
 } from "lucide-react";
 import { adminSupabase as supabase, getSessionForScope } from "@/lib/supabase";
 import AdminContentManager from "@/components/AdminContentManager";
@@ -17,7 +17,7 @@ import BookingInbox from "@/components/BookingInbox";
 import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 
-export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "subscriptions" | "settings";
+export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
 type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
@@ -30,9 +30,12 @@ const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
   ["customers", "Customers", UsersRound], ["bookings", "Bookings", CalendarDays], ["quality", "Quality & Performance", Star],
   ["reviews", "Reviews", MessageSquare], ["finance", "Payments & Finance", CircleDollarSign], ["marketing", "Marketing & Promotions", BarChart3],
-  ["content", "Content Management", FileText], ["support", "Customer Support", Headphones], ["subscriptions", "Subscriptions", CreditCard],
+  ["content", "Content Management", FileText], ["support", "Customer Support", Headphones], ["complaints", "Complaints", Flag], ["subscriptions", "Subscriptions", CreditCard],
   ["settings", "Settings & Team", Settings],
 ];
+
+const permissionForSection = (section: AdminSection) => section === "complaints" ? "support" : section;
+type InboxCounts = { support: number; complaints: number };
 
 export default function AdminDashboard({ section }: { section: AdminSection; preview?: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   const [notice, setNotice] = useState("");
   const [access, setAccess] = useState<Record<string, boolean> | null>(null);
   const [denied, setDenied] = useState(false);
+  const [inboxCounts, setInboxCounts] = useState<InboxCounts>({ support: 0, complaints: 0 });
 
   async function load() {
     const session = await getSessionForScope("admin");
@@ -52,7 +56,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     const verified = await verification.json() as { permissions?: Record<string,boolean>; is_super_admin?: boolean };
     const verifiedAccess = verified.is_super_admin ? null : verified.permissions || {};
     setAccess(verifiedAccess);
-    if (verifiedAccess !== null && !verifiedAccess[section]) {
+    if (verifiedAccess !== null && !verifiedAccess[permissionForSection(section)]) {
       setDenied(true);
       setData(emptyData);
       setSelected(null);
@@ -70,6 +74,15 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
+    if (verifiedAccess === null || verifiedAccess.support) {
+      const countsResponse = await fetch("/api/admin/inbox-counts", { headers, cache: "no-store" });
+      if (countsResponse.ok) {
+        const counts = await countsResponse.json() as Partial<InboxCounts>;
+        setInboxCounts({ support: Number(counts.support || 0), complaints: Number(counts.complaints || 0) });
+      } else {
+        console.error("Admin inbox counts load failed", await countsResponse.text());
+      }
+    }
   }
 
   useEffect(() => {
@@ -105,29 +118,30 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   if (loading) return <div className="min-h-screen bg-cream p-12 text-center text-plum">Loading platform administration…</div>;
   if (error) return <div className="grid min-h-screen place-items-center bg-cream p-5"><div className="rounded-2xl bg-white p-8 text-center"><h1 className="font-serif text-3xl text-plum">Admin access</h1><p className="mt-3">{error}</p><Link href="/admin/login" className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">Go to admin login</Link></div></div>;
   if (denied) {
-    const firstAllowed = navigation.find(([id]) => access?.[id])?.[0];
+    const firstAllowed = navigation.find(([id]) => access?.[permissionForSection(id)])?.[0];
     const firstAllowedHref = firstAllowed === "overview" ? "/admin" : firstAllowed ? `/admin/${firstAllowed}` : "/admin/login";
-    return <AdminShell section={section} access={access}><RoleSessionBoundary scope="admin" /><div className="mx-auto max-w-2xl rounded-[18px] border border-plum/10 bg-white p-10 text-center"><Settings className="mx-auto text-magenta" /><h1 className="mt-4 font-serif text-3xl text-plum">Access not assigned</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-ink/70">Your platform-admin role does not include this section. Ask a Super Admin to update your permissions.</p><Link href={firstAllowedHref} className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white">Open an assigned section</Link></div></AdminShell>;
+    return <AdminShell section={section} access={access} inboxCounts={inboxCounts}><RoleSessionBoundary scope="admin" /><div className="mx-auto max-w-2xl rounded-[18px] border border-plum/10 bg-white p-10 text-center"><Settings className="mx-auto text-magenta" /><h1 className="mt-4 font-serif text-3xl text-plum">Access not assigned</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-ink/70">Your platform-admin role does not include this section. Ask a Super Admin to update your permissions.</p><Link href={firstAllowedHref} className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white">Open an assigned section</Link></div></AdminShell>;
   }
 
-  return <AdminShell section={section} access={access}><RoleSessionBoundary scope="admin" />
+  return <AdminShell section={section} access={access} inboxCounts={inboxCounts}><RoleSessionBoundary scope="admin" />
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-[40px] font-semibold leading-none text-plum">{navigation.find((item) => item[0] === section)?.[1]}</h1><p className="mt-2 text-sm text-ink/55">{subtitle(section)}</p></div><div className="flex items-center gap-3 rounded-[11px] border border-plum/10 bg-white px-4 py-3 text-xs"><Search size={17} /><input className="w-64 bg-transparent outline-none" placeholder="Search platform records" /><Bell size={19} /></div></div>
     {notice ? <div className="mb-4 rounded-lg bg-blush/55 p-3 text-sm text-plum">{notice}</div> : null}
-    <AdminSectionView section={section} data={data} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} />
+    <AdminSectionView section={section} data={data} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} onTicketRead={(mode) => setInboxCounts((counts) => ({ ...counts, [mode]: Math.max(0, counts[mode] - 1) }))} />
   </AdminShell>;
 }
 
-function AdminShell({ section, children, access }: { section: AdminSection; children: React.ReactNode; access: Record<string,boolean>|null }) {
-  const visibleNavigation = access === null ? navigation : navigation.filter(([id]) => access[id]);
+function AdminShell({ section, children, access, inboxCounts }: { section: AdminSection; children: React.ReactNode; access: Record<string,boolean>|null; inboxCounts: InboxCounts }) {
+  const visibleNavigation = access === null ? navigation : navigation.filter(([id]) => access[permissionForSection(id)]);
   const mobileNavigation = ([
     ["overview", "Overview", Home], ["bookings", "Bookings", CalendarDays], ["submissions", "Alerts", Bell], ["quality", "Reports", BarChart3], ["settings", "More", Menu],
-  ] as Array<[AdminSection, string, typeof Home]>).filter(([id]) => access === null || access[id]);
+  ] as Array<[AdminSection, string, typeof Home]>).filter(([id]) => access === null || access[permissionForSection(id)]);
   const homeId = visibleNavigation[0]?.[0];
   const homeHref = homeId === "overview" ? "/admin" : homeId ? `/admin/${homeId}` : "/admin/login";
-  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-[linear-gradient(160deg,#25102d,#16081d)] p-4 text-white lg:block"><Link href={homeHref} className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:hidden"><details><summary className="list-none"><Menu /></summary><nav className="absolute left-4 z-50 mt-3 w-72 rounded-xl bg-white p-2 shadow-2xl">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm"><Icon size={17} />{label}</Link>)}</nav></details><b className="font-serif text-xl text-plum">Girlz Culture</b><div className="flex items-center gap-2"><Bell /><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush" /></div></header>{children}</main><nav className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label}</Link>)}</nav></div>;
+  const navCount = (id: AdminSection) => id === "support" ? inboxCounts.support : id === "complaints" ? inboxCounts.complaints : 0;
+  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-[linear-gradient(160deg,#25102d,#16081d)] p-4 text-white lg:block"><Link href={homeHref} className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{navCount(id)}</span> : null}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:hidden"><details><summary className="list-none"><Menu /></summary><nav className="absolute left-4 z-50 mt-3 w-72 rounded-xl bg-white p-2 shadow-2xl">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm"><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold text-white">{navCount(id)}</span> : null}</Link>)}</nav></details><b className="font-serif text-xl text-plum">Girlz Culture</b><div className="flex items-center gap-2"><Bell /><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush" /></div></header>{children}</main><nav className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label}</Link>)}</nav></div>;
 }
 
-function AdminSectionView({ section, data, selected, setSelected, decide, update, onCreated }: { section: AdminSection; data: DataState; selected: Row | null; setSelected: (row: Row) => void; decide: (id: string, decision: "approve" | "reject" | "activate") => void; update: (table: string, id: string, changes: Row) => Promise<void>; onCreated: () => Promise<void> }) {
+function AdminSectionView({ section, data, selected, setSelected, decide, update, onCreated, onTicketRead }: { section: AdminSection; data: DataState; selected: Row | null; setSelected: (row: Row) => void; decide: (id: string, decision: "approve" | "reject" | "activate") => void; update: (table: string, id: string, changes: Row) => Promise<void>; onCreated: () => Promise<void>; onTicketRead: (mode: "support" | "complaints") => void }) {
   // Missing API arrays are normalized here as a final render guard. Every
   // section can now show its existing empty state instead of crashing.
   const safeData: DataState = {
@@ -148,7 +162,8 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "finance": return <Finance {...props} />;
     case "marketing": return <div className="space-y-5"><AdminPromoCodes /><Marketing {...props} /></div>;
     case "content": return <AdminContentManager />;
-    case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} /><BookingInbox scope="admin" /></div>;
+    case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} mode="support" onRead={onTicketRead} /><BookingInbox scope="admin" /></div>;
+    case "complaints": return <AdminSupportInbox initialTickets={safeData.tickets} mode="complaints" onRead={onTicketRead} />;
     case "subscriptions": return <Subscriptions {...props} />;
     default: return <SettingsTeam {...props} />;
   }
@@ -291,4 +306,4 @@ function DataChart({ title, values, empty, moneyValues = false }: { title: strin
 function money(value: number) { return value.toLocaleString("en-US", { style: "currency", currency: "USD" }); }
 function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—"; }
 function dateTime(value?: string, timeZone?: string) { return value ? new Date(value).toLocaleString("en-US", { timeZone: timeZone || "America/New_York", dateStyle: "medium", timeStyle: "short" }) : "—"; }
-function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Track recorded subscriptions, deposits, payouts, and refunds.", marketing: "Manage real placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage support requests submitted by customers.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }
+function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Track recorded subscriptions, deposits, payouts, and refunds.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }
