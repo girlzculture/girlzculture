@@ -85,9 +85,10 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
     + genericOptionPrice;
   const materialReduction = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_price_reduction || 0)) : 0;
   const durationReductionMinutes = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_duration_reduction_minutes || 0)) : 0;
-  const total = Math.max(1, beforeMaterialAdjustment - materialReduction);
+  const total = Math.max(0, beforeMaterialAdjustment - materialReduction);
   const originalDeposit = Number((total * 0.1).toFixed(2));
-  const deposit = Math.max(0, Number((originalDeposit - promoDiscount).toFixed(2)));
+  const calculatedDeposit = Math.max(0, Number((originalDeposit - promoDiscount).toFixed(2)));
+  const deposit = Math.round(calculatedDeposit * 100) >= 50 ? calculatedDeposit : 0;
   const balance = total - deposit;
 
   useEffect(() => {
@@ -202,6 +203,12 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
         if (body.next_available) setSuggested(body.next_available as SuggestedSlot);
         throw new Error(body.error || "Unable to start checkout.");
       }
+      if (body?.booking) {
+        setConfirmed(body.booking);
+        setStep(5);
+        setSaving(false);
+        return;
+      }
       if (!body?.url) throw new Error("Stripe did not return a checkout page. No payment was taken.");
       window.location.assign(body.url);
     } catch (error) {
@@ -270,4 +277,4 @@ function ReviewPanel(props: Row) {
     <label className="flex gap-2 rounded-lg bg-blush/30 p-2"><input type="checkbox" checked={props.consent} onChange={(event) => props.setConsent(event.target.checked)} /><span>I understand the deposit is a non-refundable reservation fee credited toward my total.</span></label>
   </div>;
 }
-function PaymentPanel({ confirmed, deposit, saving, reserve, suggested, applySuggested }: Row) { return confirmed ? <div className="rounded-[12px] bg-blush/30 p-5 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-magenta text-white"><Check size={36} /></span><h3 className="mt-4 font-serif text-2xl text-plum">You’re All Set!</h3><p className="mt-2 text-xs">Your appointment is confirmed.</p><div className="mt-4 rounded-lg bg-white p-3"><small>Confirmation Code</small><b className="block text-lg text-plum">{confirmed.confirmation_code}</b></div><Link href="/account" className="mt-4 block text-xs font-bold text-magenta">Go to My Bookings</Link></div> : <div><p className="text-xs font-semibold">Secure Checkout</p><div className="my-4 flex gap-2 text-[10px]"><span className="rounded border p-2">VISA</span><span className="rounded border p-2">MC</span><span className="rounded border p-2">AMEX</span></div><p className="rounded-lg bg-blush/30 p-4 text-center"><small>Deposit Amount</small><b className="block text-2xl text-magenta">{money(deposit)}</b></p>{suggested ? <button onClick={() => applySuggested(suggested)} className="mt-4 w-full rounded-lg border border-magenta py-3 text-xs font-bold text-magenta">Use next available: {suggested.date} at {suggested.label}</button> : null}<button onClick={reserve} disabled={saving} className="mt-4 w-full rounded-lg bg-magenta py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Reserving…" : `Pay ${money(deposit)} Deposit`}</button><p className="mt-3 flex items-center justify-center gap-1 text-[9px] text-ink/50"><LockKeyhole size={11} />Your payment is encrypted and secure.</p></div>; }
+function PaymentPanel({ confirmed, deposit, saving, reserve, suggested, applySuggested }: Row) { const requiresPayment=Number(deposit)>0; return confirmed ? <div className="rounded-[12px] bg-blush/30 p-5 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-magenta text-white"><Check size={36} /></span><h3 className="mt-4 font-serif text-2xl text-plum">You’re All Set!</h3><p className="mt-2 text-xs">Your appointment is confirmed.</p><div className="mt-4 rounded-lg bg-white p-3"><small>Confirmation Code</small><b className="block text-lg text-plum">{confirmed.confirmation_code}</b></div><Link href="/account" className="mt-4 block text-xs font-bold text-magenta">Go to My Bookings</Link></div> : <div><p className="text-xs font-semibold">{requiresPayment?"Secure Checkout":"Confirm Your Booking"}</p>{requiresPayment?<div className="my-4 flex gap-2 text-[10px]"><span className="rounded border p-2">VISA</span><span className="rounded border p-2">MC</span><span className="rounded border p-2">AMEX</span></div>:<p className="my-4 rounded-lg bg-green-50 p-3 text-xs text-green-800">No payment is required for this booking. Confirming will reserve your appointment immediately.</p>}<p className="rounded-lg bg-blush/30 p-4 text-center"><small>Deposit Amount</small><b className="block text-2xl text-magenta">{money(Number(deposit))}</b></p>{suggested ? <button onClick={() => applySuggested(suggested)} className="mt-4 w-full rounded-lg border border-magenta py-3 text-xs font-bold text-magenta">Use next available: {suggested.date} at {suggested.label}</button> : null}<button onClick={reserve} disabled={saving} className="mt-4 w-full rounded-lg bg-magenta py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Reserving…" : requiresPayment?`Pay ${money(Number(deposit))} Deposit`:"Confirm Booking — No Deposit"}</button><p className="mt-3 flex items-center justify-center gap-1 text-[9px] text-ink/50"><LockKeyhole size={11} />{requiresPayment?"Your payment is encrypted and secure.":"Your appointment is protected by our booking safeguards."}</p></div>; }

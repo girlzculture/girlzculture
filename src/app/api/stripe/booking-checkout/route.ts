@@ -1,7 +1,7 @@
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { siteUrl, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 
@@ -92,12 +92,13 @@ export async function POST(request: Request) {
     const materialPriceAdjustment = clientProvidesMaterial ? Math.max(0, Number(style.own_material_price_reduction || 0)) : 0;
     const materialDurationAdjustmentMinutes = clientProvidesMaterial ? Math.max(0, Math.round(Number(style.own_material_duration_reduction_minutes || 0))) : 0;
     if (clientProvidesMaterial) total -= materialPriceAdjustment;
-    total = Math.max(1, Math.round(total * 100) / 100);
-    if (!(total > 0) || total > 5000) throw new Error("The booking total could not be verified.");
+    total = Math.max(0, Math.round(total * 100) / 100);
+    if (!Number.isFinite(total) || total > 10000) throw new Error("The booking total could not be verified.");
     const originalDeposit = Math.round(total * 10) / 100;
     const promoCode = cleanText(body.promo_code, 40);
     const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
-    const deposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
+    const calculatedDeposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
+    const deposit = Math.round(calculatedDeposit * 100) >= 50 ? calculatedDeposit : 0;
     const discount = promoPreview?.discount || 0;
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60 - materialDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
       balance_due: Math.round((total - deposit) * 100) / 100,
       confirmation_code: `GC-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       status: "Confirmed",
-      deposit_status: "Paid",
+      deposit_status: deposit > 0 ? "Paid" : "No Payment Required",
       guest_name: guestName,
       guest_email: guestEmail,
       guest_phone: guestPhone,
@@ -165,6 +166,25 @@ export async function POST(request: Request) {
         await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
         throw promoError;
       }
+    }
+
+    if (deposit === 0) {
+      const { data: booking, error: bookingError } = await admin.from("bookings").insert({
+        ...payload,
+        stripe_payment_id: null,
+      }).select("id,confirmation_code,status,appointment_datetime").single();
+      if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
+      const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
+      if (intentError) console.error("Zero-deposit booking intent finalization failed", { intentId, bookingId: booking.id, error: intentError });
+      if (promoReservation?.redemption_id) {
+        const { error: redemptionError } = await admin.rpc("redeem_promo_code", {
+          p_redemption_id: promoReservation.redemption_id,
+          p_checkout_session_id: `no_payment_required:${intentId}`,
+        });
+        if (redemptionError) console.error("Zero-deposit promo redemption failed", { intentId, bookingId: booking.id, error: redemptionError });
+      }
+      await deliverBookingNotifications(booking.id).catch((notificationError) => console.error("Zero-deposit booking notification delivery failed", { bookingId: booking.id, notificationError }));
+      return Response.json({ booking, deposit, originalDeposit, discount, total, noPaymentRequired: true, testMode: true });
     }
 
     const session = await stripeRequest<{ id: string; url: string }>("/checkout/sessions", {

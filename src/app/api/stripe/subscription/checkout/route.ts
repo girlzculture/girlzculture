@@ -1,7 +1,7 @@
 import { normalizePlan, stripePriceEnv, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
-import { siteUrl, stripeRequest } from "@/lib/stripeServer";
+import { siteUrl, stripeGet, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 
 export async function POST(request: Request) {
@@ -16,7 +16,16 @@ export async function POST(request: Request) {
     if (promoCode) await previewPromoCode(promoCode, "subscription", SUBSCRIPTION_PLANS[plan].monthlyPrice);
     const priceId = process.env[stripePriceEnv(plan)];
     if (!priceId) throw new Error(`${plan} Stripe test price is not configured yet.`);
-    const { data: current } = await admin.from("subscriptions").select("stripe_customer_id").eq("salon_id", salon.id).maybeSingle();
+    const { data: current } = await admin.from("subscriptions").select("stripe_customer_id,stripe_subscription_id,status").eq("salon_id", salon.id).maybeSingle();
+    if (current?.stripe_subscription_id) {
+      const live = await stripeGet<{ status?: string }>(`/subscriptions/${current.stripe_subscription_id}`);
+      if (["active", "trialing"].includes(String(live.status || "").toLowerCase())) {
+        return Response.json({ error: "This salon already has an active subscription. Change the existing plan instead of starting another subscription." }, { status: 409 });
+      }
+      if (["past_due", "unpaid", "incomplete", "paused"].includes(String(live.status || "").toLowerCase())) {
+        return Response.json({ error: "The existing subscription needs billing attention. Open Manage billing instead of creating a second subscription." }, { status: 409 });
+      }
+    }
     let customerId = current?.stripe_customer_id as string | undefined;
     if (!customerId) {
       const customer = await stripeRequest<{id:string}>("/customers", { email:user.email, name:salon.name, "metadata[salon_id]":salon.id });
