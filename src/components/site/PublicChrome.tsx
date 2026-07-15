@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
+import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
@@ -48,7 +49,7 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-3">
-          <form action="/salons" className="relative md:hidden"><label className="sr-only" htmlFor="mobile-header-style">Search styles</label><input id="mobile-header-style" name="style" type="search" placeholder="Search style" className="h-10 w-[118px] rounded-xl border border-plum/10 bg-white/75 py-2 pl-3 pr-8 text-xs outline-none focus:border-magenta min-[390px]:w-[145px]"/><button aria-label="Search styles" className="absolute right-1 top-1 grid h-8 w-8 place-items-center text-magenta"><Search size={17}/></button></form>
+          <HeaderStyleSearch/>
           <Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
