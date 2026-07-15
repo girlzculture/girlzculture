@@ -1,6 +1,6 @@
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "hero_position_x", "hero_position_y", "hero_zoom", "page_group", "sections", "labels", "seo_title", "seo_description", "status"] as const;
+const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "hero_position_x", "hero_position_y", "hero_zoom", "page_group", "sections", "labels", "seo_title", "seo_description", "status", "is_enabled"] as const;
 const postFields = ["id", "slug", "title", "excerpt", "content", "category", "cover_image_url", "author", "featured", "status", "published_at"] as const;
 
 function pick(payload: Record<string, unknown>, fields: readonly string[]) {
@@ -12,7 +12,7 @@ function validSlug(value: unknown) {
 }
 
 const safeSectionTypes = new Set(["text", "card_grid", "carousel", "banner", "community_carousel"]);
-const safeCardTypes = new Set(["image", "video", "link"]);
+const safeCardTypes = new Set(["image", "video", "link", "salon"]);
 const text = (value: unknown, maximum: number) => String(value || "").trim().slice(0, maximum);
 function safeUrl(value: unknown) {
   const url = text(value, 1200);
@@ -28,7 +28,8 @@ function sanitizeSections(value: unknown) {
     const cards = Array.isArray(section.cards) ? section.cards.slice(0, maximum).map((rawCard) => {
       const card = rawCard && typeof rawCard === "object" ? rawCard as Record<string, unknown> : {};
       const contentType = safeCardTypes.has(String(card.content_type)) ? String(card.content_type) : "image";
-      return { id: text(card.id, 80), content_type: contentType, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href) };
+      const salonId = contentType === "salon" && /^[0-9a-f-]{36}$/i.test(text(card.salon_id, 50)) ? text(card.salon_id, 50) : "";
+      return { id: text(card.id, 80), content_type: contentType, salon_id: salonId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href) };
     }) : [];
     return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), cards };
   });
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
       admin.from("service_categories").select("*").order("name"),
       admin.from("service_groups").select("*,service_category:service_categories(id,name,slug)").order("name"),
       admin.from("service_addons").select("*,service_category:service_categories(id,name,slug)").order("name"),
-      admin.from("salons").select("id,name,slug").eq("status", "Active").not("slug", "is", null).order("name"),
+      admin.from("salons").select("id,name,slug,cover_photo_url,address_city,address_state").eq("status", "Active").eq("is_discoverable", true).not("slug", "is", null).order("name"),
       admin.from("salon_products").select("id,name,salon:salons(name,slug)").eq("is_visible", true).order("name"),
     ]);
     if (pages.error) throw pages.error;
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
     if (salons.error) throw salons.error;
     if (products.error) throw products.error;
     const linkTargets = [
-      ...(salons.data || []).map((salon) => ({ type: "Salon", label: salon.name, href: `/salon/${salon.slug}` })),
+      ...(salons.data || []).map((salon) => ({ id: salon.id, type: "Salon", label: salon.name, href: `/salon/${salon.slug}`, media_url: salon.cover_photo_url || "", body: [salon.address_city, salon.address_state].filter(Boolean).join(", ") })),
       ...(products.data || []).flatMap((product) => {
         const salon = Array.isArray(product.salon) ? product.salon[0] : product.salon;
         return salon?.slug ? [{ type: "Product", label: `${product.name} â€” ${salon.name}`, href: `/salon/${salon.slug}/product/${product.id}` }] : [];

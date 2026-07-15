@@ -232,7 +232,7 @@ export default async function Home() {
       <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} salonsError={salonsError} nearbySalons={nearbySalons} featuredSalons={featuredSalons} trendingPicks={trendingPicks} trendingVideos={trendingVideos} startingPrices={startingPrices} />)}
 
-        <PublicContentSections sections={homeContent.sections} />
+        <PublicContentSections sections={homeContent.sections} variant="homepage" />
 
         <section id="how-it-works" className="mb-3 rounded-[16px] bg-[linear-gradient(105deg,#fff7f3,#f8e1e7)] px-4 py-4 sm:px-7 lg:grid lg:grid-cols-[200px_1fr] lg:items-center lg:gap-7">
           <h2 className="font-serif text-[22px] font-semibold tracking-[-0.03em] text-ink">How it works</h2>

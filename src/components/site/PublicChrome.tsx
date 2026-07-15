@@ -15,6 +15,7 @@ import {
 import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
+import { getVisibleLegalLinks } from "@/lib/content";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
@@ -149,13 +150,14 @@ const footerGroups = [
   { title: "Company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
   { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
   { title: "For Professionals", links: [["Partner With Us","/partner"]] },
-  { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Cookie / Tracking Notice","/cookie-notice"], ["Deposit & Refund Policy","/deposit-refund-policy"], ["Salon Partner Agreement","/salon-partner-agreement"], ["Photo & Content Consent","/photo-content-consent"], ["Message Monitoring Disclosure","/message-monitoring-disclosure"], ["Do Not Sell or Share My Information","/do-not-sell-or-share"], ["Accessibility Statement","/accessibility"], ["Community / Content Guidelines","/community-guidelines"]] },
 ];
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  const legalLinks = await getVisibleLegalLinks();
+  const legalColumns = [legalLinks.slice(0, 5), legalLinks.slice(5, 10)];
   return (
     <footer className="bg-[#211027] text-white">
-      <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.2fr_repeat(4,0.7fr)_1.35fr] lg:px-10 xl:px-12 2xl:px-16">
+      <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
         <div>
           <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>
           <div className="mt-5 flex gap-3 text-white/75">
@@ -171,6 +173,9 @@ export function PublicFooter() {
             </ul>
           </div>
         ))}
+        {legalLinks.length ? <div className="col-span-2 grid grid-cols-2 gap-x-6 gap-y-2 lg:col-span-1">
+          {legalColumns.map((column, index) => <ul key={index} className="space-y-2 text-[10px] leading-4 text-white/65">{column.map(([label, href]) => <li key={href}><Link href={href} className="hover:text-white">{label}</Link></li>)}</ul>)}
+        </div> : <div className="hidden lg:block"/>}
         <div className="col-span-2 lg:col-span-1">
           <h2 className="font-serif text-[17px] font-semibold">Stay in the loop</h2>
           <p className="mt-2 text-[11px] leading-5 text-white/65">Tips, new salons, and exclusive offers.</p>
