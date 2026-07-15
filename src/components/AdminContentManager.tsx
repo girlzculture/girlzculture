@@ -28,6 +28,8 @@ export default function AdminContentManager() {
   const [masterStyles, setMasterStyles] = useState<Row[]>([]);
   const [masterStyle, setMasterStyle] = useState<Row | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Row[]>([]);
+  const [serviceGroups, setServiceGroups] = useState<Row[]>([]);
+  const [serviceAddons, setServiceAddons] = useState<Row[]>([]);
   const [linkTargets, setLinkTargets] = useState<Row[]>([]);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,11 +50,15 @@ export default function AdminContentManager() {
       const loadedPosts = asRows(body.posts);
       const loadedStyles = asRows(body.masterStyles);
       const loadedCategories = asRows(body.serviceCategories);
+      const loadedGroups = asRows(body.serviceGroups);
+      const loadedAddons = asRows(body.serviceAddons);
       const loadedTargets = asRows(body.linkTargets);
       setPages(loadedPages);
       setPosts(loadedPosts);
       setMasterStyles(loadedStyles);
       setServiceCategories(loadedCategories);
+      setServiceGroups(loadedGroups);
+      setServiceAddons(loadedAddons);
       setLinkTargets(loadedTargets);
       if (selectFirst) {
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
@@ -60,7 +66,7 @@ export default function AdminContentManager() {
         setPost(loadedPosts[0] || null);
         setMasterStyle(loadedStyles[0] || null);
       }
-      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, linkTargets: loadedTargets };
+      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, serviceGroups: loadedGroups, serviceAddons: loadedAddons, linkTargets: loadedTargets };
     } catch (error) {
       console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -80,8 +86,8 @@ export default function AdminContentManager() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load content");
         if (!active) return;
-        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedTargets = asRows(body.linkTargets);
-        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setLinkTargets(loadedTargets);
+        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedGroups = asRows(body.serviceGroups); const loadedAddons = asRows(body.serviceAddons); const loadedTargets = asRows(body.linkTargets);
+        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setServiceGroups(loadedGroups); setServiceAddons(loadedAddons); setLinkTargets(loadedTargets);
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
@@ -174,32 +180,8 @@ export default function AdminContentManager() {
     }
   }
 
-  async function saveMasterStyle(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!masterStyle) return;
-    const form = new FormData(event.currentTarget);
-    const payload = { ...masterStyle, name: form.get("name"), category: form.get("category"), category_id: form.get("category_id"), sort_order: Number(form.get("sort_order") || 0), is_active: form.get("is_active") === "on" };
-    setSaving(true); setNotice("");
-    try {
-      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "master_style", payload }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Style save failed");
-      const data = body.data;
-      const reloaded = await loadContent(false);
-      const persisted = reloaded.masterStyles.find((row) => row.id === data.id);
-      if (!persisted) throw new Error("The style could not be verified after saving.");
-      setMasterStyle(persisted);
-      setMasterStyles((rows) => rows.some((row) => row.id === data.id) ? rows.map((row) => row.id === data.id ? persisted : row) : [...rows, persisted]);
-      setNotice("Managed service saved and available to salon owners.");
-    } catch (error) {
-      console.error("Master style save error", error);
-      setNotice(error instanceof Error ? error.message : "Service save failed");
-    } finally { setSaving(false); }
-  }
-
   function createNew() {
     if (tab === "legal") return;
-    if (tab === "styles") { setMasterStyle({ name: "", category: "Braids", category_id: serviceCategories[0]?.id || "", sort_order: masterStyles.length * 10 + 10, is_active: true }); return; }
     if (tab === "blog") {
       setPost({ slug: "new-post", title: "New Blog Post", excerpt: "", content: "", category: "Braided Styles", status: "Draft", featured: false });
       return;
@@ -216,7 +198,7 @@ export default function AdminContentManager() {
     setTab(value);
     if (value === "legal") {
       const slug = legalSlugs[0];
-      setPage(pages.find((item) => item.slug === slug) || { slug, title: "Terms of Service", hero_title: "Terms of Service", hero_subtitle: "", sections: [{ type: "text", title: "", body: "", is_visible: true }], page_group: "Legal", status: "Published" });
+      setPage(pages.find((item) => item.slug === slug) || { slug, title: "Terms of Service", hero_title: "Terms of Service", hero_subtitle: "", sections: [{ type: "text", title: "", body: "", is_visible: true }], page_group: "Legal", status: "Published", is_enabled: true });
     } else if (value === "pages" && page && legalSlugs.includes(page.slug)) {
       const slug = contentSlugs[0];
       setPage(pages.find((item) => item.slug === slug) || null);
@@ -231,7 +213,7 @@ export default function AdminContentManager() {
         <div className="flex rounded-lg border border-plum/10 bg-white p-1">
           {(["pages", "legal", "blog", "styles"] as const).map(value => <button key={value} onClick={() => switchTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "legal" ? "Legal" : value === "blog" ? "Blog" : "Service Catalog"}</button>)}
         </div>
-        {tab !== "legal" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Service"}</button> : null}
+        {tab !== "legal" && tab !== "styles" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : "Post"}</button> : null}
       </div>
       {notice ? <p className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
@@ -239,7 +221,7 @@ export default function AdminContentManager() {
         <div className="grid min-w-0 gap-5 xl:grid-cols-[250px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">
             <h2 className="px-2 py-2 font-serif text-xl text-plum">{tab === "legal" ? "Legal Pages" : "Public Pages"}</h2>
-            {visibleSlugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug.replaceAll("-", " "), hero_title: slug.replaceAll("-", " "), hero_subtitle: "", sections: tab === "legal" ? [{ type: "text", title: "", body: "", is_visible: true }] : [], page_group: tab === "legal" ? "Legal" : "Content", status: tab === "legal" ? "Published" : "Draft" })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
+            {visibleSlugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug.replaceAll("-", " "), hero_title: slug.replaceAll("-", " "), hero_subtitle: "", sections: tab === "legal" ? [{ type: "text", title: "", body: "", is_visible: true }] : [], page_group: tab === "legal" ? "Legal" : "Content", status: tab === "legal" ? "Published" : "Draft", is_enabled: true })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
           </aside>
           {page ? tab === "legal" ? <LegalPageEditor key={page.slug} page={page} setPage={setPage} save={savePage} /> : <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} linkTargets={linkTargets} /> : null}
         </div>
@@ -249,13 +231,100 @@ export default function AdminContentManager() {
           {post ? <PostEditor key={post.id || "new"} post={post} setPost={setPost} save={savePost} remove={removePost} /> : null}
         </div>
       ) : (
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
-          <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3">{masterStyles.map((item) => <button key={item.id} onClick={() => setMasterStyle(item)} className={`mb-1 w-full rounded-lg p-3 text-left ${masterStyle?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || "Uncategorized"} · {item.category} · {item.is_active ? "Active" : "Hidden"}</small></button>)}</aside>
-          {masterStyle ? <form key={masterStyle.id || "new-style"} onSubmit={saveMasterStyle} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Managed Service</h2><p className="mt-1 text-xs leading-5 text-ink/55">Every service belongs to a top-level category. The service group keeps related offerings organized inside that category.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Service name" name="name" value={masterStyle.name} /><label className="text-xs font-bold">Top-level category<select required name="category_id" defaultValue={masterStyle.category_id || serviceCategories[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3"><option value="">Choose category</option>{serviceCategories.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><Field label="Service group" name="category" value={masterStyle.category} /><Field label="Sort order" name="sort_order" value={String(masterStyle.sort_order || 0)} /><label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={masterStyle.is_active !== false} className="accent-magenta" />Available to salon owners</label></div><button disabled={saving} className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">Save Managed Service</button></form> : null}
-        </div>
+        <ServiceCatalogManager categories={serviceCategories} groups={serviceGroups} addons={serviceAddons} services={masterStyles} initialService={masterStyle} setInitialService={setMasterStyle} authHeaders={authHeaders} reload={loadContent} setNotice={setNotice} saving={saving} setSaving={setSaving} />
       )}
     </div>
   );
+}
+
+type CatalogKind = "service_category" | "service_group" | "master_style" | "service_addon";
+function ServiceCatalogManager({ categories, groups, addons, services, initialService, setInitialService, authHeaders, reload, setNotice, saving, setSaving }: {
+  categories: Row[]; groups: Row[]; addons: Row[]; services: Row[]; initialService: Row | null;
+  setInitialService: React.Dispatch<React.SetStateAction<Row | null>>;
+  authHeaders: () => Promise<Record<string, string>>;
+  reload: (selectFirst?: boolean) => Promise<{ masterStyles: Row[]; serviceCategories: Row[]; serviceGroups: Row[]; serviceAddons: Row[] }>;
+  setNotice: (message: string) => void; saving: boolean; setSaving: (value: boolean) => void;
+}) {
+  const [kind, setKind] = useState<CatalogKind>("master_style");
+  const [selected, setSelected] = useState<Row | null>(initialService || services[0] || null);
+  const collections: Record<CatalogKind, Row[]> = { service_category: categories, service_group: groups, master_style: services, service_addon: addons };
+  const labels: Record<CatalogKind, string> = { service_category: "Categories", service_group: "Service Groups", master_style: "Service Names", service_addon: "Add-ons" };
+
+  function switchKind(next: CatalogKind) {
+    setKind(next);
+    setSelected(collections[next][0] || null);
+  }
+
+  function createItem() {
+    if (kind === "service_category") setSelected({ name: "", slug: "", description: "", is_active: true });
+    else if (kind === "master_style") setSelected({ name: "", service_group_id: groups.find((item) => item.is_active)?.id || "", is_active: true });
+    else setSelected({ name: "", category_id: categories.find((item) => item.is_active)?.id || "", is_active: true });
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const form = new FormData(event.currentTarget);
+    const payload: Row = { ...selected, name: form.get("name"), is_active: form.get("is_active") === "on" };
+    if (kind === "service_category") { payload.slug = form.get("slug"); payload.description = form.get("description"); }
+    if (kind === "service_group" || kind === "service_addon") payload.category_id = form.get("category_id");
+    if (kind === "master_style") payload.service_group_id = form.get("service_group_id");
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: kind, payload }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Catalog save failed");
+      const loaded = await reload(false);
+      const refreshed = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind].find((item) => item.id === body.data.id);
+      if (!refreshed) throw new Error("The saved catalog item could not be verified after reloading.");
+      setSelected(refreshed);
+      if (kind === "master_style") setInitialService(refreshed);
+      setNotice(`${labels[kind].replace(/s$/, "")} saved and available to salon owners.`);
+    } catch (error) {
+      console.error("Service Catalog save error", { kind, selected, error });
+      setNotice(error instanceof Error ? error.message : "Catalog save failed");
+    } finally { setSaving(false); }
+  }
+
+  async function remove() {
+    if (!selected?.id || !confirm(`Delete ${selected.name}? Existing salon records can prevent deletion; hide the item instead when it is already in use.`)) return;
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ type: kind, id: selected.id }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Delete failed");
+      const loaded = await reload(false);
+      const next = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind][0] || null;
+      setSelected(next);
+      setNotice("Catalog item deleted.");
+    } catch (error) {
+      console.error("Service Catalog delete error", { kind, selected, error });
+      setNotice(error instanceof Error ? error.message : "Delete failed");
+    } finally { setSaving(false); }
+  }
+
+  const rows = collections[kind];
+  return <div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap rounded-lg border border-plum/10 bg-white p-1">{(Object.keys(labels) as CatalogKind[]).map((value) => <button key={value} type="button" onClick={() => switchKind(value)} className={`rounded-md px-4 py-2 text-xs font-bold ${kind === value ? "bg-plum text-white" : "text-plum"}`}>{labels[value]}</button>)}</div>
+      <button type="button" onClick={createItem} className="inline-flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
+    </div>
+    <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
+      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3">{rows.map((item) => <button key={item.id} type="button" onClick={() => { setSelected(item); if (kind === "master_style") setInitialService(item); }} className={`mb-1 w-full rounded-lg p-3 text-left ${selected?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.is_active ? "· Active" : "· Hidden"}</small></button>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
+      {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+        <h2 className="font-serif text-2xl text-plum">{selected.id ? `Edit ${labels[kind].replace(/s$/, "")}` : `Add ${labels[kind].replace(/s$/, "")}`}</h2>
+        <p className="mt-1 text-xs leading-5 text-ink/55">Catalog lists are alphabetized automatically. Salon owners see active changes the next time their Styles & Pricing editor loads.</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field required label="Name" name="name" value={selected.name} />
+          {kind === "service_category" ? <><Field required label="URL slug" name="slug" value={selected.slug} /><div className="sm:col-span-2"><Area label="Description" name="description" value={selected.description} rows={3}/></div></> : null}
+          {kind === "service_group" || kind === "service_addon" ? <label className="text-xs font-bold">Category<select required name="category_id" defaultValue={selected.category_id || categories[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose category</option>{categories.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
+          {kind === "master_style" ? <label className="text-xs font-bold">Service group<select required name="service_group_id" defaultValue={selected.service_group_id || groups[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose service group</option>{groups.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.service_category?.name} · {item.name}</option>)}</select></label> : null}
+          <label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={selected.is_active !== false} className="accent-magenta" />Visible to salon owners</label>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3"><button disabled={saving} className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save Catalog Item"}</button>{selected.id ? <button type="button" disabled={saving} onClick={() => void remove()} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs font-bold text-red-700"><Trash2 size={14}/>Delete</button> : null}</div>
+      </form> : <div className="rounded-xl border border-dashed border-plum/15 bg-white p-8 text-center text-sm text-ink/50">Add the first catalog item.</div>}
+    </div>
+  </div>;
 }
 
 function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
@@ -263,7 +332,7 @@ function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Di
   return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
     <h2 className="font-serif text-2xl text-plum">Edit Legal Page</h2>
     <p className="mt-1 text-xs leading-5 text-ink/55">Use # for a large heading, ## or ### for smaller headings, - for bullets, and [label](/page) for a link. HTML is not accepted.</p>
-    <label className="mt-5 block text-xs font-bold">Page title<input name="title" value={page.title || ""} onChange={(event) => setPage((row) => ({ ...row, title: event.target.value, hero_title: event.target.value, page_group: "Legal" }))} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+    <label className="mt-5 block text-xs font-bold">Page title<input required name="title" value={page.title || ""} onChange={(event) => setPage((row) => ({ ...row, title: event.target.value, hero_title: event.target.value, page_group: "Legal" }))} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
     <input type="hidden" name="eyebrow" value="" readOnly />
     <input type="hidden" name="hero_title" value={page.title || ""} readOnly />
     <input type="hidden" name="hero_subtitle" value="" readOnly />
@@ -271,8 +340,8 @@ function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Di
     <Area label="Rich-text body" name="section_body_0" value={section.body} rows={22} />
     <input type="hidden" name="seo_title" value={page.seo_title || page.title || ""} readOnly />
     <input type="hidden" name="seo_description" value={page.seo_description || ""} readOnly />
-    <input type="hidden" name="status" value="Published" readOnly />
-    <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save & Publish Legal Page</button>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold">Publish status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option>Draft</option><option>Published</option></select></label><label className="flex items-center justify-between gap-4 rounded-lg border border-plum/10 p-3 text-xs font-bold"><span><span className="block">Shown on public site</span><small className="mt-1 block font-normal text-ink/55">Turn off to remove both the page and footer link without deleting its content.</small></span><input type="checkbox" checked={page.is_enabled !== false} onChange={(event) => setPage((row) => ({ ...row, is_enabled: event.target.checked }))} className="h-5 w-5 accent-magenta" /></label></div>
+    <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Legal Page</button>
   </form>;
 }
 
@@ -280,9 +349,9 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
   const slots = labelSlots[page.slug] || [];
   return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
     <div className="grid gap-4 lg:grid-cols-2">
-      <Field label="Page title" name="title" value={page.title} />
+      <Field required label="Page title" name="title" value={page.title} />
       <Field label="Eyebrow" name="eyebrow" value={page.eyebrow} />
-      <div className="lg:col-span-2"><Field label="Hero heading" name="hero_title" value={page.hero_title} /></div>
+      <div className="lg:col-span-2"><Field required label="Hero heading" name="hero_title" value={page.hero_title} /></div>
       <Area label="Hero description" name="hero_subtitle" value={page.hero_subtitle} rows={3} />
       <ImageUpload bucket="content-media" value={page.hero_image_url} onChange={value => setPage(row => ({ ...row, hero_image_url: value }))} label="Hero image" folder={page.slug} />
       <ImageUpload bucket="content-media" value={page.background_image_url} onChange={value => setPage(row => ({ ...row, background_image_url: value }))} label="Background image" folder={page.slug} />
@@ -332,19 +401,18 @@ function SectionEditor({ section, index, linkTargets, update, remove }: { sectio
     {type === "card_grid" ? <label className="mt-3 block text-xs font-bold">Columns<select value={Number(section.columns || 4)} onChange={(event) => update({ ...section, columns: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label> : null}
     {cards.length ? <div className="mt-4 grid gap-4 xl:grid-cols-2">{cards.map((card, cardIndex) => <article key={card.id || cardIndex} className="rounded-xl border border-plum/10 bg-white p-4">
       <div className="flex items-center justify-between gap-3"><b className="font-serif text-lg text-plum">Card {cardIndex + 1}</b><div className="flex gap-1"><button type="button" aria-label="Move card up" onClick={() => moveCard(cardIndex, -1)} disabled={cardIndex === 0} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label="Move card down" onClick={() => moveCard(cardIndex, 1)} disabled={cardIndex === cards.length - 1} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div></div>
-      <label className="mt-3 block text-xs font-bold">Card type<select value={card.content_type || "image"} onChange={(event) => updateCard(cardIndex, { ...card, content_type: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="image">Image</option><option value="video">Video</option><option value="link">Link</option></select></label>
-      {card.content_type === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://â€¦/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : <ImageUpload bucket="content-media" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label={card.content_type === "link" ? "Link card image" : "Card image"} folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
+      <label className="mt-3 block text-xs font-bold">Card source<select value={card.content_type || "image"} onChange={(event) => updateCard(cardIndex, { ...card, content_type: event.target.value, salon_id: event.target.value === "salon" ? card.salon_id || "" : "" })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="image">Uploaded image</option><option value="video">Video</option><option value="link">Image with another link</option><option value="salon">Specific salon profile</option></select></label>
+      {card.content_type === "salon" ? <label className="mt-3 block text-xs font-bold">Salon to feature<select required value={card.salon_id || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Salon" && item.id === event.target.value); updateCard(cardIndex, { ...card, salon_id: target?.id || "", title: target?.label || "", body: target?.body || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a live salon</option>{linkTargets.filter((target) => target.type === "Salon").map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">The card uses this salon’s name, cover photo, location, and public profile link.</small></label> : card.content_type === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://…/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : <ImageUpload bucket="content-media" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label={card.content_type === "link" ? "Link card image" : "Card image"} folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
       <label className="mt-3 block text-xs font-bold">Card title<input value={card.title || ""} onChange={(event) => updateCard(cardIndex, { ...card, title: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
       <label className="mt-3 block text-xs font-bold">Card text<textarea rows={3} value={card.body || ""} onChange={(event) => updateCard(cardIndex, { ...card, body: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
-      <label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.map((target) => <option key={`${target.type}-${target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label>
-      <label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://â€¦" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+      {card.content_type !== "salon" ? <><label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.map((target) => <option key={`${target.type}-${target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label><label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://…" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label></> : <p className="mt-3 rounded-lg bg-blush/40 p-3 text-xs text-plum">Salon profile destination is linked automatically.</p>}
     </article>)}</div> : null}
   </div>;
 }
 
 function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void }) {
-  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="Title" name="title" value={post.title} /><Field label="Slug" name="slug" value={post.slug} /><Field label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
+  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
 }
 
-function Field({ label, name, value }: { label: string; name: string; value?: string }) { return <label className="block text-xs font-bold">{label}<input name={name} defaultValue={value || ""} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>; }
+function Field({ label, name, value, required = false }: { label: string; name: string; value?: string; required?: boolean }) { return <label className="block text-xs font-bold">{label}<input required={required} name={name} defaultValue={value || ""} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>; }
 function Area({ label, name, value, rows }: { label: string; name: string; value?: string; rows: number }) { return <label className="mt-4 block text-xs font-bold">{label}<textarea name={name} defaultValue={value || ""} rows={rows} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal leading-6" /></label>; }

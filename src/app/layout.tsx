@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import PwaRegistration from "@/components/PwaRegistration";
+import InlineFormValidation from "@/components/InlineFormValidation";
 
 export const metadata: Metadata = {
   title: {
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}<PwaRegistration /></body>
+      <body className="min-h-full flex flex-col">{children}<InlineFormValidation/><PwaRegistration /></body>
     </html>
   );
 }
