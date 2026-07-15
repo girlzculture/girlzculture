@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CSSProperties } from "react";
 
 export default function SafeImage({
   src,
@@ -8,12 +9,14 @@ export default function SafeImage({
   alt,
   className = "",
   priority = false,
+  style,
 }: {
   src?: string | null;
   fallbackSrc: string;
   alt: string;
   className?: string;
   priority?: boolean;
+  style?: CSSProperties;
 }) {
   const desiredSrc = src || fallbackSrc;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -32,6 +35,7 @@ export default function SafeImage({
         if (currentSrc !== fallbackSrc) setFailedSrc(desiredSrc);
       }}
       className={className}
+      style={style}
     />
   );
 }

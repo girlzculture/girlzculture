@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import SearchComposer from "@/components/site/SearchComposer";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
+import PublicContentSections from "@/components/site/PublicContentSections";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -142,9 +143,10 @@ export default async function Home() {
   if (sectionError) console.warn("Homepage section controls unavailable", sectionError.message);
   if (trendingError) console.warn("Trending video cards unavailable", trendingError.message);
   const sectionOverrides = new Map(((sectionData || []) as HomeSection[]).map((section) => [section.section_key, section]));
+  const subtitleKeys: Record<HomeSectionKey, string> = { salons_near_you: "salons_near_you_subheading", featured_salons: "featured_salons_subheading", trending_now: "trending_now_subheading", trending_picks: "trending_picks_subheading" };
   const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {
     const override = sectionOverrides.get(section.section_key);
-    return override ? { ...override, description: null } : section;
+    return { ...(override || section), description: homeContent.labels?.[subtitleKeys[section.section_key]] || null };
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const trendingVideos = (trendingData || []) as unknown as TrendingVideo[];
   const { data: salonsData, error: salonsError } = await supabase
@@ -211,6 +213,7 @@ export default async function Home() {
               priority
               sizes="(max-width: 1023px) 53vw, 52vw"
               className="object-cover object-[44%_38%] lg:object-[48%_38%]"
+              style={{ objectPosition: `${Number(homeContent.hero_position_x ?? 44)}% ${Number(homeContent.hero_position_y ?? 38)}%`, transform: `scale(${Number(homeContent.hero_zoom ?? 1)})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#fffaf6] via-[#fffaf6]/30 to-transparent lg:inset-y-0 lg:left-0 lg:right-auto lg:w-1/3 lg:via-transparent" />
             <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-cream/80 to-transparent lg:h-20 lg:from-cream/70" />
@@ -225,6 +228,8 @@ export default async function Home() {
 
       <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} salonsError={salonsError} nearbySalons={nearbySalons} featuredSalons={featuredSalons} trendingPicks={trendingPicks} trendingVideos={trendingVideos} startingPrices={startingPrices} />)}
+
+        <PublicContentSections sections={homeContent.sections} />
 
         <section id="how-it-works" className="mb-3 rounded-[16px] bg-[linear-gradient(105deg,#fff7f3,#f8e1e7)] px-4 py-4 sm:px-7 lg:grid lg:grid-cols-[200px_1fr] lg:items-center lg:gap-7">
           <h2 className="font-serif text-[22px] font-semibold tracking-[-0.03em] text-ink">How it works</h2>

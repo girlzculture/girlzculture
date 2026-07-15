@@ -1,6 +1,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
+@keyframes cms-community-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 0.5rem)); }
+}
+
+.cms-community-track {
+  animation: cms-community-scroll 38s linear infinite;
+}
+
+.cms-community-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cms-community-track { animation: none; }
+}
+
 :root {
   --background: #fbf4ee;
   --foreground: #1a1220;

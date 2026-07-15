@@ -1,6 +1,25 @@
 import { supabase } from "@/lib/supabase";
 
-export type ContentSection = { title?: string; body?: string; image_url?: string; cta_label?: string; cta_href?: string };
+export type ContentCard = {
+  id?: string;
+  content_type?: "image" | "video" | "link";
+  title?: string;
+  body?: string;
+  media_url?: string;
+  href?: string;
+};
+export type ContentSection = {
+  id?: string;
+  type?: "text" | "card_grid" | "carousel" | "banner" | "community_carousel";
+  title?: string;
+  body?: string;
+  image_url?: string;
+  cta_label?: string;
+  cta_href?: string;
+  is_visible?: boolean;
+  columns?: number;
+  cards?: ContentCard[];
+};
 export type ContentPage = {
   slug: string;
   title: string;
@@ -9,6 +28,10 @@ export type ContentPage = {
   hero_subtitle?: string;
   hero_image_url?: string;
   background_image_url?: string;
+  hero_position_x?: number;
+  hero_position_y?: number;
+  hero_zoom?: number;
+  page_group?: string;
   sections?: ContentSection[];
   labels?: Record<string, string>;
 };
