@@ -198,7 +198,7 @@ export default async function Home() {
               {homeContent.hero_subtitle}
             </p>
 
-            <div className="relative z-30 mt-5 w-full max-w-[760px] lg:mt-4">
+            <div className="relative z-30 mt-5 hidden w-full max-w-[760px] md:block lg:mt-4">
               <SearchComposer />
             </div>
           </div>

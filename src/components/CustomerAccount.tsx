@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Star, UserRound } from "lucide-react";
+import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Share2, Star, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
@@ -92,7 +92,7 @@ export default function CustomerAccount() {
         <div className="mt-7">{tab === "overview" ? <Overview upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet."/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={past} empty="No completed appointments yet." past/> : tab === "favorites" ? <FavoritePanel favorites={favorites}/> : tab === "inbox" ? <BookingInbox scope="customer"/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action="Browse salons" href="/salons"/> : <SettingsPanel customer={customer}/>}</div>
       </main>
     </div>
-    <nav className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-plum/10 bg-white p-2 lg:hidden">{[[Home, "Home", "/"], [Search, "Search", "/salons"], [CalendarDays, "Bookings", "/account?tab=upcoming"], [MessageSquare, "Inbox", "/account?tab=inbox"], [UserRound, "Profile", "/account"]].map(([Icon, label, href]) => <Link key={label as string} href={href as string} className="flex flex-col items-center gap-1 text-[10px]"><Icon size={21}/>{label as string}</Link>)}</nav>
+    <nav className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-plum/10 bg-white p-2 lg:hidden">{[[Home, "Home", "/"], [Search, "Search", "/salons"], [CalendarDays, "Bookings", "/account?tab=upcoming"], [Share2, "Social", "/social"], [UserRound, "Profile", "/account?tab=inbox"]].map(([Icon, label, href]) => <Link key={label as string} href={href as string} className="flex flex-col items-center gap-1 text-[10px]"><Icon size={21}/>{label as string}</Link>)}</nav>
   </div>;
 }
 

@@ -9,7 +9,7 @@ import { adminSupabase as supabase } from "@/lib/supabase";
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
-const defaultSlugs = ["home", "salon-profile", "partner", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
+const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 const labelSlots: Record<string, Array<[string, string]>> = {
   home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"]],
@@ -250,7 +250,7 @@ function PageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatc
       <div className="mt-3 grid gap-3 sm:grid-cols-2">{slots.map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]} />)}</div>
     </> : null}
     <h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2>
-    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div>
+    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number) => <div key={index} className="rounded-lg bg-blush/25 p-4"><div className="mb-2 flex justify-end"><button type="button" onClick={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button></div><Field label="Section heading" name={`section_title_${index}`} value={section.title} /><Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} /></div>)}</div>
     <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...(row?.sections || []), { title: "New Section", body: "" }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
     <div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div>
     <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button>
