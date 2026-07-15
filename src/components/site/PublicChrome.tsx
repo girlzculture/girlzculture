@@ -167,7 +167,7 @@ export function TrustStrip() {
 
 const footerGroups = [
   { title: "Company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
-  { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"]] },
+  { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
   { title: "For Professionals", links: [["Partner With Us","/partner"]] },
   { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Accessibility","/accessibility"]] },
 ];

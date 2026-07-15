@@ -219,7 +219,7 @@ function Quality(p: any) {
     const onTime=measured.filter((booking:Row)=>new Date(booking.service_started_at).getTime()<=new Date(booking.appointment_datetime).getTime()+15*60_000).length;
     const onTimeRate=measured.length?onTime/measured.length*100:null;
     const bookingIds=new Set(bookings.map((booking:Row)=>booking.id));
-    const activeComplaints=p.complaints.filter((complaint:Row)=>bookingIds.has(complaint.booking_id)&&!/closed|resolved/i.test(complaint.status||"")).length;
+    const activeComplaints=p.complaints.filter((complaint:Row)=>complaint.booking_verified&&bookingIds.has(complaint.booking_id)&&!/closed|resolved/i.test(complaint.status||"")).length;
     const complaintFree=bookings.length?Math.max(0,100-Math.min(100,activeComplaints/bookings.length*100)):null;
     let weighted=0;let weight=0;
     if(Number(salon.review_count||0)>0){weighted+=Math.min(100,Number(salon.rating_overall||0)*20)*.4;weight+=.4;}
