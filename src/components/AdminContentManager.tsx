@@ -28,6 +28,8 @@ export default function AdminContentManager() {
   const [masterStyles, setMasterStyles] = useState<Row[]>([]);
   const [masterStyle, setMasterStyle] = useState<Row | null>(null);
   const [serviceCategories, setServiceCategories] = useState<Row[]>([]);
+  const [serviceGroups, setServiceGroups] = useState<Row[]>([]);
+  const [serviceAddons, setServiceAddons] = useState<Row[]>([]);
   const [linkTargets, setLinkTargets] = useState<Row[]>([]);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,11 +50,15 @@ export default function AdminContentManager() {
       const loadedPosts = asRows(body.posts);
       const loadedStyles = asRows(body.masterStyles);
       const loadedCategories = asRows(body.serviceCategories);
+      const loadedGroups = asRows(body.serviceGroups);
+      const loadedAddons = asRows(body.serviceAddons);
       const loadedTargets = asRows(body.linkTargets);
       setPages(loadedPages);
       setPosts(loadedPosts);
       setMasterStyles(loadedStyles);
       setServiceCategories(loadedCategories);
+      setServiceGroups(loadedGroups);
+      setServiceAddons(loadedAddons);
       setLinkTargets(loadedTargets);
       if (selectFirst) {
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
@@ -60,7 +66,7 @@ export default function AdminContentManager() {
         setPost(loadedPosts[0] || null);
         setMasterStyle(loadedStyles[0] || null);
       }
-      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, linkTargets: loadedTargets };
+      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, serviceGroups: loadedGroups, serviceAddons: loadedAddons, linkTargets: loadedTargets };
     } catch (error) {
       console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
@@ -80,8 +86,8 @@ export default function AdminContentManager() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load content");
         if (!active) return;
-        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedTargets = asRows(body.linkTargets);
-        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setLinkTargets(loadedTargets);
+        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedGroups = asRows(body.serviceGroups); const loadedAddons = asRows(body.serviceAddons); const loadedTargets = asRows(body.linkTargets);
+        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setServiceGroups(loadedGroups); setServiceAddons(loadedAddons); setLinkTargets(loadedTargets);
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
@@ -174,32 +180,8 @@ export default function AdminContentManager() {
     }
   }
 
-  async function saveMasterStyle(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!masterStyle) return;
-    const form = new FormData(event.currentTarget);
-    const payload = { ...masterStyle, name: form.get("name"), category: form.get("category"), category_id: form.get("category_id"), sort_order: Number(form.get("sort_order") || 0), is_active: form.get("is_active") === "on" };
-    setSaving(true); setNotice("");
-    try {
-      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "master_style", payload }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Style save failed");
-      const data = body.data;
-      const reloaded = await loadContent(false);
-      const persisted = reloaded.masterStyles.find((row) => row.id === data.id);
-      if (!persisted) throw new Error("The style could not be verified after saving.");
-      setMasterStyle(persisted);
-      setMasterStyles((rows) => rows.some((row) => row.id === data.id) ? rows.map((row) => row.id === data.id ? persisted : row) : [...rows, persisted]);
-      setNotice("Managed service saved and available to salon owners.");
-    } catch (error) {
-      console.error("Master style save error", error);
-      setNotice(error instanceof Error ? error.message : "Service save failed");
-    } finally { setSaving(false); }
-  }
-
   function createNew() {
     if (tab === "legal") return;
-    if (tab === "styles") { setMasterStyle({ name: "", category: "Braids", category_id: serviceCategories[0]?.id || "", sort_order: masterStyles.length * 10 + 10, is_active: true }); return; }
     if (tab === "blog") {
       setPost({ slug: "new-post", title: "New Blog Post", excerpt: "", content: "", category: "Braided Styles", status: "Draft", featured: false });
       return;
@@ -231,7 +213,7 @@ export default function AdminContentManager() {
         <div className="flex rounded-lg border border-plum/10 bg-white p-1">
           {(["pages", "legal", "blog", "styles"] as const).map(value => <button key={value} onClick={() => switchTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "legal" ? "Legal" : value === "blog" ? "Blog" : "Service Catalog"}</button>)}
         </div>
-        {tab !== "legal" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Service"}</button> : null}
+        {tab !== "legal" && tab !== "styles" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : "Post"}</button> : null}
       </div>
       {notice ? <p className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
@@ -249,13 +231,100 @@ export default function AdminContentManager() {
           {post ? <PostEditor key={post.id || "new"} post={post} setPost={setPost} save={savePost} remove={removePost} /> : null}
         </div>
       ) : (
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
-          <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3">{masterStyles.map((item) => <button key={item.id} onClick={() => setMasterStyle(item)} className={`mb-1 w-full rounded-lg p-3 text-left ${masterStyle?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || "Uncategorized"} · {item.category} · {item.is_active ? "Active" : "Hidden"}</small></button>)}</aside>
-          {masterStyle ? <form key={masterStyle.id || "new-style"} onSubmit={saveMasterStyle} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Managed Service</h2><p className="mt-1 text-xs leading-5 text-ink/55">Every service belongs to a top-level category. The service group keeps related offerings organized inside that category.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Service name" name="name" value={masterStyle.name} /><label className="text-xs font-bold">Top-level category<select required name="category_id" defaultValue={masterStyle.category_id || serviceCategories[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3"><option value="">Choose category</option>{serviceCategories.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><Field label="Service group" name="category" value={masterStyle.category} /><Field label="Sort order" name="sort_order" value={String(masterStyle.sort_order || 0)} /><label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={masterStyle.is_active !== false} className="accent-magenta" />Available to salon owners</label></div><button disabled={saving} className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">Save Managed Service</button></form> : null}
-        </div>
+        <ServiceCatalogManager categories={serviceCategories} groups={serviceGroups} addons={serviceAddons} services={masterStyles} initialService={masterStyle} setInitialService={setMasterStyle} authHeaders={authHeaders} reload={loadContent} setNotice={setNotice} saving={saving} setSaving={setSaving} />
       )}
     </div>
   );
+}
+
+type CatalogKind = "service_category" | "service_group" | "master_style" | "service_addon";
+function ServiceCatalogManager({ categories, groups, addons, services, initialService, setInitialService, authHeaders, reload, setNotice, saving, setSaving }: {
+  categories: Row[]; groups: Row[]; addons: Row[]; services: Row[]; initialService: Row | null;
+  setInitialService: React.Dispatch<React.SetStateAction<Row | null>>;
+  authHeaders: () => Promise<Record<string, string>>;
+  reload: (selectFirst?: boolean) => Promise<{ masterStyles: Row[]; serviceCategories: Row[]; serviceGroups: Row[]; serviceAddons: Row[] }>;
+  setNotice: (message: string) => void; saving: boolean; setSaving: (value: boolean) => void;
+}) {
+  const [kind, setKind] = useState<CatalogKind>("master_style");
+  const [selected, setSelected] = useState<Row | null>(initialService || services[0] || null);
+  const collections: Record<CatalogKind, Row[]> = { service_category: categories, service_group: groups, master_style: services, service_addon: addons };
+  const labels: Record<CatalogKind, string> = { service_category: "Categories", service_group: "Service Groups", master_style: "Service Names", service_addon: "Add-ons" };
+
+  function switchKind(next: CatalogKind) {
+    setKind(next);
+    setSelected(collections[next][0] || null);
+  }
+
+  function createItem() {
+    if (kind === "service_category") setSelected({ name: "", slug: "", description: "", is_active: true });
+    else if (kind === "master_style") setSelected({ name: "", service_group_id: groups.find((item) => item.is_active)?.id || "", is_active: true });
+    else setSelected({ name: "", category_id: categories.find((item) => item.is_active)?.id || "", is_active: true });
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const form = new FormData(event.currentTarget);
+    const payload: Row = { ...selected, name: form.get("name"), is_active: form.get("is_active") === "on" };
+    if (kind === "service_category") { payload.slug = form.get("slug"); payload.description = form.get("description"); }
+    if (kind === "service_group" || kind === "service_addon") payload.category_id = form.get("category_id");
+    if (kind === "master_style") payload.service_group_id = form.get("service_group_id");
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: kind, payload }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Catalog save failed");
+      const loaded = await reload(false);
+      const refreshed = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind].find((item) => item.id === body.data.id);
+      if (!refreshed) throw new Error("The saved catalog item could not be verified after reloading.");
+      setSelected(refreshed);
+      if (kind === "master_style") setInitialService(refreshed);
+      setNotice(`${labels[kind].replace(/s$/, "")} saved and available to salon owners.`);
+    } catch (error) {
+      console.error("Service Catalog save error", { kind, selected, error });
+      setNotice(error instanceof Error ? error.message : "Catalog save failed");
+    } finally { setSaving(false); }
+  }
+
+  async function remove() {
+    if (!selected?.id || !confirm(`Delete ${selected.name}? Existing salon records can prevent deletion; hide the item instead when it is already in use.`)) return;
+    setSaving(true); setNotice("");
+    try {
+      const response = await fetch("/api/admin/content", { method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ type: kind, id: selected.id }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Delete failed");
+      const loaded = await reload(false);
+      const next = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind][0] || null;
+      setSelected(next);
+      setNotice("Catalog item deleted.");
+    } catch (error) {
+      console.error("Service Catalog delete error", { kind, selected, error });
+      setNotice(error instanceof Error ? error.message : "Delete failed");
+    } finally { setSaving(false); }
+  }
+
+  const rows = collections[kind];
+  return <div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap rounded-lg border border-plum/10 bg-white p-1">{(Object.keys(labels) as CatalogKind[]).map((value) => <button key={value} type="button" onClick={() => switchKind(value)} className={`rounded-md px-4 py-2 text-xs font-bold ${kind === value ? "bg-plum text-white" : "text-plum"}`}>{labels[value]}</button>)}</div>
+      <button type="button" onClick={createItem} className="inline-flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
+    </div>
+    <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
+      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3">{rows.map((item) => <button key={item.id} type="button" onClick={() => { setSelected(item); if (kind === "master_style") setInitialService(item); }} className={`mb-1 w-full rounded-lg p-3 text-left ${selected?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.is_active ? "· Active" : "· Hidden"}</small></button>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
+      {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+        <h2 className="font-serif text-2xl text-plum">{selected.id ? `Edit ${labels[kind].replace(/s$/, "")}` : `Add ${labels[kind].replace(/s$/, "")}`}</h2>
+        <p className="mt-1 text-xs leading-5 text-ink/55">Catalog lists are alphabetized automatically. Salon owners see active changes the next time their Styles & Pricing editor loads.</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Name" name="name" value={selected.name} />
+          {kind === "service_category" ? <><Field label="URL slug" name="slug" value={selected.slug} /><div className="sm:col-span-2"><Area label="Description" name="description" value={selected.description} rows={3}/></div></> : null}
+          {kind === "service_group" || kind === "service_addon" ? <label className="text-xs font-bold">Category<select required name="category_id" defaultValue={selected.category_id || categories[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose category</option>{categories.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
+          {kind === "master_style" ? <label className="text-xs font-bold">Service group<select required name="service_group_id" defaultValue={selected.service_group_id || groups[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose service group</option>{groups.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.service_category?.name} · {item.name}</option>)}</select></label> : null}
+          <label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={selected.is_active !== false} className="accent-magenta" />Visible to salon owners</label>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3"><button disabled={saving} className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save Catalog Item"}</button>{selected.id ? <button type="button" disabled={saving} onClick={() => void remove()} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs font-bold text-red-700"><Trash2 size={14}/>Delete</button> : null}</div>
+      </form> : <div className="rounded-xl border border-dashed border-plum/15 bg-white p-8 text-center text-sm text-ink/50">Add the first catalog item.</div>}
+    </div>
+  </div>;
 }
 
 function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
