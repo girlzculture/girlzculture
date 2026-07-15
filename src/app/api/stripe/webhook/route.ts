@@ -2,7 +2,7 @@ import { normalizePlan, planRank } from "@/lib/plans";
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripeGet, verifyStripeEvent } from "@/lib/stripeServer";
 
-type StripeObject = Record<string, unknown> & { id?:string; metadata?:Record<string,string>; status?:string; customer?:string; subscription?:string; mode?:string; payment_status?:string; payment_intent?:string; current_period_end?:number; cancel_at_period_end?:boolean; items?:{data?:Array<{price?:{id?:string}}>}; };
+type StripeObject = Record<string, unknown> & { id?:string; metadata?:Record<string,string>; status?:string; customer?:string; subscription?:string; mode?:string; payment_status?:string; payment_intent?:string; current_period_end?:number; cancel_at_period_end?:boolean; items?:{data?:Array<{price?:{id?:string}}>}; discounts?:Array<{coupon?:{id?:string}|string;promotion_code?:{id?:string}|string}>; };
 
 function planFromObject(object: StripeObject) {
   const priceId=object.items?.data?.[0]?.price?.id;
@@ -25,7 +25,7 @@ async function syncSubscription(object: StripeObject) {
 }
 
 async function completeBookingCheckout(session: StripeObject) {
-  if(session.metadata?.type!=="booking_deposit"||session.payment_status!=="paid")return;
+  if(session.metadata?.type!=="booking_deposit"||!["paid","no_payment_required"].includes(String(session.payment_status)))return;
   const admin=getSupabaseAdmin();
   const intentId=session.metadata.booking_intent_id;
   if(!intentId)return;
@@ -36,6 +36,32 @@ async function completeBookingCheckout(session: StripeObject) {
   if(error)throw error;
   await admin.from("booking_checkout_intents").update({status:"Paid",booking_id:booking.id}).eq("id",intent.id);
   await deliverBookingNotifications(booking.id).catch((error)=>console.error("Paid booking notification delivery failed",{bookingId:booking.id,error}));
+}
+
+async function trackPromoRedemption(session: StripeObject) {
+  if (!session.id) return;
+  const admin = getSupabaseAdmin();
+  if (session.metadata?.promo_redemption_id) {
+    await admin.rpc("redeem_promo_code", { p_redemption_id: session.metadata.promo_redemption_id, p_checkout_session_id: session.id });
+    return;
+  }
+  let details = session;
+  if (!details.discounts?.length) details = await stripeGet<StripeObject>(`/checkout/sessions/${session.id}?expand[]=discounts.coupon&expand[]=discounts.promotion_code`);
+  const discount = details.discounts?.[0];
+  const promotionId = typeof discount?.promotion_code === "string" ? discount.promotion_code : discount?.promotion_code?.id;
+  const couponId = typeof discount?.coupon === "string" ? discount.coupon : discount?.coupon?.id;
+  if (!promotionId && !couponId) return;
+  let query = admin.from("promo_codes").select("id");
+  query = promotionId ? query.eq("stripe_promotion_code_id", promotionId) : query.eq("stripe_coupon_id", couponId as string);
+  const { data: promo } = await query.maybeSingle();
+  if (!promo) return;
+  const purpose = session.mode === "subscription" ? "subscription" : "booking";
+  let userId: string | null = null;
+  if (purpose === "booking" && session.metadata?.booking_intent_id) {
+    const { data: intent } = await admin.from("booking_checkout_intents").select("customer_id").eq("id", session.metadata.booking_intent_id).maybeSingle();
+    userId = intent?.customer_id || null;
+  }
+  await admin.rpc("record_stripe_promo_redemption", { p_promo_code_id: promo.id, p_purpose: purpose, p_user_id: userId, p_salon_id: session.metadata?.salon_id || null, p_checkout_session_id: session.id });
 }
 
 export async function POST(request: Request) {
@@ -50,6 +76,7 @@ export async function POST(request: Request) {
   try {
     const object=event.data.object as StripeObject;
     if(event.type==="checkout.session.completed"){
+      await trackPromoRedemption(object);
       await completeBookingCheckout(object);
       if(object.mode==="subscription"&&object.subscription){const subscription=await stripeGet<StripeObject>(`/subscriptions/${object.subscription}`);await syncSubscription(subscription);}
     }

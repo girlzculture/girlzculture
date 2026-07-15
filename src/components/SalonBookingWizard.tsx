@@ -36,6 +36,9 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const [addons, setAddons] = useState<string[]>([]);
   const [clientNotes, setClientNotes] = useState("");
   const [clientProvidesMaterial, setClientProvidesMaterial] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoMessage, setPromoMessage] = useState("");
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState(searchParams.get("payment") === "cancelled" ? "Checkout was cancelled. Your appointment was not booked." : closedToday ? "This salon is closed today. You can still choose a future date." : "");
@@ -57,7 +60,8 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const materialReduction = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_price_reduction || 0)) : 0;
   const durationReductionMinutes = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_duration_reduction_minutes || 0)) : 0;
   const total = Math.max(1, beforeMaterialAdjustment - materialReduction);
-  const deposit = Number((total * 0.1).toFixed(2));
+  const originalDeposit = Number((total * 0.1).toFixed(2));
+  const deposit = Math.max(0, Number((originalDeposit - promoDiscount).toFixed(2)));
   const balance = total - deposit;
 
   useEffect(() => {
@@ -117,6 +121,17 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
     setStep(3);
   }
 
+  async function applyPromo() {
+    setPromoMessage(""); setPromoDiscount(0);
+    if (!promoCode.trim()) { setPromoMessage("Enter a promo code."); return; }
+    try {
+      const response = await fetch("/api/promo/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: promoCode, purpose: "booking", amount: originalDeposit }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to apply promo code.");
+      setPromoCode(body.code); setPromoDiscount(Number(body.discount || 0)); setPromoMessage(`${body.code} applied: ${money(Number(body.discount || 0))} off your deposit.`);
+    } catch (error) { setPromoMessage(error instanceof Error ? error.message : "Unable to apply promo code."); }
+  }
+
   async function reserve() {
     if (!consent) { setMessage("Please accept the reservation deposit terms."); return; }
     if (!guest.name.trim()) { setMessage("Enter your name to finish the booking."); return; }
@@ -140,6 +155,7 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
           selected_addons: addons,
           client_notes: clientNotes,
           client_provides_material: clientProvidesMaterial,
+          promo_code: promoCode.trim() || null,
           appointment_local: `${date}T${time}`,
           guest_name: guest.name,
           guest_email: guest.email,
@@ -164,7 +180,7 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, total }} />,
     <StylistPanel key="stylist" stylists={stylists} value={stylistId} setValue={setStylistId} />,
     <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested }} />,
-    <ReviewPanel key="review" {...{ style, stylists, stylistId, date, time, slots, total, deposit, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientProvidesMaterial, setClientProvidesMaterial, materialReduction, durationReductionMinutes }} />,
+    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, deposit, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientProvidesMaterial, setClientProvidesMaterial, materialReduction, durationReductionMinutes }} /><PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];
 
@@ -177,6 +193,7 @@ function StylePanel(props: Row) {
   return <div><div className="flex gap-3 rounded-[10px] border p-2">{uploadedPhoto ? <SafeImage src={uploadedPhoto} fallbackSrc={uploadedPhoto} alt={props.style?.name || "Style"} className="h-16 w-16 rounded-lg object-cover" /> : null}<div><b className="text-sm">{props.style?.name || "Choose a style"}</b>{props.style?.category ? <p className="text-[10px] text-ink/55">{props.style.category}</p> : null}</div></div><label className="mt-3 block text-[10px] font-bold">Style<select value={props.styleId} onChange={(event) => props.setStyleId(event.target.value)} className="mt-1 w-full rounded-lg border p-2">{props.styles.map((row: Row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label><Choice label="Size" items={props.style ? options(props.style.size_options) : []} value={props.size} onChange={props.setSize} /><Choice label="Length" items={props.style ? options(props.style.length_options) : []} value={props.length} onChange={props.setLength} /><div className="mt-3"><b className="text-[10px]">Add-ons</b>{(props.style ? options(props.style.addons) : []).map((item: Row) => <label key={item.value} className="flex justify-between py-1 text-[10px]"><span><input type="checkbox" checked={props.addons.includes(item.value)} onChange={() => props.setAddons((current: string[]) => current.includes(item.value) ? current.filter((value) => value !== item.value) : [...current, item.value])} /> {item.label}</span><span>+{money(item.price_add)}</span></label>)}</div><div className="mt-4 flex justify-between rounded-lg bg-blush/40 p-3"><b className="text-xs">Estimated Total</b><b className="text-plum">{money(props.total)}</b></div></div>;
 }
 function Choice({ label, items, value, onChange }: { label: string; items: Row[]; value: string; onChange: (value: string) => void }) { if (!items.length) return null; return <div className="mt-3"><b className="text-[10px]">{label}</b><div className="mt-1 flex flex-wrap gap-1">{items.map((item) => <button key={String(item.value)} onClick={() => onChange(String(item.value))} className={`rounded border px-2 py-1 text-[9px] ${value === item.value ? "border-magenta bg-blush" : ""}`}>{String(item.label)}</button>)}</div></div>; }
+function PromoField(props: Row) { return <div className="mt-3 rounded-lg border border-plum/10 p-3"><b className="text-[10px]">Promo code</b><div className="mt-2 flex gap-2"><input value={props.promoCode} onChange={(event) => { props.setPromoCode(event.target.value.toUpperCase()); props.setPromoDiscount(0); props.setPromoMessage(""); }} placeholder="Enter code" className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-[10px] uppercase"/><button type="button" onClick={() => void props.applyPromo()} className="rounded-lg bg-plum px-3 text-[10px] font-bold text-white">Apply</button></div>{props.promoMessage ? <p className={`mt-2 text-[9px] ${props.promoDiscount ? "text-green-700" : "text-red-700"}`}>{props.promoMessage}</p> : null}{props.promoDiscount ? <p className="mt-2 flex justify-between text-[10px]"><span>Deposit after discount</span><b>{money(props.deposit)}</b></p> : null}</div>; }
 function StylistPanel({ stylists, value, setValue }: { stylists: Row[]; value: string; setValue: (value: string) => void }) {
   const rows = [{ id: "any", name: "Any available stylist", bio: "The salon will assign the first qualified professional who is free for your complete service time." }, ...stylists];
   return <div className="space-y-3">{rows.map((stylist) => {

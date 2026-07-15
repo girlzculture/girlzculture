@@ -15,6 +15,7 @@ import TeamUserManager from "@/components/auth/TeamUserManager";
 import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
 import BookingInbox from "@/components/BookingInbox";
 import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
+import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "subscriptions" | "settings";
 type Row = Record<string, any>;
@@ -145,7 +146,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "quality": return <Quality {...props} />;
     case "reviews": return <Reviews {...props} />;
     case "finance": return <Finance {...props} />;
-    case "marketing": return <Marketing {...props} />;
+    case "marketing": return <div className="space-y-5"><AdminPromoCodes /><Marketing {...props} /></div>;
     case "content": return <AdminContentManager />;
     case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} /><BookingInbox scope="admin" /></div>;
     case "subscriptions": return <Subscriptions {...props} />;

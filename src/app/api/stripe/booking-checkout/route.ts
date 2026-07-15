@@ -3,6 +3,7 @@ import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { siteUrl, stripeRequest } from "@/lib/stripeServer";
+import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -69,7 +70,11 @@ export async function POST(request: Request) {
     if (clientProvidesMaterial) total -= materialPriceAdjustment;
     total = Math.max(1, Math.round(total * 100) / 100);
     if (!(total > 0) || total > 5000) throw new Error("The booking total could not be verified.");
-    const deposit = Math.round(total * 10) / 100;
+    const originalDeposit = Math.round(total * 10) / 100;
+    const promoCode = cleanText(body.promo_code, 40);
+    const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
+    const deposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
+    const discount = promoPreview?.discount || 0;
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) - materialDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload = {
@@ -90,6 +95,10 @@ export async function POST(request: Request) {
       buffer_minutes: bufferMinutes,
       estimated_total: total,
       deposit_amount: deposit,
+      original_deposit_amount: originalDeposit,
+      discount_amount: discount,
+      promo_code_id: promoPreview?.promo.id || null,
+      promo_code: promoPreview?.promo.code || null,
       balance_due: Math.round((total - deposit) * 100) / 100,
       confirmation_code: `GC-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       status: "Confirmed",
@@ -122,10 +131,21 @@ export async function POST(request: Request) {
     }
     intentId = String(reservationId);
 
+    let promoReservation: Awaited<ReturnType<typeof reservePromoCode>> | null = null;
+    if (promoCode) {
+      try {
+        promoReservation = await reservePromoCode(promoCode, "booking", { userId: customerId, salonId, bookingIntentId: intentId });
+        await admin.from("booking_checkout_intents").update({ promo_code_id: promoReservation.promo_code_id }).eq("id", intentId);
+      } catch (promoError) {
+        await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
+        throw promoError;
+      }
+    }
+
     const session = await stripeRequest<{ id: string; url: string }>("/checkout/sessions", {
       mode: "payment",
       "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][unit_amount]": Math.round(deposit * 100),
+      "line_items[0][price_data][unit_amount]": Math.round(originalDeposit * 100),
       "line_items[0][price_data][product_data][name]": `${salon.name} reservation deposit`,
       "line_items[0][quantity]": 1,
       customer_email: guestEmail,
@@ -133,12 +153,18 @@ export async function POST(request: Request) {
       cancel_url: `${siteUrl(request)}/salon/${salon.slug}/book?payment=cancelled`,
       "metadata[booking_intent_id]": intentId,
       "metadata[type]": "booking_deposit",
+      "metadata[salon_id]": salonId,
+      "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
+      "metadata[promo_code]": promoReservation?.code || "",
       "payment_intent_data[description]": `10% reservation deposit for ${style.name}`,
+      allow_promotion_codes: !promoReservation,
+      ...(promoReservation?.stripe_coupon_id ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id } : {}),
     });
     if (!session?.id || !session?.url) throw new Error("Stripe did not return a checkout session. No payment was taken.");
     const { error: sessionError } = await admin.from("booking_checkout_intents").update({ stripe_checkout_session_id: session.id }).eq("id", intentId);
     if (sessionError) throw sessionError;
-    return Response.json({ url: session.url, deposit, total, testMode: true });
+    if (promoReservation?.redemption_id) await admin.from("promo_code_redemptions").update({ stripe_checkout_session_id: session.id }).eq("id", promoReservation.redemption_id);
+    return Response.json({ url: session.url, deposit, originalDeposit, discount, total, testMode: true });
   } catch (error) {
     if (intentId) await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
     console.error("Booking checkout failed", error);
