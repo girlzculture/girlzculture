@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizePlan } from "@/lib/plans";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const user = authData.user;
     const body = await request.json() as Record<string, unknown>;
     rejectBot(body);
-    const required = ["business_name", "owner_name", "business_email", "phone", "street_address", "city", "state", "zip_code", "business_type", "years_in_operation", "stylist_count", "business_license_number"];
+    const required = ["business_name", "owner_name", "business_email", "phone", "street_address", "city", "state", "zip_code", "business_type", "years_in_operation", "stylist_count"];
     const missing = required.find((field) => !String(body[field] || "").trim());
     if (missing) return Response.json({ error: `Missing required field: ${missing.replaceAll("_", " ")}` }, { status: 400 });
     if (!body.consent_authorized || !body.consent_terms || !body.consent_photos) return Response.json({ error: "All confirmations are required." }, { status: 400 });
@@ -87,14 +87,24 @@ export async function POST(request: Request) {
       neighborhood: null, business_type: salonPatch.business_type, referral_source: cleanText(body.referral_source, 120), selected_plan: selectedPlan,
       years_in_operation: yearsInOperation, stylist_count: stylistCount,
       website_url: optionalPublicUrl(body.website_url), instagram_url: optionalPublicUrl(body.instagram_url),
-      business_license_number: cleanText(body.business_license_number, 120), cosmetology_license_number: cleanText(body.cosmetology_license_number, 120) || null,
+      business_license_number: cleanText(body.business_license_number, 120) || null, cosmetology_license_number: cleanText(body.cosmetology_license_number, 120) || null,
       logo_url: salonPatch.logo_url, photo_urls: applicationMediaUrls(body.photo_urls), document_urls: applicationDocumentPaths(body.document_urls, user.id),
       consent_authorized: true, consent_terms: true, consent_photos: true, status: "Pending", rejection_reason: null,
     };
     const { data: saved, error: applicationError } = await admin.from("salon_applications").upsert(application, { onConflict: "salon_id" }).select("id,state,status").single();
     if (applicationError) throw applicationError;
     console.info("Salon application saved", { applicationId: saved.id, salonId: salon.id, state: saved.state, userId: user.id });
-    return Response.json({ ok: true, application: saved, salon });
+    const receipt = await sendEmail(
+      salonPatch.email,
+      "We received your Girlz Culture application",
+      "<p>Thank you for applying to partner with Girlz Culture. Our team will review your application and get back to you within 24–48 hours. You'll receive an email once you're approved, and then you can set up your page.</p>",
+      "account",
+    ).catch((deliveryError) => {
+      console.error("Salon application confirmation email failed", { applicationId: saved.id, salonId: salon.id, deliveryError });
+      return { skipped: true, failed: true };
+    });
+    console.info("Salon application confirmation email processed", { applicationId: saved.id, to: salonPatch.email, skipped: "skipped" in receipt ? receipt.skipped : false });
+    return Response.json({ ok: true, application: saved, salon, confirmation_email_sent: !("skipped" in receipt && receipt.skipped) });
   } catch (error) {
     if (createdSalonId) await admin.from("salons").delete().eq("id", createdSalonId);
     console.error("Salon application submission failed", error);
