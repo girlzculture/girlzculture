@@ -10,7 +10,8 @@ import { adminSupabase as supabase } from "@/lib/supabase";
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
-const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "terms", "privacy", "accessibility"];
+const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety"];
+const legalSlugs = ["terms", "privacy", "cookie-notice", "deposit-refund-policy", "salon-partner-agreement", "photo-content-consent", "message-monitoring-disclosure", "do-not-sell-or-share", "accessibility", "community-guidelines"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 const labelSlots: Record<string, Array<[string, string]>> = {
   home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"], ["salons_near_you_subheading", "Salons Near You subheading"], ["featured_salons_subheading", "Featured Salons subheading"], ["trending_now_subheading", "Trending Now subheading"], ["trending_picks_subheading", "Trending Picks subheading"]],
@@ -19,7 +20,7 @@ const labelSlots: Record<string, Array<[string, string]>> = {
 };
 
 export default function AdminContentManager() {
-  const [tab, setTab] = useState<"pages" | "blog" | "styles">("pages");
+  const [tab, setTab] = useState<"pages" | "legal" | "blog" | "styles">("pages");
   const [pages, setPages] = useState<Row[]>([]);
   const [posts, setPosts] = useState<Row[]>([]);
   const [page, setPage] = useState<Row | null>(null);
@@ -197,6 +198,7 @@ export default function AdminContentManager() {
   }
 
   function createNew() {
+    if (tab === "legal") return;
     if (tab === "styles") { setMasterStyle({ name: "", category: "Braids", category_id: serviceCategories[0]?.id || "", sort_order: masterStyles.length * 10 + 10, is_active: true }); return; }
     if (tab === "blog") {
       setPost({ slug: "new-post", title: "New Blog Post", excerpt: "", content: "", category: "Braided Styles", status: "Draft", featured: false });
@@ -206,7 +208,20 @@ export default function AdminContentManager() {
     if (slug) setPage({ slug, title: slug.replaceAll("-", " "), hero_title: "New page", sections: [], status: "Draft" });
   }
 
-  const slugs = [...new Set([...defaultSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
+  const allSlugs = [...new Set([...defaultSlugs, ...legalSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
+  const contentSlugs = allSlugs.filter((slug) => !legalSlugs.includes(slug));
+  const visibleSlugs = tab === "legal" ? legalSlugs : contentSlugs;
+
+  function switchTab(value: "pages" | "legal" | "blog" | "styles") {
+    setTab(value);
+    if (value === "legal") {
+      const slug = legalSlugs[0];
+      setPage(pages.find((item) => item.slug === slug) || { slug, title: "Terms of Service", hero_title: "Terms of Service", hero_subtitle: "", sections: [{ type: "text", title: "", body: "", is_visible: true }], page_group: "Legal", status: "Published" });
+    } else if (value === "pages" && page && legalSlugs.includes(page.slug)) {
+      const slug = contentSlugs[0];
+      setPage(pages.find((item) => item.slug === slug) || null);
+    }
+  }
 
   if (loading) return <div className="rounded-xl border border-plum/10 bg-white p-8 text-sm text-ink/60">Loading editable content…</div>;
 
@@ -214,19 +229,19 @@ export default function AdminContentManager() {
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-lg border border-plum/10 bg-white p-1">
-          {(["pages", "blog", "styles"] as const).map(value => <button key={value} onClick={() => setTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "blog" ? "Blog" : "Service Catalog"}</button>)}
+          {(["pages", "legal", "blog", "styles"] as const).map(value => <button key={value} onClick={() => switchTab(value)} className={`rounded-md px-5 py-2 text-xs font-bold ${tab === value ? "bg-magenta text-white" : ""}`}>{value === "pages" ? "Pages" : value === "legal" ? "Legal" : value === "blog" ? "Blog" : "Service Catalog"}</button>)}
         </div>
-        <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Service"}</button>
+        {tab !== "legal" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : tab === "blog" ? "Post" : "Service"}</button> : null}
       </div>
       {notice ? <p className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
-      {tab === "pages" ? (
+      {tab === "pages" || tab === "legal" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[250px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">
-            <h2 className="px-2 py-2 font-serif text-xl text-plum">Public Pages</h2>
-            {slugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug, hero_title: slug, sections: [], status: "Draft" })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
+            <h2 className="px-2 py-2 font-serif text-xl text-plum">{tab === "legal" ? "Legal Pages" : "Public Pages"}</h2>
+            {visibleSlugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug.replaceAll("-", " "), hero_title: slug.replaceAll("-", " "), hero_subtitle: "", sections: tab === "legal" ? [{ type: "text", title: "", body: "", is_visible: true }] : [], page_group: tab === "legal" ? "Legal" : "Content", status: tab === "legal" ? "Published" : "Draft" })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
           </aside>
-          {page ? <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} linkTargets={linkTargets} /> : null}
+          {page ? tab === "legal" ? <LegalPageEditor key={page.slug} page={page} setPage={setPage} save={savePage} /> : <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} linkTargets={linkTargets} /> : null}
         </div>
       ) : tab === "blog" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
@@ -241,6 +256,24 @@ export default function AdminContentManager() {
       )}
     </div>
   );
+}
+
+function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
+  const section = asRows(page.sections)[0] || { type: "text", title: "", body: "", is_visible: true };
+  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+    <h2 className="font-serif text-2xl text-plum">Edit Legal Page</h2>
+    <p className="mt-1 text-xs leading-5 text-ink/55">Use # for a large heading, ## or ### for smaller headings, - for bullets, and [label](/page) for a link. HTML is not accepted.</p>
+    <label className="mt-5 block text-xs font-bold">Page title<input name="title" value={page.title || ""} onChange={(event) => setPage((row) => ({ ...row, title: event.target.value, hero_title: event.target.value, page_group: "Legal" }))} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+    <input type="hidden" name="eyebrow" value="" readOnly />
+    <input type="hidden" name="hero_title" value={page.title || ""} readOnly />
+    <input type="hidden" name="hero_subtitle" value="" readOnly />
+    <input type="hidden" name="section_title_0" value={section.title || ""} readOnly />
+    <Area label="Rich-text body" name="section_body_0" value={section.body} rows={22} />
+    <input type="hidden" name="seo_title" value={page.seo_title || page.title || ""} readOnly />
+    <input type="hidden" name="seo_description" value={page.seo_description || ""} readOnly />
+    <input type="hidden" name="status" value="Published" readOnly />
+    <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save & Publish Legal Page</button>
+  </form>;
 }
 
 function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; linkTargets: Row[] }) {

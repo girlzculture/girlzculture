@@ -149,7 +149,7 @@ const footerGroups = [
   { title: "Company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
   { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
   { title: "For Professionals", links: [["Partner With Us","/partner"]] },
-  { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Accessibility","/accessibility"]] },
+  { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Cookie / Tracking Notice","/cookie-notice"], ["Deposit & Refund Policy","/deposit-refund-policy"], ["Salon Partner Agreement","/salon-partner-agreement"], ["Photo & Content Consent","/photo-content-consent"], ["Message Monitoring Disclosure","/message-monitoring-disclosure"], ["Do Not Sell or Share My Information","/do-not-sell-or-share"], ["Accessibility Statement","/accessibility"], ["Community / Content Guidelines","/community-guidelines"]] },
 ];
 
 export function PublicFooter() {
