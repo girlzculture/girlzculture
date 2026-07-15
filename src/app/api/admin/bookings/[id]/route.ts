@@ -51,9 +51,9 @@ export async function PATCH(request: Request, route: RouteContext<"/api/admin/bo
     const text = `Girlz Culture updated your booking at ${ctx.salon.name} to ${when}. Reason: ${reason}`;
     const salonText = `Girlz Culture updated ${String(updated.guest_name || "a customer's")} booking to ${when}. Reason: ${reason}`;
     await Promise.all([
-      sendEmail(String(updated.guest_email || ""), "Your Girlz Culture booking was updated", `<p>${text}</p>`),
+      sendEmail(String(updated.guest_email || ""), "Your Girlz Culture booking was updated", `<p>${text}</p>`, "bookings"),
       sendSms(String(updated.guest_phone || ""), text),
-      sendEmail(String(ctx.salon.email || ""), "A Girlz Culture booking was updated", `<p>${salonText}</p>`),
+      sendEmail(String(ctx.salon.email || ""), "A Girlz Culture booking was updated", `<p>${salonText}</p>`, "bookings"),
       sendSms(String(ctx.salon.phone || ""), salonText),
     ]);
     const inApp = [{ user_id: ctx.salon.user_id, salon_id: ctx.salon.id, booking_id: updated.id, title: "Booking updated by platform support", body: salonText, action_url: `/salon/dashboard/bookings?booking=${updated.id}`, delivery_status: "delivered" }];

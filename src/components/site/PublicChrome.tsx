@@ -5,7 +5,6 @@ import {
   Camera,
   Heart,
   Home,
-  Menu,
   MessageSquare,
   Search,
   Share2,
@@ -14,8 +13,10 @@ import {
   UserRound,
 } from "lucide-react";
 import NewsletterForm from "@/components/site/NewsletterForm";
+import MobilePublicMenu from "@/components/site/MobilePublicMenu";
+import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 
-type ActiveTab = "home" | "search" | "bookings" | "inbox" | "profile";
+type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
 export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
@@ -33,29 +34,7 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
   return (
     <header className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        <details className="group relative md:hidden">
-          <summary
-            aria-label="Open navigation menu"
-            className="inline-flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-xl text-ink [&::-webkit-details-marker]:hidden"
-          >
-            <Menu aria-hidden="true" size={23} strokeWidth={1.8} />
-          </summary>
-          <nav aria-label="Mobile navigation" className="absolute left-0 top-12 w-64 overflow-hidden rounded-[14px] border border-plum/10 bg-[#fffdfa] p-2 text-sm font-semibold text-ink shadow-[0_18px_42px_rgba(26,18,32,0.16)]">
-            <Link href="/styles" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Browse Styles</Link>
-            <Link href="/salons" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Find Salons</Link>
-            <Link href="/how-it-works" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">How It Works</Link>
-            <Link href="/about" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">About Us</Link>
-            <Link href="/blog" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Blog</Link>
-            <Link href="/partner" className="block rounded-[10px] px-4 py-3 text-magenta hover:bg-blush/45">Partner With Us</Link>
-            <div className="my-1 border-t border-plum/10" />
-            <Link href="/login" className="block rounded-[10px] px-4 py-3 hover:bg-blush/45">Log in</Link>
-            <Link href="/login" className="block rounded-[10px] bg-magenta px-4 py-3 text-center text-white">Sign up</Link>
-          </nav>
-        </details>
-
-        <div className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
-          <Wordmark compact />
-        </div>
+        <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu/><Wordmark compact /></div>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-8 text-[13px] font-semibold text-ink md:flex lg:gap-10">
           <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}>Browse Styles</Link>
@@ -70,10 +49,11 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-3">
+          <HeaderStyleSearch/>
           <Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta md:inline-flex"
           >
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
           </Link>
@@ -94,8 +74,8 @@ export function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
     { id: "home" as const, label: "Home", href: "/", icon: Home },
     { id: "search" as const, label: "Search", href: "/salons", icon: Search },
     { id: "bookings" as const, label: "Bookings", href: "/account", icon: CalendarDays },
-    { id: "inbox" as const, label: "Inbox", href: "/account", icon: MessageSquare },
-    { id: "profile" as const, label: "Profile", href: "/account", icon: UserRound },
+    { id: "social" as const, label: "Social", href: "/social", icon: Share2 },
+    { id: "profile" as const, label: "Profile", href: "/account?tab=inbox", icon: UserRound },
   ];
 
   return (
@@ -167,7 +147,7 @@ export function TrustStrip() {
 
 const footerGroups = [
   { title: "Company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
-  { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"]] },
+  { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
   { title: "For Professionals", links: [["Partner With Us","/partner"]] },
   { title: "Legal", links: [["Terms of Service","/terms"], ["Privacy Policy","/privacy"], ["Accessibility","/accessibility"]] },
 ];

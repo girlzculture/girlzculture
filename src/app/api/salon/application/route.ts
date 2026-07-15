@@ -12,6 +12,29 @@ function applicationMediaUrl(value: unknown) {
   return parsed.toString();
 }
 
+function optionalPublicUrl(value: unknown) {
+  const text = cleanText(value, 500);
+  if (!text) return null;
+  const parsed = new URL(text);
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Website and Instagram links must use https://.");
+  return parsed.toString();
+}
+
+function applicationMediaUrls(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 8).map(applicationMediaUrl).filter((url): url is string => Boolean(url));
+}
+
+function applicationDocumentPaths(value: unknown, userId: string) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 5).map((item) => cleanText(item, 500)).filter((path) => {
+    if (!path || !path.startsWith(`${userId}/documents/`) || path.includes("..")) {
+      throw new Error("Upload supporting documents through the application form.");
+    }
+    return true;
+  });
+}
+
 export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
   let createdSalonId: string | null = null;
@@ -24,12 +47,16 @@ export async function POST(request: Request) {
     const user = authData.user;
     const body = await request.json() as Record<string, unknown>;
     rejectBot(body);
-    const required = ["business_name", "owner_name", "business_email", "phone", "street_address", "city", "state", "zip_code", "business_type"];
+    const required = ["business_name", "owner_name", "business_email", "phone", "street_address", "city", "state", "zip_code", "business_type", "years_in_operation", "stylist_count", "business_license_number"];
     const missing = required.find((field) => !String(body[field] || "").trim());
     if (missing) return Response.json({ error: `Missing required field: ${missing.replaceAll("_", " ")}` }, { status: 400 });
     if (!body.consent_authorized || !body.consent_terms || !body.consent_photos) return Response.json({ error: "All confirmations are required." }, { status: 400 });
 
     const selectedPlan = normalizePlan(body.selected_plan);
+    const yearsInOperation = Math.round(Number(body.years_in_operation));
+    const stylistCount = Math.round(Number(body.stylist_count));
+    if (yearsInOperation < 0 || yearsInOperation > 150) throw new Error("Enter valid years in operation.");
+    if (stylistCount < 1 || stylistCount > 500) throw new Error("Enter the number of working stylists.");
     const slugBase = cleanText(body.business_name, 120).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "salon";
     const salonPatch = {
       user_id: user.id, name: cleanText(body.business_name, 120), owner_name: cleanText(body.owner_name, 120),
@@ -58,7 +85,10 @@ export async function POST(request: Request) {
       business_email: salonPatch.email, phone: salonPatch.phone, street_address: salonPatch.address_street, address_line2: salonPatch.address_line2,
       city: salonPatch.address_city, state: salonPatch.address_state, zip_code: salonPatch.address_zip,
       neighborhood: null, business_type: salonPatch.business_type, referral_source: cleanText(body.referral_source, 120), selected_plan: selectedPlan,
-      logo_url: salonPatch.logo_url, photo_urls: Array.isArray(body.photo_urls) ? body.photo_urls : [], document_urls: Array.isArray(body.document_urls) ? body.document_urls : [],
+      years_in_operation: yearsInOperation, stylist_count: stylistCount,
+      website_url: optionalPublicUrl(body.website_url), instagram_url: optionalPublicUrl(body.instagram_url),
+      business_license_number: cleanText(body.business_license_number, 120), cosmetology_license_number: cleanText(body.cosmetology_license_number, 120) || null,
+      logo_url: salonPatch.logo_url, photo_urls: applicationMediaUrls(body.photo_urls), document_urls: applicationDocumentPaths(body.document_urls, user.id),
       consent_authorized: true, consent_terms: true, consent_photos: true, status: "Pending", rejection_reason: null,
     };
     const { data: saved, error: applicationError } = await admin.from("salon_applications").upsert(application, { onConflict: "salon_id" }).select("id,state,status").single();

@@ -26,7 +26,7 @@ export async function POST(request: Request, context: RouteContext<"/api/admin/s
       ? `<h1>Your store is active!</h1><p>Log in to activate your ${plan} subscription in Stripe test mode. The rest of the dashboard unlocks as soon as the test subscription succeeds.</p><p><a href="${base}/salon/login">Open your dashboard</a></p>`
       : decision==="approve"?"<h1>You’re approved!</h1><p>Your application passed review. The Girlz Culture team is now preparing your store for activation.</p>"
       : `<h1>Application update</h1><p>We’re unable to approve your salon at this time.</p><p><strong>Reason:</strong> ${safeReason||"Please contact support for details."}</p>`;
-    await sendEmail(application.business_email,subject,html);
+    await sendEmail(application.business_email,subject,html,"account");
     return Response.json({ok:true,status,plan});
   }catch(error){console.error("Application decision failed",error);return errorResponse(error,"Request failed");}
 }

@@ -22,6 +22,8 @@ type StyleRecord = {
   salon_id?: string | null;
   name?: string | null;
   category?: string | null;
+  category_id?: string | null;
+  service_category?: { name?: string | null; slug?: string | null } | null;
   price_display_min?: number | null;
   price_display_max?: number | null;
   duration_min_hours?: number | null;
@@ -29,6 +31,7 @@ type StyleRecord = {
   length_options?: unknown;
   size_options?: unknown;
   addons?: unknown;
+  option_groups?: unknown;
 };
 
 type StylistRecord = {
@@ -64,7 +67,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
 
   const { data: stylesData } = await supabase
     .from("styles")
-    .select("*")
+    .select("*,service_category:service_categories(name,slug)")
     .eq("salon_id", salonData.id);
 
   const { data: stylistsData } = await supabase
