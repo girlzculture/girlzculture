@@ -14,6 +14,7 @@ import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLog
 import TeamUserManager from "@/components/auth/TeamUserManager";
 import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
 import BookingInbox from "@/components/BookingInbox";
+import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "subscriptions" | "settings";
 type Row = Record<string, any>;
@@ -250,7 +251,7 @@ function Finance(p: any) {
 
 function Marketing(p: any) {
   const featured = p.salons.filter((salon: Row) => Number(salon.featured_weight || 0) > 0);
-  return <div className="grid gap-5 lg:grid-cols-3"><Panel title="Featured on Discover">{featured.length ? featured.map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Weight ${salon.featured_weight}`} />) : <EmptyState title="No featured salons" body="Eligible paid placements will appear here." />}<Link href="/admin/salons" className="mt-4 block w-full rounded-lg border border-magenta py-2 text-center text-magenta">Manage salons</Link></Panel><Panel title="Salon Promotions">{p.promotions.length ? p.promotions.map((promotion: Row) => <Line key={promotion.id} label={promotion.title || "Promotion"} meta={promotion.status || "Draft"} />) : <EmptyState title="No promotions" body="Salon-created promotions will appear here." />}</Panel><Panel title="Blog Management">{p.posts.length ? p.posts.map((post: Row) => <Line key={post.id} label={post.title} meta={post.status} />) : <EmptyState title="No blog posts" body="Create and publish posts in Content Management." />}<Link href="/admin/content" className="mt-4 block w-full rounded-lg bg-magenta py-3 text-center font-bold text-white">Open Content Management</Link></Panel></div>;
+  return <div className="space-y-5"><AdminHomepageMarketing salons={p.salons} /><div className="grid gap-5 lg:grid-cols-3"><Panel title="Featured on Discover">{featured.length ? featured.map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Weight ${salon.featured_weight}`} />) : <EmptyState title="No featured salons" body="Eligible paid placements will appear here." />}<Link href="/admin/salons" className="mt-4 block w-full rounded-lg border border-magenta py-2 text-center text-magenta">Manage salons</Link></Panel><Panel title="Salon Promotions">{p.promotions.length ? p.promotions.map((promotion: Row) => <Line key={promotion.id} label={promotion.title || "Promotion"} meta={promotion.status || "Draft"} />) : <EmptyState title="No promotions" body="Salon-created promotions will appear here." />}</Panel><Panel title="Blog Management">{p.posts.length ? p.posts.map((post: Row) => <Line key={post.id} label={post.title} meta={post.status} />) : <EmptyState title="No blog posts" body="Create and publish posts in Content Management." />}<Link href="/admin/content" className="mt-4 block w-full rounded-lg bg-magenta py-3 text-center font-bold text-white">Open Content Management</Link></Panel></div></div>;
 }
 
 function Subscriptions(p: any) {
