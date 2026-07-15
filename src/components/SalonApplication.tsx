@@ -90,8 +90,8 @@ export default function SalonApplication() {
       <label><span className="mb-2 block text-xs font-bold">State *</span><select required value={form.state} onChange={(event)=>update("state",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{US_STATES.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
       <Input label="ZIP Code" pattern="\d{5}(-\d{4})?" title="Use 12345 or 12345-6789 format" value={form.zip_code} onChange={(value)=>update("zip_code",value)} />
       <label><span className="mb-2 block text-xs font-bold">Type of Business *</span><select value={form.business_type} onChange={(event)=>update("business_type",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{["Hair Salon","Beauty Shop","Barber Shop","Braiding Studio","Other"].map((item)=><option key={item}>{item}</option>)}</select></label>
-      <Input label="Years in operation" type="number" value={form.years_in_operation} onChange={(value)=>update("years_in_operation",value)} />
-      <Input label="Number of stylists" type="number" value={form.stylist_count} onChange={(value)=>update("stylist_count",value)} />
+      <Input label="Years in operation" type="number" min={0} max={200} value={form.years_in_operation} onChange={(value)=>update("years_in_operation",value)} />
+      <Input label="Number of stylists" type="number" min={0} max={1000} value={form.stylist_count} onChange={(value)=>update("stylist_count",value)} />
       <Input label="Business website" type="url" value={form.website_url} onChange={(value)=>update("website_url",value)} required={false} placeholder="https://yoursalon.com" />
       <Input label="Instagram profile" type="url" value={form.instagram_url} onChange={(value)=>update("instagram_url",value)} required={false} placeholder="https://instagram.com/yoursalon" />
       <Input label="Business license number" value={form.business_license_number} onChange={(value)=>update("business_license_number",value)} />
@@ -107,6 +107,6 @@ export default function SalonApplication() {
   </form>;
 }
 
-function Input({label,value,onChange,required=true,type="text",pattern,title,placeholder}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;type?:string;pattern?:string;title?:string;placeholder?:string}) {
-  return <label className="block"><span className="mb-2 block text-xs font-bold">{label}{required?" *":""}</span><input required={required} type={type} pattern={pattern} title={title} placeholder={placeholder} inputMode={type==="tel"?"tel":undefined} value={value} onChange={(event)=>onChange(event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"/></label>;
+function Input({label,value,onChange,required=true,type="text",pattern,title,placeholder,min,max}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;type?:string;pattern?:string;title?:string;placeholder?:string;min?:number;max?:number}) {
+  return <label className="block"><span className="mb-2 block text-xs font-bold">{label}{required?" *":""}</span><input required={required} type={type} pattern={pattern} title={title} placeholder={placeholder} min={min} max={max} inputMode={type==="tel"?"tel":type==="number"?"numeric":undefined} value={value} onChange={(event)=>onChange(type==="number"?event.target.value.replace(/\D/g,""):event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"/></label>;
 }

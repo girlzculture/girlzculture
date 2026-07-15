@@ -54,7 +54,6 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const [addons, setAddons] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
   const [clientNotes, setClientNotes] = useState("");
-  const [clientProvidesMaterial, setClientProvidesMaterial] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
@@ -69,8 +68,6 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const [suggested, setSuggested] = useState<SuggestedSlot | null>(null);
 
   const style = styles.find((row) => row.id === styleId) || styles[0];
-  const serviceCategorySlug = String(style?.service_category?.slug || "braiding");
-  const isBraiding = serviceCategorySlug === "braiding";
   const sizeOptions = options(style?.size_options);
   const lengthOptions = options(style?.length_options);
   const addonOptions = options(style?.addons);
@@ -78,14 +75,11 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const selectedGenericOptions = genericOptionGroups.flatMap((group) => group.options.filter((item) => (selectedOptions[group.id] || []).includes(item.value)));
   const genericOptionPrice = selectedGenericOptions.reduce((sum, item) => sum + item.price_add, 0);
   const genericDurationAdjustmentMinutes = selectedGenericOptions.reduce((sum, item) => sum + item.duration_add_minutes, 0);
-  const beforeMaterialAdjustment = Number(style?.price_display_min || style?.base_price || 0)
+  const total = Math.max(0, Number(style?.price_display_min || style?.base_price || 0)
     + Number(sizeOptions.find((item: Row) => item.value === size)?.price_add || 0)
     + Number(lengthOptions.find((item: Row) => item.value === length)?.price_add || 0)
     + addonOptions.filter((item: Row) => addons.includes(item.value)).reduce((sum: number, item: Row) => sum + item.price_add, 0)
-    + genericOptionPrice;
-  const materialReduction = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_price_reduction || 0)) : 0;
-  const durationReductionMinutes = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_duration_reduction_minutes || 0)) : 0;
-  const total = Math.max(0, beforeMaterialAdjustment - materialReduction);
+    + genericOptionPrice);
   const originalDeposit = Number((total * 0.1).toFixed(2));
   const calculatedDeposit = Math.max(0, Number((originalDeposit - promoDiscount).toFixed(2)));
   const deposit = Math.round(calculatedDeposit * 100) >= 50 ? calculatedDeposit : 0;
@@ -189,7 +183,6 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
           selected_addons: addons,
           selected_options: selectedOptions,
           client_notes: clientNotes,
-          client_provides_material: clientProvidesMaterial,
           promo_code: promoCode.trim() || null,
           appointment_local: `${date}T${time}`,
           guest_name: guest.name,
@@ -221,7 +214,7 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total }} />,
     <StylistPanel key="stylist" stylists={stylists} value={stylistId} setValue={setStylistId} />,
     <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested }} />,
-    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, deposit, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientProvidesMaterial, setClientProvidesMaterial, materialReduction, durationReductionMinutes, genericDurationAdjustmentMinutes, isBraiding }} /><PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
+    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, deposit, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, genericDurationAdjustmentMinutes }} /><PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];
 
@@ -267,7 +260,6 @@ function ReviewPanel(props: Row) {
   const selected = props.slots.find((slot: Slot) => slot.value === props.time);
   return <div className="space-y-3 text-[10px]">
     <div className="rounded-lg border p-3"><b>{props.style?.name}</b><p>{props.date} at {selected?.label || "Choose a time"}</p><p>{props.stylists.find((row: Row) => row.id === props.stylistId)?.name || "Any available stylist"}</p></div>
-    {props.isBraiding ? <><label className="flex gap-2 rounded-lg border border-plum/10 p-3"><input type="checkbox" checked={props.clientProvidesMaterial} onChange={(event) => props.setClientProvidesMaterial(event.target.checked)} className="accent-magenta" /><span><b>I will bring my own hair or wig</b><span className="mt-0.5 block text-ink/55">The salon-configured material cost and service time adjustment will be applied.</span></span></label>{props.clientProvidesMaterial && (props.materialReduction > 0 || props.durationReductionMinutes > 0) ? <p className="rounded-lg bg-green-50 p-2 text-green-800">Adjusted by -{money(props.materialReduction)} and -{props.durationReductionMinutes} minutes.</p> : null}</> : null}
     {props.genericDurationAdjustmentMinutes ? <p className="rounded-lg bg-blush/30 p-2 text-plum">Selected options adjust service time by {props.genericDurationAdjustmentMinutes > 0 ? "+" : ""}{props.genericDurationAdjustmentMinutes} minutes.</p> : null}
     <div className="space-y-1 rounded-lg bg-blush/30 p-3"><p className="flex justify-between"><span>Total Price</span><b>{money(props.total)}</b></p><p className="flex justify-between text-magenta"><span>Reservation Deposit (10%)</span><b>{money(props.deposit)}</b></p><p className="flex justify-between"><span>Balance Due at Salon</span><b>{money(props.balance)}</b></p></div>
     <textarea value={props.clientNotes} onChange={(event) => props.setClientNotes(event.target.value.slice(0, 1000))} rows={3} placeholder="Notes or special requests (allergies, accessibility, service details…)" className="w-full resize-none rounded-lg border p-2" />

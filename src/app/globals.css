@@ -117,6 +117,19 @@ textarea {
   font: inherit;
 }
 
+/* Numeric facts are typed directly. Browser spinner controls are intentionally
+   removed because they encourage tedious arrow-clicking from zero. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 :where(a[href], button:not(:disabled), summary, [role="button"], label[for], select:not(:disabled), input[type="button"]:not(:disabled), input[type="submit"]:not(:disabled), input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)) {
   cursor: pointer;
 }
