@@ -5,6 +5,9 @@ import { supabase } from "@/lib/supabase";
 
 type StyleRow = {
   name?: string | null;
+  category?: string | null;
+  category_id?: string | null;
+  service_category?: { name?: string | null; slug?: string | null } | null;
   salon_id?: string | null;
   price_display_min?: number | null;
   base_price?: number | null;
@@ -17,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function StylesPage() {
   const { data, error } = await supabase
     .from("styles")
-    .select("name,salon_id,price_display_min,base_price,photos,length_options")
+    .select("name,category,category_id,salon_id,price_display_min,base_price,photos,length_options,service_category:service_categories(name,slug)")
     .order("name");
 
   if (error) console.error("Unable to load public style catalog", error);
@@ -26,10 +29,14 @@ export default async function StylesPage() {
   for (const raw of (data || []) as StyleRow[]) {
     const name = raw.name?.trim();
     if (!name) continue;
-    const key = name.toLocaleLowerCase();
+    const category = raw.service_category?.name || "Braiding";
+    const categorySlug = raw.service_category?.slug || "braiding";
+    const key = `${categorySlug}:${name.toLocaleLowerCase()}`;
     const price = Number(raw.price_display_min || raw.base_price || 0);
     const existing = grouped.get(key) || {
       name,
+      category,
+      categorySlug,
       count: 0,
       salons: new Set<string>(),
       image: raw.photos?.[0] || "",

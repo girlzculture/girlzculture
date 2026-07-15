@@ -14,15 +14,17 @@ function validSlug(value: unknown) {
 export async function GET(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
-    const [pages, posts, masterStyles] = await Promise.all([
+    const [pages, posts, masterStyles, serviceCategories] = await Promise.all([
       admin.from("content_pages").select("*").order("slug"),
       admin.from("blog_posts").select("*").order("updated_at", { ascending: false }),
-      admin.from("master_styles").select("*").order("sort_order").order("name"),
+      admin.from("master_styles").select("*,service_category:service_categories(id,name,slug)").order("sort_order").order("name"),
+      admin.from("service_categories").select("*").order("sort_order").order("name"),
     ]);
     if (pages.error) throw pages.error;
     if (posts.error) throw posts.error;
     if (masterStyles.error) throw masterStyles.error;
-    return Response.json({ pages: pages.data || [], posts: posts.data || [], masterStyles: masterStyles.data || [] });
+    if (serviceCategories.error) throw serviceCategories.error;
+    return Response.json({ pages: pages.data || [], posts: posts.data || [], masterStyles: masterStyles.data || [], serviceCategories: serviceCategories.data || [] });
   } catch (error) {
     console.error("Admin content load failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load content" }, { status: 403 });
@@ -38,8 +40,12 @@ export async function PUT(request: Request) {
     if (type === "master_style") {
       const name = String(payload.name || "").trim().slice(0, 100);
       const category = String(payload.category || "").trim().slice(0, 80);
-      if (!name || !category) return Response.json({ error: "Style name and category are required." }, { status: 400 });
-      const record = { name, category, is_active: payload.is_active !== false, sort_order: Math.max(0, Number(payload.sort_order || 0)), updated_at: new Date().toISOString() };
+      const categoryId = String(payload.category_id || "").trim();
+      if (!name || !category || !/^[0-9a-f-]{36}$/i.test(categoryId)) return Response.json({ error: "Service name, group, and category are required." }, { status: 400 });
+      const { data: serviceCategory, error: categoryError } = await admin.from("service_categories").select("id").eq("id", categoryId).eq("is_active", true).maybeSingle();
+      if (categoryError) throw categoryError;
+      if (!serviceCategory) return Response.json({ error: "Choose an active service category." }, { status: 400 });
+      const record = { name, category, category_id: categoryId, is_active: payload.is_active !== false, sort_order: Math.max(0, Number(payload.sort_order || 0)), updated_at: new Date().toISOString() };
       const query = payload.id
         ? admin.from("master_styles").update(record).eq("id", payload.id).select().single()
         : admin.from("master_styles").insert(record).select().single();

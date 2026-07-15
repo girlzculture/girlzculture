@@ -7,6 +7,9 @@ import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
+type ServiceOption = PriceOption & { duration_add_minutes?: number | string };
+type ServiceOptionGroup = { id?: string; label?: string; selection?: string; required?: boolean; options?: ServiceOption[] };
+const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(value) ? value as ServiceOptionGroup[] : [];
 
 export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
@@ -25,7 +28,7 @@ export async function POST(request: Request) {
     const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,subscription_status,time_zone").eq("id", salonId).single();
     if (salonError) throw new Error(`Unable to verify the salon: ${salonError.message}`);
     if (!salon || salon.status !== "Active" || !["active", "trialing"].includes(String(salon.subscription_status).toLowerCase())) throw new Error("This salon is not currently accepting marketplace bookings.");
-    const { data: style, error: styleError } = await admin.from("styles").select("*").eq("id", styleId).eq("salon_id", salonId).single();
+    const { data: style, error: styleError } = await admin.from("styles").select("*,service_category:service_categories(slug)").eq("id", styleId).eq("salon_id", salonId).single();
     if (styleError || !style) throw new Error(styleError ? `Unable to verify the selected style: ${styleError.message}` : "The selected style is not available.");
 
     const guestName = cleanText(body.guest_name, 120);
@@ -55,16 +58,37 @@ export async function POST(request: Request) {
     const selectedSize = cleanText(body.selected_size, 80);
     const selectedLength = cleanText(body.selected_length, 80);
     const selectedAddons = Array.isArray(body.selected_addons) ? body.selected_addons.map((item) => cleanText(item, 80)).slice(0, 20) : [];
+    const rawSelectedOptions = body.selected_options && typeof body.selected_options === "object" && !Array.isArray(body.selected_options) ? body.selected_options as Record<string, unknown> : {};
+    const selectedOptions = Object.fromEntries(Object.entries(rawSelectedOptions).slice(0, 30).map(([key, value]) => [cleanText(key, 40), Array.isArray(value) ? value.map((item) => cleanText(item, 80)).filter(Boolean).slice(0, 30) : []]).filter(([key]) => key)) as Record<string, string[]>;
+    const groups = optionGroups(style.option_groups);
+    const groupIds = new Set(groups.map((group) => cleanText(group.id, 40)).filter(Boolean));
+    if (Object.keys(selectedOptions).some((key) => !groupIds.has(key))) throw new Error("A selected service option is no longer available.");
+    let genericPriceAdjustment = 0;
+    let genericDurationAdjustmentMinutes = 0;
+    for (const group of groups) {
+      const groupId = cleanText(group.id, 40);
+      const values = selectedOptions[groupId] || [];
+      if (group.required && values.length === 0) throw new Error(`Choose ${cleanText(group.label, 80) || "a required service option"}.`);
+      if (group.selection !== "multiple" && values.length > 1) throw new Error(`Choose only one ${cleanText(group.label, 80) || "service option"}.`);
+      for (const value of values) {
+        const option = options(group.options).find((item) => item.value === value || item.label === value) as ServiceOption | undefined;
+        if (!option) throw new Error("A selected service option is no longer available.");
+        genericPriceAdjustment += Number(option.price_add || 0);
+        genericDurationAdjustmentMinutes += Number(option.duration_add_minutes || 0);
+      }
+    }
     const add = (rows: PriceOption[], value: string) => Number(rows.find((item) => item.value === value || item.label === value)?.price_add || 0);
     let total = Number(style.base_price || style.price_display_min || 0) + add(options(style.size_options), selectedSize) + add(options(style.length_options), selectedLength);
     total += selectedAddons.reduce((sum: number, value: string) => sum + add(options(style.addons), value), 0);
+    total += genericPriceAdjustment;
     const materialId: string | null = cleanText(body.selected_material_id, 50) || null;
     if (materialId) {
       const { data: material } = await admin.from("style_materials").select("price").eq("id", materialId).eq("style_id", styleId).single();
       if (!material) throw new Error("The selected material is not available.");
       total += Number(material.price || 0);
     }
-    const clientProvidesMaterial = body.client_provides_material === true;
+    const categoryRecord = Array.isArray(style.service_category) ? style.service_category[0] : style.service_category;
+    const clientProvidesMaterial = categoryRecord?.slug === "braiding" && body.client_provides_material === true;
     const materialPriceAdjustment = clientProvidesMaterial ? Math.max(0, Number(style.own_material_price_reduction || 0)) : 0;
     const materialDurationAdjustmentMinutes = clientProvidesMaterial ? Math.max(0, Math.round(Number(style.own_material_duration_reduction_minutes || 0))) : 0;
     if (clientProvidesMaterial) total -= materialPriceAdjustment;
@@ -75,7 +99,7 @@ export async function POST(request: Request) {
     const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
     const deposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
     const discount = promoPreview?.discount || 0;
-    const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) - materialDurationAdjustmentMinutes / 60);
+    const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60 - materialDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload = {
       customer_id: customerId,
@@ -86,6 +110,7 @@ export async function POST(request: Request) {
       selected_length: selectedLength || null,
       selected_material_id: materialId,
       selected_addons: selectedAddons,
+      selected_options: selectedOptions,
       client_notes: cleanText(body.client_notes, 1000) || null,
       client_provides_material: clientProvidesMaterial,
       material_price_adjustment: clientProvidesMaterial ? -materialPriceAdjustment : 0,

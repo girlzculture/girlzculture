@@ -14,11 +14,29 @@ type Row = Record<string, any>;
 type Props = { salon: Row; styles: Row[]; stylists: Row[] };
 type Slot = { value: string; label: string; stylistId: string | null };
 type SuggestedSlot = Slot & { date: string; timeZone?: string };
+type ServiceOption = { value: string; label: string; price_add: number; duration_add_minutes: number };
+type ServiceOptionGroup = { id: string; label: string; selection: "single" | "multiple"; required: boolean; options: ServiceOption[] };
 
 function options(raw: any) {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw.map((item: any) => typeof item === "string" ? { label: item, value: item, price_add: 0 } : { label: item.label || item.name || item.value, value: item.value || item.label || item.name, price_add: Number(item.price_add || item.price || 0) });
   return Object.entries(raw).map(([key, value]: any) => ({ label: value.label || value.name || key, value: value.value || key, price_add: Number(value.price_add || value.price || 0) }));
+}
+
+function serviceOptionGroups(raw: unknown): ServiceOptionGroup[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((group: any) => ({
+    id: String(group?.id || ""),
+    label: String(group?.label || "Options"),
+    selection: group?.selection === "multiple" ? "multiple" as const : "single" as const,
+    required: group?.required === true,
+    options: Array.isArray(group?.options) ? group.options.map((item: any) => ({
+      value: String(item?.value || item?.label || ""),
+      label: String(item?.label || item?.value || ""),
+      price_add: Number(item?.price_add || 0),
+      duration_add_minutes: Number(item?.duration_add_minutes || 0),
+    })).filter((item: ServiceOption) => item.value && item.label) : [],
+  })).filter((group: ServiceOptionGroup) => group.id && group.options.length);
 }
 
 const money = (value: number) => `$${value.toFixed(2)}`;
@@ -34,6 +52,7 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const [size, setSize] = useState("");
   const [length, setLength] = useState("");
   const [addons, setAddons] = useState<string[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
   const [clientNotes, setClientNotes] = useState("");
   const [clientProvidesMaterial, setClientProvidesMaterial] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -50,19 +69,33 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const [suggested, setSuggested] = useState<SuggestedSlot | null>(null);
 
   const style = styles.find((row) => row.id === styleId) || styles[0];
+  const serviceCategorySlug = String(style?.service_category?.slug || "braiding");
+  const isBraiding = serviceCategorySlug === "braiding";
   const sizeOptions = options(style?.size_options);
   const lengthOptions = options(style?.length_options);
   const addonOptions = options(style?.addons);
+  const genericOptionGroups = serviceOptionGroups(style?.option_groups);
+  const selectedGenericOptions = genericOptionGroups.flatMap((group) => group.options.filter((item) => (selectedOptions[group.id] || []).includes(item.value)));
+  const genericOptionPrice = selectedGenericOptions.reduce((sum, item) => sum + item.price_add, 0);
+  const genericDurationAdjustmentMinutes = selectedGenericOptions.reduce((sum, item) => sum + item.duration_add_minutes, 0);
   const beforeMaterialAdjustment = Number(style?.price_display_min || style?.base_price || 0)
     + Number(sizeOptions.find((item: Row) => item.value === size)?.price_add || 0)
     + Number(lengthOptions.find((item: Row) => item.value === length)?.price_add || 0)
-    + addonOptions.filter((item: Row) => addons.includes(item.value)).reduce((sum: number, item: Row) => sum + item.price_add, 0);
+    + addonOptions.filter((item: Row) => addons.includes(item.value)).reduce((sum: number, item: Row) => sum + item.price_add, 0)
+    + genericOptionPrice;
   const materialReduction = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_price_reduction || 0)) : 0;
   const durationReductionMinutes = clientProvidesMaterial ? Math.max(0, Number(style?.own_material_duration_reduction_minutes || 0)) : 0;
   const total = Math.max(1, beforeMaterialAdjustment - materialReduction);
   const originalDeposit = Number((total * 0.1).toFixed(2));
   const deposit = Math.max(0, Number((originalDeposit - promoDiscount).toFixed(2)));
   const balance = total - deposit;
+
+  useEffect(() => {
+    setSize("");
+    setLength("");
+    setAddons([]);
+    setSelectedOptions({});
+  }, [styleId]);
 
   useEffect(() => {
     if (date) return;
@@ -153,6 +186,7 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
           selected_size: size || null,
           selected_length: length || null,
           selected_addons: addons,
+          selected_options: selectedOptions,
           client_notes: clientNotes,
           client_provides_material: clientProvidesMaterial,
           promo_code: promoCode.trim() || null,
@@ -177,10 +211,10 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   }
 
   const panels = [
-    <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, total }} />,
+    <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total }} />,
     <StylistPanel key="stylist" stylists={stylists} value={stylistId} setValue={setStylistId} />,
     <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested }} />,
-    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, deposit, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientProvidesMaterial, setClientProvidesMaterial, materialReduction, durationReductionMinutes }} /><PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
+    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, deposit, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientProvidesMaterial, setClientProvidesMaterial, materialReduction, durationReductionMinutes, genericDurationAdjustmentMinutes, isBraiding }} /><PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];
 
@@ -190,9 +224,18 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
 function PanelTitle({ n, title }: { n: number; title: string }) { return <h2 className="mb-4 flex items-center gap-2 font-serif text-lg font-semibold text-plum"><span className="grid h-6 w-6 place-items-center rounded-full bg-plum text-xs text-white">{n}</span>{title}</h2>; }
 function StylePanel(props: Row) {
   const uploadedPhoto = props.style?.photos?.[0];
-  return <div><div className="flex gap-3 rounded-[10px] border p-2">{uploadedPhoto ? <SafeImage src={uploadedPhoto} fallbackSrc={uploadedPhoto} alt={props.style?.name || "Style"} className="h-16 w-16 rounded-lg object-cover" /> : null}<div><b className="text-sm">{props.style?.name || "Choose a style"}</b>{props.style?.category ? <p className="text-[10px] text-ink/55">{props.style.category}</p> : null}</div></div><label className="mt-3 block text-[10px] font-bold">Style<select value={props.styleId} onChange={(event) => props.setStyleId(event.target.value)} className="mt-1 w-full rounded-lg border p-2">{props.styles.map((row: Row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label><Choice label="Size" items={props.style ? options(props.style.size_options) : []} value={props.size} onChange={props.setSize} /><Choice label="Length" items={props.style ? options(props.style.length_options) : []} value={props.length} onChange={props.setLength} /><div className="mt-3"><b className="text-[10px]">Add-ons</b>{(props.style ? options(props.style.addons) : []).map((item: Row) => <label key={item.value} className="flex justify-between py-1 text-[10px]"><span><input type="checkbox" checked={props.addons.includes(item.value)} onChange={() => props.setAddons((current: string[]) => current.includes(item.value) ? current.filter((value) => value !== item.value) : [...current, item.value])} /> {item.label}</span><span>+{money(item.price_add)}</span></label>)}</div><div className="mt-4 flex justify-between rounded-lg bg-blush/40 p-3"><b className="text-xs">Estimated Total</b><b className="text-plum">{money(props.total)}</b></div></div>;
+  const groups = props.genericOptionGroups as ServiceOptionGroup[];
+  return <div>
+    <div className="flex gap-3 rounded-[10px] border p-2">{uploadedPhoto ? <SafeImage src={uploadedPhoto} fallbackSrc={uploadedPhoto} alt={props.style?.name || "Service"} className="h-16 w-16 rounded-lg object-cover" /> : null}<div><b className="text-sm">{props.style?.name || "Choose a service"}</b><p className="text-[10px] text-ink/55">{[props.style?.service_category?.name, props.style?.category].filter(Boolean).join(" · ")}</p></div></div>
+    <label className="mt-3 block text-[10px] font-bold">Service<select value={props.styleId} onChange={(event) => props.setStyleId(event.target.value)} className="mt-1 w-full rounded-lg border p-2">{props.styles.map((row: Row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label>
+    {groups.length ? groups.map((group) => <GenericOptionChoices key={group.id} group={group} selected={props.selectedOptions[group.id] || []} setSelected={(values) => props.setSelectedOptions((current: Record<string, string[]>) => ({ ...current, [group.id]: values }))} />) : <><Choice label="Size" items={props.style ? options(props.style.size_options) : []} value={props.size} onChange={props.setSize} /><Choice label="Length" items={props.style ? options(props.style.length_options) : []} value={props.length} onChange={props.setLength} /><div className="mt-3"><b className="text-[10px]">Add-ons</b>{(props.style ? options(props.style.addons) : []).map((item: Row) => <label key={item.value} className="flex justify-between py-1 text-[10px]"><span><input type="checkbox" checked={props.addons.includes(item.value)} onChange={() => props.setAddons((current: string[]) => current.includes(item.value) ? current.filter((value) => value !== item.value) : [...current, item.value])} /> {item.label}</span><span>+{money(item.price_add)}</span></label>)}</div></>}
+    <div className="mt-4 flex justify-between rounded-lg bg-blush/40 p-3"><b className="text-xs">Estimated Total</b><b className="text-plum">{money(props.total)}</b></div>
+  </div>;
 }
-function Choice({ label, items, value, onChange }: { label: string; items: Row[]; value: string; onChange: (value: string) => void }) { if (!items.length) return null; return <div className="mt-3"><b className="text-[10px]">{label}</b><div className="mt-1 flex flex-wrap gap-1">{items.map((item) => <button key={String(item.value)} onClick={() => onChange(String(item.value))} className={`rounded border px-2 py-1 text-[9px] ${value === item.value ? "border-magenta bg-blush" : ""}`}>{String(item.label)}</button>)}</div></div>; }
+function Choice({ label, items, value, onChange }: { label: string; items: Row[]; value: string; onChange: (value: string) => void }) { if (!items.length) return null; return <div className="mt-3"><b className="text-[10px]">{label}</b><div className="mt-1 flex flex-wrap gap-1">{items.map((item) => <button type="button" key={String(item.value)} onClick={() => onChange(String(item.value))} className={`rounded border px-2 py-1 text-[9px] ${value === item.value ? "border-magenta bg-blush" : ""}`}>{String(item.label)}</button>)}</div></div>; }
+function GenericOptionChoices({ group, selected, setSelected }: { group: ServiceOptionGroup; selected: string[]; setSelected: (values: string[]) => void }) {
+  return <div className="mt-3"><b className="text-[10px]">{group.label}{group.required ? " *" : ""}</b><div className="mt-1 flex flex-wrap gap-1">{group.options.map((item) => { const active = selected.includes(item.value); return <button type="button" key={item.value} onClick={() => setSelected(group.selection === "single" ? [item.value] : active ? selected.filter((value) => value !== item.value) : [...selected, item.value])} className={`rounded border px-2 py-1 text-[9px] ${active ? "border-magenta bg-blush" : ""}`}>{item.label}{item.price_add ? ` +${money(item.price_add)}` : ""}</button>; })}</div></div>;
+}
 function PromoField(props: Row) { return <div className="mt-3 rounded-lg border border-plum/10 p-3"><b className="text-[10px]">Promo code</b><div className="mt-2 flex gap-2"><input value={props.promoCode} onChange={(event) => { props.setPromoCode(event.target.value.toUpperCase()); props.setPromoDiscount(0); props.setPromoMessage(""); }} placeholder="Enter code" className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-[10px] uppercase"/><button type="button" onClick={() => void props.applyPromo()} className="rounded-lg bg-plum px-3 text-[10px] font-bold text-white">Apply</button></div>{props.promoMessage ? <p className={`mt-2 text-[9px] ${props.promoDiscount ? "text-green-700" : "text-red-700"}`}>{props.promoMessage}</p> : null}{props.promoDiscount ? <p className="mt-2 flex justify-between text-[10px]"><span>Deposit after discount</span><b>{money(props.deposit)}</b></p> : null}</div>; }
 function StylistPanel({ stylists, value, setValue }: { stylists: Row[]; value: string; setValue: (value: string) => void }) {
   const rows = [{ id: "any", name: "Any available stylist", bio: "The salon will assign the first qualified professional who is free for your complete service time." }, ...stylists];
@@ -213,5 +256,18 @@ function StylistPanel({ stylists, value, setValue }: { stylists: Row[]; value: s
   })}</div>;
 }
 function DatePanel(props: Row) { return <div><input type="date" value={props.date} onChange={(event) => props.setDate(event.target.value)} className="w-full rounded-lg border p-3 text-xs" /><p className="mt-4 flex items-center justify-between text-[10px]"><b>Available Times</b><span><Clock3 size={12} className="inline" /> Est. {props.style?.duration_min_hours || 0} hrs</span></p>{props.availabilityLoading ? <p className="mt-3 text-[10px] text-ink/55">Checking live availability…</p> : <div className="mt-2 grid grid-cols-3 gap-2">{props.slots.map((slot: Slot) => <button key={slot.value} onClick={() => props.setTime(slot.value)} className={`rounded-lg border px-1 py-2 text-[9px] ${props.time === slot.value ? "border-magenta bg-blush text-magenta" : ""}`}>{slot.label}</button>)}</div>}{!props.availabilityLoading && !props.slots.length ? <p className="mt-3 rounded-lg bg-blush/30 p-3 text-[10px]">{props.availabilityReason || "No available times."}</p> : null}{props.suggested ? <button onClick={() => props.applySuggested(props.suggested)} className="mt-3 w-full rounded-lg border border-magenta px-3 py-2 text-[10px] font-bold text-magenta">Next available: {props.suggested.date} at {props.suggested.label}</button> : null}<p className="mt-4 rounded-lg bg-blush/30 p-3 text-[9px] leading-4">Times use the salon’s local timezone and include service duration plus cleanup buffer.</p></div>; }
-function ReviewPanel(props: Row) { const selected = props.slots.find((slot: Slot) => slot.value === props.time); return <div className="space-y-3 text-[10px]"><div className="rounded-lg border p-3"><b>{props.style?.name}</b><p>{props.date} at {selected?.label || "Choose a time"}</p><p>{props.stylists.find((row: Row) => row.id === props.stylistId)?.name || "Any available stylist"}</p></div><label className="flex gap-2 rounded-lg border border-plum/10 p-3"><input type="checkbox" checked={props.clientProvidesMaterial} onChange={(event) => props.setClientProvidesMaterial(event.target.checked)} className="accent-magenta" /><span><b>I will bring my own hair or wig</b><span className="mt-0.5 block text-ink/55">The salon-configured material cost and service time adjustment will be applied.</span></span></label>{props.clientProvidesMaterial && (props.materialReduction > 0 || props.durationReductionMinutes > 0) ? <p className="rounded-lg bg-green-50 p-2 text-green-800">Adjusted by -{money(props.materialReduction)} and -{props.durationReductionMinutes} minutes.</p> : null}<div className="space-y-1 rounded-lg bg-blush/30 p-3"><p className="flex justify-between"><span>Total Price</span><b>{money(props.total)}</b></p><p className="flex justify-between text-magenta"><span>Reservation Deposit (10%)</span><b>{money(props.deposit)}</b></p><p className="flex justify-between"><span>Balance Due at Salon</span><b>{money(props.balance)}</b></p></div><textarea value={props.clientNotes} onChange={(event) => props.setClientNotes(event.target.value.slice(0, 1000))} rows={3} placeholder="Notes or special requests (allergies, accessibility, style details…)" className="w-full resize-none rounded-lg border p-2" /><input required value={props.guest.name} onChange={(event) => props.setGuest((current: Row) => ({ ...current, name: event.target.value }))} placeholder="Full Name" className="w-full rounded-lg border p-2" /><input required type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={props.guest.email} onChange={(event) => props.setGuest((current: Row) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" className="w-full rounded-lg border p-2" /><input required type="tel" inputMode="tel" pattern={US_PHONE_PATTERN} title="A mobile number is required for instant booking and cancellation alerts" value={props.guest.phone} onChange={(event) => props.setGuest((current: Row) => ({ ...current, phone: formatUsPhoneInput(event.target.value) }))} placeholder="+1 (555) 123-4567" className="w-full rounded-lg border p-2" /><p className="text-[9px] text-ink/50">Required for immediate appointment alerts by SMS.</p><label className="flex gap-2 rounded-lg bg-blush/30 p-2"><input type="checkbox" checked={props.consent} onChange={(event) => props.setConsent(event.target.checked)} /><span>I understand the deposit is a non-refundable reservation fee credited toward my total.</span></label></div>; }
+function ReviewPanel(props: Row) {
+  const selected = props.slots.find((slot: Slot) => slot.value === props.time);
+  return <div className="space-y-3 text-[10px]">
+    <div className="rounded-lg border p-3"><b>{props.style?.name}</b><p>{props.date} at {selected?.label || "Choose a time"}</p><p>{props.stylists.find((row: Row) => row.id === props.stylistId)?.name || "Any available stylist"}</p></div>
+    {props.isBraiding ? <><label className="flex gap-2 rounded-lg border border-plum/10 p-3"><input type="checkbox" checked={props.clientProvidesMaterial} onChange={(event) => props.setClientProvidesMaterial(event.target.checked)} className="accent-magenta" /><span><b>I will bring my own hair or wig</b><span className="mt-0.5 block text-ink/55">The salon-configured material cost and service time adjustment will be applied.</span></span></label>{props.clientProvidesMaterial && (props.materialReduction > 0 || props.durationReductionMinutes > 0) ? <p className="rounded-lg bg-green-50 p-2 text-green-800">Adjusted by -{money(props.materialReduction)} and -{props.durationReductionMinutes} minutes.</p> : null}</> : null}
+    {props.genericDurationAdjustmentMinutes ? <p className="rounded-lg bg-blush/30 p-2 text-plum">Selected options adjust service time by {props.genericDurationAdjustmentMinutes > 0 ? "+" : ""}{props.genericDurationAdjustmentMinutes} minutes.</p> : null}
+    <div className="space-y-1 rounded-lg bg-blush/30 p-3"><p className="flex justify-between"><span>Total Price</span><b>{money(props.total)}</b></p><p className="flex justify-between text-magenta"><span>Reservation Deposit (10%)</span><b>{money(props.deposit)}</b></p><p className="flex justify-between"><span>Balance Due at Salon</span><b>{money(props.balance)}</b></p></div>
+    <textarea value={props.clientNotes} onChange={(event) => props.setClientNotes(event.target.value.slice(0, 1000))} rows={3} placeholder="Notes or special requests (allergies, accessibility, service details…)" className="w-full resize-none rounded-lg border p-2" />
+    <input required value={props.guest.name} onChange={(event) => props.setGuest((current: Row) => ({ ...current, name: event.target.value }))} placeholder="Full Name" className="w-full rounded-lg border p-2" />
+    <input required type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={props.guest.email} onChange={(event) => props.setGuest((current: Row) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" className="w-full rounded-lg border p-2" />
+    <input required type="tel" inputMode="tel" pattern={US_PHONE_PATTERN} title="A mobile number is required for instant booking and cancellation alerts" value={props.guest.phone} onChange={(event) => props.setGuest((current: Row) => ({ ...current, phone: formatUsPhoneInput(event.target.value) }))} placeholder="+1 (555) 123-4567" className="w-full rounded-lg border p-2" /><p className="text-[9px] text-ink/50">Required for immediate appointment alerts by SMS.</p>
+    <label className="flex gap-2 rounded-lg bg-blush/30 p-2"><input type="checkbox" checked={props.consent} onChange={(event) => props.setConsent(event.target.checked)} /><span>I understand the deposit is a non-refundable reservation fee credited toward my total.</span></label>
+  </div>;
+}
 function PaymentPanel({ confirmed, deposit, saving, reserve, suggested, applySuggested }: Row) { return confirmed ? <div className="rounded-[12px] bg-blush/30 p-5 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-magenta text-white"><Check size={36} /></span><h3 className="mt-4 font-serif text-2xl text-plum">You’re All Set!</h3><p className="mt-2 text-xs">Your appointment is confirmed.</p><div className="mt-4 rounded-lg bg-white p-3"><small>Confirmation Code</small><b className="block text-lg text-plum">{confirmed.confirmation_code}</b></div><Link href="/account" className="mt-4 block text-xs font-bold text-magenta">Go to My Bookings</Link></div> : <div><p className="text-xs font-semibold">Secure Checkout</p><div className="my-4 flex gap-2 text-[10px]"><span className="rounded border p-2">VISA</span><span className="rounded border p-2">MC</span><span className="rounded border p-2">AMEX</span></div><p className="rounded-lg bg-blush/30 p-4 text-center"><small>Deposit Amount</small><b className="block text-2xl text-magenta">{money(deposit)}</b></p>{suggested ? <button onClick={() => applySuggested(suggested)} className="mt-4 w-full rounded-lg border border-magenta py-3 text-xs font-bold text-magenta">Use next available: {suggested.date} at {suggested.label}</button> : null}<button onClick={reserve} disabled={saving} className="mt-4 w-full rounded-lg bg-magenta py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Reserving…" : `Pay ${money(deposit)} Deposit`}</button><p className="mt-3 flex items-center justify-center gap-1 text-[9px] text-ink/50"><LockKeyhole size={11} />Your payment is encrypted and secure.</p></div>; }
