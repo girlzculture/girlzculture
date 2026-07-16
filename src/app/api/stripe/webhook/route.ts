@@ -2,7 +2,7 @@ import { normalizePlan, planRank } from "@/lib/plans";
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripeGet, verifyStripeEvent } from "@/lib/stripeServer";
 
-type StripeObject = Record<string, unknown> & { id?:string; metadata?:Record<string,string>; status?:string; customer?:string; subscription?:string; mode?:string; payment_status?:string; payment_intent?:string; current_period_end?:number; cancel_at_period_end?:boolean; items?:{data?:Array<{price?:{id?:string}}>}; discounts?:Array<{coupon?:{id?:string}|string;promotion_code?:{id?:string}|string}>; };
+type StripeObject = Record<string, unknown> & { id?:string; metadata?:Record<string,string>; status?:string; customer?:string; subscription?:string; mode?:string; payment_status?:string; payment_intent?:string; current_period_start?:number; current_period_end?:number; cancel_at_period_end?:boolean; schedule?:string|{id?:string}|null; latest_invoice?:string|{id?:string}|null; items?:{data?:Array<{price?:{id?:string}}>}; discounts?:Array<{coupon?:{id?:string}|string;promotion_code?:{id?:string}|string}>; };
 
 function planFromObject(object: StripeObject) {
   const priceId=object.items?.data?.[0]?.price?.id;
@@ -16,12 +16,53 @@ async function syncSubscription(object: StripeObject) {
   const admin=getSupabaseAdmin();
   const salonId=object.metadata?.salon_id;
   if(!salonId||!object.id)return;
+  const {data:existing}=await admin.from("subscriptions").select("*").eq("salon_id",salonId).maybeSingle();
   const plan=planFromObject(object);
   const status=String(object.status||"inactive");
+  const periodStart=object.current_period_start?new Date(object.current_period_start*1000).toISOString():existing?.current_period_start||null;
   const periodEnd=object.current_period_end?new Date(object.current_period_end*1000).toISOString():null;
-  await admin.from("subscriptions").upsert({salon_id:salonId,tier:plan,status,stripe_subscription_id:object.id,stripe_customer_id:object.customer||null,price_id:object.items?.data?.[0]?.price?.id||null,current_period_end:periodEnd,cancel_at_period_end:Boolean(object.cancel_at_period_end),updated_at:new Date().toISOString()},{onConflict:"salon_id"});
+  const scheduleId=typeof object.schedule==="string"?object.schedule:object.schedule?.id||existing?.stripe_schedule_id||null;
+  const scheduledBecameEffective=Boolean(existing?.scheduled_tier&&normalizePlan(existing.scheduled_tier)===plan);
+  const cancellationRequestedAt=object.cancel_at_period_end?(existing?.cancellation_requested_at||new Date().toISOString()):null;
+  const endedAt=["canceled","incomplete_expired"].includes(status.toLowerCase())?(existing?.ended_at||new Date().toISOString()):null;
+  const latestInvoiceId=typeof object.latest_invoice==="string"?object.latest_invoice:object.latest_invoice?.id||existing?.last_invoice_id||null;
+  const {error:subscriptionError}=await admin.from("subscriptions").upsert({
+    salon_id:salonId,
+    tier:plan,
+    status,
+    stripe_subscription_id:object.id,
+    stripe_customer_id:object.customer||null,
+    price_id:object.items?.data?.[0]?.price?.id||null,
+    current_period_start:periodStart,
+    current_period_end:periodEnd,
+    cancel_at_period_end:Boolean(object.cancel_at_period_end),
+    cancellation_requested_at:cancellationRequestedAt,
+    ended_at:endedAt,
+    stripe_schedule_id:scheduleId,
+    scheduled_tier:scheduledBecameEffective?null:existing?.scheduled_tier||null,
+    scheduled_price_id:scheduledBecameEffective?null:existing?.scheduled_price_id||null,
+    scheduled_change_effective_at:scheduledBecameEffective?null:existing?.scheduled_change_effective_at||null,
+    last_invoice_id:latestInvoiceId,
+    updated_at:new Date().toISOString(),
+  },{onConflict:"salon_id"});
+  if(subscriptionError)throw subscriptionError;
   const active=["active","trialing"].includes(status.toLowerCase());
-  await admin.from("salons").update({subscription_tier:plan,subscription_status:active?status:"inactive",featured_weight:active?(planRank(plan)===3?100:planRank(plan)===2?40:0):0}).eq("id",salonId);
+  const {error:salonError}=await admin.from("salons").update({subscription_tier:plan,subscription_status:active?status:"inactive",featured_weight:active?(planRank(plan)===3?100:planRank(plan)===2?40:0):0}).eq("id",salonId);
+  if(salonError)throw salonError;
+}
+
+async function syncScheduleState(object: StripeObject, eventType: string) {
+  if(!object.id)return;
+  if(!["subscription_schedule.completed","subscription_schedule.released","subscription_schedule.canceled"].includes(eventType))return;
+  const admin=getSupabaseAdmin();
+  const {error}=await admin.from("subscriptions").update({
+    stripe_schedule_id:null,
+    scheduled_tier:null,
+    scheduled_price_id:null,
+    scheduled_change_effective_at:null,
+    updated_at:new Date().toISOString(),
+  }).eq("stripe_schedule_id",object.id);
+  if(error)throw error;
 }
 
 async function completeBookingCheckout(session: StripeObject) {
@@ -81,6 +122,7 @@ export async function POST(request: Request) {
       if(object.mode==="subscription"&&object.subscription){const subscription=await stripeGet<StripeObject>(`/subscriptions/${object.subscription}`);await syncSubscription(subscription);}
     }
     if(["customer.subscription.created","customer.subscription.updated","customer.subscription.deleted"].includes(event.type))await syncSubscription(object);
+    if(event.type.startsWith("subscription_schedule."))await syncScheduleState(object,event.type);
     return Response.json({received:true});
   } catch(error){
     await admin.from("stripe_webhook_events").delete().eq("id",event.id);

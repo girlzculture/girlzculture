@@ -48,3 +48,11 @@ export function isSubscriptionActive(status: unknown, currentPeriodEnd?: unknown
 export function stripePriceEnv(plan: SubscriptionPlan) {
   return ({ Basic: "STRIPE_BASIC_PRICE_ID", Growth: "STRIPE_GROWTH_PRICE_ID", Premium: "STRIPE_PREMIUM_PRICE_ID" } as const)[plan];
 }
+
+export function planFromStripePriceId(priceId: unknown): SubscriptionPlan | null {
+  const value = String(priceId || "");
+  if (value && value === process.env.STRIPE_BASIC_PRICE_ID) return "Basic";
+  if (value && value === process.env.STRIPE_GROWTH_PRICE_ID) return "Growth";
+  if (value && value === process.env.STRIPE_PREMIUM_PRICE_ID) return "Premium";
+  return null;
+}
