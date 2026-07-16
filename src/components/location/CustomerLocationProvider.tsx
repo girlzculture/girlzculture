@@ -24,6 +24,14 @@ export default function CustomerLocationProvider({ children }: { children: React
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
+        const query = new URLSearchParams(window.location.search);
+        const fromUrl: CustomerLocation = { lat: Number(query.get("lat")), lng: Number(query.get("lng")), label: String(query.get("location") || "").trim(), source: "explicit" };
+        if (fromUrl.label && validCoordinates(fromUrl)) {
+          setLocationState(fromUrl);
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(fromUrl));
+          setReady(true);
+          return;
+        }
         const parsed = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null") as CustomerLocation | null;
         if (parsed && validCoordinates(parsed) && parsed.label && ["explicit", "device", "saved"].includes(parsed.source)) setLocationState(parsed);
       } catch { sessionStorage.removeItem(STORAGE_KEY); }

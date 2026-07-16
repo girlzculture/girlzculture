@@ -176,8 +176,14 @@ function renderStars(rating: number) {
   return Array.from({ length: 5 }, (_, index) => <Star key={index} size={14} className={index < Math.round(rating) ? "fill-amber text-amber" : "fill-transparent text-ink/20"} />);
 }
 
-export default async function SalonPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
+  const incomingQuery = await searchParams;
+  const bookingContext = new URLSearchParams();
+  for (const key of ["location", "lat", "lng", "style"] as const) {
+    const value = incomingQuery[key];
+    if (typeof value === "string" && value.length <= 160) bookingContext.set(key, value);
+  }
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase.from("salons").select("*").eq("slug", slug).maybeSingle<SalonRecord>();
 
@@ -276,7 +282,7 @@ export default async function SalonPage({ params }: { params: Promise<{ slug: st
             {salon.description?.trim() ? <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description}</p> : null}
 
             <div className="mt-4 flex items-center gap-2">
-              <Link href={`/salon/${salon.slug || slug}/book`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>
+              <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>
               <SalonProfileActions salonId={salon.id} salonName={salon.name || "Salon"} />
             </div>
           </div>
