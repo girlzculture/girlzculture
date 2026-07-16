@@ -64,14 +64,14 @@ as $$
     left join lateral (
       select min(st.price_display_min)::numeric as starting_price
       from public.styles st
-      where st.salon_id = s.id and coalesce(st.is_active, true)
+      where st.salon_id = s.id
         and st.price_display_min is not null and st.price_display_min >= 0
     ) prices on true
     left join lateral (
       select jsonb_agg(jsonb_build_object('id', listed.id, 'name', listed.name) order by listed.name) as services
       from (
         select st.id, st.name from public.styles st
-        where st.salon_id = s.id and coalesce(st.is_active, true)
+        where st.salon_id = s.id
         order by st.name limit 12
       ) listed
     ) service_list on true
@@ -87,7 +87,7 @@ as $$
                           and origin_longitude + (v.radius / (69.172 * greatest(0.01, cos(radians(origin_latitude)))))
       and (nullif(trim(style_query), '') is null or exists (
         select 1 from public.styles filter_style
-        where filter_style.salon_id = s.id and coalesce(filter_style.is_active, true)
+        where filter_style.salon_id = s.id
           and filter_style.name ilike '%' || trim(style_query) || '%'
       ))
   ), eligible as (

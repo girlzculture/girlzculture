@@ -63,8 +63,8 @@ create index if not exists salons_marketplace_coordinates_idx
 create index if not exists salons_public_name_trgm_idx
   on public.salons using gin (name extensions.gin_trgm_ops);
 
-create index if not exists styles_active_discovery_idx
-  on public.styles(salon_id, is_active, price_display_min, price_display_max, name);
+create index if not exists styles_discovery_idx
+  on public.styles(salon_id, price_display_min, price_display_max, name);
 
 create index if not exists master_styles_public_name_trgm_idx
   on public.master_styles using gin (name extensions.gin_trgm_ops)
@@ -107,8 +107,8 @@ language sql stable security definer set search_path=public as $$
       coalesce(s.rating_overall,0)::numeric rating_overall,coalesce(s.review_count,0)::integer review_count,s.latitude,s.longitude,
       c.id campaign_id,c.priority,c.rotation_weight,c.radius_miles,
       public.distance_miles(origin_latitude,origin_longitude,s.latitude,s.longitude) distance_miles,
-      (select min(st.price_display_min) from public.styles st where st.salon_id=s.id and coalesce(st.is_active,true)) starting_price,
-      coalesce((select jsonb_agg(jsonb_build_object('id',st.id,'name',st.name) order by st.name) from public.styles st where st.salon_id=s.id and coalesce(st.is_active,true)),'[]'::jsonb) services
+      (select min(st.price_display_min) from public.styles st where st.salon_id=s.id) starting_price,
+      coalesce((select jsonb_agg(jsonb_build_object('id',st.id,'name',st.name) order by st.name) from public.styles st where st.salon_id=s.id),'[]'::jsonb) services
     from public.featured_salon_campaigns c
     join public.marketing_entitlements e on e.id=c.entitlement_id and e.salon_id=c.salon_id
     join public.salons s on s.id=c.salon_id
