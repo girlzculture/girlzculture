@@ -1,21 +1,23 @@
-import SalonDiscovery, { DiscoverySalon } from "@/components/public/SalonDiscovery";
+import SalonDiscovery from "@/components/public/SalonDiscovery";
 import { CustomerBottomNav, PublicHeader, TrustStrip } from "@/components/site/PublicChrome";
-import { supabase } from "@/lib/supabase";
-import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
+import { discoverNearbySalons } from "@/lib/discoveryServer";
+import { normalizeRadius, validCoordinates } from "@/lib/location";
 
-const fallbackImages = ["/images/salon-warm.jpg", "/images/salon-blush.jpg", "/images/salon-dark.jpg", "/images/salon-modern.jpg"];
+export const dynamic = "force-dynamic";
+
+function stringValue(value: string | string[] | undefined) { return typeof value === "string" ? value : ""; }
 
 export default async function SalonsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
-  const [{ data: salons }, { data: styles }] = await Promise.all([
-    supabase.from("salons").select("*").eq("is_discoverable", true).eq("status", "Active").in("subscription_status", ["active", "trialing"]),
-    supabase.from("styles").select("id,salon_id,name,price_display_min"),
-  ]);
-  const mapped: DiscoverySalon[] = (salons || []).map((salon, index) => {
-    const salonStyles = (styles || []).filter((item) => item.salon_id === salon.id);
-    const prices = salonStyles.map((item) => Number(item.price_display_min)).filter((value) => value > 0);
-    const tier = salon.subscription_tier || "Basic";
-    return { id: salon.id, name: salon.name || "Salon", slug: salon.slug || salon.id, city: salon.address_city || "", state: salon.address_state || "", zip: salon.address_zip || "", rating: Number(salon.rating_overall || 0), reviewCount: Number(salon.review_count || 0), image: salon.cover_photo_url || fallbackImages[index % fallbackImages.length], startingPrice: prices.length ? Math.min(...prices) : null, tier, verified: String(salon.verification_status || "").toLowerCase().startsWith("verified"), services: salonStyles.filter((item) => item.id && item.name).map((item) => ({ id: item.id, name: item.name })), nextAvailability: null, statusLabel: getSalonStatusLabel(salon), latitude: salon.latitude, longitude: salon.longitude, closedToday: isSalonClosedToday(salon) };
-  });
-  return <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0"><PublicHeader active="salons" /><section className="mx-auto w-full max-w-[1760px] px-3 pb-4 pt-2 sm:px-8 sm:pt-6 lg:px-12 2xl:px-16"><h1 className="font-serif text-[29px] font-semibold leading-none tracking-[-0.04em] text-ink sm:text-[56px]">Find salons that fit your style<span className="text-magenta">.</span></h1><div className="mt-1.5 sm:mt-4"><SalonDiscovery initialSalons={mapped} initialStyle={typeof query.style === "string" ? query.style : ""} initialLocation={typeof query.location === "string" ? query.location : ""} /></div></section><TrustStrip /><CustomerBottomNav active="search" /></main>;
+  const origin = { lat: Number(stringValue(query.lat)), lng: Number(stringValue(query.lng)) };
+  const validOrigin = validCoordinates(origin) ? origin : null;
+  const style = stringValue(query.style);
+  const location = stringValue(query.location);
+  const radius = normalizeRadius(stringValue(query.radius));
+  let initial = { salons: [], total: 0 } as Awaited<ReturnType<typeof discoverNearbySalons>>;
+  if (validOrigin) {
+    try { initial = await discoverNearbySalons({ origin: validOrigin, radius, style, limit: 20 }); }
+    catch (error) { console.error("Initial nearby salon query failed", error); }
+  }
+  return <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0"><PublicHeader active="salons"/><section className="mx-auto w-full max-w-[1760px] px-3 pb-5 pt-3 sm:px-8 sm:pt-7 lg:px-12 2xl:px-16"><h1 className="font-serif text-[32px] font-semibold leading-none tracking-[-0.04em] text-ink sm:text-[56px]">Find salons that fit your style<span className="text-magenta">.</span></h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">Choose your location, compare real prices and reviews, and book with confidence.</p><div className="mt-4"><SalonDiscovery initialSalons={initial.salons} initialTotal={initial.total} initialStyle={style} initialLocation={location} initialOrigin={validOrigin}/></div></section><TrustStrip/><CustomerBottomNav active="search"/></main>;
 }
