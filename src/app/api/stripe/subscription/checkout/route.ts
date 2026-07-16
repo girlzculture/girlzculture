@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       ...(promoReservation?.stripe_coupon_id?{"discounts[0][coupon]":promoReservation.stripe_coupon_id}:{}),
     });
     if(promoReservation?.redemption_id)await admin.from("promo_code_redemptions").update({stripe_checkout_session_id:session.id}).eq("id",promoReservation.redemption_id);
-    await admin.from("subscriptions").upsert({ salon_id:salon.id, tier:plan, status:"checkout_pending", stripe_customer_id:customerId, price_id:priceId, updated_at:new Date().toISOString() }, { onConflict:"salon_id" });
+    await admin.from("subscriptions").upsert({ salon_id:salon.id, tier:plan, status:"checkout_pending", stripe_customer_id:customerId, price_id:priceId, stripe_schedule_id:null, scheduled_tier:null, scheduled_price_id:null, scheduled_change_effective_at:null, cancel_at_period_end:false, cancellation_requested_at:null, ended_at:null, last_payment_failure:null, updated_at:new Date().toISOString() }, { onConflict:"salon_id" });
     return Response.json({ url:session.url, testMode:true });
   } catch (error) {
     console.error("Subscription checkout failed", error);

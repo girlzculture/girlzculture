@@ -10,11 +10,12 @@ export async function GET(request: Request) {
       ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
       ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
       ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
+      ["billing_events", "event_date", false],
     ] as const;
     const needed: Record<string, string[]> = {
       overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: ["salons"],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
-      reviews: ["reviews", "salons"], finance: ["subscriptions", "bookings", "salons"], marketing: ["salon_promotions", "blog_posts", "salons"],
+      reviews: ["reviews", "salons"], finance: ["subscriptions", "salons", "billing_events"], marketing: ["salon_promotions", "blog_posts", "salons"],
       content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], settings: ["admin_users", "admin_settings"],
     };
     const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));

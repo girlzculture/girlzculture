@@ -45,7 +45,7 @@ export function verifyStripeEvent(rawBody: string, signatureHeader: string | nul
     return left.length === right.length && timingSafeEqual(left, right);
   });
   if (!valid) throw new Error("Invalid Stripe signature.");
-  return JSON.parse(rawBody) as { id: string; type: string; data: { object: Record<string, unknown> } };
+  return JSON.parse(rawBody) as { id: string; type: string; created?: number; data: { object: Record<string, unknown>; previous_attributes?: Record<string, unknown> } };
 }
 
 export function siteUrl(request?: Request) {
