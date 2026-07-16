@@ -142,6 +142,57 @@ section {
   min-width: 0;
 }
 
+/* Homepage-only depth preview. The standard homepage remains the default;
+   append ?homepage3d=1 to compare this isolated, CSS-only treatment. */
+.gc-home-depth {
+  perspective: 1600px;
+  background:
+    radial-gradient(circle at 8% 28%, rgba(224, 163, 78, 0.10), transparent 25rem),
+    radial-gradient(circle at 91% 49%, rgba(91, 26, 107, 0.09), transparent 30rem),
+    var(--background);
+}
+
+.gc-home-depth .gc-home-hero {
+  isolation: isolate;
+  box-shadow: 0 28px 70px rgba(44, 18, 55, 0.12);
+}
+
+.gc-home-depth .gc-home-hero::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(112deg, transparent 38%, rgba(255, 255, 255, 0.22) 51%, transparent 63%);
+  transform: translateX(18%);
+}
+
+.gc-home-depth .gc-home-hero-image {
+  filter: saturate(1.04) contrast(1.025);
+}
+
+.gc-home-depth .gc-home-content {
+  transform-style: preserve-3d;
+}
+
+.gc-home-depth .gc-home-content article,
+.gc-home-depth .gc-home-content > section > div.rounded-\[15px\],
+.gc-home-depth .gc-home-content > section > div.rounded-\[16px\] {
+  border-color: rgba(91, 26, 107, 0.13);
+  box-shadow: 0 16px 34px rgba(44, 18, 55, 0.11), 0 2px 4px rgba(44, 18, 55, 0.05);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gc-home-depth .gc-home-content article {
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .gc-home-depth .gc-home-content article:hover {
+    transform: translateY(-4px) rotateX(0.7deg) rotateY(-0.7deg);
+    box-shadow: 0 22px 48px rgba(44, 18, 55, 0.16), 0 4px 10px rgba(44, 18, 55, 0.06);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -154,5 +205,10 @@ section {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .gc-home-depth .gc-home-content article,
+  .gc-home-depth .gc-home-content article:hover {
+    transform: none !important;
   }
 }

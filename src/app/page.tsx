@@ -24,7 +24,9 @@ const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { section_key: "trending_picks", title: "Trending Picks This Week", description: null, is_visible: true, sort_order: 4 },
 ];
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const previewQuery = await searchParams;
+  const depthPreview = previewQuery.homepage3d === "1";
   const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const { data: sectionData, error: sectionError } = await supabase.from("homepage_sections").select("*").order("sort_order");
   if (sectionError) console.warn("Homepage section controls unavailable", sectionError.message);
@@ -37,10 +39,10 @@ export default async function Home() {
   const socialProofLabels = [homeContent.labels?.social_proof_heading, homeContent.labels?.social_proof_subheading, homeContent.labels?.social_proof_note].filter(Boolean) as string[];
 
   return (
-    <main className="min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0">
+    <main data-homepage-variant={depthPreview ? "depth" : "standard"} className={`min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0 ${depthPreview ? "gc-home-depth" : ""}`}>
       <PublicHeader />
 
-      <section className="relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(243,217,228,0.64),transparent_31%),linear-gradient(105deg,#fbf4ee_0%,#fffaf6_55%,#f7e6df_100%)]">
+      <section className="gc-home-hero relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(243,217,228,0.64),transparent_31%),linear-gradient(105deg,#fbf4ee_0%,#fffaf6_55%,#f7e6df_100%)]">
         <div className="relative mx-auto grid w-full max-w-[1760px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12 2xl:px-16">
           <div className="relative z-20 flex flex-col justify-center pb-5 pt-6 lg:pb-2 lg:pt-4">
             <h1 className="max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:max-w-[610px] lg:text-[58px]">
@@ -62,7 +64,7 @@ export default async function Home() {
               fill
               priority
               sizes="(max-width: 1023px) 53vw, 52vw"
-              className="object-cover object-[44%_38%] lg:object-[48%_38%]"
+              className="gc-home-hero-image object-cover object-[44%_38%] lg:object-[48%_38%]"
               style={{ objectPosition: `${Number(homeContent.hero_position_x ?? 44)}% ${Number(homeContent.hero_position_y ?? 38)}%`, transform: `scale(${Number(homeContent.hero_zoom ?? 1)})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#fffaf6] via-[#fffaf6]/30 to-transparent lg:inset-y-0 lg:left-0 lg:right-auto lg:w-1/3 lg:via-transparent" />
@@ -76,7 +78,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
+      <div className="gc-home-content mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} />)}
 
         <PublicContentSections sections={homeContent.sections} variant="homepage" />
