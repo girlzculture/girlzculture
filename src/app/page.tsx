@@ -8,6 +8,7 @@ import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import PublicContentSections from "@/components/site/PublicContentSections";
 import FeaturedSalonPlacement from "@/components/public/FeaturedSalonPlacement";
+import TrendingVideoPlacement from "@/components/public/TrendingVideoPlacement";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -270,6 +271,7 @@ function MarketplaceEmpty({ title, body }: { title: string; body: string }) {
 
 function HomepageRow({ section, salonsError, nearbySalons, trendingPicks, trendingVideos, startingPrices }: { section: HomeSection; salonsError: { message?: string } | null; nearbySalons: Salon[]; trendingPicks: Salon[]; trendingVideos: TrendingVideo[]; startingPrices: Record<string, number | null> }) {
   if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description}/>;
+  if (section.section_key === "trending_picks") return <TrendingVideoPlacement title={section.title} description={section.description}/>;
   if (section.section_key === "trending_now") return <section className="pb-5 pt-3 sm:pb-6"><SectionHeading title={section.title} description={section.description || undefined} href="/salons" linkLabel="Explore salons" />{trendingVideos.length ? <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6 [&::-webkit-scrollbar]:hidden">{trendingVideos.map((video) => <Link href={video.salon?.slug ? `/salon/${video.salon.slug}` : "/salons"} key={video.slot} className="w-[42vw] max-w-[220px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_4px_16px_rgba(26,18,32,.06)] sm:w-auto"><video src={video.video_url} muted loop playsInline autoPlay preload="metadata" className="aspect-[9/13] w-full bg-ink object-cover" /><div className="p-3"><b className="font-serif text-sm text-plum">{video.salon?.name || "Girlz Culture salon"}</b><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60">{video.description}</p></div></Link>)}</div> : <MarketplaceEmpty title="Trending Now is being staged" body="Admin can prepare all six video cards privately, then reveal this row at once." />}</section>;
   const rowSalons = section.section_key === "salons_near_you" ? nearbySalons : trendingPicks;
   const errorCopy = section.section_key === "salons_near_you" ? "Nearby salons are taking a quick beauty break. Try again shortly." : "This salon row is taking a quick beauty break. Try again shortly.";
