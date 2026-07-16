@@ -17,6 +17,7 @@ import BookingInbox from "@/components/BookingInbox";
 import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
+import AdminMarketingWorkspace from "@/components/admin/AdminMarketingWorkspace";
 import { US_STATES } from "@/lib/usStates";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
@@ -293,7 +294,8 @@ function FinanceSelect({label,value,onChange,options}:{label:string;value:string
 
 function Marketing(p: any) {
   const featured = p.salons.filter((salon: Row) => Number(salon.featured_weight || 0) > 0);
-  return <div className="space-y-5"><AdminHomepageMarketing salons={p.salons} /><div className="grid gap-5 lg:grid-cols-3"><Panel title="Featured on Discover">{featured.length ? featured.map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Weight ${salon.featured_weight}`} />) : <EmptyState title="No featured salons" body="Eligible paid placements will appear here." />}<Link href="/admin/salons" className="mt-4 block w-full rounded-lg border border-magenta py-2 text-center text-magenta">Manage salons</Link></Panel><Panel title="Salon Promotions">{p.promotions.length ? p.promotions.map((promotion: Row) => <Line key={promotion.id} label={promotion.title || "Promotion"} meta={promotion.status || "Draft"} />) : <EmptyState title="No promotions" body="Salon-created promotions will appear here." />}</Panel><Panel title="Blog Management">{p.posts.length ? p.posts.map((post: Row) => <Line key={post.id} label={post.title} meta={post.status} />) : <EmptyState title="No blog posts" body="Create and publish posts in Content Management." />}<Link href="/admin/content" className="mt-4 block w-full rounded-lg bg-magenta py-3 text-center font-bold text-white">Open Content Management</Link></Panel></div></div>;
+  const overview = <div className="space-y-5"><AdminHomepageMarketing salons={p.salons} /><div className="grid gap-5 lg:grid-cols-3"><Panel title="Legacy placement weights">{featured.length ? featured.map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Legacy weight ${salon.featured_weight}`} />) : <EmptyState title="No legacy weights" body="Use the Featured Salons tab for paid, scheduled placements." />}<Link href="/admin/salons" className="mt-4 block w-full rounded-lg border border-magenta py-2 text-center text-magenta">Manage salons</Link></Panel><Panel title="Salon Promotions">{p.promotions.length ? p.promotions.map((promotion: Row) => <Line key={promotion.id} label={promotion.title || "Promotion"} meta={promotion.status || "Draft"} />) : <EmptyState title="No promotions" body="Salon-created promotions will appear here." />}</Panel><Panel title="Blog Management">{p.posts.length ? p.posts.map((post: Row) => <Line key={post.id} label={post.title} meta={post.status} />) : <EmptyState title="No blog posts" body="Create and publish posts in Content Management." />}<Link href="/admin/content" className="mt-4 block w-full rounded-lg bg-magenta py-3 text-center font-bold text-white">Open Content Management</Link></Panel></div></div>;
+  return <AdminMarketingWorkspace overview={overview}/>;
 }
 
 function Subscriptions(p: any) {

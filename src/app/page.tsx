@@ -7,6 +7,7 @@ import SearchComposer from "@/components/site/SearchComposer";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import PublicContentSections from "@/components/site/PublicContentSections";
+import FeaturedSalonPlacement from "@/components/public/FeaturedSalonPlacement";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -184,8 +185,6 @@ export default async function Home() {
   }
 
   const nearbySalons = rankSalonsForNearbyDiscovery(availableSalons).slice(0, 4);
-  const paidFeaturedPool = rankSalonsForNearbyDiscovery(salons.filter((salon) => getSubscriptionTierPriority(salon.subscription_tier) >= 2));
-  const featuredSalons = (paidFeaturedPool.length ? paidFeaturedPool : salons).slice(0, 4);
   const trendingPicks = rankSalonsForNearbyDiscovery(salons).slice(0, 6);
   const socialProofLabels = [homeContent.labels?.social_proof_heading, homeContent.labels?.social_proof_subheading, homeContent.labels?.social_proof_note].filter(Boolean) as string[];
 
@@ -230,7 +229,7 @@ export default async function Home() {
       </section>
 
       <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} salonsError={salonsError} nearbySalons={nearbySalons} featuredSalons={featuredSalons} trendingPicks={trendingPicks} trendingVideos={trendingVideos} startingPrices={startingPrices} />)}
+        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} salonsError={salonsError} nearbySalons={nearbySalons} trendingPicks={trendingPicks} trendingVideos={trendingVideos} startingPrices={startingPrices} />)}
 
         <PublicContentSections sections={homeContent.sections} variant="homepage" />
 
@@ -269,9 +268,10 @@ function MarketplaceEmpty({ title, body }: { title: string; body: string }) {
   return <div className="rounded-[16px] border border-dashed border-plum/20 bg-white/60 px-6 py-9 text-center"><h3 className="font-serif text-xl text-plum">{title}</h3><p className="mt-2 text-sm text-ink/60">{body}</p></div>;
 }
 
-function HomepageRow({ section, salonsError, nearbySalons, featuredSalons, trendingPicks, trendingVideos, startingPrices }: { section: HomeSection; salonsError: { message?: string } | null; nearbySalons: Salon[]; featuredSalons: Salon[]; trendingPicks: Salon[]; trendingVideos: TrendingVideo[]; startingPrices: Record<string, number | null> }) {
+function HomepageRow({ section, salonsError, nearbySalons, trendingPicks, trendingVideos, startingPrices }: { section: HomeSection; salonsError: { message?: string } | null; nearbySalons: Salon[]; trendingPicks: Salon[]; trendingVideos: TrendingVideo[]; startingPrices: Record<string, number | null> }) {
+  if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description}/>;
   if (section.section_key === "trending_now") return <section className="pb-5 pt-3 sm:pb-6"><SectionHeading title={section.title} description={section.description || undefined} href="/salons" linkLabel="Explore salons" />{trendingVideos.length ? <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6 [&::-webkit-scrollbar]:hidden">{trendingVideos.map((video) => <Link href={video.salon?.slug ? `/salon/${video.salon.slug}` : "/salons"} key={video.slot} className="w-[42vw] max-w-[220px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_4px_16px_rgba(26,18,32,.06)] sm:w-auto"><video src={video.video_url} muted loop playsInline autoPlay preload="metadata" className="aspect-[9/13] w-full bg-ink object-cover" /><div className="p-3"><b className="font-serif text-sm text-plum">{video.salon?.name || "Girlz Culture salon"}</b><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60">{video.description}</p></div></Link>)}</div> : <MarketplaceEmpty title="Trending Now is being staged" body="Admin can prepare all six video cards privately, then reveal this row at once." />}</section>;
-  const rowSalons = section.section_key === "salons_near_you" ? nearbySalons : section.section_key === "featured_salons" ? featuredSalons : trendingPicks;
+  const rowSalons = section.section_key === "salons_near_you" ? nearbySalons : trendingPicks;
   const errorCopy = section.section_key === "salons_near_you" ? "Nearby salons are taking a quick beauty break. Try again shortly." : "This salon row is taking a quick beauty break. Try again shortly.";
   return <section className={section.section_key === "salons_near_you" ? "py-2 sm:py-5" : "pb-4 sm:pb-6"}><SectionHeading title={section.title} description={section.description || undefined} href="/search" linkLabel="View all" />{salonsError ? <div className="rounded-[16px] border border-plum/10 bg-white p-6 text-sm text-ink/70">{errorCopy}</div> : rowSalons.length ? <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">{rowSalons.slice(0, 4).map((salon, index) => <SalonCard key={salon.id} salon={salon} index={index} price={startingPrices[salon.id]} ctaLabel={section.section_key === "salons_near_you" ? "View salon" : "View times"} prominent={section.section_key === "salons_near_you"} sponsored={section.section_key === "featured_salons" || section.section_key === "trending_picks"} />)}</div> : <MarketplaceEmpty title="No salons are available for this row yet" body="Eligible salons appear automatically as they publish complete profiles." />}</section>;
 }
