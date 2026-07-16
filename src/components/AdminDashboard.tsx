@@ -163,7 +163,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "quality": return <Quality {...props} />;
     case "reviews": return <Reviews {...props} />;
     case "finance": return <Finance {...props} />;
-    case "marketing": return <div className="space-y-5"><AdminPromoCodes /><Marketing {...props} /></div>;
+    case "marketing": return <AdminMarketingWorkspace overview={<div className="space-y-5"><AdminPromoCodes /><Marketing {...props} /></div>} />;
     case "content": return <AdminContentManager />;
     case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} mode="support" onRead={onTicketRead} /><BookingInbox scope="admin" /></div>;
     case "complaints": return <AdminSupportInbox initialTickets={safeData.tickets} mode="complaints" onRead={onTicketRead} />;
