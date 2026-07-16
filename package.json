@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "verify:billing": "node scripts/verify-subscription-finance.mjs",
-    "verify:production-foundation": "node scripts/verify-service-worker-csp.mjs"
+    "verify:production-foundation": "node scripts/verify-service-worker-csp.mjs",
+    "verify:location": "node scripts/verify-location-foundation.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",

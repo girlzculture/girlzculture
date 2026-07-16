@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { MapPin, Search } from "lucide-react";
+import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { MapPin, Search, X } from "lucide-react";
+import type { CustomerLocation } from "@/lib/location";
 
 let googleMapsPromise: Promise<void> | null = null;
 export function loadGoogleMaps() {
@@ -49,22 +50,31 @@ export function StyleAutocomplete({ value, onChange, placeholder = "Search servi
   return <div ref={root} className={`relative ${className}`}><span className="flex min-h-11 items-center gap-2"><Search size={18} className="shrink-0 text-magenta"/><input name={name} value={value} onFocus={() => setOpen(true)} onChange={(event) => { onChange(event.target.value); setOpen(true); }} autoComplete="off" placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-xs outline-none sm:text-sm"/></span>{open && suggestions.length ? <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-plum/10 bg-white py-1 shadow-2xl">{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => { onChange(suggestion); setOpen(false); }} className="block w-full px-4 py-3 text-left text-xs hover:bg-blush/40">{suggestion}</button>)}</div> : null}</div>;
 }
 
-export function LocationAutocomplete({ value, onChange, onCoordinates, placeholder = "City, neighborhood, or ZIP", className = "", name = "location" }: SharedProps & { onCoordinates?: (coordinates: { lat: number; lng: number } | null) => void }) {
+export function LocationAutocomplete({ value, onChange, onCoordinates, onResolved, placeholder = "City, neighborhood, or ZIP", className = "", name = "location" }: SharedProps & { onCoordinates?: (coordinates: { lat: number; lng: number } | null) => void; onResolved?: (location: CustomerLocation | null) => void }) {
   const [suggestions, setSuggestions] = useState<Array<{ text: string; prediction: any }>>([]);
   const [open, setOpen] = useState(false);
   const [configured, setConfigured] = useState(Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY));
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [loading, setLoading] = useState(false);
   const sessionToken = useRef<any>(null);
+  const requestSequence = useRef(0);
   const root = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
   useEffect(() => {
+    const requestId = ++requestSequence.current;
     const timer = window.setTimeout(async () => {
-      if (value.trim().length < 2 || !configured) { setSuggestions([]); return; }
+      if (value.trim().length < 2 || !configured) { setSuggestions([]); setLoading(false); return; }
+      setLoading(true);
       try {
         await loadGoogleMaps();
         const places = await (window as any).google.maps.importLibrary("places");
         sessionToken.current ||= new places.AutocompleteSessionToken();
         const result = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({ input: value, includedRegionCodes: ["us"], language: "en-US", region: "us", sessionToken: sessionToken.current });
+        if (requestId !== requestSequence.current) return;
         setSuggestions((result.suggestions || []).map((item: any) => ({ text: item.placePrediction?.text?.toString() || "", prediction: item.placePrediction })).filter((item: { text: string }) => item.text).slice(0, 6));
-      } catch (error) { console.error("Places autocomplete failed", error); setConfigured(false); setSuggestions([]); }
+        setActiveIndex(-1);
+      } catch (error) { if (requestId === requestSequence.current) { console.error("Places autocomplete failed", error); setConfigured(false); setSuggestions([]); } }
+      finally { if (requestId === requestSequence.current) setLoading(false); }
     }, value.trim().length < 2 ? 0 : 220);
     return () => window.clearTimeout(timer);
   }, [configured, value]);
@@ -77,10 +87,27 @@ export function LocationAutocomplete({ value, onChange, onCoordinates, placehold
     onChange(item.text); setOpen(false); setSuggestions([]);
     try {
       const place = item.prediction.toPlace();
-      await place.fetchFields({ fields: ["location", "formattedAddress"] });
-      onCoordinates?.(place.location ? { lat: place.location.lat(), lng: place.location.lng() } : null);
+      await place.fetchFields({ fields: ["location", "formattedAddress", "displayName", "id"] });
+      const coordinates = place.location ? { lat: place.location.lat(), lng: place.location.lng() } : null;
+      const label = String(place.formattedAddress || place.displayName || item.text);
+      if (coordinates) {
+        onChange(label);
+        onCoordinates?.(coordinates);
+        onResolved?.({ ...coordinates, label, source: "explicit", placeId: String(place.id || "") || undefined });
+      } else {
+        onCoordinates?.(null);
+        onResolved?.(null);
+      }
       sessionToken.current = null;
     } catch (error) { console.error("Place details failed", error); onCoordinates?.(null); }
   }
-  return <div ref={root} className={`relative ${className}`}><span className="flex min-h-11 items-center gap-2"><MapPin size={18} className="shrink-0 text-magenta"/><input name={name} value={value} onFocus={() => setOpen(true)} onChange={(event) => { onChange(event.target.value); onCoordinates?.(null); setOpen(true); }} autoComplete="off" placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-xs outline-none sm:text-sm"/></span>{open && suggestions.length ? <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-plum/10 bg-white py-1 shadow-2xl">{suggestions.map((suggestion) => <button key={suggestion.text} type="button" onClick={() => void choose(suggestion)} className="block w-full px-4 py-3 text-left text-xs hover:bg-blush/40">{suggestion.text}</button>)}<p className="border-t border-plum/10 px-4 py-2 text-right text-[9px] text-ink/45">Suggestions by Google</p></div> : null}{!configured && value.length > 1 ? <p className="absolute top-full z-10 mt-1 text-[9px] text-ink/45">Location suggestions require Google Maps setup.</p> : null}</div>;
+  function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!open || !suggestions.length) return;
+    if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((index) => Math.min(suggestions.length - 1, index + 1)); }
+    if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((index) => Math.max(0, index - 1)); }
+    if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+    if (event.key === "Enter" && activeIndex >= 0) { event.preventDefault(); void choose(suggestions[activeIndex]); }
+  }
+  function clear() { requestSequence.current += 1; onChange(""); onCoordinates?.(null); onResolved?.(null); setSuggestions([]); setOpen(false); setActiveIndex(-1); }
+  return <div ref={root} className={`relative ${className}`}><span className="flex min-h-11 items-center gap-2"><MapPin size={18} className="shrink-0 text-magenta"/><input name={name} value={value} role="combobox" aria-autocomplete="list" aria-expanded={open && suggestions.length > 0} aria-controls={listboxId} aria-activedescendant={activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined} onKeyDown={onKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { onChange(event.target.value); onCoordinates?.(null); onResolved?.(null); setOpen(true); }} autoComplete="off" placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-xs outline-none sm:text-sm"/>{value ? <button type="button" onClick={clear} aria-label="Clear location" className="grid min-h-9 min-w-9 place-items-center rounded-full text-ink/55 hover:bg-blush/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><X size={15}/></button> : null}</span>{open && suggestions.length ? <div id={listboxId} role="listbox" className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-plum/10 bg-white py-1 shadow-2xl">{suggestions.map((suggestion, index) => <button id={`${listboxId}-${index}`} role="option" aria-selected={activeIndex === index} key={suggestion.text} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void choose(suggestion)} className={`block min-h-11 w-full px-4 py-3 text-left text-xs focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-magenta ${activeIndex === index ? "bg-blush/55" : "hover:bg-blush/40"}`}>{suggestion.text}</button>)}<p className="border-t border-plum/10 px-4 py-2 text-right text-[10px] text-ink/60">Suggestions by Google</p></div> : null}{loading ? <p role="status" className="absolute top-full z-10 mt-1 text-[10px] text-ink/65">Finding locations…</p> : null}{!configured && value.length > 1 ? <p className="absolute top-full z-10 mt-1 text-[10px] text-ink/65">Location suggestions require Google Maps setup.</p> : null}</div>;
 }

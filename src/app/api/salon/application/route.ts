@@ -2,6 +2,7 @@ import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizePlan } from "@/lib/plans";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
+import { geocodeSalonAddress } from "@/lib/geocodingServer";
 
 function applicationMediaUrl(value: unknown) {
   const text = cleanText(value, 1000);
@@ -94,6 +95,14 @@ export async function POST(request: Request) {
     const { data: saved, error: applicationError } = await admin.from("salon_applications").upsert(application, { onConflict: "salon_id" }).select("id,state,status").single();
     if (applicationError) throw applicationError;
     console.info("Salon application saved", { applicationId: saved.id, salonId: salon.id, state: saved.state, userId: user.id });
+    try {
+      const geocode = await geocodeSalonAddress(salon.id);
+      console.info("Salon application address processed", { applicationId: saved.id, salonId: salon.id, status: geocode.status });
+    } catch (geocodeError) {
+      // Do not reject a valid application if provider configuration or a
+      // transient provider request is unavailable. The address stays pending.
+      console.error("Salon application geocoding deferred", { applicationId: saved.id, salonId: salon.id, geocodeError });
+    }
     const receipt = await sendEmail(
       salonPatch.email,
       "We received your Girlz Culture application",
