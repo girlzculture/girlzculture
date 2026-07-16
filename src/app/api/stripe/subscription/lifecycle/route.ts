@@ -9,6 +9,7 @@ type StripeSubscription = {
   current_period_end?: number;
   cancel_at_period_end?: boolean;
   schedule?: string | { id?: string } | null;
+  items?: { data?: Array<{ current_period_start?: number; current_period_end?: number }> };
 };
 
 function stripeId(value: StripeSubscription["schedule"]) {
@@ -33,6 +34,9 @@ export async function POST(request: Request) {
     if (!stored?.stripe_subscription_id) throw new Error("No Stripe subscription was found for this salon.");
     const current = await stripeGet<StripeSubscription>(`/subscriptions/${stored.stripe_subscription_id}`);
     const scheduleId = stripeId(current.schedule) || stored.stripe_schedule_id || null;
+    const currentItem = current.items?.data?.[0];
+    const currentPeriodStart = current.current_period_start || currentItem?.current_period_start;
+    const currentPeriodEnd = current.current_period_end || currentItem?.current_period_end;
 
     if (action === "cancel_scheduled_change") {
       if (!scheduleId || !stored.scheduled_tier) return Response.json({ changed: false, message: "There is no scheduled plan change to cancel." });
@@ -57,12 +61,13 @@ export async function POST(request: Request) {
         cancel_at_period_end: true,
         proration_behavior: "none",
         "metadata[cancellation_source]": "salon_owner",
-      }, { idempotencyKey: `cancel-at-period-end:${current.id}:${current.current_period_end || "current"}` });
-      const paidThrough = isoFromSeconds(updated.current_period_end || current.current_period_end);
+      }, { idempotencyKey: `cancel-at-period-end:${current.id}:${currentPeriodEnd || "current"}` });
+      const updatedItem = updated.items?.data?.[0];
+      const paidThrough = isoFromSeconds(updated.current_period_end || updatedItem?.current_period_end || currentPeriodEnd);
       const { error: updateError } = await admin.from("subscriptions").update({
         cancel_at_period_end: true,
         cancellation_requested_at: new Date().toISOString(),
-        current_period_start: isoFromSeconds(updated.current_period_start || current.current_period_start),
+        current_period_start: isoFromSeconds(updated.current_period_start || updatedItem?.current_period_start || currentPeriodStart),
         current_period_end: paidThrough,
         stripe_schedule_id: null,
         scheduled_tier: null,
@@ -84,12 +89,13 @@ export async function POST(request: Request) {
     const updated = await stripeRequest<StripeSubscription>(`/subscriptions/${current.id}`, {
       cancel_at_period_end: false,
       "metadata[cancellation_source]": "",
-    }, { idempotencyKey: `reactivate:${current.id}:${current.current_period_end || "current"}` });
+    }, { idempotencyKey: `reactivate:${current.id}:${currentPeriodEnd || "current"}` });
+    const updatedItem = updated.items?.data?.[0];
     const { error: updateError } = await admin.from("subscriptions").update({
       cancel_at_period_end: false,
       cancellation_requested_at: null,
-      current_period_start: isoFromSeconds(updated.current_period_start || current.current_period_start),
-      current_period_end: isoFromSeconds(updated.current_period_end || current.current_period_end),
+      current_period_start: isoFromSeconds(updated.current_period_start || updatedItem?.current_period_start || currentPeriodStart),
+      current_period_end: isoFromSeconds(updated.current_period_end || updatedItem?.current_period_end || currentPeriodEnd),
       ended_at: null,
       updated_at: new Date().toISOString(),
     }).eq("salon_id", salon.id);

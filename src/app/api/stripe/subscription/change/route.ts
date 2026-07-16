@@ -23,7 +23,7 @@ type StripeSubscription = {
   latest_invoice?: string | StripeInvoice | null;
   pending_update?: Record<string, unknown> | null;
   discounts?: Array<string | { id?: string }>;
-  items?: { data?: Array<{ id?: string; quantity?: number; price?: { id?: string }; tax_rates?: Array<string | { id?: string }> }> };
+  items?: { data?: Array<{ id?: string; quantity?: number; current_period_start?: number; current_period_end?: number; price?: { id?: string }; tax_rates?: Array<string | { id?: string }> }> };
 };
 
 type StripeSchedule = { id: string };
@@ -67,6 +67,8 @@ export async function POST(request: Request) {
     if (current.cancel_at_period_end) throw new Error("Reactivate the subscription before changing its plan.");
     const item = current.items?.data?.[0];
     if (!item?.id || !item.price?.id) throw new Error("Stripe did not return the current subscription item.");
+    const currentPeriodStart = current.current_period_start || item.current_period_start;
+    const currentPeriodEnd = current.current_period_end || item.current_period_end;
 
     const currentPlan = planFromStripePriceId(item.price.id) || normalizePlan(stored.tier || salon.subscription_tier);
     if (item.price.id === priceId) return Response.json({ changed: false, plan, message: `${plan} is already active.` });
@@ -89,24 +91,24 @@ export async function POST(request: Request) {
           scheduledPlan: stored.scheduled_tier || null,
         }, { status: 409 });
       }
-      if (!current.current_period_start || !current.current_period_end) throw new Error("Stripe did not return the paid billing period for this subscription.");
+      if (!currentPeriodStart || !currentPeriodEnd) throw new Error("Stripe did not return the paid billing period for this subscription.");
 
       let schedule: StripeSchedule | null = null;
       try {
         schedule = await stripeRequest<StripeSchedule>("/subscription_schedules", {
           from_subscription: current.id,
         }, {
-          idempotencyKey: `downgrade-schedule:${current.id}:${item.price.id}:${priceId}:${current.current_period_end}`,
+          idempotencyKey: `downgrade-schedule:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd}`,
         });
         const scheduleValues: Record<string, string | number | boolean> = {
           end_behavior: "release",
           proration_behavior: "none",
-          "phases[0][start_date]": current.current_period_start,
-          "phases[0][end_date]": current.current_period_end,
+          "phases[0][start_date]": currentPeriodStart,
+          "phases[0][end_date]": currentPeriodEnd,
           "phases[0][items][0][price]": item.price.id,
           "phases[0][items][0][quantity]": item.quantity || 1,
           "phases[0][proration_behavior]": "none",
-          "phases[1][start_date]": current.current_period_end,
+          "phases[1][start_date]": currentPeriodEnd,
           "phases[1][duration][interval]": "month",
           "phases[1][duration][interval_count]": 1,
           "phases[1][items][0][price]": priceId,
@@ -133,7 +135,7 @@ export async function POST(request: Request) {
           scheduleValues[`phases[1][items][0][tax_rates][${index}]`] = taxRateId;
         });
         await stripeRequest<StripeSchedule>(`/subscription_schedules/${schedule.id}`, scheduleValues, {
-          idempotencyKey: `downgrade-phases:${schedule.id}:${item.price.id}:${priceId}:${current.current_period_end}`,
+          idempotencyKey: `downgrade-phases:${schedule.id}:${item.price.id}:${priceId}:${currentPeriodEnd}`,
         });
       } catch (scheduleError) {
         if (schedule?.id) {
@@ -144,13 +146,13 @@ export async function POST(request: Request) {
         throw scheduleError;
       }
 
-      const effectiveAt = isoFromSeconds(current.current_period_end);
+      const effectiveAt = isoFromSeconds(currentPeriodEnd);
       const { error: updateError } = await admin.from("subscriptions").update({
         stripe_schedule_id: schedule.id,
         scheduled_tier: plan,
         scheduled_price_id: priceId,
         scheduled_change_effective_at: effectiveAt,
-        current_period_start: isoFromSeconds(current.current_period_start),
+        current_period_start: isoFromSeconds(currentPeriodStart),
         current_period_end: effectiveAt,
         updated_at: new Date().toISOString(),
       }).eq("salon_id", salon.id);
@@ -181,7 +183,7 @@ export async function POST(request: Request) {
       "metadata[previous_plan]": currentPlan,
       "metadata[change_type]": "upgrade",
     }, {
-      idempotencyKey: `upgrade:${current.id}:${item.price.id}:${priceId}:${current.current_period_end || "current"}`,
+      idempotencyKey: `upgrade:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd || "current"}`,
     });
 
     const invoice = await invoiceDetails(updated.latest_invoice);
@@ -206,8 +208,9 @@ export async function POST(request: Request) {
     }
 
     const status = String(updated.status || current.status || "active");
-    const periodStart = isoFromSeconds(updated.current_period_start) || stored.current_period_start;
-    const periodEnd = isoFromSeconds(updated.current_period_end) || stored.current_period_end;
+    const updatedItem = updated.items?.data?.[0];
+    const periodStart = isoFromSeconds(updated.current_period_start || updatedItem?.current_period_start) || stored.current_period_start;
+    const periodEnd = isoFromSeconds(updated.current_period_end || updatedItem?.current_period_end) || stored.current_period_end;
     const featuredWeight = plan === "Premium" ? 100 : plan === "Growth" ? 40 : 0;
     const now = new Date().toISOString();
     const { error: subscriptionError } = await admin.from("subscriptions").update({

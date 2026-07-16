@@ -35,7 +35,7 @@ type StripeObject = Record<string, unknown> & {
   failure_message?: string;
   last_finalization_error?: { message?: string };
   parent?: { subscription_details?: { subscription?: string | { id?: string }; metadata?: Record<string, string> } };
-  items?: { data?: Array<{ price?: { id?: string } }> };
+  items?: { data?: Array<{ price?: { id?: string }; current_period_start?: number; current_period_end?: number }> };
   lines?: { data?: StripeLine[] };
   phases?: Array<{ start_date?: number; end_date?: number }>;
   discounts?: Array<{ coupon?: { id?: string } | string; promotion_code?: { id?: string } | string }>;
@@ -79,8 +79,9 @@ async function syncSubscription(object: StripeObject) {
   const { data: existing } = await admin.from("subscriptions").select("*").eq("salon_id", salonId).maybeSingle();
   const plan = planFromObject(object);
   const status = String(object.status || "inactive");
-  const periodStart = isoFromSeconds(object.current_period_start) || existing?.current_period_start || null;
-  const periodEnd = isoFromSeconds(object.current_period_end);
+  const subscriptionItem = object.items?.data?.[0];
+  const periodStart = isoFromSeconds(object.current_period_start || subscriptionItem?.current_period_start) || existing?.current_period_start || null;
+  const periodEnd = isoFromSeconds(object.current_period_end || subscriptionItem?.current_period_end);
   const scheduleId = stripeId(object.schedule) || existing?.stripe_schedule_id || null;
   const scheduledBecameEffective = Boolean(existing?.scheduled_tier && normalizePlan(existing.scheduled_tier) === plan);
   const cancellationRequestedAt = object.cancel_at_period_end ? (existing?.cancellation_requested_at || new Date().toISOString()) : null;
@@ -140,7 +141,7 @@ async function billingContext(object: StripeObject) {
 
   let subscriptionId = stripeId(object.subscription) || stripeId(invoice?.subscription) || stripeId(invoice?.parent?.subscription_details?.subscription);
   let subscription: StripeObject | null = null;
-  const objectLooksLikeSubscription = Boolean(object.items?.data && object.current_period_end);
+  const objectLooksLikeSubscription = Boolean(object.items?.data && object.id && object.metadata);
   if (objectLooksLikeSubscription) {
     subscription = object;
     subscriptionId = object.id || subscriptionId;
@@ -187,7 +188,7 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
   const previousPlan = optionalPlan(context.metadata.previous_plan) || optionalPlan(context.stored?.tier) || currentPlan;
   const newPlan = optionalPlan(context.metadata.scheduled_plan) || optionalPlan(context.metadata.plan) || invoicePlan || currentPlan;
   const eventDate = new Date((event.created || object.created || Math.floor(Date.now() / 1000)) * 1000).toISOString();
-  const paidThroughSeconds = Math.max(...((context.invoice?.lines?.data || []).map((line) => Number(line.period?.end || 0))), Number(context.subscription?.current_period_end || 0));
+  const paidThroughSeconds = Math.max(...((context.invoice?.lines?.data || []).map((line) => Number(line.period?.end || 0))), Number(context.subscription?.current_period_end || context.subscription?.items?.data?.[0]?.current_period_end || 0));
   const paidThrough = isoFromSeconds(paidThroughSeconds) || context.stored?.current_period_end || null;
   const failureReason = object.failure_message || object.last_finalization_error?.message || (typeof object.payment_intent === "object" ? object.payment_intent.last_payment_error?.message : null) || null;
 
@@ -225,7 +226,7 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
     if (object.cancel_at_period_end && priorCancel === false) {
       eventType = "Cancellation scheduled";
       changeTiming = "scheduled";
-      effectiveAt = isoFromSeconds(object.current_period_end);
+      effectiveAt = isoFromSeconds(object.current_period_end || object.items?.data?.[0]?.current_period_end);
       cancellationDate = effectiveAt;
       paymentStatus = "not_charged";
     } else if (!object.cancel_at_period_end && priorCancel === true) {
