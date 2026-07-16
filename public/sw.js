@@ -1,12 +1,104 @@
-const CACHE = "girlz-culture-v2";
-const CORE = ["/", "/offline", "/styles", "/salons", "/how-it-works", "/pwa-icon-192.png"];
+const APP_CACHE_PREFIX = "girlz-culture-";
+const CACHE = `${APP_CACHE_PREFIX}public-v3`;
+const CORE = ["/offline", "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-icon-512.png"];
+const PRIVATE_PATHS = [
+  "/account",
+  "/admin",
+  "/api",
+  "/complaint",
+  "/forgot-password",
+  "/login",
+  "/reset-password",
+  "/review",
+  "/salon/dashboard",
+  "/salon/login",
+  "/salon/onboarding",
+  "/salon/signup",
+];
+const STATIC_DESTINATIONS = new Set(["font", "image", "script", "style"]);
+
+function pathMatchesPrefix(pathname, prefix) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isPrivateOrSensitive(request, url) {
+  if (request.headers.has("authorization") || request.headers.has("range")) return true;
+  if (url.pathname.startsWith("/_next/data/") || url.pathname === "/sw.js") return true;
+  return PRIVATE_PATHS.some((prefix) => pathMatchesPrefix(url.pathname, prefix));
+}
+
+function responseMayBeCached(response) {
+  if (!response || !response.ok || response.status !== 200 || response.type === "opaque") return false;
+  const cacheControl = response.headers.get("cache-control") || "";
+  const vary = response.headers.get("vary") || "";
+  return !/\b(?:no-store|private)\b/i.test(cacheControl) && vary.trim() !== "*";
+}
+
+async function safelyCache(request, response) {
+  if (!responseMayBeCached(response)) return;
+  let copy;
+  try {
+    // Clone synchronously, before cache.put or another consumer can use the body.
+    copy = response.clone();
+  } catch {
+    return;
+  }
+  try {
+    const cache = await caches.open(CACHE);
+    await cache.put(request, copy);
+  } catch {
+    // A cache write must never reject the FetchEvent or break navigation.
+  }
+}
+
+async function navigationResponse(request) {
+  try {
+    const response = await fetch(request);
+    await safelyCache(request, response);
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const offline = await caches.match("/offline");
+    if (offline) return offline;
+    return new Response("You are offline. Reconnect and try again.", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+}
+
+async function staticResponse(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    await safelyCache(request, response);
+    return response;
+  } catch {
+    return new Response("Resource unavailable while offline.", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+}
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.allSettled(CORE.map((path) => cache.add(new Request(path, { cache: "reload" }))));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter((key) => key.startsWith(APP_CACHE_PREFIX) && key !== CACHE)
+      .map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("push", (event) => {
@@ -43,17 +135,15 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin") || url.pathname.startsWith("/salon/dashboard") || url.pathname.startsWith("/account")) return;
+  if (url.origin !== self.location.origin || isPrivateOrSensitive(request, url)) return;
+
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).then((response) => {
-      const copy = response.clone();
-      caches.open(CACHE).then((cache) => cache.put(request, copy));
-      return response;
-    }).catch(() => caches.match(request).then((hit) => hit || caches.match("/offline"))));
+    event.respondWith(navigationResponse(request));
     return;
   }
-  event.respondWith(caches.match(request).then((hit) => hit || fetch(request).then((response) => {
-    if (response.ok) caches.open(CACHE).then((cache) => cache.put(request, response.clone()));
-    return response;
-  })));
+
+  const isStaticAsset = STATIC_DESTINATIONS.has(request.destination)
+    || url.pathname.startsWith("/_next/static/")
+    || CORE.includes(url.pathname);
+  if (isStaticAsset) event.respondWith(staticResponse(request));
 });

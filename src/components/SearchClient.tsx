@@ -15,7 +15,6 @@ type Salon = {
   address_zip?: string | null;
   rating_overall?: number | null;
   review_count?: number | null;
-  badges?: string[] | string | null;
   is_closed_override?: boolean | null;
   closed_override_date?: string | null;
   time_zone?: string | null;
@@ -36,7 +35,7 @@ export default function SearchClient() {
 
   const fetchSalons = async () => {
     setLoading(true);
-    const { data: salonsData, error } = await supabase.from("salons").select("*");
+    const { data: salonsData, error } = await supabase.from("salons").select("id,name,slug,address_city,address_state,address_zip,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,hours");
     if (error) {
       console.error("search salons error", error);
       setSalons([]);
@@ -130,7 +129,6 @@ export default function SearchClient() {
                     <div className="mt-2 flex items-center gap-2 text-sm text-ink/80">
                       {Number(s.review_count || 0) > 0 ? <><Star size={15} className="fill-amber text-amber" aria-hidden="true" /><div>{Number(s.rating_overall || 0).toFixed(1)} · {s.review_count} reviews</div></> : <div className="rounded-full bg-blush px-2 py-1 font-bold text-plum">New</div>}
                     </div>
-                    <div className="mt-2 text-sm text-ink/80">{Array.isArray(s.badges) ? s.badges.join(", ") : s.badges}</div>
                   </div>
 
                   <div className="flex flex-col items-end gap-2">

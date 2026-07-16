@@ -44,7 +44,8 @@ export default function SalonBookingWizard({ salon, styles, stylists }: Props) {
   const closedToday = isSalonClosedToday(salon);
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
-  const [styleId, setStyleId] = useState(styles[0]?.id || "");
+  const requestedStyle = searchParams.get("style") || searchParams.get("service");
+  const [styleId, setStyleId] = useState(requestedStyle && styles.some((row) => row.id === requestedStyle) ? requestedStyle : styles[0]?.id || "");
   const requestedStylist = searchParams.get("stylist");
   const [stylistId, setStylistId] = useState(requestedStylist && stylists.some((row) => row.id === requestedStylist) ? requestedStylist : "any");
   const [date, setDate] = useState("");

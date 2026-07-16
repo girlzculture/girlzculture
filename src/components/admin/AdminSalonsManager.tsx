@@ -1,0 +1,958 @@
+/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-explicit-any */
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  LocateFixed,
+  MapPin,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
+import { getSessionForScope } from "@/lib/supabase";
+import { US_STATES } from "@/lib/usStates";
+import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
+import type { CustomerLocation } from "@/lib/location";
+
+type Row = Record<string, any>;
+type Summary = {
+  total: number;
+  active: number;
+  pending: number;
+  suspended: number;
+  offboarded: number;
+  address_needs_review: number;
+};
+type Market = {
+  id: string;
+  state_code: string;
+  name: string;
+  market_type: string;
+  center_latitude: number;
+  center_longitude: number;
+};
+const emptySummary: Summary = {
+  total: 0,
+  active: 0,
+  pending: 0,
+  suspended: 0,
+  offboarded: 0,
+  address_needs_review: 0,
+};
+
+async function authHeaders(json = false) {
+  const session = await getSessionForScope("admin");
+  if (!session) throw new Error("Your admin session has expired.");
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    ...(json ? { "Content-Type": "application/json" } : {}),
+  };
+}
+
+export default function AdminSalonsManager() {
+  const [salons, setSalons] = useState<Row[]>([]);
+  const [summary, setSummary] = useState<Summary>(emptySummary);
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [q, setQ] = useState("");
+  const [state, setState] = useState("");
+  const [market, setMarket] = useState("");
+  const [status, setStatus] = useState("");
+  const [plan, setPlan] = useState("");
+  const [rating, setRating] = useState("");
+  const [addressReview, setAddressReview] = useState("");
+  const [radius, setRadius] = useState("");
+  const [centerText, setCenterText] = useState("");
+  const [center, setCenter] = useState<CustomerLocation | null>(null);
+  const [sort, setSort] = useState("name");
+  const [direction, setDirection] = useState("asc");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+
+  const stateMarkets = useMemo(
+    () => markets.filter((row) => !state || row.state_code === state),
+    [markets, state],
+  );
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+        sort,
+        direction,
+      });
+      if (q) params.set("q", q);
+      if (state) params.set("state", state);
+      if (market) params.set("market", market);
+      if (status) params.set("status", status);
+      if (plan) params.set("plan", plan);
+      if (rating) params.set("rating", rating);
+      if (addressReview) params.set("address_review", addressReview);
+      if (radius && center) {
+        params.set("radius", radius);
+        params.set("lat", String(center.lat));
+        params.set("lng", String(center.lng));
+      }
+      const response = await fetch(`/api/admin/salons?${params}`, {
+        headers: await authHeaders(),
+        cache: "no-store",
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to load salons.");
+      setSalons(Array.isArray(body.salons) ? body.salons : []);
+      setTotal(Number(body.total || 0));
+      setSummary(body.summary || emptySummary);
+      setMarkets(Array.isArray(body.markets) ? body.markets : []);
+      const urlParams = new URLSearchParams(params);
+      urlParams.delete("lat");
+      urlParams.delete("lng");
+      window.history.replaceState(null, "", `/admin/salons?${urlParams}`);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load salons.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), q ? 280 : 0);
+    return () => window.clearTimeout(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    addressReview,
+    center?.lat,
+    center?.lng,
+    direction,
+    market,
+    page,
+    pageSize,
+    plan,
+    q,
+    radius,
+    rating,
+    sort,
+    state,
+    status,
+  ]);
+
+  function clear() {
+    setQ("");
+    setState("");
+    setMarket("");
+    setStatus("");
+    setPlan("");
+    setRating("");
+    setAddressReview("");
+    setRadius("");
+    setCenterText("");
+    setCenter(null);
+    setSort("name");
+    setDirection("asc");
+    setPage(1);
+  }
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <div className="space-y-5">
+      <section
+        aria-label="Salon totals"
+        className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
+      >
+        {[
+          ["Total", summary.total],
+          ["Active", summary.active],
+          ["Pending", summary.pending],
+          ["Suspended", summary.suspended],
+          ["Offboarded", summary.offboarded],
+          ["Address Needs Review", summary.address_needs_review],
+        ].map(([label, value]) => (
+          <article
+            key={String(label)}
+            className="rounded-[13px] border border-plum/10 bg-white p-4"
+          >
+            <p className="text-[10px] font-semibold text-ink/60">{label}</p>
+            <b className="mt-2 block font-serif text-2xl text-plum">{value}</b>
+            <span className="text-[9px] text-ink/50">All salon records</span>
+          </article>
+        ))}
+      </section>
+      <section className="rounded-[15px] border border-plum/10 bg-white p-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <label className="relative sm:col-span-2">
+            <span className="sr-only">Search salons</span>
+            <Search className="absolute left-3 top-3.5 text-ink/45" size={16} />
+            <input
+              value={q}
+              onChange={(event) => {
+                setQ(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Name, owner email or phone, or salon ID"
+              className="min-h-11 w-full rounded-[9px] border border-plum/15 pl-10 pr-3 text-xs"
+            />
+          </label>
+          <Filter
+            label="State"
+            value={state}
+            onChange={(value) => {
+              setState(value);
+              setMarket("");
+              setPage(1);
+            }}
+          >
+            <option value="">All states</option>
+            {US_STATES.map(([code, name]) => (
+              <option value={code} key={code}>
+                {name}
+              </option>
+            ))}
+          </Filter>
+          <Filter
+            label="Market"
+            value={market}
+            onChange={(value) => {
+              setMarket(value);
+              setPage(1);
+            }}
+          >
+            <option value="">All markets</option>
+            {stateMarkets.map((row) => (
+              <option value={row.id} key={row.id}>
+                {row.name}
+              </option>
+            ))}
+          </Filter>
+          <Filter
+            label="Status"
+            value={status}
+            onChange={(value) => {
+              setStatus(value);
+              setPage(1);
+            }}
+          >
+            <option value="">All statuses</option>
+            {["New", "Pending", "Active", "Suspended", "Offboarded"].map(
+              (value) => (
+                <option key={value}>{value}</option>
+              ),
+            )}
+          </Filter>
+          <Filter
+            label="Plan"
+            value={plan}
+            onChange={(value) => {
+              setPlan(value);
+              setPage(1);
+            }}
+          >
+            <option value="">All plans</option>
+            {["Basic", "Growth", "Premium"].map((value) => (
+              <option key={value}>{value}</option>
+            ))}
+          </Filter>
+          <Filter
+            label="Rating"
+            value={rating}
+            onChange={(value) => {
+              setRating(value);
+              setPage(1);
+            }}
+          >
+            <option value="">Any rating</option>
+            <option value="4">4.0+</option>
+            <option value="4.5">4.5+</option>
+            <option value="4.8">4.8+</option>
+          </Filter>
+          <Filter
+            label="Address review"
+            value={addressReview}
+            onChange={(value) => {
+              setAddressReview(value);
+              setPage(1);
+            }}
+          >
+            <option value="">Any address state</option>
+            <option value="true">Needs review</option>
+            <option value="false">Verified coordinates</option>
+          </Filter>
+          <div className="sm:col-span-2 xl:col-span-3">
+            <span className="mb-1 block text-[10px] font-bold">
+              Radius center
+            </span>
+            <LocationAutocomplete
+              value={centerText}
+              onChange={(value) => {
+                setCenterText(value);
+                setCenter(null);
+              }}
+              onResolved={setCenter}
+              placeholder="Choose a city, market, or address"
+              className="rounded-[9px] border border-plum/15 px-3"
+            />
+          </div>
+          <Filter
+            label="Radius"
+            value={radius}
+            onChange={(value) => {
+              setRadius(value);
+              setPage(1);
+            }}
+          >
+            <option value="">No radius</option>
+            {[5, 10, 25, 50].map((value) => (
+              <option key={value} value={value}>
+                {value} miles
+              </option>
+            ))}
+            <option value="100">100 miles</option>
+          </Filter>
+          <Filter
+            label="Sort"
+            value={`${sort}:${direction}`}
+            onChange={(value) => {
+              const [field, nextDirection] = value.split(":");
+              setSort(field);
+              setDirection(nextDirection);
+              setPage(1);
+            }}
+          >
+            <option value="name:asc">Name A–Z</option>
+            <option value="name:desc">Name Z–A</option>
+            <option value="rating:desc">Rating high–low</option>
+            <option value="reviews:desc">Most reviews</option>
+            <option value="status:asc">Status</option>
+            {center ? (
+              <option value="distance:asc">Nearest center</option>
+            ) : null}
+          </Filter>
+          <button
+            type="button"
+            onClick={clear}
+            className="min-h-11 rounded-[9px] border border-magenta text-xs font-bold text-magenta"
+          >
+            Clear filters
+          </button>
+        </div>
+        {radius && !center ? (
+          <p
+            role="alert"
+            className="mt-3 flex items-center gap-2 text-xs text-red-700"
+          >
+            <AlertTriangle size={15} />
+            Choose a radius center before distance filtering can run.
+          </p>
+        ) : null}
+      </section>
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-[14px] border border-red-200 bg-white p-6 text-center"
+        >
+          <p className="text-sm text-red-700">{error}</p>
+          <button
+            onClick={() => void load()}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-magenta px-4 py-2 text-xs font-bold text-white"
+          >
+            <RefreshCw size={14} />
+            Retry
+          </button>
+        </div>
+      ) : null}
+      <section className="overflow-hidden rounded-[15px] border border-plum/10 bg-white">
+        <div className="flex items-center justify-between border-b border-plum/10 p-4">
+          <div>
+            <h2 className="font-serif text-xl text-plum">Salon operations</h2>
+            <p className="text-[10px] text-ink/55">
+              {loading ? "Loading…" : `${total} matching records`}
+            </p>
+          </div>
+          <Link
+            href="/admin/submissions"
+            className="text-xs font-bold text-magenta"
+          >
+            View applications
+          </Link>
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-cream/65">
+              <tr>
+                {[
+                  "Salon",
+                  "State / Market",
+                  "Status",
+                  "Plan tier",
+                  "Rating",
+                  "Reviews",
+                  "Actions",
+                ].map((header) => (
+                  <th className="whitespace-nowrap px-4 py-3" key={header}>
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {salons.map((salon) => (
+                <tr
+                  key={salon.id}
+                  className="border-t border-plum/10 hover:bg-blush/15"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={
+                          salon.logo_url ||
+                          salon.cover_photo_url ||
+                          "/images/salon-warm.jpg"
+                        }
+                        alt=""
+                        className="h-10 w-10 rounded-lg object-cover"
+                      />
+                      <span>
+                        <b>{salon.name || "Unnamed salon"}</b>
+                        <small className="block text-[9px] text-ink/45">
+                          {String(salon.id).slice(0, 8)}
+                        </small>
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {[
+                      salon.address_state,
+                      salon.market_name || salon.borough || salon.address_city,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "Not normalized"}
+                    {salon.distance_miles !== null ? (
+                      <small className="block text-ink/50">
+                        {Number(salon.distance_miles).toFixed(1)} mi from center
+                      </small>
+                    ) : null}
+                    {salon.address_needs_review ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold text-amber-800">
+                        <AlertTriangle size={11} />
+                        Needs review
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge value={salon.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    {salon.subscription_tier || "Not selected"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {salon.review_count > 0
+                      ? Number(salon.rating_overall).toFixed(1)
+                      : "New"}
+                  </td>
+                  <td className="px-4 py-3">{salon.review_count || 0}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setSelectedId(salon.id)}
+                      className="rounded-lg border border-magenta px-3 py-2 font-bold text-magenta"
+                    >
+                      View details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!salons.length && !loading ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-ink/55">
+                    No salon records match these filters.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+        <div className="divide-y divide-plum/10 md:hidden">
+          {salons.map((salon) => (
+            <article key={salon.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src={
+                    salon.logo_url ||
+                    salon.cover_photo_url ||
+                    "/images/salon-warm.jpg"
+                  }
+                  alt=""
+                  className="h-12 w-12 rounded-lg object-cover"
+                />
+                <div>
+                  <h3 className="font-serif text-lg text-plum">{salon.name}</h3>
+                  <p className="text-[10px] text-ink/55">
+                    {[
+                      salon.address_state,
+                      salon.market_name || salon.address_city,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <StatusBadge value={salon.status} />
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+                <span>
+                  Plan
+                  <br />
+                  <b>{salon.subscription_tier || "—"}</b>
+                </span>
+                <span>
+                  Rating
+                  <br />
+                  <b>
+                    {salon.review_count
+                      ? Number(salon.rating_overall).toFixed(1)
+                      : "New"}
+                  </b>
+                </span>
+                <span>
+                  Reviews
+                  <br />
+                  <b>{salon.review_count || 0}</b>
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedId(salon.id)}
+                className="mt-3 min-h-11 w-full rounded-lg border border-magenta font-bold text-magenta"
+              >
+                View details
+              </button>
+            </article>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-plum/10 p-4">
+          <label className="text-[10px]">
+            Rows{" "}
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="ml-2 rounded border px-2 py-1"
+            >
+              {[10, 25, 50, 100].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+              className="grid min-h-10 min-w-10 place-items-center rounded border disabled:opacity-40"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs">
+              Page {page} of {pages}
+            </span>
+            <button
+              disabled={page >= pages}
+              onClick={() => setPage((value) => Math.min(pages, value + 1))}
+              className="grid min-h-10 min-w-10 place-items-center rounded border disabled:opacity-40"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      </section>
+      {selectedId ? (
+        <SalonDetail
+          salonId={selectedId}
+          close={() => setSelectedId("")}
+          refreshed={load}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function Filter({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label>
+      <span className="mb-1 block text-[10px] font-bold">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-11 w-full rounded-[9px] border border-plum/15 bg-white px-3 text-xs"
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+function StatusBadge({ value }: { value: string }) {
+  const status = String(value || "Pending");
+  const classes = /active/i.test(status)
+    ? "bg-emerald-50 text-emerald-800"
+    : /suspend|offboard/i.test(status)
+      ? "bg-red-50 text-red-700"
+      : "bg-amber/15 text-amber-800";
+  return (
+    <span
+      className={`ml-auto inline-flex rounded-full px-2.5 py-1 text-[9px] font-bold ${classes}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function SalonDetail({
+  salonId,
+  close,
+  refreshed,
+}: {
+  salonId: string;
+  close: () => void;
+  refreshed: () => Promise<void>;
+}) {
+  const [data, setData] = useState<Row | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  async function load() {
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/salons/${salonId}`, {
+        headers: await authHeaders(),
+        cache: "no-store",
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to load salon details.");
+      setData(body);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load salon details.",
+      );
+    }
+  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salonId]);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const root = dialogRef.current;
+    const selector =
+      'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const focusable = () =>
+      Array.from(root?.querySelectorAll<HTMLElement>(selector) || []);
+    focusable()[0]?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0],
+        last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      previous?.focus();
+    };
+  }, [close]);
+  async function statusAction(nextStatus: string) {
+    const current = String(data?.salon?.status || "");
+    const impacts: Record<string, string> = {
+      Pending:
+        "The salon will be hidden from search and public booking while the owner may continue setup.",
+      Active:
+        "The salon may become public when subscription and setup eligibility are satisfied.",
+      Suspended:
+        "The salon will be hidden and booking disabled; the owner keeps dashboard access with a suspension notice.",
+      Offboarded:
+        "The salon will be removed from the marketplace and dashboard access will be restricted. Existing bookings will not be deleted.",
+    };
+    if (
+      !window.confirm(
+        `Change ${data?.salon?.name} from ${current} to ${nextStatus}?\n\n${impacts[nextStatus]}`,
+      )
+    )
+      return;
+    let reason = "";
+    if (["Suspended", "Offboarded"].includes(nextStatus)) {
+      reason = window.prompt("Internal reason (required):")?.trim() || "";
+      if (reason.length < 5) {
+        setError("Enter an internal reason of at least 5 characters.");
+        return;
+      }
+    }
+    setBusy(nextStatus);
+    try {
+      const response = await fetch(`/api/admin/salons/${salonId}`, {
+        method: "POST",
+        headers: await authHeaders(true),
+        body: JSON.stringify({ action: "status", status: nextStatus, reason }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to update status.");
+      await load();
+      await refreshed();
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Unable to update status.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  async function retryGeocode() {
+    setBusy("geocode");
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/salons/${salonId}`, {
+        method: "POST",
+        headers: await authHeaders(true),
+        body: JSON.stringify({ action: "geocode" }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to verify address.");
+      await load();
+      await refreshed();
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Unable to verify address.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  const salon = data?.salon;
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="salon-detail-title"
+      className="fixed inset-0 z-[80] bg-ink/45 p-3 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      <section className="ml-auto h-full w-full max-w-2xl overflow-y-auto rounded-[18px] bg-cream shadow-2xl">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-plum/10 bg-white p-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-magenta">
+              Salon operations
+            </p>
+            <h2 id="salon-detail-title" className="font-serif text-2xl text-plum">
+              {salon?.name || "Loading salon…"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close salon details"
+            className="grid min-h-11 min-w-11 place-items-center rounded-full hover:bg-blush"
+          >
+            <X />
+          </button>
+        </header>
+        <div className="space-y-4 p-5">
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+            >
+              {error}
+            </p>
+          ) : null}
+          {salon ? (
+            <>
+              <section className="grid gap-3 sm:grid-cols-2">
+                <Detail label="Status" value={salon.status} />
+                <Detail
+                  label="Public profile"
+                  value={salon.is_discoverable ? "Discoverable" : "Hidden"}
+                />
+                <Detail
+                  label="Plan / subscription"
+                  value={`${salon.subscription_tier || "—"} · ${salon.subscription_status || "—"}`}
+                />
+                <Detail
+                  label="Rating"
+                  value={
+                    salon.review_count
+                      ? `${Number(salon.rating_overall).toFixed(1)} from ${salon.review_count} reviews`
+                      : "New · 0 reviews"
+                  }
+                />
+              </section>
+              <section className="rounded-[13px] border border-plum/10 bg-white p-4">
+                <h3 className="font-serif text-xl text-plum">
+                  Business & address
+                </h3>
+                <p className="mt-2 text-sm">
+                  {salon.formatted_address ||
+                    [
+                      salon.address_street,
+                      salon.address_line2,
+                      salon.address_city,
+                      salon.address_state,
+                      salon.address_zip,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                </p>
+                <p className="mt-2 flex items-center gap-1 text-xs text-ink/60">
+                  <MapPin size={14} />
+                  {salon.market?.name ||
+                    salon.borough ||
+                    "Market not assigned"}{" "}
+                  · {salon.geocode_status || "pending"}
+                </p>
+                {salon.geocode_failure_reason ? (
+                  <p className="mt-2 rounded-lg bg-[#fff8e8] p-3 text-xs text-amber-900">
+                    Internal review note: {salon.geocode_failure_reason}
+                  </p>
+                ) : null}
+                <button
+                  disabled={busy === "geocode"}
+                  onClick={() => void retryGeocode()}
+                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta disabled:opacity-50"
+                >
+                  <LocateFixed size={14} />
+                  {busy === "geocode" ? "Verifying…" : "Retry geocoding"}
+                </button>
+              </section>
+              <section className="rounded-[13px] border border-plum/10 bg-white p-4">
+                <h3 className="font-serif text-xl text-plum">Status actions</h3>
+                <p className="mt-1 text-xs leading-5 text-ink/60">
+                  {data.future_booking_count || 0} future bookings will remain
+                  in place. Review affected appointments separately before
+                  contacting customers.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {["Pending", "Active", "Suspended", "Offboarded"]
+                    .filter((value) => value !== salon.status)
+                    .map((value) => (
+                      <button
+                        disabled={Boolean(busy)}
+                        onClick={() => void statusAction(value)}
+                        key={value}
+                        className={`min-h-10 rounded-lg px-4 text-xs font-bold disabled:opacity-40 ${["Suspended", "Offboarded"].includes(value) ? "border border-red-400 text-red-700" : "bg-plum text-white"}`}
+                      >
+                        Set {value}
+                      </button>
+                    ))}
+                </div>
+              </section>
+              <section className="rounded-[13px] border border-plum/10 bg-white p-4">
+                <h3 className="font-serif text-xl text-plum">References</h3>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {salon.slug ? (
+                    <Link
+                      href={`/salon/${salon.slug}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-magenta"
+                    >
+                      Public page <ExternalLink size={13} />
+                    </Link>
+                  ) : null}
+                  {data.application?.id ? (
+                    <Link
+                      href={`/admin/submissions/${data.application.id}`}
+                      className="text-xs font-bold text-magenta"
+                    >
+                      Verification application
+                    </Link>
+                  ) : null}
+                  <Link
+                    href={`/admin/finance?salon=${salon.id}`}
+                    className="text-xs font-bold text-magenta"
+                  >
+                    Financial records
+                  </Link>
+                </div>
+              </section>
+              <section className="rounded-[13px] border border-plum/10 bg-white p-4">
+                <h3 className="font-serif text-xl text-plum">Status history</h3>
+                <div className="mt-3 space-y-3">
+                  {(data.status_history || []).map((entry: Row) => (
+                    <article
+                      key={entry.id}
+                      className="border-l-2 border-magenta pl-3 text-xs"
+                    >
+                      <b>
+                        {entry.previous_status} → {entry.new_status}
+                      </b>
+                      <p className="mt-1 text-ink/60">
+                        {entry.reason || "No reason required"} ·{" "}
+                        {new Date(entry.created_at).toLocaleString()}
+                      </p>
+                    </article>
+                  ))}
+                  {!data.status_history?.length ? (
+                    <p className="text-xs text-ink/55">
+                      No status changes recorded yet.
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            </>
+          ) : (
+            <p>Loading details…</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[12px] border border-plum/10 bg-white p-4">
+      <p className="text-[10px] font-bold text-ink/55">{label}</p>
+      <b className="mt-1 block text-sm text-plum">{value}</b>
+    </div>
+  );
+}

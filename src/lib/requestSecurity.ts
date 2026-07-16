@@ -50,3 +50,19 @@ export function errorResponse(error: unknown, fallback: string) {
   }
   return Response.json({ error: error instanceof Error ? error.message : fallback }, { status: 400 });
 }
+
+/**
+ * Public endpoints must not echo database, provider, or authorization details to
+ * unauthenticated callers. Rate-limit errors are deliberately preserved because
+ * the retry window is safe and actionable; every other failure is logged by the
+ * caller and reduced to a customer-friendly message here.
+ */
+export function publicErrorResponse(error: unknown, fallback: string, status = 500) {
+  if (error instanceof RateLimitError) {
+    return Response.json(
+      { error: error.message },
+      { status: 429, headers: { "Retry-After": String(error.retryAfter) } },
+    );
+  }
+  return Response.json({ error: fallback }, { status });
+}
