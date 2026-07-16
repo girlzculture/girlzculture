@@ -1,4 +1,4 @@
-import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
+import { cleanText, enforceRateLimit, publicErrorResponse } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(request: Request) {
@@ -29,6 +29,6 @@ export async function GET(request: Request) {
     return Response.json({ suggestions: styleItems.map((item) => item.label), groups });
   } catch (error) {
     console.error("Search suggestion load failed", error);
-    return errorResponse(error, "Unable to load suggestions");
+    return publicErrorResponse(error, "Search suggestions are temporarily unavailable.");
   }
 }

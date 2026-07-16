@@ -2,6 +2,23 @@ import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const STATUSES = new Set(["Draft", "Scheduled", "Active", "Paused", "Expired"]);
+const ENTITLEMENT_SOURCES = new Set(["stripe_payment", "verified_invoice", "platform_credit"]);
+
+function boundedNumber(value: unknown, fallback: number, minimum: number, maximum: number, label: string, integer = false) {
+  const parsed = value === null || value === undefined || value === "" ? fallback : Number(value);
+  if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum || integer && !Number.isInteger(parsed)) {
+    throw new Error(`${label} must be between ${minimum} and ${maximum}.`);
+  }
+  return parsed;
+}
+
+function validTimezone(value: unknown) {
+  const timezone = cleanText(value, 80) || "America/New_York";
+  try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(); }
+  catch { throw new Error("Choose a valid IANA timezone."); }
+  return timezone;
+}
 
 export async function GET(request: Request) {
   try {
@@ -53,23 +70,33 @@ export async function POST(request: Request) {
     const reason = cleanText(body.reason, 1000) || null;
     if (campaignId && !UUID.test(campaignId)) throw new Error("Campaign ID is invalid.");
     if (!UUID.test(salonId)) throw new Error("Choose an eligible salon.");
-    if (!Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt))) throw new Error("Enter valid campaign dates and times.");
+    const startTime = Date.parse(startsAt);
+    const endTime = Date.parse(endsAt);
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) throw new Error("Campaign end time must be after its start time.");
+    if (!STATUSES.has(status)) throw new Error("Choose a valid campaign status.");
     if (campaignId && (!reason || reason.length < 5)) throw new Error("Enter an internal change reason of at least 5 characters.");
+    const entitlementSource = cleanText(body.entitlement_source, 40) || null;
+    if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) throw new Error("Choose a valid paid entitlement source.");
+    const entitlementReference = cleanText(body.entitlement_reference, 160) || null;
+    if (entitlementSource && !entitlementReference) throw new Error("Enter the verified payment, invoice, or credit reference.");
+    const entitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
+      ? null
+      : boundedNumber(body.entitlement_amount_minor, 0, 0, 100_000_000, "Entitlement amount", true);
     const { data, error } = await admin.rpc("admin_save_featured_campaign", {
       acting_admin_id: user.id,
       target_campaign_id: campaignId,
       target_salon_id: salonId,
       requested_status: status,
-      campaign_starts_at: new Date(startsAt).toISOString(),
-      campaign_ends_at: new Date(endsAt).toISOString(),
-      campaign_timezone: cleanText(body.timezone, 80) || "America/New_York",
-      campaign_radius_miles: Math.max(1, Math.min(250, Number(body.radius_miles || 25))),
-      campaign_priority: Math.max(0, Math.min(100, Math.round(Number(body.priority ?? 50)))),
-      campaign_rotation_weight: Math.max(0.1, Math.min(100, Number(body.rotation_weight || 1))),
+      campaign_starts_at: new Date(startTime).toISOString(),
+      campaign_ends_at: new Date(endTime).toISOString(),
+      campaign_timezone: validTimezone(body.timezone),
+      campaign_radius_miles: boundedNumber(body.radius_miles, 25, 1, 250, "Radius"),
+      campaign_priority: boundedNumber(body.priority, 50, 0, 100, "Priority", true),
+      campaign_rotation_weight: boundedNumber(body.rotation_weight, 1, 0.1, 100, "Rotation weight"),
       campaign_internal_note: cleanText(body.internal_note, 1000) || null,
-      entitlement_source: cleanText(body.entitlement_source, 40) || null,
-      entitlement_reference: cleanText(body.entitlement_reference, 160) || null,
-      entitlement_amount_minor: body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined ? null : Math.max(0, Math.round(Number(body.entitlement_amount_minor))),
+      entitlement_source: entitlementSource,
+      entitlement_reference: entitlementReference,
+      entitlement_amount_minor: entitlementAmount,
       change_reason: reason,
     });
     if (error) throw error;

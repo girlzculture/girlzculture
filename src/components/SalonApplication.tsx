@@ -32,8 +32,6 @@ export default function SalonApplication() {
       if (!data.user) { router.replace("/salon/login"); return; }
       setUserId(data.user.id);
       setForm((current) => ({...current, business_email:data.user?.email || "", phone:String(data.user?.user_metadata?.phone || "")}));
-      const {data:salon}=await supabase.from("salons").select("subscription_tier").eq("user_id",data.user.id).maybeSingle();
-      if(salon?.subscription_tier)setSelectedPlan(normalizePlan(salon.subscription_tier));
     });
   }, [router]);
 

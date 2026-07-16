@@ -42,26 +42,30 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
       const session = await Promise.race([getSessionForScope("salon"), new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 2500))]);
       const userId = session?.user?.id || "";
       if (!live) return;
-      if (!userId) {
+      if (!session || !userId) {
         setError("Sign in with your salon-owner account. Admin and salon sessions are kept separate, so an admin login will not replace this session.");
         setLoading(false);
         return;
       }
       const destinationResponse = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${session?.access_token}` } });
       const destination = await destinationResponse.json() as { salon_id?: string; permissions?: Record<string,boolean>; is_team_member?: boolean; parent_subscription?: Row | null };
-      const salonQuery = supabase.from("salons").select("*");
-      const { data: s, error: sErr } = destination.salon_id ? await salonQuery.eq("id", destination.salon_id).limit(1).maybeSingle() : await salonQuery.eq("user_id", userId).limit(1).maybeSingle();
+      const profileResponse = await fetch("/api/salon/profile", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
+      const profileBody = await profileResponse.json() as { salon?: Salon; error?: string };
+      const s = profileBody.salon || null;
+      const sErr = profileResponse.ok ? null : new Error(profileBody.error || "Unable to load the salon profile.");
       if (!live) return;
       if (sErr || !s) {
         setError(sErr?.message || "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.");
         setLoading(false);
         return;
       }
+      const salonId = String(s.id || "");
+      if (!salonId) throw new Error("This salon profile is missing its identifier.");
       setSalon(s as Salon);
       const teamLogin = Boolean(destination.is_team_member);
       setIsTeamMember(teamLogin);
       setTeamPermissions(teamLogin ? destination.permissions || {} : null);
-      const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications", "salon_blockouts"].map((table) => supabase.from(table).select("*").eq("salon_id", s.id).order("created_at", { ascending: false })));
+      const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications", "salon_blockouts"].map((table) => supabase.from(table).select("*").eq("salon_id", salonId).order("created_at", { ascending: false })));
       if (!live) return;
       setBookings((results[0].data || []) as Row[]); setReviews((results[1].data || []) as Row[]); setStyles((results[2].data || []) as Row[]); setStylists((results[3].data || []) as Row[]);
       setProducts((results[4].data || []) as Row[]); setPromotions((results[5].data || []) as Row[]); setSubscription((teamLogin ? destination.parent_subscription || null : ((results[6].data || [])[0] || null)) as Row | null); setNotifications((results[7].data || []) as Row[]); setBlockouts((results[8].data || []) as Row[]);
@@ -69,10 +73,10 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
 
       removeRealtime = subscribeToOwnerUpdates({
         client: supabase,
-        salonId: s.id,
+        salonId,
         onNotification: (row) => { if (live) setNotifications((current) => [row as Row, ...current]); },
         onBooking: (row) => { if (live) setBookings((current) => [row as Row, ...current]); },
-        onStatus: (status) => { if (status === "CHANNEL_ERROR" && live) console.error("Salon realtime channel failed", { salonId: s.id, status }); },
+        onStatus: (status) => { if (status === "CHANNEL_ERROR" && live) console.error("Salon realtime channel failed", { salonId, status }); },
       });
       if (!live && removeRealtime) await removeRealtime();
     }

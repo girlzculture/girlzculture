@@ -23,7 +23,7 @@ assert.match(detailApi, /geocodeSalonAddress/);
 assert.match(manager, /All states/);
 assert.match(manager, /Address Needs Review/);
 assert.match(manager, /View details/);
-assert.match(manager, /future bookings will remain in place/);
+assert.match(manager, /future bookings will remain\s+in place/);
 assert.match(manager, /Status history/);
 assert.match(dashboard, /<AdminSalonsManager/);
 assert.match(owner, /This salon is suspended/);

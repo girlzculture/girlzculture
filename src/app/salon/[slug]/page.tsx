@@ -29,8 +29,6 @@ type SalonRecord = {
   time_zone?: string | null;
   slug?: string | null;
   description?: string | null;
-  phone?: string | null;
-  email?: string | null;
   address_street?: string | null;
   address_line2?: string | null;
   address_city?: string | null;
@@ -46,7 +44,6 @@ type SalonRecord = {
   verification_status?: string | null;
   rating_overall?: number | null;
   review_count?: number | null;
-  badges?: string[] | string | null;
 };
 
 type StyleRecord = {
@@ -185,7 +182,11 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     if (typeof value === "string" && value.length <= 160) bookingContext.set(key, value);
   }
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
-  const { data: salon, error: salonError } = await supabase.from("salons").select("*").eq("slug", slug).maybeSingle<SalonRecord>();
+  const { data: salon, error: salonError } = await supabase
+    .from("salons")
+    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone")
+    .eq("slug", slug)
+    .maybeSingle<SalonRecord>();
 
   if (salonError) throw salonError;
   if (!salon) notFound();
