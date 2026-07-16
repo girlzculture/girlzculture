@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       ["billing_events", "event_date", false],
     ] as const;
     const needed: Record<string, string[]> = {
-      overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: ["salons"],
+      overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: [],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
       reviews: ["reviews", "salons"], finance: ["subscriptions", "salons", "billing_events"], marketing: ["salon_promotions", "blog_posts", "salons"],
       content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], settings: ["admin_users", "admin_settings"],

@@ -16,6 +16,7 @@ import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
 import BookingInbox from "@/components/BookingInbox";
 import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
+import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
 import { US_STATES } from "@/lib/usStates";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
@@ -155,7 +156,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
   switch (section) {
     case "overview": return <Overview {...props} />;
     case "submissions": return <Submissions {...props} />;
-    case "salons": return <Salons {...props} />;
+    case "salons": return <AdminSalonsManager />;
     case "customers": return <Customers {...props} />;
     case "bookings": return <Bookings {...props} />;
     case "quality": return <Quality {...props} />;
@@ -195,10 +196,6 @@ function Submissions(p: any) {
 
 function ApplicationDetails({ application, decide }: { application: Row | null; decide: (id: string, decision: "approve" | "reject" | "activate") => void }) {
   return <Panel title={application?.business_name || "Application details"}>{application ? <div className="space-y-4 text-sm"><Badge value={application.status} />{[["Owner", application.owner_name], ["Email", application.business_email], ["Phone", application.phone], ["Location", [application.city, application.state].filter(Boolean).join(", ")], ["Type", application.business_type || "Not provided"], ["Years operating", application.years_in_operation], ["Stylists", application.stylist_count], ["Plan", application.selected_plan]].map(([label, value]) => <div key={label}><b>{label}</b><p className="text-ink/60">{value || "Not provided"}</p></div>)}{application.logo_url ? <img src={application.logo_url} alt="Salon logo" className="h-20 w-20 rounded-lg object-cover" /> : null}{application.photo_urls?.length ? <div><b>Photos</b><div className="mt-2 grid grid-cols-3 gap-2">{application.photo_urls.map((url: string) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="Application upload" className="h-20 w-full rounded-lg object-cover" /></a>)}</div></div> : null}{application.document_urls?.length ? <div><b>Documents</b>{application.document_urls.map((url: string, index: number) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-1 block text-magenta">Open document {index + 1}</a>)}</div> : null}<Link href={`/admin/submissions/${application.id}`} className="block rounded-lg border border-plum/15 py-3 text-center font-bold text-magenta">Open full application</Link><div className="grid grid-cols-2 gap-3">{application.status === "Pending" ? <><button onClick={() => decide(application.id, "approve")} className="rounded-lg bg-magenta py-3 font-bold text-white">Approve</button><button onClick={() => decide(application.id, "reject")} className="rounded-lg border border-magenta py-3 font-bold text-magenta">Reject</button></> : application.status === "Approved" ? <button onClick={() => decide(application.id, "activate")} className="col-span-2 rounded-lg bg-plum py-3 font-bold text-white">Activate salon dashboard</button> : null}</div></div> : <p>Select an application.</p>}</Panel>;
-}
-
-function Salons(p: any) {
-  return <Panel title="All Salons"><DataTable headers={["Salon Name", "Location", "Status", "Verification", "Tier", "Booking alerts", "Rating", "Reviews", "Actions"]}>{p.salons.length ? p.salons.map((salon: Row) => <tr key={salon.id} className="border-b border-plum/10"><Td>{salon.name || "Unnamed salon"}</Td><Td>{[salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Not provided"}</Td><Td><Badge value={salon.status} /></Td><Td><Badge value={salon.verification_status} /></Td><Td>{salon.subscription_tier || "Not selected"}</Td><Td><Badge value={salon.push_reachable ? "Reachable" : "Unreachable"} /></Td><Td>{Number(salon.review_count || 0) > 0 ? Number(salon.rating_overall || 0).toFixed(1) : "New"}</Td><Td>{salon.review_count || 0}</Td><Td><select value={salon.status || "Pending"} onChange={(event) => p.update("salons", salon.id, { status: event.target.value })} className="rounded border px-2 py-1"><option>Active</option><option>Pending</option><option>Suspended</option></select></Td></tr>) : <EmptyTable columns={9} text="No salon records yet." />}</DataTable></Panel>;
 }
 
 function Customers(p: any) {
