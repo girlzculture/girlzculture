@@ -17,7 +17,7 @@ export const SUBSCRIPTION_PLANS = {
     name: "Premium" as const,
     monthlyPrice: 159.5,
     description: "Maximum marketplace visibility and support.",
-    features: ["Everything in Growth", "Top search placement", "Higher featured rotation", "Premium badge", "Priority support"],
+    features: ["Everything in Growth", "Top search placement", "Higher featured rotation", "Priority campaign eligibility", "Priority support"],
   },
 } as const;
 

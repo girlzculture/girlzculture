@@ -13,7 +13,8 @@
     "verify:discovery": "node scripts/verify-organic-discovery.mjs",
     "verify:admin-salons": "node scripts/verify-admin-salon-operations.mjs",
     "verify:featured": "node scripts/verify-featured-campaigns.mjs",
-    "verify:trending": "node scripts/verify-trending-campaigns.mjs"
+    "verify:trending": "node scripts/verify-trending-campaigns.mjs",
+    "verify:public-tiers": "node scripts/verify-public-tier-privacy.mjs"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",

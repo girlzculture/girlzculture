@@ -1,0 +1,5 @@
+import assert from"node:assert/strict";import{readFileSync}from"node:fs";const read=(path)=>readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
+const publicFiles=["src/app/page.tsx","src/components/public/MarketplaceSalonCard.tsx","src/components/public/FeaturedSalonPlacement.tsx","src/components/public/TrendingVideoPlacement.tsx","src/components/public/SalonDiscovery.tsx","src/app/api/discovery/salons/route.ts","src/app/api/discovery/featured/route.ts","src/app/api/discovery/trending/route.ts","src/lib/discoveryServer.ts"];
+for(const path of publicFiles){const source=read(path);assert.doesNotMatch(source,/subscription_tier|Premium badge/i,`${path} exposes a plan field or label`)}
+const plans=read("src/lib/plans.ts");assert.doesNotMatch(plans,/Premium badge/);const home=read("src/app/page.tsx");assert.doesNotMatch(home,/sponsored\s*=|subscription tier|SUBSCRIPTION_TIER_PRIORITY/i);assert.match(home,/verification_status/);
+console.log("Public tier privacy verification passed.");
