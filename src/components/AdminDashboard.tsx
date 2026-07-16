@@ -16,15 +16,16 @@ import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
 import BookingInbox from "@/components/BookingInbox";
 import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
+import { US_STATES } from "@/lib/usStates";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
 type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
-  subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[]; settings: Row[];
+  subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[]; settings: Row[]; billingEvents: Row[];
 };
 
-const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [] };
+const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [] };
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
@@ -70,7 +71,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
       bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
       subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
-      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings),
+      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events),
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
@@ -148,7 +149,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     salons: rows(data?.salons), applications: rows(data?.applications), customers: rows(data?.customers),
     bookings: rows(data?.bookings), reviews: rows(data?.reviews), tickets: rows(data?.tickets),
     subscriptions: rows(data?.subscriptions), complaints: rows(data?.complaints), admins: rows(data?.admins),
-    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings),
+    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents),
   };
   const props = { ...safeData, selected, setSelected, decide, update, onCreated };
   switch (section) {
@@ -257,13 +258,41 @@ function Reviews(p: any) {
 }
 
 function Finance(p: any) {
-  const activePlans = p.salons.filter((salon: Row) => ["active", "trialing"].includes(String(salon.subscription_status || "").toLowerCase()));
-  const mrr = activePlans.reduce((sum: number, salon: Row) => sum + ({ basic: 99.5, growth: 129.5, premium: 159.5 }[String(salon.subscription_tier || "").toLowerCase()] || 0), 0);
-  const deposits = p.bookings.filter(isPaidDeposit).reduce((sum: number, booking: Row) => sum + Number(booking.deposit_amount || 0), 0);
-  const refunds = p.bookings.filter((booking: Row) => /refund/i.test(String(booking.deposit_status || booking.payment_status || ""))).reduce((sum: number, booking: Row) => sum + Number(booking.deposit_amount || 0), 0);
-  const values = dailySeries(p.bookings.filter(isPaidDeposit), "appointment_datetime", (booking) => Number(booking.deposit_amount || 0));
-  return <><div className="grid gap-4 sm:grid-cols-4"><Stat label="Active Subscription MRR" value={money(mrr)} /><Stat label="Deposits Collected" value={money(deposits)} /><Stat label="Recorded Payouts" value={money(0)} /><Stat label="Refunded Deposits" value={money(refunds)} /></div><div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_1fr]"><DataChart title="Deposit Activity" values={values} empty="Paid deposits will appear here." moneyValues /><Panel title="Deposit History">{p.bookings.filter(isPaidDeposit).length ? p.bookings.filter(isPaidDeposit).map((booking: Row) => <Line key={booking.id} label={`Booking ${String(booking.id).slice(0, 8)}`} meta={money(Number(booking.deposit_amount || 0))} />) : <EmptyState title="No paid deposits" body="Successful booking deposits will appear here." />}</Panel></div></>;
+  const [stateFilter,setStateFilter]=useState("all");
+  const [planFilter,setPlanFilter]=useState("all");
+  const [typeFilter,setTypeFilter]=useState("all");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [fromDate,setFromDate]=useState(()=>{const value=new Date();value.setDate(value.getDate()-30);return value.toISOString().slice(0,10)});
+  const [toDate,setToDate]=useState(()=>new Date().toISOString().slice(0,10));
+  const eventTypes=["New subscription","Upgrade","Upgrade payment failed","Downgrade scheduled","Downgrade became effective","Cancellation scheduled","Subscription ended","Renewal payment","Renewal failed","Refund","Credit","Reactivation"];
+  const paymentStatuses=[...new Set(p.billingEvents.map((event:Row)=>String(event.payment_status||"")).filter(Boolean))] as string[];
+  const start=fromDate?new Date(`${fromDate}T00:00:00`).getTime():Number.NEGATIVE_INFINITY;
+  const end=toDate?new Date(`${toDate}T23:59:59.999`).getTime():Number.POSITIVE_INFINITY;
+  const filtered=p.billingEvents.filter((event:Row)=>{
+    const at=new Date(event.event_date).getTime();
+    return (!Number.isNaN(at)&&at>=start&&at<=end)
+      &&(stateFilter==="all"||event.state===stateFilter)
+      &&(planFilter==="all"||event.new_plan===planFilter||(!event.new_plan&&event.previous_plan===planFilter))
+      &&(typeFilter==="all"||event.event_type===typeFilter)
+      &&(statusFilter==="all"||event.payment_status===statusFilter);
+  });
+  const paid=filtered.filter((event:Row)=>/paid|succeeded/i.test(String(event.payment_status||"")));
+  const subscriptionRevenue=paid.reduce((sum:number,event:Row)=>sum+Number(event.amount_collected||0),0);
+  const upgradeRevenue=paid.filter((event:Row)=>event.event_type==="Upgrade").reduce((sum:number,event:Row)=>sum+Number(event.amount_collected||0),0);
+  const refunds=filtered.filter((event:Row)=>event.event_type==="Refund"&&!/failed|canceled/i.test(String(event.payment_status||""))).reduce((sum:number,event:Row)=>sum+Number(event.amount_refunded||0),0);
+  const credits=filtered.filter((event:Row)=>event.event_type==="Credit"&&!/void/i.test(String(event.payment_status||""))).reduce((sum:number,event:Row)=>sum+Number(event.amount_credited||0),0);
+  const failed=filtered.filter((event:Row)=>/failed/i.test(String(event.payment_status||""))||/failed/i.test(String(event.event_type||""))).length;
+  const activeSubscriptions=p.subscriptions.filter((subscription:Row)=>["active","trialing"].includes(String(subscription.status||"").toLowerCase())).length;
+  const scheduledDowngrades=p.subscriptions.filter((subscription:Row)=>Boolean(subscription.scheduled_tier)).length;
+  const scheduledCancellations=p.subscriptions.filter((subscription:Row)=>Boolean(subscription.cancel_at_period_end)).length;
+  return <>
+    <div className="rounded-[14px] border border-plum/10 bg-white/75 p-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"><label className="text-[10px] font-bold">From<input type="date" value={fromDate} onChange={event=>setFromDate(event.target.value)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs"/></label><label className="text-[10px] font-bold">To<input type="date" value={toDate} onChange={event=>setToDate(event.target.value)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs"/></label><FinanceSelect label="State" value={stateFilter} onChange={setStateFilter} options={US_STATES.map(([code,name])=>[code,name])}/><FinanceSelect label="Plan" value={planFilter} onChange={setPlanFilter} options={[["Basic","Basic"],["Growth","Growth"],["Premium","Premium"]]}/><FinanceSelect label="Transaction" value={typeFilter} onChange={setTypeFilter} options={eventTypes.map(value=>[value,value])}/><FinanceSelect label="Payment status" value={statusFilter} onChange={setStatusFilter} options={paymentStatuses.map(value=>[value,value])}/></div></div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Stat label="Subscription revenue collected" value={minorMoney(subscriptionRevenue,"usd")}/><Stat label="Upgrade proration collected" value={minorMoney(upgradeRevenue,"usd")}/><Stat label="Refunds issued" value={minorMoney(refunds,"usd")}/><Stat label="Credits issued" value={minorMoney(credits,"usd")}/><Stat label="Failed payments" value={failed}/><Stat label="Active subscriptions" value={activeSubscriptions}/><Stat label="Scheduled downgrades" value={scheduledDowngrades}/><Stat label="Scheduled cancellations" value={scheduledCancellations}/></div>
+    <div className="mt-5"><Panel title="Stripe subscription event ledger"><p className="mb-4 text-xs leading-5 text-ink/55">Amounts are stored from Stripe invoices, refunds, and credit notes. State and market are snapshots from the salon record when each event was received.</p><DataTable headers={["Date","Salon / market","Event","Plan change","Timing / effective","Collected","Refunded","Credited","Payment","Stripe references"]}>{filtered.length?filtered.map((event:Row)=><tr key={event.id||event.stripe_event_id} className="border-b border-plum/10 align-top"><Td>{dateTime(event.event_date)}</Td><Td><b>{event.salon_name||"Salon unavailable"}</b><span className="mt-1 block text-ink/50">{[event.state,event.market_snapshot].filter(Boolean).join(" · ")||"Location not recorded"}</span></Td><Td><Badge value={event.event_type}/>{event.failure_reason?<span className="mt-2 block max-w-48 text-red-600">{event.failure_reason}</span>:null}</Td><Td>{event.previous_plan||event.new_plan?<span>{event.previous_plan||"—"} {event.previous_plan&&event.new_plan?"→":""} {event.new_plan||""}</span>:"—"}</Td><Td>{event.change_timing||"—"}<span className="mt-1 block text-ink/50">{event.effective_at?dateTime(event.effective_at):""}</span>{event.event_type==="Cancellation scheduled"?<span className="mt-1 block text-ink/50">Paid through {date(event.paid_through_date)}</span>:null}</Td><Td>{minorMoney(Number(event.amount_collected||0),event.currency)}</Td><Td>{minorMoney(Number(event.amount_refunded||0),event.currency)}</Td><Td>{minorMoney(Number(event.amount_credited||0),event.currency)}</Td><Td><Badge value={event.payment_status||"Not recorded"}/></Td><Td><span className="block max-w-40 break-all text-[9px]">Event {event.stripe_event_id}</span>{event.stripe_invoice_id?<span className="mt-1 block max-w-40 break-all text-[9px]">Invoice {event.stripe_invoice_id}</span>:null}{event.stripe_subscription_id?<span className="mt-1 block max-w-40 break-all text-[9px]">Subscription {event.stripe_subscription_id}</span>:null}</Td></tr>):<EmptyTable columns={10} text="No Stripe financial events match these filters."/>}</DataTable></Panel></div>
+  </>;
 }
+
+function FinanceSelect({label,value,onChange,options}:{label:string;value:string;onChange:(value:string)=>void;options:readonly (readonly [string,string])[]}){return <label className="text-[10px] font-bold">{label}<select value={value} onChange={event=>onChange(event.target.value)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All</option>{options.map(([option,labelText])=><option value={option} key={option}>{labelText}</option>)}</select></label>}
 
 function Marketing(p: any) {
   const featured = p.salons.filter((salon: Row) => Number(salon.featured_weight || 0) > 0);
@@ -304,6 +333,7 @@ function Td({ children }: { children: React.ReactNode }) { return <td className=
 function Badge({ value }: { value?: string }) { const label = value || "Pending"; const good = /active|verified|published|confirmed|approved/i.test(label); const bad = /reject|suspend|flag|remove/i.test(label); return <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[9px] ${good ? "bg-emerald-50 text-emerald-700" : bad ? "bg-red-50 text-red-600" : "bg-amber/15 text-amber-700"}`}>{label}</span>; }
 function DataChart({ title, values, empty, moneyValues = false }: { title: string; values: number[]; empty: string; moneyValues?: boolean }) { const max = Math.max(...values, 0); return <Panel title={title}>{max === 0 ? <EmptyState title="No data yet" body={empty} /> : <><div className="flex h-48 items-end gap-2 border-b border-l border-plum/10 px-4">{values.map((value, index) => <span key={index} title={moneyValues ? money(value) : String(value)} className="w-full rounded-t bg-magenta" style={{ height: `${Math.max(3, (value / max) * 100)}%` }} />)}</div><p className="mt-3 text-center text-xs text-ink/50">Last 14 days · database records only</p></>}</Panel>; }
 function money(value: number) { return value.toLocaleString("en-US", { style: "currency", currency: "USD" }); }
+function minorMoney(value: number, currency: unknown) { try { return (Number(value || 0) / 100).toLocaleString("en-US", { style: "currency", currency: String(currency || "usd").toUpperCase() }); } catch { return `${String(currency || "usd").toUpperCase()} ${(Number(value || 0) / 100).toFixed(2)}`; } }
 function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—"; }
 function dateTime(value?: string, timeZone?: string) { return value ? new Date(value).toLocaleString("en-US", { timeZone: timeZone || "America/New_York", dateStyle: "medium", timeStyle: "short" }) : "—"; }
-function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Track recorded subscriptions, deposits, payouts, and refunds.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }
+function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Audit Stripe subscription invoices, plan changes, refunds, credits, and failures by state.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }
