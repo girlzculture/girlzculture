@@ -37,11 +37,16 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
   if (!validCoordinates(query.origin)) return { salons: [] as PublicSalonResult[], total: 0 };
   const limit = Math.max(1, Math.min(50, Math.round(query.limit || 20)));
   const offset = Math.max(0, Math.round(query.offset || 0));
+  let resolvedStyle = query.style?.trim() || null;
+  if (resolvedStyle) {
+    const resolution = await supabase.rpc("resolve_search_service_query", { p_query: resolvedStyle });
+    if (!resolution.error && resolution.data) resolvedStyle = String(resolution.data);
+  }
   const { data, error } = await supabase.rpc("discover_nearby_salons", {
     origin_latitude: query.origin.lat,
     origin_longitude: query.origin.lng,
     radius_miles: normalizeRadius(query.radius),
-    style_query: query.style?.trim() || null,
+    style_query: resolvedStyle,
     minimum_rating: query.minimumRating ?? null,
     minimum_price: query.minimumPrice ?? null,
     maximum_price: query.maximumPrice ?? null,

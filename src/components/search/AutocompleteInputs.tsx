@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, Search, X } from "lucide-react";
 import type { CustomerLocation } from "@/lib/location";
@@ -54,13 +55,14 @@ type SharedProps = {
 };
 
 type SearchSuggestion = {
-  kind: "style" | "salon" | "location";
+  kind: "style" | "salon" | "category" | "location";
   label: string;
   value?: string;
   subtitle?: string;
   href?: string;
   lat?: number;
   lng?: number;
+  matched_terms?: string[];
 };
 type SearchGroup = {
   kind: SearchSuggestion["kind"];
@@ -84,6 +86,9 @@ export function StyleAutocomplete({
   const [groups, setGroups] = useState<SearchGroup[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [noResult, setNoResult] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
   const root = useRef<HTMLDivElement>(null);
   const listboxId = useId();
@@ -98,16 +103,23 @@ export function StyleAutocomplete({
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
+      setError("");
       try {
         const response = await fetch(
           `/api/search/suggestions?type=style&q=${encodeURIComponent(value)}`,
           { signal: controller.signal },
         );
         const body = await response.json();
-        setGroups(response.ok && Array.isArray(body.groups) ? body.groups : []);
+        if (!response.ok) throw new Error(body.error || "Search suggestions are temporarily unavailable.");
+        setGroups(Array.isArray(body.groups) ? body.groups : []);
+        setNoResult(body.no_result === true);
         setActiveIndex(-1);
       } catch (error) {
-        if ((error as Error).name !== "AbortError") setGroups([]);
+        if ((error as Error).name !== "AbortError") {
+          setGroups([]);
+          setNoResult(false);
+          setError(error instanceof Error ? error.message : "Search suggestions are temporarily unavailable.");
+        }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -116,7 +128,7 @@ export function StyleAutocomplete({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [value]);
+  }, [retryCount, value]);
   useEffect(() => {
     function outside(event: PointerEvent) {
       if (!root.current?.contains(event.target as Node)) setOpen(false);
@@ -174,7 +186,7 @@ export function StyleAutocomplete({
       <span className="flex min-h-11 items-center gap-2">
         <Search size={18} className="shrink-0 text-magenta" />
         <input
-          name={name}
+          name={name || undefined}
           value={value}
           role="combobox"
           aria-label={placeholder}
@@ -188,6 +200,7 @@ export function StyleAutocomplete({
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             onChange(event.target.value);
+            setError("");
             setOpen(true);
           }}
           autoComplete="off"
@@ -203,8 +216,13 @@ export function StyleAutocomplete({
         >
           {loading ? (
             <p role="status" className="px-4 py-3 text-xs text-ink/60">
-              Finding matchesâ€¦
+              Finding matches...
             </p>
+          ) : error ? (
+            <div role="alert" className="px-4 py-3 text-xs text-red-700">
+              <p>{error}</p>
+              <button type="button" onClick={() => { setError(""); setRetryCount((count) => count + 1); }} className="mt-2 min-h-9 font-bold text-magenta">Try again</button>
+            </div>
           ) : groups.length ? (
             groups.map((group) => {
               const start = itemOffset;
@@ -228,7 +246,7 @@ export function StyleAutocomplete({
                         className={`block min-h-11 w-full px-4 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-magenta ${activeIndex === absoluteIndex ? "bg-blush/55" : "hover:bg-blush/35"}`}
                       >
                         <span className="block text-xs font-semibold text-ink">
-                          {item.label}
+                          <HighlightedText text={item.label} terms={item.matched_terms?.length ? item.matched_terms : [value]} />
                         </span>
                         {item.subtitle ? (
                           <span className="mt-0.5 block text-[10px] text-ink/55">
@@ -242,9 +260,10 @@ export function StyleAutocomplete({
               );
             })
           ) : (
-            <p role="status" className="px-4 py-3 text-xs text-ink/60">
-              No matching styles, salons, or locations.
-            </p>
+            <div role="status" className="px-4 py-4 text-xs text-ink/60">
+              <p>{noResult ? "No matching styles or salons found." : "Start typing to find styles, services, salons, categories, and locations."}</p>
+              {noResult ? <div className="mt-3 flex flex-wrap gap-2"><Link href="/styles" className="inline-flex min-h-9 items-center rounded-lg bg-magenta px-3 font-bold text-white">Browse Styles</Link><Link href="/salons?focus=location" className="inline-flex min-h-9 items-center rounded-lg border border-magenta px-3 font-bold text-magenta">Change location</Link><button type="button" onClick={() => { onChange(""); setNoResult(false); }} className="min-h-9 px-2 font-bold text-magenta">Clear search</button></div> : null}
+            </div>
           )}
         </div>
       ) : null}
@@ -268,11 +287,10 @@ export function LocationAutocomplete({
     Array<{ text: string; prediction: any }>
   >([]);
   const [open, setOpen] = useState(false);
-  const [configured, setConfigured] = useState(
-    Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY),
-  );
+  const configured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const sessionToken = useRef<any>(null);
   const requestSequence = useRef(0);
   const root = useRef<HTMLDivElement>(null);
@@ -287,6 +305,7 @@ export function LocationAutocomplete({
           return;
         }
         setLoading(true);
+        setError("");
         try {
           await loadGoogleMaps();
           const places = await (window as any).google.maps.importLibrary(
@@ -315,8 +334,8 @@ export function LocationAutocomplete({
         } catch (error) {
           if (requestId === requestSequence.current) {
             console.error("Places autocomplete failed", error);
-            setConfigured(false);
             setSuggestions([]);
+            setError(error instanceof Error ? error.message : "Location suggestions could not load.");
           }
         } finally {
           if (requestId === requestSequence.current) setLoading(false);
@@ -360,11 +379,14 @@ export function LocationAutocomplete({
       } else {
         onCoordinates?.(null);
         onResolved?.(null);
+        setError("That location could not be resolved. Choose another suggestion.");
       }
       sessionToken.current = null;
     } catch (error) {
       console.error("Place details failed", error);
       onCoordinates?.(null);
+      onResolved?.(null);
+      setError("That location could not be resolved. Choose another suggestion.");
     }
   }
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -394,13 +416,14 @@ export function LocationAutocomplete({
     setSuggestions([]);
     setOpen(false);
     setActiveIndex(-1);
+    setError("");
   }
   return (
     <div ref={root} className={`relative ${className}`}>
       <span className="flex min-h-11 items-center gap-2">
         <MapPin size={18} className="shrink-0 text-magenta" />
         <input
-          name={name}
+          name={name || undefined}
           value={value}
           role="combobox"
           aria-label={placeholder}
@@ -416,6 +439,7 @@ export function LocationAutocomplete({
             onChange(event.target.value);
             onCoordinates?.(null);
             onResolved?.(null);
+            setError("");
             setOpen(true);
           }}
           autoComplete="off"
@@ -463,9 +487,9 @@ export function LocationAutocomplete({
             ))
           ) : (
             <p role="status" className="px-4 py-3 text-xs text-ink/60">
-              {configured
+              {error || (configured
                 ? "No matching U.S. locations."
-                : "Location suggestions require Google Maps setup."}
+                : "Location suggestions require Google Maps setup.")}
             </p>
           )}
           <p className="border-t border-plum/10 px-4 py-2 text-right text-[10px] text-ink/60">
@@ -475,4 +499,13 @@ export function LocationAutocomplete({
       ) : null}
     </div>
   );
+}
+
+function HighlightedText({ text, terms }: { text: string; terms: string[] }) {
+  const escaped = [...new Set(terms.map((term) => term.trim()).filter((term) => term.length >= 2))]
+    .sort((left, right) => right.length - left.length)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!escaped.length) return text;
+  const pattern = new RegExp(`(${escaped.join("|")})`, "ig");
+  return <>{text.split(pattern).map((part, index) => escaped.some((term) => new RegExp(`^${term}$`, "i").test(part)) ? <mark key={`${part}-${index}`} className="rounded bg-amber/20 text-inherit">{part}</mark> : part)}</>;
 }

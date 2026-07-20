@@ -23,7 +23,7 @@ const PAGE_SIZE = 20;
 export default function SalonDiscovery({ initialSalons, initialTotal, initialStyle = "", initialLocation = "", initialOrigin = null }: Props) {
   const customerLocation = useCustomerLocation();
   const [style, setStyle] = useState(initialStyle);
-  const [locationText, setLocationText] = useState(initialLocation);
+  const [locationText, setLocationText] = useState(initialOrigin ? "" : initialLocation);
   const [manualLocation, setManualLocation] = useState<CustomerLocation | null>(initialOrigin ? { ...initialOrigin, label: initialLocation || "Selected location", source: "explicit" } : null);
   const [editingLocation, setEditingLocation] = useState(Boolean(initialLocation && !initialOrigin));
   const [view, setView] = useState<"list" | "map">("list");
@@ -41,9 +41,11 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
   const [error, setError] = useState("");
   const [selectedSalonId, setSelectedSalonId] = useState("");
   const firstQuery = useRef(true);
+  const requestSequence = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
 
   const resolvedLocation = manualLocation || (!editingLocation ? customerLocation.location : null);
-  const displayedLocation = editingLocation ? locationText : locationText || customerLocation.location?.label || "";
+  const displayedLocation = locationText;
   const origin = useMemo(() => resolvedLocation && validCoordinates(resolvedLocation) ? { lat: resolvedLocation.lat, lng: resolvedLocation.lng } : null, [resolvedLocation]);
   const contextQuery = useMemo(() => {
     if (!origin) return "";
@@ -57,9 +59,12 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
 
   async function requestResults(offset = 0, append = false) {
     if (!origin) { setSalons([]); setTotal(0); setLoading(false); return; }
+    activeRequest.current?.abort();
+    const requestId = ++requestSequence.current;
+    const controller = new AbortController();
+    activeRequest.current = controller;
     if (append) setLoadingMore(true); else setLoading(true);
     setError("");
-    const controller = new AbortController();
     try {
       const params = new URLSearchParams({ lat: String(origin.lat), lng: String(origin.lng), radius: String(radius), limit: String(PAGE_SIZE), offset: String(offset), sort });
       if (style.trim()) params.set("style", style.trim());
@@ -69,14 +74,18 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
       const response = await fetch(`/api/discovery/salons?${params}`, { cache: "no-store", signal: controller.signal });
       const body = await response.json() as { salons?: PublicSalonResult[]; total?: number; error?: string };
       if (!response.ok) throw new Error(body.error || "Nearby salons could not be loaded.");
+      if (requestId !== requestSequence.current) return;
       const next = Array.isArray(body.salons) ? body.salons : [];
       setSalons((current) => append ? [...current, ...next.filter((row) => !current.some((item) => item.id === row.id))] : next);
       setTotal(Number(body.total || 0));
     } catch (requestError) {
       if ((requestError as Error).name !== "AbortError") setError(requestError instanceof Error ? requestError.message : "Nearby salons could not be loaded.");
-    } finally { setLoading(false); setLoadingMore(false); }
-    return () => controller.abort();
+    } finally {
+      if (requestId === requestSequence.current) { setLoading(false); setLoadingMore(false); }
+    }
   }
+
+  useEffect(() => () => activeRequest.current?.abort(), []);
 
   useEffect(() => {
     if (firstQuery.current && initialSalons.length && initialOrigin && origin?.lat === initialOrigin.lat && origin?.lng === initialOrigin.lng && radius === DEFAULT_NEARBY_RADIUS_MILES && !rating && price === "any" && sort === "distance" && style === initialStyle) {
@@ -125,8 +134,8 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
 
   function resolveLocation(next: CustomerLocation | null) {
     setManualLocation(next);
-    setEditingLocation(Boolean(next));
-    if (next) { setLocationText(next.label); customerLocation.setLocation(next); }
+    setEditingLocation(!next);
+    if (next) { setLocationText(""); customerLocation.setLocation(next); }
   }
   async function requestDeviceLocation() {
     setManualLocation(null);
@@ -142,7 +151,7 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
   const visibleSalons = availabilityDate ? salons.filter((salon) => availability[salon.id]) : salons;
 
   return <>
-    <form onSubmit={submit} className="relative z-20 rounded-[14px] border border-plum/10 bg-white/95 p-2 shadow-[0_8px_24px_rgba(26,18,32,.08)] md:max-w-[1120px] md:p-3"><div className="grid gap-2 md:grid-cols-[1.2fr_.9fr_auto]"><StyleAutocomplete value={style} onChange={setStyle} onLocation={resolveLocation} contextQuery={contextQuery} placeholder="Describe the service you want" className="rounded-[9px] border border-plum/10 px-3"/><div><LocationAutocomplete value={displayedLocation} onChange={(value)=>{setEditingLocation(true);setLocationText(value);setManualLocation(null);}} onResolved={resolveLocation} className="rounded-[9px] border border-plum/10 px-3"/><button type="button" onClick={()=>void requestDeviceLocation()} className="mt-1 inline-flex min-h-9 items-center gap-1.5 px-2 text-[11px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-magenta"><LocateFixed size={14}/>Use my location</button>{customerLocation.permissionError?<p role="alert" className="px-2 text-[11px] text-red-700">{customerLocation.permissionError}</p>:null}</div><button className="min-h-11 rounded-[9px] bg-magenta px-8 text-sm font-bold text-white">Search</button></div></form>
+    <form onSubmit={submit} className="relative z-20 rounded-[14px] border border-plum/10 bg-white/95 p-2 shadow-[0_8px_24px_rgba(26,18,32,.08)] md:max-w-[1120px] md:p-3"><div className="grid gap-2 md:grid-cols-[1.2fr_.9fr_auto]"><StyleAutocomplete value={style} onChange={setStyle} onLocation={resolveLocation} contextQuery={contextQuery} placeholder="Describe the service you want" className="rounded-[9px] border border-plum/10 px-3"/><div><LocationAutocomplete name="location_query" value={displayedLocation} onChange={(value)=>{setEditingLocation(true);setLocationText(value);setManualLocation(null);customerLocation.clearLocation();}} onResolved={resolveLocation} placeholder={resolvedLocation?.source === "device" ? "Current location" : resolvedLocation ? "Choose a different location" : "City, neighborhood, or ZIP"} className="rounded-[9px] border border-plum/10 px-3"/><button type="button" onClick={()=>void requestDeviceLocation()} className="mt-1 inline-flex min-h-9 items-center gap-1.5 px-2 text-[11px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-magenta"><LocateFixed size={14}/>Use my location</button>{customerLocation.permissionError?<p role="alert" className="px-2 text-[11px] text-red-700">{customerLocation.permissionError}</p>:null}</div><button className="min-h-11 rounded-[9px] bg-magenta px-8 text-sm font-bold text-white">Search</button></div></form>
 
     {!origin?<LocationPrompt onUseDevice={requestDeviceLocation}/>:<>
       <div className="mt-3 flex flex-wrap items-center gap-2"><Select label="Distance" value={String(radius)} onChange={(value)=>setRadius(Number(value))} options={[["5","5 miles"],["10","10 miles"],["25","25 miles"],["50","50 miles"],["100","100 miles"]]}/><Select label="Rating" value={String(rating)} onChange={(value)=>setRating(Number(value))} options={[["0","Any rating"],["4","4.0+"],["4.5","4.5+"],["4.8","4.8+"]]}/><Select label="Price" value={price} onChange={setPrice} options={[["any","Any price"],["under_100","Under $100"],["under_150","Under $150"],["150_250","$150–$250"],["over_250","$250+"]]}/><Select label="Sort" value={sort} onChange={setSort} options={[["distance","Nearest"],["rating","Highest rated"],["price_low","Lowest price"],["price_high","Highest price"]]}/><label className="inline-flex min-h-11 items-center gap-2 rounded-[9px] border border-plum/15 bg-white px-3 text-[11px] font-semibold"><CalendarDays size={15}/><span className="sr-only">Availability date</span><input aria-label="Availability date" type="date" value={availabilityDate} min={new Date().toISOString().slice(0,10)} onChange={(event)=>setAvailabilityDate(event.target.value)} className="bg-transparent outline-none"/></label><button type="button" onClick={clearFilters} className="inline-flex min-h-11 items-center gap-1.5 px-2 text-[11px] font-bold text-magenta"><RotateCcw size={14}/>Clear filters</button></div>
