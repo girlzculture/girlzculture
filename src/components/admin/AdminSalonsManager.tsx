@@ -68,6 +68,9 @@ export default function AdminSalonsManager() {
   const [plan, setPlan] = useState("");
   const [rating, setRating] = useState("");
   const [addressReview, setAddressReview] = useState("");
+  const [setup, setSetup] = useState("");
+  const [subscriptionEligibility, setSubscriptionEligibility] = useState("");
+  const [discoverability, setDiscoverability] = useState("");
   const [radius, setRadius] = useState("");
   const [centerText, setCenterText] = useState("");
   const [center, setCenter] = useState<CustomerLocation | null>(null);
@@ -76,14 +79,60 @@ export default function AdminSalonsManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [urlHydrated, setUrlHydrated] = useState(false);
+  const requestSequence = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
 
   const stateMarkets = useMemo(
     () => markets.filter((row) => !state || row.state_code === state),
     [markets, state],
   );
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const nextPage = Number(params.get("page") || 1);
+      const nextPageSize = Number(params.get("page_size") || 25);
+      const lat = Number(params.get("lat"));
+      const lng = Number(params.get("lng"));
+      const centerLabel = params.get("center") || "";
+      setPage(Number.isInteger(nextPage) && nextPage > 0 ? nextPage : 1);
+      setPageSize(
+        [10, 25, 50, 100].includes(nextPageSize) ? nextPageSize : 25,
+      );
+      setQ(params.get("q") || "");
+      setState(params.get("state") || "");
+      setMarket(params.get("market") || "");
+      setStatus(params.get("status") || "");
+      setPlan(params.get("plan") || "");
+      setRating(params.get("rating") || "");
+      setAddressReview(params.get("address_review") || "");
+      setSetup(params.get("setup") || "");
+      setSubscriptionEligibility(
+        params.get("subscription_eligibility") || "",
+      );
+      setDiscoverability(params.get("discoverability") || "");
+      setRadius(params.get("radius") || "");
+      setSort(params.get("sort") || "name");
+      setDirection(params.get("direction") || "asc");
+      if (centerLabel && Number.isFinite(lat) && Number.isFinite(lng)) {
+        setCenterText(centerLabel);
+        setCenter({ label: centerLabel, lat, lng, source: "saved" });
+      }
+      setUrlHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => () => activeRequest.current?.abort(), []);
+
   async function load() {
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    const sequence = ++requestSequence.current;
     setLoading(true);
     setError("");
+    setSalons([]);
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -98,36 +147,44 @@ export default function AdminSalonsManager() {
       if (plan) params.set("plan", plan);
       if (rating) params.set("rating", rating);
       if (addressReview) params.set("address_review", addressReview);
+      if (setup) params.set("setup", setup);
+      if (subscriptionEligibility)
+        params.set("subscription_eligibility", subscriptionEligibility);
+      if (discoverability)
+        params.set("discoverability", discoverability);
       if (radius && center) {
         params.set("radius", radius);
         params.set("lat", String(center.lat));
         params.set("lng", String(center.lng));
+        params.set("center", center.label || centerText);
       }
       const response = await fetch(`/api/admin/salons?${params}`, {
         headers: await authHeaders(),
         cache: "no-store",
+        signal: controller.signal,
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load salons.");
+      if (sequence !== requestSequence.current) return;
       setSalons(Array.isArray(body.salons) ? body.salons : []);
       setTotal(Number(body.total || 0));
       setSummary(body.summary || emptySummary);
       setMarkets(Array.isArray(body.markets) ? body.markets : []);
-      const urlParams = new URLSearchParams(params);
-      urlParams.delete("lat");
-      urlParams.delete("lng");
-      window.history.replaceState(null, "", `/admin/salons?${urlParams}`);
+      window.history.replaceState(null, "", `/admin/salons?${params}`);
     } catch (loadError) {
+      if (controller.signal.aborted || sequence !== requestSequence.current)
+        return;
       setError(
         loadError instanceof Error
           ? loadError.message
           : "Unable to load salons.",
       );
     } finally {
-      setLoading(false);
+      if (sequence === requestSequence.current) setLoading(false);
     }
   }
   useEffect(() => {
+    if (!urlHydrated) return;
     const timer = window.setTimeout(() => void load(), q ? 280 : 0);
     return () => window.clearTimeout(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -142,9 +199,13 @@ export default function AdminSalonsManager() {
     q,
     radius,
     rating,
+    setup,
     sort,
     state,
     status,
+    subscriptionEligibility,
+    discoverability,
+    urlHydrated,
   ]);
 
   function clear() {
@@ -155,6 +216,9 @@ export default function AdminSalonsManager() {
     setPlan("");
     setRating("");
     setAddressReview("");
+    setSetup("");
+    setSubscriptionEligibility("");
+    setDiscoverability("");
     setRadius("");
     setCenterText("");
     setCenter(null);
@@ -163,6 +227,70 @@ export default function AdminSalonsManager() {
     setPage(1);
   }
   const pages = Math.max(1, Math.ceil(total / pageSize));
+  const activeFilterChips = [
+    q ? { key: "q", label: `Search: ${q}`, clear: () => setQ("") } : null,
+    state
+      ? { key: "state", label: `State: ${state}`, clear: () => setState("") }
+      : null,
+    market
+      ? {
+          key: "market",
+          label: `Market: ${markets.find((row) => row.id === market)?.name || "Selected"}`,
+          clear: () => setMarket(""),
+        }
+      : null,
+    status
+      ? { key: "status", label: `Status: ${status}`, clear: () => setStatus("") }
+      : null,
+    plan
+      ? { key: "plan", label: `Plan: ${plan}`, clear: () => setPlan("") }
+      : null,
+    rating
+      ? { key: "rating", label: `Rating: ${rating}+`, clear: () => setRating("") }
+      : null,
+    addressReview
+      ? {
+          key: "address",
+          label: addressReview === "true" ? "Address needs review" : "Coordinates verified",
+          clear: () => setAddressReview(""),
+        }
+      : null,
+    setup
+      ? {
+          key: "setup",
+          label: setup === "complete" ? "Setup complete" : "Setup incomplete",
+          clear: () => setSetup(""),
+        }
+      : null,
+    subscriptionEligibility
+      ? {
+          key: "subscription",
+          label:
+            subscriptionEligibility === "eligible"
+              ? "Subscription eligible"
+              : "Subscription ineligible",
+          clear: () => setSubscriptionEligibility(""),
+        }
+      : null,
+    discoverability
+      ? {
+          key: "discoverability",
+          label: discoverability === "true" ? "Discoverable" : "Hidden",
+          clear: () => setDiscoverability(""),
+        }
+      : null,
+    radius && center
+      ? {
+          key: "radius",
+          label: `Within ${radius} mi of ${center.label}`,
+          clear: () => {
+            setRadius("");
+            setCenter(null);
+            setCenterText("");
+          },
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
   return (
     <div className="space-y-5">
       <section
@@ -198,7 +326,7 @@ export default function AdminSalonsManager() {
                 setQ(event.target.value);
                 setPage(1);
               }}
-              placeholder="Name, owner email or phone, or salon ID"
+              placeholder="Name, owner/contact, ID, city, state, ZIP, market or borough"
               className="min-h-11 w-full rounded-[9px] border border-plum/15 pl-10 pr-3 text-xs"
             />
           </label>
@@ -242,7 +370,16 @@ export default function AdminSalonsManager() {
             }}
           >
             <option value="">All statuses</option>
-            {["New", "Pending", "Active", "Suspended", "Offboarded"].map(
+            {[
+              "New",
+              "Pending",
+              "Approved",
+              "Ready for Activation",
+              "Active",
+              "Needs Attention",
+              "Suspended",
+              "Offboarded",
+            ].map(
               (value) => (
                 <option key={value}>{value}</option>
               ),
@@ -285,6 +422,42 @@ export default function AdminSalonsManager() {
             <option value="">Any address state</option>
             <option value="true">Needs review</option>
             <option value="false">Verified coordinates</option>
+          </Filter>
+          <Filter
+            label="Setup completion"
+            value={setup}
+            onChange={(value) => {
+              setSetup(value);
+              setPage(1);
+            }}
+          >
+            <option value="">Any setup state</option>
+            <option value="complete">Complete</option>
+            <option value="incomplete">Incomplete</option>
+          </Filter>
+          <Filter
+            label="Subscription eligibility"
+            value={subscriptionEligibility}
+            onChange={(value) => {
+              setSubscriptionEligibility(value);
+              setPage(1);
+            }}
+          >
+            <option value="">Any subscription state</option>
+            <option value="eligible">Eligible</option>
+            <option value="ineligible">Ineligible</option>
+          </Filter>
+          <Filter
+            label="Public visibility"
+            value={discoverability}
+            onChange={(value) => {
+              setDiscoverability(value);
+              setPage(1);
+            }}
+          >
+            <option value="">Any visibility</option>
+            <option value="true">Discoverable</option>
+            <option value="false">Hidden</option>
           </Filter>
           <div className="sm:col-span-2 xl:col-span-3">
             <span className="mb-1 block text-[10px] font-bold">
@@ -344,6 +517,27 @@ export default function AdminSalonsManager() {
             Clear filters
           </button>
         </div>
+        {activeFilterChips.length ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-ink/50">
+              Active filters
+            </span>
+            {activeFilterChips.map((chip) => (
+              <button
+                type="button"
+                key={chip.key}
+                onClick={() => {
+                  chip.clear();
+                  setPage(1);
+                }}
+                className="inline-flex min-h-9 items-center gap-1 rounded-full bg-blush/65 px-3 text-[10px] font-bold text-plum"
+                aria-label={`Remove ${chip.label} filter`}
+              >
+                {chip.label} <X size={12} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        ) : null}
         {radius && !center ? (
           <p
             role="alert"
@@ -393,6 +587,7 @@ export default function AdminSalonsManager() {
                   "State / Market",
                   "Status",
                   "Plan tier",
+                  "Setup / visibility",
                   "Rating",
                   "Reviews",
                   "Actions",
@@ -404,6 +599,21 @@ export default function AdminSalonsManager() {
               </tr>
             </thead>
             <tbody>
+              {loading
+                ? Array.from({ length: Math.min(pageSize, 8) }, (_, index) => (
+                    <tr
+                      key={`skeleton-${index}`}
+                      className="border-t border-plum/10"
+                      aria-hidden="true"
+                    >
+                      {Array.from({ length: 8 }, (__, cell) => (
+                        <td key={cell} className="px-4 py-4">
+                          <span className="block h-4 animate-pulse rounded bg-blush/70" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                : null}
               {salons.map((salon) => (
                 <tr
                   key={salon.id}
@@ -452,6 +662,19 @@ export default function AdminSalonsManager() {
                   </td>
                   <td className="px-4 py-3">
                     {salon.subscription_tier || "Not selected"}
+                    <small className="block text-[9px] text-ink/50">
+                      {salon.subscription_status || "inactive"}
+                    </small>
+                  </td>
+                  <td className="px-4 py-3">
+                    <b>
+                      {salon.setup_complete
+                        ? "Complete"
+                        : `${salon.onboarding_progress || 0}%`}
+                    </b>
+                    <small className="block text-[9px] text-ink/50">
+                      {salon.is_discoverable ? "Discoverable" : "Hidden"}
+                    </small>
                   </td>
                   <td className="px-4 py-3">
                     {salon.review_count > 0
@@ -471,7 +694,7 @@ export default function AdminSalonsManager() {
               ))}
               {!salons.length && !loading ? (
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-ink/55">
+                  <td colSpan={8} className="p-10 text-center text-ink/55">
                     No salon records match these filters.
                   </td>
                 </tr>
@@ -480,6 +703,18 @@ export default function AdminSalonsManager() {
           </table>
         </div>
         <div className="divide-y divide-plum/10 md:hidden">
+          {loading
+            ? Array.from({ length: 4 }, (_, index) => (
+                <article
+                  key={`mobile-skeleton-${index}`}
+                  className="space-y-3 p-4"
+                  aria-hidden="true"
+                >
+                  <span className="block h-12 animate-pulse rounded-lg bg-blush/70" />
+                  <span className="block h-10 animate-pulse rounded-lg bg-blush/50" />
+                </article>
+              ))
+            : null}
           {salons.map((salon) => (
             <article key={salon.id} className="p-4">
               <div className="flex items-center gap-3">
@@ -505,7 +740,7 @@ export default function AdminSalonsManager() {
                 </div>
                 <StatusBadge value={salon.status} />
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] sm:grid-cols-4">
                 <span>
                   Plan
                   <br />
@@ -525,6 +760,16 @@ export default function AdminSalonsManager() {
                   <br />
                   <b>{salon.review_count || 0}</b>
                 </span>
+                <span>
+                  Setup / public
+                  <br />
+                  <b>
+                    {salon.setup_complete
+                      ? "Complete"
+                      : `${salon.onboarding_progress || 0}%`} {" "}
+                    · {salon.is_discoverable ? "Live" : "Hidden"}
+                  </b>
+                </span>
               </div>
               <button
                 onClick={() => setSelectedId(salon.id)}
@@ -534,6 +779,11 @@ export default function AdminSalonsManager() {
               </button>
             </article>
           ))}
+          {!salons.length && !loading ? (
+            <p className="p-10 text-center text-sm text-ink/55">
+              No salon records match these filters.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-plum/10 p-4">
           <label className="text-[10px]">
@@ -553,7 +803,7 @@ export default function AdminSalonsManager() {
           </label>
           <div className="flex items-center gap-2">
             <button
-              disabled={page <= 1}
+              disabled={loading || page <= 1}
               onClick={() => setPage((value) => Math.max(1, value - 1))}
               className="grid min-h-10 min-w-10 place-items-center rounded border disabled:opacity-40"
             >
@@ -563,7 +813,7 @@ export default function AdminSalonsManager() {
               Page {page} of {pages}
             </span>
             <button
-              disabled={page >= pages}
+              disabled={loading || page >= pages}
               onClick={() => setPage((value) => Math.min(pages, value + 1))}
               className="grid min-h-10 min-w-10 place-items-center rounded border disabled:opacity-40"
             >
