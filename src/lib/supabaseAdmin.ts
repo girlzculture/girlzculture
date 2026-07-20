@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
+import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -19,18 +20,15 @@ export async function requireAdmin(request: Request) {
   const normalizedEmail = data.user.email?.trim().toLowerCase() || "";
   const { data: identity, error: identityError } = await admin.from("platform_identities").select("email_normalized,primary_role,status").eq("user_id", data.user.id).maybeSingle();
   if (identityError && identityError.code !== "PGRST205") throw identityError;
-  if (identity && (identity.status !== "Active" || identity.primary_role !== "admin" || identity.email_normalized !== normalizedEmail)) throw new Error("Forbidden");
-  const { data: rowByUser } = await admin.from("admin_users").select("id,user_id,email,role,status,permissions,is_super_admin,activated_at").eq("user_id", data.user.id).in("status", ["Active", "Invited"]).limit(1).maybeSingle();
-  let row = rowByUser;
+  if (!identity || identity.status !== "Active" || identity.primary_role !== "admin" || identity.email_normalized !== normalizedEmail) throw new Error("Forbidden");
+  let row = await assertAuthorizedAdminUser(admin, data.user);
   if (row?.status === "Invited") {
     const activatedAt = new Date().toISOString();
     const { error: activationError } = await admin.from("admin_users").update({ status: "Active", activated_at: activatedAt }).eq("id", row.id).eq("status", "Invited");
     if (activationError) throw activationError;
     row = { ...row, status: "Active", activated_at: activatedAt };
   }
-  const master = process.env.ADMIN_EMAIL?.toLowerCase();
-  if (!row && normalizedEmail !== master) throw new Error("Forbidden");
-  return { admin, user: data.user, adminUser: row || { email: normalizedEmail, role: "Super Admin", status: "Active", permissions: {}, is_super_admin: true } };
+  return { admin, user: data.user, adminUser: row };
 }
 
 export async function requireAdminPermission(request: Request, permission: string) {

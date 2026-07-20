@@ -50,6 +50,22 @@ revoke all on public.platform_identities from anon, authenticated;
 revoke all on public.identity_security_events from anon, authenticated;
 revoke all on public.identity_conflict_resolutions from anon, authenticated;
 
+-- One-time legacy reconciliation: old admin rows were authorized by matching
+-- email and may predate admin_users.user_id. Establish the durable Auth link
+-- before building the conflict inventory; runtime authorization never uses
+-- this email fallback.
+update public.admin_users admin_record
+set user_id=auth_user.id
+from auth.users auth_user
+where admin_record.user_id is null
+  and admin_record.email is not null
+  and auth_user.email is not null
+  and public.normalize_identity_email(admin_record.email)=public.normalize_identity_email(auth_user.email)
+  and not exists (
+    select 1 from public.admin_users other
+    where other.user_id=auth_user.id and other.id<>admin_record.id
+  );
+
 create or replace view public.identity_conflict_queue
 with (security_invoker = false)
 as
