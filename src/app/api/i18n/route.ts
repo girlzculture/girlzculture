@@ -1,0 +1,3 @@
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { BUNDLED_MESSAGES, normalizeLocale } from "@/i18n/catalog";
+export async function GET(request:Request){const locale=normalizeLocale(new URL(request.url).searchParams.get("locale"));try{const{data,error}=await getSupabaseAdmin().from("translation_entries").select("translation_key,translated_text").eq("locale",locale).eq("status","Published");if(error)throw error;return Response.json({locale,messages:{...BUNDLED_MESSAGES[locale],...Object.fromEntries((data||[]).map(row=>[row.translation_key,row.translated_text]))}},{headers:{"Cache-Control":"public, max-age=60, stale-while-revalidate=300"}})}catch{return Response.json({locale,messages:BUNDLED_MESSAGES[locale]})}}

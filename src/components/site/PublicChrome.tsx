@@ -16,6 +16,7 @@ import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 import { getVisibleLegalLinks } from "@/lib/content";
+import { LocalizedText } from "@/components/i18n/LanguageSelector";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
@@ -38,14 +39,14 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
         <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu/><Wordmark compact /></div>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-8 text-[13px] font-semibold text-ink md:flex lg:gap-10">
-          <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}>Browse Styles</Link>
-          <Link href="/salons" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "salons" ? "border-magenta text-magenta" : "border-transparent"}`}>Find Salons</Link>
-          <Link href="/how-it-works" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "how" ? "border-magenta text-magenta" : "border-transparent"}`}>How It Works</Link>
-          <Link href="/about" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta lg:inline-flex ${active === "about" ? "border-magenta text-magenta" : "border-transparent"}`}>About Us</Link>
-          <Link href="/blog" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta xl:inline-flex ${active === "blog" ? "border-magenta text-magenta" : "border-transparent"}`}>Blog</Link>
+          <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.styles" fallback="Browse Styles"/></Link>
+          <Link href="/salons" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "salons" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.salons" fallback="Find Salons"/></Link>
+          <Link href="/how-it-works" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "how" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.how" fallback="How It Works"/></Link>
+          <Link href="/about" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta lg:inline-flex ${active === "about" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.about" fallback="About Us"/></Link>
+          <Link href="/blog" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta xl:inline-flex ${active === "blog" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.blog" fallback="Blog"/></Link>
           <Link href="/partner" className="inline-flex items-center gap-2 transition-colors hover:text-magenta">
-            Partner With Us
-            <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">New</span>
+            <LocalizedText messageKey="nav.partner" fallback="Partner With Us"/>
+            <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white"><LocalizedText messageKey="nav.new" fallback="New"/></span>
           </Link>
         </nav>
 
@@ -59,10 +60,10 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
           </Link>
           <Link href="/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta md:inline-flex">
-            Log in
+            <LocalizedText messageKey="nav.login" fallback="Log in"/>
           </Link>
           <Link href="/login" className="hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(214,24,107,0.18)] transition hover:-translate-y-0.5 hover:bg-[#bb145d] md:inline-flex">
-            Sign up
+            <LocalizedText messageKey="nav.signup" fallback="Sign up"/>
           </Link>
         </div>
       </div>
@@ -72,11 +73,11 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
 
 export function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
   const items = [
-    { id: "home" as const, label: "Home", href: "/", icon: Home },
-    { id: "search" as const, label: "Search", href: "/salons", icon: Search },
-    { id: "bookings" as const, label: "Bookings", href: "/account", icon: CalendarDays },
-    { id: "social" as const, label: "Social", href: "/social", icon: Share2 },
-    { id: "profile" as const, label: "Profile", href: "/account?tab=inbox", icon: UserRound },
+    { id: "home" as const, label: "Home", key: "nav.home", href: "/", icon: Home },
+    { id: "search" as const, label: "Search", key: "nav.search", href: "/salons", icon: Search },
+    { id: "bookings" as const, label: "Bookings", key: "nav.bookings", href: "/account", icon: CalendarDays },
+    { id: "social" as const, label: "Social", key: "nav.social", href: "/social", icon: Share2 },
+    { id: "profile" as const, label: "Profile", key: "nav.profile", href: "/account?tab=inbox", icon: UserRound },
   ];
 
   return (
@@ -96,7 +97,7 @@ export function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
               className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold ${isActive ? "text-magenta" : "text-ink/75"}`}
             >
               <Icon aria-hidden="true" size={20} strokeWidth={isActive ? 2.4 : 1.8} />
-              {item.label}
+              <LocalizedText messageKey={item.key} fallback={item.label}/>
             </Link>
           );
         })}
@@ -107,18 +108,18 @@ export function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
 
 const trustItems = [
   {
-    title: "Verified Salons",
-    description: "Every salon is vetted for quality, safety, and professionalism.",
+    title: "Verified Salons", titleKey: "trust.salons.title",
+    description: "Every salon is vetted for quality, safety, and professionalism.", descriptionKey: "trust.salons.body",
     icon: ShieldCheck,
   },
   {
-    title: "Booking-based Reviews",
-    description: "Reviews are connected to completed appointments.",
+    title: "Booking-based Reviews", titleKey: "trust.reviews.title",
+    description: "Reviews are connected to completed appointments.", descriptionKey: "trust.reviews.body",
     icon: MessageSquare,
   },
   {
-    title: "Transparent Pricing",
-    description: "Upfront pricing, so there are no surprises.",
+    title: "Transparent Pricing", titleKey: "trust.pricing.title",
+    description: "Upfront pricing, so there are no surprises.", descriptionKey: "trust.pricing.body",
     icon: Tag,
   },
 ];
@@ -135,8 +136,8 @@ export function TrustStrip() {
                 <Icon aria-hidden="true" size={24} strokeWidth={1.8} />
               </span>
               <span>
-                <span className="block font-serif text-[18px] font-semibold leading-tight">{item.title}</span>
-                <span className="mt-1 block max-w-[260px] text-[11px] leading-[1.45] text-white/75">{item.description}</span>
+                <span className="block font-serif text-[18px] font-semibold leading-tight"><LocalizedText messageKey={item.titleKey} fallback={item.title}/></span>
+                <span className="mt-1 block max-w-[260px] text-[11px] leading-[1.45] text-white/75"><LocalizedText messageKey={item.descriptionKey} fallback={item.description}/></span>
               </span>
             </div>
           );
@@ -147,9 +148,9 @@ export function TrustStrip() {
 }
 
 const footerGroups = [
-  { title: "Company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
-  { title: "Support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
-  { title: "For Professionals", links: [["Partner With Us","/partner"]] },
+  { title: "Company", titleKey: "footer.company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
+  { title: "Support", titleKey: "footer.support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
+  { title: "For Professionals", titleKey: "footer.professionals", links: [["Partner With Us","/partner"]] },
 ];
 
 export async function PublicFooter() {
@@ -167,7 +168,7 @@ export async function PublicFooter() {
         </div>
         {footerGroups.map((group) => (
           <div key={group.title}>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{group.title}</h2>
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/80"><LocalizedText messageKey={group.titleKey} fallback={group.title}/></h2>
             <ul className="mt-3 space-y-2 text-[11px] text-white/65">
               {group.links.map(([label,href]) => <li key={href}><Link href={href} className="hover:text-white">{label}</Link></li>)}
             </ul>
@@ -177,10 +178,10 @@ export async function PublicFooter() {
           {legalColumns.map((column, index) => <ul key={index} className="space-y-2 text-[10px] leading-4 text-white/65">{column.map(([label, href]) => <li key={href}><Link href={href} className="hover:text-white">{label}</Link></li>)}</ul>)}
         </div> : <div className="hidden lg:block"/>}
         <div className="col-span-2 lg:col-span-1">
-          <h2 className="font-serif text-[17px] font-semibold">Stay in the loop</h2>
-          <p className="mt-2 text-[11px] leading-5 text-white/65">Tips, new salons, and exclusive offers.</p>
+          <h2 className="font-serif text-[17px] font-semibold"><LocalizedText messageKey="footer.newsletter" fallback="Stay in the loop"/></h2>
+          <p className="mt-2 text-[11px] leading-5 text-white/65"><LocalizedText messageKey="footer.newsletter_help" fallback="Tips, new salons, and exclusive offers."/></p>
           <NewsletterForm />
-          <p className="mt-5 text-[9px] text-white/45">© {new Date().getFullYear()} Girlz Culture, Inc. All rights reserved.</p>
+          <p className="mt-5 text-[9px] text-white/45">© {new Date().getFullYear()} Girlz Culture, Inc. <LocalizedText messageKey="footer.rights" fallback="All rights reserved."/></p>
         </div>
       </div>
     </footer>

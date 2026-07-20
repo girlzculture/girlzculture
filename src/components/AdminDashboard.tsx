@@ -21,6 +21,7 @@ import AdminMarketingWorkspace from "@/components/admin/AdminMarketingWorkspace"
 import SalonLifecycleSettings from "@/components/admin/SalonLifecycleSettings";
 import SearchLanguageSettings from "@/components/admin/SearchLanguageSettings";
 import MediaRulesSettings from "@/components/admin/MediaRulesSettings";
+import TranslationManager from "@/components/admin/TranslationManager";
 import { US_STATES } from "@/lib/usStates";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
@@ -327,7 +328,7 @@ function dailySeries(rows: Row[], dateField: string, value: (row: Row) => number
 
 function isPaidDeposit(booking: Row) { return /paid|succeeded|complete/i.test(String(booking.deposit_status || booking.payment_status || "")); }
 function QuickLink({ href, label }: { href: string; label: string }) { return <Link href={href} className="rounded-[10px] bg-blush/30 p-4 text-center text-[10px] font-semibold text-plum">{label}</Link>; }
-function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(26,18,32,.03)]"><h2 className="mb-4 font-serif text-xl font-semibold text-plum">{title}</h2>{title === "Platform Settings" ? <div className="mb-5 space-y-5"><SalonLifecycleSettings /><SearchLanguageSettings /><MediaRulesSettings /></div> : null}{children}</section>; }
+function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(26,18,32,.03)]"><h2 className="mb-4 font-serif text-xl font-semibold text-plum">{title}</h2>{title === "Platform Settings" ? <div className="mb-5 space-y-5"><SalonLifecycleSettings /><SearchLanguageSettings /><MediaRulesSettings /><TranslationManager /></div> : null}{children}</section>; }
 function Line({ label, meta = "" }: { label: string; meta?: string }) { return <div className="flex items-center justify-between gap-4 border-b border-plum/10 py-3 text-xs"><span>{label}</span><span className="text-right text-ink/45">{meta}</span></div>; }
 function EmptyState({ title, body }: { title: string; body: string }) { return <div className="rounded-[12px] border border-dashed border-plum/15 bg-cream/50 p-5 text-center"><h3 className="font-serif text-lg text-plum">{title}</h3><p className="mt-1 text-xs leading-5 text-ink/55">{body}</p></div>; }
 function DataTable({ headers, children }: { headers: string[]; children: React.ReactNode }) { return <div className="overflow-x-auto"><table className="min-w-full text-left text-xs"><thead className="bg-cream/70"><tr>{headers.map((header) => <th key={header} className="whitespace-nowrap px-3 py-3">{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>; }
