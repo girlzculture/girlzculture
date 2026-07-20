@@ -27,9 +27,9 @@ export async function POST(request: Request) {
       let path = "/salon/dashboard";
       if (salon.status?.toLowerCase() === "pending") {
         const { data: application } = await admin.from("salon_applications").select("id").eq("salon_id", salon.id).maybeSingle();
-        path = application?.id ? "/salon/dashboard" : "/salon/apply";
+        path = application?.id ? "/pending" : "/salon/apply";
       }
-      return Response.json({ path, role: "salon_owner" });
+      return Response.json({ path, role: "salon_owner", salon_status: salon.status });
     }
     if (teamMember) {
       if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);

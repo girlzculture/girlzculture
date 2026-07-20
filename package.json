@@ -19,7 +19,8 @@
     "verify:homepage-depth": "node scripts/verify-homepage-depth-preview.mjs",
     "verify:hardening": "node scripts/verify-marketplace-hardening.mjs",
     "verify:identity": "node scripts/verify-canonical-identity.mjs",
-    "verify:admin-security": "node scripts/verify-admin-identity-security.mjs"
+    "verify:admin-security": "node scripts/verify-admin-identity-security.mjs",
+    "verify:lifecycle": "node scripts/verify-salon-lifecycle-engine.mjs"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",

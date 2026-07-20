@@ -950,8 +950,10 @@ function SalonDetail({
     const impacts: Record<string, string> = {
       Pending:
         "The salon will be hidden from search and public booking while the owner may continue setup.",
+      Approved:
+        "The owner can subscribe and finish setup, but the salon remains hidden until every marketplace gate passes.",
       Active:
-        "The salon may become public when subscription and setup eligibility are satisfied.",
+        "The salon will become public only if every required marketplace gate passes.",
       Suspended:
         "The salon will be hidden and booking disabled; the owner keeps dashboard access with a suspension notice.",
       Offboarded:
@@ -1078,6 +1080,38 @@ function SalonDetail({
                   }
                 />
               </section>
+              {data.lifecycle ? (
+                <section className="rounded-[13px] border border-plum/10 bg-white p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-serif text-xl text-plum">Public visibility diagnostic</h3>
+                      <p className="mt-1 text-xs leading-5 text-ink/60">
+                        {data.lifecycle.is_discoverable
+                          ? "This salon passes every required gate and is public."
+                          : "This salon is hidden until every required gate below passes and its lifecycle permits activation."}
+                      </p>
+                    </div>
+                    <b className="rounded-full bg-blush px-3 py-1 text-xs text-plum">
+                      {Number(data.lifecycle.progress || 0)}%
+                    </b>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {Object.entries((data.lifecycle.checks || {}) as Record<string, Row>)
+                      .filter(([, check]) => check.required === true)
+                      .map(([key, check]) => (
+                        <div key={key} className="flex items-center justify-between gap-3 rounded-lg bg-cream/70 px-3 py-2 text-xs">
+                          <span>{check.label || key}</span>
+                          <b className={check.passed ? "text-emerald-700" : "text-red-700"}>
+                            {check.passed ? "Passed" : "Missing"}
+                          </b>
+                        </div>
+                      ))}
+                  </div>
+                  <p className="mt-3 text-[10px] leading-4 text-ink/50">
+                    Approval: {String(data.lifecycle.status || salon.status)} · Subscription: {String(data.lifecycle.subscription_status || "inactive")} · Auto-activation: {data.lifecycle.auto_activation ? "on" : "off"}
+                  </p>
+                </section>
+              ) : null}
               <section className="rounded-[13px] border border-plum/10 bg-white p-4">
                 <h3 className="font-serif text-xl text-plum">
                   Business & address
@@ -1123,11 +1157,11 @@ function SalonDetail({
                   contacting customers.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {["Pending", "Active", "Suspended", "Offboarded"]
+                  {["Pending", "Approved", "Active", "Suspended", "Offboarded"]
                     .filter((value) => value !== salon.status)
                     .map((value) => (
                       <button
-                        disabled={Boolean(busy)}
+                        disabled={Boolean(busy) || (value === "Active" && data.lifecycle?.all_required_complete !== true)}
                         onClick={() => void statusAction(value)}
                         key={value}
                         className={`min-h-10 rounded-lg px-4 text-xs font-bold disabled:opacity-40 ${["Suspended", "Offboarded"].includes(value) ? "border border-red-400 text-red-700" : "bg-plum text-white"}`}
