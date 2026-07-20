@@ -43,12 +43,21 @@ export default function CustomerAuth() {
       finally { setLoading(false); }
       return;
     }
-    const { data, error } = await supabase.auth.signUp({ email: validEmail, password, options: { data: { role: "customer", name } } });
-    if (error) { setMessage(error.message); setLoading(false); return; }
-    if (data.user && data.session) await supabase.from("customers").upsert({ id: data.user.id, name, email: validEmail, status: "Active" });
-    setLoading(false);
-    if (data.session) window.location.replace("/account");
-    else setMessage("Account created. Check your email to confirm it, then log in.");
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "customer", name, email: validEmail, password, website: "" }),
+      });
+      const body = await response.json() as { error?: string; confirmation_required?: boolean; session?: LoginSession | null };
+      if (!response.ok) throw new Error(body.error || "Your account could not be created.");
+      if (body.session) await finishLogin(body.session);
+      else setMessage("Account created. Check your email to confirm it, then log in.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Your account could not be created.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function changeMode(next: "login" | "signup") { setMode(next); setChallenge(null); setCode(""); setMessage(""); }

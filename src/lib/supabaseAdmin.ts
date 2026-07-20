@@ -17,8 +17,11 @@ export async function requireAdmin(request: Request) {
   const { data } = await admin.auth.getUser(token);
   if (!data.user) throw new Error("Unauthorized");
   const normalizedEmail = data.user.email?.trim().toLowerCase() || "";
-  const { data: rows } = await admin.from("admin_users").select("id,user_id,email,role,status,permissions,is_super_admin,activated_at").ilike("email", normalizedEmail);
-  let row = (rows || []).find((candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail && ["Active", "Invited"].includes(candidate.status));
+  const { data: identity, error: identityError } = await admin.from("platform_identities").select("email_normalized,primary_role,status").eq("user_id", data.user.id).maybeSingle();
+  if (identityError && identityError.code !== "PGRST205") throw identityError;
+  if (identity && (identity.status !== "Active" || identity.primary_role !== "admin" || identity.email_normalized !== normalizedEmail)) throw new Error("Forbidden");
+  const { data: rowByUser } = await admin.from("admin_users").select("id,user_id,email,role,status,permissions,is_super_admin,activated_at").eq("user_id", data.user.id).in("status", ["Active", "Invited"]).limit(1).maybeSingle();
+  let row = rowByUser;
   if (row?.status === "Invited") {
     const activatedAt = new Date().toISOString();
     const { error: activationError } = await admin.from("admin_users").update({ status: "Active", activated_at: activatedAt }).eq("id", row.id).eq("status", "Invited");

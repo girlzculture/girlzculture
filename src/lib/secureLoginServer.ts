@@ -2,6 +2,7 @@ import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { createHash, createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { clientAddress, cleanEmail } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail, sendSms } from "@/lib/supabaseAdmin";
+import { canonicalIdentityForUser, identityRoleToLoginScope } from "@/lib/identityServer";
 
 export type LoginScope = "customer" | "salon" | "admin";
 const MAX_FAILURES = 5;
@@ -57,12 +58,25 @@ export async function signInAndVerifyRole(email: string, password: string, expec
 async function resolveUserRole(user: User): Promise<LoginScope> {
   const admin = getSupabaseAdmin();
   const email = user.email?.trim().toLowerCase() || "";
-  const [{ data: adminRows }, { data: salon }, { data: teamMember }] = await Promise.all([
-    admin.from("admin_users").select("id,email,status").ilike("email", email),
+  const identity = await canonicalIdentityForUser(user.id);
+  if (identity) {
+    if (identity.status !== "Active" || identity.email_normalized !== email) {
+      throw new Error("This account requires administrator review.");
+    }
+    return identityRoleToLoginScope(identity.primary_role);
+  }
+  const [{ data: conflicts, error: conflictError }, { data: adminRow }, { data: salon }, { data: teamMember }, { data: customer }] = await Promise.all([
+    admin.from("identity_conflict_queue").select("email_normalized").eq("email_normalized", email).limit(1),
+    admin.from("admin_users").select("id,status").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle(),
     admin.from("salons").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
     admin.from("salon_team_members").select("id").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle(),
+    admin.from("customers").select("id").eq("id", user.id).limit(1).maybeSingle(),
   ]);
-  if ((adminRows || []).some((row) => row.email?.trim().toLowerCase() === email && row.status !== "Inactive")) return "admin";
+  if (conflictError && conflictError.code !== "PGRST205") throw conflictError;
+  if ((conflicts || []).length) throw new Error("This account requires administrator review.");
+  const scopes = [adminRow ? "admin" : null, salon || teamMember ? "salon" : null, customer ? "customer" : null].filter(Boolean) as LoginScope[];
+  if (new Set(scopes).size > 1) throw new Error("This account requires administrator review.");
+  if (adminRow) return "admin";
   if (salon || teamMember) return "salon";
   return "customer";
 }

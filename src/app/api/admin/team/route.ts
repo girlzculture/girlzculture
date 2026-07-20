@@ -1,6 +1,6 @@
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { requireAdmin, requireAdminPermission } from "@/lib/supabaseAdmin";
-import { inviteOrFindUser } from "@/lib/teamInvite";
+import { inviteNewIdentity } from "@/lib/teamInvite";
 
 export const ADMIN_PERMISSION_KEYS = ["overview","submissions","salons","customers","bookings","quality","reviews","finance","marketing","content","support","subscriptions","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(ADMIN_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     const { admin, user } = await superAdmin(request); const body = await request.json() as Record<string, unknown>;
     const email = cleanEmail(body.email); const phone = cleanUsPhone(body.phone); const name = cleanText(body.name, 120); const role = cleanText(body.role, 80) || "Admin";
     if (!name) throw new Error("Name is required.");
-    const invited = await inviteOrFindUser(admin, email, "admin");
-    const requestedStatus = cleanText(body.status, 20) === "Inactive" ? "Inactive" : invited.user.last_sign_in_at ? "Active" : "Invited";
+    const invited = await inviteNewIdentity(admin, email, "admin", { request, actorUserId: user.id, source: "admin_team_invitation" });
+    const requestedStatus = cleanText(body.status, 20) === "Inactive" ? "Inactive" : "Invited";
     const { data: existing, error: existingError } = await admin.from("admin_users").select("id,is_super_admin").ilike("email", email).limit(1).maybeSingle();
     if (existingError) throw existingError;
     if (existing?.is_super_admin) throw new Error("A Super Admin cannot be replaced from this form.");
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       ? await admin.from("admin_users").update(values).eq("id", existing.id).select().single()
       : await admin.from("admin_users").insert({ id: invited.user.id, ...values, invited_at: new Date().toISOString() }).select().single();
     const { data, error } = saved;
-    if (error) throw error; return Response.json({ user: data, invitation_sent: invited.invited });
+    if (error) { await admin.auth.admin.deleteUser(invited.user.id); throw error; } return Response.json({ user: data, invitation_sent: true });
   } catch (error) { console.error("Admin team invitation failed", error); return errorResponse(error, "Unable to invite admin user."); }
 }
 
