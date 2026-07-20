@@ -223,7 +223,8 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
                 bucket="review-photos"
                 multiple
                 maxFiles={6}
-                folder="reviews"
+                folder={`reviews/${booking.id || ""}`}
+                preset="review"
                 label="Result photos"
                 helperText="Upload before-and-after or final look photos. JPG and PNG only."
                 value={photoUrls}

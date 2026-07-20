@@ -21,7 +21,8 @@
     "verify:identity": "node scripts/verify-canonical-identity.mjs",
     "verify:admin-security": "node scripts/verify-admin-identity-security.mjs",
     "verify:lifecycle": "node scripts/verify-salon-lifecycle-engine.mjs",
-    "verify:search-location": "node scripts/verify-search-location.mjs"
+    "verify:search-location": "node scripts/verify-search-location.mjs",
+    "verify:media": "node scripts/verify-unified-media.mjs"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",
