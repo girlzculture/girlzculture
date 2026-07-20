@@ -61,8 +61,8 @@ export async function POST(request: Request) {
     const selectedPlan = normalizePlan(body.selected_plan);
     const yearsInOperation = Math.round(Number(body.years_in_operation));
     const stylistCount = Math.round(Number(body.stylist_count));
-    if (yearsInOperation < 0 || yearsInOperation > 150) throw new Error("Enter valid years in operation.");
-    if (stylistCount < 1 || stylistCount > 500) throw new Error("Enter the number of working stylists.");
+    if (!Number.isFinite(yearsInOperation) || yearsInOperation < 0 || yearsInOperation > 150) throw new Error("Enter valid years in operation.");
+    if (!Number.isFinite(stylistCount) || stylistCount < 1 || stylistCount > 500) throw new Error("Enter the number of working stylists.");
     const slugBase = cleanText(body.business_name, 120).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "salon";
     const salonPatch = {
       user_id: user.id, name: cleanText(body.business_name, 120), owner_name: cleanText(body.owner_name, 120),
