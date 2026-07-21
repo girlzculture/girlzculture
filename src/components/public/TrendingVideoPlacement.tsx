@@ -38,7 +38,8 @@ export default function TrendingVideoPlacement({
   title = "Trending Picks This Week",
   description,
   viewAll = false,
-}: { title?: string; description?: string | null; viewAll?: boolean }) {
+  maxCards=12,
+}: { title?: string; description?: string | null; viewAll?: boolean;maxCards?:number }) {
   const locationState = useCustomerLocation();
   const [locationText, setLocationText] = useState("");
   const [videos, setVideos] = useState<Trending[]>([]);
@@ -47,7 +48,7 @@ export default function TrendingVideoPlacement({
   const [more, setMore] = useState(false);
   const [error, setError] = useState("");
   const location = locationState.location;
-  const limit = viewAll ? 24 : 12;
+  const limit = viewAll ? 24 : Math.max(1,Math.min(24,Math.round(maxCards)));
 
   async function load(offset = 0, append = false, signal?: AbortSignal) {
     if (!location || !validCoordinates(location)) {
@@ -91,7 +92,7 @@ export default function TrendingVideoPlacement({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [location?.lat, location?.lng, viewAll]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location?.lat, location?.lng, viewAll,maxCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function resolved(next: CustomerLocation | null) {
     if (next) {

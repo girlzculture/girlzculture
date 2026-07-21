@@ -5,9 +5,9 @@ import { CheckCircle2, Send } from "lucide-react";
 import { EMAIL_PATTERN, isValidEmail } from "@/lib/validation";
 
 type SalonOption = { id: string; name: string; address_city?: string | null; address_state?: string | null };
-const emptyForm = { name: "", email: "", salonId: "", bookedThroughPlatform: "Yes", bookingEmail: "", issue: "", website: "" };
+const emptyForm = { name: "", email: "", salonId: "", bookedThroughPlatform: "Yes", bookingEmail: "", reason: "", issue: "", website: "" };
 
-export default function ComplaintForm({ salons }: { salons: SalonOption[] }) {
+export default function ComplaintForm({ salons,reasons }: { salons: SalonOption[];reasons:string[] }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
@@ -29,6 +29,7 @@ export default function ComplaintForm({ salons }: { salons: SalonOption[] }) {
     <div className="grid gap-5 sm:grid-cols-2"><Field label="Your name"><input required minLength={2} value={form.name} onChange={(event) => update("name", event.target.value)} /></Field><Field label="Your email"><input required type="email" pattern={EMAIL_PATTERN} placeholder="name@example.com" value={form.email} onChange={(event) => update("email", event.target.value)} /></Field></div>
     <div className="mt-5"><Field label="Which business?"><select required value={form.salonId} onChange={(event) => update("salonId", event.target.value)}><option value="">Choose a Girlz Culture business</option>{salons.map((salon) => <option key={salon.id} value={salon.id}>{salon.name}{salon.address_city ? ` — ${salon.address_city}${salon.address_state ? `, ${salon.address_state}` : ""}` : ""}</option>)}</select></Field></div>
     <div className="mt-5 grid gap-5 sm:grid-cols-2"><Field label="Did you book through Girlz Culture?"><select value={form.bookedThroughPlatform} onChange={(event) => update("bookedThroughPlatform", event.target.value)}><option>Yes</option><option>No</option></select></Field>{form.bookedThroughPlatform === "Yes" ? <Field label="Booking email"><input required type="email" pattern={EMAIL_PATTERN} placeholder="Email used at booking" value={form.bookingEmail} onChange={(event) => update("bookingEmail", event.target.value)} /></Field> : <div className="rounded-xl bg-blush/30 p-4 text-xs leading-5 text-ink/65">You can still submit. Support will review it manually, and it will not change a business’s quality score without a verified booking.</div>}</div>
+    <div className="mt-5"><Field label="Reason"><select required value={form.reason} onChange={(event)=>update("reason",event.target.value)}><option value="">Choose a reason</option>{reasons.map(reason=><option key={reason}>{reason}</option>)}</select></Field></div>
     <label className="mt-5 block text-sm font-bold text-plum">What happened?<textarea required minLength={20} maxLength={5000} rows={8} value={form.issue} onChange={(event) => update("issue", event.target.value)} placeholder="Describe the issue, what happened, and the resolution you are seeking." className="mt-2 w-full rounded-xl border border-plum/15 p-4 font-normal text-ink outline-none focus:border-magenta" /></label>
     <label className="hidden">Website<input tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => update("website", event.target.value)} /></label>
     {notice ? <p aria-live="polite" className={`mt-4 rounded-xl p-4 text-sm ${sent ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"}`}>{sent ? <CheckCircle2 className="mr-2 inline" size={17} /> : null}{notice}</p> : null}

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import SalonBookingWizard from "@/components/SalonBookingWizard";
 import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 
 type SalonRecord = {
   id?: string;
@@ -106,6 +107,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
 
   const styles = (stylesData || []) as StyleRecord[];
   const stylists = (stylistsData || []) as StylistRecord[];
+  const [depositPercentage,maximumAdvanceDays,clientNotesMaxLength]=await Promise.all([getEngineNumber("booking.deposit_percentage",10,0,100),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000)]);
 
-  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} /></Suspense>;
+  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} depositPercentage={depositPercentage} maximumAdvanceDays={maximumAdvanceDays} clientNotesMaxLength={clientNotesMaxLength}/></Suspense>;
 }

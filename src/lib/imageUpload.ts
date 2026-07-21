@@ -10,6 +10,7 @@ export type ImageUploadProfile = {
   outputWidth: number;
   maxBytes: number;
   safeArea?: boolean;
+  quality?: number;
 };
 
 export const IMAGE_UPLOAD_PROFILES: Record<ImagePresetKey, ImageUploadProfile> = {
@@ -102,7 +103,8 @@ export async function optimizeImageFile(file: File, profileOrWidth: ImageUploadP
     const sourceDrawHeight = image.naturalHeight * coverScale;
     context.drawImage(image, -sourceDrawWidth / 2, -sourceDrawHeight / 2, sourceDrawWidth, sourceDrawHeight);
     const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, outputType === "image/jpeg" ? 0.86 : undefined));
+    const jpegQuality=Math.min(1,Math.max(0.6,Number(profile.quality ?? 86)/100));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, outputType === "image/jpeg" ? jpegQuality : undefined));
     if (!blob) throw new Error("The image could not be optimized. Choose another file.");
     if (blob.size > profile.maxBytes) throw new Error(`The optimized image is still over ${Math.round(profile.maxBytes / 1024 / 1024)} MB. Crop closer or choose a smaller file.`);
     const base = sanitizeFileName(file.name.replace(/\.[^.]+$/, "") || "image");

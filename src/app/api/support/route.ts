@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cleanEmail, cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
+import { getEngineList } from "@/lib/engineConfigServer";
 
 export async function POST(request: Request) {
   try {
@@ -11,10 +12,11 @@ export async function POST(request: Request) {
     const subject = cleanText(body.subject,180);
     const category = cleanText(body.category || "General",80);
     const message = cleanText(body.message,5000);
-    if (name.length < 2 || subject.length < 3 || message.length < 10) {
+    const categories=await getEngineList("support.ticket_categories",["Bookings","Payments","Account access","Salon concern","Safety","Partnerships","Technical issue","Other"],40);
+    if (name.length < 2 || subject.length < 3 || !categories.includes(category) || message.length < 10) {
       return Response.json({ error: "Please complete every field with valid information." }, { status: 400 });
     }
-    const { data, error } = await getSupabaseAdmin().from("support_tickets").insert({ requester_name: name, requester_email: email, subject, category, message, status: "Open", priority: category === "Safety concern" ? "High" : "Normal" }).select("id").single();
+    const { data, error } = await getSupabaseAdmin().from("support_tickets").insert({ requester_name: name, requester_email: email, subject, category, message, status: "Open", priority: category === "Safety" ? "High" : "Normal" }).select("id").single();
     if (error) throw error;
     console.info("Public support request created", { ticketId: data.id, category });
     return Response.json({ ok: true, ticketId: data.id });

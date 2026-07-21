@@ -11,10 +11,10 @@ import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHO
 import { isValidUsZip, US_STATES } from "@/lib/usStates";
 const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", address_line2:"", city:"", state:"NY", zip_code:"", business_type:"Braiding Studio", years_in_operation:"", stylist_count:"", website_url:"", instagram_url:"", business_license_number:"", cosmetology_license_number:"", referral_source:"" };
 
-export default function SalonApplication() {
+export default function SalonApplication({businessTypes}:{businessTypes:string[]}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [form,setForm] = useState(initial);
+  const [form,setForm] = useState({...initial,business_type:businessTypes[0]||initial.business_type});
   const [selectedPlan,setSelectedPlan] = useState<SubscriptionPlan>(() => normalizePlan(searchParams.get("plan") || "Growth"));
   const [userId,setUserId] = useState("");
   const [checks,setChecks] = useState([false,false,false]);
@@ -83,7 +83,7 @@ export default function SalonApplication() {
       <Input label="City" value={form.city} onChange={(value)=>update("city",value)} />
       <label><span className="mb-2 block text-xs font-bold">State *</span><select required value={form.state} onChange={(event)=>update("state",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{US_STATES.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
       <Input label="ZIP Code" pattern="\d{5}(-\d{4})?" title="Use 12345 or 12345-6789 format" value={form.zip_code} onChange={(value)=>update("zip_code",value)} />
-      <label><span className="mb-2 block text-xs font-bold">Type of Business *</span><select value={form.business_type} onChange={(event)=>update("business_type",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{["Hair Salon","Beauty Shop","Barber Shop","Braiding Studio","Other"].map((item)=><option key={item}>{item}</option>)}</select></label>
+      <label><span className="mb-2 block text-xs font-bold">Type of Business *</span><select value={form.business_type} onChange={(event)=>update("business_type",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{businessTypes.map((item)=><option key={item}>{item}</option>)}</select></label>
       <Input label="Years in operation" type="number" min={0} max={200} value={form.years_in_operation} onChange={(value)=>update("years_in_operation",value)} />
       <Input label="Number of stylists" type="number" min={0} max={1000} value={form.stylist_count} onChange={(value)=>update("stylist_count",value)} />
       <Input label="Business website" type="url" value={form.website_url} onChange={(value)=>update("website_url",value)} required={false} placeholder="https://yoursalon.com" />

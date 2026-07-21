@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "crypto";
 import { getSupabaseAdmin, requireAdminPermission, requireSalonPermission } from "@/lib/supabaseAdmin";
 import { IMAGE_UPLOAD_PROFILES, type ImagePresetKey } from "@/lib/imageUpload";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 
 export const runtime = "nodejs";
 
@@ -28,8 +29,11 @@ export async function GET(request: Request) {
   const fallback = kind ? IMAGE_UPLOAD_PROFILES[kind] : null;
   if (!fallback) return Response.json({ error: "Unknown media placement." }, { status: 400 });
   try {
-    const { data } = await getSupabaseAdmin().from("media_upload_profiles").select("*").eq("profile_key", kind).eq("is_active", true).maybeSingle();
-    return Response.json({ profile: data ? { key: kind, label: data.display_name, aspectWidth: data.aspect_width, aspectHeight: data.aspect_height, minWidth: data.min_width_px, minHeight: data.min_height_px, outputWidth: data.output_width_px, maxBytes: data.max_bytes, safeArea: data.safe_area_enabled } : fallback });
+    const [{ data },quality]=await Promise.all([
+      getSupabaseAdmin().from("media_upload_profiles").select("*").eq("profile_key", kind).eq("is_active", true).maybeSingle(),
+      getEngineNumber("media.public_image_quality",88,60,100),
+    ]);
+    return Response.json({ profile: data ? { key: kind, label: data.display_name, aspectWidth: data.aspect_width, aspectHeight: data.aspect_height, minWidth: data.min_width_px, minHeight: data.min_height_px, outputWidth: data.output_width_px, maxBytes: data.max_bytes, safeArea: data.safe_area_enabled, quality } : { ...fallback, quality } });
   } catch { return Response.json({ profile: fallback }); }
 }
 

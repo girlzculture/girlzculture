@@ -41,7 +41,9 @@ export async function POST(request: Request) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate || "") || !/^\d{2}:\d{2}$/.test(localTime || "")) throw new Error("Choose a valid appointment date and time.");
     const timeZone = salonTimeZone(salon.time_zone);
     const appointment = zonedLocalToUtc(appointmentLocal, timeZone);
-    if (appointment.getTime() < Date.now() + 30 * 60_000) throw new Error("Choose a future appointment time.");
+    const [minimumLeadMinutes,maximumAdvanceDays,clientNotesMaxLength]=await Promise.all([getEngineNumber("booking.minimum_lead_minutes",30,15,1440),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000)]);
+    if (appointment.getTime() < Date.now() + minimumLeadMinutes * 60_000) throw new Error(`Choose a time at least ${minimumLeadMinutes} minutes from now.`);
+    if (appointment.getTime() > Date.now() + maximumAdvanceDays * 86_400_000) throw new Error(`Appointments can be booked up to ${maximumAdvanceDays} days ahead.`);
 
     const requestedStylistId = cleanText(body.stylist_id, 50) || null;
     if (requestedStylistId) {
@@ -109,7 +111,7 @@ export async function POST(request: Request) {
       selected_material_id: materialId,
       selected_addons: selectedAddons,
       selected_options: selectedOptions,
-      client_notes: cleanText(body.client_notes, 1000) || null,
+      client_notes: cleanText(body.client_notes, clientNotesMaxLength) || null,
       appointment_datetime: appointment.toISOString(),
       duration_hours: durationHours,
       buffer_minutes: bufferMinutes,

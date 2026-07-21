@@ -7,6 +7,8 @@ import LocaleProvider from "@/components/i18n/LocaleProvider";
 import { cookies } from "next/headers";
 import { normalizeLocale } from "@/i18n/catalog";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import { getEngineColor } from "@/lib/engineConfigServer";
+import type { CSSProperties } from "react";
 
 export const metadata: Metadata = {
   title: {
@@ -28,8 +30,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale=normalizeLocale((await cookies()).get("gc_locale")?.value);
+  const [primaryColor,ctaColor]=await Promise.all([
+    getEngineColor("branding.primary_color","#5B1A6B"),
+    getEngineColor("branding.cta_color","#D6186B"),
+  ]);
   return (
-    <html lang={locale} className="h-full antialiased">
+    <html lang={locale} className="h-full antialiased" style={{"--gc-plum":primaryColor,"--gc-magenta":ctaColor} as CSSProperties}>
       <body className="min-h-full flex flex-col"><LocaleProvider initialLocale={locale}><CustomerLocationProvider>{children}</CustomerLocationProvider><div className="fixed bottom-[76px] right-3 z-[65] print:hidden md:bottom-4 md:right-4"><LanguageSelector compact className="shadow-[0_8px_30px_rgba(26,18,32,.14)] backdrop-blur"/></div><InlineFormValidation/><PwaRegistration /></LocaleProvider></body>
     </html>
   );

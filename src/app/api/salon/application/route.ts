@@ -3,6 +3,7 @@ import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizePlan } from "@/lib/plans";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { geocodeSalonAddress } from "@/lib/geocodingServer";
+import { getEngineList } from "@/lib/engineConfigServer";
 
 function applicationMediaUrl(value: unknown) {
   const text = cleanText(value, 1000);
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
     }
 
     const selectedPlan = normalizePlan(body.selected_plan);
+    const businessTypes=await getEngineList("catalog.business_types",["Braiding Studio","Hair Salon","Beauty Shop","Independent Braider","Mobile Braider","Natural Hair Studio","Other"],30);
+    const businessType=cleanText(body.business_type,80);
+    if(!businessTypes.includes(businessType))throw new Error("Choose an approved business type.");
     const yearsInOperation = Math.round(Number(body.years_in_operation));
     const stylistCount = Math.round(Number(body.stylist_count));
     if (!Number.isFinite(yearsInOperation) || yearsInOperation < 0 || yearsInOperation > 150) throw new Error("Enter valid years in operation.");
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
       email: accountEmail, phone: cleanUsPhone(body.phone),
       address_street: cleanText(body.street_address, 180), address_line2: cleanText(body.address_line2, 120) || null, address_city: cleanText(body.city, 100), address_state: normalizeUsState(body.state),
       address_zip: normalizeUsZip(body.zip_code),
-      business_type: cleanText(body.business_type, 80), application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",
+      business_type: businessType, application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",
       logo_url: applicationMediaUrl(body.logo_url),
     };
     const salonResult = await admin.from("salons").select("id,slug").eq("user_id", user.id).maybeSingle();
