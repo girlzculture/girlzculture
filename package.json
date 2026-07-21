@@ -32,7 +32,8 @@
     "verify:engine-governance": "node scripts/verify-engine-governance.mjs",
     "verify:self-audit": "node scripts/verify-platform-self-audit.mjs",
     "verify:migrations": "node scripts/verify-migration-order.mjs",
-    "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs"
+    "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs",
+    "i18n:extract": "node scripts/generate-interface-source-registry.mjs"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",
