@@ -18,12 +18,12 @@ async function contextFor(request: Request, id: string) {
   return { ...context, booking, salon, styles: styles || [], stylists: stylists || [], audit: audit || [] };
 }
 
-export async function GET(request: Request, route: RouteContext<"/api/admin/bookings/[id]">) {
+export async function GET(request: Request, route: { params: Promise<{ id: string }> }) {
   try { const { id } = await route.params; const { booking, salon, styles, stylists, audit } = await contextFor(request, id); return Response.json({ booking, salon, styles, stylists, audit }); }
   catch (error) { return errorResponse(error, "Unable to load booking."); }
 }
 
-export async function PATCH(request: Request, route: RouteContext<"/api/admin/bookings/[id]">) {
+export async function PATCH(request: Request, route: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await route.params; const ctx = await contextFor(request, id); const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 30); const reason = cleanText(body.reason, 500);
