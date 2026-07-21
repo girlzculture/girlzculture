@@ -2,6 +2,7 @@ import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/reques
 import { requireAdmin, requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
 import { inviteNewIdentity } from "@/lib/teamInvite";
 import { assertCompanyAdminEmail } from "@/lib/adminSecurityServer";
+import { assertRecentHighRiskVerification, identityDependencySummary, prepareAndDeleteIdentity } from "@/lib/identityDeletionServer";
 
 export const ADMIN_PERMISSION_KEYS = ["overview","submissions","salons","customers","bookings","quality","reviews","finance","marketing","content","support","subscriptions","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(ADMIN_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
@@ -46,6 +47,6 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  try { const { admin, user } = await superAdmin(request); const id = new URL(request.url).searchParams.get("id") || ""; const {data:target,error:targetError}=await admin.from("admin_users").select("id,user_id,email,status,is_super_admin").eq("id",id).single();if(targetError||!target)throw targetError||new Error("Admin user not found.");await assertNotProtected(admin,user.id,target);await audit(admin,user.id,target.user_id,"admin_removed",{email_domain:String(target.email||"").split("@")[1]||""});if(target.user_id){const removed=await admin.auth.admin.deleteUser(target.user_id);if(removed.error)throw removed.error;}else{const {error}=await admin.from("admin_users").delete().eq("id",id);if(error)throw error;}return Response.json({ removed: true }); }
+  try { const { admin, user } = await superAdmin(request); await assertRecentHighRiskVerification(admin,user.id,"admin"); const id = new URL(request.url).searchParams.get("id") || ""; const {data:target,error:targetError}=await admin.from("admin_users").select("id,user_id,email,status,is_super_admin").eq("id",id).single();if(targetError||!target)throw targetError||new Error("Admin user not found.");await assertNotProtected(admin,user.id,target);if(target.user_id){const dependencies=await identityDependencySummary(admin,target.user_id,"admin",id);await prepareAndDeleteIdentity(admin,{targetUserId:target.user_id,role:"admin",targetRecordId:id,actorUserId:user.id,reason:"Removed from Settings & Team",dependencies});}else{const {error}=await admin.from("admin_users").delete().eq("id",id);if(error)throw error;}return Response.json({ removed: true, email_reusable: Boolean(target.user_id) }); }
   catch (error) { return errorResponse(error, "Unable to remove admin user."); }
 }

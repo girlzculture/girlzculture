@@ -1,6 +1,7 @@
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { inviteNewIdentity } from "@/lib/teamInvite";
+import { assertRecentHighRiskVerification, identityDependencySummary, prepareAndDeleteIdentity } from "@/lib/identityDeletionServer";
 
 export const SALON_PERMISSION_KEYS = ["overview","my_page","photos","styles","stylists","products","availability","bookings","reviews","earnings","promotions","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(SALON_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
@@ -37,6 +38,6 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  try { const { admin, salon } = await owner(request); const id = new URL(request.url).searchParams.get("id") || ""; const { data: member } = await admin.from("salon_team_members").select("stylist_id").eq("id", id).eq("salon_id", salon.id).maybeSingle(); const { error } = await admin.from("salon_team_members").delete().eq("id", id).eq("salon_id", salon.id); if (error) throw error; if (member?.stylist_id) await admin.from("stylists").update({ user_id: null }).eq("id", member.stylist_id); return Response.json({ removed: true }); }
+  try { const { admin, salon, user } = await owner(request); await assertRecentHighRiskVerification(admin,user.id,"salon"); const id = new URL(request.url).searchParams.get("id") || ""; const { data: member, error:memberError } = await admin.from("salon_team_members").select("id,user_id,stylist_id,email").eq("id", id).eq("salon_id", salon.id).maybeSingle(); if(memberError)throw memberError;if(!member)throw new Error("Salon team member not found.");if(member.user_id){const dependencies=await identityDependencySummary(admin,member.user_id,"salon_team",id);await prepareAndDeleteIdentity(admin,{targetUserId:member.user_id,role:"salon_team",targetRecordId:id,actorUserId:user.id,reason:"Removed by salon owner",dependencies});}else{const { error } = await admin.from("salon_team_members").delete().eq("id", id).eq("salon_id", salon.id); if (error) throw error; if (member.stylist_id) await admin.from("stylists").update({ user_id: null }).eq("id", member.stylist_id);} return Response.json({ removed: true, email_reusable:Boolean(member.user_id) }); }
   catch (error) { return errorResponse(error, "Unable to remove salon user."); }
 }
