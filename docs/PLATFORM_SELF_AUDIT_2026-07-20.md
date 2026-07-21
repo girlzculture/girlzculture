@@ -179,7 +179,7 @@ All generic admin operations use `/api/admin/records`, typed confirmation, reaso
 - Content route records are archived instead of deleting the route contract.
 - Shared or attached media is archived/referenced; only an owner-controlled staged orphan is physically removed immediately.
 - Existing Stripe invoices/paid periods are immutable. Plan changes use new/current Stripe Prices and webhook lifecycle events.
-- Video trimming and arbitrary-codec transcoding are not implemented in-browser. Current campaign video accepts MP4/WebM, validates <=30 seconds, attempts safe WebM compression where supported, previews, retries/cleans failed uploads, and never autoplays with sound.
+- Trending video accepts MP4/WebM, supports poster-frame selection and safe trim/optimization through browser `MediaRecorder` where available, validates the final <=30-second clip, provides staged progress/public preview, and cleans failed/replaced video and poster objects. Arbitrary-codec/server-grade transcoding remains intentionally unsupported; browsers without the required API receive an explicit export-under-10-MB instruction rather than a false success claim.
 
 ## 6. Authentication/signup/login/invitation paths audited
 
@@ -212,7 +212,7 @@ Unified image tool: `src/components/ImageUpload.tsx` + `src/lib/imageUpload.ts` 
 | Featured campaign creative | Reuses eligible salon imagery; campaign records reference real salon/media. |
 | Trending campaign video | Dedicated `AdminTrendingCampaigns` workflow; MP4/WebM validation, <=30 seconds, optimization attempt, preview, storage cleanup and moderation. |
 
-The initial salon application intentionally has no logo/gallery upload. Approved salons complete governed media requirements in onboarding/dashboard. Profile images for customer/admin team accounts are not currently user-uploadable; they are an exception, not a broken upload path. Poster-frame selection and browser-side trimming are not implemented; see section 5.
+The initial salon application intentionally has no logo/gallery upload. Approved salons complete governed media requirements in onboarding/dashboard. Profile images for customer/admin team accounts are not currently user-uploadable; they are an exception, not a broken upload path. Trending campaigns use their dedicated video editor because images and videos have materially different preview, duration, poster, trim, optimization, and moderation requirements.
 
 ## 8. Numeric-input audit
 
@@ -269,6 +269,7 @@ Apply in filename order after all earlier repository migrations. The new ordered
 11. `20260720200000_safe_test_data_batches.sql`
 12. `20260720210000_platform_engine_governance_recovery.sql`
 13. `20260720220000_booking_reminder_delivery.sql`
+14. `20260720230000_trending_video_posters.sql`
 
 Do not skip migrations or run them out of order. They are code-complete in Git but were not applied from this local environment because no authorized Supabase database connection/CLI is available.
 

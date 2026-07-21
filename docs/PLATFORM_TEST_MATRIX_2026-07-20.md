@@ -69,7 +69,8 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 | Required desktop/mobile preview layout | Complete | Relevant public routes rendered at 1280px and 390px with no horizontal overflow; placement dimension/profile enforcement passed `verify:media`. |
 | Orphan-media prevention | Complete | Staging/finalization/reference cleanup and ownership registry checks passed `verify:media`. |
 | Trending MP4/WebM validation, duration limit, compression attempt, preview, moderation, and cleanup | Complete | Dedicated trending verifier passed; campaign video workflow enforces <=30 seconds and governed ownership/moderation. |
-| Browser-side poster-frame selection and video trimming | Not complete | These controls are not implemented. A managed media-transcoding workflow is recommended before broader video production use. |
+| Browser-side poster-frame selection and permitted video trimming | Complete | `createVideoPoster` captures an optimized JPEG at the selected frame; `optimizeTrendingVideo` applies an explicit trim range through `MediaRecorder` where supported; the admin editor shows source/final timing, poster/public preview, progress phases, retry-safe cleanup, and capability guidance. |
+| Arbitrary-codec/server-grade video transcoding | Not applicable | The product deliberately accepts MP4/WebM and does not claim universal browser transcoding. Browsers without safe `MediaRecorder`/`captureStream` support receive a clear export-under-10-MB instruction. |
 
 ## Localization
 
@@ -140,8 +141,8 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 | Section 16 concrete self-audit | Complete | `docs/PLATFORM_SELF_AUDIT_2026-07-20.md` names routes, components, settings, operations, exceptions, migrations, environment variables, and external actions. |
 | Section 17 evidence-backed matrix | Complete | This document covers every requested category and separates static/local evidence from blocked live verification. |
 | Full translated experience in all four languages | Not complete | Foundation and global shared surfaces are complete; remaining direct English component/email strings require conversion and reviewed translations. |
-| Full advanced video editor | Not complete | Safe upload/validation/preview/moderation is complete; poster-frame selection and trimming are absent. |
-| Database migration applied | Blocked | No authorized deployment connection is available; apply the 13 files in the exact order in the self-audit. |
+| Governed Trending video workflow | Complete | MP4/WebM validation, optional browser-supported trim, poster-frame selection, public preview, staged progress, cleanup, moderation, lazy public playback, and explicit capability limitations are implemented and source-verified. |
+| Database migration applied | Blocked | No authorized deployment connection is available; apply the 14 files in the exact order in the self-audit. |
 | Pushed | Blocked | No remote push was performed. |
 | PR merged | Blocked | No PR was opened or merged. |
 | Deployed | Blocked | No Netlify deployment was performed. |
