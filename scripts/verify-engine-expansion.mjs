@@ -17,7 +17,8 @@ const required=["branding_design","navigation_menus","pages_sections","homepage_
 const failures=[];
 if(categories.length!==21)failures.push(`Expected 21 Engine categories; found ${categories.length}`);
 for(const id of required)if(!categories.includes(id))failures.push(`Missing Engine category ${id}`);
-const localeCount=[...migration.matchAll(/^\('(?:[a-z]{2,3}|[a-z]{2,3}-[A-Z]{2})','/gm)].length;
+const localeSeedBlock=migration.split("insert into public.supported_locales")[1]?.split("on conflict(locale)")[0]||"";
+const localeCount=[...localeSeedBlock.matchAll(/^\('(?:[a-z]{2,3}|[a-z]{2,3}-[A-Z]{2})','/gm)].length;
 if(localeCount<37)failures.push(`Expected at least 37 seeded locales; found ${localeCount}`);
 for(const token of ["text_direction","translation_entry_versions","ai_automation_features","ai_prompt_versions","ai_generation_drafts","ai_usage_events","engine_system_components","navigation_items","notification_templates","admin_apply_notification_template"])if(!migration.includes(token))failures.push(`Migration missing ${token}`);
 for(const token of ["document.documentElement.dir","persistAccountLocale","Intl.PluralRules"])if(!runtime.includes(token))failures.push(`Localization runtime missing ${token}`);
