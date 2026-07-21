@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 import { isSalonClosedToday } from "@/lib/salonOpenStatus";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 type Row = Record<string, any>;
 type Props = { salon: Row; styles: Row[]; stylists: Row[];depositPercentage:number;maximumAdvanceDays:number;clientNotesMaxLength:number };
@@ -43,6 +44,7 @@ const money = (value: number) => `$${value.toFixed(2)}`;
 function localDateOffset(days:number){const date=new Date();date.setDate(date.getDate()+days);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`}
 
 export default function SalonBookingWizard({ salon, styles, stylists,depositPercentage,maximumAdvanceDays,clientNotesMaxLength }: Props) {
+  const { locale } = useI18n();
   const closedToday = isSalonClosedToday(salon);
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
@@ -197,6 +199,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
           guest_name: guest.name,
           guest_email: guest.email,
           guest_phone: guest.phone,
+          locale,
           website: "",
         }),
       });

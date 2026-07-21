@@ -63,6 +63,10 @@ on conflict(locale) do update set
 create unique index if not exists supported_locales_one_default_idx
   on public.supported_locales(is_default) where is_default;
 
+alter table public.bookings
+  add column if not exists preferred_locale text not null default 'en'
+    references public.supported_locales(locale) on update cascade on delete restrict;
+
 create table if not exists public.translation_entry_versions (
   id uuid primary key default gen_random_uuid(),
   translation_entry_id uuid not null references public.translation_entries(id) on delete cascade,

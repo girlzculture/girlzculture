@@ -3,8 +3,16 @@ import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
 import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
 
+function impactForKey(key:string){
+  if(/login|signup|password|identity|security/.test(key))return"security";
+  if(/refund|deposit|payment|billing/.test(key))return"billing";
+  if(/notification\.booking|booking|appointment|cancel/.test(key))return"booking";
+  if(/safety|complaint|moderation/.test(key))return"safety";
+  if(/legal|terms|privacy/.test(key))return"legal";
+  return"standard";
+}
 const SOURCE_DEFINITIONS:Record<string,{source:string;impact:string}>={
-  ...Object.fromEntries(Object.entries(ENGLISH_MESSAGES).map(([key,source])=>[key,{source,impact:/login|signup/.test(key)?"security":"standard"}])),
+  ...Object.fromEntries(Object.entries(ENGLISH_MESSAGES).map(([key,source])=>[key,{source,impact:impactForKey(key)}])),
   ...GENERATED_SOURCE_MESSAGES,
 };
 

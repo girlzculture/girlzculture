@@ -21,6 +21,11 @@ const checks = [
   ["document localization bridge", read("src/components/i18n/DocumentLocalizationBridge.tsx"), /MutationObserver/],
   ["user content opt out", read("src/components/i18n/DocumentLocalizationBridge.tsx"), /data-no-translate/],
   ["localized placeholders and accessibility labels", read("src/components/i18n/DocumentLocalizationBridge.tsx"), /placeholder.*aria-label.*title/],
+  ["booking locale persistence", read("src/app/api/stripe/booking-checkout/route.ts"), /preferred_locale:\s*preferredLocale/],
+  ["booking locale schema", read("supabase/migrations/20260721100000_engine_localization_ai_system.sql"), /bookings[\s\S]*preferred_locale[\s\S]*supported_locales/],
+  ["localized email templates", read("src/lib/supabaseAdmin.ts"), /notification\.\$\{key\}\.subject/],
+  ["localized SMS and push", read("src/lib/supabaseAdmin.ts"), /\.sms"[\s\S]*\.push_title"/],
+  ["notification English fallback", read("src/i18n/catalog.ts"), /notification\.booking\.customer_confirmed\.body/],
 ];
 const generatedCount=(read("src/i18n/generated-source-messages.ts").match(/"source\.[a-f0-9]{12}"/g)||[]).length;
 if(generatedCount<400){console.error(`Localization verification failed: expected at least 400 generated interface messages, found ${generatedCount}`);process.exit(1)}

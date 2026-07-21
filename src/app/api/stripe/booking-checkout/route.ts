@@ -5,6 +5,7 @@ import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdm
 import { siteUrl, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 import { getEngineNumber } from "@/lib/engineConfigServer";
+import { normalizeLocale } from "@/i18n/catalog";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -35,6 +36,15 @@ export async function POST(request: Request) {
     const guestName = cleanText(body.guest_name, 120);
     const guestEmail = cleanEmail(body.guest_email);
     const guestPhone = cleanUsPhone(body.guest_phone, true);
+    const requestedLocale = normalizeLocale(cleanText(body.locale, 20));
+    const { data: enabledLocale } = await admin
+      .from("supported_locales")
+      .select("locale")
+      .eq("locale", requestedLocale)
+      .eq("is_enabled", true)
+      .is("archived_at", null)
+      .maybeSingle();
+    const preferredLocale = enabledLocale?.locale || "en";
     if (!guestName) throw new Error("Enter your name.");
     const appointmentLocal = cleanText(body.appointment_local, 20);
     const [localDate, localTime] = appointmentLocal.split("T");
@@ -128,6 +138,7 @@ export async function POST(request: Request) {
       guest_name: guestName,
       guest_email: guestEmail,
       guest_phone: guestPhone,
+      preferred_locale: preferredLocale,
       source: "Website",
     };
 
