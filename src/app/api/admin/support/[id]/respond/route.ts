@@ -4,7 +4,7 @@ import { cleanText } from "@/lib/requestSecurity";
 
 const escapeHtml=(value:string)=>value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 
-export async function POST(request: Request, context: RouteContext<"/api/admin/support/[id]/respond">) {
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { admin, user } = await requireAdminPermission(request, "support");
     const { id } = await context.params;

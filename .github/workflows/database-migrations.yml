@@ -17,6 +17,13 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      # Pull-request builds cannot access protected production secrets. These
+      # nonfunctional values only allow Next.js to evaluate the client module.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,6 +62,16 @@ jobs:
           test -n "$SUPABASE_PROJECT_ID"
       - name: Link reviewed project
         run: npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+      - name: Reconcile approved legacy SQL-editor migration history
+        shell: bash
+        run: |
+          # Approved one-time baseline: these 46 migrations through
+          # 20260716170000 were applied before automated migration tracking.
+          npx --yes supabase@latest migration repair --status applied --linked --password "$SUPABASE_DB_PASSWORD" 20260710143000 20260710190000 20260710213000 20260711110000 20260711150000 20260711190000 20260713110000 20260713130000 20260713180000 20260713190000 20260713200000 20260713210000 20260713220000 20260714100000 20260714110000 20260714120000 20260714130000 20260714140000 20260714150000 20260714160000 20260714170000 20260714180000 20260714190000 20260714200000 20260714210000 20260714220000 20260714230000 20260714240000 20260714250000 20260715100000 20260715110000 20260715120000 20260715130000 20260715140000 20260715150000 20260715160000 20260715170000 20260715180000 20260715190000 20260715200000 20260716120000 20260716130000 20260716140000 20260716150000 20260716160000 20260716170000
+      - name: Show reconciled migration plan
+        run: npx --yes supabase@latest migration list --linked
+      - name: Dry-run pending continuation migrations
+        run: npx --yes supabase@latest db push --linked --include-all --dry-run --password "$SUPABASE_DB_PASSWORD"
       - name: Show pending migration plan
         run: npx --yes supabase@latest migration list --linked
       - name: Apply migrations in repository order

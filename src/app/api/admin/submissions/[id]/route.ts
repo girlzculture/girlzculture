@@ -1,6 +1,6 @@
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request, context: RouteContext<"/api/admin/submissions/[id]">) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { admin } = await requireAdminPermission(request, "submissions");
     const { id } = await context.params;
