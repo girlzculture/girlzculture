@@ -239,4 +239,59 @@ insert into public.engine_system_components(component_key,display_name,component
 ('deployment','Migration deployment','deployment',true,'Applies reviewed migrations through CI/CD.')
 on conflict(component_key) do update set display_name=excluded.display_name,component_type=excluded.component_type,is_required=excluded.is_required,help_text=excluded.help_text;
 
+-- Constrained navigation registry. Administrators can change labels, approved
+-- destinations, order, visibility, and badges without injecting markup.
+create table if not exists public.navigation_items (
+  id uuid primary key default gen_random_uuid(),
+  surface text not null check(surface in ('header','mobile_menu','mobile_bottom','footer')),
+  group_key text not null default 'main' check(group_key ~ '^[a-z][a-z0-9_-]{1,39}$'),
+  item_key text not null check(item_key ~ '^[a-z][a-z0-9_.-]{1,79}$'),
+  label text not null check(length(label) between 1 and 80),
+  translation_key text check(translation_key is null or translation_key ~ '^[a-z][a-z0-9_.-]{1,179}$'),
+  href text not null check(href ~ '^/[A-Za-z0-9_/?=&.%#-]*$'),
+  sort_order integer not null default 0 check(sort_order between 0 and 100000),
+  is_enabled boolean not null default true,
+  show_new_badge boolean not null default false,
+  archived_at timestamptz,
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now(),
+  unique(surface,item_key)
+);
+create index if not exists navigation_items_surface_sort_idx on public.navigation_items(surface,group_key,sort_order) where archived_at is null;
+alter table public.navigation_items enable row level security;
+drop policy if exists navigation_items_public_read on public.navigation_items;
+drop policy if exists navigation_items_admin_manage on public.navigation_items;
+create policy navigation_items_public_read on public.navigation_items for select using((is_enabled and archived_at is null) or public.admin_has_permission('content'));
+create policy navigation_items_admin_manage on public.navigation_items for all to authenticated using(public.admin_has_permission('content')) with check(public.admin_has_permission('content'));
+
+insert into public.navigation_items(surface,group_key,item_key,label,translation_key,href,sort_order,is_enabled,show_new_badge) values
+('header','main','styles','Browse Styles','nav.styles','/styles',10,true,false),
+('header','main','salons','Find Salons','nav.salons','/salons',20,true,false),
+('header','main','how','How It Works','nav.how','/how-it-works',30,true,false),
+('header','main','about','About Us','nav.about','/about',40,true,false),
+('header','main','blog','Blog','nav.blog','/blog',50,true,false),
+('header','main','partner','Partner With Us','nav.partner','/partner',60,true,true),
+('mobile_menu','main','styles','Browse Styles','nav.styles','/styles',10,true,false),
+('mobile_menu','main','salons','Find Salons','nav.salons','/salons',20,true,false),
+('mobile_menu','main','how','How It Works','nav.how','/how-it-works',30,true,false),
+('mobile_menu','main','about','About Us','nav.about','/about',40,true,false),
+('mobile_menu','main','blog','Blog','nav.blog','/blog',50,true,false),
+('mobile_menu','main','partner','Partner With Us','nav.partner','/partner',60,true,false),
+('mobile_menu','main','social','Social','nav.social','/social',70,true,false),
+('mobile_bottom','main','home','Home','nav.home','/',10,true,false),
+('mobile_bottom','main','search','Search','nav.search','/salons',20,true,false),
+('mobile_bottom','main','bookings','Bookings','nav.bookings','/account',30,true,false),
+('mobile_bottom','main','social','Social','nav.social','/social',40,true,false),
+('mobile_bottom','main','profile','Profile','nav.profile','/account?tab=inbox',50,true,false),
+('footer','company','about','About Us',null,'/about',10,true,false),
+('footer','company','press','Press',null,'/press',20,true,false),
+('footer','company','blog','Blog','nav.blog','/blog',30,true,false),
+('footer','company','testimonials','Testimonials',null,'/testimonials',40,true,false),
+('footer','support','help','Help Center',null,'/help',10,true,false),
+('footer','support','safety','Safety & Trust',null,'/safety',20,true,false),
+('footer','support','contact','Contact Us',null,'/contact',30,true,false),
+('footer','support','complaint','Submit a Complaint',null,'/complaint',40,true,false),
+('footer','professionals','partner','Partner With Us','nav.partner','/partner',10,true,false)
+on conflict(surface,item_key) do nothing;
+
 commit;

@@ -8,28 +8,28 @@ type Resource = {
 };
 
 const resources:Record<string,Resource>={
-  service_category:{table:"service_categories",permission:"content",label:"Service categories",nameFields:["name"],actions:["archive","delete"],dependencies:[{table:"service_groups",column:"category_id",label:"service groups"},{table:"service_addons",column:"category_id",label:"add-ons"},{table:"master_styles",column:"category_id",label:"service names"}]},
-  service_group:{table:"service_groups",permission:"content",label:"Service groups",nameFields:["name"],actions:["archive","delete","reassign"],dependencies:[{table:"master_styles",column:"service_group_id",label:"service names"}]},
-  service_addon:{table:"service_addons",permission:"content",label:"Add-ons",nameFields:["name"],actions:["archive","delete"]},
-  master_style:{table:"master_styles",permission:"content",label:"Master service names",nameFields:["name"],actions:["archive","delete","reassign"],dependencies:[{table:"styles",column:"master_style_id",label:"salon services"}]},
-  blog_post:{table:"blog_posts",permission:"content",label:"Blog posts",nameFields:["title","slug"],actions:["archive","delete"]},
-  content_page:{table:"content_pages",permission:"content",label:"Content pages",nameFields:["title","slug"],actions:["archive"]},
+  service_category:{table:"service_categories",permission:"content",label:"Service categories",nameFields:["name"],actions:["archive","restore","delete"],dependencies:[{table:"service_groups",column:"category_id",label:"service groups"},{table:"service_addons",column:"category_id",label:"add-ons"},{table:"master_styles",column:"category_id",label:"service names"}]},
+  service_group:{table:"service_groups",permission:"content",label:"Service groups",nameFields:["name"],actions:["archive","restore","delete","reassign"],dependencies:[{table:"master_styles",column:"service_group_id",label:"service names"}]},
+  service_addon:{table:"service_addons",permission:"content",label:"Add-ons",nameFields:["name"],actions:["archive","restore","delete"]},
+  master_style:{table:"master_styles",permission:"content",label:"Master service names",nameFields:["name"],actions:["archive","restore","delete","reassign"],dependencies:[{table:"styles",column:"master_style_id",label:"salon services"}]},
+  blog_post:{table:"blog_posts",permission:"content",label:"Blog posts",nameFields:["title","slug"],actions:["archive","restore","delete"]},
+  content_page:{table:"content_pages",permission:"content",label:"Content pages",nameFields:["title","slug"],actions:["archive","restore"]},
   salon:{table:"salons",permission:"salons",label:"Salons",nameFields:["name","slug"],actions:["offboard"],dependencies:[{table:"bookings",column:"salon_id",label:"bookings"},{table:"styles",column:"salon_id",label:"services"},{table:"stylists",column:"salon_id",label:"stylists"},{table:"subscriptions",column:"salon_id",label:"subscriptions"}]},
   salon_application:{table:"salon_applications",permission:"submissions",label:"Salon applications",nameFields:["business_name","business_email"],actions:["archive"],dependencies:[{table:"salons",column:"id",label:"linked salon"}]},
-  stylist:{table:"stylists",permission:"salons",label:"Stylists",nameFields:["name"],actions:["archive","delete"],dependencies:[{table:"bookings",column:"stylist_id",label:"bookings"},{table:"salon_team_members",column:"stylist_id",label:"team access records"}]},
-  style:{table:"styles",permission:"salons",label:"Salon services",nameFields:["name"],actions:["archive","delete"],dependencies:[{table:"bookings",column:"style_id",label:"bookings"},{table:"style_materials",column:"style_id",label:"material options"}]},
-  salon_product:{table:"salon_products",permission:"salons",label:"Products",nameFields:["name"],actions:["archive","delete"]},
-  salon_promotion:{table:"salon_promotions",permission:"marketing",label:"Salon promotions",nameFields:["title"],actions:["archive","delete"]},
-  promo_code:{table:"promo_codes",permission:"marketing",label:"Promo codes",nameFields:["code"],actions:["archive","delete"],dependencies:[{table:"promo_code_redemptions",column:"promo_code_id",label:"redemptions"}]},
+  stylist:{table:"stylists",permission:"salons",label:"Stylists",nameFields:["name"],actions:["archive","restore","delete"],dependencies:[{table:"bookings",column:"stylist_id",label:"bookings"},{table:"salon_team_members",column:"stylist_id",label:"team access records"}]},
+  style:{table:"styles",permission:"salons",label:"Salon services",nameFields:["name"],actions:["archive","restore","delete"],dependencies:[{table:"bookings",column:"style_id",label:"bookings"},{table:"style_materials",column:"style_id",label:"material options"}]},
+  salon_product:{table:"salon_products",permission:"salons",label:"Products",nameFields:["name"],actions:["archive","restore","delete"]},
+  salon_promotion:{table:"salon_promotions",permission:"marketing",label:"Salon promotions",nameFields:["title"],actions:["archive","restore","delete"]},
+  promo_code:{table:"promo_codes",permission:"marketing",label:"Promo codes",nameFields:["code"],actions:["archive","restore","delete"],dependencies:[{table:"promo_code_redemptions",column:"promo_code_id",label:"redemptions"}]},
   customer:{table:"customers",permission:"customers",label:"Customers",nameFields:["name","email"],actions:["anonymize"],dependencies:[{table:"bookings",column:"customer_id",label:"bookings"},{table:"reviews",column:"customer_id",label:"reviews"},{table:"support_tickets",column:"customer_id",label:"support requests"}]},
   salon_team:{table:"salon_team_members",permission:"settings",label:"Salon team identities",nameFields:["name","email"],actions:["anonymize"],dependencies:[{table:"stylists",column:"user_id",label:"linked stylist profiles"}]},
   booking:{table:"bookings",permission:"bookings",label:"Bookings",nameFields:["confirmation_code","guest_name"],actions:["cancel"],dependencies:[{table:"complaints_log",column:"booking_id",label:"complaints"},{table:"booking_messages",column:"booking_id",label:"messages"}]},
-  review:{table:"reviews",permission:"reviews",label:"Reviews",nameFields:["reviewer_name","id"],actions:["archive"]},
-  support_ticket:{table:"support_tickets",permission:"support",label:"Support requests",nameFields:["subject","requester_email"],actions:["archive"]},
+  review:{table:"reviews",permission:"reviews",label:"Reviews",nameFields:["reviewer_name","id"],actions:["archive","restore"]},
+  support_ticket:{table:"support_tickets",permission:"support",label:"Support requests",nameFields:["subject","requester_email"],actions:["archive","restore"]},
   featured_campaign:{table:"featured_salon_campaigns",permission:"marketing",label:"Featured campaigns",nameFields:["internal_note","id"],actions:["archive"]},
   trending_campaign:{table:"trending_video_campaigns",permission:"marketing",label:"Trending campaigns",nameFields:["description","id"],actions:["archive"]},
-  location_market:{table:"location_markets",permission:"salons",label:"Markets and service areas",nameFields:["name","state_code"],actions:["archive","delete"],dependencies:[{table:"salons",column:"market_id",label:"salons"}]},
-  newsletter_subscriber:{table:"newsletter_subscribers",permission:"marketing",label:"Newsletter subscribers",nameFields:["email"],actions:["archive","delete"]},
+  location_market:{table:"location_markets",permission:"salons",label:"Markets and service areas",nameFields:["name","state_code"],actions:["archive","restore","delete"],dependencies:[{table:"salons",column:"market_id",label:"salons"}]},
+  newsletter_subscriber:{table:"newsletter_subscribers",permission:"marketing",label:"Newsletter subscribers",nameFields:["email"],actions:["archive","restore","delete"]},
 };
 
 const catalogRpcTypes=new Set(["service_category","service_group","service_addon","master_style","blog_post","content_page","promo_code"]);
@@ -66,10 +66,26 @@ export async function POST(request:Request){
     const body=await request.json() as Record<string,unknown>;const type=cleanText(body.resource,60);const id=cleanText(body.id,100);const action=cleanText(body.action,30);const reason=cleanText(body.reason,500);const reassignTo=cleanText(body.reassign_to,100)||null;const resource=resources[type];
     if(!resource||!resource.actions.includes(action))return Response.json({error:"Choose an available safe action."},{status:400});
     const{admin,user}=await requireAdminPermission(request,resource.permission);const{data:row,error:readError}=await admin.from(resource.table).select("*").eq(resource.table==="content_pages"?"slug":"id",id).maybeSingle();if(readError)throw readError;if(!row)return Response.json({error:"Record not found."},{status:404});
-    const record=publicSummary(row,resource);if(cleanText(body.confirmation,200)!==record.label)return Response.json({error:`Type “${record.label}” exactly to confirm.`},{status:400});if(reason.length<5)return Response.json({error:"Enter a reason of at least 5 characters."},{status:400});
+    const record=publicSummary(row,resource);if(cleanText(body.confirmation,200)!==record.label)return Response.json({error:`Type “${record.label}” exactly to confirm.`},{status:400});if(reason.length<5)return Response.json({error:"Enter a reason of at least 5 characters."},{status:400});if(action==="restore"&&!record.archived)return Response.json({error:"This record is already active and does not need to be restored."},{status:409});
     const dependencies=await dependencyPlan(admin,resource,id);
-    if(catalogRpcTypes.has(type)){const result=await admin.rpc("admin_manage_catalog_record",{p_record_type:type,p_record_id:id,p_action:action,p_reassign_to:reassignTo,p_actor_user_id:user.id,p_reason:reason,p_dependency_summary:dependencies});if(result.error)throw result.error;return Response.json({result:result.data,dependencies});}
     let after:Record<string,unknown>|null=null;
+    if(action==="restore"){
+      const key=resource.table==="content_pages"?"slug":"id";const withoutArchiveColumn=["featured_salon_campaigns","trending_video_campaigns"].includes(resource.table);let patch:Record<string,unknown>={updated_at:new Date().toISOString(),...(!withoutArchiveColumn?{archived_at:null}:{})};
+      if(["service_categories","service_groups","service_addons","master_styles","location_markets","stylists","styles"].includes(resource.table))patch={...patch,is_active:true};
+      else if(resource.table==="content_pages")patch={...patch,is_enabled:true,status:"Draft"};
+      else if(resource.table==="blog_posts")patch={...patch,status:"Draft",featured:false};
+      else if(resource.table==="salon_products")patch={...patch,is_visible:false};
+      else if(resource.table==="salon_promotions")patch={...patch,is_active:false};
+      else if(resource.table==="promo_codes")patch={...patch,is_active:true};
+      else if(resource.table==="support_tickets")patch={...patch,status:"Open"};
+      else if(resource.table==="featured_salon_campaigns")patch={...patch,status:"Paused"};
+      else if(resource.table==="trending_video_campaigns")patch={...patch,status:"Draft"};
+      else if(resource.table==="newsletter_subscribers")patch={...patch,status:"Active"};
+      const result=await admin.from(resource.table).update(patch).eq(key,id).select().single();if(result.error)throw result.error;after=result.data;
+      await admin.from("record_management_events").insert({record_type:type,record_id:id,record_label:record.label,action:"Updated",dependency_summary:dependencies,before_values:row,after_values:after,reason,acting_user_id:user.id,acting_scope:"platform_admin"});
+      return Response.json({result:{ok:true,action,label:record.label},dependencies});
+    }
+    if(catalogRpcTypes.has(type)){const result=await admin.rpc("admin_manage_catalog_record",{p_record_type:type,p_record_id:id,p_action:action,p_reassign_to:reassignTo,p_actor_user_id:user.id,p_reason:reason,p_dependency_summary:dependencies});if(result.error)throw result.error;return Response.json({result:result.data,dependencies});}
     if(type==="salon"&&action==="offboard"){const result=await admin.rpc("admin_change_salon_status",{acting_admin_id:user.id,target_salon_id:id,requested_status:"Offboarded",internal_reason:reason});if(result.error)throw result.error;after=result.data as Record<string,unknown>;}
     else if(type==="salon_application"&&action==="archive"){const result=await admin.from(resource.table).update({status:"Rejected",rejection_reason:reason}).eq("id",id).select().single();if(result.error)throw result.error;after=result.data;}
     else if(type==="stylist"||type==="style"){const hasHistory=dependencies.details.some(item=>item.label==="bookings"&&item.count>0);if(action==="delete"&&hasHistory)throw new Error("This record has booking history and must be archived, not deleted.");if(action==="archive"){const result=await admin.from(resource.table).update({archived_at:new Date().toISOString()}).eq("id",id).select().single();if(result.error)throw result.error;after=result.data;}else{const result=await admin.from(resource.table).delete().eq("id",id);if(result.error)throw result.error;}}

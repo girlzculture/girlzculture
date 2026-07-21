@@ -15,7 +15,7 @@ import {
 import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
-import { getVisibleLegalLinks } from "@/lib/content";
+import { getNavigationItems, getVisibleLegalLinks, type NavigationItem } from "@/lib/content";
 import { LocalizedText } from "@/components/i18n/LanguageSelector";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
@@ -32,22 +32,20 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" | "about" | "blog" }) {
+const defaultHeader:NavigationItem[]=[
+  {surface:"header",group_key:"main",item_key:"styles",label:"Browse Styles",translation_key:"nav.styles",href:"/styles",sort_order:10},{surface:"header",group_key:"main",item_key:"salons",label:"Find Salons",translation_key:"nav.salons",href:"/salons",sort_order:20},{surface:"header",group_key:"main",item_key:"how",label:"How It Works",translation_key:"nav.how",href:"/how-it-works",sort_order:30},{surface:"header",group_key:"main",item_key:"about",label:"About Us",translation_key:"nav.about",href:"/about",sort_order:40},{surface:"header",group_key:"main",item_key:"blog",label:"Blog",translation_key:"nav.blog",href:"/blog",sort_order:50},{surface:"header",group_key:"main",item_key:"partner",label:"Partner With Us",translation_key:"nav.partner",href:"/partner",sort_order:60,show_new_badge:true},
+];
+const defaultMobileMenu:NavigationItem[]=[...defaultHeader.map(item=>({...item,surface:"mobile_menu" as const})),{surface:"mobile_menu",group_key:"main",item_key:"social",label:"Social",translation_key:"nav.social",href:"/social",sort_order:70}];
+
+export async function PublicHeader({ active }: { active?: "styles" | "salons" | "how" | "about" | "blog" }) {
+  const[headerItems,mobileItems]=await Promise.all([getNavigationItems("header",defaultHeader),getNavigationItems("mobile_menu",defaultMobileMenu)]);
   return (
     <header className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu/><Wordmark compact /></div>
+        <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu links={mobileItems}/><Wordmark compact /></div>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-8 text-[13px] font-semibold text-ink md:flex lg:gap-10">
-          <Link href="/styles" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "styles" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.styles" fallback="Browse Styles"/></Link>
-          <Link href="/salons" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "salons" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.salons" fallback="Find Salons"/></Link>
-          <Link href="/how-it-works" className={`border-b-2 py-5 transition-colors hover:text-magenta ${active === "how" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.how" fallback="How It Works"/></Link>
-          <Link href="/about" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta lg:inline-flex ${active === "about" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.about" fallback="About Us"/></Link>
-          <Link href="/blog" className={`hidden border-b-2 py-5 transition-colors hover:text-magenta xl:inline-flex ${active === "blog" ? "border-magenta text-magenta" : "border-transparent"}`}><LocalizedText messageKey="nav.blog" fallback="Blog"/></Link>
-          <Link href="/partner" className="inline-flex items-center gap-2 transition-colors hover:text-magenta">
-            <LocalizedText messageKey="nav.partner" fallback="Partner With Us"/>
-            <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white"><LocalizedText messageKey="nav.new" fallback="New"/></span>
-          </Link>
+          {headerItems.map(item=><Link key={item.item_key} href={item.href} className={`inline-flex items-center gap-2 border-b-2 py-5 transition-colors hover:text-magenta ${active===item.item_key?"border-magenta text-magenta":"border-transparent"}`}><LocalizedText messageKey={item.translation_key||`navigation.${item.item_key}`} fallback={item.label}/>{item.show_new_badge?<span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white"><LocalizedText messageKey="nav.new" fallback="New"/></span>:null}</Link>)}
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-3">
@@ -71,14 +69,9 @@ export function PublicHeader({ active }: { active?: "styles" | "salons" | "how" 
   );
 }
 
-export function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
-  const items = [
-    { id: "home" as const, label: "Home", key: "nav.home", href: "/", icon: Home },
-    { id: "search" as const, label: "Search", key: "nav.search", href: "/salons", icon: Search },
-    { id: "bookings" as const, label: "Bookings", key: "nav.bookings", href: "/account", icon: CalendarDays },
-    { id: "social" as const, label: "Social", key: "nav.social", href: "/social", icon: Share2 },
-    { id: "profile" as const, label: "Profile", key: "nav.profile", href: "/account?tab=inbox", icon: UserRound },
-  ];
+export async function CustomerBottomNav({ active = "home" }: { active?: ActiveTab }) {
+  const fallback:NavigationItem[]=[{surface:"mobile_bottom",group_key:"main",item_key:"home",label:"Home",translation_key:"nav.home",href:"/",sort_order:10},{surface:"mobile_bottom",group_key:"main",item_key:"search",label:"Search",translation_key:"nav.search",href:"/salons",sort_order:20},{surface:"mobile_bottom",group_key:"main",item_key:"bookings",label:"Bookings",translation_key:"nav.bookings",href:"/account",sort_order:30},{surface:"mobile_bottom",group_key:"main",item_key:"social",label:"Social",translation_key:"nav.social",href:"/social",sort_order:40},{surface:"mobile_bottom",group_key:"main",item_key:"profile",label:"Profile",translation_key:"nav.profile",href:"/account?tab=inbox",sort_order:50}];
+  const iconMap={home:Home,search:Search,bookings:CalendarDays,social:Share2,profile:UserRound};const records=await getNavigationItems("mobile_bottom",fallback);const items=records.slice(0,5).map(item=>({...item,id:item.item_key as ActiveTab,key:item.translation_key||`navigation.${item.item_key}`,icon:iconMap[item.item_key as keyof typeof iconMap]||Home}));
 
   return (
     <nav
@@ -147,15 +140,32 @@ export function TrustStrip() {
   );
 }
 
-const footerGroups = [
-  { title: "Company", titleKey: "footer.company", links: [["About Us","/about"], ["Press","/press"], ["Blog","/blog"], ["Testimonials","/testimonials"]] },
-  { title: "Support", titleKey: "footer.support", links: [["Help Center","/help"], ["Safety & Trust","/safety"], ["Contact Us","/contact"], ["Submit a Complaint","/complaint"]] },
-  { title: "For Professionals", titleKey: "footer.professionals", links: [["Partner With Us","/partner"]] },
+const defaultFooter:NavigationItem[] = [
+  { surface:"footer", group_key:"company", item_key:"about", label:"About Us", href:"/about", sort_order:10 },
+  { surface:"footer", group_key:"company", item_key:"press", label:"Press", href:"/press", sort_order:20 },
+  { surface:"footer", group_key:"company", item_key:"blog", label:"Blog", translation_key:"nav.blog", href:"/blog", sort_order:30 },
+  { surface:"footer", group_key:"company", item_key:"testimonials", label:"Testimonials", href:"/testimonials", sort_order:40 },
+  { surface:"footer", group_key:"support", item_key:"help", label:"Help Center", href:"/help", sort_order:10 },
+  { surface:"footer", group_key:"support", item_key:"safety", label:"Safety & Trust", href:"/safety", sort_order:20 },
+  { surface:"footer", group_key:"support", item_key:"contact", label:"Contact Us", href:"/contact", sort_order:30 },
+  { surface:"footer", group_key:"support", item_key:"complaint", label:"Submit a Complaint", href:"/complaint", sort_order:40 },
+  { surface:"footer", group_key:"professionals", item_key:"partner", label:"Partner With Us", translation_key:"nav.partner", href:"/partner", sort_order:10 },
 ];
 
+const footerGroupLabels:Record<string,{title:string;key:string}> = {
+  company:{title:"Company",key:"footer.company"},
+  support:{title:"Support",key:"footer.support"},
+  professionals:{title:"For Professionals",key:"footer.professionals"},
+};
+
 export async function PublicFooter() {
-  const legalLinks = await getVisibleLegalLinks();
+  const [legalLinks, footerItems] = await Promise.all([getVisibleLegalLinks(), getNavigationItems("footer", defaultFooter)]);
   const legalColumns = [legalLinks.slice(0, 5), legalLinks.slice(5, 10)];
+  const footerGroups = Array.from(new Set(footerItems.map((item) => item.group_key))).map((groupKey) => ({
+    groupKey,
+    ...(footerGroupLabels[groupKey] || { title:groupKey.replaceAll("_", " "), key:`footer.${groupKey}` }),
+    links:footerItems.filter((item) => item.group_key === groupKey),
+  }));
   return (
     <footer className="bg-[#211027] text-white">
       <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
@@ -167,10 +177,10 @@ export async function PublicFooter() {
           </div>
         </div>
         {footerGroups.map((group) => (
-          <div key={group.title}>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/80"><LocalizedText messageKey={group.titleKey} fallback={group.title}/></h2>
+          <div key={group.groupKey}>
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/80"><LocalizedText messageKey={group.key} fallback={group.title}/></h2>
             <ul className="mt-3 space-y-2 text-[11px] text-white/65">
-              {group.links.map(([label,href]) => <li key={href}><Link href={href} className="hover:text-white">{label}</Link></li>)}
+              {group.links.map((item) => <li key={item.item_key}><Link href={item.href} className="hover:text-white"><LocalizedText messageKey={item.translation_key||`navigation.${item.item_key}`} fallback={item.label}/>{item.show_new_badge ? <span className="ml-1 rounded-full bg-magenta px-1.5 py-0.5 text-[7px] font-bold uppercase">New</span> : null}</Link></li>)}
             </ul>
           </div>
         ))}
