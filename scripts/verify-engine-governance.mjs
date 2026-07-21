@@ -22,6 +22,9 @@ const supportInbox=read("src/components/AdminSupportInbox.tsx");
 const help=read("src/app/help/page.tsx");
 const layout=read("src/app/layout.tsx");
 const media=read("src/app/api/media/upload/route.ts");
+const reminderMigration=read("supabase/migrations/20260720220000_booking_reminder_delivery.sql");
+const reminderRoute=read("src/app/api/bookings/reminders/route.ts");
+const netlify=read("netlify.toml");
 
 assert.match(migration,/affected_surfaces text\[\]/);
 assert.match(migration,/engine_import_drafts/);
@@ -65,6 +68,8 @@ assert.match(complaint,/quality\.complaint_reasons/);
 assert.match(notifications,/notifications\.channels/);
 assert.match(notifications,/notifications\.booking_customer_confirmed_subject/);
 assert.match(notifications,/notifications\.booking_salon_cancelled_subject/);
+assert.match(notifications,/notifications\.booking_reminder_hours/);
+assert.match(notifications,/processBookingReminders/);
 assert.match(salon,/trust\.verified_label/);
 assert.match(application,/catalog\.business_types/);
 assert.match(applicationPage,/catalog\.business_types/);
@@ -75,5 +80,9 @@ assert.match(help,/content\.faq_search_enabled/);
 assert.match(layout,/branding\.primary_color/);
 assert.match(layout,/branding\.cta_color/);
 assert.match(media,/media\.public_image_quality/);
+assert.match(reminderMigration,/claim_booking_reminder/);
+assert.match(reminderMigration,/booking_reminder_claims/);
+assert.match(reminderRoute,/INTERNAL_API_SECRET/);
+assert.match(netlify,/schedule = "\*\/15 \* \* \* \*"/);
 
 console.log("Engine governance verification passed (draft import, recovery, environment isolation, affected surfaces, and live consumers).");

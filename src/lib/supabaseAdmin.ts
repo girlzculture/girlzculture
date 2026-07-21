@@ -127,17 +127,18 @@ async function bookingNotificationContext(bookingId: string) {
 }
 
 async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAdmin>){
-  const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject"];
+  const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject"];
   const{data,error}=await admin.from("engine_settings").select("setting_key,published_value").eq("status","Published").in("setting_key",keys);
   if(error)console.warn("Booking notification Engine settings unavailable; using safe defaults",{code:error.code});
   const values=Object.fromEntries((data||[]).map(row=>[row.setting_key,row.published_value]));
   const rawChannels=Array.isArray(values["notifications.channels"])?values["notifications.channels"]:[];
   const channels=new Set((rawChannels.length?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
   const subject=(key:string,fallback:string)=>{const value=String(values[key]||"").trim();return value&&value.length<=140?value:fallback};
-  return{channels,customerConfirmed:subject("notifications.booking_customer_confirmed_subject","Your Girlz Culture appointment is confirmed"),salonConfirmed:subject("notifications.booking_salon_confirmed_subject","New confirmed Girlz Culture booking"),customerCancelled:subject("notifications.booking_customer_cancelled_subject","Your Girlz Culture appointment was cancelled"),salonCancelled:subject("notifications.booking_salon_cancelled_subject","Girlz Culture booking cancelled")};
+  const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
+  return{channels,reminderHours:reminderHours.length?reminderHours:[24,2],customerConfirmed:subject("notifications.booking_customer_confirmed_subject","Your Girlz Culture appointment is confirmed"),salonConfirmed:subject("notifications.booking_salon_confirmed_subject","New confirmed Girlz Culture booking"),customerCancelled:subject("notifications.booking_customer_cancelled_subject","Your Girlz Culture appointment was cancelled"),salonCancelled:subject("notifications.booking_salon_cancelled_subject","Girlz Culture booking cancelled"),reminderSubject:subject("notifications.booking_reminder_subject","Your Girlz Culture appointment is coming up")};
 }
 
-async function runDeliveries(bookingId: string, eventType: "booking_confirmed" | "booking_cancelled", tasks: DeliveryTask[]) {
+async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
   const admin = getSupabaseAdmin();
   const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; error?: string }> = [];
   for (const task of tasks) {
@@ -211,4 +212,43 @@ export async function deliverCancellationNotifications(bookingId: string, reason
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture: ${businessMessage}`) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: "Assigned booking cancelled", body: businessMessage, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
   return { deliveries: await runDeliveries(bookingId, "booking_cancelled", tasks.filter(task=>notification.channels.has(task.channel))) };
+}
+
+export async function deliverBookingReminder(bookingId:string,reminderHours:number){
+  const{admin,booking,salon,style,stylist,stylistContact}=await bookingNotificationContext(bookingId);
+  if(String(booking.status||"").toLowerCase()!=="confirmed")return{skipped:true,reason:"Booking is no longer confirmed."};
+  const notification=await bookingNotificationSettings(admin);
+  const when=formatInTimeZone(booking.appointment_datetime,salon.time_zone);
+  const service=String(style?.name||"Braiding service");
+  const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
+  const summary=`Reminder: ${service} at ${salon.name} is scheduled for ${when}${stylist?.name?` with ${stylist.name}`:""}.`;
+  const salonSummary=`Reminder: ${String(booking.guest_name||"A customer")}'s ${service} appointment is scheduled for ${when}${stylist?.name?` with ${stylist.name}`:""}.`;
+  const tasks:DeliveryTask[]=[
+    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),notification.reminderSubject,`<h1>Appointment reminder</h1><p>${escapeHtml(summary)}</p><p><a href="${root}/account?tab=upcoming">View your booking</a></p>`,"bookings")},
+    {recipientType:"customer",channel:"sms",destination:String(booking.guest_phone||""),run:()=>sendSms(String(booking.guest_phone||""),`Girlz Culture: ${summary}`)},
+    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),"Upcoming Girlz Culture appointment",`<h1>Appointment reminder</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${root}/salon/dashboard/bookings?booking=${booking.id}">Open booking</a></p>`,"bookings")},
+    {recipientType:"salon",channel:"sms",destination:String(salon.phone||""),run:()=>sendSms(String(salon.phone||""),`Girlz Culture: ${salonSummary}`)},
+    {recipientType:"salon",channel:"push",destination:String(salon.user_id||""),run:()=>sendPushToUsers([String(salon.user_id||"")],{title:"Upcoming appointment",body:salonSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})},
+  ];
+  if(booking.customer_id)tasks.push({recipientType:"customer",channel:"push",destination:String(booking.customer_id),run:()=>sendPushToUsers([String(booking.customer_id)],{title:"Appointment reminder",body:summary,url:"/account?tab=upcoming",tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
+  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,"Upcoming assigned appointment",`<h1>Appointment reminder</h1><p>${escapeHtml(salonSummary)}</p>`,"bookings")});
+  if(stylistContact?.phone)tasks.push({recipientType:"stylist",channel:"sms",destination:stylistContact.phone,run:()=>sendSms(stylistContact.phone,`Girlz Culture: ${salonSummary}`)});
+  if(stylistContact?.userId)tasks.push({recipientType:"stylist",channel:"push",destination:stylistContact.userId,run:()=>sendPushToUsers([stylistContact.userId],{title:"Upcoming assigned appointment",body:salonSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
+  return{deliveries:await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)))};
+}
+
+export async function processBookingReminders(){
+  const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const now=Date.now();const results:Array<Record<string,unknown>>=[];
+  for(const reminderHours of notification.reminderHours){
+    const target=now+reminderHours*60*60*1000;const from=new Date(target-10*60*1000).toISOString();const to=new Date(target+20*60*1000).toISOString();
+    const{data:bookings,error}=await admin.from("bookings").select("id,appointment_datetime").eq("status","Confirmed").gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(250);
+    if(error)throw error;
+    for(const booking of bookings||[]){
+      const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:booking.id,p_reminder_hours:reminderHours});
+      if(claim.error)throw claim.error;if(claim.data!==true)continue;
+      try{const delivery=await deliverBookingReminder(booking.id,reminderHours);await admin.from("booking_reminder_claims").update({completed_at:new Date().toISOString(),error_message:null}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);results.push({bookingId:booking.id,reminderHours,status:"processed",delivery});}
+      catch(error){const message=error instanceof Error?error.message:"Reminder failed";await admin.from("booking_reminder_claims").update({error_message:message}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);console.error("Booking reminder delivery failed",{bookingId:booking.id,reminderHours,error});results.push({bookingId:booking.id,reminderHours,status:"failed"});}
+    }
+  }
+  return{configuredHours:notification.reminderHours,processed:results.length,results};
 }
