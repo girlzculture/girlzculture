@@ -1,6 +1,6 @@
 # Girlz Culture platform test matrix
 
-Test date: 2026-07-20  
+Test date: 2026-07-21
 Branch: `codex/owner-linking-visual-foundation`  
 Companion inventory: `docs/PLATFORM_SELF_AUDIT_2026-07-20.md`
 
@@ -10,7 +10,7 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Local source, dependency, and build environment | Complete | Node dependencies are installed; `npx tsc --noEmit`, `npm run lint`, `npm run build`, and `npm audit --omit=dev` completed successfully on 2026-07-20. |
+| Local source, dependency, and build environment | Complete | Node dependencies are installed; `npx tsc --noEmit`, `npm run lint`, `npm run build`, and `npm audit --omit=dev` completed successfully on 2026-07-21. |
 | Local public browser environment | Complete | Next dev server returned HTTP 200 at `http://127.0.0.1:3100`; desktop viewport was 1280x720 and mobile viewport was 390x844. |
 | New Supabase migrations applied to the intended project | Blocked | The repository has no linked Supabase CLI project/database password. The build reached the configured Supabase API but reported `PGRST205` for missing `engine_settings`, proving the new migration range is not applied there. |
 | Authenticated role fixtures | Blocked | No authorized anonymous/customer/salon-owner/salon-team/limited-admin/super-admin credential set was provided for destructive or permission-changing live tests. |
@@ -76,10 +76,13 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 
 | Test | Status | Evidence |
 | --- | --- | --- |
-| Locale infrastructure, supported-language records, persistence, safe fallback, formatting helpers, and translation publishing | Complete | `npm run verify:i18n` passed 8 localization controls; Engine translation CRUD/publish and English fallback are present. |
-| Global public navigation, mobile navigation, footer, shared trust strip, and common action keys | Complete | These surfaces use `LocaleProvider`/catalog keys and were asserted by `verify:i18n`. |
-| Full English, Spanish, French, and Wolof coverage on booking, customer, salon, admin, email, push, and SMS surfaces | Not complete | Many long-form strings, dashboard labels, validation responses, and transactional bodies remain direct English strings; the self-audit lists this explicitly. |
-| Long-string visual coverage and missing-key behavior | Blocked | English fallback is code-complete; full visual testing awaits published reviewed translations for all four locales. |
+| Locale infrastructure, 37 initial language records, later admin-added locales, persistence, safe fallback, formatting helpers, RTL, and translation publishing | Complete | `npm run verify:i18n` passed 24 controls; `verify:engine-expansion` confirmed all 37 required locale records; Engine translation CRUD/review/publish/import/export/rollback and English fallback are present. |
+| Platform-wide interface source coverage | Complete | The generated registry contains 486 interface messages. `DocumentLocalizationBridge` applies published exact-source translations to registered interface/accessibility text while excluding user content. |
+| Localized booking email, SMS, push, and reminder templates | Complete | Booking locale capture, account-locale fallback, published notification entries, locale-aware timestamps, high-impact review requirements, and English fallback passed `verify:i18n`/governance contracts. |
+| Human-reviewed translations for all 486 messages in every enabled locale | Not complete | The architecture and draft/review/publish workflow are complete; reviewed translated content was not supplied for every locale. High-impact legal/payment/refund/cancellation/security/safety text cannot auto-publish. |
+| Language selector standard change/input behavior | Complete | The selector handles both standard React `change` and native `input`, updates document language/direction, guest cookie/storage, and authenticated preference. |
+| Language selector through the local browser automation native-select adapter | Blocked | The adapter changed the native selected DOM value but did not dispatch the application state event; this automation-specific interaction is not reported as a user-flow pass. |
+| Long-string visual coverage for all 37 locales | Blocked | English fallback is code-complete; full visual testing requires reviewed published translations. |
 | User-generated reviews, descriptions, and messages auto-translate | Not applicable | User-generated content is intentionally preserved in its authored language. |
 
 ## Numeric inputs
@@ -95,11 +98,15 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 
 | Test | Status | Evidence |
 | --- | --- | --- |
-| All 17 Engine categories load with permission-aware navigation | Complete | `npm run verify:engine` passed all 17 category contracts. |
+| All 21 Engine categories load with permission-aware navigation | Complete | `npm run verify:engine` passed all 21 category contracts; `verify:engine-expansion` passed expanded navigation/control contracts. |
 | Draft, review, publish, history, affected surfaces, rollback, environment isolation, import preview/export, and emergency recovery | Complete | `npm run verify:engine-governance` passed the governance/recovery contract; high-impact import/revert requires recent MFA. |
 | Secrets are never exposed through Engine or the public config endpoint | Complete | Static negative assertions passed; public config restricts reads to `is_public=true`. |
 | Change label, dropdown, threshold, plan display/workflow, media rule, translation, and notification subject without code | Blocked | Each live consumer exists and is verifier-covered, but publish/reload proof requires the Engine migrations applied to a test project. |
 | Roll back a published configuration version | Blocked | Transactional rollback/recovery function and UI passed source verification; execution requires migrated Engine tables and a super-admin session with recent MFA. |
+| AI disabled and emergency kill-switch states preserve deterministic platform behavior | Complete | `verify:engine-expansion` passed approved-list, disabled/fail-closed, review, budget, usage, audit, sandbox, and deterministic-fallback contracts. No AI provider is required for core booking/search/support behavior. |
+| AI provider failure, budget exhaustion, unsafe input, and reviewed-output runtime | Blocked | Provider-neutral server interfaces and tests are present, but a configured approved provider/model, disposable budget, and authenticated admin fixture are required for external runtime proof. |
+| Integrations & System Status reports health without exposing secrets | Complete | Status API/panel and static negative assertions passed `verify:engine-expansion`; secret values are never returned. |
+| Protected CI migration preflight and fail-stop behavior | Complete | `.github/workflows/database-migrations.yml` and all 61 ordered migration filenames passed `verify:migrations`. Actual dispatch is Blocked. |
 | Create/edit/archive/delete/reassign eligible record types with dependency explanations | Complete | `npm run verify:records` passed 21 record-type contracts, generic API authorization, dependency inspection, confirmation, and event logging. |
 | Delete a service group with dependents and offer safe reassignment | Complete | Transactional catalog RPC and plain-language dependency response passed `verify:records`. |
 | Salon deletion with operational/financial dependents becomes archive/offboarding | Complete | Unsafe hard delete is denied; lifecycle/offboarding and retained-history contract passed `verify:lifecycle` and `verify:records`. |
@@ -111,9 +118,9 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 
 | Test | Status | Evidence |
 | --- | --- | --- |
-| Public homepage desktop smoke | Complete | At 1280x720, `/` rendered `Book with Confidence.`, `Salons Near You`, `Featured Salons`, `Trending Picks This Week`, `How it works`, footer, no horizontal overflow, and no console errors. |
-| Public catalog/support/auth route smoke | Complete | `/styles`, `/salons`, `/help`, `/contact`, `/testimonials`, `/safety`, `/login`, `/salon/apply`, and `/admin/login` rendered their expected H1/forms with no console errors. |
-| Mobile responsive smoke | Complete | At 390x844, `/`, `/styles`, `/salons`, `/help`, `/contact`, `/login`, `/salon/apply`, and `/admin/login` rendered without horizontal overflow; catalog routes exposed their fixed mobile navigation. |
+| Public homepage desktop smoke | Complete | At 1280x720, `/` rendered `Book with Confidence.`, the expected main content, no horizontal overflow, zero broken images, and no console errors/warnings. |
+| Public catalog/editorial/support/auth route smoke | Complete | `/styles`, `/salons`, `/how-it-works`, `/about`, `/testimonials`, `/help`, `/contact`, `/login`, `/plans`, and `/salon/apply` rendered expected H1/main/navigation state with zero broken images and no console errors/warnings. |
+| Mobile responsive smoke | Complete | The same 11 routes passed at 390x844 without horizontal overflow or broken images and with expected mobile navigation. |
 | Every customer, salon, and admin tab as its authorized role | Blocked | Requires separate authenticated customer, salon-owner, salon-team, limited-admin, and super-admin fixtures after migrations. |
 | Admin permission guard and undefined-array normalization are present | Complete | `permissionForSection`/`AdminShell` gate sections and `rows(value)` converts non-arrays to `[]` in `src/components/AdminDashboard.tsx`; sensitive APIs use `requireAdminPermission` from `src/lib/supabaseAdmin.ts`; TypeScript/lint/build passed. |
 | Limited-admin unauthorized section denial renders cleanly at runtime | Blocked | The denial/redirect UI is implemented, but an authenticated limited-admin fixture is required to prove the runtime permission matrix after migrations. |
@@ -125,9 +132,9 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 | Actual email, push, SMS, and scheduled reminder delivery | Blocked | Requires provider credentials, published Engine settings, Netlify deployment, scheduled invocation, and delivery-log inspection. |
 | TypeScript | Complete | `npx tsc --noEmit` exited 0. |
 | ESLint | Complete | `npm run lint` exited 0 after the Netlify scheduled-function export was named. |
-| Optimized production build | Complete | `npm run build` exited 0, compiled TypeScript, and generated/collected 89 application routes. |
+| Optimized production build | Complete | `npm run build` exited 0, compiled TypeScript, and generated/collected 94 application routes. |
 | Dependency/security audit | Complete | `npm audit --omit=dev` reported 0 vulnerabilities. |
-| Feature source-contract suite | Complete | All 23 `verify:*` scripts passed after updating older campaign/identity assertions for Engine card counts and protected deletion. |
+| Feature source-contract suite | Complete | All 26 `verify:*` scripts passed, including 21 Engine areas, 37 locales, 486 interface messages, 21 managed record contracts, 61 migration order checks, and 92 self-audit controls. |
 | SQL parser/schema verification against Supabase Postgres | Blocked | No authorized database connection or local Postgres/Docker test environment is available. Migration files are ordered but not claimed as executed. |
 | RLS matrix as anonymous/customer/salon/team/limited-admin/super-admin/service role | Blocked | Requires the migration range applied to a disposable Supabase project plus the role fixtures above. |
 | Full accessibility audit with keyboard and assistive technology | Not complete | Semantic combobox/labels and responsive smoke checks passed, but no full axe/manual screen-reader pass was executed across all authenticated surfaces. |
@@ -137,12 +144,13 @@ This matrix deliberately separates repository evidence from live Supabase, provi
 
 | Deliverable | Status | Evidence |
 | --- | --- | --- |
-| Sections 1–15 repository implementation | Complete | Logical implementation commits `1b6ee6e` through `2d50fa8`, plus `bebf01d`, `16bb585`, and `e8c7ddb`; all repository verifiers/build checks above pass. |
-| Section 16 concrete self-audit | Complete | `docs/PLATFORM_SELF_AUDIT_2026-07-20.md` names routes, components, settings, operations, exceptions, migrations, environment variables, and external actions. |
-| Section 17 evidence-backed matrix | Complete | This document covers every requested category and separates static/local evidence from blocked live verification. |
-| Full translated experience in all four languages | Not complete | Foundation and global shared surfaces are complete; remaining direct English component/email strings require conversion and reviewed translations. |
+| Sections 1–14 repository implementation and reporting | Complete | Continuation commits `9a5adce` through `9782ddd`, this matrix, the self-audit, generated inventory, and `docs/ENGINE_COMPLETION_TRACEABILITY_2026-07-21.md`; all local build/source-contract checks above pass. |
+| Concrete platform inventory | Complete | `docs/ENGINE_PLATFORM_INVENTORY_2026-07-21.md` names 42 pages, 73 APIs, 77 components, 61 migrations, 74 tables/views, 82 functions, and 160 RLS policies. |
+| Evidence-backed matrix | Complete | This document separates repository/local evidence from blocked live database, role, provider, deployment, and production evidence. |
+| Localization architecture and source conversion | Complete | 37 initial locales, admin-added locale support, 486 registered interface messages, published translation bridge, transactional booking notifications, RTL and formatting/fallback paths are implemented. |
+| Human-reviewed translated experience for all 37 locales | Not complete | Translation content must be reviewed and published by authorized editors; high-impact content cannot auto-publish. |
 | Governed Trending video workflow | Complete | MP4/WebM validation, optional browser-supported trim, poster-frame selection, public preview, staged progress, cleanup, moderation, lazy public playback, and explicit capability limitations are implemented and source-verified. |
-| Database migration applied | Blocked | No authorized deployment connection is available; apply the 14 files in the exact order in the self-audit. |
+| Database migration applied | Blocked | No authorized deployment connection is available; deploy the 15-file continuation range through the protected GitHub migration workflow in the exact order in the self-audit/traceability report. |
 | Pushed | Blocked | No remote push was performed. |
 | PR merged | Blocked | No PR was opened or merged. |
 | Deployed | Blocked | No Netlify deployment was performed. |

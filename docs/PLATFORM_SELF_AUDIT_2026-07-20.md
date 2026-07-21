@@ -1,6 +1,6 @@
 # Girlz Culture platform self-audit
 
-Audit date: 2026-07-20  
+Audit date: 2026-07-21
 Branch: `codex/owner-linking-visual-foundation`  
 Scope: identity, admin security, salon discovery, lifecycle, media, localization, numeric inputs, Engine governance, record lifecycle, identity deletion, test data, and live configuration consumers.
 
@@ -19,7 +19,7 @@ This inventory distinguishes code that exists in the repository from database mi
 | 7 video completion | `1119e32` | Browser-supported trim, poster-frame selection, staged progress, governed poster storage, and replacement cleanup. |
 | 8 | `f71658c` | Locale foundation, translation publishing, persistence, and safe fallback. |
 | 9 | `ed44f34` | Shared numeric input behavior and server validation audit. |
-| 10 | `a530c0a` | The Engine control center, 17 categories, draft/publish/history, and secret-safe status. |
+| 10 | `a530c0a` | The initial Engine control center, draft/publish/history, and secret-safe status. |
 | 11 | `98fed89` | Dependency-aware create/edit/archive/delete/reassign record lifecycle. |
 | 12 | `a6d7adb` | Protected auth identity deletion/anonymization and normalized email reuse. |
 | 13 | `2d50fa8` | Explicit test batches, dry-run preview, protected history, and safe cleanup. |
@@ -27,8 +27,15 @@ This inventory distinguishes code that exists in the repository from database mi
 | 15 | `16bb585` | Engine environment isolation, import/export, optimistic concurrency, affected surfaces, and emergency recovery. |
 | 14 reminder delivery | `e8c7ddb` | Idempotent governed booking reminders and Netlify scheduled execution. |
 | 16 | `5319e71` | Concrete page/dashboard/configuration self-audit and deployment inventory. |
+| Continuation integration | `9a5adce` | Safely merged latest `main` without resetting or discarding either history. |
+| Engine expansion | `5cc9d01` | Expanded Engine to 21 categories, 37 locales, AI/Automation, system status, and protected migration workflow. |
+| Page/navigation governance | `3c5e979` | Added page composition previews, navigation registry, ordering, archive and restore management. |
+| Notification governance | `a7be309` | Added governed transactional template/version management and booking runtime consumers. |
+| Interface localization | `1631725` | Registered 486 interface source messages and added published-translation DOM bridge. |
+| Transactional localization | `b720c86` | Added locale-aware email/SMS/push rendering with English fallback. |
+| Generated inventory | `9782ddd` | Generated exact routes, APIs, components, migrations, tables/views, functions, and RLS policy inventory. |
 
-Section 17 test evidence is maintained in `docs/PLATFORM_TEST_MATRIX_2026-07-20.md`.
+Continuation test evidence is maintained in `docs/PLATFORM_TEST_MATRIX_2026-07-20.md`; requirement-level traceability is in `docs/ENGINE_COMPLETION_TRACEABILITY_2026-07-21.md`.
 
 ## 1. Configuration surfaces made admin-manageable
 
@@ -226,11 +233,13 @@ The initial salon application intentionally has no logo/gallery upload. Approved
 
 ## 9. Localization coverage and exceptions
 
-Foundation: `src/i18n/catalog.ts`, `LocaleProvider`, `LanguageSelector`, `/api/i18n`, `translation_entries`, Engine Translation Manager, locale cookie/local storage, `Intl` date/number/currency helpers, and English safe fallback. Supported locale records are English, Spanish, French and Wolof.
+Foundation: `src/i18n/catalog.ts`, `LocaleProvider`, `LanguageSelector`, `DocumentLocalizationBridge`, `/api/i18n`, `translation_entries`, Engine Translation Manager, locale cookie/local storage/account persistence, `Intl` date/number/currency/plural helpers, RTL direction, and English safe fallback. Migration `20260721100000` seeds 37 initial locale records and the admin workflow can add more without a code deployment.
 
-Current translated stable-key coverage includes global desktop/mobile public navigation, footer headings/copy, trust-strip labels/copy, shared language/common actions, and any published Engine translation entry consumed by a component key. CMS pages can store locale-specific published content through the translation manager.
+`scripts/generate-interface-source-registry.mjs` audits source files and generates `src/i18n/generated-source-messages.ts`; the current registry contains 486 user-visible interface strings. The bridge applies only published exact-source translations to registered interface text and accessibility attributes, including dynamic React output. It excludes contenteditable areas, code/script/style/pre content, and explicit user-content opt-outs. Stable-key translation remains the preferred path for shared navigation, controls, and high-impact transactional text.
 
-Exception requiring continued editorial/component conversion: much of the long-form English copy and many form/dashboard labels in customer account, booking wizard, salon dashboard, admin dashboard, validation responses, and transactional email bodies are still direct source strings rather than `t(key)` consumers. They safely remain English and never expose raw keys, but this means full whole-platform translated operation is **not yet complete**. User-generated salon descriptions/reviews/messages are intentionally never auto-translated. Legal/payment/safety translations require human Reviewed/Published status.
+Booking confirmation, cancellation, and reminder email/SMS/push paths now resolve `bookings.preferred_locale`, authenticated account metadata where available, published notification translation entries, locale-aware date/time formatting, and English fallback. User-generated salon descriptions, proper names, addresses, reviews, and messages are intentionally never silently translated.
+
+Exception requiring editorial completion: architecture/source conversion is complete, but reviewed translated copy for every one of the 486 messages in every enabled locale has not been supplied. Until an authorized human publishes it, missing copy safely remains English. Legal, payment, refund, cancellation, security, and safety content requires Reviewed/Published status and cannot be automatically published from a machine-generated draft.
 
 ## 10. Salon public-visibility gates
 
@@ -271,6 +280,7 @@ Apply in filename order after all earlier repository migrations. The new ordered
 12. `20260720210000_platform_engine_governance_recovery.sql`
 13. `20260720220000_booking_reminder_delivery.sql`
 14. `20260720230000_trending_video_posters.sql`
+15. `20260721100000_engine_localization_ai_system.sql`
 
 Do not skip migrations or run them out of order. They are code-complete in Git but were not applied from this local environment because no authorized Supabase database connection/CLI is available.
 
@@ -303,4 +313,7 @@ Do not skip migrations or run them out of order. They are code-complete in Git b
 - Engine configuration is deliberately split from transactional/provider configuration. Secret status is visible, secret values are not.
 - Discovery and lifecycle are database-centered for consistency; migration application is therefore a deployment blocker for the new code paths.
 - The current image pipeline is suitable for launch-scale images. Higher volume/video should move rendition/transcoding jobs to managed object storage/CDN/media processing without changing the `media_assets` ownership registry contract.
-- Full translation coverage remains the largest product-completeness gap; the infrastructure and management workflow exist, but many components still contain direct English strings.
+- Engine now contains 21 categories, provider-neutral disabled-safe AI controls, 37 initial locales, transactional notification templates, constrained page/navigation composition, and system health. Human-reviewed translated content and deployment remain separate completion boundaries.
+- AI credentials and approved provider/model lists are server deployment configuration. With no provider configured, every AI feature is disabled and core search, booking, support, translation, and moderation workflows use deterministic non-AI behavior.
+- `.github/workflows/database-migrations.yml` is the supported deployment path. It requires manual dispatch and the protected `production-database` environment, checks order/preflight, and invokes the linked Supabase migration command. Engine never exposes a SQL console.
+- Exact generated inventory: 42 pages, 73 APIs, 77 components, 61 migrations, 74 tables/views, 82 SQL functions, and 160 RLS policies in `docs/ENGINE_PLATFORM_INVENTORY_2026-07-21.md`.

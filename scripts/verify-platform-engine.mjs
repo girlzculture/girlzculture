@@ -34,7 +34,7 @@ assert.match(publicApi, /ETag/);
 assert.match(control, /Save draft/);
 assert.match(control, /Publish change/);
 assert.match(control, /Restore/);
-assert.match(control, /Secret values can never be viewed or edited/);
+assert.match(control, /Secret values\s+can never be viewed or edited in Engine/);
 assert.match(control, /beforeunload/);
 assert.match(control, /Search all Engine controls/);
 assert.match(checkout, /getEngineNumber\("booking\.deposit_percentage"/);
