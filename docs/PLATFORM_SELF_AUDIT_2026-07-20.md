@@ -16,6 +16,7 @@ This inventory distinguishes code that exists in the repository from database mi
 | 4 | `c9bc789` | Salon lifecycle, setup gates, activation, suspension, restoration, offboarding, and visibility diagnostics. |
 | 5–6 | `776f5d3` | Governed service search, suggestions, geocoding, location persistence, and discovery. |
 | 7 | `ca7478b` | Unified governed image/media workflow and storage ownership registry. |
+| 7 video completion | `1119e32` | Browser-supported trim, poster-frame selection, staged progress, governed poster storage, and replacement cleanup. |
 | 8 | `f71658c` | Locale foundation, translation publishing, persistence, and safe fallback. |
 | 9 | `ed44f34` | Shared numeric input behavior and server validation audit. |
 | 10 | `a530c0a` | The Engine control center, 17 categories, draft/publish/history, and secret-safe status. |
