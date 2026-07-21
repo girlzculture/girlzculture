@@ -29,7 +29,8 @@
     "verify:records": "node scripts/verify-record-lifecycle.mjs",
     "verify:identity-deletion": "node scripts/verify-identity-deletion.mjs",
     "verify:test-data": "node scripts/verify-test-data-management.mjs",
-    "verify:engine-governance": "node scripts/verify-engine-governance.mjs"
+    "verify:engine-governance": "node scripts/verify-engine-governance.mjs",
+    "verify:self-audit": "node scripts/verify-platform-self-audit.mjs"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",

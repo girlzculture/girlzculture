@@ -19,7 +19,8 @@ assert.match(autocomplete, /No matching styles or salons found/);
 
 const nearby = read("src/components/public/NearbySalonPlacement.tsx");
 assert.match(nearby, /api\/discovery\/salons/);
-assert.match(nearby, /limit: "12"/);
+assert.match(nearby, /maxCards=6/);
+assert.match(nearby, /limit:\s*String\(Math\.max/);
 assert.match(nearby, /No salons are nearby yet/);
 assert.doesNotMatch(nearby, /fake|placeholder salon/i);
 

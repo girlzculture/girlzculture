@@ -6,6 +6,29 @@ Scope: identity, admin security, salon discovery, lifecycle, media, localization
 
 This inventory distinguishes code that exists in the repository from database migrations, deployment configuration, and live verification. A migration file in Git is not evidence that the migration has been applied to Supabase.
 
+## Implementation ledger
+
+| Section | Commit | Delivered scope |
+| --- | --- | --- |
+| 1 | `1b6ee6e` | Canonical platform identity and single-role destination enforcement. |
+| 2 | `fce54fa` | Company-domain admin invitation, verification, MFA, and protection controls. |
+| 3 | `2b37413` | Admin salon query/filter/result integrity and defensive collection handling. |
+| 4 | `c9bc789` | Salon lifecycle, setup gates, activation, suspension, restoration, offboarding, and visibility diagnostics. |
+| 5–6 | `776f5d3` | Governed service search, suggestions, geocoding, location persistence, and discovery. |
+| 7 | `ca7478b` | Unified governed image/media workflow and storage ownership registry. |
+| 8 | `f71658c` | Locale foundation, translation publishing, persistence, and safe fallback. |
+| 9 | `ed44f34` | Shared numeric input behavior and server validation audit. |
+| 10 | `a530c0a` | The Engine control center, 17 categories, draft/publish/history, and secret-safe status. |
+| 11 | `98fed89` | Dependency-aware create/edit/archive/delete/reassign record lifecycle. |
+| 12 | `a6d7adb` | Protected auth identity deletion/anonymization and normalized email reuse. |
+| 13 | `2d50fa8` | Explicit test batches, dry-run preview, protected history, and safe cleanup. |
+| 14 | `bebf01d` | Engine values connected to live homepage, booking, catalog, support, media, brand, and notification behavior. |
+| 15 | `16bb585` | Engine environment isolation, import/export, optimistic concurrency, affected surfaces, and emergency recovery. |
+| 14 reminder delivery | `e8c7ddb` | Idempotent governed booking reminders and Netlify scheduled execution. |
+| 16 | `5319e71` | Concrete page/dashboard/configuration self-audit and deployment inventory. |
+
+Section 17 test evidence is maintained in `docs/PLATFORM_TEST_MATRIX_2026-07-20.md`.
+
 ## 1. Configuration surfaces made admin-manageable
 
 The main UI is Admin > Engine (`/admin/engine`), implemented by `src/components/admin/EngineControlCenter.tsx`. Access requires the admin `settings` permission; publishing security, booking, billing, or safety-impact settings follows the high-impact confirmation rules. Super-admin and recent MFA are required for emergency recovery and destructive maintenance actions.
@@ -73,7 +96,7 @@ The main UI is Admin > Engine (`/admin/engine`), implemented by `src/components/
 
 ### Platform-admin inventory
 
-`/admin/[section]` exposes Overview, Submissions, Salons, Customers, Bookings, Quality & Performance, Reviews, Payments & Finance, Marketing & Promotions, Content Management, Customer Support, Complaints, Subscriptions, Engine, and Settings & Team. `src/lib/adminSectionAccess.ts` and server API permission checks gate each section. Missing collections normalize to empty arrays so limited users receive a denied/empty state rather than a `.map` crash.
+`/admin/[section]` exposes Overview, Submissions, Salons, Customers, Bookings, Quality & Performance, Reviews, Payments & Finance, Marketing & Promotions, Content Management, Customer Support, Complaints, Subscriptions, Engine, and Settings & Team. `permissionForSection`/`AdminShell` in `src/components/AdminDashboard.tsx` and `requireAdminPermission` in `src/lib/supabaseAdmin.ts` gate sections and sensitive APIs. Missing collections pass through the dashboard `rows(value)` guard so absent API arrays become empty arrays rather than a `.map` crash.
 
 Admin-specific managed surfaces include submission decisions, salon lifecycle and diagnostics, customer records, booking edits/cancellation, quality thresholds, review moderation, financial read models, promo codes, Featured/Trending campaigns, CMS/pages/blog/catalog/media, support responses, subscription records, Engine publishing, identity conflicts/deletion, test batches, and authorized admin invitations/permissions.
 
