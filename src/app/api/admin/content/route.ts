@@ -159,14 +159,25 @@ export async function DELETE(request: Request) {
     const { admin, user } = await requireAdminPermission(request, "content");
     const { id, type = "post" } = await request.json() as { id?: string; type?: "post" | "master_style" | "service_category" | "service_group" | "service_addon" };
     if (!id) return Response.json({ error: "Record ID is required" }, { status: 400 });
-    const table = ({ post: "blog_posts", master_style: "master_styles", service_category: "service_categories", service_group: "service_groups", service_addon: "service_addons" } as const)[type];
-    if (!table) return Response.json({ error: "Unknown catalog record type" }, { status: 400 });
-    const { error } = await admin.from(table).delete().eq("id", id);
-    if (error) throw error;
+    const recordType = ({ post: "blog_post", master_style: "master_style", service_category: "service_category", service_group: "service_group", service_addon: "service_addon" } as const)[type];
+    if (!recordType) return Response.json({ error: "Unknown catalog record type" }, { status: 400 });
+    const { data, error } = await admin.rpc("admin_manage_catalog_record", {
+      p_record_type: recordType,
+      p_record_id: id,
+      p_action: "delete",
+      p_reassign_to: null,
+      p_actor_user_id: user.id,
+      p_reason: "Deleted from Content Management",
+      p_dependency_summary: {},
+    });
+    if (error) {
+      if (/still used|must be archived|cannot|reassign/i.test(error.message)) return Response.json({ error: error.message }, { status: 409 });
+      throw error;
+    }
     console.info("Admin content record deleted", { id, type, admin: user.email });
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, result: data });
   } catch (error) {
     console.error("Admin blog delete failed", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Unable to delete post" }, { status: 500 });
+    return Response.json({ error: "The record could not be deleted safely. Nothing was changed; try Archive in The Engine or contact support with the server log timestamp." }, { status: 500 });
   }
 }

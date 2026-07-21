@@ -1,0 +1,34 @@
+import fs from "node:fs";
+
+const read=file=>fs.readFileSync(file,"utf8");
+const migration=read("supabase/migrations/20260721100000_engine_localization_ai_system.sql");
+const manifest=read("src/lib/engineManifest.ts");
+const runtime=read("src/components/i18n/LocaleProvider.tsx");
+const ai=read("src/lib/aiAutomationServer.ts");
+const workflow=read(".github/workflows/database-migrations.yml");
+const navigationApi=read("src/app/api/admin/engine/navigation/route.ts");
+const navigationManager=read("src/components/admin/NavigationMenuManager.tsx");
+const publicChrome=read("src/components/site/PublicChrome.tsx");
+const notificationApi=read("src/app/api/admin/engine/notifications/route.ts");
+const notificationManager=read("src/components/admin/NotificationTemplateManager.tsx");
+const notificationRuntime=read("src/lib/supabaseAdmin.ts");
+const categories=[...manifest.matchAll(/\{ id: "([a-z_]+)", label:/g)].map(match=>match[1]);
+const required=["branding_design","navigation_menus","pages_sections","homepage_composition","service_taxonomies","salon_lifecycle","booking_availability","payments_subscriptions","search_discovery","markets_service_areas","media_uploads","languages_translations","notifications_templates","trust_quality","promotions_campaigns","customer_support","users_roles","ai_automation","test_data_maintenance","integrations_system","configuration_history"];
+const failures=[];
+if(categories.length!==21)failures.push(`Expected 21 Engine categories; found ${categories.length}`);
+for(const id of required)if(!categories.includes(id))failures.push(`Missing Engine category ${id}`);
+const localeSeedBlock=migration.split("insert into public.supported_locales")[1]?.split("on conflict(locale)")[0]||"";
+const localeCount=[...localeSeedBlock.matchAll(/^\('(?:[a-z]{2,3}|[a-z]{2,3}-[A-Z]{2})','/gm)].length;
+if(localeCount<37)failures.push(`Expected at least 37 seeded locales; found ${localeCount}`);
+for(const token of ["text_direction","translation_entry_versions","ai_automation_features","ai_prompt_versions","ai_generation_drafts","ai_usage_events","engine_system_components","navigation_items","notification_templates","admin_apply_notification_template"])if(!migration.includes(token))failures.push(`Migration missing ${token}`);
+for(const token of ["document.documentElement.dir","persistAccountLocale","Intl.PluralRules"])if(!runtime.includes(token))failures.push(`Localization runtime missing ${token}`);
+for(const token of ["SENSITIVE_PATTERNS","approvedAiProviders","ADAPTER_NOT_INSTALLED","deterministicDraft","KILL_SWITCH"])if(!ai.includes(token))failures.push(`AI safety layer missing ${token}`);
+for(const token of ["workflow_dispatch","production-database","db push --linked","verify:migrations"])if(!workflow.includes(token))failures.push(`Migration workflow missing ${token}`);
+for(const token of ["INTERNAL_HREF","requireAdminPermission(request, \"content\")","navigation_item_created","action === \"restore\""])if(!navigationApi.includes(token))failures.push(`Navigation API missing ${token}`);
+for(const token of ["Desktop header","Mobile bottom bar","Show New badge","Archive"])if(!navigationManager.includes(token))failures.push(`Navigation manager missing ${token}`);
+for(const token of ["getNavigationItems(\"header\"","getNavigationItems(\"mobile_menu\"","getNavigationItems(\"mobile_bottom\"","getNavigationItems(\"footer\""])if(!publicChrome.includes(token))failures.push(`Public navigation runtime missing ${token}`);
+for(const token of ["PLACEHOLDER","save_draft","publish","rollback","admin_security_events"])if(!notificationApi.includes(token))failures.push(`Notification API missing ${token}`);
+for(const token of ["Notification templates","Draft preview","Version history","Publish"])if(!notificationManager.includes(token))failures.push(`Notification manager missing ${token}`);
+for(const token of ["renderNotificationEmail","booking.customer_confirmed","booking.customer_cancelled","booking.customer_reminder"])if(!notificationRuntime.includes(token))failures.push(`Notification runtime missing ${token}`);
+if(failures.length){console.error(failures.join("\n"));process.exit(1)}
+console.log(`Engine expansion verified: ${categories.length} categories, ${localeCount} seeded locales, governed AI and migration workflow present.`);

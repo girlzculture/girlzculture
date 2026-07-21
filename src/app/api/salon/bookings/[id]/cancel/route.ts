@@ -1,8 +1,7 @@
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { deliverCancellationNotifications, requireSalonPermission } from "@/lib/supabaseAdmin";
 import { stripeRequest } from "@/lib/stripeServer";
-
-const reasons = new Set(["Fully booked", "Walk-in took the slot", "Stylist unavailable", "Salon closed", "Other"]);
+import { getEngineList } from "@/lib/engineConfigServer";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -12,6 +11,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const body = await request.json() as Record<string, unknown>;
     const reason = cleanText(body.reason, 80);
     const detail = cleanText(body.detail, 300);
+    const reasons=new Set(await getEngineList("quality.cancellation_reasons",["Customer requested","Fully booked","Walk-in took the slot","Stylist unavailable","Salon closed","Scheduling conflict","Payment issue","Other"],40));
     if (!reasons.has(reason)) throw new Error("Choose a cancellation reason.");
     if (reason === "Other" && !detail) throw new Error("Add a short explanation for Other.");
     const { data: booking, error: bookingError } = await admin.from("bookings").select("*").eq("id", id).eq("salon_id", salon.id).maybeSingle();

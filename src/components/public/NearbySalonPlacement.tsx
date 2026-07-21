@@ -9,7 +9,7 @@ import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
 import { DEFAULT_NEARBY_RADIUS_MILES, validCoordinates, type CustomerLocation } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 
-export default function NearbySalonPlacement({ title = "Salons Near You", description }: { title?: string; description?: string | null }) {
+export default function NearbySalonPlacement({ title = "Salons Near You", description,maxCards=6 }: { title?: string; description?: string | null;maxCards?:number }) {
   const locationState = useCustomerLocation();
   const [locationText, setLocationText] = useState("");
   const [salons, setSalons] = useState<PublicSalonResult[]>([]);
@@ -27,7 +27,7 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
     if (!location || !validCoordinates(location)) { setSalons([]); setTotal(0); return; }
     setLoading(true); setError("");
     try {
-      const query = new URLSearchParams({ lat: String(location.lat), lng: String(location.lng), radius: String(DEFAULT_NEARBY_RADIUS_MILES), limit: "12", offset: "0", sort: "distance" });
+      const query = new URLSearchParams({ lat: String(location.lat), lng: String(location.lng), radius: String(DEFAULT_NEARBY_RADIUS_MILES), limit: String(Math.max(1,Math.min(24,Math.round(maxCards)))), offset: "0", sort: "distance" });
       const response = await fetch(`/api/discovery/salons?${query}`, { cache: "no-store", signal });
       const body = await response.json() as { salons?: PublicSalonResult[]; total?: number; error?: string };
       if (!response.ok) throw new Error(body.error || "Nearby salons could not be loaded.");
@@ -45,7 +45,7 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
     return () => { window.clearTimeout(timer); controller.abort(); };
     // Coordinates are the complete proximity query inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location?.lat, location?.lng]);
+  }, [location?.lat, location?.lng,maxCards]);
 
   function resolve(next: CustomerLocation | null) {
     if (!next) return;

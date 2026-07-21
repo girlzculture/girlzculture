@@ -3,6 +3,7 @@ import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizePlan } from "@/lib/plans";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { geocodeSalonAddress } from "@/lib/geocodingServer";
+import { getEngineList } from "@/lib/engineConfigServer";
 
 function applicationMediaUrl(value: unknown) {
   const text = cleanText(value, 1000);
@@ -52,19 +53,27 @@ export async function POST(request: Request) {
     const missing = required.find((field) => !String(body[field] || "").trim());
     if (missing) return Response.json({ error: `Missing required field: ${missing.replaceAll("_", " ")}` }, { status: 400 });
     if (!body.consent_authorized || !body.consent_terms || !body.consent_photos) return Response.json({ error: "All confirmations are required." }, { status: 400 });
+    const accountEmail = cleanEmail(user.email);
+    const businessEmail = cleanEmail(body.business_email);
+    if (businessEmail !== accountEmail) {
+      return Response.json({ error: "Use the email address associated with your signed-in salon account." }, { status: 400 });
+    }
 
     const selectedPlan = normalizePlan(body.selected_plan);
+    const businessTypes=await getEngineList("catalog.business_types",["Braiding Studio","Hair Salon","Beauty Shop","Independent Braider","Mobile Braider","Natural Hair Studio","Other"],30);
+    const businessType=cleanText(body.business_type,80);
+    if(!businessTypes.includes(businessType))throw new Error("Choose an approved business type.");
     const yearsInOperation = Math.round(Number(body.years_in_operation));
     const stylistCount = Math.round(Number(body.stylist_count));
-    if (yearsInOperation < 0 || yearsInOperation > 150) throw new Error("Enter valid years in operation.");
-    if (stylistCount < 1 || stylistCount > 500) throw new Error("Enter the number of working stylists.");
+    if (!Number.isFinite(yearsInOperation) || yearsInOperation < 0 || yearsInOperation > 150) throw new Error("Enter valid years in operation.");
+    if (!Number.isFinite(stylistCount) || stylistCount < 1 || stylistCount > 500) throw new Error("Enter the number of working stylists.");
     const slugBase = cleanText(body.business_name, 120).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "salon";
     const salonPatch = {
       user_id: user.id, name: cleanText(body.business_name, 120), owner_name: cleanText(body.owner_name, 120),
-      email: cleanEmail(body.business_email), phone: cleanUsPhone(body.phone),
+      email: accountEmail, phone: cleanUsPhone(body.phone),
       address_street: cleanText(body.street_address, 180), address_line2: cleanText(body.address_line2, 120) || null, address_city: cleanText(body.city, 100), address_state: normalizeUsState(body.state),
       address_zip: normalizeUsZip(body.zip_code),
-      business_type: cleanText(body.business_type, 80), application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",
+      business_type: businessType, application_state: cleanText(body.state, 50), status: "Pending", verification_status: "Pending",
       logo_url: applicationMediaUrl(body.logo_url),
     };
     const salonResult = await admin.from("salons").select("id,slug").eq("user_id", user.id).maybeSingle();

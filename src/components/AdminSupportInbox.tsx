@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Mail, MessageSquare, Send } from "lucide-react";
 import { adminSupabase as supabase } from "@/lib/supabase";
 
@@ -25,14 +25,19 @@ export default function AdminSupportInbox({
   const [selectedId, setSelectedId] = useState("");
   const [response, setResponse] = useState("");
   const [filter, setFilter] = useState("All");
+  const [statuses,setStatuses]=useState(["Open","In Progress","Waiting on Customer","Resolved","Closed"]);
+  const [responseStatus,setResponseStatus]=useState("Resolved");
   const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
   const selected = tickets.find((ticket) => ticket.id === selectedId) || null;
   const visible = useMemo(() => filter === "All" ? tickets : tickets.filter((ticket) => ticket.status === filter), [filter, tickets]);
   const unread = tickets.filter((ticket) => !ticket.admin_read_at).length;
 
+  useEffect(()=>{let live=true;void fetch("/api/config?keys=support.ticket_statuses",{cache:"no-store"}).then(response=>response.json()).then(body=>{const configured=body?.config?.["support.ticket_statuses"];if(live&&Array.isArray(configured)&&configured.length)setStatuses(configured.map(String).filter(Boolean).slice(0,20));}).catch(error=>console.warn("Support status configuration unavailable; using safe defaults",error));return()=>{live=false}},[]);
+
   async function openTicket(ticket: Ticket) {
     setSelectedId(ticket.id || "");
+    setResponseStatus(ticket.status&&statuses.includes(ticket.status)?ticket.status:"Resolved");
     setNotice("");
     if (!ticket.id || ticket.admin_read_at) return;
     try {
@@ -60,12 +65,12 @@ export default function AdminSupportInbox({
       if (!session) throw new Error("Your admin session has expired.");
       const request = await fetch(`/api/admin/support/${selected.id}/respond`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ response, status: "Resolved" }),
+        body: JSON.stringify({ response, status: responseStatus }),
       });
       const body = await request.json();
       if (!request.ok) throw new Error(body.error || "Unable to respond");
       setTickets((rows) => rows.map((row) => row.id === body.data.id ? body.data : row));
-      setResponse(""); setNotice("Response saved and the request is resolved.");
+      setResponse(""); setNotice(`Response saved and the request is ${responseStatus.toLowerCase()}.`);
     } catch (error) {
       console.error("Admin support response error", error);
       setNotice(error instanceof Error ? error.message : "Unable to respond");
@@ -76,7 +81,7 @@ export default function AdminSupportInbox({
   const emptyLabel = mode === "complaints" ? "complaint" : "support request";
   return <div className="grid gap-5 xl:grid-cols-[390px_1fr]">
     <section className="rounded-[14px] border border-plum/10 bg-white p-4">
-      <div className="flex items-center justify-between gap-3"><h2 className="font-serif text-2xl text-plum">{heading}</h2><select value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-lg border border-plum/10 px-3 py-2 text-xs"><option>All</option><option>Open</option><option>In Progress</option><option>Resolved</option></select></div>
+      <div className="flex items-center justify-between gap-3"><h2 className="font-serif text-2xl text-plum">{heading}</h2><select value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-lg border border-plum/10 px-3 py-2 text-xs"><option>All</option>{statuses.map(status=><option key={status}>{status}</option>)}</select></div>
       <p className="mt-1 text-xs text-ink/55">{tickets.filter((ticket) => ticket.status === "Open").length} open · {unread} unread</p>
       <div className="mt-4 space-y-2">{visible.length ? visible.map((ticket) => <button key={ticket.id || ticket.subject || "ticket"} onClick={() => void openTicket(ticket)} className={`relative w-full rounded-xl border p-4 text-left ${selectedId === ticket.id ? "border-magenta bg-blush/30" : "border-plum/10"}`}>{!ticket.admin_read_at ? <span aria-label="Unread" className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-magenta" /> : null}<div className="flex items-center justify-between gap-2 pr-5"><b className="line-clamp-1 text-sm text-plum">{ticket.subject}</b><span className="rounded-full bg-blush px-2 py-1 text-[9px] font-bold text-magenta">{ticket.status}</span></div><p className="mt-1 text-xs text-ink/55">{ticket.requester_name} · {ticket.category}</p>{ticket.category === "Complaint" ? <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-[9px] font-bold ${ticket.booking_verified ? "bg-emerald-100 text-emerald-800" : "bg-amber/15 text-amber-900"}`}>{ticket.booking_verified ? "Booking verified · counts in quality" : "Unverified · human review only"}</span> : null}<p className="mt-2 line-clamp-2 text-xs leading-5 text-ink/70">{ticket.message}</p></button>) : <p className="rounded-xl bg-blush/20 p-6 text-center text-sm text-ink/55">No {emptyLabel}s in this view.</p>}</div>
     </section>
@@ -85,7 +90,7 @@ export default function AdminSupportInbox({
       <div className="mt-5 grid gap-3 rounded-xl bg-cream p-4 text-sm sm:grid-cols-2"><span className="flex items-center gap-2"><MessageSquare size={16} className="text-magenta" />{selected.requester_name}</span><a href={`mailto:${selected.requester_email}`} className="flex items-center gap-2 text-magenta"><Mail size={16} />{selected.requester_email}</a></div>
       <div className="mt-5 rounded-xl border border-plum/10 p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-ink/75">{selected.message}</p></div>
       {selected.admin_response ? <div className="mt-4 rounded-xl bg-blush/30 p-5"><b className="text-sm text-plum">Admin response</b><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{selected.admin_response}</p></div> : null}
-      <form onSubmit={respond} className="mt-5"><label className="text-xs font-bold text-plum">Reply<textarea required value={response} onChange={(event) => setResponse(event.target.value)} rows={6} placeholder="Write a helpful response…" className="mt-2 w-full rounded-xl border border-plum/10 p-4 font-normal outline-none focus:border-magenta" /></label>{notice ? <p className="mt-3 rounded-lg bg-blush/40 p-3 text-sm text-plum">{notice}</p> : null}<button disabled={sending} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-magenta px-6 py-3 text-sm font-bold text-white disabled:opacity-60"><Send size={16} />{sending ? "Sending…" : "Send response"}</button></form>
+      <form onSubmit={respond} className="mt-5"><label className="text-xs font-bold text-plum">Reply<textarea required value={response} onChange={(event) => setResponse(event.target.value)} rows={6} placeholder="Write a helpful response…" className="mt-2 w-full rounded-xl border border-plum/10 p-4 font-normal outline-none focus:border-magenta" /></label><label className="mt-3 block text-xs font-bold text-plum">Status after reply<select value={responseStatus} onChange={event=>setResponseStatus(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-plum/10 bg-white px-3 font-normal">{statuses.map(status=><option key={status}>{status}</option>)}</select></label>{notice ? <p className="mt-3 rounded-lg bg-blush/40 p-3 text-sm text-plum">{notice}</p> : null}<button disabled={sending} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-magenta px-6 py-3 text-sm font-bold text-white disabled:opacity-60"><Send size={16} />{sending ? "Sending…" : "Send response"}</button></form>
     </> : <div className="grid min-h-[360px] place-items-center text-sm text-ink/50">Select a {emptyLabel}.</div>}</section>
   </div>;
 }

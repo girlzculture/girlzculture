@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3, Bell, Building2, CalendarDays, CircleDollarSign, ClipboardList, CreditCard,
-  FileText, Flag, Headphones, Home, Menu, MessageSquare, Search, Settings, Star, UsersRound,
+  FileText, Flag, Headphones, Home, Menu, MessageSquare, Search, Settings, SlidersHorizontal, Star, UsersRound,
 } from "lucide-react";
 import { adminSupabase as supabase, getSessionForScope } from "@/lib/supabase";
 import AdminContentManager from "@/components/AdminContentManager";
@@ -18,26 +18,30 @@ import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
 import AdminMarketingWorkspace from "@/components/admin/AdminMarketingWorkspace";
+import EngineControlCenter from "@/components/admin/EngineControlCenter";
+import IdentityDeletionManager from "@/components/admin/IdentityDeletionManager";
 import { US_STATES } from "@/lib/usStates";
 
-export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
+export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
   subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[]; settings: Row[]; billingEvents: Row[];
+  identityConflicts: Row[];
 };
 
-const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [] };
+const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [], identityConflicts: [] };
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
   ["customers", "Customers", UsersRound], ["bookings", "Bookings", CalendarDays], ["quality", "Quality & Performance", Star],
   ["reviews", "Reviews", MessageSquare], ["finance", "Payments & Finance", CircleDollarSign], ["marketing", "Marketing & Promotions", BarChart3],
   ["content", "Content Management", FileText], ["support", "Customer Support", Headphones], ["complaints", "Complaints", Flag], ["subscriptions", "Subscriptions", CreditCard],
+  ["engine", "The Engine", SlidersHorizontal],
   ["settings", "Settings & Team", Settings],
 ];
 
-const permissionForSection = (section: AdminSection) => section === "complaints" ? "support" : section;
+const permissionForSection = (section: AdminSection) => section === "complaints" ? "support" : section === "engine" ? "settings" : section;
 type InboxCounts = { support: number; complaints: number };
 
 export default function AdminDashboard({ section }: { section: AdminSection; preview?: boolean }) {
@@ -73,7 +77,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
       bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
       subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
-      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events),
+      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue),
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
@@ -151,7 +155,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     salons: rows(data?.salons), applications: rows(data?.applications), customers: rows(data?.customers),
     bookings: rows(data?.bookings), reviews: rows(data?.reviews), tickets: rows(data?.tickets),
     subscriptions: rows(data?.subscriptions), complaints: rows(data?.complaints), admins: rows(data?.admins),
-    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents),
+    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents), identityConflicts: rows(data?.identityConflicts),
   };
   const props = { ...safeData, selected, setSelected, decide, update, onCreated };
   switch (section) {
@@ -168,6 +172,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} mode="support" onRead={onTicketRead} /><BookingInbox scope="admin" /></div>;
     case "complaints": return <AdminSupportInbox initialTickets={safeData.tickets} mode="complaints" onRead={onTicketRead} />;
     case "subscriptions": return <Subscriptions {...props} />;
+    case "engine": return <EngineControlCenter />;
     default: return <SettingsTeam {...props} />;
   }
 }
@@ -303,8 +308,8 @@ function Subscriptions(p: any) {
 }
 
 function SettingsTeam(p: any) {
-  void p;
-  return <div className="space-y-5"><Panel title="Platform Settings"><p className="text-sm leading-6 text-ink/70">Public content is managed in Content Management. Secrets and infrastructure settings remain server-side environment variables.</p><Link href="/admin/content" className="mt-4 inline-flex rounded-lg bg-magenta px-6 py-3 font-bold text-white">Open Content Management</Link></Panel><TeamUserManager scope="admin" /></div>;
+  const conflicts = rows(p.identityConflicts);
+  return <div className="space-y-5"><Panel title="Platform Settings"><p className="text-sm leading-6 text-ink/70">Business rules, defaults, languages, media constraints, and safe integration status now live in The Engine. Public editorial content remains in Content Management; secrets remain in deployment environment variables.</p><div className="mt-4 flex flex-wrap gap-2"><Link href="/admin/engine" className="inline-flex rounded-lg bg-magenta px-6 py-3 font-bold text-white">Open The Engine</Link><Link href="/admin/content" className="inline-flex rounded-lg border border-magenta px-6 py-3 font-bold text-magenta">Open Content Management</Link></div></Panel><Panel title="Identity conflict review"><p className="mb-4 text-xs leading-5 text-ink/60">One email may belong to only one Auth user and one primary role. Historical conflicts are listed for deliberate review; the system never merges or deletes them automatically.</p>{conflicts.length?<div className="space-y-3">{conflicts.map((conflict:Row)=><article key={conflict.email_normalized} className="rounded-xl border border-amber/30 bg-amber/5 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><b className="break-all text-sm text-plum">{conflict.email_normalized}</b><Badge value={conflict.resolution_status}/></div><p className="mt-2 text-xs text-ink/60">Roles: {Array.isArray(conflict.roles)&&conflict.roles.length?conflict.roles.join(", "):"Review required"}</p><p className="mt-1 text-xs text-ink/50">{Array.isArray(conflict.user_ids)?conflict.user_ids.length:0} Auth user record(s) · {Array.isArray(conflict.records)?conflict.records.length:0} linked record(s)</p>{Array.isArray(conflict.records)?<ul className="mt-3 space-y-1 border-t border-plum/10 pt-3 text-[10px] text-ink/55">{conflict.records.map((record:Row,index:number)=><li key={`${record.record_type}-${record.record_id}-${index}`}>{record.record_type}: {record.role||"Auth identity"} · {String(record.record_id||"").slice(0,12)}</li>)}</ul>:null}</article>)}</div>:<EmptyState title="No identity conflicts" body="Every known email is assigned to one canonical user and one primary role."/>}</Panel><TeamUserManager scope="admin" /><IdentityDeletionManager /></div>;
 }
 
 function recentActivity(p: DataState) {
@@ -335,4 +340,4 @@ function money(value: number) { return value.toLocaleString("en-US", { style: "c
 function minorMoney(value: number, currency: unknown) { try { return (Number(value || 0) / 100).toLocaleString("en-US", { style: "currency", currency: String(currency || "usd").toUpperCase() }); } catch { return `${String(currency || "usd").toUpperCase()} ${(Number(value || 0) / 100).toFixed(2)}`; } }
 function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—"; }
 function dateTime(value?: string, timeZone?: string) { return value ? new Date(value).toLocaleString("en-US", { timeZone: timeZone || "America/New_York", dateStyle: "medium", timeStyle: "short" }) : "—"; }
-function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Audit Stripe subscription invoices, plan changes, refunds, credits, and failures by state.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }
+function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Audit Stripe subscription invoices, plan changes, refunds, credits, and failures by state.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", engine: "Govern platform behavior, defaults, publication, and integration readiness.", settings: "Review platform configuration and authorized admin access." })[section]; }

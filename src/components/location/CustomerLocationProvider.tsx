@@ -16,28 +16,53 @@ type LocationContextValue = {
 const STORAGE_KEY = "girlz-culture-customer-location-v1";
 const CustomerLocationContext = createContext<LocationContextValue | null>(null);
 
+function readStoredLocation() {
+  try {
+    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null") as CustomerLocation | null;
+  } catch {
+    return null;
+  }
+}
+
+function persistLocation(location: CustomerLocation) {
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(location)); } catch { /* Storage can be unavailable in hardened browsers. */ }
+}
+
+function removeStoredLocation() {
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* Keep in-memory location usable without storage. */ }
+}
+
 export default function CustomerLocationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocationState] = useState<CustomerLocation | null>(null);
   const [ready, setReady] = useState(false);
   const [permissionError, setPermissionError] = useState("");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const query = new URLSearchParams(window.location.search);
-        const fromUrl: CustomerLocation = { lat: Number(query.get("lat")), lng: Number(query.get("lng")), label: String(query.get("location") || "").trim(), source: "explicit" };
-        if (fromUrl.label && validCoordinates(fromUrl)) {
-          setLocationState(fromUrl);
-          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(fromUrl));
-          setReady(true);
-          return;
-        }
-        const parsed = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null") as CustomerLocation | null;
-        if (parsed && validCoordinates(parsed) && parsed.label && ["explicit", "device", "saved"].includes(parsed.source)) setLocationState(parsed);
-      } catch { sessionStorage.removeItem(STORAGE_KEY); }
+    function restoreLocation() {
+      const query = new URLSearchParams(window.location.search);
+      const rawLatitude = query.get("lat");
+      const rawLongitude = query.get("lng");
+      const fromUrl: CustomerLocation | null = rawLatitude?.trim() && rawLongitude?.trim()
+        ? { lat: Number(rawLatitude), lng: Number(rawLongitude), label: String(query.get("location") || "").trim(), source: "explicit" }
+        : null;
+      if (fromUrl?.label && validCoordinates(fromUrl)) {
+        setLocationState(fromUrl);
+        persistLocation(fromUrl);
+        setReady(true);
+        return;
+      }
+      const parsed = readStoredLocation();
+      setLocationState(parsed && validCoordinates(parsed) && parsed.label && ["explicit", "device", "saved"].includes(parsed.source) ? parsed : null);
       setReady(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
+    }
+    const timer = window.setTimeout(restoreLocation, 0);
+    window.addEventListener("popstate", restoreLocation);
+    window.addEventListener("pageshow", restoreLocation);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("popstate", restoreLocation);
+      window.removeEventListener("pageshow", restoreLocation);
+    };
   }, []);
 
   const setLocation = useCallback((next: CustomerLocation) => {
@@ -45,13 +70,13 @@ export default function CustomerLocationProvider({ children }: { children: React
     const safe = { ...next, label: next.label.trim().slice(0, 160) };
     setLocationState(safe);
     setPermissionError("");
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
+    persistLocation(safe);
   }, []);
 
   const clearLocation = useCallback(() => {
     setLocationState(null);
     setPermissionError("");
-    sessionStorage.removeItem(STORAGE_KEY);
+    removeStoredLocation();
   }, []);
 
   const useDeviceLocation = useCallback(async () => {

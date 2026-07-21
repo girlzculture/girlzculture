@@ -17,8 +17,9 @@ import {
 
 type Row = Record<string, any> & { id?: string; name?: string };
 type MasterStyle = Record<string, any> & { id: string; name: string; category?: string; category_id?: string; service_group_id?: string; service_category?: { id?: string; name?: string; slug?: string } | null; service_group?: { id?: string; name?: string; category_id?: string } | null };
-type OptionRow = { label: string; price_add: number };
-type MaterialRow = { id?: string; name: string; price: number; longevity_weeks: number; quality_grade: string };
+type NumericValue = number | "";
+type OptionRow = { label: string; price_add: NumericValue };
+type MaterialRow = { id?: string; name: string; price: NumericValue; longevity_weeks: number; quality_grade: string };
 type Context = {
   salon: Row;
   styles: Row[];
@@ -44,14 +45,14 @@ function normalizedOptions(raw: unknown): OptionRow[] {
   }).filter((item) => item.label);
 }
 
-function MoneyInput({ value, onChange, label = "Price" }: { value: number; onChange: (value: number) => void; label?: string }) {
-  return <label className="text-[10px] font-bold">{label}<span className="mt-1 flex min-h-10 items-center rounded-[7px] border border-plum/15 bg-white px-3"><span className="mr-1 text-ink/45">$</span><input type="number" inputMode="decimal" min="0" max="10000" step="0.01" value={value} onChange={(event) => onChange(Math.min(10000,Math.max(0,Number(event.target.value)||0)))} className="min-w-0 flex-1 outline-none" /></span></label>;
+function MoneyInput({ value, onChange, label = "Price" }: { value: NumericValue; onChange: (value: NumericValue) => void; label?: string }) {
+  return <label className="text-[10px] font-bold">{label}<span className="mt-1 flex min-h-10 items-center rounded-[7px] border border-plum/15 bg-white px-3"><span className="mr-1 text-ink/45">$</span><input type="number" inputMode="decimal" min="0" max="10000" step="0.01" value={value} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} onKeyDown={(event)=>{if(/[eE+-]/.test(event.key))event.preventDefault()}} className="min-w-0 flex-1 outline-none" /></span></label>;
 }
 
 function OptionEditor({ title, options, rows, setRows, allowOther = false }: { title: string; options: readonly string[]; rows: OptionRow[]; setRows: React.Dispatch<React.SetStateAction<OptionRow[]>>; allowOther?: boolean }) {
   function add() {
     const next = options.find((option) => !rows.some((row) => row.label === option)) || options[0];
-    if (next) setRows((current) => [...current, { label: next, price_add: 0 }]);
+    if (next) setRows((current) => [...current, { label: next, price_add: "" }]);
   }
   return <section className="rounded-[11px] border border-plum/10 bg-cream/35 p-4">
     <div className="flex items-center justify-between gap-3"><h3 className="font-serif text-lg text-plum">{title}</h3><button type="button" onClick={add} className="flex items-center gap-1 text-[10px] font-bold text-magenta"><Plus size={13} />Add another</button></div>
@@ -68,7 +69,7 @@ function OptionEditor({ title, options, rows, setRows, allowOther = false }: { t
 }
 
 function ManagedAddonEditor({ options, rows, setRows }: { options: string[]; rows: OptionRow[]; setRows: React.Dispatch<React.SetStateAction<OptionRow[]>> }) {
-  return <section className="rounded-[11px] border border-plum/10 bg-cream/35 p-4"><h3 className="font-serif text-lg text-plum">Add-ons</h3><p className="mt-1 text-[10px] text-ink/55">Choose from the platform catalog, then set your price.</p><div className="mt-3 space-y-2">{options.map((option) => { const selected=rows.find((row)=>row.label===option); return <div key={option} className="grid grid-cols-[1fr_115px] items-center gap-3 rounded-[8px] border border-plum/10 bg-white p-2"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={Boolean(selected)} onChange={(event)=>setRows((current)=>event.target.checked?[...current,{label:option,price_add:0}]:current.filter((row)=>row.label!==option))} className="accent-magenta"/>{option}</label>{selected?<MoneyInput value={selected.price_add} onChange={(value)=>setRows((current)=>current.map((row)=>row.label===option?{...row,price_add:value}:row))}/>:<span className="text-right text-[10px] text-ink/40">Not offered</span>}</div>;})}{!options.length?<Empty text="No active add-ons are available for this category."/>:null}</div></section>;
+  return <section className="rounded-[11px] border border-plum/10 bg-cream/35 p-4"><h3 className="font-serif text-lg text-plum">Add-ons</h3><p className="mt-1 text-[10px] text-ink/55">Choose from the platform catalog, then set your price.</p><div className="mt-3 space-y-2">{options.map((option) => { const selected=rows.find((row)=>row.label===option); return <div key={option} className="grid grid-cols-[1fr_115px] items-center gap-3 rounded-[8px] border border-plum/10 bg-white p-2"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={Boolean(selected)} onChange={(event)=>setRows((current)=>event.target.checked?[...current,{label:option,price_add:""}]:current.filter((row)=>row.label!==option))} className="accent-magenta"/>{option}</label>{selected?<MoneyInput value={selected.price_add} onChange={(value)=>setRows((current)=>current.map((row)=>row.label===option?{...row,price_add:value}:row))}/>:<span className="text-right text-[10px] text-ink/40">Not offered</span>}</div>;})}{!options.length?<Empty text="No active add-ons are available for this category."/>:null}</div></section>;
 }
 
 export function StructuredStylesEditor({ c }: { c: Context }) {
@@ -81,10 +82,10 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
   const [groupId, setGroupId] = useState("");
   const [masterId, setMasterId] = useState("");
   const [description, setDescription] = useState("");
-  const [durationMin, setDurationMin] = useState(0);
-  const [durationMax, setDurationMax] = useState(0);
-  const [basePrice, setBasePrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(0);
+  const [durationMin, setDurationMin] = useState<NumericValue>("");
+  const [durationMax, setDurationMax] = useState<NumericValue>("");
+  const [basePrice, setBasePrice] = useState<NumericValue>("");
+  const [maxPrice, setMaxPrice] = useState<NumericValue>("");
   const [bufferMinutes, setBufferMinutes] = useState(15);
   const [sizes, setSizes] = useState<OptionRow[]>([]);
   const [lengths, setLengths] = useState<OptionRow[]>([]);
@@ -93,6 +94,9 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
   const [included, setIncluded] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [engineOptions,setEngineOptions]=useState({sizes:[...SIZE_OPTIONS] as string[],lengths:[...LENGTH_OPTIONS] as string[],materials:[...MATERIAL_OPTIONS] as string[],quality:[...MATERIAL_QUALITY_OPTIONS] as string[],longevity:[...MATERIAL_LONGEVITY_WEEKS] as number[],included:[...INCLUDED_ITEM_OPTIONS] as string[],defaultBuffer:15});
+
+  useEffect(()=>{let live=true;void fetch("/api/config?keys=catalog.size_options,catalog.length_options,catalog.material_options,catalog.material_quality_grades,catalog.material_longevity_weeks,catalog.included_items,booking.default_buffer_minutes").then(response=>response.json()).then(body=>{if(!live)return;const config=(body.config||{}) as Record<string,unknown>;const list=(key:string,fallback:string[])=>Array.isArray(config[key])?config[key].map(String).filter(Boolean):fallback;const longevity=list("catalog.material_longevity_weeks",MATERIAL_LONGEVITY_WEEKS.map(String)).map(Number).filter(value=>Number.isInteger(value)&&value>0&&value<=52);const defaultBuffer=Number(config["booking.default_buffer_minutes"]);setEngineOptions({sizes:list("catalog.size_options",[...SIZE_OPTIONS]),lengths:list("catalog.length_options",[...LENGTH_OPTIONS]),materials:list("catalog.material_options",[...MATERIAL_OPTIONS]),quality:list("catalog.material_quality_grades",[...MATERIAL_QUALITY_OPTIONS]),longevity:longevity.length?longevity:[...MATERIAL_LONGEVITY_WEEKS],included:list("catalog.included_items",[...INCLUDED_ITEM_OPTIONS]),defaultBuffer:Number.isFinite(defaultBuffer)&&defaultBuffer>=0&&defaultBuffer<=180?defaultBuffer:15});}).catch(error=>console.warn("Salon catalog Engine options unavailable; using safe defaults",error));return()=>{live=false}},[]);
 
   useEffect(() => {
     let live = true;
@@ -109,11 +113,11 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
     let live = true;
     setMasterId(String(active?.master_style_id || ""));
     setDescription(String(active?.description || ""));
-    setDurationMin(Number(active?.duration_min_hours || 0));
-    setDurationMax(Number(active?.duration_max_hours || 0));
-    setBasePrice(Number(active?.base_price || 0));
-    setMaxPrice(Number(active?.price_display_max || active?.base_price || 0));
-    setBufferMinutes(Number(active?.buffer_minutes ?? 15));
+    setDurationMin(active?.duration_min_hours == null ? "" : Number(active.duration_min_hours));
+    setDurationMax(active?.duration_max_hours == null ? "" : Number(active.duration_max_hours));
+    setBasePrice(active?.base_price == null ? "" : Number(active.base_price));
+    setMaxPrice(active?.price_display_max == null ? (active?.base_price == null ? "" : Number(active.base_price)) : Number(active.price_display_max));
+    setBufferMinutes(Number(active?.buffer_minutes ?? engineOptions.defaultBuffer));
     setSizes(normalizedOptions(active?.size_options));
     setLengths(normalizedOptions(active?.length_options));
     setAddons(normalizedOptions(active?.addons));
@@ -125,7 +129,7 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
       if (error) c.setNotice(error.message); else setMaterials((data || []).map((row) => ({ id: row.id, name: row.name, price: Number(row.price || 0), longevity_weeks: Number(row.longevity_weeks || 4), quality_grade: row.quality_grade || "Good" })));
     });
     return () => { live = false; };
-  }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active?.id,engineOptions.defaultBuffer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chosenMaster = masters.find((master) => master.id === masterId);
   useEffect(()=>{if(!chosenMaster)return;setCategoryId(String(chosenMaster.category_id||""));setGroupId(String(chosenMaster.service_group_id||chosenMaster.service_group?.id||""));},[chosenMaster]);
@@ -137,6 +141,10 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!masterId || !chosenMaster) { c.setNotice("Choose a service from the managed style list."); return; }
+    if (durationMin === "" || durationMax === "" || basePrice === "") { c.setNotice("Enter the service duration and base price before saving."); return; }
+    if (durationMax < durationMin) { c.setNotice("Maximum duration must be equal to or greater than minimum duration."); return; }
+    const resolvedMaxPrice = maxPrice === "" ? basePrice : maxPrice;
+    if (resolvedMaxPrice < basePrice) { c.setNotice("Maximum price must be equal to or greater than base price."); return; }
     setSaving(true);
     const saved = await c.saveRecord("styles", {
       master_style_id: masterId,
@@ -149,16 +157,16 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
       buffer_minutes: bufferMinutes,
       base_price: basePrice,
       price_display_min: basePrice,
-      price_display_max: Math.max(basePrice, maxPrice),
-      size_options: sizes,
-      length_options: lengths,
-      addons,
+      price_display_max: resolvedMaxPrice,
+      size_options: sizes.map((row)=>({...row,price_add:row.price_add === "" ? 0 : row.price_add})),
+      length_options: lengths.map((row)=>({...row,price_add:row.price_add === "" ? 0 : row.price_add})),
+      addons: addons.map((row)=>({...row,price_add:row.price_add === "" ? 0 : row.price_add})),
       included_items: included,
       option_groups: Array.isArray(active?.option_groups) ? active.option_groups : [],
       photos,
     }, active?.id);
     if (saved?.id) {
-      const { error: materialError } = await supabase.rpc("replace_style_materials", { p_style_id: saved.id, p_materials: materials.map((material) => ({ name: material.name, price: material.price, longevity_weeks: material.longevity_weeks, quality_grade: material.quality_grade, option_type: "material", metadata: {} })) });
+      const { error: materialError } = await supabase.rpc("replace_style_materials", { p_style_id: saved.id, p_materials: materials.map((material) => ({ name: material.name, price: material.price === "" ? 0 : material.price, longevity_weeks: material.longevity_weeks, quality_grade: material.quality_grade, option_type: "material", metadata: {} })) });
       if (materialError) c.setNotice(materialError.message);
       c.setStyles((rows) => active ? rows.map((row) => row.id === active.id ? saved : row) : [saved, ...rows]);
       c.setSelectedStyle(saved.id);
@@ -167,8 +175,8 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
   }
 
   function addMaterial() {
-    const next = MATERIAL_OPTIONS.find((option) => !materials.some((material) => material.name === option)) || MATERIAL_OPTIONS[0];
-    if (next) setMaterials((current) => [...current, { name: next, price: 0, longevity_weeks: 4, quality_grade: "Good" }]);
+    const next = engineOptions.materials.find((option) => !materials.some((material) => material.name === option)) || engineOptions.materials[0];
+    if (next) setMaterials((current) => [...current, { name: next, price: "", longevity_weeks: 4, quality_grade: "Good" }]);
   }
 
   return <>
@@ -177,10 +185,10 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
       <EditorPanel><h2 className="font-serif text-xl text-plum">Your Services</h2><div className="mt-3 space-y-2">{c.styles.map((style) => { const managed = masters.find((master) => master.id === style.master_style_id); return <button key={style.id} type="button" onClick={() => c.setSelectedStyle(style.id || null)} className={`grid w-full ${style.photos?.[0] ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[1fr_auto]"} gap-3 rounded-[10px] border p-3 text-left ${active?.id === style.id ? "border-magenta bg-blush/30" : "border-plum/10"}`}>{style.photos?.[0] ? <Image unoptimized width={64} height={64} src={String(style.photos[0])} alt={style.name || "Service"} className="h-16 w-16 rounded-[8px] object-cover" /> : null}<span><b className="font-serif text-base">{style.name}</b><span className="mt-1 block text-[10px] text-ink/55">{managed?.service_category?.name || "Service"} · {style.category || "General"} · {Number(style.duration_min_hours || 0)}–{Number(style.duration_max_hours || 0)} hrs</span>{!style.photos?.[0] ? <span className="mt-1 flex items-center gap-1 text-[9px] text-ink/40"><ImageIcon size={11} />No service image uploaded</span> : null}</span><span className="text-right text-[10px]">From<br /><b className="text-sm">${Number(style.price_display_min || style.base_price || 0)}</b></span></button>; })}{!c.styles.length ? <Empty text="Add your first service." /> : null}</div></EditorPanel>
       <form key={active?.id || "new"} onSubmit={save}><EditorPanel><div className="flex items-center justify-between"><h2 className="font-serif text-xl text-plum">{active ? "Edit Service" : "Add Service"}</h2><span className="text-[9px] font-bold uppercase text-green-700">Category-aware</span></div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2"><SelectField label="Top-level category" value={categoryId} onChange={(value)=>{setCategoryId(value);setGroupId("");setMasterId("");setAddons([]);}} options={categories.map((category)=>({value:String(category.id),label:String(category.name)}))} placeholder="Choose category" /><SelectField label="Service group" value={groupId} onChange={(value)=>{setGroupId(value);setMasterId("");}} options={availableGroups.map((group)=>({value:String(group.id),label:String(group.name)}))} placeholder="Choose service group" /><SelectField label="Service name" value={masterId} onChange={setMasterId} options={availableServices.map((master)=>({value:String(master.id),label:master.name}))} placeholder="Choose service name" /><label className="sm:col-span-2 text-[10px] font-bold">Description<textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 500))} rows={3} className="mt-1 w-full rounded-[7px] border border-plum/15 p-3 font-normal" /></label><NumberField label="Duration minimum (hours)" value={durationMin} onChange={setDurationMin} step="0.25" max={24}/><NumberField label="Duration maximum (hours)" value={durationMax} onChange={setDurationMax} step="0.25" max={24}/><MoneyInput label="Base price" value={basePrice} onChange={setBasePrice} /><MoneyInput label="Maximum displayed price" value={maxPrice} onChange={setMaxPrice} /><SelectField label="Cleanup buffer" value={String(bufferMinutes)} onChange={(value) => setBufferMinutes(Number(value))} options={[0,15,30,45,60].map((value) => ({ value: String(value), label: `${value} minutes` }))} /></div>
-        {isBraiding ? <><div className="mt-5 grid gap-4 lg:grid-cols-2"><OptionEditor title="Size Options" options={SIZE_OPTIONS} rows={sizes} setRows={setSizes} /><OptionEditor title="Length Options" options={LENGTH_OPTIONS} rows={lengths} setRows={setLengths} /><ManagedAddonEditor options={availableAddons} rows={addons} setRows={setAddons} />
-          <section className="rounded-[11px] border border-plum/10 bg-cream/35 p-4"><div className="flex items-center justify-between"><h3 className="font-serif text-lg text-plum">Hair / Material</h3><button type="button" onClick={addMaterial} className="flex items-center gap-1 text-[10px] font-bold text-magenta"><Plus size={13} />Add another</button></div><div className="mt-3 space-y-3">{materials.map((material, index) => <div key={`${material.name}-${index}`} className="rounded-[8px] border border-plum/10 bg-white p-3"><div className="grid gap-2 sm:grid-cols-2"><SelectField label="Material" value={material.name} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, name: value } : item))} options={MATERIAL_OPTIONS.map((value) => ({ value, label: value }))} /><MoneyInput value={material.price} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, price: value } : item))} /><SelectField label="Longevity" value={String(material.longevity_weeks)} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, longevity_weeks: Number(value) } : item))} options={MATERIAL_LONGEVITY_WEEKS.map((value) => ({ value: String(value), label: `${value} week${value === 1 ? "" : "s"}` }))} /><SelectField label="Quality" value={material.quality_grade} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, quality_grade: value } : item))} options={MATERIAL_QUALITY_OPTIONS.map((value) => ({ value, label: value }))} /></div><button type="button" onClick={() => setMaterials((current) => current.filter((_, rowIndex) => rowIndex !== index))} className="mt-2 flex items-center gap-1 text-[10px] text-magenta"><Trash2 size={12} />Remove material</button></div>)}{!materials.length ? <Empty text="No material choices selected." /> : null}</div></section>
+        {isBraiding ? <><div className="mt-5 grid gap-4 lg:grid-cols-2"><OptionEditor title="Size Options" options={engineOptions.sizes} rows={sizes} setRows={setSizes} /><OptionEditor title="Length Options" options={engineOptions.lengths} rows={lengths} setRows={setLengths} /><ManagedAddonEditor options={availableAddons} rows={addons} setRows={setAddons} />
+          <section className="rounded-[11px] border border-plum/10 bg-cream/35 p-4"><div className="flex items-center justify-between"><h3 className="font-serif text-lg text-plum">Hair / Material</h3><button type="button" onClick={addMaterial} className="flex items-center gap-1 text-[10px] font-bold text-magenta"><Plus size={13} />Add another</button></div><div className="mt-3 space-y-3">{materials.map((material, index) => <div key={`${material.name}-${index}`} className="rounded-[8px] border border-plum/10 bg-white p-3"><div className="grid gap-2 sm:grid-cols-2"><SelectField label="Material" value={material.name} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, name: value } : item))} options={engineOptions.materials.map((value) => ({ value, label: value }))} /><MoneyInput value={material.price} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, price: value } : item))} /><SelectField label="Longevity" value={String(material.longevity_weeks)} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, longevity_weeks: Number(value) } : item))} options={engineOptions.longevity.map((value) => ({ value: String(value), label: `${value} week${value === 1 ? "" : "s"}` }))} /><SelectField label="Quality" value={material.quality_grade} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, quality_grade: value } : item))} options={engineOptions.quality.map((value) => ({ value, label: value }))} /></div><button type="button" onClick={() => setMaterials((current) => current.filter((_, rowIndex) => rowIndex !== index))} className="mt-2 flex items-center gap-1 text-[10px] text-magenta"><Trash2 size={12} />Remove material</button></div>)}{!materials.length ? <Empty text="No material choices selected." /> : null}</div></section>
         </div>
-        <section className="mt-4 rounded-[11px] border border-plum/10 p-4"><h3 className="font-serif text-lg text-plum">What’s Included</h3><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{INCLUDED_ITEM_OPTIONS.map((item) => <label key={item} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={included.includes(item)} onChange={() => setIncluded((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item])} className="accent-magenta" />{item}</label>)}</div></section></> : <div className="mt-5 grid gap-4 lg:grid-cols-2"><ManagedAddonEditor options={availableAddons} rows={addons} setRows={setAddons}/><section className="rounded-[11px] border border-plum/10 bg-blush/25 p-4 text-xs leading-5 text-plum">This category uses the generic option-group model. Category-specific controls can be enabled when that category is launched; the managed catalog and checkout already support them.</section></div>}
+        <section className="mt-4 rounded-[11px] border border-plum/10 p-4"><h3 className="font-serif text-lg text-plum">What’s Included</h3><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{engineOptions.included.map((item) => <label key={item} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={included.includes(item)} onChange={() => setIncluded((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item])} className="accent-magenta" />{item}</label>)}</div></section></> : <div className="mt-5 grid gap-4 lg:grid-cols-2"><ManagedAddonEditor options={availableAddons} rows={addons} setRows={setAddons}/><section className="rounded-[11px] border border-plum/10 bg-blush/25 p-4 text-xs leading-5 text-plum">This category uses the generic option-group model. Category-specific controls can be enabled when that category is launched; the managed catalog and checkout already support them.</section></div>}
         <section className="mt-4 rounded-[11px] border border-plum/10 p-4"><h3 className="font-serif text-lg text-plum">Service Image</h3><p className="mt-1 text-[10px] text-ink/55">Only salon-uploaded work is shown. No stock or generated fallback will appear.</p>{active?.id ? <ImageUpload bucket="style-photos" folder={`styles/${active.id}`} label="Upload image" value={photos} multiple maxFiles={6} onChange={(value) => setPhotos(Array.isArray(value) ? value : [])} /> : <p className="mt-3 rounded-[8px] bg-blush/30 p-3 text-xs text-plum">Save the service details first, then upload its images.</p>}</section>
         <button disabled={saving} className="mt-5 min-h-12 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save Service"}</button>
       </EditorPanel></form>
@@ -194,17 +202,17 @@ export function StructuredStylistsEditor({ c }: { c: Context }) {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState<string[]>([]);
-  const [years, setYears] = useState(0);
+  const [years, setYears] = useState<NumericValue>("");
   const [avatar, setAvatar] = useState("");
   const [portfolio, setPortfolio] = useState<string[]>([]);
   const [creatingDraft, setCreatingDraft] = useState(false);
 
   useEffect(() => { let live = true; supabase.from("master_styles").select("id,name").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => { if (!live) return; if (error) c.setNotice(error.message); else setMasters((data || []) as MasterStyle[]); }); return () => { live = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setName(String(active?.name || "")); setBio(String(active?.bio || "").slice(0, 250)); setSpecialties(Array.isArray(active?.specialties) ? active.specialties.map(String) : []); setYears(Number(active?.years_experience || 0)); setAvatar(String(active?.avatar_url || "")); setPortfolio(Array.isArray(active?.photos) ? active.photos.map(String) : []); }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setName(String(active?.name || "")); setBio(String(active?.bio || "").slice(0, 250)); setSpecialties(Array.isArray(active?.specialties) ? active.specialties.map(String) : []); setYears(active?.years_experience == null ? "" : Number(active.years_experience)); setAvatar(String(active?.avatar_url || "")); setPortfolio(Array.isArray(active?.photos) ? active.photos.map(String) : []); }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const saved = await c.saveRecord("stylists", { name: name.trim(), bio: bio.slice(0, 250), specialties, years_experience: Math.min(70,Math.max(0,years)), avatar_url: avatar || null, photos: portfolio, is_active: true, is_draft: false }, active?.id);
+    const saved = await c.saveRecord("stylists", { name: name.trim(), bio: bio.slice(0, 250), specialties, years_experience: years === "" ? 0 : Math.min(70,Math.max(0,years)), avatar_url: avatar || null, photos: portfolio, is_active: true, is_draft: false }, active?.id);
     if (!saved) return;
     c.setStylists((rows) => active ? rows.map((row) => row.id === active.id ? saved : row) : [saved, ...rows]);
     c.setSelectedStylist(saved.id || null);
@@ -233,4 +241,4 @@ function EditorTitle({ title, subtitle, action }: { title: string; subtitle: str
 function EditorPanel({ children }: { children: React.ReactNode }) { return <section className="min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5">{children}</section>; }
 function Empty({ text }: { text: string }) { return <p className="rounded-[8px] border border-dashed border-plum/15 p-4 text-center text-[10px] text-ink/50">{text}</p>; }
 function SelectField({ label, value, onChange, options, placeholder }: { label: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }>; placeholder?: string }) { return <label className="text-[10px] font-bold">{label}<select value={value} required onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-2 font-normal">{placeholder ? <option value="">{placeholder}</option> : null}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
-function NumberField({ label, value, onChange, step, max=10000 }: { label: string; value: number; onChange: (value: number) => void; step: string; max?: number }) { return <label className="text-[10px] font-bold">{label}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={value} onChange={(event) => onChange(Math.min(max,Math.max(0,Number(event.target.value)||0)))} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label>; }
+function NumberField({ label, value, onChange, step, max=10000 }: { label: string; value: NumericValue; onChange: (value: NumericValue) => void; step: string; max?: number }) { return <label className="text-[10px] font-bold">{label}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={value} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} onKeyDown={(event)=>{if(/[eE+-]/.test(event.key))event.preventDefault()}} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label>; }

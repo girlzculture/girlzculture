@@ -38,6 +38,7 @@ export type ContentPage = {
   is_enabled?: boolean;
 };
 export type BlogPost = { id?: string; slug: string; title: string; excerpt?: string; content: string; category: string; cover_image_url?: string; author?: string; featured?: boolean; published_at?: string };
+export type NavigationItem = { id?:string;surface:"header"|"mobile_menu"|"mobile_bottom"|"footer";group_key:string;item_key:string;label:string;translation_key?:string|null;href:string;sort_order:number;is_enabled?:boolean;show_new_badge?:boolean };
 // Kept as an empty compatibility export while older routes transition away from fallbacks.
 export const fallbackPosts: BlogPost[] = [];
 
@@ -75,6 +76,12 @@ export async function getVisibleLegalLinks() {
   }
   const visible = new Set((data || []).map((row) => row.slug));
   return LEGAL_LINKS.filter(([, , slug]) => visible.has(slug)).map(([label, href]) => [label, href] as [string, string]);
+}
+
+export async function getNavigationItems(surface:NavigationItem["surface"],fallback:NavigationItem[]){
+  const{data,error}=await supabase.from("navigation_items").select("id,surface,group_key,item_key,label,translation_key,href,sort_order,is_enabled,show_new_badge").eq("surface",surface).eq("is_enabled",true).is("archived_at",null).order("sort_order");
+  if(error){console.warn("Navigation registry unavailable; using safe built-in navigation",{surface,code:error.code});return fallback}
+  return(data?.length?data:fallback) as NavigationItem[];
 }
 
 export async function getBlogPosts() {

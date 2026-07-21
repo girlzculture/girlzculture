@@ -29,10 +29,12 @@ export default function FeaturedSalonPlacement({
   title = "Featured Salons",
   description,
   viewAll = false,
+  maxCards=12,
 }: {
   title?: string;
   description?: string | null;
   viewAll?: boolean;
+  maxCards?:number;
 }) {
   const customerLocation = useCustomerLocation();
   const [locationText, setLocationText] = useState("");
@@ -47,7 +49,7 @@ export default function FeaturedSalonPlacement({
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const location = customerLocation.location;
-  const limit = viewAll ? 24 : 12;
+  const limit = viewAll ? 24 : Math.max(1,Math.min(24,Math.round(maxCards)));
 
   async function load(offset = 0, append = false, signal?: AbortSignal) {
     if (!location || !validCoordinates(location)) {
@@ -113,7 +115,7 @@ export default function FeaturedSalonPlacement({
     };
     // Location coordinates are the complete public placement inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location?.lat, location?.lng, viewAll]);
+  }, [location?.lat, location?.lng, viewAll,maxCards]);
 
   async function requestDeviceLocation() {
     await customerLocation.useDeviceLocation();

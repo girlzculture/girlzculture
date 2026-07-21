@@ -20,6 +20,7 @@ import SafeImage from "@/components/site/SafeImage";
 import SalonProfileActions from "@/components/site/SalonProfileActions";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
+import { getEngineText } from "@/lib/engineConfigServer";
 
 type SalonRecord = {
   id: string;
@@ -192,9 +193,9 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   if (!salon) notFound();
 
   const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult] = await Promise.all([
-    supabase.from("styles").select("*").eq("salon_id", salon.id).order("created_at", { ascending: true }),
-    supabase.from("stylists").select("*").eq("salon_id", salon.id).order("created_at", { ascending: true }),
-    supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).order("created_at", { ascending: false }),
+    supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("stylists").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
   ]);
 
@@ -204,7 +205,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
   let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
   if (reviewsWithCustomerResult.error) {
-    const { data: reviewsData } = await supabase.from("reviews").select("*").eq("salon_id", salon.id).order("created_at", { ascending: false });
+    const { data: reviewsData } = await supabase.from("reviews").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false });
     reviews = (reviewsData || []) as ReviewRecord[];
   }
 
@@ -233,6 +234,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
   const hours = normalizeHours(salon.hours);
   const isVerified = salon.verification_status?.toLowerCase().startsWith("verified") ?? false;
+  const verifiedLabel=await getEngineText("trust.verified_label","Verified Salon",60);
 
   const trustIcons = [ShieldCheck, Tag, Clock3];
   const trustLabels = [pageContent.labels?.trust_label_1, pageContent.labels?.trust_label_2, pageContent.labels?.trust_label_3].filter(Boolean) as string[];
@@ -263,7 +265,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
-            <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? "Verified Salon" : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
+            <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? verifiedLabel : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span><span className="text-ink/55">({reviewCount} reviews)</span></> : <span className="rounded-full bg-blush px-2.5 py-1 font-bold text-plum">New</span>}</div>

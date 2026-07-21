@@ -2,7 +2,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, FileText, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, FileText, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
 import HeroImageFraming from "@/components/admin/HeroImageFraming";
 import { adminSupabase as supabase } from "@/lib/supabase";
@@ -347,7 +347,13 @@ function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Di
 
 function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; linkTargets: Row[] }) {
   const slots = labelSlots[page.slug] || [];
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  function moveSection(index: number, direction: -1 | 1) {
+    setPage((row) => { const sections = [...asRows(row?.sections)]; const nextIndex=index+direction;if(nextIndex<0||nextIndex>=sections.length)return row;[sections[index],sections[nextIndex]]=[sections[nextIndex],sections[index]];return{...row,sections}; });
+  }
   return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Page composition</h2><p className="mt-1 text-xs text-ink/55">Edit constrained Girlz Culture sections and preview the current draft before publishing.</p></div><div className="flex rounded-lg border p-1"><button type="button" onClick={()=>setPreviewMode("desktop")} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-[10px] font-bold ${previewMode==="desktop"?"bg-plum text-white":"text-plum"}`}><Monitor size={13}/>Desktop</button><button type="button" onClick={()=>setPreviewMode("mobile")} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-[10px] font-bold ${previewMode==="mobile"?"bg-plum text-white":"text-plum"}`}><Smartphone size={13}/>Mobile</button></div></div>
+    <ContentPagePreview page={page} mode={previewMode}/>
     <div className="grid gap-4 lg:grid-cols-2">
       <Field required label="Page title" name="title" value={page.title} />
       <Field label="Eyebrow" name="eyebrow" value={page.eyebrow} />
@@ -363,14 +369,14 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">{slots.map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]} />)}</div>
     </> : null}
     <h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2>
-    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number) => <SectionEditor key={section.id || index} section={section} index={index} linkTargets={linkTargets} update={(next) => setPage(row => ({ ...row, sections: asRows(row?.sections).map((item: Row, itemIndex: number) => itemIndex === index ? next : item) }))} remove={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} />)}</div>
+    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number, sections:Row[]) => <SectionEditor key={section.id || index} section={section} index={index} sectionCount={sections.length} linkTargets={linkTargets} move={(direction)=>moveSection(index,direction)} update={(next) => setPage(row => ({ ...row, sections: asRows(row?.sections).map((item: Row, itemIndex: number) => itemIndex === index ? next : item) }))} remove={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} />)}</div>
     <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...asRows(row?.sections), { id: crypto.randomUUID(), type: "card_grid", title: "New Section", body: "", is_visible: true, columns: 4, cards: [] }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
     <div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div>
     <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button>
   </form>;
 }
 
-function SectionEditor({ section, index, linkTargets, update, remove }: { section: Row; index: number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void }) {
+function SectionEditor({ section, index, sectionCount, linkTargets, update, remove, move }: { section: Row; index: number; sectionCount:number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void;move:(direction:-1|1)=>void }) {
   const type = String(section.type || "text");
   const cards = asRows(section.cards);
   const maximum = type === "community_carousel" ? 20 : 12;
@@ -392,7 +398,7 @@ function SectionEditor({ section, index, linkTargets, update, remove }: { sectio
         <label className="text-xs font-bold">Layout<select value={type} onChange={(event) => update({ ...section, type: event.target.value, cards: ["card_grid", "carousel", "community_carousel"].includes(event.target.value) ? cards : [] })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="text">Text</option><option value="card_grid">Card grid</option><option value="carousel">Horizontal carousel</option><option value="community_carousel">Auto-scrolling community carousel</option><option value="banner">Banner</option></select></label>
         {["card_grid", "carousel", "community_carousel"].includes(type) ? <label className="text-xs font-bold">Number of cards<input type="number" min="1" max={maximum} value={cards.length || 1} onChange={(event) => resizeCards(Math.max(1, Math.min(maximum, Number(event.target.value) || 1)))} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
       </div>
-      <label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
+      <div className="flex gap-1"><button type="button" aria-label={`Move section ${index+1} earlier`} onClick={()=>move(-1)} disabled={index===0} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label={`Move section ${index+1} later`} onClick={()=>move(1)} disabled={index===sectionCount-1} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div><label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
       <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button>
     </div>
     <Field label="Section heading" name={`section_title_${index}`} value={section.title} />
@@ -409,6 +415,8 @@ function SectionEditor({ section, index, linkTargets, update, remove }: { sectio
     </article>)}</div> : null}
   </div>;
 }
+
+function ContentPagePreview({page,mode}:{page:Row;mode:"desktop"|"mobile"}){const sections=asRows(page.sections).filter(section=>section.is_visible!==false);return <section className="mb-6 rounded-xl border border-dashed border-magenta/30 bg-cream p-4"><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Eye size={13}/>Unpublished draft preview · {mode}</p><div className={`mx-auto mt-3 overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${mode==="mobile"?"max-w-[360px]":"max-w-full"}`}><div className="relative min-h-36 bg-[linear-gradient(120deg,#2c1135,#7a285f)] p-6 text-white"><span className="text-[9px] font-bold uppercase tracking-[.16em] text-amber">{String(page.eyebrow||page.title||"Girlz Culture")}</span><h3 className="mt-2 font-serif text-3xl leading-none">{String(page.hero_title||page.title||"Untitled page")}</h3><p className="mt-3 max-w-xl text-xs leading-5 text-white/75">{String(page.hero_subtitle||"")}</p></div><div className="space-y-4 p-4">{sections.map((section,index)=><div key={section.id||index} className="rounded-lg bg-blush/25 p-4"><h4 className="font-serif text-xl text-plum">{String(section.title||`Section ${index+1}`)}</h4>{section.body?<p className="mt-2 text-[10px] leading-5 text-ink/60">{String(section.body).slice(0,260)}</p>:null}{asRows(section.cards).length?<div className={`mt-3 grid gap-2 ${mode==="mobile"?"grid-cols-2":"grid-cols-4"}`}>{asRows(section.cards).slice(0,mode==="mobile"?4:8).map((card,cardIndex)=><div key={card.id||cardIndex} className="min-h-20 rounded-md border bg-white p-2"><b className="text-[9px] text-plum">{String(card.title||`Card ${cardIndex+1}`)}</b><p className="mt-1 line-clamp-2 text-[8px] text-ink/50">{String(card.body||"")}</p></div>)}</div>:null}</div>)}{!sections.length?<p className="rounded-lg border border-dashed p-6 text-center text-xs text-ink/45">No visible sections in this draft.</p>:null}</div></div></section>}
 
 function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void }) {
   return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;

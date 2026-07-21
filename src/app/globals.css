@@ -23,13 +23,15 @@
   --foreground: #1a1220;
   --font-inter: "Inter", Arial, Helvetica, sans-serif;
   --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
+  --gc-plum: #5b1a6b;
+  --gc-magenta: #d6186b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-plum: #5b1a6b;
-  --color-magenta: #d6186b;
+  --color-plum: var(--gc-plum);
+  --color-magenta: var(--gc-magenta);
   --color-ink: #1a1220;
   --color-cream: #fbf4ee;
   --color-blush: #f3d9e4;

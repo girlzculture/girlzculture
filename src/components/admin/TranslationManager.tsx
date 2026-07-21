@@ -1,0 +1,680 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+import {
+  Download,
+  Eye,
+  FileUp,
+  Languages,
+  Plus,
+  RotateCcw,
+  Search,
+} from "lucide-react";
+import { getSessionForScope } from "@/lib/supabase";
+
+type Locale = {
+  locale: string;
+  display_name: string;
+  native_name: string;
+  intl_locale: string;
+  text_direction: "ltr" | "rtl";
+  is_enabled: boolean;
+  is_default: boolean;
+  sort_order: number;
+};
+type Entry = {
+  id: string;
+  translation_key: string;
+  locale: string;
+  namespace: string;
+  source_text: string;
+  translated_text: string;
+  status: string;
+  impact_level: string;
+  version: number;
+  machine_generated: boolean;
+};
+type Version = {
+  id: string;
+  translation_entry_id: string;
+  version: number;
+  translated_text: string;
+  status: string;
+  change_reason?: string;
+  created_at: string;
+};
+const HIGH = new Set(["booking", "billing", "security", "safety", "legal"]);
+
+export default function TranslationManager() {
+  const [open, setOpen] = useState(true);
+  const [locales, setLocales] = useState<Locale[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [locale, setLocale] = useState("en");
+  const [status, setStatus] = useState("All");
+  const [namespace, setNamespace] = useState("All");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Entry | null>(null);
+  const [text, setText] = useState("");
+  const [reason, setReason] = useState("");
+  const [reviewed, setReviewed] = useState(false);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [showLocaleForm, setShowLocaleForm] = useState(false);
+  async function headers(json = false) {
+    const session = await getSessionForScope("admin");
+    if (!session) throw new Error("Your admin session expired.");
+    return {
+      Authorization: `Bearer ${session.access_token}`,
+      ...(json ? { "Content-Type": "application/json" } : {}),
+    };
+  }
+  async function load(preferredKey?: string,requestedLocale=locale) {
+    try {
+      const response = await fetch(`/api/admin/engine/translations?locale=${encodeURIComponent(requestedLocale)}`, {
+        headers: await headers(),
+        cache: "no-store",
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error);
+      const localeRows = Array.isArray(body.locales) ? body.locales : [];
+      const entryRows = Array.isArray(body.entries) ? body.entries : [];
+      setLocales(localeRows);
+      setEntries(entryRows);
+      setVersions(Array.isArray(body.versions) ? body.versions : []);
+      const resolvedLocale=localeRows.some((item:Locale)=>item.locale===requestedLocale)?requestedLocale:localeRows.find((item: Locale) => item.is_default)?.locale||localeRows[0]?.locale||"en";
+      if(resolvedLocale!==locale)setLocale(resolvedLocale);
+      if (preferredKey) {
+        const row = entryRows.find(
+          (item: Entry) =>
+            item.translation_key === preferredKey && item.locale === resolvedLocale,
+        );
+        if (row) {
+          setSelected(row);
+          setText(row.translated_text);
+        }
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Unable to load translations.",
+      );
+    }
+  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const currentLocale = locales.find((item) => item.locale === locale);
+  const localeEntries = entries.filter((item) => item.locale === locale);
+  const namespaces = ["All", ...new Set(entries.map((item) => item.namespace))];
+  const visible = localeEntries.filter(
+    (item) =>
+      (status === "All" || item.status === status) &&
+      (namespace === "All" || item.namespace === namespace) &&
+      (!query ||
+        `${item.translation_key} ${item.source_text} ${item.translated_text}`
+          .toLowerCase()
+          .includes(query.toLowerCase())),
+  );
+  const counts = localeEntries.reduce<Record<string, number>>(
+    (result, item) => ({
+      ...result,
+      [item.status]: (result[item.status] || 0) + 1,
+    }),
+    {},
+  );
+  const completion = localeEntries.length
+    ? Math.round(
+        (localeEntries.filter((item) => item.status === "Published").length /
+          localeEntries.length) *
+          100,
+      )
+    : 0;
+  const selectedVersions = versions.filter(
+    (item) => item.translation_entry_id === selected?.id,
+  );
+  const overflow = Boolean(
+    selected && text.length > Math.max(selected.source_text.length * 1.65, 80),
+  );
+  function choose(row: Entry) {
+    setSelected(row);
+    setText(row.translated_text);
+    setReason("");
+    setReviewed(false);
+    setMessage("");
+  }
+  async function patch(body: Record<string, unknown>) {
+    const response = await fetch("/api/admin/engine/translations", {
+      method: "PATCH",
+      headers: await headers(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result;
+  }
+  async function save(action: "save_draft" | "publish") {
+    if (!selected) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await patch({
+        id: selected.id,
+        translation_key: selected.translation_key,
+        locale: selected.locale,
+        impact_level: selected.impact_level,
+        version: selected.version,
+        translated_text: text,
+        action,
+        confirm_review: reviewed,
+        reason,
+      });
+      setMessage(
+        action === "publish"
+          ? "Translation reviewed and published."
+          : "Translation draft saved. Published copy is unchanged.",
+      );
+      await load(selected.translation_key);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Unable to save translation.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function updateLocale(changes: Record<string, unknown>) {
+    setBusy(true);
+    try {
+      await patch({ action: "locale_update", locale, ...changes });
+      setMessage("Language availability updated and audited.");
+      await load(undefined, locale);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Unable to update language.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function createLocale(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const form = new FormData(event.currentTarget);
+      const body = await patch({
+        action: "locale_create",
+        locale: form.get("locale"),
+        display_name: form.get("display_name"),
+        native_name: form.get("native_name"),
+        intl_locale: form.get("intl_locale"),
+        text_direction: form.get("text_direction"),
+      });
+      setLocale(body.locale.locale);
+      setShowLocaleForm(false);
+      setMessage(
+        "Language created in a disabled state. Complete and review translations before enabling it.",
+      );
+      await load(undefined, body.locale.locale);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Unable to add language.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function rollback(target: number) {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      await patch({
+        action: "rollback",
+        id: selected.id,
+        version: selected.version,
+        target_version: target,
+      });
+      setMessage(`Version ${target} restored as a draft for review.`);
+      await load(selected.translation_key);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to restore translation.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  function exportTranslations() {
+    const payload = {
+      schema: "girlz-culture-translations/v1",
+      exported_at: new Date().toISOString(),
+      locale,
+      entries: localeEntries.map((item) => ({
+        translation_key: item.translation_key,
+        locale: item.locale,
+        source_text: item.source_text,
+        translated_text: item.translated_text,
+        status: item.status,
+        impact_level: item.impact_level,
+      })),
+    };
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `girlz-culture-${locale}-translations.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+  async function importTranslations(file: File) {
+    setBusy(true);
+    try {
+      const parsed = JSON.parse(await file.text()) as { entries?: unknown[] };
+      await patch({ action: "bulk_import", entries: parsed.entries });
+      setMessage(
+        "Translation file imported as drafts. Review and publish each high-impact entry manually.",
+      );
+      await load();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to import translation drafts.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="rounded-[15px] border border-plum/10 bg-white p-5">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex min-h-11 w-full items-center justify-between text-left"
+      >
+        <span className="flex items-center gap-2 font-serif text-xl text-plum">
+          <Languages size={20} />
+          Language registry & translations
+        </span>
+        <b className="text-xs text-magenta">{open ? "Close" : "Manage"}</b>
+      </button>
+      {open ? (
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-3 rounded-xl bg-cream p-4 sm:grid-cols-[1fr_auto_auto]">
+            <div>
+              <label className="text-[10px] font-bold">
+                Current language
+                <select
+                  value={locale}
+                  onChange={(event) => {
+                    const next=event.target.value;setLocale(next);
+                    setSelected(null);
+                    void load(undefined,next);
+                  }}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 text-xs"
+                >
+                  {locales.map((item) => (
+                    <option key={item.locale} value={item.locale}>
+                      {item.native_name} · {item.display_name}
+                      {item.is_enabled ? "" : " (disabled)"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full bg-magenta"
+                  style={{ width: `${completion}%` }}
+                />
+              </div>
+              <p className="mt-1 text-[10px] text-ink/55">
+                {completion}% published · Missing {counts.Missing || 0} · Draft{" "}
+                {counts.Draft || 0} · Published {counts.Published || 0}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowLocaleForm((value) => !value)}
+              className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-lg border border-magenta px-4 text-xs font-bold text-magenta"
+            >
+              <Plus size={14} />
+              Add language
+            </button>
+            <div className="flex gap-2 self-end">
+              <button
+                type="button"
+                onClick={exportTranslations}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-xs font-bold"
+              >
+                <Download size={14} />
+                Export
+              </button>
+              <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-bold">
+                <FileUp size={14} />
+                Import drafts
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void importTranslations(file);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+          {showLocaleForm ? (
+            <form
+              onSubmit={createLocale}
+              className="grid gap-3 rounded-xl border border-magenta/25 bg-blush/20 p-4 sm:grid-cols-2 lg:grid-cols-5"
+            >
+              <LocaleField
+                label="Locale code"
+                name="locale"
+                placeholder="e.g. ht or zh-CN"
+              />
+              <LocaleField
+                label="English name"
+                name="display_name"
+                placeholder="Haitian Creole"
+              />
+              <LocaleField
+                label="Native name"
+                name="native_name"
+                placeholder="Kreyòl ayisyen"
+              />
+              <LocaleField
+                label="Intl locale"
+                name="intl_locale"
+                placeholder="ht-HT"
+              />
+              <label className="text-[10px] font-bold">
+                Direction
+                <select
+                  name="text_direction"
+                  className="mt-1 min-h-10 w-full rounded-lg border px-3 text-xs"
+                >
+                  <option value="ltr">Left to right</option>
+                  <option value="rtl">Right to left</option>
+                </select>
+              </label>
+              <button
+                disabled={busy}
+                className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white sm:col-span-2 lg:col-span-1"
+              >
+                Create disabled language
+              </button>
+            </form>
+          ) : null}
+          {currentLocale ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3 text-xs">
+              <b>{currentLocale.native_name}</b>
+              <span>
+                {currentLocale.text_direction === "rtl"
+                  ? "Right-to-left"
+                  : "Left-to-right"}
+              </span>
+              <span>Order {currentLocale.sort_order}</span>
+              <button
+                type="button"
+                disabled={busy || currentLocale.is_default}
+                onClick={() =>
+                  void updateLocale({ is_enabled: !currentLocale.is_enabled })
+                }
+                className="ml-auto min-h-9 rounded-lg border border-magenta px-3 font-bold text-magenta disabled:opacity-40"
+              >
+                {currentLocale.is_enabled ? "Disable" : "Enable"}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void updateLocale({
+                    sort_order: Math.max(0, currentLocale.sort_order - 10),
+                  })
+                }
+                className="min-h-9 rounded-lg border px-3 font-bold"
+              >
+                Move earlier
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void updateLocale({
+                    sort_order: currentLocale.sort_order + 10,
+                  })
+                }
+                className="min-h-9 rounded-lg border px-3 font-bold"
+              >
+                Move later
+              </button>
+            </div>
+          ) : null}
+          <div className="grid gap-2 sm:grid-cols-[130px_150px_1fr]">
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className="min-h-10 rounded-lg border px-3 text-xs"
+            >
+              <option>All</option>
+              <option>Missing</option>
+              <option>Draft</option>
+              <option>Reviewed</option>
+              <option>Published</option>
+            </select>
+            <select
+              value={namespace}
+              onChange={(event) => setNamespace(event.target.value)}
+              className="min-h-10 rounded-lg border px-3 text-xs"
+            >
+              {namespaces.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+            <label className="flex min-h-10 items-center gap-2 rounded-lg border px-3">
+              <Search size={14} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search keys, source, or translation"
+                className="min-w-0 flex-1 text-xs outline-none"
+              />
+            </label>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-[.8fr_1.2fr]">
+            <div className="max-h-[520px] space-y-1 overflow-y-auto rounded-xl border p-2">
+              {visible.map((row) => (
+                <button
+                  type="button"
+                  key={`${row.translation_key}-${row.locale}`}
+                  onClick={() => choose(row)}
+                  className={`block w-full rounded-lg p-3 text-left ${selected?.translation_key === row.translation_key ? "bg-blush" : "hover:bg-cream"}`}
+                >
+                  <b className="block text-xs text-plum">{row.source_text}</b>
+                  <span className="mt-1 block text-[9px] text-ink/45">
+                    {row.translation_key} · {row.status}
+                  </span>
+                </button>
+              ))}
+              {!visible.length ? (
+                <p className="p-6 text-center text-xs text-ink/50">
+                  No translations match these filters.
+                </p>
+              ) : null}
+            </div>
+            {selected ? (
+              <div
+                className="space-y-3 rounded-xl border p-4"
+                dir={currentLocale?.text_direction || "ltr"}
+              >
+                <div>
+                  <p className="text-[10px] uppercase text-ink/45">
+                    English source · {selected.translation_key}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {selected.source_text}
+                  </p>
+                </div>
+                <label className="block text-xs font-bold">
+                  {currentLocale?.native_name || locale} translation
+                  <textarea
+                    rows={6}
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    className="mt-1 w-full rounded-lg border p-3 font-normal"
+                  />
+                </label>
+                {overflow ? (
+                  <p className="rounded-lg bg-amber/10 p-3 text-[10px] text-[#7b4a00]">
+                    Text overflow warning: this translation is substantially
+                    longer than its source. Check compact and mobile previews
+                    before publishing.
+                  </p>
+                ) : null}
+                <label className="block text-xs font-bold">
+                  Change reason
+                  <textarea
+                    rows={2}
+                    value={reason}
+                    onChange={(event) =>
+                      setReason(event.target.value.slice(0, 500))
+                    }
+                    className="mt-1 w-full rounded-lg border p-3 font-normal"
+                  />
+                </label>
+                {HIGH.has(selected.impact_level) ? (
+                  <label className="flex gap-2 rounded-lg bg-amber/10 p-3 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={reviewed}
+                      onChange={(event) => setReviewed(event.target.checked)}
+                      className="accent-magenta"
+                    />
+                    I personally reviewed this high-impact{" "}
+                    {selected.impact_level} translation and approve it for
+                    publication.
+                  </label>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || !text.trim()}
+                    onClick={() => void save("save_draft")}
+                    className="min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta"
+                  >
+                    Save draft
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      busy ||
+                      !text.trim() ||
+                      Boolean(HIGH.has(selected.impact_level) && !reviewed)
+                    }
+                    onClick={() => void save("publish")}
+                    className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-50"
+                  >
+                    Review & publish
+                  </button>
+                </div>
+                <details>
+                  <summary className="cursor-pointer text-xs font-bold text-magenta">
+                    Version history ({selectedVersions.length})
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {selectedVersions.map((version) => (
+                      <div
+                        key={version.id}
+                        className="flex items-start justify-between gap-3 rounded-lg bg-cream p-3 text-[10px]"
+                      >
+                        <div>
+                          <b>
+                            Version {version.version} · {version.status}
+                          </b>
+                          <p className="mt-1 line-clamp-2">
+                            {version.translated_text}
+                          </p>
+                          <span className="text-ink/45">
+                            {new Date(version.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void rollback(version.version)}
+                          className="inline-flex items-center gap-1 font-bold text-magenta"
+                        >
+                          <RotateCcw size={12} />
+                          Restore draft
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+                <div className="rounded-xl border border-dashed bg-cream/50 p-4">
+                  <p className="flex items-center gap-2 text-[10px] font-bold uppercase text-magenta">
+                    <Eye size={13} />
+                    Context preview
+                  </p>
+                  <div className="mt-3 max-w-sm rounded-lg bg-white p-4 shadow-sm">
+                    <p className="text-xs text-ink/50">
+                      Representative interface card
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-3 min-h-10 w-full rounded-lg bg-magenta px-3 text-xs font-bold text-white"
+                    >
+                      {text || selected.source_text}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid min-h-72 place-items-center rounded-xl border border-dashed p-6 text-center text-xs text-ink/50">
+                Choose a translation to edit, preview, publish, or restore.
+              </div>
+            )}
+          </div>
+          {message ? (
+            <p
+              role="status"
+              className="rounded-lg bg-blush/50 p-3 text-xs text-plum"
+            >
+              {message}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function LocaleField({
+  label,
+  name,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  placeholder: string;
+}) {
+  return (
+    <label className="text-[10px] font-bold">
+      {label}
+      <input
+        required
+        name={name}
+        placeholder={placeholder}
+        className="mt-1 min-h-10 w-full rounded-lg border px-3 text-xs font-normal"
+      />
+    </label>
+  );
+}

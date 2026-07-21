@@ -8,6 +8,7 @@ import PublicContentSections from "@/components/site/PublicContentSections";
 import FeaturedSalonPlacement from "@/components/public/FeaturedSalonPlacement";
 import TrendingVideoPlacement from "@/components/public/TrendingVideoPlacement";
 import NearbySalonPlacement from "@/components/public/NearbySalonPlacement";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -37,6 +38,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     return { ...(override || section), description: homeContent.labels?.[subtitleKeys[section.section_key]] || null };
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const socialProofLabels = [homeContent.labels?.social_proof_heading, homeContent.labels?.social_proof_subheading, homeContent.labels?.social_proof_note].filter(Boolean) as string[];
+  const [nearbyCardCount,featuredCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
 
   return (
     <main data-homepage-variant={depthPreview ? "depth" : "standard"} className={`min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0 ${depthPreview ? "gc-home-depth" : ""}`}>
@@ -79,7 +81,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       </section>
 
       <div className="gc-home-content mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} />)}
+        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} trendingCardCount={trendingCardCount}/>)}
 
         <PublicContentSections sections={homeContent.sections} variant="homepage" />
 
@@ -114,9 +116,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   );
 }
 
-function HomepageRow({ section }: { section: HomeSection }) {
-  if (section.section_key === "salons_near_you") return <NearbySalonPlacement title={section.title} description={section.description}/>;
-  if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description}/>;
-  if (section.section_key === "trending_picks" || section.section_key === "trending_now") return <TrendingVideoPlacement title={section.title} description={section.description}/>;
+function HomepageRow({ section,nearbyCardCount,featuredCardCount,trendingCardCount }: { section: HomeSection;nearbyCardCount:number;featuredCardCount:number;trendingCardCount:number }) {
+  if (section.section_key === "salons_near_you") return <NearbySalonPlacement title={section.title} description={section.description} maxCards={nearbyCardCount}/>;
+  if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description} maxCards={featuredCardCount}/>;
+  if (section.section_key === "trending_picks" || section.section_key === "trending_now") return <TrendingVideoPlacement title={section.title} description={section.description} maxCards={trendingCardCount}/>;
   return null;
 }

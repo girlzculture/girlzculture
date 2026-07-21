@@ -4,6 +4,8 @@ import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, r
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { siteUrl, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
+import { getEngineNumber } from "@/lib/engineConfigServer";
+import { normalizeLocale } from "@/i18n/catalog";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -34,13 +36,24 @@ export async function POST(request: Request) {
     const guestName = cleanText(body.guest_name, 120);
     const guestEmail = cleanEmail(body.guest_email);
     const guestPhone = cleanUsPhone(body.guest_phone, true);
+    const requestedLocale = normalizeLocale(cleanText(body.locale, 20));
+    const { data: enabledLocale } = await admin
+      .from("supported_locales")
+      .select("locale")
+      .eq("locale", requestedLocale)
+      .eq("is_enabled", true)
+      .is("archived_at", null)
+      .maybeSingle();
+    const preferredLocale = enabledLocale?.locale || "en";
     if (!guestName) throw new Error("Enter your name.");
     const appointmentLocal = cleanText(body.appointment_local, 20);
     const [localDate, localTime] = appointmentLocal.split("T");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate || "") || !/^\d{2}:\d{2}$/.test(localTime || "")) throw new Error("Choose a valid appointment date and time.");
     const timeZone = salonTimeZone(salon.time_zone);
     const appointment = zonedLocalToUtc(appointmentLocal, timeZone);
-    if (appointment.getTime() < Date.now() + 30 * 60_000) throw new Error("Choose a future appointment time.");
+    const [minimumLeadMinutes,maximumAdvanceDays,clientNotesMaxLength]=await Promise.all([getEngineNumber("booking.minimum_lead_minutes",30,15,1440),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000)]);
+    if (appointment.getTime() < Date.now() + minimumLeadMinutes * 60_000) throw new Error(`Choose a time at least ${minimumLeadMinutes} minutes from now.`);
+    if (appointment.getTime() > Date.now() + maximumAdvanceDays * 86_400_000) throw new Error(`Appointments can be booked up to ${maximumAdvanceDays} days ahead.`);
 
     const requestedStylistId = cleanText(body.stylist_id, 50) || null;
     if (requestedStylistId) {
@@ -89,7 +102,8 @@ export async function POST(request: Request) {
     }
     total = Math.max(0, Math.round(total * 100) / 100);
     if (!Number.isFinite(total) || total > 10000) throw new Error("The booking total could not be verified.");
-    const originalDeposit = Math.round(total * 10) / 100;
+    const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
+    const originalDeposit = Math.round(total * depositPercentage) / 100;
     const promoCode = cleanText(body.promo_code, 40);
     const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
     const calculatedDeposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
@@ -107,7 +121,7 @@ export async function POST(request: Request) {
       selected_material_id: materialId,
       selected_addons: selectedAddons,
       selected_options: selectedOptions,
-      client_notes: cleanText(body.client_notes, 1000) || null,
+      client_notes: cleanText(body.client_notes, clientNotesMaxLength) || null,
       appointment_datetime: appointment.toISOString(),
       duration_hours: durationHours,
       buffer_minutes: bufferMinutes,
@@ -124,6 +138,7 @@ export async function POST(request: Request) {
       guest_name: guestName,
       guest_email: guestEmail,
       guest_phone: guestPhone,
+      preferred_locale: preferredLocale,
       source: "Website",
     };
 
@@ -193,7 +208,7 @@ export async function POST(request: Request) {
       "metadata[salon_id]": salonId,
       "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
       "metadata[promo_code]": promoReservation?.code || "",
-      "payment_intent_data[description]": `10% reservation deposit for ${style.name}`,
+      "payment_intent_data[description]": `${depositPercentage}% reservation deposit for ${style.name}`,
       allow_promotion_codes: !promoReservation,
       ...(promoReservation?.stripe_coupon_id ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id } : {}),
     });

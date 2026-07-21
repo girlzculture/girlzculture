@@ -1,0 +1,70 @@
+name: Verify and apply database migrations
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type APPLY REVIEWED MIGRATIONS to unlock the protected migration job
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # Pull-request builds cannot access protected production secrets. These
+      # nonfunctional values only allow Next.js to evaluate the client module.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:migrations
+      - run: npm run verify:engine-expansion
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+  migrate:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'APPLY REVIEWED MIGRATIONS'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production-database
+    concurrency:
+      group: girlz-culture-production-database
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Require migration secrets
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_ID"
+      - name: Link reviewed project
+        run: npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+      - name: Show pending migration plan
+        run: npx --yes supabase@latest migration list --linked
+      - name: Apply migrations in repository order
+        run: npx --yes supabase@latest db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
+      - name: Record final migration state
+        run: npx --yes supabase@latest migration list --linked

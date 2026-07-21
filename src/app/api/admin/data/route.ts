@@ -3,20 +3,20 @@ import { requireAdminPermission } from "@/lib/supabaseAdmin";
 export async function GET(request: Request) {
   try {
     const section = new URL(request.url).searchParams.get("section") || "overview";
-    const permission = section === "complaints" ? "support" : section;
+    const permission = section === "complaints" ? "support" : section === "engine" ? "settings" : section;
     const { admin } = await requireAdminPermission(request, permission);
     const allSources = [
       ["salons", "name", true], ["salon_applications", "submitted_at", true], ["customers", "created_at", true],
       ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
       ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
       ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
-      ["billing_events", "event_date", false],
+      ["billing_events", "event_date", false], ["identity_conflict_queue", "email_normalized", false],
     ] as const;
     const needed: Record<string, string[]> = {
       overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: [],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
       reviews: ["reviews", "salons"], finance: ["subscriptions", "salons", "billing_events"], marketing: ["salon_promotions", "blog_posts", "salons"],
-      content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], settings: ["admin_users", "admin_settings"],
+      content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
     };
     const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));
     const results = await Promise.all(sources.map(async ([table, order, required]) => {

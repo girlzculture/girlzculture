@@ -2,6 +2,7 @@ import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilit
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { deliverBookingNotifications, requireAdminPermission } from "@/lib/supabaseAdmin";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +32,8 @@ export async function POST(request: Request) {
     }
     const total = Number(style.price_display_min || style.base_price || 0);
     if (!(total >= 0)) throw new Error("The style price could not be verified.");
-    const deposit = Math.round(total * 10) / 100;
+    const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
+    const deposit = Math.round(total * depositPercentage) / 100;
     const { data, error } = await admin.from("bookings").insert({
       salon_id: salonId,
       style_id: style.id,

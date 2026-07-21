@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { clientAddress, cleanEmail, cleanText, enforceRateLimit, errorResponse, RateLimitError, rejectBot } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
+import { getEngineList } from "@/lib/engineConfigServer";
 
 export async function GET() {
   try {
@@ -23,8 +24,10 @@ export async function POST(request: Request) {
     const salonId = cleanText(body.salonId, 50);
     const bookedThroughPlatform = body.bookedThroughPlatform === true || String(body.bookedThroughPlatform).toLowerCase() === "yes";
     const bookingEmail = bookedThroughPlatform ? cleanEmail(body.bookingEmail) : cleanText(body.bookingEmail, 254).toLowerCase();
+    const reason=cleanText(body.reason,120);
     const issue = cleanText(body.issue, 5000);
-    if (name.length < 2 || !salonId || issue.length < 20) throw new Error("Please complete every complaint field and describe the issue in at least 20 characters.");
+    const allowedReasons=await getEngineList("quality.complaint_reasons",["Service quality","Safety or hygiene","Appointment timing","Pricing or payment","Professional conduct","Other"],40);
+    if (name.length < 2 || !salonId || !allowedReasons.includes(reason) || issue.length < 20) throw new Error("Please complete every complaint field and describe the issue in at least 20 characters.");
 
     const admin = getSupabaseAdmin();
     const { data: salon, error: salonError } = await admin.from("salons").select("id,name").eq("id", salonId).ilike("status", "active").maybeSingle();
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
     const { data: complaint, error: complaintError } = await admin.from("complaints_log").insert({
       salon_id: salonId,
       booking_id: verified ? booking?.id : null,
-      category: "Customer complaint",
+      category: reason,
       description: issue,
       issue_description: issue,
       status: "Open",
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
       booking_verified: verified,
       requester_name: name,
       requester_email: email,
-      subject: `Complaint: ${salon.name}`,
+      subject: `Complaint — ${reason}: ${salon.name}`,
       category: "Complaint",
       message: `${issue}\n\n${verificationNote}`,
       status: "Open",

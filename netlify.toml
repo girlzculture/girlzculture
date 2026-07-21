@@ -8,3 +8,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions."booking-reminders"]
+  schedule = "*/15 * * * *"

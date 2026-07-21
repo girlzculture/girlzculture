@@ -1,16 +1,17 @@
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import ComplaintForm from "@/components/public/ComplaintForm";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getEngineList } from "@/lib/engineConfigServer";
 
 export const dynamic = "force-dynamic";
 
 export default async function ComplaintPage() {
-  const { data, error } = await getSupabaseAdmin()
+  const [{ data, error },reasons] = await Promise.all([getSupabaseAdmin()
     .from("salons")
     .select("id,name,address_city,address_state")
     .in("status", ["Active", "Approved"])
     .order("name")
-    .limit(1000);
+    .limit(1000),getEngineList("quality.complaint_reasons",["Service quality","Safety or hygiene","Appointment timing","Pricing or payment","Professional conduct","Other"],40)]);
   if (error) console.error("Complaint salon list failed", error);
 
   return <main className="min-h-screen bg-cream text-ink">
@@ -24,7 +25,7 @@ export default async function ComplaintPage() {
           <li>Unverified reports receive human review but may not automatically result in an action.</li>
         </ul>
       </div>
-      <ComplaintForm salons={data || []} />
+      <ComplaintForm salons={data || []} reasons={reasons}/>
     </section>
     <PublicFooter />
   </main>;

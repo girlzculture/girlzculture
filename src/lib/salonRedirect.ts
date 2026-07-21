@@ -1,7 +1,7 @@
 import { salonSupabase as supabase } from "@/lib/supabase";
 
 type SalonDestinationResult = {
-  path: "/salon/dashboard" | "/salon/onboarding" | "/salon/apply";
+  path: "/salon/dashboard" | "/salon/onboarding" | "/salon/apply" | "/pending";
   salonExists: boolean;
   reason: "matched-salon" | "missing-user-id" | "no-salon" | "lookup-error";
 };
@@ -29,7 +29,7 @@ export async function getSalonDestinationForUserId(userId: string | null | undef
   let path: SalonDestinationResult["path"] = salonExists ? "/salon/dashboard" : "/salon/onboarding";
   if (data?.id && data.status?.toLowerCase() === "pending") {
     const { data: application } = await supabase.from("salon_applications").select("id").eq("salon_id", data.id).maybeSingle();
-    path = application?.id ? "/salon/dashboard" : "/salon/apply";
+    path = application?.id ? "/pending" : "/salon/apply";
   }
 
   return {
