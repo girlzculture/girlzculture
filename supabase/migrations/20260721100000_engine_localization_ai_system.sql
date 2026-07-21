@@ -239,6 +239,84 @@ insert into public.engine_system_components(component_key,display_name,component
 ('deployment','Migration deployment','deployment',true,'Applies reviewed migrations through CI/CD.')
 on conflict(component_key) do update set display_name=excluded.display_name,component_type=excluded.component_type,is_required=excluded.is_required,help_text=excluded.help_text;
 
+-- Plain-text notification templates. Administrators can change customer-safe
+-- copy and approved placeholders, but cannot inject HTML or provider secrets.
+create table if not exists public.notification_templates (
+  template_key text primary key check(template_key ~ '^[a-z][a-z0-9_.-]{2,119}$'),
+  display_name text not null check(length(display_name) between 1 and 100),
+  description text not null default '',
+  channel text not null default 'email' check(channel in ('email')),
+  allowed_variables text[] not null default '{}',
+  draft_subject text not null check(length(draft_subject) between 1 and 140),
+  draft_body text not null check(length(draft_body) between 1 and 12000),
+  published_subject text not null check(length(published_subject) between 1 and 140),
+  published_body text not null check(length(published_body) between 1 and 12000),
+  status text not null default 'Published' check(status in ('Draft','Published')),
+  impact_level text not null default 'customer' check(impact_level in ('standard','customer','booking','billing','safety','security','legal')),
+  version integer not null default 1 check(version > 0),
+  published_version integer not null default 1 check(published_version > 0),
+  updated_by uuid references auth.users(id) on delete set null,
+  published_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  published_at timestamptz
+);
+create table if not exists public.notification_template_versions (
+  id uuid primary key default gen_random_uuid(),
+  template_key text not null references public.notification_templates(template_key) on delete restrict,
+  version integer not null,
+  subject_template text not null,
+  body_template text not null,
+  status text not null,
+  change_reason text,
+  changed_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  unique(template_key,version)
+);
+alter table public.notification_templates enable row level security;
+alter table public.notification_template_versions enable row level security;
+drop policy if exists notification_templates_admin_manage on public.notification_templates;
+drop policy if exists notification_template_versions_admin_read on public.notification_template_versions;
+create policy notification_templates_admin_manage on public.notification_templates for all to authenticated using(public.admin_has_permission('content')) with check(public.admin_has_permission('content'));
+create policy notification_template_versions_admin_read on public.notification_template_versions for select to authenticated using(public.admin_has_permission('content'));
+
+insert into public.notification_templates(template_key,display_name,description,allowed_variables,draft_subject,draft_body,published_subject,published_body,impact_level) values
+('booking.customer_confirmed','Customer booking confirmation','Sent after a customer booking is confirmed.',array['summary','confirmation_code','account_url'],'Your Girlz Culture appointment is confirmed','Your appointment is confirmed.\n\n{{summary}}\n\nConfirmation code: {{confirmation_code}}\n\nView your booking: {{account_url}}','Your Girlz Culture appointment is confirmed','Your appointment is confirmed.\n\n{{summary}}\n\nConfirmation code: {{confirmation_code}}\n\nView your booking: {{account_url}}','booking'),
+('booking.salon_confirmed','Salon booking confirmation','Sent to a salon after a booking is confirmed.',array['summary','dashboard_url'],'New confirmed Girlz Culture booking','A new booking is confirmed.\n\n{{summary}}\n\nOpen this booking: {{dashboard_url}}','New confirmed Girlz Culture booking','A new booking is confirmed.\n\n{{summary}}\n\nOpen this booking: {{dashboard_url}}','booking'),
+('booking.stylist_confirmed','Stylist assignment confirmation','Sent when a booking is assigned to a stylist.',array['summary','dashboard_url'],'A Girlz Culture booking was assigned to you','A booking was assigned to you.\n\n{{summary}}\n\nOpen your appointment: {{dashboard_url}}','A Girlz Culture booking was assigned to you','A booking was assigned to you.\n\n{{summary}}\n\nOpen your appointment: {{dashboard_url}}','booking'),
+('booking.customer_cancelled','Customer cancellation notice','Sent to a customer when a booking is cancelled.',array['message','browse_url'],'Your Girlz Culture appointment was cancelled','Your appointment was cancelled.\n\n{{message}}\n\nWe are sorry for the disruption. Find another available salon: {{browse_url}}','Your Girlz Culture appointment was cancelled','Your appointment was cancelled.\n\n{{message}}\n\nWe are sorry for the disruption. Find another available salon: {{browse_url}}','booking'),
+('booking.salon_cancelled','Salon cancellation notice','Sent to a salon when a booking is cancelled.',array['message'],'Girlz Culture booking cancelled','A booking was cancelled.\n\n{{message}}','Girlz Culture booking cancelled','A booking was cancelled.\n\n{{message}}','booking'),
+('booking.stylist_cancelled','Stylist cancellation notice','Sent when an assigned booking is cancelled.',array['message'],'An assigned Girlz Culture booking was cancelled','An assigned booking was cancelled.\n\n{{message}}','An assigned Girlz Culture booking was cancelled','An assigned booking was cancelled.\n\n{{message}}','booking'),
+('booking.customer_reminder','Customer appointment reminder','Sent before a confirmed customer appointment.',array['summary','account_url'],'Your Girlz Culture appointment is coming up','Appointment reminder.\n\n{{summary}}\n\nView your booking: {{account_url}}','Your Girlz Culture appointment is coming up','Appointment reminder.\n\n{{summary}}\n\nView your booking: {{account_url}}','booking'),
+('booking.salon_reminder','Salon appointment reminder','Sent before a confirmed salon appointment.',array['summary','dashboard_url'],'Upcoming Girlz Culture appointment','Appointment reminder.\n\n{{summary}}\n\nOpen booking: {{dashboard_url}}','Upcoming Girlz Culture appointment','Appointment reminder.\n\n{{summary}}\n\nOpen booking: {{dashboard_url}}','booking'),
+('booking.stylist_reminder','Stylist appointment reminder','Sent before an assigned stylist appointment.',array['summary'],'Upcoming assigned appointment','Appointment reminder.\n\n{{summary}}','Upcoming assigned appointment','Appointment reminder.\n\n{{summary}}','booking')
+on conflict(template_key) do nothing;
+
+create or replace function public.admin_apply_notification_template(p_template_key text,p_expected_version integer,p_action text,p_subject text,p_body text,p_reason text,p_target_version integer,p_actor_user_id uuid)
+returns public.notification_templates language plpgsql security definer set search_path=public as $$
+declare current_row public.notification_templates%rowtype; target public.notification_template_versions%rowtype; saved public.notification_templates%rowtype;
+begin
+  if not public.admin_has_permission('content') then raise exception 'Permission denied'; end if;
+  select * into current_row from public.notification_templates where template_key=p_template_key for update;
+  if not found then raise exception 'Template not found'; end if;
+  if current_row.version<>p_expected_version then raise exception 'TEMPLATE_VERSION_CONFLICT'; end if;
+  if p_action not in ('save_draft','publish','rollback') then raise exception 'Unsupported template action'; end if;
+  insert into public.notification_template_versions(template_key,version,subject_template,body_template,status,change_reason,changed_by)
+  values(current_row.template_key,current_row.version,current_row.draft_subject,current_row.draft_body,current_row.status,nullif(trim(coalesce(p_reason,'')),''),p_actor_user_id)
+  on conflict(template_key,version) do nothing;
+  if p_action='rollback' then
+    select * into target from public.notification_template_versions where template_key=p_template_key and version=p_target_version;
+    if not found then raise exception 'Template version not found'; end if;
+    update public.notification_templates set draft_subject=target.subject_template,draft_body=target.body_template,status='Draft',version=version+1,updated_by=p_actor_user_id,updated_at=now() where template_key=p_template_key returning * into saved;
+  elsif p_action='save_draft' then
+    update public.notification_templates set draft_subject=p_subject,draft_body=p_body,status='Draft',version=version+1,updated_by=p_actor_user_id,updated_at=now() where template_key=p_template_key returning * into saved;
+  else
+    update public.notification_templates set draft_subject=p_subject,draft_body=p_body,published_subject=p_subject,published_body=p_body,status='Published',version=version+1,published_version=version+1,updated_by=p_actor_user_id,published_by=p_actor_user_id,updated_at=now(),published_at=now() where template_key=p_template_key returning * into saved;
+  end if;
+  return saved;
+end $$;
+revoke all on function public.admin_apply_notification_template(text,integer,text,text,text,text,integer,uuid) from public,anon,authenticated;
+grant execute on function public.admin_apply_notification_template(text,integer,text,text,text,text,integer,uuid) to service_role;
+
 -- Constrained navigation registry. Administrators can change labels, approved
 -- destinations, order, visibility, and badges without injecting markup.
 create table if not exists public.navigation_items (

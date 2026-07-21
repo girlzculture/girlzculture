@@ -25,6 +25,7 @@ import { ENGINE_CATEGORIES } from "@/lib/engineManifest";
 import AiAutomationManager from "@/components/admin/AiAutomationManager";
 import SystemStatusManager from "@/components/admin/SystemStatusManager";
 import NavigationMenuManager from "@/components/admin/NavigationMenuManager";
+import NotificationTemplateManager from "@/components/admin/NotificationTemplateManager";
 
 type Setting = {
   id: string;
@@ -483,8 +484,7 @@ export default function EngineControlCenter() {
           <p className="mt-2 text-xs text-ink/60">
             Environment: <b>{importPreview.environment}</b> ·{" "}
             {importPreview.entries.length} valid · {importPreview.changed}{" "}
-            changed · {importPreview.errors.length} blocked. Imports create
-            drafts only and never copy secrets or publish behavior.
+            changed · {importPreview.errors.length} blocked. <span>Imports create drafts only</span> and never copy secrets or publish behavior.
           </p>
           {importPreview.errors.length ? (
             <ul className="mt-3 list-disc pl-5 text-xs text-red-700">
@@ -759,6 +759,7 @@ export default function EngineControlCenter() {
             <TranslationManager />
           ) : null}
           {category === "navigation_menus" ? <NavigationMenuManager /> : null}
+          {category === "notifications_templates" ? <NotificationTemplateManager /> : null}
           {category === "ai_automation" ? <AiAutomationManager /> : null}
           {category === "integrations_system" ? <SystemStatusManager /> : null}
           {category === "test_data_maintenance" ? <TestDataManager /> : null}

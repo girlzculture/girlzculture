@@ -126,16 +126,28 @@ async function bookingNotificationContext(bookingId: string) {
   return { admin, booking, salon, style, stylist, stylistContact };
 }
 
+type PublishedNotificationTemplate={template_key:string;published_subject:string;published_body:string;allowed_variables:string[]};
+type NotificationTemplateMap=Record<string,PublishedNotificationTemplate>;
+function renderNotificationEmail(templates:NotificationTemplateMap,key:string,variables:Record<string,string>,fallbackSubject:string,fallbackBody:string){
+  const template=templates[key];
+  const substitute=(value:string)=>value.replace(/\{\{([a-z][a-z0-9_]*)\}\}/g,(_match,name:string)=>variables[name]||"");
+  const subject=substitute(String(template?.published_subject||fallbackSubject)).slice(0,140);
+  const plainText=substitute(String(template?.published_body||fallbackBody));
+  return{subject,html:`<p>${escapeHtml(plainText).replaceAll("\n","<br/>")}</p>`};
+}
+
 async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAdmin>){
   const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject"];
-  const{data,error}=await admin.from("engine_settings").select("setting_key,published_value").eq("status","Published").in("setting_key",keys);
+  const[{data,error},{data:templateRows,error:templateError}]=await Promise.all([admin.from("engine_settings").select("setting_key,published_value").eq("status","Published").in("setting_key",keys),admin.from("notification_templates").select("template_key,published_subject,published_body,allowed_variables").eq("status","Published")]);
   if(error)console.warn("Booking notification Engine settings unavailable; using safe defaults",{code:error.code});
+  if(templateError)console.warn("Booking notification templates unavailable; using safe defaults",{code:templateError.code});
   const values=Object.fromEntries((data||[]).map(row=>[row.setting_key,row.published_value]));
+  const templates=Object.fromEntries((templateRows||[]).map(row=>[row.template_key,row])) as NotificationTemplateMap;
   const rawChannels=Array.isArray(values["notifications.channels"])?values["notifications.channels"]:[];
   const channels=new Set((rawChannels.length?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
   const subject=(key:string,fallback:string)=>{const value=String(values[key]||"").trim();return value&&value.length<=140?value:fallback};
   const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
-  return{channels,reminderHours:reminderHours.length?reminderHours:[24,2],customerConfirmed:subject("notifications.booking_customer_confirmed_subject","Your Girlz Culture appointment is confirmed"),salonConfirmed:subject("notifications.booking_salon_confirmed_subject","New confirmed Girlz Culture booking"),customerCancelled:subject("notifications.booking_customer_cancelled_subject","Your Girlz Culture appointment was cancelled"),salonCancelled:subject("notifications.booking_salon_cancelled_subject","Girlz Culture booking cancelled"),reminderSubject:subject("notifications.booking_reminder_subject","Your Girlz Culture appointment is coming up")};
+  return{channels,templates,reminderHours:reminderHours.length?reminderHours:[24,2],customerConfirmed:subject("notifications.booking_customer_confirmed_subject","Your Girlz Culture appointment is confirmed"),salonConfirmed:subject("notifications.booking_salon_confirmed_subject","New confirmed Girlz Culture booking"),customerCancelled:subject("notifications.booking_customer_cancelled_subject","Your Girlz Culture appointment was cancelled"),salonCancelled:subject("notifications.booking_salon_cancelled_subject","Girlz Culture booking cancelled"),reminderSubject:subject("notifications.booking_reminder_subject","Your Girlz Culture appointment is coming up")};
 }
 
 async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
@@ -172,15 +184,18 @@ export async function deliverBookingNotifications(bookingId: string) {
   const accountUrl = `${root}/account?tab=upcoming`;
   const salonSummary = `${customer} booked ${service} for ${when}. Duration: ${duration}. Stylist: ${professional}.`;
   const customerSummary = `${service} at ${salon.name} is confirmed for ${when}. Stylist: ${professional}.`;
+  const salonEmail=renderNotificationEmail(notification.templates,"booking.salon_confirmed",{summary:salonSummary,dashboard_url:dashboardUrl},notification.salonConfirmed,`A new booking is confirmed.\n\n${salonSummary}\n\nOpen this booking: ${dashboardUrl}`);
+  const customerEmail=renderNotificationEmail(notification.templates,"booking.customer_confirmed",{summary:customerSummary,confirmation_code:String(booking.confirmation_code||""),account_url:accountUrl},notification.customerConfirmed,`Your appointment is confirmed.\n\n${customerSummary}\n\nConfirmation code: ${booking.confirmation_code||""}\n\nView your booking: ${accountUrl}`);
+  const stylistEmail=renderNotificationEmail(notification.templates,"booking.stylist_confirmed",{summary:salonSummary,dashboard_url:dashboardUrl},"A Girlz Culture booking was assigned to you",`A booking was assigned to you.\n\n${salonSummary}\n\nOpen your appointment: ${dashboardUrl}`);
   const tasks: DeliveryTask[] = [
-    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), notification.salonConfirmed, `<h1>New confirmed booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open this booking</a></p>`, "bookings") },
+    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), salonEmail.subject, salonEmail.html, "bookings") },
     { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), `Girlz Culture confirmed booking: ${salonSummary} ${dashboardUrl}`) },
     { recipientType: "salon", channel: "push", destination: String(salon.user_id || ""), run: () => sendPushToUsers([String(salon.user_id || "")], { title: "New confirmed booking", body: salonSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) },
-    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), notification.customerConfirmed, `<h1>Your appointment is confirmed</h1><p>${escapeHtml(customerSummary)}</p><p>Confirmation code: ${escapeHtml(booking.confirmation_code)}</p><p><a href="${accountUrl}">View your booking</a></p>`, "bookings") },
+    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), customerEmail.subject, customerEmail.html, "bookings") },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), `Girlz Culture: ${customerSummary} Confirmation ${booking.confirmation_code || ""}. ${accountUrl}`) },
   ];
   if (booking.customer_id) tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: "Appointment confirmed", body: customerSummary, url: "/account?tab=upcoming", tag: `booking-${booking.id}` }) });
-  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "A Girlz Culture booking was assigned to you", `<h1>New assigned booking</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${dashboardUrl}">Open your appointment</a></p>`, "bookings") });
+  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings") });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture assigned booking: ${salonSummary} ${dashboardUrl}`) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: "A booking was assigned to you", body: salonSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
   const deliveries = await runDeliveries(bookingId, "booking_confirmed", tasks.filter(task=>notification.channels.has(task.channel)));
@@ -200,15 +215,19 @@ export async function deliverCancellationNotifications(bookingId: string, reason
     : "No deposit refund was due for this booking.";
   const message = `Your ${service} appointment at ${salon.name} for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled. Reason: ${reason}. ${refundMessage}`;
   const businessMessage = `${String(booking.guest_name || "A customer")}'s ${service} appointment for ${when}${stylist?.name ? ` with ${stylist.name}` : ""} was cancelled. Reason: ${reason}.`;
+  const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
+  const customerEmail=renderNotificationEmail(notification.templates,"booking.customer_cancelled",{message,browse_url:`${root}/salons`},notification.customerCancelled,`Your appointment was cancelled.\n\n${message}\n\nWe are sorry for the disruption. Find another available salon: ${root}/salons`);
+  const salonEmail=renderNotificationEmail(notification.templates,"booking.salon_cancelled",{message:businessMessage},notification.salonCancelled,`A booking was cancelled.\n\n${businessMessage}`);
+  const stylistEmail=renderNotificationEmail(notification.templates,"booking.stylist_cancelled",{message:businessMessage},"An assigned Girlz Culture booking was cancelled",`An assigned booking was cancelled.\n\n${businessMessage}`);
   const tasks: DeliveryTask[] = [
-    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), notification.customerCancelled, `<h1>Appointment cancelled</h1><p>${escapeHtml(message)}</p><p>We are sorry for the disruption. Visit Girlz Culture to find another available salon.</p>`, "bookings") },
+    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), customerEmail.subject, customerEmail.html, "bookings") },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), `Girlz Culture: ${message}`) },
-    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), notification.salonCancelled, `<h1>Booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`, "bookings") },
+    { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), salonEmail.subject, salonEmail.html, "bookings") },
     { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), `Girlz Culture: ${businessMessage}`) },
     { recipientType: "salon", channel: "push", destination: String(salon.user_id || ""), run: () => sendPushToUsers([String(salon.user_id || "")], { title: "Booking cancelled", body: businessMessage, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) },
   ];
   if (booking.customer_id) tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: "Appointment cancelled", body: message, url: "/account?tab=past", tag: `booking-${booking.id}`, requireInteraction: true }) });
-  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, "An assigned Girlz Culture booking was cancelled", `<h1>Assigned booking cancelled</h1><p>${escapeHtml(businessMessage)}</p>`, "bookings") });
+  if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings") });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, `Girlz Culture: ${businessMessage}`) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: "Assigned booking cancelled", body: businessMessage, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
   return { deliveries: await runDeliveries(bookingId, "booking_cancelled", tasks.filter(task=>notification.channels.has(task.channel))) };
@@ -223,15 +242,19 @@ export async function deliverBookingReminder(bookingId:string,reminderHours:numb
   const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
   const summary=`Reminder: ${service} at ${salon.name} is scheduled for ${when}${stylist?.name?` with ${stylist.name}`:""}.`;
   const salonSummary=`Reminder: ${String(booking.guest_name||"A customer")}'s ${service} appointment is scheduled for ${when}${stylist?.name?` with ${stylist.name}`:""}.`;
+  const accountUrl=`${root}/account?tab=upcoming`;const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
+  const customerEmail=renderNotificationEmail(notification.templates,"booking.customer_reminder",{summary,account_url:accountUrl},notification.reminderSubject,`Appointment reminder.\n\n${summary}\n\nView your booking: ${accountUrl}`);
+  const salonEmail=renderNotificationEmail(notification.templates,"booking.salon_reminder",{summary:salonSummary,dashboard_url:dashboardUrl},"Upcoming Girlz Culture appointment",`Appointment reminder.\n\n${salonSummary}\n\nOpen booking: ${dashboardUrl}`);
+  const stylistEmail=renderNotificationEmail(notification.templates,"booking.stylist_reminder",{summary:salonSummary},"Upcoming assigned appointment",`Appointment reminder.\n\n${salonSummary}`);
   const tasks:DeliveryTask[]=[
-    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),notification.reminderSubject,`<h1>Appointment reminder</h1><p>${escapeHtml(summary)}</p><p><a href="${root}/account?tab=upcoming">View your booking</a></p>`,"bookings")},
+    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),customerEmail.subject,customerEmail.html,"bookings")},
     {recipientType:"customer",channel:"sms",destination:String(booking.guest_phone||""),run:()=>sendSms(String(booking.guest_phone||""),`Girlz Culture: ${summary}`)},
-    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),"Upcoming Girlz Culture appointment",`<h1>Appointment reminder</h1><p>${escapeHtml(salonSummary)}</p><p><a href="${root}/salon/dashboard/bookings?booking=${booking.id}">Open booking</a></p>`,"bookings")},
+    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),salonEmail.subject,salonEmail.html,"bookings")},
     {recipientType:"salon",channel:"sms",destination:String(salon.phone||""),run:()=>sendSms(String(salon.phone||""),`Girlz Culture: ${salonSummary}`)},
     {recipientType:"salon",channel:"push",destination:String(salon.user_id||""),run:()=>sendPushToUsers([String(salon.user_id||"")],{title:"Upcoming appointment",body:salonSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})},
   ];
   if(booking.customer_id)tasks.push({recipientType:"customer",channel:"push",destination:String(booking.customer_id),run:()=>sendPushToUsers([String(booking.customer_id)],{title:"Appointment reminder",body:summary,url:"/account?tab=upcoming",tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
-  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,"Upcoming assigned appointment",`<h1>Appointment reminder</h1><p>${escapeHtml(salonSummary)}</p>`,"bookings")});
+  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,stylistEmail.subject,stylistEmail.html,"bookings")});
   if(stylistContact?.phone)tasks.push({recipientType:"stylist",channel:"sms",destination:stylistContact.phone,run:()=>sendSms(stylistContact.phone,`Girlz Culture: ${salonSummary}`)});
   if(stylistContact?.userId)tasks.push({recipientType:"stylist",channel:"push",destination:stylistContact.userId,run:()=>sendPushToUsers([stylistContact.userId],{title:"Upcoming assigned appointment",body:salonSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
   return{deliveries:await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)))};
