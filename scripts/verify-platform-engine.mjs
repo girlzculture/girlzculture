@@ -7,16 +7,18 @@ const api = read("src/app/api/admin/engine/config/route.ts");
 const publicApi = read("src/app/api/config/route.ts");
 const dashboard = read("src/components/AdminDashboard.tsx");
 const control = read("src/components/admin/EngineControlCenter.tsx");
+const manifest = read("src/lib/engineManifest.ts");
 const checkout = read("src/app/api/stripe/booking-checkout/route.ts");
 const manualBooking = read("src/app/api/admin/bookings/route.ts");
 
 const categories = [
-  "general_branding", "identity_security", "salon_activation", "booking_rules",
-  "payments_plans", "service_catalog", "search_language", "location_markets",
-  "homepage_composition", "content_legal", "trust_badges", "notifications",
-  "languages", "media", "quality_support", "test_data", "configuration_history",
+  "branding_design", "navigation_menus", "pages_sections", "homepage_composition",
+  "service_taxonomies", "salon_lifecycle", "booking_availability", "payments_subscriptions",
+  "search_discovery", "markets_service_areas", "media_uploads", "languages_translations",
+  "notifications_templates", "trust_quality", "promotions_campaigns", "customer_support",
+  "users_roles", "ai_automation", "test_data_maintenance", "integrations_system", "configuration_history",
 ];
-for (const category of categories) assert.match(control, new RegExp(`\"${category}\"`));
+for (const category of categories) assert.match(manifest, new RegExp(`"${category}"`));
 
 assert.match(dashboard, /\["engine", "The Engine", SlidersHorizontal\]/);
 assert.match(dashboard, /section === "engine" \? "settings"/);
@@ -33,8 +35,10 @@ assert.match(control, /Save draft/);
 assert.match(control, /Publish change/);
 assert.match(control, /Restore/);
 assert.match(control, /Secret values can never be viewed or edited/);
+assert.match(control, /beforeunload/);
+assert.match(control, /Search all Engine controls/);
 assert.match(checkout, /getEngineNumber\("booking\.deposit_percentage"/);
 assert.match(manualBooking, /getEngineNumber\("booking\.deposit_percentage"/);
 assert.doesNotMatch(control, /STRIPE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY/);
 
-console.log(`Platform Engine verification passed (${categories.length} governed categories).`);
+console.log(`Platform Engine verification passed (${categories.length} governed areas).`);

@@ -1,7 +1,9 @@
 export const SUPPORTED_LOCALES = ["en", "es", "fr", "wo"] as const;
-export type AppLocale = typeof SUPPORTED_LOCALES[number];
-export const LOCALE_NAMES: Record<AppLocale,string> = { en:"English", es:"Español", fr:"Français", wo:"Wolof" };
-export const INTL_LOCALES: Record<AppLocale,string> = { en:"en-US", es:"es-US", fr:"fr-FR", wo:"wo-SN" };
+export type AppLocale = string;
+export type LocaleOption = { locale:string;display_name:string;native_name:string;intl_locale:string;text_direction:"ltr"|"rtl";is_default?:boolean;sort_order?:number };
+export const LOCALE_NAMES: Record<string,string> = { en:"English", es:"Español", fr:"Français", wo:"Wolof" };
+export const INTL_LOCALES: Record<string,string> = { en:"en-US", es:"es-US", fr:"fr-FR", wo:"wo-SN" };
+export const RTL_LANGUAGE_CODES = new Set(["ar","fa","he","ur"]);
 
 export const ENGLISH_MESSAGES: Record<string,string> = {
   "nav.styles":"Browse Styles", "nav.salons":"Find Salons", "nav.how":"How It Works", "nav.about":"About Us", "nav.blog":"Blog", "nav.partner":"Partner With Us", "nav.new":"New", "nav.login":"Log in", "nav.signup":"Sign up",
@@ -11,11 +13,18 @@ export const ENGLISH_MESSAGES: Record<string,string> = {
   "common.language":"Language", "common.save":"Save", "common.cancel":"Cancel", "common.loading":"Loading...", "common.retry":"Try again", "common.error":"Something went wrong.",
 };
 
-export const BUNDLED_MESSAGES: Record<AppLocale,Record<string,string>> = {
+export const BUNDLED_MESSAGES: Record<string,Record<string,string>> = {
   en: ENGLISH_MESSAGES,
   es: { "nav.styles":"Explorar estilos", "nav.salons":"Buscar salones", "nav.how":"Cómo funciona", "nav.about":"Sobre nosotros", "nav.blog":"Blog", "nav.partner":"Trabaja con nosotros", "nav.new":"Nuevo", "nav.login":"Iniciar sesión", "nav.signup":"Registrarse", "nav.home":"Inicio", "nav.search":"Buscar", "nav.bookings":"Reservas", "nav.social":"Comunidad", "nav.profile":"Perfil", "footer.company":"Empresa", "footer.support":"Ayuda", "footer.professionals":"Para profesionales", "footer.newsletter":"Mantente al día", "footer.newsletter_help":"Consejos, salones nuevos y ofertas exclusivas.", "footer.rights":"Todos los derechos reservados.", "trust.salons.title":"Salones verificados", "trust.salons.body":"Cada salón se revisa por calidad, seguridad y profesionalismo.", "trust.reviews.title":"Reseñas de reservas", "trust.reviews.body":"Las reseñas están vinculadas a citas completadas.", "trust.pricing.title":"Precios transparentes", "trust.pricing.body":"Precios claros y sin sorpresas.", "common.language":"Idioma", "common.save":"Guardar", "common.cancel":"Cancelar", "common.loading":"Cargando...", "common.retry":"Intentar de nuevo", "common.error":"Algo salió mal." },
   fr: { "nav.styles":"Voir les coiffures", "nav.salons":"Trouver un salon", "nav.how":"Comment ça marche", "nav.about":"À propos", "nav.blog":"Blog", "nav.partner":"Devenir partenaire", "nav.new":"Nouveau", "nav.login":"Se connecter", "nav.signup":"S’inscrire", "nav.home":"Accueil", "nav.search":"Rechercher", "nav.bookings":"Réservations", "nav.social":"Communauté", "nav.profile":"Profil", "footer.company":"Entreprise", "footer.support":"Assistance", "footer.professionals":"Pour les professionnels", "footer.newsletter":"Restez informée", "footer.newsletter_help":"Conseils, nouveaux salons et offres exclusives.", "footer.rights":"Tous droits réservés.", "trust.salons.title":"Salons vérifiés", "trust.salons.body":"Chaque salon est évalué pour sa qualité, sa sécurité et son professionnalisme.", "trust.reviews.title":"Avis liés aux réservations", "trust.reviews.body":"Les avis sont liés à des rendez-vous terminés.", "trust.pricing.title":"Tarifs transparents", "trust.pricing.body":"Des tarifs clairs, sans surprise.", "common.language":"Langue", "common.save":"Enregistrer", "common.cancel":"Annuler", "common.loading":"Chargement...", "common.retry":"Réessayer", "common.error":"Une erreur s’est produite." },
   wo: { "nav.styles":"Seet xeeti coiffure", "nav.salons":"Seet salon yi", "nav.how":"Ni mu doxee", "nav.about":"Lu jëm ci nun", "nav.blog":"Blog", "nav.partner":"Ànd ak nun", "nav.new":"Lu bees", "nav.login":"Dugg", "nav.signup":"Bindu", "nav.home":"Kër gi", "nav.search":"Seet", "nav.bookings":"Rendez-vous yi", "nav.social":"Mbooloo", "nav.profile":"Sama xibaar", "footer.company":"Kompañi", "footer.support":"Ndimbal", "footer.professionals":"Ñeel professionnels yi", "footer.newsletter":"Xam lu bees", "footer.newsletter_help":"Xelal, salon yu bees ak promo yi.", "footer.rights":"Sañ-sañ yépp ñu ngi leen moom.", "trust.salons.title":"Salon yu ñu wóoral", "trust.salons.body":"Ñu ngi seet salon bu nekk ngir baax, kaaraange ak liggéey bu rafet.", "trust.reviews.title":"Xalaat yu jóge ci rendez-vous", "trust.reviews.body":"Xalaat yi dañu leen boole ak rendez-vous yu jeex.", "trust.pricing.title":"Njëg yu leer", "trust.pricing.body":"Njëg yi leer nañu te amul lu la bett.", "common.language":"Làkk", "common.save":"Denc", "common.cancel":"Neenal", "common.loading":"Mi ngi yeb...", "common.retry":"Jéemaat", "common.error":"Am na lu jaarul yoon." },
 };
 
-export function normalizeLocale(value:unknown):AppLocale { const short=String(value||"").trim().toLowerCase().split(/[-_]/)[0] as AppLocale; return SUPPORTED_LOCALES.includes(short)?short:"en"; }
+export function normalizeLocale(value:unknown):AppLocale {
+  const raw=String(value||"").trim().replaceAll("_","-");
+  if(!/^[A-Za-z]{2,3}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?$/.test(raw))return "en";
+  const parts=raw.split("-");
+  return parts.map((part,index)=>index===0?part.toLowerCase():part.length===4?`${part[0].toUpperCase()}${part.slice(1).toLowerCase()}`:part.toUpperCase()).join("-");
+}
+export function localeDirection(locale:unknown):"ltr"|"rtl" { return RTL_LANGUAGE_CODES.has(normalizeLocale(locale).split("-")[0])?"rtl":"ltr"; }
+export function intlLocale(locale:unknown){const safe=normalizeLocale(locale);return INTL_LOCALES[safe]||safe;}
