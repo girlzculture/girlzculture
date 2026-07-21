@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3, Bell, Building2, CalendarDays, CircleDollarSign, ClipboardList, CreditCard,
-  FileText, Flag, Headphones, Home, Menu, MessageSquare, Search, Settings, Star, UsersRound,
+  FileText, Flag, Headphones, Home, Menu, MessageSquare, Search, Settings, SlidersHorizontal, Star, UsersRound,
 } from "lucide-react";
 import { adminSupabase as supabase, getSessionForScope } from "@/lib/supabase";
 import AdminContentManager from "@/components/AdminContentManager";
@@ -18,13 +18,10 @@ import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
 import AdminMarketingWorkspace from "@/components/admin/AdminMarketingWorkspace";
-import SalonLifecycleSettings from "@/components/admin/SalonLifecycleSettings";
-import SearchLanguageSettings from "@/components/admin/SearchLanguageSettings";
-import MediaRulesSettings from "@/components/admin/MediaRulesSettings";
-import TranslationManager from "@/components/admin/TranslationManager";
+import EngineControlCenter from "@/components/admin/EngineControlCenter";
 import { US_STATES } from "@/lib/usStates";
 
-export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "settings";
+export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
@@ -39,10 +36,11 @@ const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["customers", "Customers", UsersRound], ["bookings", "Bookings", CalendarDays], ["quality", "Quality & Performance", Star],
   ["reviews", "Reviews", MessageSquare], ["finance", "Payments & Finance", CircleDollarSign], ["marketing", "Marketing & Promotions", BarChart3],
   ["content", "Content Management", FileText], ["support", "Customer Support", Headphones], ["complaints", "Complaints", Flag], ["subscriptions", "Subscriptions", CreditCard],
+  ["engine", "The Engine", SlidersHorizontal],
   ["settings", "Settings & Team", Settings],
 ];
 
-const permissionForSection = (section: AdminSection) => section === "complaints" ? "support" : section;
+const permissionForSection = (section: AdminSection) => section === "complaints" ? "support" : section === "engine" ? "settings" : section;
 type InboxCounts = { support: number; complaints: number };
 
 export default function AdminDashboard({ section }: { section: AdminSection; preview?: boolean }) {
@@ -173,6 +171,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} mode="support" onRead={onTicketRead} /><BookingInbox scope="admin" /></div>;
     case "complaints": return <AdminSupportInbox initialTickets={safeData.tickets} mode="complaints" onRead={onTicketRead} />;
     case "subscriptions": return <Subscriptions {...props} />;
+    case "engine": return <EngineControlCenter />;
     default: return <SettingsTeam {...props} />;
   }
 }
@@ -309,7 +308,7 @@ function Subscriptions(p: any) {
 
 function SettingsTeam(p: any) {
   const conflicts = rows(p.identityConflicts);
-  return <div className="space-y-5"><Panel title="Platform Settings"><p className="text-sm leading-6 text-ink/70">Public content is managed in Content Management. Secrets and infrastructure settings remain server-side environment variables.</p><Link href="/admin/content" className="mt-4 inline-flex rounded-lg bg-magenta px-6 py-3 font-bold text-white">Open Content Management</Link></Panel><Panel title="Identity conflict review"><p className="mb-4 text-xs leading-5 text-ink/60">One email may belong to only one Auth user and one primary role. Historical conflicts are listed for deliberate review; the system never merges or deletes them automatically.</p>{conflicts.length?<div className="space-y-3">{conflicts.map((conflict:Row)=><article key={conflict.email_normalized} className="rounded-xl border border-amber/30 bg-amber/5 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><b className="break-all text-sm text-plum">{conflict.email_normalized}</b><Badge value={conflict.resolution_status}/></div><p className="mt-2 text-xs text-ink/60">Roles: {Array.isArray(conflict.roles)&&conflict.roles.length?conflict.roles.join(", "):"Review required"}</p><p className="mt-1 text-xs text-ink/50">{Array.isArray(conflict.user_ids)?conflict.user_ids.length:0} Auth user record(s) · {Array.isArray(conflict.records)?conflict.records.length:0} linked record(s)</p>{Array.isArray(conflict.records)?<ul className="mt-3 space-y-1 border-t border-plum/10 pt-3 text-[10px] text-ink/55">{conflict.records.map((record:Row,index:number)=><li key={`${record.record_type}-${record.record_id}-${index}`}>{record.record_type}: {record.role||"Auth identity"} · {String(record.record_id||"").slice(0,12)}</li>)}</ul>:null}</article>)}</div>:<EmptyState title="No identity conflicts" body="Every known email is assigned to one canonical user and one primary role."/>}</Panel><TeamUserManager scope="admin" /></div>;
+  return <div className="space-y-5"><Panel title="Platform Settings"><p className="text-sm leading-6 text-ink/70">Business rules, defaults, languages, media constraints, and safe integration status now live in The Engine. Public editorial content remains in Content Management; secrets remain in deployment environment variables.</p><div className="mt-4 flex flex-wrap gap-2"><Link href="/admin/engine" className="inline-flex rounded-lg bg-magenta px-6 py-3 font-bold text-white">Open The Engine</Link><Link href="/admin/content" className="inline-flex rounded-lg border border-magenta px-6 py-3 font-bold text-magenta">Open Content Management</Link></div></Panel><Panel title="Identity conflict review"><p className="mb-4 text-xs leading-5 text-ink/60">One email may belong to only one Auth user and one primary role. Historical conflicts are listed for deliberate review; the system never merges or deletes them automatically.</p>{conflicts.length?<div className="space-y-3">{conflicts.map((conflict:Row)=><article key={conflict.email_normalized} className="rounded-xl border border-amber/30 bg-amber/5 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><b className="break-all text-sm text-plum">{conflict.email_normalized}</b><Badge value={conflict.resolution_status}/></div><p className="mt-2 text-xs text-ink/60">Roles: {Array.isArray(conflict.roles)&&conflict.roles.length?conflict.roles.join(", "):"Review required"}</p><p className="mt-1 text-xs text-ink/50">{Array.isArray(conflict.user_ids)?conflict.user_ids.length:0} Auth user record(s) · {Array.isArray(conflict.records)?conflict.records.length:0} linked record(s)</p>{Array.isArray(conflict.records)?<ul className="mt-3 space-y-1 border-t border-plum/10 pt-3 text-[10px] text-ink/55">{conflict.records.map((record:Row,index:number)=><li key={`${record.record_type}-${record.record_id}-${index}`}>{record.record_type}: {record.role||"Auth identity"} · {String(record.record_id||"").slice(0,12)}</li>)}</ul>:null}</article>)}</div>:<EmptyState title="No identity conflicts" body="Every known email is assigned to one canonical user and one primary role."/>}</Panel><TeamUserManager scope="admin" /></div>;
 }
 
 function recentActivity(p: DataState) {
@@ -328,7 +327,7 @@ function dailySeries(rows: Row[], dateField: string, value: (row: Row) => number
 
 function isPaidDeposit(booking: Row) { return /paid|succeeded|complete/i.test(String(booking.deposit_status || booking.payment_status || "")); }
 function QuickLink({ href, label }: { href: string; label: string }) { return <Link href={href} className="rounded-[10px] bg-blush/30 p-4 text-center text-[10px] font-semibold text-plum">{label}</Link>; }
-function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(26,18,32,.03)]"><h2 className="mb-4 font-serif text-xl font-semibold text-plum">{title}</h2>{title === "Platform Settings" ? <div className="mb-5 space-y-5"><SalonLifecycleSettings /><SearchLanguageSettings /><MediaRulesSettings /><TranslationManager /></div> : null}{children}</section>; }
+function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(26,18,32,.03)]"><h2 className="mb-4 font-serif text-xl font-semibold text-plum">{title}</h2>{children}</section>; }
 function Line({ label, meta = "" }: { label: string; meta?: string }) { return <div className="flex items-center justify-between gap-4 border-b border-plum/10 py-3 text-xs"><span>{label}</span><span className="text-right text-ink/45">{meta}</span></div>; }
 function EmptyState({ title, body }: { title: string; body: string }) { return <div className="rounded-[12px] border border-dashed border-plum/15 bg-cream/50 p-5 text-center"><h3 className="font-serif text-lg text-plum">{title}</h3><p className="mt-1 text-xs leading-5 text-ink/55">{body}</p></div>; }
 function DataTable({ headers, children }: { headers: string[]; children: React.ReactNode }) { return <div className="overflow-x-auto"><table className="min-w-full text-left text-xs"><thead className="bg-cream/70"><tr>{headers.map((header) => <th key={header} className="whitespace-nowrap px-3 py-3">{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>; }
@@ -340,4 +339,4 @@ function money(value: number) { return value.toLocaleString("en-US", { style: "c
 function minorMoney(value: number, currency: unknown) { try { return (Number(value || 0) / 100).toLocaleString("en-US", { style: "currency", currency: String(currency || "usd").toUpperCase() }); } catch { return `${String(currency || "usd").toUpperCase()} ${(Number(value || 0) / 100).toFixed(2)}`; } }
 function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—"; }
 function dateTime(value?: string, timeZone?: string) { return value ? new Date(value).toLocaleString("en-US", { timeZone: timeZone || "America/New_York", dateStyle: "medium", timeStyle: "short" }) : "—"; }
-function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Audit Stripe subscription invoices, plan changes, refunds, credits, and failures by state.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", settings: "Review platform configuration and authorized admin access." })[section]; }
+function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Audit Stripe subscription invoices, plan changes, refunds, credits, and failures by state.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", engine: "Govern platform behavior, defaults, publication, and integration readiness.", settings: "Review platform configuration and authorized admin access." })[section]; }

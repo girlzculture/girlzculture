@@ -4,6 +4,7 @@ import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, r
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { siteUrl, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -89,7 +90,8 @@ export async function POST(request: Request) {
     }
     total = Math.max(0, Math.round(total * 100) / 100);
     if (!Number.isFinite(total) || total > 10000) throw new Error("The booking total could not be verified.");
-    const originalDeposit = Math.round(total * 10) / 100;
+    const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
+    const originalDeposit = Math.round(total * depositPercentage) / 100;
     const promoCode = cleanText(body.promo_code, 40);
     const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
     const calculatedDeposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
@@ -193,7 +195,7 @@ export async function POST(request: Request) {
       "metadata[salon_id]": salonId,
       "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
       "metadata[promo_code]": promoReservation?.code || "",
-      "payment_intent_data[description]": `10% reservation deposit for ${style.name}`,
+      "payment_intent_data[description]": `${depositPercentage}% reservation deposit for ${style.name}`,
       allow_promotion_codes: !promoReservation,
       ...(promoReservation?.stripe_coupon_id ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id } : {}),
     });
