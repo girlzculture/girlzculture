@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       admin.from("salons").select("id,name,slug,address_city,address_state,borough,latitude,longitude").eq("status", "Active").eq("is_discoverable", true).in("subscription_status", ["active", "trialing"]).eq("geocode_status", "success").eq("address_needs_review", false).limit(500),
       admin.from("master_styles").select("id,name,category_id,service_group_id,sort_order").eq("is_active", true).order("sort_order").limit(2_000),
       admin.from("service_categories").select("id,name,slug,sort_order").eq("is_active", true).order("sort_order").limit(500),
-      admin.from("styles").select("salon_id,master_style_id,name").limit(5_000),
+      admin.from("styles").select("salon_id,master_style_id,name").is("archived_at",null).limit(5_000),
       admin.from("location_markets").select("id,name,state_code,center_latitude,center_longitude").eq("is_active", true).order("name").limit(500),
     ]);
     const firstError = [settingsResult.error, rulesResult.error, salonsResult.error, catalogResult.error, categoriesResult.error, offeringsResult.error, marketsResult.error].find(Boolean);

@@ -25,7 +25,8 @@
     "verify:media": "node scripts/verify-unified-media.mjs",
     "verify:i18n": "node scripts/verify-localization-engine.mjs",
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
-    "verify:engine": "node scripts/verify-platform-engine.mjs"
+    "verify:engine": "node scripts/verify-platform-engine.mjs",
+    "verify:records": "node scripts/verify-record-lifecycle.mjs"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",

@@ -192,9 +192,9 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   if (!salon) notFound();
 
   const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult] = await Promise.all([
-    supabase.from("styles").select("*").eq("salon_id", salon.id).order("created_at", { ascending: true }),
-    supabase.from("stylists").select("*").eq("salon_id", salon.id).order("created_at", { ascending: true }),
-    supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).order("created_at", { ascending: false }),
+    supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("stylists").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
   ]);
 
@@ -204,7 +204,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
   let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
   if (reviewsWithCustomerResult.error) {
-    const { data: reviewsData } = await supabase.from("reviews").select("*").eq("salon_id", salon.id).order("created_at", { ascending: false });
+    const { data: reviewsData } = await supabase.from("reviews").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false });
     reviews = (reviewsData || []) as ReviewRecord[];
   }
 

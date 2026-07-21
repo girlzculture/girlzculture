@@ -93,12 +93,14 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     .from("styles")
     .select("*,service_category:service_categories(name,slug)")
     .eq("salon_id", salonData.id)
+    .is("archived_at", null)
     .eq("is_active", true);
 
   const { data: stylistsData } = await supabase
     .from("stylists")
     .select("*")
     .eq("salon_id", salonData.id)
+    .is("archived_at", null)
     .eq("is_active", true)
     .eq("is_draft", false);
 

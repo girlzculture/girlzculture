@@ -21,6 +21,7 @@ export default async function StylesPage() {
   const { data, error } = await supabase
     .from("styles")
     .select("name,category,category_id,salon_id,price_display_min,base_price,photos,length_options,service_category:service_categories(name,slug)")
+    .is("archived_at", null)
     .order("name");
 
   if (error) console.error("Unable to load public style catalog", error);
