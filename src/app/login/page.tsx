@@ -2,11 +2,12 @@ import Link from "next/link";
 import { CalendarDays, Crown, Heart, Star } from "lucide-react";
 import CustomerAuth from "@/components/CustomerAuth";
 import { Wordmark } from "@/components/site/PublicChrome";
+import LanguageSelector from "@/components/i18n/LanguageSelector";
 
 export default function CustomerLogin() {
   const benefits = [[Heart, "Save your favorite stylists"], [CalendarDays, "See your bookings"], [Star, "Leave reviews"]] as const;
   return <main className="min-h-screen bg-cream p-4 text-ink">
-    <header className="mx-auto flex max-w-[1500px] items-center justify-between py-4"><Wordmark/><nav className="hidden gap-8 text-sm font-semibold md:flex"><Link href="/salons">Find Salons</Link><Link href="/styles">Services</Link><Link href="/partner">For Stylists</Link><Link href="/how-it-works">How It Works</Link></nav></header>
+    <header className="mx-auto flex max-w-[1500px] items-center justify-between py-4"><Wordmark/><div data-language-selector-host className="flex items-center gap-5"><nav className="hidden gap-8 text-sm font-semibold md:flex"><Link href="/salons">Find Salons</Link><Link href="/styles">Services</Link><Link href="/partner">For Stylists</Link><Link href="/how-it-works">How It Works</Link></nav><LanguageSelector compact/></div></header>
     <div className="mx-auto grid max-w-[1400px] items-stretch overflow-hidden rounded-[22px] border border-plum/10 bg-white/80 shadow-xl lg:grid-cols-[1fr_.8fr]">
       <section className="relative hidden min-h-[680px] overflow-hidden bg-[url('/images/hero-braids.jpg')] bg-cover bg-center lg:block">
         <div className="absolute inset-0 bg-gradient-to-r from-cream via-cream/30 to-transparent"/>

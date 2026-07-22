@@ -9,7 +9,7 @@ const checks = [
   ["account preference", read("src/components/i18n/LocaleProvider.tsx"), /persistAccountLocale/],
   ["right-to-left runtime", read("src/components/i18n/LocaleProvider.tsx"), /document\.documentElement\.dir/],
   ["locale-aware plurals", read("src/components/i18n/LocaleProvider.tsx"), /Intl\.PluralRules/],
-  ["visible global selector", read("src/app/layout.tsx"), /<LanguageSelector/],
+  ["visible public header selectors", `${read("src/components/site/PublicChrome.tsx")}\n${read("src/components/site/MobilePublicMenu.tsx")}`, /<LanguageSelector/],
   ["published-only public translations", read("src/app/api/i18n/route.ts"), /\.eq\("status",\s*"Published"\)/],
   ["translation workflow states", read("supabase/migrations/20260720160000_localization_engine.sql"), /'Missing','Draft','Reviewed','Published'/],
   ["human review gate", read("src/app/api/admin/engine/translations/route.ts"), /require explicit human review confirmation/],

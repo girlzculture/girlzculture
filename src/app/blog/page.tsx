@@ -6,7 +6,10 @@ import { getBlogPosts, type BlogPost } from "@/lib/content";
 
 const categories = ["All Articles", "Hair Care", "Braided Styles", "Beauty & Wellness", "Salon Business", "Community Stories"];
 
-export const dynamic = "force-dynamic";
+// Content saves explicitly revalidate this route. A short cache window keeps a
+// transient database/network stall from turning a public blog request into a
+// hosting-layer 502 during cold starts.
+export const revalidate = 300;
 
 export default async function Blog({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const { category = "All Articles" } = await searchParams;

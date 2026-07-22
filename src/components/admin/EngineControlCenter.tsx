@@ -24,6 +24,7 @@ import TestDataManager from "@/components/admin/TestDataManager";
 import { ENGINE_CATEGORIES } from "@/lib/engineManifest";
 import AiAutomationManager from "@/components/admin/AiAutomationManager";
 import SystemStatusManager from "@/components/admin/SystemStatusManager";
+import ErrorMonitoringManager from "@/components/admin/ErrorMonitoringManager";
 import NavigationMenuManager from "@/components/admin/NavigationMenuManager";
 import NotificationTemplateManager from "@/components/admin/NotificationTemplateManager";
 
@@ -761,7 +762,7 @@ export default function EngineControlCenter() {
           {category === "navigation_menus" ? <NavigationMenuManager /> : null}
           {category === "notifications_templates" ? <NotificationTemplateManager /> : null}
           {category === "ai_automation" ? <AiAutomationManager /> : null}
-          {category === "integrations_system" ? <SystemStatusManager /> : null}
+          {category === "integrations_system" ? <><SystemStatusManager /><ErrorMonitoringManager /></> : null}
           {category === "test_data_maintenance" ? <TestDataManager /> : null}
           {selectedCategory?.links?.length ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
