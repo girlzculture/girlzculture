@@ -1,3 +1,5 @@
+import { revalidatePath } from "next/cache";
+import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "hero_position_x", "hero_position_y", "hero_zoom", "page_group", "sections", "labels", "seo_title", "seo_description", "status", "is_enabled"] as const;
@@ -35,16 +37,40 @@ function sanitizeSections(value: unknown) {
   });
 }
 
+async function auditContentChange(admin: Awaited<ReturnType<typeof requireAdminPermission>>["admin"], userId: string, recordType: string, recordId: string, label: string, beforeValues: unknown, afterValues: unknown) {
+  const { error } = await admin.from("record_management_events").insert({
+    record_type: recordType,
+    record_id: recordId,
+    record_label: label,
+    action: beforeValues ? "Updated" : "Created",
+    before_values: beforeValues || null,
+    after_values: afterValues || null,
+    reason: "Saved from Content Management",
+    acting_user_id: userId,
+    acting_scope: "platform_admin",
+  });
+  if (error) throw error;
+}
+
+function revalidatePublishedContent() {
+  revalidatePath("/", "layout");
+  revalidatePath("/styles");
+  revalidatePath("/blog");
+  revalidatePath("/salon/[slug]", "page");
+}
+
 export async function GET(request: Request) {
+  let monitoringAdmin;
   try {
     const { admin } = await requireAdminPermission(request, "content");
+    monitoringAdmin = admin;
     const [pages, posts, masterStyles, serviceCategories, serviceGroups, serviceAddons, salons, products] = await Promise.all([
       admin.from("content_pages").select("*").order("slug"),
       admin.from("blog_posts").select("*").order("updated_at", { ascending: false }),
-      admin.from("master_styles").select("*,service_category:service_categories(id,name,slug),service_group:service_groups(id,name,category_id)").order("name"),
-      admin.from("service_categories").select("*").order("name"),
-      admin.from("service_groups").select("*,service_category:service_categories(id,name,slug)").order("name"),
-      admin.from("service_addons").select("*,service_category:service_categories(id,name,slug)").order("name"),
+      admin.from("master_styles").select("*,service_category:service_categories(id,name,slug),service_group:service_groups(id,name,category_id)").order("sort_order").order("name"),
+      admin.from("service_categories").select("*").order("sort_order").order("name"),
+      admin.from("service_groups").select("*,service_category:service_categories(id,name,slug)").order("sort_order").order("name"),
+      admin.from("service_addons").select("*,service_category:service_categories(id,name,slug)").order("sort_order").order("name"),
       admin.from("salons").select("id,name,slug,cover_photo_url,address_city,address_state").eq("status", "Active").eq("is_discoverable", true).not("slug", "is", null).order("name"),
       admin.from("salon_products").select("id,name,salon:salons(name,slug)").eq("is_visible", true).order("name"),
     ]);
@@ -63,16 +89,17 @@ export async function GET(request: Request) {
         return salon?.slug ? [{ type: "Product", label: `${product.name} â€” ${salon.name}`, href: `/salon/${salon.slug}/product/${product.id}` }] : [];
       }),
     ];
-    return Response.json({ pages: pages.data || [], posts: posts.data || [], masterStyles: masterStyles.data || [], serviceCategories: serviceCategories.data || [], serviceGroups: serviceGroups.data || [], serviceAddons: serviceAddons.data || [], linkTargets });
+    return Response.json({ pages: pages.data || [], posts: posts.data || [], masterStyles: masterStyles.data || [], serviceCategories: serviceCategories.data || [], serviceGroups: serviceGroups.data || [], serviceAddons: serviceAddons.data || [], linkTargets }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Admin content load failed", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Unable to load content" }, { status: 403 });
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "content-management", action: "load", actorRole: "admin", safeMessage: "Content could not be loaded." });
   }
 }
 
 export async function PUT(request: Request) {
+  let monitoringAdmin;
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
+    monitoringAdmin = admin;
     const { type, payload } = await request.json() as { type: "page" | "post" | "master_style" | "service_category" | "service_group" | "service_addon"; payload: Record<string, unknown> };
     if (!payload) return Response.json({ error: "Content payload is required." }, { status: 400 });
 
@@ -83,12 +110,15 @@ export async function PUT(request: Request) {
       const { data: group, error: groupError } = await admin.from("service_groups").select("id,name,category_id").eq("id", groupId).eq("is_active", true).maybeSingle();
       if (groupError) throw groupError;
       if (!group) return Response.json({ error: "Choose an active service group." }, { status: 400 });
-      const record = { name, category: group.name, category_id: group.category_id, service_group_id: group.id, is_active: payload.is_active !== false, updated_at: new Date().toISOString() };
+      const { data: before } = payload.id ? await admin.from("master_styles").select("*").eq("id", payload.id).maybeSingle() : { data: null };
+      const record = { name, category: group.name, category_id: group.category_id, service_group_id: group.id, sort_order: Math.max(0, Math.min(100000, Number(payload.sort_order || 0))), is_active: payload.is_active !== false, archived_at: payload.is_active === false ? payload.archived_at || null : null, updated_at: new Date().toISOString() };
       const query = payload.id
         ? admin.from("master_styles").update(record).eq("id", payload.id).select().single()
         : admin.from("master_styles").insert(record).select().single();
       const { data, error } = await query;
       if (error) throw error;
+      await auditContentChange(admin, user.id, "master_style", data.id, data.name, before, data);
+      revalidatePublishedContent();
       console.info("Admin master style saved", { styleId: data.id, name: data.name, admin: user.email });
       return Response.json({ data });
     }
@@ -97,10 +127,13 @@ export async function PUT(request: Request) {
       const name = text(payload.name, 80);
       const slug = text(payload.slug, 80).toLowerCase();
       if (!name || !validSlug(slug)) return Response.json({ error: "Category name and a lowercase URL slug are required." }, { status: 400 });
-      const record = { name, slug, description: text(payload.description, 500) || null, is_active: payload.is_active !== false, updated_at: new Date().toISOString() };
+      const { data: before } = payload.id ? await admin.from("service_categories").select("*").eq("id", payload.id).maybeSingle() : { data: null };
+      const record = { name, slug, description: text(payload.description, 500) || null, sort_order: Math.max(0, Math.min(100000, Number(payload.sort_order || 0))), is_active: payload.is_active !== false, archived_at: payload.is_active === false ? payload.archived_at || null : null, updated_at: new Date().toISOString() };
       const query = payload.id ? admin.from("service_categories").update(record).eq("id", payload.id).select().single() : admin.from("service_categories").insert(record).select().single();
       const { data, error } = await query;
       if (error) throw error;
+      await auditContentChange(admin, user.id, "service_category", data.id, data.name, before, data);
+      revalidatePublishedContent();
       console.info("Admin service category saved", { id: data.id, name: data.name, admin: user.email });
       return Response.json({ data });
     }
@@ -113,10 +146,13 @@ export async function PUT(request: Request) {
       if (categoryError) throw categoryError;
       if (!category) return Response.json({ error: "Choose an active service category." }, { status: 400 });
       const table = type === "service_group" ? "service_groups" : "service_addons";
-      const record = { name, category_id: categoryId, is_active: payload.is_active !== false, updated_at: new Date().toISOString() };
+      const { data: before } = payload.id ? await admin.from(table).select("*").eq("id", payload.id).maybeSingle() : { data: null };
+      const record = { name, category_id: categoryId, sort_order: Math.max(0, Math.min(100000, Number(payload.sort_order || 0))), is_active: payload.is_active !== false, archived_at: payload.is_active === false ? payload.archived_at || null : null, updated_at: new Date().toISOString() };
       const query = payload.id ? admin.from(table).update(record).eq("id", payload.id).select().single() : admin.from(table).insert(record).select().single();
       const { data, error } = await query;
       if (error) throw error;
+      await auditContentChange(admin, user.id, type, data.id, data.name, before, data);
+      revalidatePublishedContent();
       console.info(`Admin ${type} saved`, { id: data.id, name: data.name, admin: user.email });
       return Response.json({ data });
     }
@@ -124,6 +160,7 @@ export async function PUT(request: Request) {
     if (!validSlug(payload.slug)) return Response.json({ error: "Enter a valid lowercase page slug." }, { status: 400 });
 
     if (type === "page") {
+      const { data: before } = await admin.from("content_pages").select("*").eq("slug", payload.slug).maybeSingle();
       const record = {
         ...pick(payload, pageFields),
         sections: sanitizeSections(payload.sections),
@@ -135,28 +172,34 @@ export async function PUT(request: Request) {
       };
       const { data, error } = await admin.from("content_pages").upsert(record, { onConflict: "slug" }).select().single();
       if (error) throw error;
+      await auditContentChange(admin, user.id, "content_page", data.slug, data.title, before, data);
+      revalidatePublishedContent();
       console.info("Admin page content saved", { slug: data.slug, admin: user.email });
       return Response.json({ data });
     }
 
     if (type === "post") {
+      const { data: before } = payload.id ? await admin.from("blog_posts").select("*").eq("id", payload.id).maybeSingle() : { data: null };
       const record = { ...pick(payload, postFields), updated_at: new Date().toISOString() };
       const { data, error } = await admin.from("blog_posts").upsert(record, { onConflict: payload.id ? "id" : "slug" }).select().single();
       if (error) throw error;
+      await auditContentChange(admin, user.id, "blog_post", data.id, data.title, before, data);
+      revalidatePublishedContent();
       console.info("Admin blog post saved", { slug: data.slug, admin: user.email });
       return Response.json({ data });
     }
 
     return Response.json({ error: "Unknown content type" }, { status: 400 });
   } catch (error) {
-    console.error("Admin content save failed", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Unable to save content" }, { status: 500 });
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "content-management", action: "save", actorRole: "admin", safeMessage: "We couldn't save this content." });
   }
 }
 
 export async function DELETE(request: Request) {
+  let monitoringAdmin;
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
+    monitoringAdmin = admin;
     const { id, type = "post" } = await request.json() as { id?: string; type?: "post" | "master_style" | "service_category" | "service_group" | "service_addon" };
     if (!id) return Response.json({ error: "Record ID is required" }, { status: 400 });
     const recordType = ({ post: "blog_post", master_style: "master_style", service_category: "service_category", service_group: "service_group", service_addon: "service_addon" } as const)[type];
@@ -177,7 +220,6 @@ export async function DELETE(request: Request) {
     console.info("Admin content record deleted", { id, type, admin: user.email });
     return Response.json({ ok: true, result: data });
   } catch (error) {
-    console.error("Admin blog delete failed", error);
-    return Response.json({ error: "The record could not be deleted safely. Nothing was changed; try Archive in The Engine or contact support with the server log timestamp." }, { status: 500 });
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "content-management", action: "delete", actorRole: "admin", safeMessage: "The record could not be deleted safely. Nothing was changed." });
   }
 }

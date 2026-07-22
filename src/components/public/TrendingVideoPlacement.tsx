@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LocateFixed, MapPin, RotateCcw, Video } from "lucide-react";
+import { ArrowLeft, ArrowRight, LocateFixed, MapPin, RotateCcw, Video } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import SafeCampaignVideo from "@/components/public/SafeCampaignVideo";
 import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
@@ -47,6 +47,7 @@ export default function TrendingVideoPlacement({
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
   const [error, setError] = useState("");
+  const carousel = useRef<HTMLDivElement>(null);
   const location = locationState.location;
   const limit = viewAll ? 24 : Math.max(1,Math.min(24,Math.round(maxCards)));
 
@@ -101,6 +102,11 @@ export default function TrendingVideoPlacement({
     }
   }
 
+  function scroll(direction: -1 | 1) {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    carousel.current?.scrollBy({ left: direction * Math.min(720, carousel.current.clientWidth * 0.82), behavior });
+  }
+
   return (
     <section aria-labelledby="trending-picks-heading" className={viewAll ? "py-6" : "pb-5 pt-3 sm:pb-6"}>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
@@ -112,7 +118,7 @@ export default function TrendingVideoPlacement({
           {description ? <p className="mt-1 text-xs text-ink/60">{description}</p> : null}
           {location ? <p className="mt-1 flex items-center gap-1 text-[10px] text-ink/55"><MapPin size={12} aria-hidden="true" />Near {location.label}</p> : null}
         </div>
-        {!viewAll && videos.length ? <Link href="/trending" className="text-[11px] font-bold text-magenta">View all →</Link> : null}
+        {!viewAll && videos.length ? <div className="flex items-center gap-2"><button type="button" aria-label="Previous Trending Picks" onClick={()=>scroll(-1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowLeft size={16}/></button><button type="button" aria-label="Next Trending Picks" onClick={()=>scroll(1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowRight size={16}/></button><Link href="/trending" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div> : null}
       </div>
 
       {!locationState.ready || (loading && !videos.length) ? <Skeletons /> : !location ? (
@@ -131,7 +137,7 @@ export default function TrendingVideoPlacement({
         </div>
       ) : videos.length ? (
         <>
-          <div className={`-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:px-0 [&::-webkit-scrollbar]:hidden ${viewAll ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"}`}>
+          <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} aria-label={viewAll ? undefined : "Trending Picks carousel"} className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}>
             {videos.map((video) => (
               <article key={video.campaign_id} className="w-[54vw] max-w-[250px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_5px_18px_rgba(26,18,32,.07)] sm:w-auto sm:max-w-none">
                 <SafeCampaignVideo src={video.video_url} poster={video.thumbnail_url} label={`${video.salon_name} Trending Pick`} className="aspect-[9/13] w-full" />

@@ -1,4 +1,6 @@
-import { cleanText, errorResponse } from "@/lib/requestSecurity";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { cleanText } from "@/lib/requestSecurity";
+import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -8,7 +10,7 @@ const ENTITLEMENT_SOURCES = new Set(["stripe_payment", "verified_invoice", "plat
 function boundedNumber(value: unknown, fallback: number, minimum: number, maximum: number, label: string, integer = false) {
   const parsed = value === null || value === undefined || value === "" ? fallback : Number(value);
   if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum || (integer && !Number.isInteger(parsed))) {
-    throw new Error(`${label} must be between ${minimum} and ${maximum}.`);
+    rejectRequest(`${label} must be between ${minimum} and ${maximum}.`);
   }
   return parsed;
 }
@@ -16,13 +18,15 @@ function boundedNumber(value: unknown, fallback: number, minimum: number, maximu
 function validTimezone(value: unknown) {
   const timezone = cleanText(value, 80) || "America/New_York";
   try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(); }
-  catch { throw new Error("Choose a valid IANA timezone."); }
+  catch { rejectRequest("Choose a valid IANA timezone."); }
   return timezone;
 }
 
 export async function GET(request: Request) {
+  let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
+    monitoringAdmin = admin;
     await admin.rpc("refresh_trending_campaign_states");
     const search = new URL(request.url).searchParams;
     if (search.get("mode") === "salons") {
@@ -48,22 +52,23 @@ export async function GET(request: Request) {
     if (error) throw error;
     return Response.json({ campaigns: data || [] }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Trending campaign load failed", error);
-    return errorResponse(error, "Unable to load Trending Picks campaigns.");
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "load_trending_campaigns", actorRole: "admin", safeMessage: "We couldn't load Trending Picks campaigns." });
   }
 }
 
 export async function POST(request: Request) {
+  let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin, user } = await requireAdminPermission(request, "marketing");
+    monitoringAdmin = admin;
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 30);
     const id = cleanText(body.id, 60);
     if (action === "moderate") {
-      if (!UUID.test(id)) throw new Error("Campaign ID is invalid.");
+      if (!UUID.test(id)) rejectRequest("Campaign ID is invalid.");
       const decision = cleanText(body.decision, 20);
       const reason = cleanText(body.reason, 1000);
-      if (!["Approved", "Rejected"].includes(decision) || reason.length < 5) throw new Error("Choose a moderation decision and enter a reason of at least 5 characters.");
+      if (!["Approved", "Rejected"].includes(decision) || reason.length < 5) rejectRequest("Choose a moderation decision and enter a reason of at least 5 characters.");
       const { error } = await admin.rpc("admin_moderate_trending_campaign", {
         acting_admin_id: user.id,
         target_campaign_id: id,
@@ -73,30 +78,30 @@ export async function POST(request: Request) {
       if (error) throw error;
       return Response.json({ moderated: true });
     }
-    if (action !== "save") throw new Error("Choose a valid campaign action.");
+    if (action !== "save") rejectRequest("Choose a valid campaign action.");
 
     const salonId = cleanText(body.salon_id, 60);
-    if (!UUID.test(salonId) || (id && !UUID.test(id))) throw new Error("Choose a valid salon and campaign.");
+    if (!UUID.test(salonId) || (id && !UUID.test(id))) rejectRequest("Choose a valid salon and campaign.");
     const startsAt = cleanText(body.starts_at, 50);
     const endsAt = cleanText(body.ends_at, 50);
     const startTime = Date.parse(startsAt);
     const endTime = Date.parse(endsAt);
-    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) throw new Error("Campaign end time must be after its start time.");
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) rejectRequest("Campaign end time must be after its start time.");
 
     const reason = cleanText(body.reason, 1000) || null;
-    if (id && (!reason || reason.length < 5)) throw new Error("Enter an internal change reason of at least 5 characters.");
+    if (id && (!reason || reason.length < 5)) rejectRequest("Enter an internal change reason of at least 5 characters.");
     const mime = cleanText(body.mime_type, 40);
     const videoUrl = cleanText(body.video_url, 1200);
     const storagePath = cleanText(body.storage_path, 600);
     const description = cleanText(body.description, 180);
-    if (!videoUrl || !storagePath || !description || !["video/mp4", "video/webm"].includes(mime)) throw new Error("Upload a valid video and enter its description.");
+    if (!videoUrl || !storagePath || !description || !["video/mp4", "video/webm"].includes(mime)) rejectRequest("Upload a valid video and enter its description.");
 
     const status = cleanText(body.status, 20) || "Draft";
-    if (!STATUSES.has(status)) throw new Error("Choose a valid campaign status.");
+    if (!STATUSES.has(status)) rejectRequest("Choose a valid campaign status.");
     const entitlementSource = cleanText(body.entitlement_source, 40) || null;
-    if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) throw new Error("Choose a valid paid entitlement source.");
+    if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) rejectRequest("Choose a valid paid entitlement source.");
     const entitlementReference = cleanText(body.entitlement_reference, 160) || null;
-    if (entitlementSource && !entitlementReference) throw new Error("Enter the verified payment, invoice, or credit reference.");
+    if (entitlementSource && !entitlementReference) rejectRequest("Enter the verified payment, invoice, or credit reference.");
     const entitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
       ? null
       : boundedNumber(body.entitlement_amount_minor, 0, 0, 100_000_000, "Entitlement amount", true);
@@ -128,7 +133,6 @@ export async function POST(request: Request) {
     if (error) throw error;
     return Response.json({ campaign_id: data });
   } catch (error) {
-    console.error("Trending campaign save failed", error);
-    return errorResponse(error, "Unable to save this Trending Picks campaign.");
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "save_trending_campaign", actorRole: "admin", safeMessage: "We couldn't save this Trending Picks campaign." });
   }
 }

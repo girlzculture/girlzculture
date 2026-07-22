@@ -1,7 +1,7 @@
 "use client";
 
 import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, ImagePlus, RotateCw, UploadCloud, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, RotateCw, UploadCloud, X } from "lucide-react";
 import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
 import { getImageUploadError, IMAGE_UPLOAD_PROFILES, inferImagePreset, inspectImageFile, optimizeImageFile, type ImagePresetKey, type ImageTransform, type ImageUploadProfile } from "@/lib/imageUpload";
 
@@ -27,6 +27,7 @@ function values(value: ImageUploadProps["value"], multiple: boolean) {
 export default function ImageUpload({ bucket, value, onChange, label, helperText, folder, multiple = false, maxFiles = 8, disabled = false, className, authScope = "customer", preset }: ImageUploadProps) {
   const supabase = getSupabaseForScope(authScope);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cropDrag = useRef<{ id: number; x: number; y: number; positionX: number; positionY: number } | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -98,21 +99,36 @@ export default function ImageUpload({ bucket, value, onChange, label, helperText
   }
 
   function drop(event: DragEvent<HTMLDivElement>) { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void prepare(file); }
+  function beginCropDrag(event: React.PointerEvent<HTMLDivElement>) {
+    cropDrag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, positionX: Number(transform.positionX || 0), positionY: Number(transform.positionY || 0) };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveCrop(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = cropDrag.current;
+    if (!drag || drag.id !== event.pointerId) return;
+    const width = Math.max(1, event.currentTarget.clientWidth);
+    const height = Math.max(1, event.currentTarget.clientHeight);
+    setTransform((current) => ({ ...current, positionX: Math.max(-100, Math.min(100, drag.positionX - ((event.clientX - drag.x) / width) * 200)), positionY: Math.max(-100, Math.min(100, drag.positionY - ((event.clientY - drag.y) / height) * 200)) }));
+  }
+  function endCropDrag(event: React.PointerEvent<HTMLDivElement>) { if (cropDrag.current?.id === event.pointerId) cropDrag.current = null; }
+  function nudge(axis: "positionX" | "positionY", amount: number) { setTransform((current) => ({ ...current, [axis]: Math.max(-100, Math.min(100, Number(current[axis] || 0) + amount)) })); }
   const locked = disabled || authenticated !== true || busy || (multiple && current.length >= maxFiles);
   const aspect = `${profile.aspectWidth} / ${profile.aspectHeight}`;
   const backgroundPosition = `${50 - Number(transform.positionX || 0) / 2}% ${50 - Number(transform.positionY || 0) / 2}%`;
 
   return <div className={className}>
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-magenta">{label}</p>{helperText ? <p className="mt-1 text-xs leading-5 text-ink/65">{helperText}</p> : null}</div><p className="text-[10px] font-semibold text-ink/55">JPG/PNG · {profile.aspectWidth}:{profile.aspectHeight} · min {profile.minWidth}×{profile.minHeight}px · max original 12 MB</p></div>
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-magenta">{label}</p>{helperText ? <p className="mt-1 text-xs leading-5 text-ink/65">{helperText}</p> : null}</div><ul className="space-y-0.5 text-[10px] font-semibold text-ink/55"><li>JPG or PNG · maximum original size 12 MB</li><li>Recommended {profile.minWidth}×{profile.minHeight}px or larger · {profile.aspectWidth}:{profile.aspectHeight} crop</li><li>Crop, zoom, and reposition before upload</li></ul></div>
     <input ref={inputRef} type="file" accept="image/jpeg,image/png" onChange={(event) => { const file = event.target.files?.[0]; if (file) void prepare(file); }} className="sr-only" />
 
     {selected && preview ? <section className="mt-4 rounded-[16px] border border-plum/15 bg-cream/55 p-4" aria-label={`Edit ${label}`}>
       <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-        <div><div className="relative mx-auto max-h-[420px] max-w-2xl overflow-hidden rounded-[13px] bg-ink/10" style={{ aspectRatio: aspect, backgroundImage: `url(${preview})`, backgroundSize: `${Number(transform.zoom || 1) * 100}%`, backgroundPosition, backgroundRepeat: "no-repeat", transform: `rotate(${transform.rotation || 0}deg)` }}>{profile.safeArea ? <div className="pointer-events-none absolute inset-[10%] rounded-lg border border-dashed border-white/80 shadow-[0_0_0_999px_rgba(26,18,32,.12)]" aria-hidden="true" /> : null}</div><p className="mt-2 text-center text-[10px] text-ink/55">Desktop crop preview · safe area is inside the dashed line</p></div>
-        <div><div className="mx-auto w-28 overflow-hidden rounded-[12px] border-[5px] border-ink bg-ink/10" style={{ aspectRatio: presetKey === "cover" || presetKey === "content" ? "9 / 16" : aspect, backgroundImage: `url(${preview})`, backgroundSize: `${Number(transform.zoom || 1) * 100}%`, backgroundPosition, backgroundRepeat: "no-repeat" }} /><p className="mt-2 text-center text-[10px] text-ink/55">Mobile placement preview</p>
+        <div><div onPointerDown={beginCropDrag} onPointerMove={moveCrop} onPointerUp={endCropDrag} onPointerCancel={endCropDrag} className="relative mx-auto max-h-[420px] max-w-2xl touch-none overflow-hidden rounded-[13px] bg-ink/10" style={{ aspectRatio: aspect, backgroundImage: `url(${preview})`, backgroundSize: `${Number(transform.zoom || 1) * 100}%`, backgroundPosition, backgroundRepeat: "no-repeat", transform: `rotate(${transform.rotation || 0}deg)` }}>{profile.safeArea ? <div className="pointer-events-none absolute inset-[10%] rounded-lg border border-dashed border-white/80 shadow-[0_0_0_999px_rgba(26,18,32,.12)]" aria-hidden="true" /> : null}</div><p className="mt-2 text-center text-[10px] text-ink/55">Desktop crop preview · drag with a mouse or finger to reposition</p></div>
+        <div><span className="sr-only">Mobile placement preview and tablet placement preview with safe area guidance</span><div className="flex items-end justify-center gap-3"><div><div className="mx-auto w-24 overflow-hidden rounded-[12px] border-[5px] border-ink bg-ink/10" style={{ aspectRatio: presetKey === "cover" || presetKey === "content" ? "9 / 16" : aspect, backgroundImage: `url(${preview})`, backgroundSize: `${Number(transform.zoom || 1) * 100}%`, backgroundPosition, backgroundRepeat: "no-repeat" }} /><p className="mt-1 text-center text-[9px] text-ink/55">Mobile</p></div><div><div className="mx-auto w-32 overflow-hidden rounded-[8px] border-4 border-ink/80 bg-ink/10" style={{ aspectRatio: presetKey === "cover" || presetKey === "content" ? "4 / 3" : aspect, backgroundImage: `url(${preview})`, backgroundSize: `${Number(transform.zoom || 1) * 100}%`, backgroundPosition, backgroundRepeat: "no-repeat" }} /><p className="mt-1 text-center text-[9px] text-ink/55">Tablet</p></div></div>
           <label className="mt-4 block text-[10px] font-bold">Zoom<input aria-label="Image zoom" type="range" min="1" max="3" step="0.05" value={transform.zoom || 1} onChange={(event) => setTransform((current) => ({ ...current, zoom: Number(event.target.value) }))} className="mt-1 w-full accent-magenta" /></label>
           <label className="mt-3 block text-[10px] font-bold">Move left/right<input aria-label="Horizontal image position" type="range" min="-100" max="100" value={transform.positionX || 0} onChange={(event) => setTransform((current) => ({ ...current, positionX: Number(event.target.value) }))} className="mt-1 w-full accent-magenta" /></label>
           <label className="mt-3 block text-[10px] font-bold">Move up/down<input aria-label="Vertical image position" type="range" min="-100" max="100" value={transform.positionY || 0} onChange={(event) => setTransform((current) => ({ ...current, positionY: Number(event.target.value) }))} className="mt-1 w-full accent-magenta" /></label>
+          <div className="mt-3 grid grid-cols-4 gap-1"><button type="button" aria-label="Move crop left" onClick={()=>nudge("positionX",10)} className="grid min-h-9 place-items-center rounded-lg border border-plum/15"><ArrowLeft size={15}/></button><button type="button" aria-label="Move crop right" onClick={()=>nudge("positionX",-10)} className="grid min-h-9 place-items-center rounded-lg border border-plum/15"><ArrowRight size={15}/></button><button type="button" aria-label="Move crop up" onClick={()=>nudge("positionY",10)} className="grid min-h-9 place-items-center rounded-lg border border-plum/15"><ArrowUp size={15}/></button><button type="button" aria-label="Move crop down" onClick={()=>nudge("positionY",-10)} className="grid min-h-9 place-items-center rounded-lg border border-plum/15"><ArrowDown size={15}/></button></div>
+          <button type="button" onClick={()=>setTransform({ zoom:1, positionX:0, positionY:0, rotation:0 })} className="mt-2 min-h-10 w-full rounded-lg border border-plum/15 text-xs font-bold text-plum">Reset crop</button>
           <button type="button" onClick={() => setTransform((current) => ({ ...current, rotation: (((current.rotation || 0) + 90) % 360) as 0 | 90 | 180 | 270 }))} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-plum/15 text-xs font-bold text-plum"><RotateCw size={15}/>Rotate 90°</button>
         </div>
       </div>

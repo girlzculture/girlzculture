@@ -11,17 +11,38 @@ function videoFileName(file: File, suffix: string, extension: string) {
   return `${file.name.replace(/\.[^.]+$/, "")}-${suffix}.${extension}`;
 }
 
+function inferredMime(file: File) {
+  if (file.type === "video/mp4" || file.type === "video/webm") return file.type;
+  if (/\.mp4$/i.test(file.name)) return "video/mp4";
+  if (/\.webm$/i.test(file.name)) return "video/webm";
+  return "";
+}
+
+function videoReadFailure(video: HTMLVideoElement, file: File) {
+  const mime = inferredMime(file);
+  const codecUnsupported = mime && video.canPlayType(mime) === "";
+  const reference = crypto.randomUUID();
+  const reason = codecUnsupported
+    ? "This browser does not support the video codec inside this file. Export it as H.264/AAC MP4 or VP8/VP9 WebM."
+    : "The browser could not read this video container. Try H.264/AAC MP4 or VP8/VP9 WebM.";
+  return new Error(`${reason} Reference ${reference}.`);
+}
+
 function loadVideo(file: File, event: "loadedmetadata" | "loadeddata") {
   const url = URL.createObjectURL(file);
   const video = document.createElement("video");
   video.preload = "auto";
   video.muted = true;
   video.playsInline = true;
-  video.src = url;
   const ready = new Promise<HTMLVideoElement>((resolve, reject) => {
-    video.addEventListener(event, () => resolve(video), { once: true });
-    video.addEventListener("error", () => reject(new Error("Unable to read this video. Try exporting it as MP4 or WebM.")), { once: true });
+    const timeout = window.setTimeout(() => reject(videoReadFailure(video, file)), 15_000);
+    video.addEventListener(event, () => { window.clearTimeout(timeout); resolve(video); }, { once: true });
+    video.addEventListener("error", () => { window.clearTimeout(timeout); reject(videoReadFailure(video, file)); }, { once: true });
   });
+  // Listeners must be registered before assigning src; very small local files
+  // can dispatch metadata synchronously in some browser engines.
+  video.src = url;
+  video.load();
   return { url, video, ready };
 }
 
@@ -36,11 +57,23 @@ function seekVideo(video: HTMLVideoElement, seconds: number) {
 }
 
 export async function getVideoDuration(file: File) {
-  const { url, ready } = loadVideo(file, "loadedmetadata");
+  const { url, video, ready } = loadVideo(file, "loadedmetadata");
   try {
-    const video = await ready;
-    return video.duration;
+    await ready;
+    if (Number.isFinite(video.duration) && video.duration > 0) return video.duration;
+    // Some WebM/fragmented MP4 files report Infinity until the browser seeks.
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(videoReadFailure(video, file)), 8_000);
+      const finish = () => { window.clearTimeout(timeout); resolve(); };
+      video.addEventListener("durationchange", finish, { once: true });
+      video.addEventListener("timeupdate", finish, { once: true });
+      video.currentTime = 1e10;
+    });
+    if (Number.isFinite(video.duration) && video.duration > 0) return video.duration;
+    throw videoReadFailure(video, file);
   } finally {
+    video.removeAttribute("src");
+    video.load();
     URL.revokeObjectURL(url);
   }
 }
@@ -68,7 +101,9 @@ export async function createVideoPoster(file: File, atSeconds: number) {
 }
 
 export async function optimizeTrendingVideo(file: File, edits: VideoEditOptions = {}) {
-  if (!["video/mp4", "video/webm"].includes(file.type)) throw new Error("Upload an MP4 or WebM video.");
+  const mime = inferredMime(file);
+  if (!mime) throw new Error("Upload an MP4 or WebM video.");
+  if (!file.type) file = new File([file], file.name, { type: mime, lastModified: file.lastModified });
   const sourceDuration = await getVideoDuration(file);
   const start = edits.startSeconds ?? 0;
   const end = edits.endSeconds ?? sourceDuration;

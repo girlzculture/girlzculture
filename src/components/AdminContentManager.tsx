@@ -247,15 +247,39 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
 }) {
   const [kind, setKind] = useState<CatalogKind>("master_style");
   const [selected, setSelected] = useState<Row | null>(initialService || services[0] || null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [dependency, setDependency] = useState<Row | null>(null);
+  const [reason, setReason] = useState("Catalog maintenance");
+  const [replacementId, setReplacementId] = useState("");
   const collections: Record<CatalogKind, Row[]> = { service_category: categories, service_group: groups, master_style: services, service_addon: addons };
   const labels: Record<CatalogKind, string> = { service_category: "Categories", service_group: "Service Groups", master_style: "Service Names", service_addon: "Add-ons" };
 
   function switchKind(next: CatalogKind) {
     setKind(next);
     setSelected(collections[next][0] || null);
+    setSelectedIds([]);
+    setDependency(null);
+    setReplacementId("");
   }
 
+  useEffect(() => {
+    let active = true;
+    if (!selected?.id) return;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/admin/records?resource=${encodeURIComponent(kind)}&id=${encodeURIComponent(selected.id)}`, { headers: await authHeaders(), cache: "no-store" });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Unable to inspect dependencies.");
+        if (active) setDependency(body);
+      } catch (error) {
+        if (active) setDependency({ error: error instanceof Error ? error.message : "Dependency preview is unavailable." });
+      }
+    })();
+    return () => { active = false; };
+  }, [kind, selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function createItem() {
+    setDependency(null);
     if (kind === "service_category") setSelected({ name: "", slug: "", description: "", is_active: true });
     else if (kind === "master_style") setSelected({ name: "", service_group_id: groups.find((item) => item.is_active)?.id || "", is_active: true });
     else setSelected({ name: "", category_id: categories.find((item) => item.is_active)?.id || "", is_active: true });
@@ -265,7 +289,7 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     event.preventDefault();
     if (!selected) return;
     const form = new FormData(event.currentTarget);
-    const payload: Row = { ...selected, name: form.get("name"), is_active: form.get("is_active") === "on" };
+    const payload: Row = { ...selected, name: form.get("name"), sort_order: form.get("sort_order"), is_active: form.get("is_active") === "on" };
     if (kind === "service_category") { payload.slug = form.get("slug"); payload.description = form.get("description"); }
     if (kind === "service_group" || kind === "service_addon") payload.category_id = form.get("category_id");
     if (kind === "master_style") payload.service_group_id = form.get("service_group_id");
@@ -286,20 +310,30 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     } finally { setSaving(false); }
   }
 
-  async function remove() {
-    if (!selected?.id || !confirm(`Delete ${selected.name}? Existing salon records can prevent deletion; hide the item instead when it is already in use.`)) return;
+  async function managedAction(action: "archive" | "restore" | "delete" | "reassign") {
+    const targetIds = selectedIds.length ? selectedIds : selected?.id ? [String(selected.id)] : [];
+    const targets = targetIds.map((id) => collections[kind].find((row) => String(row.id) === id)).filter(Boolean) as Row[];
+    if (!targets.length) return;
+    if (reason.trim().length < 5) { setNotice("Enter a reason of at least 5 characters."); return; }
+    if (action === "reassign" && !replacementId) { setNotice("Choose an active replacement record."); return; }
+    if ((action === "delete" || action === "reassign") && !confirm(`${action === "delete" ? "Delete" : "Reassign and remove"} ${targets.length} selected catalog item${targets.length === 1 ? "" : "s"}? Dependency checks run before every change.`)) return;
     setSaving(true); setNotice("");
     try {
-      const response = await fetch("/api/admin/content", { method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ type: kind, id: selected.id }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Delete failed");
+      for (const target of targets) {
+        const response = await fetch("/api/admin/records", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ resource: kind, id: target.id, action, reason: reason.trim(), reassign_to: replacementId || null, confirmation: target.name }) });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || `${action} failed`);
+      }
       const loaded = await reload(false);
       const next = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind][0] || null;
       setSelected(next);
-      setNotice("Catalog item deleted.");
+      setDependency(null);
+      setSelectedIds([]);
+      setReplacementId("");
+      setNotice(`${targets.length} catalog item${targets.length === 1 ? "" : "s"} ${action === "reassign" ? "reassigned" : `${action}d`}.`);
     } catch (error) {
-      console.error("Service Catalog delete error", { kind, selected, error });
-      setNotice(error instanceof Error ? error.message : "Delete failed");
+      console.error("Service Catalog managed action error", { kind, targetIds, action, error });
+      setNotice(error instanceof Error ? error.message : `${action} failed`);
     } finally { setSaving(false); }
   }
 
@@ -310,18 +344,20 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
       <button type="button" onClick={createItem} className="inline-flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
     </div>
     <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
-      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3">{rows.map((item) => <button key={item.id} type="button" onClick={() => { setSelected(item); if (kind === "master_style") setInitialService(item); }} className={`mb-1 w-full rounded-lg p-3 text-left ${selected?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.is_active ? "· Active" : "· Hidden"}</small></button>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
+      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3"><label className="mb-2 flex items-center gap-2 border-b border-plum/10 px-2 pb-3 text-[10px] font-bold text-plum"><input type="checkbox" checked={Boolean(rows.length) && selectedIds.length === rows.length} onChange={(event)=>setSelectedIds(event.target.checked ? rows.map((row)=>String(row.id)) : [])} className="accent-magenta" />Select all for a batch action</label>{rows.map((item) => <div key={item.id} className={`mb-1 grid grid-cols-[24px_1fr] items-start rounded-lg ${selected?.id === item.id ? "bg-blush" : ""}`}><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(String(item.id))} onChange={(event)=>setSelectedIds((current)=>event.target.checked?[...new Set([...current,String(item.id)])]:current.filter((id)=>id!==String(item.id)))} className="ml-2 mt-4 accent-magenta"/><button type="button" onClick={() => { setDependency(null); setSelected(item); if (kind === "master_style") setInitialService(item); }} className="w-full p-3 text-left"><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.archived_at ? "· Archived" : item.is_active ? "· Active" : "· Hidden"}</small></button></div>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
       {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
         <h2 className="font-serif text-2xl text-plum">{selected.id ? `Edit ${labels[kind].replace(/s$/, "")}` : `Add ${labels[kind].replace(/s$/, "")}`}</h2>
         <p className="mt-1 text-xs leading-5 text-ink/55">Catalog lists are alphabetized automatically. Salon owners see active changes the next time their Styles & Pricing editor loads.</p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field required label="Name" name="name" value={selected.name} />
+          <Field label="Sort order (0 uses alphabetical order)" name="sort_order" value={selected.sort_order ?? 0} type="number" />
           {kind === "service_category" ? <><Field required label="URL slug" name="slug" value={selected.slug} /><div className="sm:col-span-2"><Area label="Description" name="description" value={selected.description} rows={3}/></div></> : null}
           {kind === "service_group" || kind === "service_addon" ? <label className="text-xs font-bold">Category<select required name="category_id" defaultValue={selected.category_id || categories[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose category</option>{categories.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
           {kind === "master_style" ? <label className="text-xs font-bold">Service group<select required name="service_group_id" defaultValue={selected.service_group_id || groups[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose service group</option>{groups.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.service_category?.name} · {item.name}</option>)}</select></label> : null}
           <label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={selected.is_active !== false} className="accent-magenta" />Visible to salon owners</label>
         </div>
-        <div className="mt-6 flex flex-wrap gap-3"><button disabled={saving} className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save Catalog Item"}</button>{selected.id ? <button type="button" disabled={saving} onClick={() => void remove()} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs font-bold text-red-700"><Trash2 size={14}/>Delete</button> : null}</div>
+        {selected.id ? <section className="mt-5 rounded-xl border border-plum/10 bg-cream/45 p-4"><h3 className="font-serif text-lg text-plum">Dependencies & safe actions</h3>{dependency?.dependencies?.details?.length ? <ul className="mt-2 space-y-1 text-xs text-ink/65">{dependency.dependencies.details.map((item:Row)=><li key={item.label}>{item.label}: <b>{item.count}</b> · {item.retention}</li>)}</ul> : <p className="mt-2 text-xs text-ink/55">{dependency?.error || "No dependent records were found."}</p>}<div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Reason" name="managed_reason" value={reason} onChange={setReason}/>{kind === "master_style" || kind === "service_group" ? <label className="text-xs font-bold">Reassign to<select value={replacementId} onChange={(event)=>setReplacementId(event.target.value)} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose replacement</option>{rows.filter((row)=>row.id!==selected.id&&row.is_active&&!row.archived_at).map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>:null}</div><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={saving||Boolean(selected.archived_at)} onClick={()=>void managedAction("archive")} className="rounded-lg border border-plum/20 px-4 py-2 text-xs font-bold text-plum disabled:opacity-40">Archive{selectedIds.length?` (${selectedIds.length})`:""}</button><button type="button" disabled={saving||!selected.archived_at} onClick={()=>void managedAction("restore")} className="rounded-lg border border-green-300 px-4 py-2 text-xs font-bold text-green-700 disabled:opacity-40">Restore</button>{kind === "master_style" || kind === "service_group" ? <button type="button" disabled={saving||!replacementId} onClick={()=>void managedAction("reassign")} className="rounded-lg border border-amber-300 px-4 py-2 text-xs font-bold text-amber-800 disabled:opacity-40">Reassign</button>:null}<button type="button" disabled={saving} onClick={()=>void managedAction("delete")} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-xs font-bold text-red-700"><Trash2 size={14}/>Safe Delete{selectedIds.length?` (${selectedIds.length})`:""}</button></div></section>:null}
+        <div className="mt-6 flex flex-wrap gap-3"><button disabled={saving} className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save Catalog Item"}</button></div>
       </form> : <div className="rounded-xl border border-dashed border-plum/15 bg-white p-8 text-center text-sm text-ink/50">Add the first catalog item.</div>}
     </div>
   </div>;
@@ -369,7 +405,7 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">{slots.map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]} />)}</div>
     </> : null}
     <h2 className="mt-6 font-serif text-2xl text-plum">Sections</h2>
-    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number, sections:Row[]) => <SectionEditor key={section.id || index} section={section} index={index} sectionCount={sections.length} linkTargets={linkTargets} move={(direction)=>moveSection(index,direction)} update={(next) => setPage(row => ({ ...row, sections: asRows(row?.sections).map((item: Row, itemIndex: number) => itemIndex === index ? next : item) }))} remove={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} />)}</div>
+    <div className="mt-3 space-y-3">{asRows(page.sections).map((section: Row, index: number, sections:Row[]) => <SectionEditor key={`${section.id || index}-${asRows(section.cards).length}`} section={section} index={index} sectionCount={sections.length} linkTargets={linkTargets} move={(direction)=>moveSection(index,direction)} update={(next) => setPage(row => ({ ...row, sections: asRows(row?.sections).map((item: Row, itemIndex: number) => itemIndex === index ? next : item) }))} remove={() => setPage(row => ({ ...row, sections: asRows(row?.sections).filter((_: Row, itemIndex: number) => itemIndex !== index) }))} />)}</div>
     <button type="button" onClick={() => setPage(row => ({ ...row, sections: [...asRows(row?.sections), { id: crypto.randomUUID(), type: "card_grid", title: "New Section", body: "", is_visible: true, columns: 4, cards: [] }] }))} className="mt-3 text-xs font-bold text-magenta">+ Add section</button>
     <div className="mt-6 grid gap-3 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title} /><Field label="SEO description" name="seo_description" value={page.seo_description} /><label className="text-xs font-bold">Status<select name="status" defaultValue={page.status || "Draft"} className="mt-1 w-full rounded-lg border p-3 font-normal"><option>Draft</option><option>Published</option></select></label></div>
     <button className="mt-6 rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Page</button>
@@ -380,6 +416,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
   const type = String(section.type || "text");
   const cards = asRows(section.cards);
   const maximum = type === "community_carousel" ? 20 : 12;
+  const [cardCountDraft, setCardCountDraft] = useState(String(cards.length || 1));
   function resizeCards(count: number) {
     const next = [...cards];
     while (next.length < count) next.push({ id: crypto.randomUUID(), content_type: "image", title: "", body: "", media_url: "", href: "" });
@@ -392,11 +429,19 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
     const next = [...cards]; [next[cardIndex], next[nextIndex]] = [next[nextIndex], next[cardIndex]];
     update({ ...section, cards: next });
   }
+  function commitCardCount() {
+    const count = Number(cardCountDraft);
+    if (!Number.isInteger(count) || count < 1 || count > maximum) {
+      setCardCountDraft(String(cards.length || 1));
+      return;
+    }
+    resizeCards(count);
+  }
   return <div className="rounded-lg border border-plum/10 bg-blush/25 p-4">
     <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
       <div className="grid flex-1 gap-3 sm:grid-cols-2">
         <label className="text-xs font-bold">Layout<select value={type} onChange={(event) => update({ ...section, type: event.target.value, cards: ["card_grid", "carousel", "community_carousel"].includes(event.target.value) ? cards : [] })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="text">Text</option><option value="card_grid">Card grid</option><option value="carousel">Horizontal carousel</option><option value="community_carousel">Auto-scrolling community carousel</option><option value="banner">Banner</option></select></label>
-        {["card_grid", "carousel", "community_carousel"].includes(type) ? <label className="text-xs font-bold">Number of cards<input type="number" min="1" max={maximum} value={cards.length || 1} onChange={(event) => resizeCards(Math.max(1, Math.min(maximum, Number(event.target.value) || 1)))} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
+        {["card_grid", "carousel", "community_carousel"].includes(type) ? <label className="text-xs font-bold">Number of cards<input type="number" inputMode="numeric" min="1" max={maximum} value={cardCountDraft} onChange={(event) => setCardCountDraft(event.target.value)} onBlur={commitCardCount} onKeyDown={(event)=>{if(/[eE+\-.]/.test(event.key))event.preventDefault();if(event.key==="Enter"){event.preventDefault();commitCardCount();}}} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
       </div>
       <div className="flex gap-1"><button type="button" aria-label={`Move section ${index+1} earlier`} onClick={()=>move(-1)} disabled={index===0} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label={`Move section ${index+1} later`} onClick={()=>move(1)} disabled={index===sectionCount-1} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div><label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
       <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button>
@@ -422,5 +467,5 @@ function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React
   return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
 }
 
-function Field({ label, name, value, required = false }: { label: string; name: string; value?: string; required?: boolean }) { return <label className="block text-xs font-bold">{label}<input required={required} name={name} defaultValue={value || ""} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>; }
+function Field({ label, name, value, required = false, type = "text", onChange }: { label: string; name: string; value?: string | number; required?: boolean; type?: string; onChange?: (value: string) => void }) { return <label className="block text-xs font-bold">{label}<input required={required} type={type} name={name} defaultValue={value ?? ""} onChange={onChange ? (event)=>onChange(event.target.value) : undefined} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>; }
 function Area({ label, name, value, rows }: { label: string; name: string; value?: string; rows: number }) { return <label className="mt-4 block text-xs font-bold">{label}<textarea name={name} defaultValue={value || ""} rows={rows} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal leading-6" /></label>; }

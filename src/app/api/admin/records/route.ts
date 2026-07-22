@@ -9,7 +9,7 @@ type Resource = {
 
 const resources:Record<string,Resource>={
   service_category:{table:"service_categories",permission:"content",label:"Service categories",nameFields:["name"],actions:["archive","restore","delete"],dependencies:[{table:"service_groups",column:"category_id",label:"service groups"},{table:"service_addons",column:"category_id",label:"add-ons"},{table:"master_styles",column:"category_id",label:"service names"}]},
-  service_group:{table:"service_groups",permission:"content",label:"Service groups",nameFields:["name"],actions:["archive","restore","delete","reassign"],dependencies:[{table:"master_styles",column:"service_group_id",label:"service names"}]},
+  service_group:{table:"service_groups",permission:"content",label:"Service groups",nameFields:["name"],actions:["archive","restore","delete","reassign"],dependencies:[{table:"master_styles",column:"service_group_id",label:"service names"},{table:"styles",column:"service_group_id",label:"salon services"}]},
   service_addon:{table:"service_addons",permission:"content",label:"Add-ons",nameFields:["name"],actions:["archive","restore","delete"]},
   master_style:{table:"master_styles",permission:"content",label:"Master service names",nameFields:["name"],actions:["archive","restore","delete","reassign"],dependencies:[{table:"styles",column:"master_style_id",label:"salon services"}]},
   blog_post:{table:"blog_posts",permission:"content",label:"Blog posts",nameFields:["title","slug"],actions:["archive","restore","delete"]},
@@ -83,6 +83,23 @@ export async function POST(request:Request){
       else if(resource.table==="newsletter_subscribers")patch={...patch,status:"Active"};
       const result=await admin.from(resource.table).update(patch).eq(key,id).select().single();if(result.error)throw result.error;after=result.data;
       await admin.from("record_management_events").insert({record_type:type,record_id:id,record_label:record.label,action:"Updated",dependency_summary:dependencies,before_values:row,after_values:after,reason,acting_user_id:user.id,acting_scope:"platform_admin"});
+      return Response.json({result:{ok:true,action,label:record.label},dependencies});
+    }
+    if(type==="service_group"&&action==="reassign"){
+      const result=await admin.rpc("admin_reassign_service_group",{p_group_id:id,p_target_id:reassignTo,p_actor_user_id:user.id,p_reason:reason,p_dependency_summary:dependencies});
+      if(result.error)throw result.error;
+      return Response.json({result:result.data,dependencies});
+    }
+    if(type==="service_group"&&(action==="archive"||action==="delete")){
+      if(action==="delete"&&dependencies.total>0)throw new Error(`This group is still used by ${dependencies.total} service records. Reassign or archive it.`);
+      if(action==="archive"){
+        const result=await admin.from(resource.table).update({is_active:false,archived_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",id).select().single();
+        if(result.error)throw result.error;after=result.data;
+      }else{
+        const result=await admin.from(resource.table).delete().eq("id",id);
+        if(result.error)throw result.error;
+      }
+      await admin.from("record_management_events").insert({record_type:type,record_id:id,record_label:record.label,action:action==="archive"?"Archived":"Deleted",dependency_summary:dependencies,before_values:row,after_values:after,reason,acting_user_id:user.id,acting_scope:"platform_admin"});
       return Response.json({result:{ok:true,action,label:record.label},dependencies});
     }
     if(catalogRpcTypes.has(type)){const result=await admin.rpc("admin_manage_catalog_record",{p_record_type:type,p_record_id:id,p_action:action,p_reassign_to:reassignTo,p_actor_user_id:user.id,p_reason:reason,p_dependency_summary:dependencies});if(result.error)throw result.error;return Response.json({result:result.data,dependencies});}
