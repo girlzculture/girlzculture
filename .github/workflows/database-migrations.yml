@@ -33,6 +33,7 @@ jobs:
       - run: npm ci
       - run: npm run verify:migrations
       - run: npm run verify:engine-expansion
+      - run: npm run verify:catalog-management
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run build

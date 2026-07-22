@@ -13,8 +13,19 @@ export default function SalonPhotoGallery({ photos, salonName }: { photos: strin
   const touchStart = useRef<number | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchDistance = useRef<number | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
 
-  function close() { setActive(null); setZoom(1); }
+  function open(index: number) {
+    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setActive(index);
+  }
+  function close() {
+    setActive(null);
+    setZoom(1);
+    window.requestAnimationFrame(() => previousFocus.current?.focus());
+  }
   function move(direction: -1 | 1) {
     if (active === null || !available.length) return;
     setActive((active + direction + available.length) % available.length);
@@ -25,10 +36,19 @@ export default function SalonPhotoGallery({ photos, salonName }: { photos: strin
     if (active === null) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
     function keydown(event: KeyboardEvent) {
       if (event.key === "Escape") close();
       if (event.key === "ArrowLeft") move(-1);
       if (event.key === "ArrowRight") move(1);
+      if (event.key === "Tab" && dialogRef.current) {
+        const controls = [...dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+        if (!controls.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
     }
     document.addEventListener("keydown", keydown);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", keydown); };
@@ -66,15 +86,15 @@ export default function SalonPhotoGallery({ photos, salonName }: { photos: strin
 
   return <>
     <div className="relative grid h-[232px] grid-cols-[1.2fr_1fr] gap-1.5 overflow-hidden rounded-[10px] sm:h-[330px] lg:h-[356px]">
-      <Tile photo={tiles[0]} label={`${salonName} featured work`} priority onOpen={() => tiles[0] && setActive(0)} className="rounded-[8px]" />
+      <Tile photo={tiles[0]} label={`${salonName} featured work`} priority onOpen={() => tiles[0] && open(0)} className="rounded-[8px]" />
       <div className="grid grid-cols-2 grid-rows-2 gap-1.5">
-        {tiles.slice(1).map((photo, index) => <Tile key={`${photo || "empty"}-${index}`} photo={photo} label={`${salonName} gallery ${index + 2}`} onOpen={() => photo && setActive(index + 1)} className="rounded-[7px]" overlay={index === 3 && remaining ? `+${remaining}\nView all` : undefined} />)}
+        {tiles.slice(1).map((photo, index) => <Tile key={`${photo || "empty"}-${index}`} photo={photo} label={`${salonName} gallery ${index + 2}`} onOpen={() => photo && open(index + 1)} className="rounded-[7px]" overlay={index === 3 && remaining ? `+${remaining}\nView all` : undefined} />)}
       </div>
-      {available.length ? <button type="button" onClick={()=>setActive(0)} className="absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-white/95 px-3 text-[10px] font-bold text-plum shadow-lg"><Images size={15}/>View all photos</button> : null}
+      {available.length ? <button type="button" onClick={()=>open(0)} className="absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-white/95 px-3 text-[10px] font-bold text-plum shadow-lg"><Images size={15}/>View all photos</button> : null}
     </div>
 
-    {active !== null && available[active] ? <div role="dialog" aria-modal="true" aria-label={`${salonName} photo gallery`} className="fixed inset-0 z-[100] flex flex-col bg-ink/95 p-3 text-white sm:p-6">
-      <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold">{salonName} · Photo {active + 1} of {available.length}</p><div className="flex items-center gap-2"><button type="button" aria-label="Zoom out" onClick={()=>setZoom(value=>Math.max(1,value-.5))} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Minus/></button><button type="button" aria-label="Zoom in" onClick={()=>setZoom(value=>Math.min(4,value+.5))} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Plus/></button><button type="button" aria-label="Close photo gallery" onClick={close} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><X/></button></div></div>
+    {active !== null && available[active] ? <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`${salonName} photo gallery`} className="fixed inset-0 z-[100] flex flex-col bg-ink/95 p-3 text-white sm:p-6">
+      <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold">{salonName} · Photo {active + 1} of {available.length}</p><div className="flex items-center gap-2"><button type="button" aria-label="Zoom out" onClick={()=>setZoom(value=>Math.max(1,value-.5))} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Minus/></button><button type="button" aria-label="Zoom in" onClick={()=>setZoom(value=>Math.min(4,value+.5))} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Plus/></button><button ref={closeButtonRef} type="button" aria-label="Close photo gallery" onClick={close} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><X/></button></div></div>
       <div className="relative mt-3 flex min-h-0 flex-1 items-center justify-center overflow-hidden touch-none" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onContextMenu={event=>event.preventDefault()}>
         <button type="button" aria-label="Previous photo" onClick={()=>move(-1)} className="absolute left-1 z-10 grid h-12 w-12 place-items-center rounded-full bg-white/10 backdrop-blur sm:left-4"><ArrowLeft/></button>
         <SafeImage src={available[active]} fallbackSrc={available[active]} alt={`${salonName} gallery photo ${active + 1}`} draggable={false} className="max-h-full max-w-full select-none object-contain transition-transform duration-150" style={{ transform: `scale(${zoom})` }} />

@@ -5,7 +5,69 @@ const MAX_TRENDING_DURATION_SECONDS = 30.5;
 export type VideoEditOptions = {
   startSeconds?: number;
   endSeconds?: number;
+  signal?: AbortSignal;
 };
+
+export type VideoUploadOptions = {
+  accessToken: string;
+  signal?: AbortSignal;
+  onProgress?: (percent: number) => void;
+};
+
+function cancelled() {
+  return new DOMException("Upload cancelled.", "AbortError");
+}
+
+function storagePath(path: string) {
+  return path.split("/").map((part) => encodeURIComponent(part)).join("/");
+}
+
+/**
+ * Uploads through the authenticated browser session, never a service-role key.
+ * XMLHttpRequest is deliberate here because Supabase's standard upload helper
+ * does not expose transfer progress or a cancellable request handle.
+ */
+export function uploadTrendingFile(path: string, file: File, options: VideoUploadOptions) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) return Promise.reject(new Error("Media storage is not configured for this deployment."));
+  if (!options.accessToken) return Promise.reject(new Error("Your admin session has expired. Sign in and try again."));
+  if (options.signal?.aborted) return Promise.reject(cancelled());
+
+  return new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    const abort = () => request.abort();
+    const finish = () => options.signal?.removeEventListener("abort", abort);
+    request.open("POST", `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/trending-videos/${storagePath(path)}`);
+    request.timeout = 120_000;
+    request.setRequestHeader("Authorization", `Bearer ${options.accessToken}`);
+    request.setRequestHeader("apikey", anonKey);
+    request.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    request.setRequestHeader("cache-control", "max-age=31536000");
+    request.setRequestHeader("x-upsert", "false");
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) options.onProgress?.(Math.max(0, Math.min(100, Math.round(event.loaded / event.total * 100))));
+    };
+    request.onload = () => {
+      finish();
+      if (request.status >= 200 && request.status < 300) {
+        options.onProgress?.(100);
+        resolve();
+        return;
+      }
+      if (request.status === 401) reject(new Error("Your admin session expired during upload. Sign in and retry."));
+      else if (request.status === 403) reject(new Error("You do not have permission to upload campaign media."));
+      else if (request.status === 409) reject(new Error("That media file already exists. Retry to create a new upload."));
+      else if (request.status >= 500) reject(new Error("Media storage is temporarily unavailable. Retry in a moment."));
+      else reject(new Error("Media storage rejected this file. Check the format and size, then retry."));
+    };
+    request.onerror = () => { finish(); reject(new Error("The media upload lost its network connection. Check your connection and retry.")); };
+    request.ontimeout = () => { finish(); reject(new Error("The media upload timed out. Check your connection and retry.")); };
+    request.onabort = () => { finish(); reject(cancelled()); };
+    options.signal?.addEventListener("abort", abort, { once: true });
+    request.send(file);
+  });
+}
 
 function videoFileName(file: File, suffix: string, extension: string) {
   return `${file.name.replace(/\.[^.]+$/, "")}-${suffix}.${extension}`;
@@ -101,6 +163,7 @@ export async function createVideoPoster(file: File, atSeconds: number) {
 }
 
 export async function optimizeTrendingVideo(file: File, edits: VideoEditOptions = {}) {
+  if (edits.signal?.aborted) throw cancelled();
   const mime = inferredMime(file);
   if (!mime) throw new Error("Upload an MP4 or WebM video.");
   if (!file.type) file = new File([file], file.name, { type: mime, lastModified: file.lastModified });
@@ -146,11 +209,13 @@ export async function optimizeTrendingVideo(file: File, edits: VideoEditOptions 
         video.pause();
         video.removeEventListener("timeupdate", checkTime);
         video.removeEventListener("ended", finish);
+        edits.signal?.removeEventListener("abort", finish);
         resolve();
       };
       const checkTime = () => { if (video.currentTime >= end - 0.03) finish(); };
       video.addEventListener("timeupdate", checkTime);
       video.addEventListener("ended", finish, { once: true });
+      edits.signal?.addEventListener("abort", finish, { once: true });
       window.setTimeout(finish, Math.ceil(duration * 1000) + 2000);
     });
     recorder.start(500);
@@ -158,6 +223,7 @@ export async function optimizeTrendingVideo(file: File, edits: VideoEditOptions 
     await reachedEnd;
     if (recorder.state !== "inactive") recorder.stop();
     await finished;
+    if (edits.signal?.aborted) throw cancelled();
     const blob = new Blob(chunks, { type: "video/webm" });
     if (!blob.size) throw new Error("The browser did not produce an edited video. Try a current Chrome or Edge browser.");
     const optimized = new File([blob], videoFileName(file, needsTrim ? "trimmed" : "optimized", "webm"), { type: "video/webm", lastModified: Date.now() });

@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ImageIcon, Plus, Trash2, UserRound } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
+import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { salonSupabase as supabase } from "@/lib/supabase";
 import {
   INCLUDED_ITEM_OPTIONS,
@@ -106,7 +107,7 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
       supabase.from("service_categories").select("id,name,slug").eq("is_active",true).order("name"),
       supabase.from("service_groups").select("id,name,category_id").eq("is_active",true).order("name"),
       supabase.from("service_addons").select("id,name,category_id").eq("is_active",true).order("name"),
-    ]);if(!live)return;const error=masterResult.error||categoryResult.error||groupResult.error||addonResult.error;if(error)c.setNotice(error.message);else{setMasters((masterResult.data||[]) as MasterStyle[]);setCategories(categoryResult.data||[]);setGroups(groupResult.data||[]);setCatalogAddons(addonResult.data||[]);}})();
+    ]);if(!live)return;const error=masterResult.error||categoryResult.error||groupResult.error||addonResult.error;if(error)c.setNotice(error.message);else{setMasters(sortCatalogRecords((masterResult.data||[]) as MasterStyle[]));setCategories(sortCatalogRecords(categoryResult.data||[]));setGroups(sortCatalogRecords(groupResult.data||[]));setCatalogAddons(sortCatalogRecords(addonResult.data||[]));}})();
     return () => { live = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -219,7 +220,7 @@ export function StructuredStylistsEditor({ c }: { c: Context }) {
   const [avatar, setAvatar] = useState("");
   const [portfolio, setPortfolio] = useState<string[]>([]);
 
-  useEffect(() => { let live = true; supabase.from("master_styles").select("id,name").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => { if (!live) return; if (error) c.setNotice(error.message); else setMasters((data || []) as MasterStyle[]); }); return () => { live = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { let live = true; supabase.from("master_styles").select("id,name,sort_order").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => { if (!live) return; if (error) c.setNotice(error.message); else setMasters(sortCatalogRecords((data || []) as MasterStyle[])); }); return () => { live = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setName(String(active?.name || "")); setBio(String(active?.bio || "").slice(0, 250)); setSpecialties(Array.isArray(active?.specialties) ? active.specialties.map(String) : []); setYears(active?.years_experience == null ? "" : Number(active.years_experience)); setAvatar(String(active?.avatar_url || "")); setPortfolio(Array.isArray(active?.photos) ? active.photos.map(String) : []); }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(event: FormEvent<HTMLFormElement>) {

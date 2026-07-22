@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
+import { sortCatalogRecords } from "@/lib/catalogOrdering";
 
 const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "hero_position_x", "hero_position_y", "hero_zoom", "page_group", "sections", "labels", "seo_title", "seo_description", "status", "is_enabled"] as const;
 const postFields = ["id", "slug", "title", "excerpt", "content", "category", "cover_image_url", "author", "featured", "status", "published_at"] as const;
@@ -89,7 +90,15 @@ export async function GET(request: Request) {
         return salon?.slug ? [{ type: "Product", label: `${product.name} â€” ${salon.name}`, href: `/salon/${salon.slug}/product/${product.id}` }] : [];
       }),
     ];
-    return Response.json({ pages: pages.data || [], posts: posts.data || [], masterStyles: masterStyles.data || [], serviceCategories: serviceCategories.data || [], serviceGroups: serviceGroups.data || [], serviceAddons: serviceAddons.data || [], linkTargets }, { headers: { "Cache-Control": "private, no-store" } });
+    return Response.json({
+      pages: pages.data || [],
+      posts: posts.data || [],
+      masterStyles: sortCatalogRecords(masterStyles.data),
+      serviceCategories: sortCatalogRecords(serviceCategories.data),
+      serviceGroups: sortCatalogRecords(serviceGroups.data),
+      serviceAddons: sortCatalogRecords(serviceAddons.data),
+      linkTargets,
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "content-management", action: "load", actorRole: "admin", safeMessage: "Content could not be loaded." });
   }

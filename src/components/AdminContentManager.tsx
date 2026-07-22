@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, FileText, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
 import HeroImageFraming from "@/components/admin/HeroImageFraming";
+import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 
 type Row = Record<string, any>;
@@ -249,17 +250,37 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
   const [selected, setSelected] = useState<Row | null>(initialService || services[0] || null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [dependency, setDependency] = useState<Row | null>(null);
+  const [batchDependencies, setBatchDependencies] = useState<Record<string, Row>>({});
+  const [batchResults, setBatchResults] = useState<Array<{ id: string; name: string; ok: boolean; message: string }>>([]);
   const [reason, setReason] = useState("Catalog maintenance");
   const [replacementId, setReplacementId] = useState("");
-  const collections: Record<CatalogKind, Row[]> = { service_category: categories, service_group: groups, master_style: services, service_addon: addons };
+  const collections: Record<CatalogKind, Row[]> = {
+    service_category: sortCatalogRecords(categories),
+    service_group: sortCatalogRecords(groups),
+    master_style: sortCatalogRecords(services),
+    service_addon: sortCatalogRecords(addons),
+  };
   const labels: Record<CatalogKind, string> = { service_category: "Categories", service_group: "Service Groups", master_style: "Service Names", service_addon: "Add-ons" };
+  const rows = collections[kind];
+  const visibleIds = new Set(rows.map((row) => String(row.id)));
+  const selectedRows = rows.filter((row) => selectedIds.includes(String(row.id)));
+  const displayedTargets = selectedRows.length ? selectedRows : selected?.id ? [selected] : [];
 
   function switchKind(next: CatalogKind) {
     setKind(next);
     setSelected(collections[next][0] || null);
     setSelectedIds([]);
     setDependency(null);
+    setBatchDependencies({});
+    setBatchResults([]);
     setReplacementId("");
+  }
+
+  async function inspectDependency(recordId: string) {
+    const response = await fetch(`/api/admin/records?resource=${encodeURIComponent(kind)}&id=${encodeURIComponent(recordId)}`, { headers: await authHeaders(), cache: "no-store" });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "Unable to inspect dependencies.");
+    return body as Row;
   }
 
   useEffect(() => {
@@ -267,9 +288,7 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     if (!selected?.id) return;
     void (async () => {
       try {
-        const response = await fetch(`/api/admin/records?resource=${encodeURIComponent(kind)}&id=${encodeURIComponent(selected.id)}`, { headers: await authHeaders(), cache: "no-store" });
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || "Unable to inspect dependencies.");
+        const body = await inspectDependency(String(selected.id));
         if (active) setDependency(body);
       } catch (error) {
         if (active) setDependency({ error: error instanceof Error ? error.message : "Dependency preview is unavailable." });
@@ -278,8 +297,24 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     return () => { active = false; };
   }, [kind, selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    let active = true;
+    const ids = selectedIds.filter((id) => visibleIds.has(id));
+    if (!ids.length) {
+      return () => { active = false; };
+    }
+    void Promise.all(ids.map(async (id) => {
+      try { return [id, await inspectDependency(id)] as const; }
+      catch (error) { return [id, { error: error instanceof Error ? error.message : "Dependency preview is unavailable." }] as const; }
+    })).then((entries) => { if (active) setBatchDependencies(Object.fromEntries(entries)); });
+    return () => { active = false; };
+  }, [kind, selectedIds.join("|"), rows.map((row) => String(row.id)).join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function createItem() {
     setDependency(null);
+    setSelectedIds([]);
+    setBatchDependencies({});
+    setBatchResults([]);
     if (kind === "service_category") setSelected({ name: "", slug: "", description: "", is_active: true });
     else if (kind === "master_style") setSelected({ name: "", service_group_id: groups.find((item) => item.is_active)?.id || "", is_active: true });
     else setSelected({ name: "", category_id: categories.find((item) => item.is_active)?.id || "", is_active: true });
@@ -311,40 +346,64 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
   }
 
   async function managedAction(action: "archive" | "restore" | "delete" | "reassign") {
-    const targetIds = selectedIds.length ? selectedIds : selected?.id ? [String(selected.id)] : [];
-    const targets = targetIds.map((id) => collections[kind].find((row) => String(row.id) === id)).filter(Boolean) as Row[];
+    const targets = displayedTargets;
     if (!targets.length) return;
     if (reason.trim().length < 5) { setNotice("Enter a reason of at least 5 characters."); return; }
     if (action === "reassign" && !replacementId) { setNotice("Choose an active replacement record."); return; }
-    if ((action === "delete" || action === "reassign") && !confirm(`${action === "delete" ? "Delete" : "Reassign and remove"} ${targets.length} selected catalog item${targets.length === 1 ? "" : "s"}? Dependency checks run before every change.`)) return;
+    if (action === "reassign" && targets.some((target) => String(target.id) === replacementId)) { setNotice("The replacement cannot also be selected for reassignment."); return; }
     setSaving(true); setNotice("");
     try {
+      const inspected = await Promise.all(targets.map(async (target) => [String(target.id), await inspectDependency(String(target.id))] as const));
+      const currentDependencies = Object.fromEntries(inspected);
+      setBatchDependencies(currentDependencies);
+      const verb = ({ archive: "Archive", restore: "Restore", delete: "Permanently delete", reassign: "Reassign and remove" } as const)[action];
+      const dependencyLines = targets.map((target) => {
+        const total = Number(currentDependencies[String(target.id)]?.dependencies?.total || 0);
+        return `- ${target.name}: ${total} dependent record${total === 1 ? "" : "s"}`;
+      });
+      const warning = action === "delete" ? "\nDelete is refused when protected dependencies or retained history exist." : "";
+      if (!confirm(`${verb} ${targets.length} catalog item${targets.length === 1 ? "" : "s"}?\n\n${dependencyLines.join("\n")}${warning}\n\nEvery successful change is written to the audit history.`)) return;
+
+      const results: Array<{ id: string; name: string; ok: boolean; message: string }> = [];
       for (const target of targets) {
-        const response = await fetch("/api/admin/records", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ resource: kind, id: target.id, action, reason: reason.trim(), reassign_to: replacementId || null, confirmation: target.name }) });
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || `${action} failed`);
+        try {
+          const response = await fetch("/api/admin/records", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ resource: kind, id: target.id, action, reason: reason.trim(), reassign_to: replacementId || null, confirmation: target.name }) });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || `${action} failed`);
+          results.push({ id: String(target.id), name: String(target.name), ok: true, message: "Completed" });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : `${action} failed`;
+          console.error("Service Catalog record action failed", { kind, id: target.id, action, error });
+          results.push({ id: String(target.id), name: String(target.name), ok: false, message });
+        }
       }
       const loaded = await reload(false);
-      const next = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind][0] || null;
+      const refreshedRows = sortCatalogRecords(({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind]);
+      const failedIds = results.filter((result) => !result.ok).map((result) => result.id);
+      const next = refreshedRows.find((row) => failedIds.includes(String(row.id))) || refreshedRows[0] || null;
       setSelected(next);
       setDependency(null);
-      setSelectedIds([]);
-      setReplacementId("");
-      setNotice(`${targets.length} catalog item${targets.length === 1 ? "" : "s"} ${action === "reassign" ? "reassigned" : `${action}d`}.`);
+      setSelectedIds(failedIds);
+      setBatchResults(results);
+      if (!failedIds.length) setReplacementId("");
+      const completed = results.filter((result) => result.ok).length;
+      setNotice(`${completed} of ${results.length} catalog item${results.length === 1 ? "" : "s"} completed. ${failedIds.length ? "Review the item results below; failed items were not changed." : "All selected changes were verified after reload."}`);
     } catch (error) {
-      console.error("Service Catalog managed action error", { kind, targetIds, action, error });
+      console.error("Service Catalog managed action error", { kind, targetIds: targets.map((target) => target.id), action, error });
       setNotice(error instanceof Error ? error.message : `${action} failed`);
     } finally { setSaving(false); }
   }
 
-  const rows = collections[kind];
   return <div>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap rounded-lg border border-plum/10 bg-white p-1">{(Object.keys(labels) as CatalogKind[]).map((value) => <button key={value} type="button" onClick={() => switchKind(value)} className={`rounded-md px-4 py-2 text-xs font-bold ${kind === value ? "bg-plum text-white" : "text-plum"}`}>{labels[value]}</button>)}</div>
       <button type="button" onClick={createItem} className="inline-flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
     </div>
     <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
-      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3"><label className="mb-2 flex items-center gap-2 border-b border-plum/10 px-2 pb-3 text-[10px] font-bold text-plum"><input type="checkbox" checked={Boolean(rows.length) && selectedIds.length === rows.length} onChange={(event)=>setSelectedIds(event.target.checked ? rows.map((row)=>String(row.id)) : [])} className="accent-magenta" />Select all for a batch action</label>{rows.map((item) => <div key={item.id} className={`mb-1 grid grid-cols-[24px_1fr] items-start rounded-lg ${selected?.id === item.id ? "bg-blush" : ""}`}><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(String(item.id))} onChange={(event)=>setSelectedIds((current)=>event.target.checked?[...new Set([...current,String(item.id)])]:current.filter((id)=>id!==String(item.id)))} className="ml-2 mt-4 accent-magenta"/><button type="button" onClick={() => { setDependency(null); setSelected(item); if (kind === "master_style") setInitialService(item); }} className="w-full p-3 text-left"><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.archived_at ? "· Archived" : item.is_active ? "· Active" : "· Hidden"}</small></button></div>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
+      <div className="min-w-0">
+        <div className="mb-2 flex items-center justify-between rounded-lg border border-plum/10 bg-white px-3 py-2 text-[10px]"><b className="text-plum">{selectedRows.length} selected</b><button type="button" disabled={!selectedRows.length} onClick={()=>{setSelectedIds([]);setBatchDependencies({});setBatchResults([]);}} className="font-bold text-magenta disabled:opacity-40">Clear selection</button></div>
+      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3"><label className="mb-2 flex items-center gap-2 border-b border-plum/10 px-2 pb-3 text-[10px] font-bold text-plum"><input type="checkbox" checked={Boolean(rows.length) && selectedRows.length === rows.length} onChange={(event)=>{setSelectedIds(event.target.checked ? rows.map((row)=>String(row.id)) : []);setBatchResults([]);}} className="accent-magenta" />Select all current visible results</label>{rows.map((item) => <div key={item.id} className={`mb-1 grid grid-cols-[24px_1fr] items-start rounded-lg ${selected?.id === item.id ? "bg-blush" : ""}`}><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(String(item.id))} onChange={(event)=>{setSelectedIds((current)=>event.target.checked?[...new Set([...current,String(item.id)])]:current.filter((id)=>id!==String(item.id)));setBatchResults([]);}} className="ml-2 mt-4 accent-magenta"/><button type="button" onClick={() => { setDependency(null); setSelected(item); if (kind === "master_style") setInitialService(item); }} className="w-full p-3 text-left"><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.archived_at ? "· Archived" : item.is_active ? "· Active" : "· Hidden"}</small></button></div>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
+      </div>
       {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
         <h2 className="font-serif text-2xl text-plum">{selected.id ? `Edit ${labels[kind].replace(/s$/, "")}` : `Add ${labels[kind].replace(/s$/, "")}`}</h2>
         <p className="mt-1 text-xs leading-5 text-ink/55">Catalog lists are alphabetized automatically. Salon owners see active changes the next time their Styles & Pricing editor loads.</p>
@@ -356,6 +415,14 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
           {kind === "master_style" ? <label className="text-xs font-bold">Service group<select required name="service_group_id" defaultValue={selected.service_group_id || groups[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose service group</option>{groups.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.service_category?.name} · {item.name}</option>)}</select></label> : null}
           <label className="flex items-center gap-2 self-end rounded-lg border border-plum/10 p-3 text-xs font-bold"><input type="checkbox" name="is_active" defaultChecked={selected.is_active !== false} className="accent-magenta" />Visible to salon owners</label>
         </div>
+        {batchResults.length && !selectedRows.length ? <section className="mt-5 rounded-xl border border-plum/10 bg-white p-4"><h3 className="font-serif text-lg text-plum">Last batch results</h3><ul className="mt-2 space-y-1 text-xs">{batchResults.map((result)=><li key={`${result.id}-${result.ok}`} className={result.ok ? "text-green-700" : "text-red-700"}>{result.ok ? "Completed" : "Not changed"}: {result.name} · {result.message}</li>)}</ul></section> : null}
+        {selectedRows.length ? <section className="mt-5 rounded-xl border border-magenta/20 bg-blush/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-serif text-lg text-plum">Batch dependency preview</h3><b className="rounded-full bg-plum px-3 py-1 text-[10px] text-white">{selectedRows.length} selected</b></div>
+          <div className="mt-3 space-y-2">{selectedRows.map((target) => { const preview = batchDependencies[String(target.id)]; const total = Number(preview?.dependencies?.total || 0); return <div key={target.id} className="rounded-lg border border-plum/10 bg-white p-3 text-xs"><div className="flex items-center justify-between gap-3"><b className="text-plum">{target.name}</b><span>{preview?.error ? "Preview failed" : preview ? `${total} dependent record${total === 1 ? "" : "s"}` : "Checking…"}</span></div>{preview?.dependencies?.details?.length ? <ul className="mt-2 space-y-1 text-[10px] text-ink/60">{preview.dependencies.details.map((item:Row)=><li key={item.label}>{item.label}: <b>{item.count}</b> · {item.retention}</li>)}</ul> : null}{preview?.error ? <p className="mt-2 text-[10px] text-red-700">{preview.error}</p> : null}</div>; })}</div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Reason for every selected record" name="batch_reason" value={reason} onChange={setReason}/>{kind === "master_style" || kind === "service_group" ? <label className="text-xs font-bold">Reassign all to<select value={replacementId} onChange={(event)=>setReplacementId(event.target.value)} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose replacement</option>{rows.filter((row)=>!selectedIds.includes(String(row.id))&&row.is_active&&!row.archived_at).map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>:null}</div>
+          <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={saving} onClick={()=>void managedAction("archive")} className="rounded-lg border border-plum/20 px-4 py-2 text-xs font-bold text-plum disabled:opacity-40">Archive ({selectedRows.length})</button><button type="button" disabled={saving} onClick={()=>void managedAction("restore")} className="rounded-lg border border-green-300 px-4 py-2 text-xs font-bold text-green-700 disabled:opacity-40">Restore ({selectedRows.length})</button>{kind === "master_style" || kind === "service_group" ? <button type="button" disabled={saving||!replacementId} onClick={()=>void managedAction("reassign")} className="rounded-lg border border-amber-300 px-4 py-2 text-xs font-bold text-amber-800 disabled:opacity-40">Reassign ({selectedRows.length})</button>:null}<button type="button" disabled={saving} onClick={()=>void managedAction("delete")} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-xs font-bold text-red-700 disabled:opacity-40"><Trash2 size={14}/>Safe Delete ({selectedRows.length})</button></div>
+          {batchResults.length ? <div className="mt-4 rounded-lg border border-plum/10 bg-white p-3"><b className="text-xs text-plum">Last batch results</b><ul className="mt-2 space-y-1 text-[10px]">{batchResults.map((result)=><li key={`${result.id}-${result.ok}`} className={result.ok ? "text-green-700" : "text-red-700"}>{result.ok ? "Completed" : "Not changed"}: {result.name} · {result.message}</li>)}</ul></div> : null}
+        </section> : null}
         {selected.id ? <section className="mt-5 rounded-xl border border-plum/10 bg-cream/45 p-4"><h3 className="font-serif text-lg text-plum">Dependencies & safe actions</h3>{dependency?.dependencies?.details?.length ? <ul className="mt-2 space-y-1 text-xs text-ink/65">{dependency.dependencies.details.map((item:Row)=><li key={item.label}>{item.label}: <b>{item.count}</b> · {item.retention}</li>)}</ul> : <p className="mt-2 text-xs text-ink/55">{dependency?.error || "No dependent records were found."}</p>}<div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Reason" name="managed_reason" value={reason} onChange={setReason}/>{kind === "master_style" || kind === "service_group" ? <label className="text-xs font-bold">Reassign to<select value={replacementId} onChange={(event)=>setReplacementId(event.target.value)} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose replacement</option>{rows.filter((row)=>row.id!==selected.id&&row.is_active&&!row.archived_at).map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>:null}</div><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={saving||Boolean(selected.archived_at)} onClick={()=>void managedAction("archive")} className="rounded-lg border border-plum/20 px-4 py-2 text-xs font-bold text-plum disabled:opacity-40">Archive{selectedIds.length?` (${selectedIds.length})`:""}</button><button type="button" disabled={saving||!selected.archived_at} onClick={()=>void managedAction("restore")} className="rounded-lg border border-green-300 px-4 py-2 text-xs font-bold text-green-700 disabled:opacity-40">Restore</button>{kind === "master_style" || kind === "service_group" ? <button type="button" disabled={saving||!replacementId} onClick={()=>void managedAction("reassign")} className="rounded-lg border border-amber-300 px-4 py-2 text-xs font-bold text-amber-800 disabled:opacity-40">Reassign</button>:null}<button type="button" disabled={saving} onClick={()=>void managedAction("delete")} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-xs font-bold text-red-700"><Trash2 size={14}/>Safe Delete{selectedIds.length?` (${selectedIds.length})`:""}</button></div></section>:null}
         <div className="mt-6 flex flex-wrap gap-3"><button disabled={saving} className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Saving…" : "Save Catalog Item"}</button></div>
       </form> : <div className="rounded-xl border border-dashed border-plum/15 bg-white p-8 text-center text-sm text-ink/50">Add the first catalog item.</div>}
