@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, Film, ImageIcon, Pause, Play, Search, Upload, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, Film, ImageIcon, Pause, Play, Search, Upload, XCircle } from "lucide-react";
 import { adminSupabase, getSessionForScope } from "@/lib/supabase";
-import { createVideoPoster, getVideoDuration, optimizeTrendingVideo } from "@/lib/videoUploadClient";
+import { createVideoPoster, getVideoDuration, optimizeTrendingVideo, uploadTrendingFile } from "@/lib/videoUploadClient";
 
 type Row = Record<string, any>;
 
@@ -42,14 +42,18 @@ export default function AdminTrendingCampaigns() {
   const [posterTime, setPosterTime] = useState(0);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [retryReady, setRetryReady] = useState(false);
   const [progress, setProgress] = useState(0);
   const previewRef = useRef<HTMLVideoElement>(null);
+  const uploadController = useRef<AbortController | null>(null);
   const [windowDefaults] = useState(() => ({ start: localInput(new Date(Date.now() + 3600000).toISOString()), end: localInput(new Date(Date.now() + 8 * 86400000).toISOString()) }));
   const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : "", [file]);
   const posterPreviewUrl = useMemo(() => posterFile ? URL.createObjectURL(posterFile) : "", [posterFile]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl); }, [posterPreviewUrl]);
+  useEffect(() => () => uploadController.current?.abort(), []);
 
   async function load() {
     const response = await fetch("/api/admin/trending-campaigns", { headers: await headers(), cache: "no-store" });
@@ -89,6 +93,7 @@ export default function AdminTrendingCampaigns() {
 
   async function selectVideo(next: File | null) {
     resetMedia();
+    setRetryReady(false);
     if (!next) return;
     setFile(next);
     setNotice("Reading video details…");
@@ -104,6 +109,17 @@ export default function AdminTrendingCampaigns() {
       setFile(null);
       setNotice(error instanceof Error ? error.message : "Unable to read this video.");
     }
+  }
+
+  function dropVideo(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const next = Array.from(event.dataTransfer.files).find((candidate) => candidate.type.startsWith("video/") || /\.(mp4|webm)$/i.test(candidate.name));
+    if (!next) {
+      setNotice("Drop an MP4 or WebM video file.");
+      return;
+    }
+    void selectVideo(next);
   }
 
   async function capturePoster() {
@@ -136,7 +152,11 @@ export default function AdminTrendingCampaigns() {
     if (!editing && !file) { setNotice("Choose a video to upload."); return; }
     if (file && (trimEnd - trimStart <= 0 || trimEnd - trimStart > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
     setBusy(true);
+    setUploading(true);
+    setRetryReady(false);
     setProgress(8);
+    const controller = new AbortController();
+    uploadController.current = controller;
     setNotice("Validating and optimizing video…");
     let uploadedPath = "";
     let uploadedPosterPath = "";
@@ -150,19 +170,20 @@ export default function AdminTrendingCampaigns() {
         mime_type: editing?.mime_type,
       };
       if (file) {
-        const optimized = await optimizeTrendingVideo(file, { startSeconds: trimStart, endSeconds: trimEnd });
-        setProgress(36);
+        const optimized = await optimizeTrendingVideo(file, { startSeconds: trimStart, endSeconds: trimEnd, signal: controller.signal });
+        if (controller.signal.aborted) throw new DOMException("Upload cancelled.", "AbortError");
+        setProgress(24);
         setNotice("Uploading optimized video…");
         uploadedPath = `campaigns/${salonId}/${Date.now()}-${crypto.randomUUID()}.${optimized.file.type === "video/webm" ? "webm" : "mp4"}`;
-        const { error } = await adminSupabase.storage.from("trending-videos").upload(uploadedPath, optimized.file, { cacheControl: "31536000", contentType: optimized.file.type, upsert: false });
-        if (error) throw error;
+        const session = await getSessionForScope("admin");
+        if (!session) throw new Error("Your admin session has expired. Sign in and try again.");
+        await uploadTrendingFile(uploadedPath, optimized.file, { accessToken: session.access_token, signal: controller.signal, onProgress: (value) => setProgress(24 + Math.round(value * .44)) });
         const { data } = adminSupabase.storage.from("trending-videos").getPublicUrl(uploadedPath);
         setProgress(68);
         setNotice("Uploading poster frame…");
         const selectedPoster = posterFile || await createVideoPoster(file, posterTime);
         uploadedPosterPath = `campaigns/${salonId}/posters/${Date.now()}-${crypto.randomUUID()}.jpg`;
-        const posterUpload = await adminSupabase.storage.from("trending-videos").upload(uploadedPosterPath, selectedPoster, { cacheControl: "31536000", contentType: selectedPoster.type, upsert: false });
-        if (posterUpload.error) throw posterUpload.error;
+        await uploadTrendingFile(uploadedPosterPath, selectedPoster, { accessToken: session.access_token, signal: controller.signal, onProgress: (value) => setProgress(68 + Math.round(value * .16)) });
         const poster = adminSupabase.storage.from("trending-videos").getPublicUrl(uploadedPosterPath);
         video = { video_url: data.publicUrl, storage_path: uploadedPath, thumbnail_url: poster.data.publicUrl, duration_seconds: optimized.duration, file_size_bytes: optimized.file.size, mime_type: optimized.file.type };
       }
@@ -193,8 +214,12 @@ export default function AdminTrendingCampaigns() {
       const paths = [uploadedPath, uploadedPosterPath].filter(Boolean);
       if (paths.length) await adminSupabase.storage.from("trending-videos").remove(paths);
       setProgress(0);
-      setNotice(error instanceof Error ? error.message : "Unable to save campaign.");
+      const wasCancelled = error instanceof DOMException && error.name === "AbortError";
+      setRetryReady(!wasCancelled);
+      setNotice(wasCancelled ? "Upload cancelled. The selected file was not saved." : error instanceof Error ? error.message : "Unable to save campaign.");
     } finally {
+      uploadController.current = null;
+      setUploading(false);
       setBusy(false);
     }
   }
@@ -236,11 +261,11 @@ export default function AdminTrendingCampaigns() {
       <div className="flex items-center gap-3"><Film className="text-magenta" /><div><h2 className="font-serif text-2xl text-plum">Trending Picks campaigns</h2><p className="text-xs text-ink/55">Upload, trim where your browser supports it, choose a poster frame, preview, moderate, and schedule local placement.</p></div></div>
       <form onSubmit={submit} className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="relative sm:col-span-2"><Label text="Eligible salon"><div className="relative"><Search className="absolute left-3 top-3.5 text-ink/40" size={15} /><input disabled={Boolean(editing)} value={editing?.salon?.name || query} onChange={(event) => { setQuery(event.target.value); setSelectedSalon(null); }} className="min-h-11 w-full rounded-lg border border-plum/15 pl-9 text-xs" placeholder="Search salons" /></div></Label>{salons.length && !selectedSalon ? <div className="absolute z-20 mt-1 w-full rounded-lg border bg-white p-1 shadow-xl">{salons.map((salon) => <button type="button" key={salon.id} onClick={() => { setSelectedSalon(salon); setQuery(salon.name); setSalons([]); }} className="block w-full rounded p-3 text-left text-xs hover:bg-blush"><b>{salon.name}</b> · {salon.address_city}, {salon.address_state}</button>)}</div> : null}</div>
-        <Label text={editing ? "Replacement video (optional; resets moderation)" : "Video (MP4/WebM, final clip ≤30 sec)"}><input type="file" accept="video/mp4,video/webm" required={!editing} onChange={(event) => void selectVideo(event.target.files?.[0] || null)} className="min-h-11 w-full rounded-lg border p-2 text-xs" /></Label>
+        <label onDragOver={(event) => event.preventDefault()} onDrop={dropVideo} className="block rounded-lg border border-dashed border-magenta/40 bg-blush/20 p-3 text-[10px] font-bold transition-colors hover:bg-blush/40 focus-within:ring-2 focus-within:ring-magenta"><span>{editing ? "Replacement video (optional; resets moderation)" : "Video (MP4/WebM, final clip ≤30 sec)"}</span><span className="mt-1 block font-normal text-ink/55">Drag and drop, or choose a file.</span><input type="file" accept="video/mp4,video/webm,.mp4,.webm" required={!editing} onChange={(event) => void selectVideo(event.target.files?.[0] || null)} className="mt-2 min-h-11 w-full rounded-lg border bg-white p-2 text-xs" /></label>
         <Field name="description" label="Description" defaultValue={editing?.description} />
         {file && previewUrl ? <div className="space-y-3 rounded-xl border border-plum/10 bg-cream p-3 sm:col-span-2 xl:col-span-4">
           <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
-            <video ref={previewRef} src={previewUrl} controls preload="metadata" poster={activePoster || undefined} className="aspect-video w-full rounded-lg bg-ink object-contain" />
+            <video ref={previewRef} src={previewUrl} controls playsInline preload="metadata" poster={activePoster || undefined} className="aspect-video w-full rounded-lg bg-ink object-contain" />
             <div className="space-y-3">
               <div><b className="text-xs text-plum">Trim and placement preview</b><p className="mt-1 text-[10px] leading-4 text-ink/55">Source {sourceDuration.toFixed(1)} sec. Final clips must be 30 seconds or less. Trimming uses the browser’s safe MediaRecorder support and will explain when the browser cannot perform it.</p></div>
               <div className="grid grid-cols-2 gap-2"><Field name="trim_start_preview" label="Trim start (sec)" type="number" min="0" max={String(Math.max(0, sourceDuration - 0.1))} step="0.1" value={trimStart} onValue={(value) => { setTrimStart(value); if (posterTime < value) updatePosterTime(value); }} /><Field name="trim_end_preview" label="Trim end (sec)" type="number" min="0.1" max={String(sourceDuration)} step="0.1" value={trimEnd} onValue={(value) => { setTrimEnd(value); if (posterTime > value) updatePosterTime(value); }} /></div>
@@ -262,10 +287,10 @@ export default function AdminTrendingCampaigns() {
         <Field name="amount" label="Amount USD" type="number" min="0" step="0.01" />
         <Field name="note" label="Internal note" defaultValue={editing?.internal_note} />
         {editing ? <Field name="reason" label="Change reason" required /> : null}
-        <div className="flex items-end gap-2 xl:col-span-2"><button disabled={busy} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Upload size={14} />{busy ? "Saving…" : editing ? "Save audited changes" : "Upload draft campaign"}</button>{editing ? <button type="button" onClick={() => { setEditing(null); resetMedia(); }} className="min-h-11 rounded-lg border px-4 text-xs font-bold">Cancel</button> : null}</div>
+        <div className="flex items-end gap-2 xl:col-span-2"><button disabled={busy} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Upload size={14} />{busy ? "Saving…" : retryReady ? "Retry upload" : editing ? "Save audited changes" : "Upload draft campaign"}</button>{uploading ? <button type="button" onClick={() => uploadController.current?.abort()} className="min-h-11 rounded-lg border border-red-300 px-4 text-xs font-bold text-red-700">Cancel upload</button> : editing ? <button type="button" onClick={() => { setEditing(null); resetMedia(); }} className="min-h-11 rounded-lg border px-4 text-xs font-bold">Cancel</button> : null}</div>
       </form>
     </section>
-    <section className="grid gap-4 lg:grid-cols-2">{campaigns.map((campaign) => <article key={campaign.id} className="overflow-hidden rounded-[15px] border border-plum/10 bg-white"><video src={campaign.video_url} controls preload="metadata" poster={campaign.thumbnail_url || undefined} className="aspect-video w-full bg-ink object-cover" /><div className="p-4"><div className="flex flex-wrap items-center gap-2"><h3 className="font-serif text-lg text-plum">{campaign.salon?.name}</h3><Badge value={campaign.status} /><Badge value={campaign.moderation_status} /></div><p className="mt-2 text-xs text-ink/65">{campaign.description}</p><p className="mt-2 text-[10px] text-ink/50">{campaign.radius_miles} mi · priority {campaign.priority} · {new Date(campaign.starts_at).toLocaleString()} → {new Date(campaign.ends_at).toLocaleString()}</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => { setEditing(campaign); resetMedia(); }} className="min-h-10 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta">Edit</button>{campaign.moderation_status !== "Approved" ? <button disabled={busy} onClick={() => void moderate(campaign, "Approved")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-green-700 px-3 text-[10px] font-bold text-white"><CheckCircle2 size={13} />Approve</button> : null}{campaign.moderation_status !== "Rejected" ? <button disabled={busy} onClick={() => void moderate(campaign, "Rejected")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-300 px-3 text-[10px] font-bold text-red-700"><XCircle size={13} />Reject</button> : null}{campaign.status === "Active" ? <button onClick={() => void status(campaign, "Paused")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-[10px] font-bold"><Pause size={13} />Pause</button> : campaign.status === "Paused" ? <button onClick={() => void status(campaign, "Active")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-plum px-3 text-[10px] font-bold text-white"><Play size={13} />Resume</button> : null}</div>{campaign.audit?.length ? <details className="mt-3 text-[10px]"><summary className="font-bold text-magenta">Audit history ({campaign.audit.length})</summary>{[...campaign.audit].sort((a: Row, b: Row) => String(b.created_at).localeCompare(String(a.created_at))).map((entry: Row) => <p key={entry.id} className="mt-2 border-l-2 border-magenta pl-2"><b>{entry.action}</b> · {entry.reason || "Initial creation"}</p>)}</details> : null}</div></article>)}{!campaigns.length ? <p className="rounded-[15px] bg-white p-10 text-center text-xs text-ink/55 lg:col-span-2">No Trending Picks campaigns yet.</p> : null}</section>
+    <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">{campaigns.map((campaign) => <article key={campaign.id} className="overflow-hidden rounded-[15px] border border-plum/10 bg-white"><video src={campaign.video_url} controls playsInline preload="metadata" poster={campaign.thumbnail_url || undefined} className="aspect-video w-full bg-ink object-cover" /><div className="p-4"><div className="flex flex-wrap items-center gap-2"><h3 className="font-serif text-lg text-plum">{campaign.salon?.name}</h3><Badge value={campaign.status} /><Badge value={campaign.moderation_status} /></div><p className="mt-2 line-clamp-2 text-xs text-ink/65">{campaign.description}</p><p className="mt-2 text-[10px] text-ink/50">{campaign.radius_miles} mi · priority {campaign.priority} · {new Date(campaign.starts_at).toLocaleString()} → {new Date(campaign.ends_at).toLocaleString()}</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => { setEditing(campaign); resetMedia(); }} className="min-h-10 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta">Edit</button>{campaign.moderation_status !== "Approved" ? <button disabled={busy} onClick={() => void moderate(campaign, "Approved")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-green-700 px-3 text-[10px] font-bold text-white"><CheckCircle2 size={13} />Approve</button> : null}{campaign.moderation_status !== "Rejected" ? <button disabled={busy} onClick={() => void moderate(campaign, "Rejected")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-300 px-3 text-[10px] font-bold text-red-700"><XCircle size={13} />Reject</button> : null}{campaign.status === "Active" ? <button onClick={() => void status(campaign, "Paused")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-[10px] font-bold"><Pause size={13} />Pause</button> : campaign.status === "Paused" ? <button onClick={() => void status(campaign, "Active")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-plum px-3 text-[10px] font-bold text-white"><Play size={13} />Resume</button> : null}{campaign.status !== "Expired" ? <button disabled={busy} onClick={() => void status(campaign, "Expired")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-plum/20 px-3 text-[10px] font-bold text-plum"><Archive size={13} />Archive</button> : null}</div>{campaign.audit?.length ? <details className="mt-3 text-[10px]"><summary className="font-bold text-magenta">Audit history ({campaign.audit.length})</summary>{[...campaign.audit].sort((a: Row, b: Row) => String(b.created_at).localeCompare(String(a.created_at))).map((entry: Row) => <p key={entry.id} className="mt-2 border-l-2 border-magenta pl-2"><b>{entry.action}</b> · {entry.reason || "Initial creation"}</p>)}</details> : null}</div></article>)}{!campaigns.length ? <p className="rounded-[15px] bg-white p-10 text-center text-xs text-ink/55 md:col-span-2 2xl:col-span-3">No Trending Picks campaigns yet.</p> : null}</section>
   </div>;
 }
 

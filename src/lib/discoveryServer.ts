@@ -42,7 +42,7 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
     const resolution = await supabase.rpc("resolve_search_service_query", { p_query: resolvedStyle });
     if (!resolution.error && resolution.data) resolvedStyle = String(resolution.data);
   }
-  const { data, error } = await supabase.rpc("discover_nearby_salons", {
+  const { data, error } = await supabase.rpc("discover_nearby_salons_ranked", {
     origin_latitude: query.origin.lat,
     origin_longitude: query.origin.lng,
     radius_miles: normalizeRadius(query.radius),

@@ -6,14 +6,15 @@ import { getSessionForScope } from "@/lib/supabase";
 
 type Surface = "header" | "mobile_menu" | "mobile_bottom" | "footer";
 type Item = { id:string; surface:Surface; group_key:string; item_key:string; label:string; translation_key?:string|null; href:string; sort_order:number; is_enabled:boolean; show_new_badge:boolean; archived_at?:string|null };
-const empty:Omit<Item,"id"> = { surface:"header", group_key:"main", item_key:"", label:"", translation_key:"", href:"/", sort_order:10, is_enabled:true, show_new_badge:false, archived_at:null };
+type ItemForm = Omit<Item,"id"|"sort_order"> & { sort_order:number|"" };
+const empty:ItemForm = { surface:"header", group_key:"main", item_key:"", label:"", translation_key:"", href:"/", sort_order:10, is_enabled:true, show_new_badge:false, archived_at:null };
 const surfaceNames:Record<Surface,string> = { header:"Desktop header", mobile_menu:"Mobile menu", mobile_bottom:"Mobile bottom bar", footer:"Footer" };
 
 export default function NavigationMenuManager() {
   const [items,setItems] = useState<Item[]>([]);
   const [surface,setSurface] = useState<Surface>("header");
   const [selectedId,setSelectedId] = useState("");
-  const [form,setForm] = useState<Omit<Item,"id">>(empty);
+  const [form,setForm] = useState<ItemForm>(empty);
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState("");
@@ -44,9 +45,13 @@ export default function NavigationMenuManager() {
   function create() { setSelectedId(""); setForm({...empty,surface,group_key:surface === "footer" ? "company" : "main",sort_order:(visible.at(-1)?.sort_order || 0)+10}); setMessage(""); }
 
   async function submit() {
+    if (form.sort_order === "" || !Number.isInteger(Number(form.sort_order)) || Number(form.sort_order) < 0 || Number(form.sort_order) > 100000) {
+      setMessage("Enter a whole-number order from 0 to 100000.");
+      return;
+    }
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/admin/engine/navigation", { method:selectedId?"PATCH":"POST", headers:await authHeaders(true), body:JSON.stringify({...form,id:selectedId||undefined,action:"update"}) });
+      const response = await fetch("/api/admin/engine/navigation", { method:selectedId?"PATCH":"POST", headers:await authHeaders(true), body:JSON.stringify({...form,sort_order:Number(form.sort_order),id:selectedId||undefined,action:"update"}) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setMessage(selectedId ? "Navigation item saved." : "Navigation item created.");
@@ -102,7 +107,7 @@ export default function NavigationMenuManager() {
         </div>
         <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="rounded-xl border border-plum/10 p-4">
           <h4 className="font-serif text-xl text-plum">{selectedId ? "Edit navigation item" : "New navigation item"}</h4>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label="Label" value={form.label} onChange={(label) => setForm({...form,label})}/><Field label="Internal destination" value={form.href} onChange={(href) => setForm({...form,href})}/><Field label="Item key" value={form.item_key} onChange={(item_key) => setForm({...form,item_key:item_key.toLowerCase().replace(/\s+/g,"-")})}/><Field label="Group key" value={form.group_key} onChange={(group_key) => setForm({...form,group_key:group_key.toLowerCase().replace(/\s+/g,"-")})}/><Field label="Translation key (optional)" value={form.translation_key||""} onChange={(translation_key) => setForm({...form,translation_key})}/><label className="text-xs font-bold">Order<input type="number" min={0} max={100000} value={form.sort_order} onChange={(event) => setForm({...form,sort_order:Number(event.target.value)})} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 px-3 font-normal"/></label></div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label="Label" value={form.label} onChange={(label) => setForm({...form,label})}/><Field label="Internal destination" value={form.href} onChange={(href) => setForm({...form,href})}/><Field label="Item key" value={form.item_key} onChange={(item_key) => setForm({...form,item_key:item_key.toLowerCase().replace(/\s+/g,"-")})}/><Field label="Group key" value={form.group_key} onChange={(group_key) => setForm({...form,group_key:group_key.toLowerCase().replace(/\s+/g,"-")})}/><Field label="Translation key (optional)" value={form.translation_key||""} onChange={(translation_key) => setForm({...form,translation_key})}/><label className="text-xs font-bold">Order<input type="number" inputMode="numeric" min={0} max={100000} value={form.sort_order} onChange={(event) => setForm({...form,sort_order:event.target.value===""?"":Number(event.target.value)})} onKeyDown={(event)=>{if(/[eE+\-.]/.test(event.key))event.preventDefault()}} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 px-3 font-normal"/></label></div>
           <div className="mt-4 flex flex-wrap gap-4 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={form.is_enabled} onChange={(event) => setForm({...form,is_enabled:event.target.checked})} className="accent-magenta"/>Visible</label><label className="flex items-center gap-2"><input type="checkbox" checked={form.show_new_badge} onChange={(event) => setForm({...form,show_new_badge:event.target.checked})} className="accent-magenta"/>Show New badge</label></div>
           <div className="mt-5 flex flex-wrap gap-2"><button type="submit" disabled={busy||Boolean(form.archived_at)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-40"><Save size={14}/>{selectedId?"Save item":"Add item"}</button>{selectedId ? (form.archived_at ? <button type="button" disabled={busy} onClick={() => void action(selectedId,"restore")} className="inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-xs font-bold"><RotateCcw size={14}/>Restore</button> : <button type="button" disabled={busy} onClick={() => void action(selectedId,"archive")} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-4 text-xs font-bold text-red-700"><Archive size={14}/>Archive</button>) : null}</div>
           {message ? <p role="status" className="mt-4 rounded-lg bg-blush p-3 text-xs text-plum">{message}</p> : null}

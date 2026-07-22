@@ -1,4 +1,6 @@
-import { cleanText, errorResponse } from "@/lib/requestSecurity";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { cleanText } from "@/lib/requestSecurity";
+import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -8,7 +10,7 @@ const ENTITLEMENT_SOURCES = new Set(["stripe_payment", "verified_invoice", "plat
 function boundedNumber(value: unknown, fallback: number, minimum: number, maximum: number, label: string, integer = false) {
   const parsed = value === null || value === undefined || value === "" ? fallback : Number(value);
   if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum || integer && !Number.isInteger(parsed)) {
-    throw new Error(`${label} must be between ${minimum} and ${maximum}.`);
+    rejectRequest(`${label} must be between ${minimum} and ${maximum}.`);
   }
   return parsed;
 }
@@ -16,13 +18,15 @@ function boundedNumber(value: unknown, fallback: number, minimum: number, maximu
 function validTimezone(value: unknown) {
   const timezone = cleanText(value, 80) || "America/New_York";
   try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(); }
-  catch { throw new Error("Choose a valid IANA timezone."); }
+  catch { rejectRequest("Choose a valid IANA timezone."); }
   return timezone;
 }
 
 export async function GET(request: Request) {
+  let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
+    monitoringAdmin = admin;
     await admin.rpc("expire_featured_campaigns");
     const search = new URL(request.url).searchParams;
     if (search.get("mode") === "salons") {
@@ -42,43 +46,44 @@ export async function GET(request: Request) {
     if (settingsError) throw settingsError;
     return Response.json({ campaigns: campaigns || [], settings }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Featured campaign load failed", error);
-    return errorResponse(error, "Unable to load Featured Salon campaigns.");
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "load_featured_campaigns", actorRole: "admin", safeMessage: "We couldn't load Featured Salon campaigns." });
   }
 }
 
 export async function POST(request: Request) {
+  let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin, user } = await requireAdminPermission(request, "marketing");
+    monitoringAdmin = admin;
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 30);
     if (action === "settings") {
       const emptyTitle = cleanText(body.empty_title, 100);
       const emptyBody = cleanText(body.empty_body, 240);
       const emptyHref = cleanText(body.empty_href, 300);
-      if (!emptyTitle || !emptyBody || !/^\/(?!\/)/.test(emptyHref)) throw new Error("Enter valid promotional card copy and an internal link.");
+      if (!emptyTitle || !emptyBody || !/^\/(?!\/)/.test(emptyHref)) rejectRequest("Enter valid promotional card copy and an internal link.");
       const { data, error } = await admin.from("homepage_sections").update({ empty_title: emptyTitle, empty_body: emptyBody, empty_href: emptyHref, updated_by: user.id, updated_at: new Date().toISOString() }).eq("section_key", "featured_salons").select().single();
       if (error) throw error;
       return Response.json({ settings: data });
     }
-    if (action !== "save") throw new Error("Choose a valid campaign action.");
+    if (action !== "save") rejectRequest("Choose a valid campaign action.");
     const campaignId = cleanText(body.id, 60) || null;
     const salonId = cleanText(body.salon_id, 60);
     const status = cleanText(body.status, 20) || "Draft";
     const startsAt = cleanText(body.starts_at, 50);
     const endsAt = cleanText(body.ends_at, 50);
     const reason = cleanText(body.reason, 1000) || null;
-    if (campaignId && !UUID.test(campaignId)) throw new Error("Campaign ID is invalid.");
-    if (!UUID.test(salonId)) throw new Error("Choose an eligible salon.");
+    if (campaignId && !UUID.test(campaignId)) rejectRequest("Campaign ID is invalid.");
+    if (!UUID.test(salonId)) rejectRequest("Choose an eligible salon.");
     const startTime = Date.parse(startsAt);
     const endTime = Date.parse(endsAt);
-    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) throw new Error("Campaign end time must be after its start time.");
-    if (!STATUSES.has(status)) throw new Error("Choose a valid campaign status.");
-    if (campaignId && (!reason || reason.length < 5)) throw new Error("Enter an internal change reason of at least 5 characters.");
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) rejectRequest("Campaign end time must be after its start time.");
+    if (!STATUSES.has(status)) rejectRequest("Choose a valid campaign status.");
+    if (campaignId && (!reason || reason.length < 5)) rejectRequest("Enter an internal change reason of at least 5 characters.");
     const entitlementSource = cleanText(body.entitlement_source, 40) || null;
-    if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) throw new Error("Choose a valid paid entitlement source.");
+    if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) rejectRequest("Choose a valid paid entitlement source.");
     const entitlementReference = cleanText(body.entitlement_reference, 160) || null;
-    if (entitlementSource && !entitlementReference) throw new Error("Enter the verified payment, invoice, or credit reference.");
+    if (entitlementSource && !entitlementReference) rejectRequest("Enter the verified payment, invoice, or credit reference.");
     const entitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
       ? null
       : boundedNumber(body.entitlement_amount_minor, 0, 0, 100_000_000, "Entitlement amount", true);
@@ -102,7 +107,6 @@ export async function POST(request: Request) {
     if (error) throw error;
     return Response.json({ campaign_id: data });
   } catch (error) {
-    console.error("Featured campaign save failed", error);
-    return errorResponse(error, "Unable to save this Featured Salon campaign.");
+    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "save_featured_campaign", actorRole: "admin", safeMessage: "We couldn't save this Featured Salon campaign." });
   }
 }

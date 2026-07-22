@@ -29,7 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (application.logo_url) patch.logo_url = application.logo_url;
       const { error: salonError } = await admin.from("salons").update(patch).eq("id", application.salon_id);
       if (salonError) throw salonError;
-      const reconciliation = await admin.rpc("reconcile_salon_lifecycle", {
+      const reconciliation = await admin.rpc("reconcile_salon_publication", {
         p_salon_id: application.salon_id,
         p_actor_id: user.id,
         p_reason: "Salon application approved",

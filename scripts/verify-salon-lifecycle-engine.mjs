@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20260720130000_salon_lifecycle_engine.sql");
+const publicationMigration = read("supabase/migrations/20260721120000_salon_publication_controls.sql");
 const onboardingApi = read("src/app/api/salon/onboarding/route.ts");
 const engineApi = read("src/app/api/admin/engine/lifecycle/route.ts");
 const settings = read("src/components/admin/SalonLifecycleSettings.tsx");
@@ -14,13 +15,18 @@ for (const gate of ["application_approved", "structured_address", "precise_geoco
 }
 assert.match(migration, /salon_lifecycle_diagnostic/);
 assert.match(migration, /reconcile_salon_lifecycle/);
+assert.match(publicationMigration, /salon_publication_diagnostic/);
+assert.match(publicationMigration, /reconcile_salon_publication/);
+assert.match(publicationMigration, /admin_reconcile_salon_publication/);
+assert.match(publicationMigration, /slug_redirects/);
 assert.match(migration, /Ready for Activation/);
 assert.match(migration, /Needs Attention/);
 assert.match(migration, /future_booking_count/);
 assert.match(migration, /loss_behavior/);
-assert.match(onboardingApi, /reconcile_salon_lifecycle/);
+assert.match(onboardingApi, /reconcile_salon_publication/);
 assert.match(engineApi, /requireAdminPermission\(request, "settings"\)/);
 assert.match(engineApi, /reconciled/);
+assert.match(engineApi, /reconcile_salon_publication/);
 assert.match(settings, /Automatically activate eligible salons/);
 assert.match(salons, /Public visibility diagnostic/);
 assert.match(salons, /all_required_complete/);

@@ -33,6 +33,7 @@
     "verify:self-audit": "node scripts/verify-platform-self-audit.mjs",
     "verify:migrations": "node scripts/verify-migration-order.mjs",
     "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs",
+    "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },
@@ -40,7 +41,7 @@
     "@googlemaps/markerclusterer": "^2.6.2",
     "@supabase/supabase-js": "^2.109.0",
     "lucide-react": "^1.24.0",
-    "next": "16.2.10",
+    "next": "16.2.11",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -55,6 +56,7 @@
     "typescript": "^5"
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.10",
+    "sharp": "^0.35.3"
   }
 }

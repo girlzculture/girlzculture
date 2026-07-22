@@ -9,6 +9,7 @@ import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import BookingInbox from "@/components/BookingInbox";
+import LanguageSelector from "@/components/i18n/LanguageSelector";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -79,7 +80,7 @@ export default function CustomerAccount() {
     <header className="flex h-20 items-center justify-between border-b border-plum/10 bg-white/80 px-5 lg:px-10">
       <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
       <nav className="hidden gap-10 text-sm md:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
-      <div className="flex items-center gap-4"><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
+      <div data-language-selector-host className="flex items-center gap-2 sm:gap-4"><LanguageSelector compact/><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
     </header>
     <div className="mx-auto grid max-w-[1720px] lg:grid-cols-[270px_1fr]">
       <aside className="hidden min-h-[calc(100vh-80px)] bg-[linear-gradient(150deg,#4b0b58,#22092b)] p-6 text-white lg:flex lg:flex-col">

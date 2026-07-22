@@ -48,7 +48,13 @@ export function errorResponse(error: unknown, fallback: string) {
   if (error instanceof RateLimitError) {
     return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
   }
-  return Response.json({ error: error instanceof Error ? error.message : fallback }, { status: 400 });
+  const message = error instanceof Error ? error.message : fallback;
+  const status = /^Unauthorized\b/i.test(message)
+    ? 401
+    : /^Forbidden\b/i.test(message)
+      ? 403
+      : 400;
+  return Response.json({ error: message }, { status });
 }
 
 /**

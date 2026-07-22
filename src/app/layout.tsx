@@ -6,7 +6,6 @@ import CustomerLocationProvider from "@/components/location/CustomerLocationProv
 import LocaleProvider from "@/components/i18n/LocaleProvider";
 import { cookies } from "next/headers";
 import { localeDirection, normalizeLocale } from "@/i18n/catalog";
-import LanguageSelector from "@/components/i18n/LanguageSelector";
 import { getEngineColor } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
 import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBridge";
@@ -62,12 +61,6 @@ export default async function RootLayout({
         <LocaleProvider initialLocale={locale}>
           <CustomerLocationProvider>{children}</CustomerLocationProvider>
           <DocumentLocalizationBridge />
-          <div className="fixed bottom-[76px] right-3 z-[65] print:hidden md:bottom-4 md:right-4">
-            <LanguageSelector
-              compact
-              className="shadow-[0_8px_30px_rgba(26,18,32,.14)] backdrop-blur"
-            />
-          </div>
           <InlineFormValidation />
           <PwaRegistration />
         </LocaleProvider>

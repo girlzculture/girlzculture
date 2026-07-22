@@ -85,13 +85,23 @@ export async function getNavigationItems(surface:NavigationItem["surface"],fallb
 }
 
 export async function getBlogPosts() {
-  const { data, error } = await supabase.from("blog_posts").select("*").eq("status", "Published").order("featured", { ascending: false }).order("published_at", { ascending: false });
-  if (error) console.error("Blog list load failed", error.message);
-  return (data || []) as BlogPost[];
+  try {
+    const { data, error } = await supabase.from("blog_posts").select("*").eq("status", "Published").is("archived_at", null).order("featured", { ascending: false }).order("published_at", { ascending: false }).abortSignal(AbortSignal.timeout(7_000));
+    if (error) console.error("Blog list load failed", { code: error.code, message: error.message });
+    return (data || []) as BlogPost[];
+  } catch (error) {
+    console.error("Blog list upstream timed out", { message: error instanceof Error ? error.message : "unknown" });
+    return [];
+  }
 }
 
 export async function getBlogPost(slug: string) {
-  const { data, error } = await supabase.from("blog_posts").select("*").eq("slug", slug).eq("status", "Published").maybeSingle();
-  if (error) console.error("Blog post load failed", { slug, error: error.message });
-  return data as BlogPost | null;
+  try {
+    const { data, error } = await supabase.from("blog_posts").select("*").eq("slug", slug).eq("status", "Published").is("archived_at", null).abortSignal(AbortSignal.timeout(7_000)).maybeSingle();
+    if (error) console.error("Blog post load failed", { slug, code: error.code, message: error.message });
+    return data as BlogPost | null;
+  } catch (error) {
+    console.error("Blog post upstream timed out", { slug, message: error instanceof Error ? error.message : "unknown" });
+    return null;
+  }
 }

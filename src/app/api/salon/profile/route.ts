@@ -1,4 +1,5 @@
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
+import { capturePlatformError, monitoredRouteFailure, safeFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 
@@ -55,18 +56,23 @@ function permissionFor(keys: string[]) {
 }
 
 export async function GET(request: Request) {
+  let admin;
   try {
     const context = await requireSalonOwner(request);
+    admin = context.admin;
     return Response.json({ salon: context.salon }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Salon profile load failed", error);
-    return errorResponse(error, "Unable to load the salon profile.");
+    return monitoredRouteFailure({ request, admin, error, feature: "salon-profile", action: "load", actorRole: "salon", safeMessage: "We couldn't load the salon profile." });
   }
 }
 
 export async function PATCH(request: Request) {
+  let admin;
+  let salonId: string | null = null;
   try {
     const context = await requireSalonOwner(request);
+    admin = context.admin;
+    salonId = context.salon.id;
     const body = await request.json() as Record<string, unknown>;
     const permission = permissionFor(Object.keys(body));
     if (!context.isOwner && !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission]) {
@@ -77,7 +83,10 @@ export async function PATCH(request: Request) {
     if (error) throw error;
     return Response.json({ salon: data });
   } catch (error) {
-    console.error("Salon profile update failed", error);
-    return errorResponse(error, "Unable to update the salon profile.");
+    const message = error instanceof Error ? error.message : "";
+    if (/^(Unauthorized|Forbidden)|must be|cannot be changed|valid object|valid email|US phone|HTTPS|at least one/i.test(message)) return errorResponse(error, "Unable to update the salon profile.");
+    const safeMessage = "We couldn't save this change.";
+    const reference = await capturePlatformError({ request, admin, error, feature: "salon-profile", action: "update", actorRole: "salon", salonId, safeMessage });
+    return safeFailure(safeMessage, reference);
   }
 }

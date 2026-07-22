@@ -23,10 +23,10 @@ export default function LanguageSelector({
     >
       <Languages size={14} />
       <span className={compact ? "sr-only" : "hidden xl:inline"}>
-        {t("common.language", "Language")}
+        {t("common.select_language", "Select language")}
       </span>
       <select
-        aria-label={t("common.language", "Language")}
+        aria-label={t("common.select_language", "Select language")}
         value={locale}
         onChange={handleInput}
         onInput={handleInput}

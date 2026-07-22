@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LocateFixed, MapPin, Megaphone, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, LocateFixed, MapPin, Megaphone, RotateCcw } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
@@ -48,6 +48,7 @@ export default function FeaturedSalonPlacement({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const carousel = useRef<HTMLDivElement>(null);
   const location = customerLocation.location;
   const limit = viewAll ? 24 : Math.max(1,Math.min(24,Math.round(maxCards)));
 
@@ -127,6 +128,11 @@ export default function FeaturedSalonPlacement({
     }
   }
 
+  function scroll(direction: -1 | 1) {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    carousel.current?.scrollBy({ left: direction * Math.min(720, carousel.current.clientWidth * 0.82), behavior });
+  }
+
   return (
     <section
       aria-labelledby="featured-salons-heading"
@@ -156,9 +162,7 @@ export default function FeaturedSalonPlacement({
           ) : null}
         </div>
         {!viewAll && salons.length ? (
-          <Link href="/featured" className="text-[11px] font-bold text-magenta">
-            View all →
-          </Link>
+          <div className="flex items-center gap-2"><button type="button" aria-label="Previous featured salons" onClick={()=>scroll(-1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowLeft size={16}/></button><button type="button" aria-label="Next featured salons" onClick={()=>scroll(1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowRight size={16}/></button><Link href="/featured" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div>
         ) : null}
       </div>
       {!customerLocation.ready ? (
@@ -213,14 +217,14 @@ export default function FeaturedSalonPlacement({
         <Skeletons count={viewAll ? 8 : 4} />
       ) : salons.length ? (
         <>
-          <div
-            className={`-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden ${viewAll ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-4"}`}
+          <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} aria-label={viewAll ? undefined : "Featured salons carousel"}
+            className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}
           >
             {salons.map((salon) => (
               <MarketplaceSalonCard
                 key={salon.id}
                 salon={salon}
-                variant="grid"
+                variant={viewAll ? "grid" : "compact"}
               />
             ))}
           </div>

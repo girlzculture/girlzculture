@@ -10,7 +10,7 @@ export const ENGLISH_MESSAGES: Record<string,string> = {
   "nav.home":"Home", "nav.search":"Search", "nav.bookings":"Bookings", "nav.social":"Social", "nav.profile":"Profile",
   "footer.company":"Company", "footer.support":"Support", "footer.professionals":"For Professionals", "footer.newsletter":"Stay in the loop", "footer.newsletter_help":"Tips, new salons, and exclusive offers.", "footer.rights":"All rights reserved.",
   "trust.salons.title":"Verified Salons", "trust.salons.body":"Every salon is vetted for quality, safety, and professionalism.", "trust.reviews.title":"Booking-based Reviews", "trust.reviews.body":"Reviews are connected to completed appointments.", "trust.pricing.title":"Transparent Pricing", "trust.pricing.body":"Upfront pricing, so there are no surprises.",
-  "common.language":"Language", "common.save":"Save", "common.cancel":"Cancel", "common.loading":"Loading...", "common.retry":"Try again", "common.error":"Something went wrong.",
+  "common.language":"Language", "common.select_language":"Select language", "common.save":"Save", "common.cancel":"Cancel", "common.loading":"Loading...", "common.retry":"Try again", "common.error":"Something went wrong.",
   "notification.booking.customer_confirmed.subject":"Your Girlz Culture appointment is confirmed",
   "notification.booking.customer_confirmed.body":"Your appointment is confirmed.\n\n{{summary}}\n\nConfirmation code: {{confirmation_code}}\n\nView your booking: {{account_url}}",
   "notification.booking.salon_confirmed.subject":"New confirmed Girlz Culture booking",

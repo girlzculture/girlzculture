@@ -16,7 +16,7 @@ import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 import { getNavigationItems, getVisibleLegalLinks, type NavigationItem } from "@/lib/content";
-import { LocalizedText } from "@/components/i18n/LanguageSelector";
+import LanguageSelector, { LocalizedText } from "@/components/i18n/LanguageSelector";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
@@ -40,7 +40,7 @@ const defaultMobileMenu:NavigationItem[]=[...defaultHeader.map(item=>({...item,s
 export async function PublicHeader({ active }: { active?: "styles" | "salons" | "how" | "about" | "blog" }) {
   const[headerItems,mobileItems]=await Promise.all([getNavigationItems("header",defaultHeader),getNavigationItems("mobile_menu",defaultMobileMenu)]);
   return (
-    <header className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
+    <header data-language-selector-host className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu links={mobileItems}/><Wordmark compact /></div>
 
@@ -49,6 +49,7 @@ export async function PublicHeader({ active }: { active?: "styles" | "salons" | 
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-3">
+          <div className="hidden md:block"><LanguageSelector compact /></div>
           <HeaderStyleSearch/>
           <Link
             href="/account?tab=favorites"

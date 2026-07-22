@@ -5,7 +5,7 @@ import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import SafeImage from "@/components/site/SafeImage";
 import { getBlogPost } from "@/lib/content";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
