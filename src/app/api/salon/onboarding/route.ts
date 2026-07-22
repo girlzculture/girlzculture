@@ -23,7 +23,7 @@ async function evaluate(
     if (error) throw error;
   }
 
-  const { data, error } = await admin.rpc("reconcile_salon_lifecycle", {
+  const { data, error } = await admin.rpc("reconcile_salon_publication", {
     p_salon_id: salon.id,
     p_actor_id: null,
     p_reason: action === "finish" ? "Salon owner requested setup completion" : "Salon setup checklist refreshed",

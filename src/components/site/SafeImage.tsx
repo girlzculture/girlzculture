@@ -10,6 +10,7 @@ export default function SafeImage({
   className = "",
   priority = false,
   style,
+  draggable,
 }: {
   src?: string | null;
   fallbackSrc: string;
@@ -17,6 +18,7 @@ export default function SafeImage({
   className?: string;
   priority?: boolean;
   style?: CSSProperties;
+  draggable?: boolean;
 }) {
   const desiredSrc = src || fallbackSrc;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export default function SafeImage({
       }}
       className={className}
       style={style}
+      draggable={draggable}
     />
   );
 }

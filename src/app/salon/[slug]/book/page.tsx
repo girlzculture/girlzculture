@@ -19,6 +19,7 @@ type SalonRecord = {
   description?: string | null;
   status?: string | null;
   is_discoverable?: boolean | null;
+  accepting_bookings?: boolean | null;
   subscription_status?: string | null;
 };
 
@@ -59,7 +60,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
 
   const { data: salonRecord, error: salonError } = await admin
     .from("salons")
-    .select("id,name,slug,address_street,address_line2,address_city,address_state,address_zip,description,status,is_discoverable,subscription_status")
+    .select("id,name,slug,address_street,address_line2,address_city,address_state,address_zip,description,status,is_discoverable,subscription_status,accepting_bookings")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -71,7 +72,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     notFound();
   }
 
-  const unavailable = salonRecord.status !== "Active" || salonRecord.is_discoverable !== true || !["active", "trialing"].includes(String(salonRecord.subscription_status || "").toLowerCase());
+  const unavailable = salonRecord.status !== "Active" || salonRecord.is_discoverable !== true || salonRecord.accepting_bookings === false || !["active", "trialing"].includes(String(salonRecord.subscription_status || "").toLowerCase());
   if (unavailable) {
     return <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0"><PublicHeader/><section className="mx-auto grid min-h-[65vh] w-full max-w-3xl place-items-center px-4 py-16 text-center"><div className="rounded-[20px] border border-plum/10 bg-white p-8 shadow-[0_14px_45px_rgba(26,18,32,.08)]"><p className="text-xs font-bold uppercase tracking-[.12em] text-magenta">Booking unavailable</p><h1 className="mt-3 font-serif text-4xl text-plum">This salon is not accepting new bookings right now.</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-ink/65">The salon may have paused its listing or availability. Your existing bookings are not affected.</p><div className="mt-6 flex flex-wrap justify-center gap-3"><Link href="/salons" className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-sm font-bold text-white">Find another salon</Link><Link href={`/salon/${slug}`} className="inline-flex min-h-11 items-center rounded-lg border border-magenta px-5 text-sm font-bold text-magenta">Return to salon</Link></div></div></section><CustomerBottomNav active="search"/></main>;
   }

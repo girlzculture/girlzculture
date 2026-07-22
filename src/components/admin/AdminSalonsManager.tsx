@@ -1019,6 +1019,25 @@ function SalonDetail({
       setBusy("");
     }
   }
+  async function reconcileLifecycle() {
+    setBusy("reconcile");
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/salons/${salonId}`, {
+        method: "POST",
+        headers: await authHeaders(true),
+        body: JSON.stringify({ action: "reconcile" }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to reconcile salon eligibility.");
+      await load();
+      await refreshed();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Unable to reconcile salon eligibility.");
+    } finally {
+      setBusy("");
+    }
+  }
   const salon = data?.salon;
   return (
     <div
@@ -1110,6 +1129,8 @@ function SalonDetail({
                   <p className="mt-3 text-[10px] leading-4 text-ink/50">
                     Approval: {String(data.lifecycle.status || salon.status)} · Subscription: {String(data.lifecycle.subscription_status || "inactive")} · Auto-activation: {data.lifecycle.auto_activation ? "on" : "off"}
                   </p>
+                  <p className="mt-2 text-[10px] leading-4 text-ink/60">Setup: {String(data.lifecycle.setup_state || "Unknown")} · Address: {String(data.lifecycle.address_state || "Unknown")} · Publication: {String(data.lifecycle.publication_state || (data.lifecycle.is_discoverable ? "Published" : "Hidden"))}</p>
+                  <button type="button" disabled={Boolean(busy)} onClick={()=>void reconcileLifecycle()} className="mt-4 min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">{busy==="reconcile"?"Rechecking…":"Recheck lifecycle eligibility"}</button>
                 </section>
               ) : null}
               <section className="rounded-[13px] border border-plum/10 bg-white p-4">

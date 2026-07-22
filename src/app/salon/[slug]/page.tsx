@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   BadgeCheck,
   Clock3,
-  ImageOff,
   MapPin,
   Navigation,
   Package,
@@ -11,13 +10,14 @@ import {
   Star,
   Tag,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import SalonReviews from "@/components/SalonReviews";
 import SalonStyles from "@/components/SalonStyles";
 import SalonStylists from "@/components/SalonStylists";
 import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome";
 import SafeImage from "@/components/site/SafeImage";
 import SalonProfileActions from "@/components/site/SalonProfileActions";
+import SalonPhotoGallery from "@/components/public/SalonPhotoGallery";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
@@ -45,6 +45,8 @@ type SalonRecord = {
   verification_status?: string | null;
   rating_overall?: number | null;
   review_count?: number | null;
+  status?: string | null;
+  is_discoverable?: boolean | null;
 };
 
 type StyleRecord = {
@@ -175,6 +177,7 @@ function renderStars(rating: number) {
 }
 
 export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const supabase = getSupabaseAdmin();
   const { slug } = await params;
   const incomingQuery = await searchParams;
   const bookingContext = new URLSearchParams();
@@ -185,15 +188,20 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone")
+    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
   if (salonError) throw salonError;
-  if (!salon) notFound();
+  if (!salon) {
+    const { data: redirectRecord } = await supabase.from("salon_slug_redirects").select("new_slug").eq("old_slug", slug).is("retired_at", null).maybeSingle();
+    if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
+    notFound();
+  }
+  if (slug.startsWith("pending-") || salon.status !== "Active" || salon.is_discoverable !== true) notFound();
 
   const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult] = await Promise.all([
-    supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
     supabase.from("stylists").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
@@ -224,9 +232,6 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const statusLabel = getSalonStatusLabel(salon);
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
   const uploadedGallery = [salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)].filter((photo): photo is string => Boolean(photo));
-  const galleryItems = Array.from({ length: 5 }, (_, index) => uploadedGallery[index] || null);
-  const remainingPhotos = Math.max(0, uploadedGallery.length - 5);
-  const morePhotoLabel = remainingPhotos ? `+${remainingPhotos} more` : null;
   const locationLine = [salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
   const addressLine = [salon.address_street, salon.address_line2, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
   const mapQuery = salon.latitude != null && salon.longitude != null ? `${salon.latitude},${salon.longitude}` : addressLine;
@@ -249,19 +254,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </nav>
 
         <section className="grid gap-5 pb-5 pt-3 md:pt-0 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8">
-          <div className="grid h-[232px] grid-cols-[1.2fr_1fr] gap-1.5 overflow-hidden rounded-[10px] sm:h-[330px] lg:h-[356px]">
-            <div className="relative overflow-hidden rounded-[8px] bg-blush">
-              {galleryItems[0] ? <SafeImage src={galleryItems[0]} fallbackSrc={galleryItems[0]} alt={`${salon.name || "Salon"} featured work`} priority className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-plum/30"><ImageOff size={46} strokeWidth={1.2} aria-hidden="true" /><span className="sr-only">No salon photo uploaded</span></span>}
-            </div>
-            <div className="grid grid-cols-2 grid-rows-2 gap-1.5">
-              {galleryItems.slice(1, 5).map((photo, index) => (
-                <div key={`${photo || "empty"}-${index}`} className="relative overflow-hidden rounded-[7px] bg-blush">
-                  {photo ? <SafeImage src={photo} fallbackSrc={photo} alt={`${salon.name || "Salon"} gallery ${index + 2}`} className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-plum/25"><ImageOff size={28} strokeWidth={1.2} aria-hidden="true" /><span className="sr-only">No salon photo uploaded</span></span>}
-                  {index === 3 && morePhotoLabel ? <span className="absolute inset-0 flex items-center justify-center whitespace-pre-line bg-ink/55 text-center font-serif text-[18px] font-semibold leading-5 text-white">{morePhotoLabel.replace(" ", "\n")}</span> : null}
-                </div>
-              ))}
-            </div>
-          </div>
+          <SalonPhotoGallery photos={uploadedGallery} salonName={salon.name || "Salon"} />
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}

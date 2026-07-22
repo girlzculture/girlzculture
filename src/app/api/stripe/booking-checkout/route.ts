@@ -27,9 +27,9 @@ export async function POST(request: Request) {
     const styleId = cleanText(body.style_id, 50);
     if (!salonId || !styleId) throw new Error("The salon or style selection is missing. Please return to the salon page and try again.");
 
-    const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,subscription_status,time_zone").eq("id", salonId).single();
+    const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,time_zone").eq("id", salonId).single();
     if (salonError) throw new Error(`Unable to verify the salon: ${salonError.message}`);
-    if (!salon || salon.status !== "Active" || !["active", "trialing"].includes(String(salon.subscription_status).toLowerCase())) throw new Error("This salon is not currently accepting marketplace bookings.");
+    if (!salon || salon.status !== "Active" || salon.is_discoverable !== true || salon.accepting_bookings === false || !["active", "trialing"].includes(String(salon.subscription_status).toLowerCase())) throw new Error("This salon is not currently accepting marketplace bookings.");
     const { data: style, error: styleError } = await admin.from("styles").select("*,service_category:service_categories(slug)").eq("id", styleId).eq("salon_id", salonId).single();
     if (styleError || !style) throw new Error(styleError ? `Unable to verify the selected style: ${styleError.message}` : "The selected style is not available.");
 

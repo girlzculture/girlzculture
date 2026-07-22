@@ -6,7 +6,7 @@ export type CustomerLocation = Coordinates & {
 };
 
 export const EARTH_RADIUS_MILES = 3958.7613;
-export const DEFAULT_NEARBY_RADIUS_MILES = 25;
+export const DEFAULT_NEARBY_RADIUS_MILES = 50;
 export const MAX_DISCOVERY_RADIUS_MILES = 100;
 
 export function validCoordinates(value: Partial<Coordinates> | null | undefined): value is Coordinates {

@@ -66,7 +66,7 @@ export async function PATCH(request: Request) {
     if (salonError) throw salonError;
     const failures: string[] = [];
     for (const salon of salons || []) {
-      const result = await admin.rpc("reconcile_salon_lifecycle", {
+      const result = await admin.rpc("reconcile_salon_publication", {
         p_salon_id: salon.id,
         p_actor_id: null,
         p_reason: "Platform lifecycle requirements changed",
