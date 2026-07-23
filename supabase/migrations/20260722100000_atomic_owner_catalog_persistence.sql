@@ -76,7 +76,7 @@ begin
       v_style.price_display_min, v_style.price_display_max,
       coalesce(v_style.size_options, '[]'::jsonb), coalesce(v_style.length_options, '[]'::jsonb),
       coalesce(v_style.addons, '[]'::jsonb), coalesce(v_style.included_items, '{}'::text[]),
-      coalesce(v_style.option_groups, '[]'::jsonb), coalesce(v_style.photos, '{}'::text[]),
+      coalesce(v_style.option_groups, '[]'::jsonb), coalesce(v_style.photos, '[]'::jsonb),
       coalesce(v_style.is_draft, false), v_style.archived_at
     ) returning * into v_style;
   end if;
