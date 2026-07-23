@@ -59,17 +59,27 @@ const expectedColumns = {
   ],
 };
 
+function sqlIdentifier(name) {
+  return `(?:"${name}"|${name})`;
+}
+
 const failures = [];
 for (const [table, columns] of Object.entries(expectedColumns)) {
+  // Supabase/pg_dump may emit quoted identifiers ("public"."salons") or
+  // unquoted identifiers (public.salons), and may include IF NOT EXISTS.
   const tableMatch = dump.match(
-    new RegExp(`CREATE TABLE public\\.${table}\\s*\\(([\\s\\S]*?)\\n\\);`, "i"),
+    new RegExp(
+      `CREATE TABLE(?: IF NOT EXISTS)?\\s+${sqlIdentifier("public")}\\.${sqlIdentifier(table)}\\s*\\(([\\s\\S]*?)\\n\\);`,
+      "i",
+    ),
   );
   if (!tableMatch) {
     failures.push(`public.${table}: table definition not found`);
     continue;
   }
   for (const column of columns) {
-    if (!new RegExp(`^\\s{4}${column}\\s+`, "mi").test(tableMatch[1])) {
+    // Column indentation varies between pg_dump/Supabase CLI versions.
+    if (!new RegExp(`^\\s*${sqlIdentifier(column)}\\s+`, "mi").test(tableMatch[1])) {
       failures.push(`public.${table}.${column}: baseline column not found`);
     }
   }
