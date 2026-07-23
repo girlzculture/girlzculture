@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, LocateFixed, MapPin, RotateCcw, Video } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, RotateCcw, Video } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import SafeCampaignVideo from "@/components/public/SafeCampaignVideo";
-import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
-import { DEFAULT_NEARBY_RADIUS_MILES, validCoordinates, type CustomerLocation } from "@/lib/location";
+import { validCoordinates } from "@/lib/location";
 
 type Trending = {
   campaign_id: string;
@@ -41,7 +40,6 @@ export default function TrendingVideoPlacement({
   maxCards=12,
 }: { title?: string; description?: string | null; viewAll?: boolean;maxCards?:number }) {
   const locationState = useCustomerLocation();
-  const [locationText, setLocationText] = useState("");
   const [videos, setVideos] = useState<Trending[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -64,7 +62,7 @@ export default function TrendingVideoPlacement({
       const params = new URLSearchParams({
         lat: String(location.lat),
         lng: String(location.lng),
-        radius: String(DEFAULT_NEARBY_RADIUS_MILES),
+        radius: String(locationState.radiusMiles),
         limit: String(limit),
         offset: String(offset),
         seed: rotationSeed(),
@@ -93,14 +91,7 @@ export default function TrendingVideoPlacement({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [location?.lat, location?.lng, viewAll,maxCards]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function resolved(next: CustomerLocation | null) {
-    if (next) {
-      locationState.setLocation(next);
-      setLocationText(next.label);
-    }
-  }
+  }, [location?.lat, location?.lng, locationState.radiusMiles, viewAll,maxCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function scroll(direction: -1 | 1) {
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
@@ -122,13 +113,10 @@ export default function TrendingVideoPlacement({
       </div>
 
       {!locationState.ready || (loading && !videos.length) ? <Skeletons /> : !location ? (
-        <div className="rounded-[15px] border border-plum/10 bg-white p-5">
-          <h3 className="font-serif text-xl text-plum">Choose a location for local Trending Picks</h3>
-          <p className="mt-1 text-xs text-ink/60">Only approved, paid video campaigns within their real radius are shown.</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-            <LocationAutocomplete value={locationText} onChange={setLocationText} onResolved={resolved} className="rounded-lg border px-3" />
-            <button type="button" onClick={() => void locationState.useDeviceLocation()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><LocateFixed size={15} aria-hidden="true" />Use my location</button>
-          </div>
+        <div className="rounded-[15px] border border-plum/10 bg-white p-6 text-center">
+          <h3 className="font-serif text-xl text-plum">Local Trending Picks need a search area</h3>
+          <p className="mt-1 text-xs text-ink/60">Choose a city or ZIP in Find Salons to see approved campaigns nearby.</p>
+          <Link href="/salons" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Choose a search location</Link>
         </div>
       ) : error ? (
         <div role="alert" className="rounded-[15px] border border-red-200 bg-white p-6 text-center">

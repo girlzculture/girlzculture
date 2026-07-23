@@ -1,5 +1,6 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { discoverNearbySalons } from "@/lib/discoveryServer";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 import { MAX_DISCOVERY_RADIUS_MILES, validCoordinates } from "@/lib/location";
 import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
 
@@ -31,7 +32,15 @@ async function GETHandler(request: Request) {
       lng: longitude === null || longitude === "" ? Number.NaN : Number(longitude),
     };
     if (!validCoordinates(origin)) return Response.json({ error: "Choose a valid location before searching nearby." }, { status: 400 });
-    const radius = Number(search.get("radius") || 25);
+    const requestedRadius = search.get("radius");
+    const radius = requestedRadius
+      ? Number(requestedRadius)
+      : await getEngineNumber(
+          "search.default_radius_miles",
+          50,
+          1,
+          MAX_DISCOVERY_RADIUS_MILES,
+        );
     if (!Number.isFinite(radius) || radius < 1 || radius > MAX_DISCOVERY_RADIUS_MILES) return Response.json({ error: `Distance must be between 1 and ${MAX_DISCOVERY_RADIUS_MILES} miles.` }, { status: 400 });
     const sort = cleanText(search.get("sort"), 20) || "distance";
     if (!SORTS.has(sort)) return Response.json({ error: "Choose a valid sort order." }, { status: 400 });

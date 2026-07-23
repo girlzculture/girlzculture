@@ -69,6 +69,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/i18n/preference` | POST | protected | Covered |
 | `/api/i18n` | GET | public/read-only | Covered |
 | `/api/location/geocode-salon` | POST | provider-backed | Covered |
+| `/api/location/resolve` | GET | public/read-only | Covered |
 | `/api/media/cleanup` | POST | provider-backed | Covered |
 | `/api/media/upload` | GET, POST, DELETE | provider-backed | Covered |
 | `/api/messages` | GET, POST | provider-backed | Covered |

@@ -2,15 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, LocateFixed, MapPin, Megaphone, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, Megaphone, RotateCcw } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
-import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
-import {
-  DEFAULT_NEARBY_RADIUS_MILES,
-  validCoordinates,
-  type CustomerLocation,
-} from "@/lib/location";
+import { validCoordinates } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 
 type Promo = { title: string; body: string; href: string };
@@ -37,7 +32,6 @@ export default function FeaturedSalonPlacement({
   maxCards?:number;
 }) {
   const customerLocation = useCustomerLocation();
-  const [locationText, setLocationText] = useState("");
   const [salons, setSalons] = useState<PublicSalonResult[]>([]);
   const [total, setTotal] = useState(0);
   const [promo, setPromo] = useState<Promo>({
@@ -65,7 +59,7 @@ export default function FeaturedSalonPlacement({
       const params = new URLSearchParams({
         lat: String(location.lat),
         lng: String(location.lng),
-        radius: String(DEFAULT_NEARBY_RADIUS_MILES),
+        radius: String(customerLocation.radiusMiles),
         limit: String(limit),
         offset: String(offset),
         seed: rotationSeed(),
@@ -116,17 +110,7 @@ export default function FeaturedSalonPlacement({
     };
     // Location coordinates are the complete public placement inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location?.lat, location?.lng, viewAll,maxCards]);
-
-  async function requestDeviceLocation() {
-    await customerLocation.useDeviceLocation();
-  }
-  function resolved(next: CustomerLocation | null) {
-    if (next) {
-      customerLocation.setLocation(next);
-      setLocationText(next.label);
-    }
-  }
+  }, [location?.lat, location?.lng, customerLocation.radiusMiles, viewAll,maxCards]);
 
   function scroll(direction: -1 | 1) {
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
@@ -168,36 +152,20 @@ export default function FeaturedSalonPlacement({
       {!customerLocation.ready ? (
         <Skeletons count={viewAll ? 8 : 4} />
       ) : !location ? (
-        <div className="rounded-[15px] border border-plum/10 bg-white p-5">
+        <div className="rounded-[15px] border border-plum/10 bg-white p-6 text-center">
           <h3 className="font-serif text-xl text-plum">
-            Choose a location for local featured salons
+            Local featured salons need a search area
           </h3>
           <p className="mt-1 text-xs leading-5 text-ink/65">
-            Featured placement is local. We will not fill this row with distant
-            or unpaid salons.
+            Choose a city or ZIP in Find Salons. We only show eligible paid
+            placements within their real campaign radius.
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-            <LocationAutocomplete
-              value={locationText}
-              onChange={setLocationText}
-              onResolved={resolved}
-              placeholder="City, neighborhood, or ZIP"
-              className="rounded-[9px] border border-plum/15 px-3"
-            />
-            <button
-              type="button"
-              onClick={() => void requestDeviceLocation()}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[9px] bg-magenta px-5 text-xs font-bold text-white"
-            >
-              <LocateFixed size={15} />
-              Use my location
-            </button>
-          </div>
-          {customerLocation.permissionError ? (
-            <p role="alert" className="mt-2 text-xs text-red-700">
-              {customerLocation.permissionError}
-            </p>
-          ) : null}
+          <Link
+            href="/salons"
+            className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white"
+          >
+            Choose a search location
+          </Link>
         </div>
       ) : error ? (
         <div

@@ -1,6 +1,7 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, publicErrorResponse } from "@/lib/requestSecurity";
 import { MAX_DISCOVERY_RADIUS_MILES, validCoordinates } from "@/lib/location";
+import { getEngineNumber } from "@/lib/engineConfigServer";
 import { supabase } from "@/lib/supabase";
 
 async function GETHandler(request: Request) {
@@ -17,7 +18,15 @@ async function GETHandler(request: Request) {
       return Response.json({ error: "Choose a valid location to see Trending Picks." }, { status: 400 });
     }
 
-    const radius = Number(search.get("radius") || 25);
+    const requestedRadius = search.get("radius");
+    const radius = requestedRadius
+      ? Number(requestedRadius)
+      : await getEngineNumber(
+          "search.default_radius_miles",
+          50,
+          1,
+          MAX_DISCOVERY_RADIUS_MILES,
+        );
     const limit = Number(search.get("limit") || 12);
     const offset = Number(search.get("offset") || 0);
     if (!Number.isFinite(radius) || radius < 1 || radius > MAX_DISCOVERY_RADIUS_MILES) {
