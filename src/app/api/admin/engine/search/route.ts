@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
@@ -8,7 +9,7 @@ function stringList(value: unknown) {
   return values;
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const [settings, rules, services, categories, zeroResults] = await Promise.all([
@@ -27,12 +28,12 @@ export async function GET(request: Request) {
       zero_results: zeroResults.data || [],
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Search engine settings load failed", error);
+    noteOperationalFailure("Search engine settings load failed", error);
     return errorResponse(error, "Unable to load search controls.");
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "settings");
     const body = await request.json() as Record<string, unknown>;
@@ -80,7 +81,9 @@ export async function PATCH(request: Request) {
     if (error) throw error;
     return Response.json({ rule: data });
   } catch (error) {
-    console.error("Search engine settings update failed", error);
+    noteOperationalFailure("Search engine settings update failed", error);
     return errorResponse(error, "Unable to update search controls.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/search", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/search", "PATCH"), PATCHHandler);

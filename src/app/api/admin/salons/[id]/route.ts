@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { geocodeSalonAddress } from "@/lib/geocodingServer";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { admin } = await requireAdminPermission(request, "salons");
     const { id } = await params;
@@ -22,12 +23,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (lifecycle.error) throw lifecycle.error;
     return Response.json({ salon, subscription: subscription.data, status_history: audit.data || [], application: application.data, future_booking_count: future.count || 0, lifecycle: lifecycle.data }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Admin salon detail load failed", error);
+    noteOperationalFailure("Admin salon detail load failed", error);
     return errorResponse(error, "Unable to load salon details.");
   }
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function POSTHandler(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { admin, user } = await requireAdminPermission(request, "salons");
     const { id } = await params;
@@ -51,7 +52,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     throw new Error("Unknown salon action.");
   } catch (error) {
-    console.error("Admin salon action failed", error);
+    noteOperationalFailure("Admin salon action failed", error);
     return errorResponse(error, "Unable to update this salon.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/salons/[id]", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/salons/[id]", "POST"), POSTHandler);

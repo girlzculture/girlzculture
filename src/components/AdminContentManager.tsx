@@ -69,7 +69,6 @@ export default function AdminContentManager() {
       }
       return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, serviceGroups: loadedGroups, serviceAddons: loadedAddons, linkTargets: loadedTargets };
     } catch (error) {
-      console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
       throw error;
     } finally {
@@ -92,7 +91,6 @@ export default function AdminContentManager() {
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
-        console.error("Content Management load error", error);
         if (active) setNotice(error instanceof Error ? error.message : "Unable to load content");
       } finally { if (active) setLoading(false); }
     })();
@@ -132,7 +130,6 @@ export default function AdminContentManager() {
     setPages(rows => rows.some(row => row.slug === data.slug) ? rows.map(row => row.slug === data.slug ? data : row) : [...rows, data]);
       setNotice("Page saved, verified in Supabase, and published content is updated.");
     } catch (error) {
-      console.error("Content Management page save error", { slug: page.slug, error });
       setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Page save failed");
     } finally { setSaving(false); }
   }
@@ -161,7 +158,6 @@ export default function AdminContentManager() {
     setPosts(rows => rows.some(row => row.id === data.id) ? rows.map(row => row.id === data.id ? data : row) : [data, ...rows]);
       setNotice("Blog post saved and verified in Supabase.");
     } catch (error) {
-      console.error("Content Management blog save error", { slug: post.slug, error });
       setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Post save failed");
     } finally { setSaving(false); }
   }
@@ -176,7 +172,6 @@ export default function AdminContentManager() {
       setPost(null);
       setNotice("Blog post deleted.");
     } catch (error) {
-      console.error("Content Management delete error", error);
       setNotice(error instanceof Error ? error.message : "Delete failed");
     }
   }
@@ -254,6 +249,7 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
   const [batchResults, setBatchResults] = useState<Array<{ id: string; name: string; ok: boolean; message: string }>>([]);
   const [reason, setReason] = useState("Catalog maintenance");
   const [replacementId, setReplacementId] = useState("");
+  const [orderingMode,setOrderingMode]=useState<"alphabetical"|"custom">(Number((initialService||services[0])?.sort_order||0)>0?"custom":"alphabetical");
   const collections: Record<CatalogKind, Row[]> = {
     service_category: sortCatalogRecords(categories),
     service_group: sortCatalogRecords(groups),
@@ -268,7 +264,9 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
 
   function switchKind(next: CatalogKind) {
     setKind(next);
-    setSelected(collections[next][0] || null);
+    const first = collections[next][0] || null;
+    setSelected(first);
+    setOrderingMode(Number(first?.sort_order || 0) > 0 ? "custom" : "alphabetical");
     setSelectedIds([]);
     setDependency(null);
     setBatchDependencies({});
@@ -315,6 +313,7 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     setSelectedIds([]);
     setBatchDependencies({});
     setBatchResults([]);
+    setOrderingMode("alphabetical");
     if (kind === "service_category") setSelected({ name: "", slug: "", description: "", is_active: true });
     else if (kind === "master_style") setSelected({ name: "", service_group_id: groups.find((item) => item.is_active)?.id || "", is_active: true });
     else setSelected({ name: "", category_id: categories.find((item) => item.is_active)?.id || "", is_active: true });
@@ -324,7 +323,8 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     event.preventDefault();
     if (!selected) return;
     const form = new FormData(event.currentTarget);
-    const payload: Row = { ...selected, name: form.get("name"), sort_order: form.get("sort_order"), is_active: form.get("is_active") === "on" };
+    const customPosition=Math.max(1,Number(form.get("custom_position")||1));
+    const payload: Row = { ...selected, name: form.get("name"), sort_order: orderingMode==="custom"?customPosition*10:0, is_active: form.get("is_active") === "on" };
     if (kind === "service_category") { payload.slug = form.get("slug"); payload.description = form.get("description"); }
     if (kind === "service_group" || kind === "service_addon") payload.category_id = form.get("category_id");
     if (kind === "master_style") payload.service_group_id = form.get("service_group_id");
@@ -340,7 +340,6 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
       if (kind === "master_style") setInitialService(refreshed);
       setNotice(`${labels[kind].replace(/s$/, "")} saved and available to salon owners.`);
     } catch (error) {
-      console.error("Service Catalog save error", { kind, selected, error });
       setNotice(error instanceof Error ? error.message : "Catalog save failed");
     } finally { setSaving(false); }
   }
@@ -373,7 +372,6 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
           results.push({ id: String(target.id), name: String(target.name), ok: true, message: "Completed" });
         } catch (error) {
           const message = error instanceof Error ? error.message : `${action} failed`;
-          console.error("Service Catalog record action failed", { kind, id: target.id, action, error });
           results.push({ id: String(target.id), name: String(target.name), ok: false, message });
         }
       }
@@ -389,7 +387,6 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
       const completed = results.filter((result) => result.ok).length;
       setNotice(`${completed} of ${results.length} catalog item${results.length === 1 ? "" : "s"} completed. ${failedIds.length ? "Review the item results below; failed items were not changed." : "All selected changes were verified after reload."}`);
     } catch (error) {
-      console.error("Service Catalog managed action error", { kind, targetIds: targets.map((target) => target.id), action, error });
       setNotice(error instanceof Error ? error.message : `${action} failed`);
     } finally { setSaving(false); }
   }
@@ -402,14 +399,15 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
       <div className="min-w-0">
         <div className="mb-2 flex items-center justify-between rounded-lg border border-plum/10 bg-white px-3 py-2 text-[10px]"><b className="text-plum">{selectedRows.length} selected</b><button type="button" disabled={!selectedRows.length} onClick={()=>{setSelectedIds([]);setBatchDependencies({});setBatchResults([]);}} className="font-bold text-magenta disabled:opacity-40">Clear selection</button></div>
-      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3"><label className="mb-2 flex items-center gap-2 border-b border-plum/10 px-2 pb-3 text-[10px] font-bold text-plum"><input type="checkbox" checked={Boolean(rows.length) && selectedRows.length === rows.length} onChange={(event)=>{setSelectedIds(event.target.checked ? rows.map((row)=>String(row.id)) : []);setBatchResults([]);}} className="accent-magenta" />Select all current visible results</label>{rows.map((item) => <div key={item.id} className={`mb-1 grid grid-cols-[24px_1fr] items-start rounded-lg ${selected?.id === item.id ? "bg-blush" : ""}`}><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(String(item.id))} onChange={(event)=>{setSelectedIds((current)=>event.target.checked?[...new Set([...current,String(item.id)])]:current.filter((id)=>id!==String(item.id)));setBatchResults([]);}} className="ml-2 mt-4 accent-magenta"/><button type="button" onClick={() => { setDependency(null); setSelected(item); if (kind === "master_style") setInitialService(item); }} className="w-full p-3 text-left"><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.archived_at ? "· Archived" : item.is_active ? "· Active" : "· Hidden"}</small></button></div>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
+      <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3"><label className="mb-2 flex items-center gap-2 border-b border-plum/10 px-2 pb-3 text-[10px] font-bold text-plum"><input type="checkbox" checked={Boolean(rows.length) && selectedRows.length === rows.length} onChange={(event)=>{setSelectedIds(event.target.checked ? rows.map((row)=>String(row.id)) : []);setBatchResults([]);}} className="accent-magenta" />Select all current visible results</label>{rows.map((item) => <div key={item.id} className={`mb-1 grid grid-cols-[24px_1fr] items-start rounded-lg ${selected?.id === item.id ? "bg-blush" : ""}`}><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(String(item.id))} onChange={(event)=>{setSelectedIds((current)=>event.target.checked?[...new Set([...current,String(item.id)])]:current.filter((id)=>id!==String(item.id)));setBatchResults([]);}} className="ml-2 mt-4 accent-magenta"/><button type="button" onClick={() => { setDependency(null); setSelected(item);setOrderingMode(Number(item.sort_order||0)>0?"custom":"alphabetical"); if (kind === "master_style") setInitialService(item); }} className="w-full p-3 text-left"><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.archived_at ? "· Archived" : item.is_active ? "· Active" : "· Hidden"}</small></button></div>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
       </div>
       {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
         <h2 className="font-serif text-2xl text-plum">{selected.id ? `Edit ${labels[kind].replace(/s$/, "")}` : `Add ${labels[kind].replace(/s$/, "")}`}</h2>
         <p className="mt-1 text-xs leading-5 text-ink/55">Catalog lists are alphabetized automatically. Salon owners see active changes the next time their Styles & Pricing editor loads.</p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field required label="Name" name="name" value={selected.name} />
-          <Field label="Sort order (0 uses alphabetical order)" name="sort_order" value={selected.sort_order ?? 0} type="number" />
+          <label className="text-xs font-bold">Display order<select value={orderingMode} onChange={(event)=>setOrderingMode(event.target.value as "alphabetical"|"custom")} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="alphabetical">Alphabetical (recommended)</option><option value="custom">Custom position</option></select></label>
+          {orderingMode==="custom"?<label className="text-xs font-bold">Position<select name="custom_position" defaultValue={Math.max(1,Math.round(Number(selected.sort_order||10)/10))} className="mt-1 w-full rounded-lg border p-3 font-normal">{Array.from({length:Math.max(rows.length+1,1)},(_,index)=><option key={index+1} value={index+1}>{index+1}{index===0?" · First":""}</option>)}</select><span className="mt-1 block text-[10px] font-normal text-ink/50">Items with custom positions appear first; the rest remain alphabetical.</span></label>:null}
           {kind === "service_category" ? <><Field required label="URL slug" name="slug" value={selected.slug} /><div className="sm:col-span-2"><Area label="Description" name="description" value={selected.description} rows={3}/></div></> : null}
           {kind === "service_group" || kind === "service_addon" ? <label className="text-xs font-bold">Category<select required name="category_id" defaultValue={selected.category_id || categories[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose category</option>{categories.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
           {kind === "master_style" ? <label className="text-xs font-bold">Service group<select required name="service_group_id" defaultValue={selected.service_group_id || groups[0]?.id || ""} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Choose service group</option>{groups.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.service_category?.name} · {item.name}</option>)}</select></label> : null}

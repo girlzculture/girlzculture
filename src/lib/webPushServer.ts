@@ -7,6 +7,7 @@ import {
   sign,
 } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { capturePlatformError } from "@/lib/platformErrors";
 
 function getPushAdmin() {
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
@@ -107,13 +108,15 @@ function vapidAuthorization(endpoint: string) {
 
 async function refreshSalonReachability(salonId: string) {
   const admin = getPushAdmin();
-  const { count } = await admin
+  const { count, error } = await admin
     .from("push_subscriptions")
     .select("id", { count: "exact", head: true })
     .eq("salon_id", salonId)
     .eq("permission_status", "granted")
     .is("revoked_at", null);
-  await admin.from("salons").update({ push_reachable: Number(count || 0) > 0 }).eq("id", salonId);
+  if(error)throw error;
+  const update=await admin.from("salons").update({ push_reachable: Number(count || 0) > 0 }).eq("id", salonId);
+  if(update.error)throw update.error;
 }
 
 async function deliver(subscription: StoredPushSubscription, payload: PushPayload) {
@@ -135,7 +138,7 @@ async function deliver(subscription: StoredPushSubscription, payload: PushPayloa
   });
   if (response.ok || response.status === 201) return { delivered: true as const };
   if (response.status === 404 || response.status === 410) return { delivered: false as const, revoked: true as const, error: `Push endpoint expired (${response.status}).` };
-  return { delivered: false as const, revoked: false as const, error: `Push service returned ${response.status}: ${await response.text()}` };
+  return { delivered: false as const, revoked: false as const, error: `PUSH_SERVICE_FAILED_${response.status}` };
 }
 
 export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
@@ -154,28 +157,57 @@ export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
   let delivered = 0;
   let failed = 0;
   let revoked = 0;
+  const warningReferences: string[] = [];
   const affectedSalons = new Set<string>();
   for (const subscription of subscriptions) {
     try {
       const result = await deliver(subscription, payload);
       if (result.delivered) {
         delivered += 1;
-        await admin.from("push_subscriptions").update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", subscription.id);
+        const update=await admin.from("push_subscriptions").update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", subscription.id);
+        if(update.error)throw update.error;
       } else {
         failed += 1;
         if (result.revoked) {
           revoked += 1;
-          await admin.from("push_subscriptions").update({ revoked_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", subscription.id);
+          const update=await admin.from("push_subscriptions").update({ revoked_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", subscription.id);
+          if(update.error)throw update.error;
           if (subscription.salon_id) affectedSalons.add(subscription.salon_id);
+        } else {
+          warningReferences.push(await capturePlatformError({
+            admin,
+            error:new Error(result.error),
+            feature:"web-push",
+            action:"deliver_push",
+            actorRole:"system",
+            salonId:subscription.salon_id || null,
+            recordType:"push_subscription",
+            recordId:subscription.id,
+            provider:"web-push",
+            safeMessage:"A push notification could not be delivered.",
+          }));
         }
-        console.error("Web Push delivery failed", { subscriptionId: subscription.id, userId: subscription.user_id, error: result.error });
       }
     } catch (error) {
       failed += 1;
-      console.error("Web Push delivery failed", { subscriptionId: subscription.id, userId: subscription.user_id, error });
+      warningReferences.push(await capturePlatformError({
+        admin,
+        error,
+        feature:"web-push",
+        action:"deliver_or_record_push",
+        actorRole:"system",
+        salonId:subscription.salon_id || null,
+        recordType:"push_subscription",
+        recordId:subscription.id,
+        provider:"web-push",
+        safeMessage:"A push notification could not be delivered or recorded.",
+      }));
     }
   }
-  await Promise.all([...affectedSalons].map(refreshSalonReachability));
-  if (!delivered && failed) throw new Error(`Web Push failed for ${failed} subscribed device${failed === 1 ? "" : "s"}.`);
-  return { skipped: false, delivered, failed, revoked };
+  try{
+    await Promise.all([...affectedSalons].map(refreshSalonReachability));
+  }catch(error){
+    warningReferences.push(await capturePlatformError({admin,error,feature:"web-push",action:"refresh_reachability",actorRole:"system",provider:"supabase",safeMessage:"Push reachability could not be refreshed."}));
+  }
+  return { skipped: false, delivered, failed, revoked, warnings:warningReferences.map(reference=>({message:`A push notification needs attention. Reference ${reference}.`,request_id:reference})) };
 }

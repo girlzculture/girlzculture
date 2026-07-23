@@ -9,12 +9,13 @@ const application = read("src/components/SalonApplication.tsx");
 const review = read("src/components/ReviewForm.tsx");
 
 const checks = [
-  [upload.includes("Drag and drop or choose a file") && upload.includes("Crop & upload"), "unified upload editor"],
-  [upload.includes("Image zoom") && upload.includes("Horizontal image position") && upload.includes("Vertical image position") && upload.includes("Rotate 90°"), "crop controls"],
-  [upload.includes("Mobile placement preview") && upload.includes("safe area"), "placement previews"],
-  [api.includes("imageDimensions") && api.includes("authorize(request, bucket, folder)") && api.includes("media_assets"), "server validation and registry"],
+  [upload.includes("Drag and drop or choose a file") && upload.includes("Save all crops"), "unified upload editor"],
+  [upload.includes('label={`${device} image zoom`}') && upload.includes("horizontal image position") && upload.includes("vertical image position") && upload.includes("Rotate 90°"), "per-device crop controls"],
+  [upload.includes('role="tablist"') && upload.includes("desktop") && upload.includes("tablet") && upload.includes("mobile") && upload.includes("activeProfile.safeArea"), "responsive placement previews"],
+  [api.includes("imageDimensions") && api.includes("authorize(request, bucket, folder)") && api.includes("media_assets") && api.includes("renditions"), "server validation and responsive registry"],
+  [api.includes("Object.values((asset.renditions || {})") && api.includes("new Set([asset.object_path, ...renditionPaths]"), "all staged renditions are removed together"],
   [rules.includes("logo:") && rules.includes("cover:") && rules.includes("avatar:") && rules.includes("product:") && rules.includes("review:"), "asset-specific profiles"],
-  [migration.includes("create table if not exists public.media_upload_profiles") && migration.includes("attach_registered_media"), "media migration and atomic attachment"],
+  [migration.includes("create table if not exists public.media_upload_profiles") && migration.includes("attach_registered_media") && upload.includes("crop_metadata"), "media migration and atomic attachment"],
   [!application.includes('bucket="application-media"') && application.includes("Photos are added after approval"), "duplicate application media removed"],
   [review.includes('folder={`reviews/${booking.id || ""}`}'), "booking-owned review path"],
 ];

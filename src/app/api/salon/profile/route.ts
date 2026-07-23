@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { capturePlatformError, monitoredRouteFailure, safeFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -55,7 +56,7 @@ function permissionFor(keys: string[]) {
   return "my_page";
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let admin;
   try {
     const context = await requireSalonOwner(request);
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   let admin;
   let salonId: string | null = null;
   try {
@@ -79,9 +80,11 @@ export async function PATCH(request: Request) {
       throw new Error("Forbidden: this salon role cannot update these profile fields.");
     }
     const patch = sanitizePatch(body);
-    const { data, error } = await context.admin.from("salons").update(patch).eq("id", context.salon.id).select("*").single();
+    const { error } = await context.admin.from("salons").update(patch).eq("id", context.salon.id);
     if (error) throw error;
-    return Response.json({ salon: data });
+    const readBack = await context.admin.from("salons").select("*").eq("id", context.salon.id).single();
+    if (readBack.error || !readBack.data) throw readBack.error || new Error("The salon profile could not be verified after saving.");
+    return Response.json({ salon: readBack.data, verified: true }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (/^(Unauthorized|Forbidden)|must be|cannot be changed|valid object|valid email|US phone|HTTPS|at least one/i.test(message)) return errorResponse(error, "Unable to update the salon profile.");
@@ -90,3 +93,5 @@ export async function PATCH(request: Request) {
     return safeFailure(safeMessage, reference);
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "PATCH"), PATCHHandler);

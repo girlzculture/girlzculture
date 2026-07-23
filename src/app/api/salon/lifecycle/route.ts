@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -9,7 +10,7 @@ async function diagnostic(request: Request) {
   return { context, data };
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { data } = await diagnostic(request);
     return Response.json({ lifecycle: data }, { headers: { "Cache-Control": "private, no-store" } });
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let admin;
   let salonId: string | null = null;
   try {
@@ -69,3 +70,5 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "salon-lifecycle", action: "owner-action", actorRole: "salon-owner", salonId, safeMessage: "We couldn't update the salon status." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/lifecycle", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/lifecycle", "POST"), POSTHandler);

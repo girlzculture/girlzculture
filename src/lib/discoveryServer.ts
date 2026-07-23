@@ -1,5 +1,5 @@
 import "server-only";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizeRadius, validCoordinates, type Coordinates } from "@/lib/location";
 
 export type PublicSalonResult = {
@@ -37,6 +37,7 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
   if (!validCoordinates(query.origin)) return { salons: [] as PublicSalonResult[], total: 0 };
   const limit = Math.max(1, Math.min(50, Math.round(query.limit || 20)));
   const offset = Math.max(0, Math.round(query.offset || 0));
+  const supabase = getSupabaseAdmin();
   let resolvedStyle = query.style?.trim() || null;
   if (resolvedStyle) {
     const resolution = await supabase.rpc("resolve_search_service_query", { p_query: resolvedStyle });

@@ -2,92 +2,301 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { BadgeCheck, CalendarDays, Check, CircleDollarSign, Clock3, Crown, Eye, ImageOff, ImagePlus, Info, LockKeyhole, Megaphone, MessageCircle as Sparkles, Package, Plus, Star, UserPlus, UsersRound } from "lucide-react";
-import { getSessionForScope, salonSupabase as supabase } from "@/lib/supabase";
+import {
+  BadgeCheck,
+  CalendarDays,
+  Check,
+  CircleDollarSign,
+  Clock3,
+  Crown,
+  Eye,
+  ImageOff,
+  ImagePlus,
+  Info,
+  LockKeyhole,
+  Megaphone,
+  MessageCircle as Sparkles,
+  Package,
+  Plus,
+  Star,
+  UserPlus,
+  UsersRound,
+} from "lucide-react";
+import { getSessionForScope, reportClientOperationalFailure, salonSupabase as supabase } from "@/lib/supabase";
 import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
 import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
-import OwnerDashboardShell, { DashboardSection } from "@/components/owner/OwnerDashboardShell";
-import { hasPlanFeature, isSubscriptionActive, normalizePlan, planRank, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
-import { EMAIL_PATTERN, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
+import OwnerDashboardShell, {
+  DashboardSection,
+} from "@/components/owner/OwnerDashboardShell";
+import {
+  hasPlanFeature,
+  isSubscriptionActive,
+  normalizePlan,
+  planRank,
+  PLAN_ORDER,
+  SUBSCRIPTION_PLANS,
+  type SubscriptionPlan,
+} from "@/lib/plans";
+import {
+  EMAIL_PATTERN,
+  isValidEmail,
+  isValidUsPhone,
+  normalizeEmail,
+  normalizeUsPhone,
+  US_PHONE_PATTERN,
+} from "@/lib/validation";
 import { dateKeyInTimeZone } from "@/lib/dateTime";
 import { STORE_TIME_OPTIONS } from "@/lib/salonPresets";
-import { StructuredStylesEditor, StructuredStylistsEditor } from "@/components/owner/StructuredCatalogEditors";
+import {
+  StructuredStylesEditor,
+  StructuredStylistsEditor,
+} from "@/components/owner/StructuredCatalogEditors";
 import RoleLogoutButton from "@/components/auth/RoleLogoutButton";
 import TeamUserManager from "@/components/auth/TeamUserManager";
 import SalonOpenStatusControl from "@/components/owner/SalonOpenStatusControl";
-import { isValidUsZip, normalizeUsState, normalizeUsZip, US_STATES } from "@/lib/usStates";
+import {
+  isValidUsZip,
+  normalizeUsState,
+  normalizeUsZip,
+  US_STATES,
+} from "@/lib/usStates";
 import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
+import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 
-type Row = Record<string, unknown> & { id?: string; salon_id?: string; name?: string; created_at?: string };
-const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="salon" />;
-type Salon = Row & { slug?: string; status?: string; subscription_status?: string; description?: string; email?: string; phone?: string; address_street?: string; address_line2?: string; address_city?: string; address_state?: string; address_zip?: string; logo_url?: string; cover_photo_url?: string; gallery_photos?: string[]; hours?: Record<string,unknown>; booking_settings?: Record<string,unknown>; languages?: string[]; trust_info?: Record<string,boolean>; media_consent?: boolean; notification_preferences?: Record<string,boolean>; rating_overall?: number; review_count?: number; subscription_tier?: string; stripe_account_id?: string; time_zone?: string; onboarding_progress?: number; is_discoverable?: boolean; accepting_bookings?: boolean; owner_unpublished_at?: string|null; closure_requested_at?: string|null; geocode_status?: string; address_needs_review?: boolean; formatted_address?: string };
+type Row = Record<string, unknown> & {
+  id?: string;
+  salon_id?: string;
+  name?: string;
+  created_at?: string;
+};
+const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => (
+  <BaseImageUpload {...props} authScope="salon" />
+);
+type Salon = Row & {
+  slug?: string;
+  status?: string;
+  subscription_status?: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  address_street?: string;
+  address_line2?: string;
+  address_city?: string;
+  address_state?: string;
+  address_zip?: string;
+  logo_url?: string;
+  cover_photo_url?: string;
+  gallery_photos?: string[];
+  hours?: Record<string, unknown>;
+  booking_settings?: Record<string, unknown>;
+  languages?: string[];
+  trust_info?: Record<string, boolean>;
+  media_consent?: boolean;
+  notification_preferences?: Record<string, boolean>;
+  rating_overall?: number;
+  review_count?: number;
+  subscription_tier?: string;
+  stripe_account_id?: string;
+  time_zone?: string;
+  onboarding_progress?: number;
+  is_discoverable?: boolean;
+  accepting_bookings?: boolean;
+  owner_unpublished_at?: string | null;
+  closure_requested_at?: string | null;
+  geocode_status?: string;
+  address_needs_review?: boolean;
+  formatted_address?: string;
+};
 
-const fallbackPhotos = ["/images/braids-cornrows.jpg","/images/braids-knotless.jpg","/images/braids-box.jpg","/images/hero-braids.jpg"];
-const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-export default function OwnerDashboardApp({ section, initialBookingId = "" }: { section: DashboardSection; preview?: boolean; initialBookingId?: string }) {
-  const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
-  const [salon,setSalon]=useState<Salon|null>(null); const [bookings,setBookings]=useState<Row[]>([]); const [reviews,setReviews]=useState<Row[]>([]); const [styles,setStyles]=useState<Row[]>([]); const [stylists,setStylists]=useState<Row[]>([]); const [products,setProducts]=useState<Row[]>([]); const [promotions,setPromotions]=useState<Row[]>([]); const [subscription,setSubscription]=useState<Row|null>(null);
-  const [notifications,setNotifications]=useState<Row[]>([]); const [blockouts,setBlockouts]=useState<Row[]>([]);
-  const [teamPermissions,setTeamPermissions]=useState<Record<string,boolean>|null>(null);
-  const [isTeamMember,setIsTeamMember]=useState(false);
-  const [cancellationReasons,setCancellationReasons]=useState(["Customer requested","Fully booked","Walk-in took the slot","Stylist unavailable","Salon closed","Scheduling conflict","Payment issue","Other"]);
-  const [cancellationThreshold,setCancellationThreshold]=useState(10);
-  const [selectedStyle,setSelectedStyle]=useState<string|null>(null); const [selectedStylist,setSelectedStylist]=useState<string|null>(null); const [selectedProduct,setSelectedProduct]=useState<string|null>(null);
+const fallbackPhotos = [
+  "/images/braids-cornrows.jpg",
+  "/images/braids-knotless.jpg",
+  "/images/braids-box.jpg",
+  "/images/hero-braids.jpg",
+];
+const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+export default function OwnerDashboardApp({
+  section,
+  initialBookingId = "",
+}: {
+  section: DashboardSection;
+  preview?: boolean;
+  initialBookingId?: string;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [salon, setSalon] = useState<Salon | null>(null);
+  const [bookings, setBookings] = useState<Row[]>([]);
+  const [reviews, setReviews] = useState<Row[]>([]);
+  const [styles, setStyles] = useState<Row[]>([]);
+  const [stylists, setStylists] = useState<Row[]>([]);
+  const [products, setProducts] = useState<Row[]>([]);
+  const [promotions, setPromotions] = useState<Row[]>([]);
+  const [subscription, setSubscription] = useState<Row | null>(null);
+  const [billingEvents, setBillingEvents] = useState<Row[]>([]);
+  const [notifications, setNotifications] = useState<Row[]>([]);
+  const [blockouts, setBlockouts] = useState<Row[]>([]);
+  const [teamPermissions, setTeamPermissions] = useState<Record<
+    string,
+    boolean
+  > | null>(null);
+  const [isTeamMember, setIsTeamMember] = useState(false);
+  const [cancellationReasons, setCancellationReasons] = useState([
+    "Customer requested",
+    "Fully booked",
+    "Walk-in took the slot",
+    "Stylist unavailable",
+    "Salon closed",
+    "Scheduling conflict",
+    "Payment issue",
+    "Other",
+  ]);
+  const [cancellationThreshold, setCancellationThreshold] = useState(10);
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedStylist, setSelectedStylist] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
     let removeRealtime: (() => Promise<void>) | null = null;
 
     async function loadDashboard() {
-      const session = await Promise.race([getSessionForScope("salon"), new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 2500))]);
+      const session = await Promise.race([
+        getSessionForScope("salon"),
+        new Promise<null>((resolve) =>
+          window.setTimeout(() => resolve(null), 2500),
+        ),
+      ]);
       const userId = session?.user?.id || "";
       if (!live) return;
       if (!session || !userId) {
-        setError("Sign in with your salon-owner account. Admin and salon sessions are kept separate, so an admin login will not replace this session.");
+        setError(
+          "Sign in with your salon-owner account. Admin and salon sessions are kept separate, so an admin login will not replace this session.",
+        );
         setLoading(false);
         return;
       }
-      const destinationResponse = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${session?.access_token}` } });
-      const destination = await destinationResponse.json() as { salon_id?: string; permissions?: Record<string,boolean>; is_team_member?: boolean; parent_subscription?: Row | null };
-      const profileResponse = await fetch("/api/salon/profile", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
-      const profileBody = await profileResponse.json() as { salon?: Salon; error?: string };
-      const s = profileBody.salon || null;
-      const sErr = profileResponse.ok ? null : new Error(profileBody.error || "Unable to load the salon profile.");
+      const workspaceResponse = await fetch("/api/salon/workspace", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+      const workspace = (await workspaceResponse.json()) as {
+        salon?: Salon;
+        records?: Record<string, Row[]>;
+        permissions?: Record<string, boolean> | null;
+        isTeamMember?: boolean;
+        error?: string;
+      };
+      const s = workspace.salon || null;
+      const sErr = workspaceResponse.ok
+        ? null
+        : new Error(workspace.error || "Unable to load the salon workspace.");
       if (!live) return;
       if (sErr || !s) {
-        setError(sErr?.message || "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.");
+        setError(
+          sErr?.message ||
+            "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.",
+        );
         setLoading(false);
         return;
       }
       const salonId = String(s.id || "");
-      if (!salonId) throw new Error("This salon profile is missing its identifier.");
+      if (!salonId)
+        throw new Error("This salon profile is missing its identifier.");
       setSalon(s as Salon);
-      const teamLogin = Boolean(destination.is_team_member);
+      const teamLogin = Boolean(workspace.isTeamMember);
       setIsTeamMember(teamLogin);
-      setTeamPermissions(teamLogin ? destination.permissions || {} : null);
-      const results = await Promise.all(["bookings", "reviews", "styles", "stylists", "salon_products", "salon_promotions", "subscriptions", "notifications", "salon_blockouts"].map((table) => supabase.from(table).select("*").eq("salon_id", salonId).order("created_at", { ascending: false })));
-      if (!live) return;
-      setBookings((results[0].data || []) as Row[]); setReviews((results[1].data || []) as Row[]); setStyles((results[2].data || []) as Row[]); setStylists((results[3].data || []) as Row[]);
-      setProducts((results[4].data || []) as Row[]); setPromotions((results[5].data || []) as Row[]); setSubscription((teamLogin ? destination.parent_subscription || null : ((results[6].data || [])[0] || null)) as Row | null); setNotifications((results[7].data || []) as Row[]); setBlockouts((results[8].data || []) as Row[]);
-      try{const configResponse=await fetch("/api/config?keys=quality.cancellation_reasons,quality.cancellation_threshold_percent",{cache:"no-store"});const configBody=await configResponse.json();const configuredReasons=configBody?.config?.["quality.cancellation_reasons"];const configuredThreshold=Number(configBody?.config?.["quality.cancellation_threshold_percent"]);if(live&&Array.isArray(configuredReasons)&&configuredReasons.length)setCancellationReasons(configuredReasons.map(String).filter(Boolean).slice(0,40));if(live&&Number.isFinite(configuredThreshold)&&configuredThreshold>=1&&configuredThreshold<=100)setCancellationThreshold(configuredThreshold);}catch(configError){console.warn("Cancellation quality configuration unavailable; using safe defaults",configError)}
-      setSelectedStyle(results[2].data?.[0]?.id || null); setSelectedStylist(results[3].data?.[0]?.id || null); setSelectedProduct(results[4].data?.[0]?.id || null); setLoading(false);
+      setTeamPermissions(teamLogin ? workspace.permissions || {} : null);
+      const records = workspace.records || {};
+      const loadedBookings = records.bookings || [],
+        loadedReviews = records.reviews || [],
+        loadedStyles = records.styles || [],
+        loadedStylists = records.stylists || [],
+        loadedProducts = records.salon_products || [];
+      setBookings(loadedBookings);
+      setReviews(loadedReviews);
+      setStyles(loadedStyles);
+      setStylists(loadedStylists);
+      setProducts(loadedProducts);
+      setPromotions(records.salon_promotions || []);
+      setSubscription((records.subscriptions || [])[0] || null);
+      setBillingEvents(records.billing_events || []);
+      setNotifications(records.notifications || []);
+      setBlockouts(records.salon_blockouts || []);
+      try {
+        const configResponse = await fetch(
+          "/api/config?keys=quality.cancellation_reasons,quality.cancellation_threshold_percent",
+          { cache: "no-store" },
+        );
+        const configBody = await configResponse.json();
+        const configuredReasons =
+          configBody?.config?.["quality.cancellation_reasons"];
+        const configuredThreshold = Number(
+          configBody?.config?.["quality.cancellation_threshold_percent"],
+        );
+        if (
+          live &&
+          Array.isArray(configuredReasons) &&
+          configuredReasons.length
+        )
+          setCancellationReasons(
+            configuredReasons.map(String).filter(Boolean).slice(0, 40),
+          );
+        if (
+          live &&
+          Number.isFinite(configuredThreshold) &&
+          configuredThreshold >= 1 &&
+          configuredThreshold <= 100
+        )
+          setCancellationThreshold(configuredThreshold);
+      } catch {
+        // The monitored configuration API supplies safe defaults and references.
+      }
+      setSelectedStyle(loadedStyles[0]?.id || null);
+      setSelectedStylist(loadedStylists[0]?.id || null);
+      setSelectedProduct(loadedProducts[0]?.id || null);
+      setLoading(false);
 
       removeRealtime = subscribeToOwnerUpdates({
         client: supabase,
         salonId,
-        onNotification: (row) => { if (live) setNotifications((current) => [row as Row, ...current]); },
-        onBooking: (row) => { if (live) setBookings((current) => [row as Row, ...current]); },
-        onStatus: (status) => { if (status === "CHANNEL_ERROR" && live) console.error("Salon realtime channel failed", { salonId, status }); },
+        onNotification: (row) => {
+          if (live) setNotifications((current) => [row as Row, ...current]);
+        },
+        onBooking: (row) => {
+          if (live) setBookings((current) => [row as Row, ...current]);
+        },
+        onStatus: (status) => {
+          if (status === "CHANNEL_ERROR" && live) {
+            void getSessionForScope("salon").then((session) =>
+              reportClientOperationalFailure({
+                status: 503,
+                code: "REALTIME_CHANNEL_ERROR",
+                operation: "realtime:owner-dashboard",
+                provider: "supabase-realtime",
+                authorization: session
+                  ? `Bearer ${session.access_token}`
+                  : "",
+              }),
+            ).then((report) => {
+              if (live) setError(report.message);
+            });
+          }
+        },
       });
       if (!live && removeRealtime) await removeRealtime();
     }
 
     void loadDashboard().catch((loadError) => {
       if (!live) return;
-      console.error("Salon dashboard load failed", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Unable to load the dashboard.");
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load the dashboard.",
+      );
       setLoading(false);
     });
 
@@ -97,350 +306,3750 @@ export default function OwnerDashboardApp({ section, initialBookingId = "" }: { 
     };
   }, []);
 
-  async function updateSalonServer(patch: Record<string,unknown>) {
-    if(!salon?.id)return;
-    const safePatch={...patch};
-    if("email" in safePatch){if(!isValidEmail(safePatch.email)){setNotice("Please enter a valid email address (name@example.com).");return;}safePatch.email=normalizeEmail(safePatch.email);}
-    if("phone" in safePatch&&String(safePatch.phone||"")){if(!isValidUsPhone(safePatch.phone)){setNotice("Please enter a US phone number.");return;}safePatch.phone=normalizeUsPhone(safePatch.phone);}
-    const addressChanged=["address_street","address_line2","address_city","address_state","address_zip"].some((key)=>key in safePatch&&safePatch[key]!==salon[key]);
+  async function updateSalonServer(patch: Record<string, unknown>) {
+    if (!salon?.id) return;
+    const safePatch = { ...patch };
+    if ("email" in safePatch) {
+      if (!isValidEmail(safePatch.email)) {
+        setNotice("Please enter a valid email address (name@example.com).");
+        return;
+      }
+      safePatch.email = normalizeEmail(safePatch.email);
+    }
+    if ("phone" in safePatch && String(safePatch.phone || "")) {
+      if (!isValidUsPhone(safePatch.phone)) {
+        setNotice("Please enter a US phone number.");
+        return;
+      }
+      safePatch.phone = normalizeUsPhone(safePatch.phone);
+    }
+    const addressChanged = [
+      "address_street",
+      "address_line2",
+      "address_city",
+      "address_state",
+      "address_zip",
+    ].some((key) => key in safePatch && safePatch[key] !== salon[key]);
     try {
-      const session=await getSessionForScope("salon");
-      if(!session)throw new Error("Your salon session expired. Please sign in again.");
-      const response=await fetch("/api/salon/profile",{method:"PATCH",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify(safePatch)});
-      const body=await response.json() as {salon?:Salon;error?:string};
-      if(!response.ok||!body.salon)throw new Error(body.error||"We couldn't save this change.");
+      const session = await getSessionForScope("salon");
+      if (!session)
+        throw new Error("Your salon session expired. Please sign in again.");
+      const response = await fetch("/api/salon/profile", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(safePatch),
+      });
+      const body = (await response.json()) as {
+        salon?: Salon;
+        error?: string;
+        verified?: boolean;
+      };
+      if (!response.ok || !body.salon || body.verified !== true)
+        throw new Error(
+          body.error || "We couldn't verify this change after saving.",
+        );
       setSalon(body.salon);
-      if(addressChanged){
+      if (addressChanged) {
         setNotice("Address saved. Verifying its map location…");
-        const geocodeResponse=await fetch("/api/location/geocode-salon",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({salon_id:salon.id})});
-        const geocodeBody=await geocodeResponse.json();
-        if(!geocodeResponse.ok)throw new Error(geocodeBody.error||"The address was saved, but map verification could not finish.");
-        if(geocodeBody.status==="needs_review"){
-          setSalon(current=>current?{...current,geocode_status:"needs_review",address_needs_review:true}:current);
-          setNotice("Address saved, but its map location needs review. Check the street, city, state, and ZIP, then save again.");
-        }else{
-          setSalon(current=>current?{...current,geocode_status:"success",address_needs_review:false,formatted_address:geocodeBody.formattedAddress||current.formatted_address}:current);
+        const geocodeResponse = await fetch("/api/location/geocode-salon", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ salon_id: salon.id }),
+        });
+        const geocodeBody = await geocodeResponse.json();
+        if (!geocodeResponse.ok) {
+          setNotice(
+            geocodeBody.error ||
+              "The profile was saved, but map verification could not finish.",
+          );
+          return;
+        }
+        if (geocodeBody.status === "needs_review") {
+          setSalon((current) =>
+            current
+              ? {
+                  ...current,
+                  geocode_status: "needs_review",
+                  address_needs_review: true,
+                }
+              : current,
+          );
+          setNotice(
+            "Address saved, but its map location needs review. Check the street, city, state, and ZIP, then save again.",
+          );
+        } else {
+          setSalon((current) =>
+            current
+              ? {
+                  ...current,
+                  geocode_status: "success",
+                  address_needs_review: false,
+                  formatted_address:
+                    geocodeBody.formattedAddress || current.formatted_address,
+                }
+              : current,
+          );
           setNotice("Address saved and map location verified.");
         }
-      }else setNotice("Changes saved to your public salon page.");
-    }catch(saveError){setNotice(saveError instanceof Error?saveError.message:"We couldn't save this change. Please try again.");}
+      } else setNotice("Changes saved to your public salon page.");
+    } catch (saveError) {
+      setNotice(
+        saveError instanceof Error
+          ? saveError.message
+          : "We couldn't save this change. Please try again.",
+      );
+    }
   }
-  async function saveRecordServer(table:string, values:Record<string,unknown>, id?:string) {
-    if(!salon?.id)return null;
+  async function saveRecordServer(
+    table: string,
+    values: Record<string, unknown>,
+    id?: string,
+  ) {
+    if (!salon?.id) return null;
     try {
-      const session=await getSessionForScope("salon");
-      if(!session)throw new Error("Your salon session expired. Please sign in again.");
-      const response=await fetch("/api/salon/records/save",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({table,id,values})});
-      const body=await response.json() as {record?:Row;error?:string};
-      if(!response.ok||!body.record)throw new Error(body.error||"We couldn't save this change.");
-      setNotice("Saved successfully.");
+      const session = await getSessionForScope("salon");
+      if (!session)
+        throw new Error("Your salon session expired. Please sign in again.");
+      const response = await fetch("/api/salon/records/save", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ table, id, values }),
+      });
+      const body = (await response.json()) as {
+        record?: Row;
+        error?: string;
+        verified?: boolean;
+      };
+      if (!response.ok || !body.record || body.verified !== true)
+        throw new Error(
+          body.error || "We couldn't verify this change after saving.",
+        );
+      setNotice("Saved and verified.");
       return body.record;
-    }catch(saveError){setNotice(saveError instanceof Error?saveError.message:"We couldn't save this change. Please try again.");return null;}
+    } catch (saveError) {
+      setNotice(
+        saveError instanceof Error
+          ? saveError.message
+          : "We couldn't save this change. Please try again.",
+      );
+      return null;
+    }
   }
-  async function removeRecord(table:string,id:string,setter:React.Dispatch<React.SetStateAction<Row[]>>) { if(!window.confirm("Remove this record from the public salon experience? Booking history will be preserved."))return;try{const session=await getSessionForScope("salon");if(!session)throw new Error("Your salon session expired.");const response=await fetch("/api/salon/records",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({table,id,reason:"Removed from salon dashboard"})});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to remove this record.");setter(current=>current.filter(row=>row.id!==id));setNotice(body.message||"Record removed safely.");}catch(deleteError){setNotice(deleteError instanceof Error?deleteError.message:"The record could not be removed safely.");} }
+  async function removeRecord(
+    table: string,
+    id: string,
+    setter: React.Dispatch<React.SetStateAction<Row[]>>,
+  ) {
+    if (
+      !window.confirm(
+        "Remove this record from the public salon experience? Booking history will be preserved.",
+      )
+    )
+      return;
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Your salon session expired.");
+      const response = await fetch("/api/salon/records", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          table,
+          id,
+          reason: "Removed from salon dashboard",
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to remove this record.");
+      setter((current) => current.filter((row) => row.id !== id));
+      setNotice(body.message || "Record removed safely.");
+    } catch (deleteError) {
+      setNotice(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "The record could not be removed safely.",
+      );
+    }
+  }
 
-  if(loading)return <div className="min-h-screen bg-cream p-10 text-center text-plum">Loading your salon workspace…</div>;
-  if(error)return <div className="flex min-h-screen items-center justify-center bg-cream p-5"><div className="max-w-md rounded-[18px] border border-plum/10 bg-white p-8 text-center"><h1 className="font-serif text-3xl text-plum">Owner dashboard</h1><p className="mt-3 text-sm text-ink/70">{error}</p><Link href="/salon/login" className="mt-5 inline-flex rounded-[9px] bg-magenta px-5 py-3 text-sm font-bold text-white">Sign in</Link></div></div>;
-  if(!salon)return null;
-  const lifecycleStatus=String(salon.status||"Pending").toLowerCase();
-  if(["new","pending"].includes(lifecycleStatus))return <div className="flex min-h-screen items-center justify-center bg-cream p-5"><div className="max-w-xl rounded-[22px] border border-plum/10 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-plum"><Clock3 /></div><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Your application is under review</h1><p className="mt-4 leading-7 text-ink/70">Your salon has been saved, but the owner dashboard stays locked until Girlz Culture approves and activates your store. We’ll email you as soon as the review is complete.</p><Link href="/salon/application-submitted" className="mt-6 inline-flex rounded-[9px] bg-magenta px-6 py-3 font-bold text-white">View next steps</Link></div></div>;
-  if(lifecycleStatus==="offboarded")return <div className="flex min-h-screen items-center justify-center bg-cream p-5"><div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]"><LockKeyhole className="mx-auto text-magenta" size={42}/><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Salon access is restricted</h1><p className="mt-4 leading-7 text-ink/70">This salon is no longer active on Girlz Culture. Existing booking records remain protected. Contact platform support if you believe this status is incorrect.</p><Link href="/contact" className="mt-6 inline-flex rounded-[9px] bg-magenta px-6 py-3 font-bold text-white">Contact support</Link></div></div>;
+  if (loading)
+    return (
+      <div className="min-h-screen bg-cream p-10 text-center text-plum">
+        Loading your salon workspace…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream p-5">
+        <div className="max-w-md rounded-[18px] border border-plum/10 bg-white p-8 text-center">
+          <h1 className="font-serif text-3xl text-plum">Owner dashboard</h1>
+          <p className="mt-3 text-sm text-ink/70">{error}</p>
+          <Link
+            href="/salon/login"
+            className="mt-5 inline-flex rounded-[9px] bg-magenta px-5 py-3 text-sm font-bold text-white"
+          >
+            Sign in
+          </Link>
+        </div>
+      </div>
+    );
+  if (!salon) return null;
+  const lifecycleStatus = String(salon.status || "Pending").toLowerCase();
+  if (["new", "pending"].includes(lifecycleStatus))
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream p-5">
+        <div className="max-w-xl rounded-[22px] border border-plum/10 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-plum">
+            <Clock3 />
+          </div>
+          <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
+            Your application is under review
+          </h1>
+          <p className="mt-4 leading-7 text-ink/70">
+            Your salon has been saved, but the owner dashboard stays locked
+            until Girlz Culture approves and activates your store. We’ll email
+            you as soon as the review is complete.
+          </p>
+          <Link
+            href="/salon/application-submitted"
+            className="mt-6 inline-flex rounded-[9px] bg-magenta px-6 py-3 font-bold text-white"
+          >
+            View next steps
+          </Link>
+        </div>
+      </div>
+    );
+  if (lifecycleStatus === "offboarded")
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream p-5">
+        <div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]">
+          <LockKeyhole className="mx-auto text-magenta" size={42} />
+          <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
+            Salon access is restricted
+          </h1>
+          <p className="mt-4 leading-7 text-ink/70">
+            This salon is no longer active on Girlz Culture. Existing booking
+            records remain protected. Contact platform support if you believe
+            this status is incorrect.
+          </p>
+          <Link
+            href="/contact"
+            className="mt-6 inline-flex rounded-[9px] bg-magenta px-6 py-3 font-bold text-white"
+          >
+            Contact support
+          </Link>
+        </div>
+      </div>
+    );
 
-  const plan=normalizePlan(subscription?.tier||salon.subscription_tier);
-  const subscriptionActive=isSubscriptionActive(subscription?.status,subscription?.current_period_end);
-  const permissionKey=section === "messages" ? "bookings" : section.replace("-", "_");
-  const firstAllowedSection=teamPermissions?Object.entries(teamPermissions).find(([key,allowed])=>key!=="subscription"&&allowed)?.[0].replace("_","-")||"settings":"overview";
-  const firstAllowedHref=firstAllowedSection==="overview"?"/salon/dashboard":`/salon/dashboard/${firstAllowedSection}`;
-  if(teamPermissions&&(section==="subscription"||!teamPermissions[permissionKey]))return <OwnerDashboardShell section={section} salonName={salon.name||"Your Salon"} salonSlug={salon.slug||""} avatar={salon.logo_url||null} notifications={notifications} access={teamPermissions}><div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center"><LockKeyhole className="mx-auto text-magenta"/><h1 className="mt-4 font-serif text-3xl text-plum">Access not assigned</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-ink/70">The salon owner has not granted this account access to this dashboard section. Subscription and billing are always owner-only.</p><Link href={firstAllowedHref} className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white">Open an assigned section</Link></div></OwnerDashboardShell>;
-  const context={salon,bookings,reviews,styles,stylists,products,promotions,blockouts,subscription,plan,subscriptionActive,isOwner:!isTeamMember,access:teamPermissions,cancellationReasons,cancellationThreshold,initialBookingId,selectedStyle,selectedStylist,selectedProduct,setSelectedStyle,setSelectedStylist,setSelectedProduct,setStyles,setStylists,setProducts,setPromotions,setBookings,setBlockouts,updateSalon:updateSalonServer,saveRecord:saveRecordServer,removeRecord,setNotice};
-  return <OwnerDashboardShell section={section} salonName={salon.name||"Your Salon"} salonSlug={salon.slug||""} avatar={salon.logo_url||null} notifications={notifications} access={teamPermissions}>{lifecycleStatus==="suspended"?<div role="alert" className="mb-4 rounded-[14px] border border-red-200 bg-red-50 p-4"><b className="font-serif text-lg text-red-800">This salon is suspended</b><p className="mt-1 text-xs leading-5 text-red-700">Your dashboard and records remain available, but the public profile is hidden and new bookings are disabled. Contact platform support for status details.</p></div>:null}{!isTeamMember&&subscriptionActive&&!salon.is_discoverable&&lifecycleStatus!=="suspended"?<div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-magenta/20 bg-blush/45 p-4"><div><b className="font-serif text-lg text-plum">Finish marketplace setup · {Number(salon.onboarding_progress||0)}%</b><p className="mt-1 text-xs text-ink/60">Your dashboard works, but the salon stays out of search until every required setup item is complete.</p></div><Link href="/salon/onboarding" className="rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white">Continue setup</Link></div>:null}<div className="mb-4"><PushSetup scope="salon" compact /></div>{notice?<div role="status" className="mb-4 flex items-center justify-between rounded-[10px] border border-magenta/20 bg-blush/45 px-4 py-3 text-xs text-plum"><span>{notice}</span><button onClick={()=>setNotice("")}>×</button></div>:null}<DashboardContent section={section} context={context}/></OwnerDashboardShell>;
+  const plan = normalizePlan(subscription?.tier || salon.subscription_tier);
+  const subscriptionActive = isSubscriptionActive(
+    subscription?.status,
+    subscription?.current_period_end,
+  );
+  const permissionKey =
+    section === "messages" ? "bookings" : section.replace("-", "_");
+  const firstAllowedSection = teamPermissions
+    ? Object.entries(teamPermissions)
+        .find(([key, allowed]) => key !== "subscription" && allowed)?.[0]
+        .replace("_", "-") || "settings"
+    : "overview";
+  const firstAllowedHref =
+    firstAllowedSection === "overview"
+      ? "/salon/dashboard"
+      : `/salon/dashboard/${firstAllowedSection}`;
+  if (
+    teamPermissions &&
+    (section === "subscription" || !teamPermissions[permissionKey])
+  )
+    return (
+      <OwnerDashboardShell
+        section={section}
+        salonName={salon.name || "Your Salon"}
+        salonSlug={salon.slug || ""}
+        avatar={salon.logo_url || null}
+        notifications={notifications}
+        access={teamPermissions}
+      >
+        <div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center">
+          <LockKeyhole className="mx-auto text-magenta" />
+          <h1 className="mt-4 font-serif text-3xl text-plum">
+            Access not assigned
+          </h1>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-ink/70">
+            The salon owner has not granted this account access to this
+            dashboard section. Subscription and billing are always owner-only.
+          </p>
+          <Link
+            href={firstAllowedHref}
+            className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white"
+          >
+            Open an assigned section
+          </Link>
+        </div>
+      </OwnerDashboardShell>
+    );
+  const context = {
+    salon,
+    bookings,
+    reviews,
+    styles,
+    stylists,
+    products,
+    promotions,
+    blockouts,
+    subscription,
+    billingEvents,
+    plan,
+    subscriptionActive,
+    isOwner: !isTeamMember,
+    access: teamPermissions,
+    cancellationReasons,
+    cancellationThreshold,
+    initialBookingId,
+    selectedStyle,
+    selectedStylist,
+    selectedProduct,
+    setSelectedStyle,
+    setSelectedStylist,
+    setSelectedProduct,
+    setStyles,
+    setStylists,
+    setProducts,
+    setPromotions,
+    setBookings,
+    setBlockouts,
+    updateSalon: updateSalonServer,
+    saveRecord: saveRecordServer,
+    removeRecord,
+    setNotice,
+  };
+  return (
+    <OwnerDashboardShell
+      section={section}
+      salonName={salon.name || "Your Salon"}
+      salonSlug={salon.slug || ""}
+      avatar={salon.logo_url || null}
+      notifications={notifications}
+      access={teamPermissions}
+    >
+      {lifecycleStatus === "suspended" ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-[14px] border border-red-200 bg-red-50 p-4"
+        >
+          <b className="font-serif text-lg text-red-800">
+            This salon is suspended
+          </b>
+          <p className="mt-1 text-xs leading-5 text-red-700">
+            Your dashboard and records remain available, but the public profile
+            is hidden and new bookings are disabled. Contact platform support
+            for status details.
+          </p>
+        </div>
+      ) : null}
+      {!isTeamMember &&
+      subscriptionActive &&
+      !salon.is_discoverable &&
+      lifecycleStatus !== "suspended" ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-magenta/20 bg-blush/45 p-4">
+          <div>
+            <b className="font-serif text-lg text-plum">
+              Finish marketplace setup ·{" "}
+              {Number(salon.onboarding_progress || 0)}%
+            </b>
+            <p className="mt-1 text-xs text-ink/60">
+              Your dashboard works, but the salon stays out of search until
+              every required setup item is complete.
+            </p>
+          </div>
+          <Link
+            href="/salon/onboarding"
+            className="rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"
+          >
+            Continue setup
+          </Link>
+        </div>
+      ) : null}
+      <div className="mb-4">
+        <PushSetup scope="salon" compact />
+      </div>
+      {notice ? (
+        <div
+          role="status"
+          className="mb-4 flex items-center justify-between rounded-[10px] border border-magenta/20 bg-blush/45 px-4 py-3 text-xs text-plum"
+        >
+          <span>{notice}</span>
+          <button onClick={() => setNotice("")}>×</button>
+        </div>
+      ) : null}
+      <DashboardContent section={section} context={context} />
+    </OwnerDashboardShell>
+  );
 }
 
-type Ctx = {salon:Salon;bookings:Row[];reviews:Row[];styles:Row[];stylists:Row[];products:Row[];promotions:Row[];blockouts:Row[];subscription:Row|null;plan:SubscriptionPlan;subscriptionActive:boolean;isOwner:boolean;access:Record<string,boolean>|null;cancellationReasons:string[];cancellationThreshold:number;initialBookingId:string;selectedStyle:string|null;selectedStylist:string|null;selectedProduct:string|null;setSelectedStyle:(id:string|null)=>void;setSelectedStylist:(id:string|null)=>void;setSelectedProduct:(id:string|null)=>void;setStyles:React.Dispatch<React.SetStateAction<Row[]>>;setStylists:React.Dispatch<React.SetStateAction<Row[]>>;setProducts:React.Dispatch<React.SetStateAction<Row[]>>;setPromotions:React.Dispatch<React.SetStateAction<Row[]>>;setBookings:React.Dispatch<React.SetStateAction<Row[]>>;setBlockouts:React.Dispatch<React.SetStateAction<Row[]>>;updateSalon:(patch:Record<string,unknown>)=>Promise<void>;saveRecord:(table:string,values:Record<string,unknown>,id?:string)=>Promise<Row|null>;removeRecord:(table:string,id:string,setter:React.Dispatch<React.SetStateAction<Row[]>>)=>Promise<void>;setNotice:(text:string)=>void};
+type Ctx = {
+  salon: Salon;
+  bookings: Row[];
+  reviews: Row[];
+  styles: Row[];
+  stylists: Row[];
+  products: Row[];
+  promotions: Row[];
+  blockouts: Row[];
+  subscription: Row | null;
+  billingEvents: Row[];
+  plan: SubscriptionPlan;
+  subscriptionActive: boolean;
+  isOwner: boolean;
+  access: Record<string, boolean> | null;
+  cancellationReasons: string[];
+  cancellationThreshold: number;
+  initialBookingId: string;
+  selectedStyle: string | null;
+  selectedStylist: string | null;
+  selectedProduct: string | null;
+  setSelectedStyle: (id: string | null) => void;
+  setSelectedStylist: (id: string | null) => void;
+  setSelectedProduct: (id: string | null) => void;
+  setStyles: React.Dispatch<React.SetStateAction<Row[]>>;
+  setStylists: React.Dispatch<React.SetStateAction<Row[]>>;
+  setProducts: React.Dispatch<React.SetStateAction<Row[]>>;
+  setPromotions: React.Dispatch<React.SetStateAction<Row[]>>;
+  setBookings: React.Dispatch<React.SetStateAction<Row[]>>;
+  setBlockouts: React.Dispatch<React.SetStateAction<Row[]>>;
+  updateSalon: (patch: Record<string, unknown>) => Promise<void>;
+  saveRecord: (
+    table: string,
+    values: Record<string, unknown>,
+    id?: string,
+  ) => Promise<Row | null>;
+  removeRecord: (
+    table: string,
+    id: string,
+    setter: React.Dispatch<React.SetStateAction<Row[]>>,
+  ) => Promise<void>;
+  setNotice: (text: string) => void;
+};
 
-function DashboardContent({section,context:c}:{section:DashboardSection;context:Ctx}){
-  void Styles; void Stylists;
-  if(section==="subscription")return c.isOwner ? <SubscriptionV2 c={c}/> : <AccessPaused isOwner={false}/>;
-  if(!c.subscriptionActive)return c.isOwner ? <SubscriptionRequired c={c}/> : <AccessPaused isOwner={false}/>;
-  if(section==="promotions"&&!hasPlanFeature(c.plan,"promotions"))return <UpgradeRequired feature="Promotions" plan="Growth" isOwner={c.isOwner}/>;
-  if(section==="overview")return <Overview c={c}/>; if(section==="my-page")return <><MyPage c={c}/><SalonLogoEditor c={c}/></>; if(section==="photos")return <Photos c={c}/>; if(section==="styles")return <StructuredStylesEditor c={c}/>; if(section==="stylists")return <StructuredStylistsEditor c={c}/>; if(section==="products")return <TruthfulProducts c={c}/>; if(section==="availability")return <Availability c={c}/>; if(section==="bookings")return <Bookings c={c}/>; if(section==="messages")return <BookingInbox scope="salon"/>; if(section==="reviews")return <Reviews c={c}/>; if(section==="earnings")return <Earnings c={c}/>; if(section==="promotions")return <Promotions c={c}/>; return <><SettingsPage c={c}/><div className="mt-5"><TeamUserManager scope="salon" /></div><div className="mt-4 rounded-[14px] border border-magenta/20 bg-white p-5 lg:hidden"><p className="mb-3 text-sm leading-6 text-plum">Two-factor authentication is required for salon accounts and uses SMS with email fallback.</p><RoleLogoutButton scope="salon" className="flex items-center gap-2 font-bold text-magenta" /></div></>;
+function DashboardContent({
+  section,
+  context: c,
+}: {
+  section: DashboardSection;
+  context: Ctx;
+}) {
+  void Styles;
+  void Stylists;
+  if (section === "subscription")
+    return c.isOwner ? (
+      <SubscriptionV2 c={c} />
+    ) : (
+      <AccessPaused isOwner={false} />
+    );
+  if (!c.subscriptionActive)
+    return c.isOwner ? (
+      <SubscriptionRequired c={c} />
+    ) : (
+      <AccessPaused isOwner={false} />
+    );
+  if (section === "promotions" && !hasPlanFeature(c.plan, "promotions"))
+    return (
+      <UpgradeRequired feature="Promotions" plan="Growth" isOwner={c.isOwner} />
+    );
+  if (section === "overview") return <Overview c={c} />;
+  if (section === "my-page")
+    return (
+      <>
+        <MyPage c={c} />
+        <SalonLogoEditor c={c} />
+      </>
+    );
+  if (section === "photos") return <Photos c={c} />;
+  if (section === "styles") return <StructuredStylesEditor c={c} />;
+  if (section === "stylists") return <StructuredStylistsEditor c={c} />;
+  if (section === "products") return <TruthfulProducts c={c} />;
+  if (section === "availability") return <Availability c={c} />;
+  if (section === "bookings") return <Bookings c={c} />;
+  if (section === "messages") return <BookingInbox scope="salon" />;
+  if (section === "reviews") return <Reviews c={c} />;
+  if (section === "earnings") return <Earnings c={c} />;
+  if (section === "promotions")
+    return (
+      <SalonPromotionsManager
+        promotions={c.promotions}
+        styles={c.styles}
+        products={c.products}
+        setPromotions={c.setPromotions}
+        saveRecord={c.saveRecord}
+        removeRecord={c.removeRecord}
+      />
+    );
+  return (
+    <>
+      <SettingsPage c={c} />
+      <div className="mt-5">
+        <TeamUserManager scope="salon" />
+      </div>
+      <div className="mt-4 rounded-[14px] border border-magenta/20 bg-white p-5 lg:hidden">
+        <p className="mb-3 text-sm leading-6 text-plum">
+          Two-factor authentication is required for salon accounts and uses SMS
+          with email fallback.
+        </p>
+        <RoleLogoutButton
+          scope="salon"
+          className="flex items-center gap-2 font-bold text-magenta"
+        />
+      </div>
+    </>
+  );
 }
 
-function SubscriptionRequired({c}:{c:Ctx}){return <div className="mx-auto max-w-3xl py-16 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta"><Crown size={30}/></span><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Activate your salon plan</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">Your salon is approved, but the business workspace remains locked until a subscription is active. Your selected {c.plan} plan can be activated in Stripe test mode.</p><Link href="/salon/dashboard/subscription" className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white">Activate subscription</Link></div>}
-function AccessPaused({isOwner}:{isOwner:boolean}){return <div className="mx-auto max-w-3xl py-16 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta"><LockKeyhole size={30}/></span><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Salon access is paused</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">This salon’s subscription is not active. Please contact the salon owner; only the owner can manage billing.</p>{isOwner?<Link href="/salon/dashboard/subscription" className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white">Manage subscription</Link>:null}</div>}
-function UpgradeRequired({feature,plan,isOwner}:{feature:string;plan:SubscriptionPlan;isOwner:boolean}){return <div className="mx-auto max-w-3xl py-16 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta"><LockKeyhole size={30}/></span><h1 className="mt-5 font-serif text-4xl font-semibold text-plum">Upgrade to unlock {feature}</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">This feature is available on the {plan} and Premium plans. {isOwner?"Upgrade securely from your subscription page.":"Ask the salon owner to review the plan."}</p>{isOwner?<Link href="/salon/dashboard/subscription" className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white">Compare plans</Link>:null}</div>}
+function SubscriptionRequired({ c }: { c: Ctx }) {
+  return (
+    <div className="mx-auto max-w-3xl py-16 text-center">
+      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta">
+        <Crown size={30} />
+      </span>
+      <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
+        Activate your salon plan
+      </h1>
+      <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
+        Your salon is approved, but the business workspace remains locked until
+        a subscription is active. Your selected {c.plan} plan can be activated
+        in Stripe test mode.
+      </p>
+      <Link
+        href="/salon/dashboard/subscription"
+        className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white"
+      >
+        Activate subscription
+      </Link>
+    </div>
+  );
+}
+function AccessPaused({ isOwner }: { isOwner: boolean }) {
+  return (
+    <div className="mx-auto max-w-3xl py-16 text-center">
+      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta">
+        <LockKeyhole size={30} />
+      </span>
+      <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
+        Salon access is paused
+      </h1>
+      <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
+        This salon’s subscription is not active. Please contact the salon owner;
+        only the owner can manage billing.
+      </p>
+      {isOwner ? (
+        <Link
+          href="/salon/dashboard/subscription"
+          className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white"
+        >
+          Manage subscription
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+function UpgradeRequired({
+  feature,
+  plan,
+  isOwner,
+}: {
+  feature: string;
+  plan: SubscriptionPlan;
+  isOwner: boolean;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl py-16 text-center">
+      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta">
+        <LockKeyhole size={30} />
+      </span>
+      <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
+        Upgrade to unlock {feature}
+      </h1>
+      <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
+        This feature is available on the {plan} and Premium plans.{" "}
+        {isOwner
+          ? "Upgrade securely from your subscription page."
+          : "Ask the salon owner to review the plan."}
+      </p>
+      {isOwner ? (
+        <Link
+          href="/salon/dashboard/subscription"
+          className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white"
+        >
+          Compare plans
+        </Link>
+      ) : null}
+    </div>
+  );
+}
 
-function SubscriptionV2({c}:{c:Ctx}){
-  const [busy,setBusy]=useState("");
-  const scheduledPlan=c.subscription?.scheduled_tier?normalizePlan(c.subscription.scheduled_tier):null;
-  const scheduledEffective=c.subscription?.scheduled_change_effective_at;
-  const cancellationScheduled=Boolean(c.subscription?.cancel_at_period_end);
-  const paidThrough=c.subscription?.current_period_end;
-  async function action(path:string,key:string,payload:Record<string,unknown>={}){
+function SubscriptionV2({ c }: { c: Ctx }) {
+  const [busy, setBusy] = useState("");
+  const scheduledPlan = c.subscription?.scheduled_tier
+    ? normalizePlan(c.subscription.scheduled_tier)
+    : null;
+  const scheduledEffective = c.subscription?.scheduled_change_effective_at;
+  const cancellationScheduled = Boolean(c.subscription?.cancel_at_period_end);
+  const paidThrough = c.subscription?.current_period_end;
+  async function action(
+    path: string,
+    key: string,
+    payload: Record<string, unknown> = {},
+  ) {
     setBusy(key);
-    try{
-      const {data:{session}}=await supabase.auth.getSession();
-      if(!session)throw new Error("Please sign in again.");
-      const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(payload)});
-      const body=await response.json();
-      if(!response.ok)throw new Error(body.error||"Unable to update the subscription.");
-      if(body.url){window.location.assign(body.url);return;}
-      c.setNotice(body.message||"Your subscription plan was updated. Your dashboard remained active throughout the change.");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to update the subscription.");
+      if (body.requiresConfirmation) {
+        const confirmed = window.confirm(
+          String(
+            body.message ||
+              "Confirm this plan upgrade and allow Stripe to calculate and collect the prorated invoice?",
+          ),
+        );
+        if (!confirmed) {
+          c.setNotice(
+            "Upgrade cancelled. Your current plan and access are unchanged.",
+          );
+          setBusy("");
+          return;
+        }
+        const confirmedResponse = await fetch(path, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ ...payload, confirm: true }),
+        });
+        const confirmedBody = await confirmedResponse.json();
+        if (!confirmedResponse.ok)
+          throw new Error(
+            confirmedBody.error ||
+              "Stripe did not confirm the upgrade. Your current plan is unchanged.",
+          );
+        if (confirmedBody.requiresAction && confirmedBody.paymentUrl) {
+          c.setNotice(
+            "Stripe needs one more confirmation. Your current plan remains active until payment succeeds.",
+          );
+          window.location.assign(confirmedBody.paymentUrl);
+          return;
+        }
+        c.setNotice(
+          confirmedBody.message ||
+            "Stripe confirmed the prorated invoice and activated the new plan.",
+        );
+        setBusy("");
+        window.setTimeout(() => window.location.reload(), 1200);
+        return;
+      }
+      if (body.url) {
+        window.location.assign(body.url);
+        return;
+      }
+      c.setNotice(
+        body.message ||
+          "Your subscription plan was updated. Your dashboard remained active throughout the change.",
+      );
       setBusy("");
-      window.setTimeout(()=>window.location.reload(),900);
-    }catch(error){
-      c.setNotice(error instanceof Error?error.message:"Unable to continue.");
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error ? error.message : "Unable to continue.",
+      );
       setBusy("");
     }
   }
-  return <>
-    <Title title="Subscription" subtitle="Choose the plan that matches your growth goals. Payments are in Stripe test mode."/>
-    <div className="mb-4 rounded-[10px] border border-amber/30 bg-amber/10 px-4 py-3 text-xs text-ink/70"><b>TEST MODE:</b> No real charges are processed while Girlz Culture is in pre-launch testing.</div>
-    {scheduledPlan?<Panel className="mb-4 border-amber/35 bg-amber/10"><div className="grid gap-4 sm:grid-cols-4"><div><p className="text-[10px] uppercase text-ink/55">Current plan</p><p className="mt-1 font-serif text-xl text-plum">{c.plan}</p></div><div><p className="text-[10px] uppercase text-ink/55">Scheduled next plan</p><p className="mt-1 font-serif text-xl text-plum">{scheduledPlan}</p></div><div><p className="text-[10px] uppercase text-ink/55">Effective date</p><p className="mt-1 text-xs font-bold">{dateText(scheduledEffective)}</p></div><div><p className="text-[10px] uppercase text-ink/55">Charged now</p><p className="mt-1 font-serif text-xl text-plum">$0.00</p></div></div><p className="mt-4 text-xs leading-5 text-ink/65">Your {c.plan} access remains unchanged through this paid period. No refund, account credit, deduction, or negative proration was created.</p><button disabled={Boolean(busy)} onClick={()=>void action("/api/stripe/subscription/lifecycle","cancel-scheduled",{action:"cancel_scheduled_change"})} className="mt-4 rounded-[8px] border border-magenta px-4 py-2.5 text-xs font-bold text-magenta">{busy==="cancel-scheduled"?"Keeping current plan…":"Cancel scheduled downgrade"}</button></Panel>:null}
-    {cancellationScheduled?<Panel className="mb-4 border-magenta/30 bg-blush/35"><h2 className="font-serif text-2xl text-plum">Cancellation scheduled</h2><p className="mt-2 text-sm text-ink/70">Your current plan and access remain active through <b>{dateText(paidThrough)}</b>. You will not be charged again.</p><button disabled={Boolean(busy)} onClick={()=>void action("/api/stripe/subscription/lifecycle","reactivate",{action:"reactivate"})} className="mt-4 rounded-[8px] bg-magenta px-5 py-3 text-xs font-bold text-white">{busy==="reactivate"?"Reactivating…":"Reactivate subscription"}</button></Panel>:null}
-    <div className="grid gap-4 lg:grid-cols-3">{PLAN_ORDER.map(name=>{const plan=SUBSCRIPTION_PLANS[name];const current=c.plan===name&&c.subscriptionActive;const changing=c.subscriptionActive&&!current;const upgrading=changing&&planRank(name)>planRank(c.plan);const isScheduled=scheduledPlan===name;const label=changing?(upgrading?`Upgrade to ${name}`:`Schedule ${name}`):`Choose ${name}`;return <Panel key={name} className={name==="Growth"?"border-magenta":""}><div className="flex items-center justify-between"><h2 className="font-serif text-2xl text-plum">{name}</h2>{name==="Growth"?<span className="rounded-full bg-magenta px-2 py-1 text-[8px] font-bold uppercase text-white">Most Popular</span>:null}</div><p className="mt-3 font-serif text-3xl font-semibold">${plan.monthlyPrice.toFixed(2)}<span className="font-sans text-[10px] font-normal"> / month</span></p><p className="mt-2 min-h-10 text-[11px] text-ink/60">{plan.description}</p><ul className="mt-4 space-y-2 text-[10px]">{plan.features.map(feature=><li key={feature} className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0 text-magenta" aria-hidden="true"/><span>{feature}</span></li>)}</ul><button disabled={Boolean(busy)||current||isScheduled||cancellationScheduled} onClick={()=>void action(changing?"/api/stripe/subscription/change":"/api/stripe/subscription/checkout",name,{plan:name})} className={`mt-6 min-h-11 w-full rounded-[8px] text-xs font-bold disabled:opacity-60 ${current?"border border-green-500 text-green-700":"bg-magenta text-white"}`}>{current?"Current active plan":isScheduled?"Scheduled next plan":busy===name?(changing?(upgrading?"Collecting prorated invoice…":"Scheduling downgrade…"):"Opening checkout…"):label}</button>{changing?<p className="mt-2 text-[10px] leading-4 text-ink/55">{upgrading?"Activates only after Stripe successfully collects the actual prorated invoice.":"Takes effect at the next renewal. $0.00 is charged now and current access continues."}</p>:null}</Panel>})}</div>
-    {c.subscription?.stripe_customer_id?<div className="mt-5 flex flex-wrap gap-3"><button disabled={Boolean(busy)} onClick={()=>void action("/api/stripe/portal","portal")} className="rounded-[8px] border border-magenta px-5 py-3 text-xs font-bold text-magenta">{busy==="portal"?"Opening billing…":"Manage payment method"}</button>{c.subscriptionActive&&!cancellationScheduled?<button disabled={Boolean(busy)} onClick={()=>void action("/api/stripe/subscription/lifecycle","cancel",{action:"cancel_at_period_end"})} className="rounded-[8px] border border-plum/20 px-5 py-3 text-xs font-bold text-plum">{busy==="cancel"?"Scheduling cancellation…":"Cancel at period end"}</button>:null}</div>:null}
-  </>}
-
-function Title({title,subtitle,action}:{title:string;subtitle:string;action?:React.ReactNode}){return <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="font-serif text-[36px] font-semibold leading-none tracking-[-.035em] text-plum sm:text-[48px]">{title}</h1><p className="mt-2 text-sm text-ink/65">{subtitle}</p></div>{action}</div>}
-function Panel({children,className=""}:{children:React.ReactNode;className?:string}){return <section className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5 ${className}`}>{children}</section>}
-function Metric({label,value,icon:Icon=Eye}:{label:string;value:string|number;trend?:string;icon?:React.ComponentType<{size?:number}>}){return <Panel><div className="flex items-center justify-between"><div><p className="text-xs text-ink/70">{label}</p><p className="mt-1 font-serif text-[28px] font-semibold">{value}</p></div><span className="flex h-11 w-11 items-center justify-center rounded-full bg-blush text-magenta"><Icon size={22}/></span></div></Panel>}
-function MiniLine(){return <p className="rounded-[8px] border border-dashed border-plum/15 bg-cream/50 p-4 text-center text-[10px] text-ink/50">No historical trend data yet.</p>}
-
-function Overview({c}:{c:Ctx}){
-  const completed=c.bookings.filter(b=>String(b.status).toLowerCase()==="completed");
-  const revenue=completed.reduce((sum,b)=>sum+Number(b.estimated_total||0),0);
-  const [renderedAt]=useState(()=>Date.now());
-  const upcoming=c.bookings.filter(b=>new Date(String(b.appointment_datetime||0)).getTime()>renderedAt&&!/cancelled/i.test(String(b.status||""))).slice(0,3);
-  const completion=Math.round([c.salon.name,c.salon.description,c.salon.phone,c.salon.address_street,c.salon.cover_photo_url,c.styles.length,c.stylists.length].filter(Boolean).length/7*100);
-  const salonCancellations=c.bookings.filter((booking)=>booking.cancellation_initiated_by==="Salon").length;
-  const cancellationRate=c.bookings.length?salonCancellations/c.bookings.length*100:0;
-  const quickActions=([['Add Photos','photos',ImagePlus],['Availability','availability',CalendarDays],['Promotion','promotions',Megaphone],['Add Stylist','stylists',UserPlus],['Add Product','products',Package]] as const).filter(([,path])=>c.access===null||Boolean(c.access[path]));
-  return <>
-    <Title title="Salon Owner Dashboard" subtitle="Run your business with confidence."/>
-    <SalonOpenStatusControl salon={c.salon} />
-    {cancellationRate>c.cancellationThreshold?<div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 p-4 text-xs text-red-800"><b>Your salon cancellation rate is above {c.cancellationThreshold}%.</b><p className="mt-1">Update availability before accepting more bookings to protect your quality standing.</p></div>:null}
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Profile Views" value={Number(c.salon.profile_views||0)}/><Metric label="Total Bookings" value={c.bookings.length} icon={CalendarDays}/><Metric label="New Customers" value={new Set(c.bookings.map(b=>b.customer_id||b.guest_email).filter(Boolean)).size} icon={UsersRound}/><Metric label="Completed Booking Value" value={`$${revenue.toLocaleString()}`} icon={CircleDollarSign}/><Metric label="Salon Cancellation Rate" value={`${cancellationRate.toFixed(1)}%`} icon={Clock3}/></div>
-    <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1.5fr_.8fr]"><Panel><h2 className="font-serif text-xl text-plum">Profile Completion</h2><p className="mt-3 text-sm">Complete your profile to attract more clients and grow your brand.</p><div className="mt-5 flex items-center gap-3"><div className="h-2 flex-1 rounded-full bg-blush"><div className="h-full rounded-full bg-magenta" style={{width:`${completion}%`}}/></div><b>{completion}%</b></div><Link href="/salon/dashboard/my-page" className="mt-6 inline-flex text-xs font-bold text-magenta">Finish setup</Link></Panel><Panel><div className="flex justify-between"><h2 className="font-serif text-xl text-plum">Upcoming Appointments</h2><Link href="/salon/dashboard/bookings" className="text-xs text-magenta">View all</Link></div><div className="mt-3 divide-y divide-plum/10">{upcoming.map((booking,index)=><Link href={`/salon/dashboard/bookings?booking=${booking.id}`} key={booking.id||index} className="grid grid-cols-[85px_1fr_auto] gap-3 py-3 text-xs"><span>{dateText(booking.appointment_datetime,c.salon.time_zone)}</span><span><b>{styleName(c,booking.style_id)}</b><br/><span className="text-ink/55">{stylistName(c,booking.stylist_id)}</span></span><Status value={String(booking.status||"Confirmed")}/></Link>)}{!upcoming.length?<Empty text="No upcoming appointments."/>:null}</div></Panel><Panel><h2 className="font-serif text-xl text-plum">Recent Reviews</h2>{c.reviews.slice(0,2).map((review,index)=><div key={review.id||index} className="mt-3 border-t border-plum/10 pt-3 text-xs"><Stars value={Number(review.rating_overall||0)}/>{review.written_review?<p className="mt-2 line-clamp-3">{String(review.written_review)}</p>:null}</div>)}{!c.reviews.length?<Empty text="Reviews will appear after completed bookings."/>:null}</Panel></div>
-    <div className={`mt-4 grid gap-4 ${c.isOwner?'lg:grid-cols-[.7fr_1.3fr]':''}`}>{c.isOwner?<Panel><div className="flex items-center gap-3"><Crown className="text-magenta"/><div><p className="text-xs">Subscription</p><h2 className="font-serif text-xl text-plum">{String(c.subscription?.subscription_tier||c.subscription?.tier||c.salon.subscription_tier||"No")} Plan</h2></div></div><Link href="/salon/dashboard/subscription" className="mt-4 inline-flex text-xs font-bold text-magenta">Manage subscription</Link></Panel>:null}<Panel><h2 className="font-serif text-xl text-plum">Quick Actions</h2><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{quickActions.map(([label,path,Icon])=><Link key={path} href={`/salon/dashboard/${path}`} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-[10px] border border-plum/10 bg-cream/40 text-center text-[10px] font-semibold text-ink"><Icon size={25} className="text-magenta"/>{label}</Link>)}{!quickActions.length?<p className="col-span-full text-xs text-ink/55">No quick actions are assigned to this role.</p>:null}</div></Panel></div>
-  </>;
+  return (
+    <>
+      <Title
+        title="Subscription"
+        subtitle="Choose the plan that matches your growth goals. Payments are in Stripe test mode."
+      />
+      <div className="mb-4 rounded-[10px] border border-amber/30 bg-amber/10 px-4 py-3 text-xs text-ink/70">
+        <b>TEST MODE:</b> No real charges are processed while Girlz Culture is
+        in pre-launch testing.
+      </div>
+      {scheduledPlan ? (
+        <Panel className="mb-4 border-amber/35 bg-amber/10">
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div>
+              <p className="text-[10px] uppercase text-ink/55">Current plan</p>
+              <p className="mt-1 font-serif text-xl text-plum">{c.plan}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase text-ink/55">
+                Scheduled next plan
+              </p>
+              <p className="mt-1 font-serif text-xl text-plum">
+                {scheduledPlan}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase text-ink/55">
+                Effective date
+              </p>
+              <p className="mt-1 text-xs font-bold">
+                {dateText(scheduledEffective)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase text-ink/55">Charged now</p>
+              <p className="mt-1 font-serif text-xl text-plum">$0.00</p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-ink/65">
+            Your {c.plan} access remains unchanged through this paid period. No
+            refund, account credit, deduction, or negative proration was
+            created.
+          </p>
+          <button
+            disabled={Boolean(busy)}
+            onClick={() =>
+              void action(
+                "/api/stripe/subscription/lifecycle",
+                "cancel-scheduled",
+                { action: "cancel_scheduled_change" },
+              )
+            }
+            className="mt-4 rounded-[8px] border border-magenta px-4 py-2.5 text-xs font-bold text-magenta"
+          >
+            {busy === "cancel-scheduled"
+              ? "Keeping current plan…"
+              : "Cancel scheduled downgrade"}
+          </button>
+        </Panel>
+      ) : null}
+      {cancellationScheduled ? (
+        <Panel className="mb-4 border-magenta/30 bg-blush/35">
+          <h2 className="font-serif text-2xl text-plum">
+            Cancellation scheduled
+          </h2>
+          <p className="mt-2 text-sm text-ink/70">
+            Your current plan and access remain active through{" "}
+            <b>{dateText(paidThrough)}</b>. You will not be charged again.
+          </p>
+          <button
+            disabled={Boolean(busy)}
+            onClick={() =>
+              void action("/api/stripe/subscription/lifecycle", "reactivate", {
+                action: "reactivate",
+              })
+            }
+            className="mt-4 rounded-[8px] bg-magenta px-5 py-3 text-xs font-bold text-white"
+          >
+            {busy === "reactivate"
+              ? "Reactivating…"
+              : "Reactivate subscription"}
+          </button>
+        </Panel>
+      ) : null}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {PLAN_ORDER.map((name) => {
+          const plan = SUBSCRIPTION_PLANS[name];
+          const current = c.plan === name && c.subscriptionActive;
+          const changing = c.subscriptionActive && !current;
+          const upgrading = changing && planRank(name) > planRank(c.plan);
+          const isScheduled = scheduledPlan === name;
+          const label = changing
+            ? upgrading
+              ? `Upgrade to ${name}`
+              : `Schedule ${name}`
+            : `Choose ${name}`;
+          return (
+            <Panel
+              key={name}
+              className={name === "Growth" ? "border-magenta" : ""}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif text-2xl text-plum">{name}</h2>
+                {name === "Growth" ? (
+                  <span className="rounded-full bg-magenta px-2 py-1 text-[8px] font-bold uppercase text-white">
+                    Most Popular
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-3 font-serif text-3xl font-semibold">
+                ${plan.monthlyPrice.toFixed(2)}
+                <span className="font-sans text-[10px] font-normal">
+                  {" "}
+                  / month
+                </span>
+              </p>
+              <p className="mt-2 min-h-10 text-[11px] text-ink/60">
+                {plan.description}
+              </p>
+              <ul className="mt-4 space-y-2 text-[10px]">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2">
+                    <Check
+                      size={13}
+                      className="mt-0.5 shrink-0 text-magenta"
+                      aria-hidden="true"
+                    />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                disabled={
+                  Boolean(busy) ||
+                  current ||
+                  isScheduled ||
+                  cancellationScheduled
+                }
+                onClick={() =>
+                  void action(
+                    changing
+                      ? "/api/stripe/subscription/change"
+                      : "/api/stripe/subscription/checkout",
+                    name,
+                    { plan: name },
+                  )
+                }
+                className={`mt-6 min-h-11 w-full rounded-[8px] text-xs font-bold disabled:opacity-60 ${current ? "border border-green-500 text-green-700" : "bg-magenta text-white"}`}
+              >
+                {current
+                  ? "Current active plan"
+                  : isScheduled
+                    ? "Scheduled next plan"
+                    : busy === name
+                      ? changing
+                        ? upgrading
+                          ? "Collecting prorated invoice…"
+                          : "Scheduling downgrade…"
+                        : "Opening checkout…"
+                      : label}
+              </button>
+              {changing ? (
+                <p className="mt-2 text-[10px] leading-4 text-ink/55">
+                  {upgrading
+                    ? "Activates only after Stripe successfully collects the actual prorated invoice."
+                    : "Takes effect at the next renewal. $0.00 is charged now and current access continues."}
+                </p>
+              ) : null}
+            </Panel>
+          );
+        })}
+      </div>
+      {c.subscription?.stripe_customer_id ? (
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            disabled={Boolean(busy)}
+            onClick={() => void action("/api/stripe/portal", "portal")}
+            className="rounded-[8px] border border-magenta px-5 py-3 text-xs font-bold text-magenta"
+          >
+            {busy === "portal" ? "Opening billing…" : "Manage payment method"}
+          </button>
+          {c.subscriptionActive && !cancellationScheduled ? (
+            <button
+              disabled={Boolean(busy)}
+              onClick={() =>
+                void action("/api/stripe/subscription/lifecycle", "cancel", {
+                  action: "cancel_at_period_end",
+                })
+              }
+              className="rounded-[8px] border border-plum/20 px-5 py-3 text-xs font-bold text-plum"
+            >
+              {busy === "cancel"
+                ? "Scheduling cancellation…"
+                : "Cancel at period end"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      <Panel className="mt-5 overflow-x-auto">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-xl text-plum">
+              Stripe billing history
+            </h2>
+            <p className="mt-1 text-[10px] text-ink/55">
+              Confirmed invoice, renewal, plan-change, refund, and credit events
+              received through the signed Stripe webhook.
+            </p>
+          </div>
+          <span className="text-[9px] font-bold uppercase text-amber">
+            Test mode
+          </span>
+        </div>
+        <table className="mt-4 w-full min-w-[760px] text-left text-[10px]">
+          <thead>
+            <tr>
+              {[
+                "Date",
+                "Event",
+                "Plan",
+                "Collected",
+                "Refunded",
+                "Credited",
+                "Payment",
+                "Stripe reference",
+              ].map((label) => (
+                <th key={label} className="border-b border-plum/10 py-2 pr-3">
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {c.billingEvents.map((event) => (
+              <tr key={event.id} className="border-b border-plum/10">
+                <td className="py-3 pr-3">{dateText(event.event_date)}</td>
+                <td className="pr-3">
+                  <b>{String(event.event_type || "Billing event")}</b>
+                  {event.failure_reason ? (
+                    <span className="block text-red-700">
+                      {String(event.failure_reason)}
+                    </span>
+                  ) : null}
+                </td>
+                <td className="pr-3">
+                  {[event.previous_plan, event.new_plan]
+                    .filter(Boolean)
+                    .join(" → ") || "—"}
+                </td>
+                <td className="pr-3">
+                  ${(Number(event.amount_collected || 0) / 100).toFixed(2)}
+                </td>
+                <td className="pr-3">
+                  ${(Number(event.amount_refunded || 0) / 100).toFixed(2)}
+                </td>
+                <td className="pr-3">
+                  ${(Number(event.amount_credited || 0) / 100).toFixed(2)}
+                </td>
+                <td className="pr-3">
+                  <Status
+                    value={String(event.payment_status || "Not recorded")}
+                  />
+                </td>
+                <td className="max-w-52 break-all pr-3 text-[9px]">
+                  {String(
+                    event.stripe_invoice_id || event.stripe_event_id || "—",
+                  )}
+                </td>
+              </tr>
+            ))}
+            {!c.billingEvents.length ? (
+              <tr>
+                <td colSpan={8}>
+                  <Empty text="No signed Stripe billing events have been received for this salon yet." />
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </Panel>
+    </>
+  );
 }
 
-function MyPage({c}:{c:Ctx}) {
-  const [gallery,setGallery]=useState<string[]>(Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]);
-  const [cover,setCover]=useState(c.salon.cover_photo_url||"");
-  async function submit(e:FormEvent<HTMLFormElement>) {
+function Title({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 className="font-serif text-[36px] font-semibold leading-none tracking-[-.035em] text-plum sm:text-[48px]">
+          {title}
+        </h1>
+        <p className="mt-2 text-sm text-ink/65">{subtitle}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+function Panel({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5 ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+function Metric({
+  label,
+  value,
+  icon: Icon = Eye,
+}: {
+  label: string;
+  value: string | number;
+  trend?: string;
+  icon?: React.ComponentType<{ size?: number }>;
+}) {
+  return (
+    <Panel>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-ink/70">{label}</p>
+          <p className="mt-1 font-serif text-[28px] font-semibold">{value}</p>
+        </div>
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blush text-magenta">
+          <Icon size={22} />
+        </span>
+      </div>
+    </Panel>
+  );
+}
+function MiniLine() {
+  return (
+    <p className="rounded-[8px] border border-dashed border-plum/15 bg-cream/50 p-4 text-center text-[10px] text-ink/50">
+      No historical trend data yet.
+    </p>
+  );
+}
+
+function Overview({ c }: { c: Ctx }) {
+  const completed = c.bookings.filter(
+    (b) => String(b.status).toLowerCase() === "completed",
+  );
+  const revenue = completed.reduce(
+    (sum, b) => sum + Number(b.estimated_total || 0),
+    0,
+  );
+  const [renderedAt] = useState(() => Date.now());
+  const upcoming = c.bookings
+    .filter(
+      (b) =>
+        new Date(String(b.appointment_datetime || 0)).getTime() > renderedAt &&
+        !/cancelled/i.test(String(b.status || "")),
+    )
+    .slice(0, 3);
+  const completion = Math.round(
+    ([
+      c.salon.name,
+      c.salon.description,
+      c.salon.phone,
+      c.salon.address_street,
+      c.salon.cover_photo_url,
+      c.styles.length,
+      c.stylists.length,
+    ].filter(Boolean).length /
+      7) *
+      100,
+  );
+  const salonCancellations = c.bookings.filter(
+    (booking) => booking.cancellation_initiated_by === "Salon",
+  ).length;
+  const cancellationRate = c.bookings.length
+    ? (salonCancellations / c.bookings.length) * 100
+    : 0;
+  const quickActions = (
+    [
+      ["Add Photos", "photos", ImagePlus],
+      ["Availability", "availability", CalendarDays],
+      ["Promotion", "promotions", Megaphone],
+      ["Add Stylist", "stylists", UserPlus],
+      ["Add Product", "products", Package],
+    ] as const
+  ).filter(([, path]) => c.access === null || Boolean(c.access[path]));
+  return (
+    <>
+      <Title
+        title="Salon Owner Dashboard"
+        subtitle="Run your business with confidence."
+      />
+      <SalonOpenStatusControl salon={c.salon} />
+      {cancellationRate > c.cancellationThreshold ? (
+        <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 p-4 text-xs text-red-800">
+          <b>
+            Your salon cancellation rate is above {c.cancellationThreshold}%.
+          </b>
+          <p className="mt-1">
+            Update availability before accepting more bookings to protect your
+            quality standing.
+          </p>
+        </div>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Metric
+          label="Profile Views"
+          value={Number(c.salon.profile_views || 0)}
+        />
+        <Metric
+          label="Total Bookings"
+          value={c.bookings.length}
+          icon={CalendarDays}
+        />
+        <Metric
+          label="New Customers"
+          value={
+            new Set(
+              c.bookings
+                .map((b) => b.customer_id || b.guest_email)
+                .filter(Boolean),
+            ).size
+          }
+          icon={UsersRound}
+        />
+        <Metric
+          label="Completed Booking Value"
+          value={`$${revenue.toLocaleString()}`}
+          icon={CircleDollarSign}
+        />
+        <Metric
+          label="Salon Cancellation Rate"
+          value={`${cancellationRate.toFixed(1)}%`}
+          icon={Clock3}
+        />
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1.5fr_.8fr]">
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Profile Completion</h2>
+          <p className="mt-3 text-sm">
+            Complete your profile to attract more clients and grow your brand.
+          </p>
+          <div className="mt-5 flex items-center gap-3">
+            <div className="h-2 flex-1 rounded-full bg-blush">
+              <div
+                className="h-full rounded-full bg-magenta"
+                style={{ width: `${completion}%` }}
+              />
+            </div>
+            <b>{completion}%</b>
+          </div>
+          <Link
+            href="/salon/dashboard/my-page"
+            className="mt-6 inline-flex text-xs font-bold text-magenta"
+          >
+            Finish setup
+          </Link>
+        </Panel>
+        <Panel>
+          <div className="flex justify-between">
+            <h2 className="font-serif text-xl text-plum">
+              Upcoming Appointments
+            </h2>
+            <Link
+              href="/salon/dashboard/bookings"
+              className="text-xs text-magenta"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="mt-3 divide-y divide-plum/10">
+            {upcoming.map((booking, index) => (
+              <Link
+                href={`/salon/dashboard/bookings?booking=${booking.id}`}
+                key={booking.id || index}
+                className="grid grid-cols-[85px_1fr_auto] gap-3 py-3 text-xs"
+              >
+                <span>
+                  {dateText(booking.appointment_datetime, c.salon.time_zone)}
+                </span>
+                <span>
+                  <b>{styleName(c, booking.style_id)}</b>
+                  <br />
+                  <span className="text-ink/55">
+                    {stylistName(c, booking.stylist_id)}
+                  </span>
+                </span>
+                <Status value={String(booking.status || "Confirmed")} />
+              </Link>
+            ))}
+            {!upcoming.length ? (
+              <Empty text="No upcoming appointments." />
+            ) : null}
+          </div>
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Recent Reviews</h2>
+          {c.reviews.slice(0, 2).map((review, index) => (
+            <div
+              key={review.id || index}
+              className="mt-3 border-t border-plum/10 pt-3 text-xs"
+            >
+              <Stars value={Number(review.rating_overall || 0)} />
+              {review.written_review ? (
+                <p className="mt-2 line-clamp-3">
+                  {String(review.written_review)}
+                </p>
+              ) : null}
+            </div>
+          ))}
+          {!c.reviews.length ? (
+            <Empty text="Reviews will appear after completed bookings." />
+          ) : null}
+        </Panel>
+      </div>
+      <div
+        className={`mt-4 grid gap-4 ${c.isOwner ? "lg:grid-cols-[.7fr_1.3fr]" : ""}`}
+      >
+        {c.isOwner ? (
+          <Panel>
+            <div className="flex items-center gap-3">
+              <Crown className="text-magenta" />
+              <div>
+                <p className="text-xs">Subscription</p>
+                <h2 className="font-serif text-xl text-plum">
+                  {String(
+                    c.subscription?.subscription_tier ||
+                      c.subscription?.tier ||
+                      c.salon.subscription_tier ||
+                      "No",
+                  )}{" "}
+                  Plan
+                </h2>
+              </div>
+            </div>
+            <Link
+              href="/salon/dashboard/subscription"
+              className="mt-4 inline-flex text-xs font-bold text-magenta"
+            >
+              Manage subscription
+            </Link>
+          </Panel>
+        ) : null}
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Quick Actions</h2>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {quickActions.map(([label, path, Icon]) => (
+              <Link
+                key={path}
+                href={`/salon/dashboard/${path}`}
+                className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-[10px] border border-plum/10 bg-cream/40 text-center text-[10px] font-semibold text-ink"
+              >
+                <Icon size={25} className="text-magenta" />
+                {label}
+              </Link>
+            ))}
+            {!quickActions.length ? (
+              <p className="col-span-full text-xs text-ink/55">
+                No quick actions are assigned to this role.
+              </p>
+            ) : null}
+          </div>
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function MyPage({ c }: { c: Ctx }) {
+  const [gallery, setGallery] = useState<string[]>(
+    Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : [],
+  );
+  const [cover, setCover] = useState(c.salon.cover_photo_url || "");
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f=new FormData(e.currentTarget);
-    const zip=String(f.get("address_zip")||"");
-    if(!isValidUsZip(zip)){c.setNotice("Enter a valid ZIP code (12345 or 12345-6789).");return;}
-    let state:string;
-    try{state=normalizeUsState(f.get("address_state"));}catch(error){c.setNotice(error instanceof Error?error.message:"Choose a valid US state.");return;}
+    const f = new FormData(e.currentTarget);
+    const zip = String(f.get("address_zip") || "");
+    if (!isValidUsZip(zip)) {
+      c.setNotice("Enter a valid ZIP code (12345 or 12345-6789).");
+      return;
+    }
+    let state: string;
+    try {
+      state = normalizeUsState(f.get("address_state"));
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error ? error.message : "Choose a valid US state.",
+      );
+      return;
+    }
     await c.updateSalon({
-      name:f.get("name"),description:f.get("description"),address_street:f.get("address_street"),address_line2:f.get("address_line2")||null,address_city:f.get("address_city"),address_state:state,address_zip:normalizeUsZip(zip),phone:f.get("phone"),email:f.get("email"),
-      languages:String(f.get("languages")||"").split(",").map(x=>x.trim()).filter(Boolean).slice(0,5),
-      trust_info:Object.fromEntries(["licensed_professionals","clean_safe","women_owned","appointment_only"].map(k=>[k,f.get(k)==="on"])),media_consent:f.get("consent")==="on",cover_photo_url:cover,gallery_photos:gallery,
+      name: f.get("name"),
+      description: f.get("description"),
+      address_street: f.get("address_street"),
+      address_line2: f.get("address_line2") || null,
+      address_city: f.get("address_city"),
+      address_state: state,
+      address_zip: normalizeUsZip(zip),
+      phone: f.get("phone"),
+      email: f.get("email"),
+      languages: String(f.get("languages") || "")
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .slice(0, 5),
+      trust_info: Object.fromEntries(
+        [
+          "licensed_professionals",
+          "clean_safe",
+          "women_owned",
+          "appointment_only",
+        ].map((k) => [k, f.get(k) === "on"]),
+      ),
+      media_consent: f.get("consent") === "on",
+      cover_photo_url: cover,
+      gallery_photos: gallery,
     });
   }
-  const addressWarning = c.salon.address_needs_review || c.salon.geocode_status === "needs_review";
-  return <>
-    <Title title="My Page" subtitle="Update your salon information. This information appears on your public salon page." action={<div className="flex gap-2"><Link href={`/salon/${c.salon.slug}`} className="rounded-[8px] border border-magenta px-4 py-3 text-xs font-bold text-magenta">Preview your public page</Link><button form="my-page-form" className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white">Save changes</button></div>}/>
-    {addressWarning?<div role="alert" className="mb-4 rounded-[12px] border border-amber/50 bg-[#fff8e8] p-4 text-sm text-ink"><b className="font-serif text-lg text-plum">Address needs review</b><p className="mt-1 leading-6">Check the complete street address, city, state, and ZIP below, then save again. Your salon stays out of nearby results until its map location is verified.</p></div>:null}
-    <form id="my-page-form" onSubmit={submit} className="grid gap-4 xl:grid-cols-2">
-      <Panel><h2 className="font-serif text-xl text-plum">Business Information</h2><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Business Name" name="name" defaultValue={c.salon.name} required wide/><TextArea label="About / Description" name="description" defaultValue={c.salon.description} wide/><Field label="Address Line 1" name="address_street" defaultValue={c.salon.address_street} required/><Field label="Address Line 2" name="address_line2" defaultValue={c.salon.address_line2}/><Field label="City" name="address_city" defaultValue={c.salon.address_city} required/><label className="block"><span className="mb-1.5 block text-[10px] font-bold">State <span className="text-magenta">*</span></span><select name="address_state" required defaultValue={c.salon.address_state||"NY"} className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta">{US_STATES.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label><Field label="ZIP Code" name="address_zip" defaultValue={c.salon.address_zip} required/><Field label="Phone" name="phone" defaultValue={c.salon.phone}/><Field label="Email" name="email" defaultValue={c.salon.email} type="email"/><Field label="Languages Spoken" name="languages" defaultValue={(c.salon.languages||[]).join(", ")} wide/><div className="sm:col-span-2"><p className="mb-2 text-xs font-bold">Trust Info</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[["licensed_professionals","Licensed Professionals"],["clean_safe","Clean & Safe Studio"],["women_owned","Women-Owned"],["appointment_only","By Appointment Only"]].map(([key,label])=><label key={key} className="flex min-h-20 flex-col justify-between rounded-[9px] border border-plum/10 p-3 text-[10px] font-semibold"><span>{label}</span><input name={key} type="checkbox" defaultChecked={c.salon.trust_info?.[key]} className="accent-magenta"/></label>)}</div></div></div></Panel>
-      <Panel><h2 className="font-serif text-xl text-plum">Photos / Media</h2><div className="mt-4"><ImageUpload bucket="salon-photos" folder={`salons/${c.salon.id}`} label="Cover Photo (Required)" value={cover} onChange={v=>setCover(typeof v==="string"?v:"")} helperText="This is the main image at the top of your public page."/></div><div className="mt-5"><ImageUpload bucket="salon-photos" multiple maxFiles={12} folder={`salons/${c.salon.id}/gallery`} label="Gallery" value={gallery} onChange={v=>setGallery(Array.isArray(v)?v:[])} helperText="Showcase your work and your space."/></div><label className="mt-5 flex gap-3 text-xs font-semibold"><input name="consent" required type="checkbox" defaultChecked={Boolean(c.salon.media_consent)} className="accent-magenta"/>I confirm I have permission to use these images and the right to display them.</label></Panel>
-    </form>
-  </>;
+  const addressWarning =
+    c.salon.address_needs_review || c.salon.geocode_status === "needs_review";
+  return (
+    <>
+      <Title
+        title="My Page"
+        subtitle="Update your salon information. This information appears on your public salon page."
+        action={
+          <div className="flex gap-2">
+            <Link
+              href={`/salon/${c.salon.slug}`}
+              className="rounded-[8px] border border-magenta px-4 py-3 text-xs font-bold text-magenta"
+            >
+              Preview your public page
+            </Link>
+            <button
+              form="my-page-form"
+              className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
+            >
+              Save changes
+            </button>
+          </div>
+        }
+      />
+      {addressWarning ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-[12px] border border-amber/50 bg-[#fff8e8] p-4 text-sm text-ink"
+        >
+          <b className="font-serif text-lg text-plum">Address needs review</b>
+          <p className="mt-1 leading-6">
+            Check the complete street address, city, state, and ZIP below, then
+            save again. Your salon stays out of nearby results until its map
+            location is verified.
+          </p>
+        </div>
+      ) : null}
+      <form
+        id="my-page-form"
+        onSubmit={submit}
+        className="grid gap-4 xl:grid-cols-2"
+      >
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Business Information</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Business Name"
+              name="name"
+              defaultValue={c.salon.name}
+              required
+              wide
+            />
+            <TextArea
+              label="About / Description"
+              name="description"
+              defaultValue={c.salon.description}
+              wide
+            />
+            <Field
+              label="Address Line 1"
+              name="address_street"
+              defaultValue={c.salon.address_street}
+              required
+            />
+            <Field
+              label="Address Line 2"
+              name="address_line2"
+              defaultValue={c.salon.address_line2}
+            />
+            <Field
+              label="City"
+              name="address_city"
+              defaultValue={c.salon.address_city}
+              required
+            />
+            <label className="block">
+              <span className="mb-1.5 block text-[10px] font-bold">
+                State <span className="text-magenta">*</span>
+              </span>
+              <select
+                name="address_state"
+                required
+                defaultValue={c.salon.address_state || "NY"}
+                className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta"
+              >
+                {US_STATES.map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Field
+              label="ZIP Code"
+              name="address_zip"
+              defaultValue={c.salon.address_zip}
+              required
+            />
+            <Field label="Phone" name="phone" defaultValue={c.salon.phone} />
+            <Field
+              label="Email"
+              name="email"
+              defaultValue={c.salon.email}
+              type="email"
+            />
+            <Field
+              label="Languages Spoken"
+              name="languages"
+              defaultValue={(c.salon.languages || []).join(", ")}
+              wide
+            />
+            <div className="sm:col-span-2">
+              <p className="mb-2 text-xs font-bold">Trust Info</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  ["licensed_professionals", "Licensed Professionals"],
+                  ["clean_safe", "Clean & Safe Studio"],
+                  ["women_owned", "Women-Owned"],
+                  ["appointment_only", "By Appointment Only"],
+                ].map(([key, label]) => (
+                  <label
+                    key={key}
+                    className="flex min-h-20 flex-col justify-between rounded-[9px] border border-plum/10 p-3 text-[10px] font-semibold"
+                  >
+                    <span>{label}</span>
+                    <input
+                      name={key}
+                      type="checkbox"
+                      defaultChecked={c.salon.trust_info?.[key]}
+                      className="accent-magenta"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Photos / Media</h2>
+          <div className="mt-4">
+            <ImageUpload
+              bucket="salon-photos"
+              folder={`salons/${c.salon.id}`}
+              label="Cover Photo (Required)"
+              value={cover}
+              onChange={(v) => setCover(typeof v === "string" ? v : "")}
+              helperText="This is the main image at the top of your public page."
+            />
+          </div>
+          <div className="mt-5">
+            <ImageUpload
+              bucket="salon-photos"
+              multiple
+              maxFiles={12}
+              folder={`salons/${c.salon.id}/gallery`}
+              label="Gallery"
+              value={gallery}
+              onChange={(v) => setGallery(Array.isArray(v) ? v : [])}
+              helperText="Showcase your work and your space."
+            />
+          </div>
+          <label className="mt-5 flex gap-3 text-xs font-semibold">
+            <input
+              name="consent"
+              required
+              type="checkbox"
+              defaultChecked={Boolean(c.salon.media_consent)}
+              className="accent-magenta"
+            />
+            I confirm I have permission to use these images and the right to
+            display them.
+          </label>
+        </Panel>
+      </form>
+    </>
+  );
 }
 
-function SalonLogoEditor({c}:{c:Ctx}) {
-  const [logo,setLogo]=useState(String(c.salon.logo_url||""));
-  return <Panel className="mt-4"><div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end"><div><h2 className="font-serif text-xl text-plum">Salon Logo</h2><p className="mt-1 text-xs text-ink/55">This is the business mark shown in your owner dashboard and public salon profile.</p><div className="mt-4 max-w-xl"><ImageUpload bucket="salon-photos" folder={`salons/${c.salon.id}/logo`} label="Salon logo" value={logo} onChange={(value)=>setLogo(typeof value==="string"?value:"")} /></div></div><button type="button" onClick={()=>void c.updateSalon({logo_url:logo||null})} className="min-h-11 rounded-[8px] bg-magenta px-6 text-xs font-bold text-white">Save Logo</button></div></Panel>;
-}
-
-function Photos({c}:{c:Ctx}){const [cover,setCover]=useState(c.salon.cover_photo_url||"");const [gallery,setGallery]=useState<string[]>(Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]);return <><Title title="Photos" subtitle="Manage the media that tells your salon’s story." action={<button onClick={()=>c.updateSalon({cover_photo_url:cover,gallery_photos:gallery,media_consent:true})} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white">Save media</button>}/><div className="grid gap-4 xl:grid-cols-[.7fr_1.3fr]"><Panel><ImageUpload bucket="salon-photos" folder={`salons/${c.salon.id}`} label="Cover Photo" value={cover} onChange={v=>setCover(typeof v==="string"?v:"")} helperText="JPG or PNG, maximum 2MB after optimization."/></Panel><Panel><ImageUpload bucket="salon-photos" multiple maxFiles={16} folder={`salons/${c.salon.id}/gallery`} label="Media Library" value={gallery} onChange={v=>setGallery(Array.isArray(v)?v:[])} helperText="Upload, remove, and reorder salon work photos."/><label className="mt-5 flex gap-3 text-xs font-semibold"><input type="checkbox" defaultChecked className="accent-magenta"/>I confirm I have permission to use these images and the right to display them.</label></Panel></div></>}
-
-function Styles({c}:{c:Ctx}){const active=c.styles.find(s=>s.id===c.selectedStyle)||null;async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const priced=(key:string)=>String(f.get(key)||"").split("\n").map(line=>{const [label,price_add]=line.split("|");return {label:label?.trim(),price_add:Number(price_add||0)}}).filter(x=>x.label);const saved=await c.saveRecord("styles",{name:f.get("name"),category:f.get("category"),description:f.get("description"),duration_min_hours:Number(f.get("duration_min")),duration_max_hours:Number(f.get("duration_max")),base_price:Number(f.get("base_price")),price_display_min:Number(f.get("base_price")),price_display_max:Number(f.get("max_price")||f.get("base_price")),size_options:priced("sizes"),length_options:priced("lengths"),addons:priced("addons"),included_items:String(f.get("included")||"").split(",").map(x=>x.trim()).filter(Boolean)},active?.id);if(saved){const materials=String(f.get("materials")||"").split("\n").map(line=>{const [name,price,longevity,quality_note]=line.split("|");return {style_id:saved.id,name:name?.trim(),price:Number(price||0),longevity:longevity?.trim(),quality_note:quality_note?.trim()}}).filter(x=>x.name);if(saved.id){await supabase.from("style_materials").delete().eq("style_id",saved.id);if(materials.length)await supabase.from("style_materials").insert(materials)}c.setStyles(rows=>active?rows.map(r=>r.id===active.id?saved:r):[saved,...rows]);c.setSelectedStyle(saved.id||null)}}return <><Title title="Styles & Pricing" subtitle="Manage your signature styles, pricing, options, and inclusions." action={<button onClick={()=>c.setSelectedStyle(null)} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16}/>Add Style</button>}/><div className="grid gap-4 xl:grid-cols-[.72fr_1.28fr]"><Panel><h2 className="font-serif text-xl text-plum">Your Styles</h2><div className="mt-3 space-y-2">{c.styles.map((style,i)=>{const min=Number(style.duration_min_hours||0);const max=Number(style.duration_max_hours||0);const duration=min&&max?`${min}–${max} hrs`:"Duration not set";return <button key={style.id} onClick={()=>c.setSelectedStyle(style.id||null)} className={`grid w-full grid-cols-[64px_1fr_auto] gap-3 rounded-[10px] border p-2 text-left ${c.selectedStyle===style.id?"border-magenta bg-blush/30":"border-plum/10"}`}><SafeImage src={(style.photos as string[])?.[0]} fallbackSrc={fallbackPhotos[i%fallbackPhotos.length]} alt={style.name||"Style"} className="h-16 w-16 rounded-[8px] object-cover"/><span><b className="font-serif text-base">{style.name}</b><span className="mt-1 block text-[10px] text-ink/55">{String(style.category||"Uncategorized")} • {duration}</span></span><span className="text-right text-[10px]">From<br/><b className="text-sm">${Number(style.price_display_min||style.base_price||0)}</b></span></button>})}{!c.styles.length?<Empty text="Add your first service."/>:null}</div></Panel><Panel><h2 className="font-serif text-xl text-plum">{active?"Edit Style":"Add Style"}</h2><form key={active?.id||"new"} onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Style Name" name="name" defaultValue={active?.name} required/><Field label="Category" name="category" defaultValue={active?.category||""}/><TextArea label="Description" name="description" defaultValue={active?.description} wide/><Field label="Duration Min (hrs)" name="duration_min" type="number" defaultValue={active?.duration_min_hours??""}/><Field label="Duration Max (hrs)" name="duration_max" type="number" defaultValue={active?.duration_max_hours??""}/><Field label="Base Price" name="base_price" type="number" defaultValue={active?.base_price??""}/><Field label="Maximum Price" name="max_price" type="number" defaultValue={active?.price_display_max??active?.base_price??""}/><TextArea label="Size Options — one per line: Name|Price Add" name="sizes" defaultValue={optionText(active?.size_options)} /><TextArea label="Length Options — one per line: Name|Price Add" name="lengths" defaultValue={optionText(active?.length_options)}/><TextArea label="Add-ons — one per line: Name|Price" name="addons" defaultValue={optionText(active?.addons)}/><TextArea label="Hair / Material — Name|Price|Longevity|Quality" name="materials" defaultValue=""/><TextArea label="What’s Included — comma separated" name="included" defaultValue={Array.isArray(active?.included_items)?(active?.included_items as string[]).join(", "):""} wide/><button className="sm:col-span-2 min-h-11 rounded-[8px] bg-magenta text-xs font-bold text-white">Save Changes</button></form></Panel></div></>}
-
-function Stylists({c}:{c:Ctx}){const active=c.stylists.find(s=>s.id===c.selectedStylist)||null;const [avatar,setAvatar]=useState(String(active?.avatar_url||""));const [portfolio,setPortfolio]=useState<string[]>(Array.isArray(active?.photos)?active?.photos as string[]:[]);async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const saved=await c.saveRecord("stylists",{name:f.get("name"),bio:f.get("bio"),specialties:String(f.get("specialties")||"").split(",").map(x=>x.trim()).filter(Boolean),years_experience:f.get("years")===""?null:Number(f.get("years")),avatar_url:avatar,photos:portfolio,is_active:true},active?.id);if(saved){c.setStylists(rows=>active?rows.map(r=>r.id===active.id?saved:r):[saved,...rows]);c.setSelectedStylist(saved.id||null)}}return <><Title title="Stylists" subtitle="Manage your talented team and their expertise." action={<button onClick={()=>{c.setSelectedStylist(null);setAvatar("");setPortfolio([])}} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16}/>Add Stylist</button>}/><div className="flex gap-3 overflow-x-auto pb-3">{c.stylists.map((stylist,i)=>{const rating=Number(stylist.rating||0);return <button key={stylist.id} onClick={()=>{c.setSelectedStylist(stylist.id||null);setAvatar(String(stylist.avatar_url||""));setPortfolio(Array.isArray(stylist.photos)?stylist.photos as string[]:[])}} className={`min-w-[170px] rounded-[11px] border p-3 text-left ${active?.id===stylist.id?"border-magenta bg-blush/30":"border-plum/10 bg-white"}`}><SafeImage src={stylist.avatar_url as string} fallbackSrc={fallbackPhotos[i%fallbackPhotos.length]} alt={stylist.name||"Stylist"} className="h-16 w-16 rounded-full object-cover"/><p className="mt-2 font-serif text-lg">{stylist.name}</p>{rating>0?<Stars value={rating}/>:<p className="mt-1 text-[10px] text-ink/55">New</p>}<p className="mt-1 text-[10px] text-ink/55">{Number(stylist.years_experience||0)>0?`${Number(stylist.years_experience)} years experience`:"Experience not added"}</p></button>})}</div><Panel><h2 className="font-serif text-xl text-plum">{active?"Edit Stylist":"Add Stylist"}</h2><form key={active?.id||"new"} onSubmit={submit} className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1fr_1.3fr]"><div><ImageUpload bucket="stylist-photos" folder={`stylists/${active?.id||"new"}`} label="Profile Photo" value={avatar} onChange={v=>setAvatar(typeof v==="string"?v:"")}/></div><div className="space-y-4"><Field label="Name" name="name" defaultValue={active?.name} required/><TextArea label="Bio / Description" name="bio" defaultValue={active?.bio}/><Field label="Specialties (comma separated)" name="specialties" defaultValue={Array.isArray(active?.specialties)?(active?.specialties as string[]).join(", "):""}/><Field label="Years of Experience" name="years" type="number" defaultValue={active?.years_experience??""}/><button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save Changes</button></div><ImageUpload bucket="stylist-photos" multiple maxFiles={10} folder={`stylists/${active?.id||"new"}/portfolio`} label="Work Portfolio" value={portfolio} onChange={v=>setPortfolio(Array.isArray(v)?v:[])}/></form></Panel></>}
-
-function TruthfulProducts({c}:{c:Ctx}) {
-  const active=c.products.find((product)=>product.id===c.selectedProduct)||null;
-  const [photo,setPhoto]=useState(String(active?.photo_url||""));
-  async function submit(event:FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form=new FormData(event.currentTarget);
-    const saved=await c.saveRecord("salon_products",{name:form.get("name"),description:form.get("description"),price:Number(form.get("price")),photo_url:photo||null,is_visible:form.get("visible")==="on",in_person_only:true},active?.id);
-    if(saved){c.setProducts((rows)=>active?rows.map((row)=>row.id===active.id?saved:row):[saved,...rows]);c.setSelectedProduct(saved.id||null)}
-  }
-  return <>
-    <Title title="Products" subtitle="Advertise products for in-person purchase at your salon." action={<button onClick={()=>{c.setSelectedProduct(null);setPhoto("")}} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16}/>Add Product</button>}/>
-    <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900"><Info size={16} className="shrink-0" aria-hidden="true"/><span>These products are advertised for in-person purchase only and appear on your salon’s public page. No online checkout.</span></div>
-    <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{c.products.map((product)=><button key={product.id} onClick={()=>{c.setSelectedProduct(product.id||null);setPhoto(String(product.photo_url||""))}} className="overflow-hidden rounded-[10px] border border-plum/10 bg-white text-left"><div className="grid aspect-[4/3] w-full place-items-center bg-blush/35 text-plum/30">{product.photo_url?<SafeImage src={String(product.photo_url)} fallbackSrc={String(product.photo_url)} alt={product.name||"Product"} className="h-full w-full object-cover"/>:<ImageOff size={30} strokeWidth={1.2} aria-label="No product photo uploaded"/>}</div><div className="p-2.5"><b className="line-clamp-1 text-xs">{product.name}</b><p className="mt-1 line-clamp-1 text-[9px] text-ink/60">{String(product.description||"")}</p><p className="mt-2 text-sm font-semibold">${Number(product.price||0).toFixed(2)}</p></div></button>)}{!c.products.length?<Empty text="Add products sold at your salon."/>:null}</div>
-      <Panel><h2 className="font-serif text-xl text-plum">Add / Edit Product</h2><form key={active?.id||"new"} onSubmit={submit} className="mt-4 space-y-4"><ImageUpload bucket="salon-photos" folder={`salons/${c.salon.id}/products`} label="Product Photo" value={photo} onChange={value=>setPhoto(typeof value==="string"?value:"")}/><Field label="Name" name="name" defaultValue={active?.name}/><TextArea label="Description" name="description" defaultValue={active?.description}/><Field label="Price (USD)" name="price" type="number" defaultValue={active?.price??""}/><label className="flex items-center gap-2 text-xs"><input type="checkbox" name="visible" defaultChecked={active?.is_visible!==false} className="accent-magenta"/>Visible on Public Page</label><button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save Product</button></form></Panel>
-    </div>
-  </>;
-}
-
-function Availability({c}:{c:Ctx}) {
-  const hours=c.salon.hours||{};
-  const settings=c.salon.booking_settings||{};
-  const timeZone=c.salon.time_zone||"America/New_York";
-  const week=salonWeek(timeZone);
-  const activeBookings=c.bookings.filter((booking)=>!["cancelled","declined","refunded"].includes(String(booking.status||"").toLowerCase()));
-  const [stylistId,setStylistId]=useState(c.stylists[0]?.id||"");
-  const [until,setUntil]=useState("17:00");
-  const [busy,setBusy]=useState("");
-  const [renderedAt]=useState(()=>Date.now());
-  const activeStylist=c.stylists.find((stylist)=>stylist.id===stylistId)||null;
-  const activeBlockouts=c.blockouts.filter((blockout)=>new Date(String(blockout.ends_at||0)).getTime()>renderedAt);
-
-  async function saveHours(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await c.updateSalon({hours:Object.fromEntries(days.map(day=>[day,{open:String(f.get(`${day}_open`)||"09:00"),close:String(f.get(`${day}_close`)||"17:00"),closed:f.get(`${day}_closed`)==="on"}]))})}
-  async function saveBookingSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await c.updateSalon({booking_settings:{...settings,slot_minutes:Number(f.get("slot")),buffer_minutes:Number(f.get("buffer")),any_available_stylist:true}})}
-  async function saveStylistSchedule(e:FormEvent<HTMLFormElement>){
-    e.preventDefault();
-    if(!activeStylist?.id)return;
-    const form=new FormData(e.currentTarget);
-    const availability=Object.fromEntries(days.map(day=>{const working=form.get(`${day}_working`)==="on";return [day,{open:String(form.get(`${day}_open`)||"09:00"),close:String(form.get(`${day}_close`)||"17:00"),closed:!working}]}));
-    const data=await c.saveRecord("stylists",{availability},activeStylist.id);
-    if(!data)return;
-    c.setStylists((rows)=>rows.map((row)=>row.id===activeStylist.id?data:row));
-    c.setNotice(`${activeStylist.name||"Stylist"} availability saved.`);
-  }
-  async function block(mode:string,targetStylistId?:string){
-    setBusy(`${mode}:${targetStylistId||"salon"}`);
-    try{
-      const session=await getSessionForScope("salon");
-      if(!session)throw new Error("Please sign in again.");
-      const response=await fetch("/api/salon/availability/block",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({mode,stylist_id:targetStylistId||null,until})});
-      const body=await response.json();
-      if(!response.ok)throw new Error(body.error||"Unable to block availability.");
-      c.setBlockouts((rows)=>[body.blockout as Row,...rows]);
-      c.setNotice("Availability blocked immediately. Customers can no longer book that window.");
-    }catch(error){c.setNotice(error instanceof Error?error.message:"Unable to block availability.");}finally{setBusy("");}
-  }
-  async function unblock(id:string){
-    setBusy(`delete:${id}`);
-    try{
-      const session=await getSessionForScope("salon");
-      if(!session)throw new Error("Please sign in again.");
-      const response=await fetch(`/api/salon/availability/block?id=${encodeURIComponent(id)}`,{method:"DELETE",headers:{Authorization:`Bearer ${session.access_token}`}});
-      const body=await response.json();
-      if(!response.ok)throw new Error(body.error||"Unable to restore availability.");
-      c.setBlockouts((rows)=>rows.filter((row)=>row.id!==id));
-      c.setNotice("Availability restored.");
-    }catch(error){c.setNotice(error instanceof Error?error.message:"Unable to restore availability.");}finally{setBusy("");}
-  }
-
-  return <>
-    <Title title="Availability & Calendar" subtitle={`Appointments are shown in ${timeZone.replaceAll("_"," ")}.`}/>
-    <Panel className="mb-4 border-magenta/20 bg-blush/25"><div className="flex flex-col gap-4 lg:flex-row lg:items-end"><div className="flex-1"><h2 className="font-serif text-xl text-plum">Salon is full right now</h2><p className="mt-1 text-xs text-ink/60">Stop all new bookings immediately when walk-ins fill every chair.</p></div><button disabled={Boolean(busy)} onClick={()=>void block("salon_today")} className="min-h-11 rounded-[8px] bg-plum px-5 text-xs font-bold text-white disabled:opacity-60">Mark salon full today</button><label className="text-[10px] font-bold">Booked until<div className="mt-1 flex"><input type="time" value={until} onChange={(event)=>setUntil(event.target.value)} className="min-h-11 rounded-l-[8px] border border-plum/15 px-3"/><button disabled={Boolean(busy)} onClick={()=>void block("salon_until")} className="rounded-r-[8px] bg-magenta px-4 text-white disabled:opacity-60">Block</button></div></label></div></Panel>
-    <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-      <Panel className="overflow-x-auto"><div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">{week.map((date)=><section key={date.key} className="min-h-[430px] border-r border-plum/10 bg-cream/20 last:border-r-0"><header className="border-b border-plum/10 bg-white/80 px-2 py-3 text-center"><b className="block text-[10px] uppercase tracking-wide text-plum">{date.label}</b><span className="mt-1 block font-serif text-lg">{date.day}</span></header><div className="space-y-2 p-2">{activeBookings.filter((booking)=>dateKeyInTimeZone(String(booking.appointment_datetime||""),timeZone)===date.key).sort((a,b)=>String(a.appointment_datetime).localeCompare(String(b.appointment_datetime))).map((booking,index)=><article key={booking.id||index} className="rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-[9px] leading-4"><b className="block text-plum">{bookingTime(booking.appointment_datetime,timeZone)}</b><span className="font-semibold">{styleName(c,booking.style_id)}</span><span className="block text-ink/60">{stylistName(c,booking.stylist_id)}</span></article>)}{!activeBookings.some((booking)=>dateKeyInTimeZone(String(booking.appointment_datetime||""),timeZone)===date.key)?<p className="py-5 text-center text-[9px] text-ink/35">No appointments</p>:null}</div></section>)}</div></Panel>
-      <div className="space-y-4">
-        <Panel><h2 className="font-serif text-xl text-plum">Store Hours</h2><p className="mt-1 text-[10px] text-ink/55">Choose times in 15-minute increments. No typed time values are accepted.</p><form onSubmit={saveHours} className="mt-3 space-y-2">{days.map(day=>{const value=hours[day] as Row|undefined;const legacyClosed=typeof hours[day]==="string"&&String(hours[day]).toLowerCase()==="closed";const closed=value?.closed===true||legacyClosed;return <div key={day} className="grid grid-cols-[32px_1fr_1fr] gap-2 rounded-[8px] border border-plum/10 p-2 text-[10px]"><b>{day}</b><select aria-label={`${day} opening time`} name={`${day}_open`} defaultValue={String(value?.open||"09:00")} className="min-w-0 rounded-[6px] border border-plum/10 bg-white px-1">{STORE_TIME_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select><select aria-label={`${day} closing time`} name={`${day}_close`} defaultValue={String(value?.close||"17:00")} className="min-w-0 rounded-[6px] border border-plum/10 bg-white px-1">{STORE_TIME_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select><label className="col-span-3 flex items-center justify-end gap-2"><input name={`${day}_closed`} type="checkbox" defaultChecked={closed} className="accent-magenta"/>Closed</label></div>})}<button className="min-h-10 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save hours</button></form></Panel>
-        <Panel><h2 className="font-serif text-xl text-plum">Bookable Time Slots</h2><form onSubmit={saveBookingSettings} className="mt-3 grid grid-cols-2 gap-2"><label className="text-[10px] font-bold">Slot interval<select name="slot" defaultValue={Number(settings.slot_minutes||30)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-2"><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option></select></label><label className="text-[10px] font-bold">Default buffer<select name="buffer" defaultValue={Number(settings.buffer_minutes||15)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-2"><option value="0">No buffer</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select></label><button className="col-span-2 min-h-10 rounded-[8px] border border-magenta text-xs font-bold text-magenta">Save booking settings</button></form></Panel>
+function SalonLogoEditor({ c }: { c: Ctx }) {
+  const [logo, setLogo] = useState(String(c.salon.logo_url || ""));
+  return (
+    <Panel className="mt-4">
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div>
+          <h2 className="font-serif text-xl text-plum">Salon Logo</h2>
+          <p className="mt-1 text-xs text-ink/55">
+            This is the business mark shown in your owner dashboard and public
+            salon profile.
+          </p>
+          <div className="mt-4 max-w-xl">
+            <ImageUpload
+              bucket="salon-photos"
+              folder={`salons/${c.salon.id}/logo`}
+              label="Salon logo"
+              value={logo}
+              onChange={(value) =>
+                setLogo(typeof value === "string" ? value : "")
+              }
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void c.updateSalon({ logo_url: logo || null })}
+          className="min-h-11 rounded-[8px] bg-magenta px-6 text-xs font-bold text-white"
+        >
+          Save Logo
+        </button>
       </div>
-    </div>
-    <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-      <Panel><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-serif text-xl text-plum">Per-Stylist Availability</h2><p className="mt-1 text-xs text-ink/55">A stylist only appears for customers inside these working hours.</p></div>{c.stylists.length?<select value={stylistId} onChange={(event)=>setStylistId(event.target.value)} className="min-h-10 rounded-[8px] border border-plum/15 px-3 text-xs">{c.stylists.map((stylist)=><option key={stylist.id} value={stylist.id}>{stylist.name}</option>)}</select>:null}</div>
-        {activeStylist?<><div className="mt-4 grid gap-2 sm:grid-cols-3"><button disabled={Boolean(busy)} onClick={()=>void block("stylist_three_hours",activeStylist.id)} className="min-h-11 rounded-[8px] bg-plum px-3 text-xs font-bold text-white disabled:opacity-60">Block next 3 hours</button><button disabled={Boolean(busy)} onClick={()=>void block("stylist_today",activeStylist.id)} className="min-h-11 rounded-[8px] bg-magenta px-3 text-xs font-bold text-white disabled:opacity-60">Unavailable today</button><div className="flex"><input type="time" value={until} onChange={(event)=>setUntil(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-l-[8px] border border-plum/15 px-2"/><button disabled={Boolean(busy)} onClick={()=>void block("stylist_until",activeStylist.id)} className="rounded-r-[8px] border border-magenta px-3 text-[10px] font-bold text-magenta disabled:opacity-60">Until</button></div></div><form key={activeStylist.id} onSubmit={saveStylistSchedule} className="mt-5 space-y-2">{days.map((day)=>{const schedule=(activeStylist.availability as Record<string,Row>|undefined)?.[day];const working=schedule?.closed!==true&&Boolean(schedule?.open&&schedule?.close);return <div key={day} className="grid grid-cols-[42px_22px_1fr_1fr] items-center gap-2 rounded-[8px] border border-plum/10 p-2 text-xs"><b>{day}</b><input type="checkbox" name={`${day}_working`} defaultChecked={working} className="accent-magenta"/><input aria-label={`${day} opening time`} type="time" name={`${day}_open`} defaultValue={String(schedule?.open||"09:00")} className="min-w-0 rounded-[6px] border border-plum/10 p-2"/><input aria-label={`${day} closing time`} type="time" name={`${day}_close`} defaultValue={String(schedule?.close||"17:00")} className="min-w-0 rounded-[6px] border border-plum/10 p-2"/></div>})}<button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save {activeStylist.name||"stylist"} schedule</button></form></>:<div className="mt-4 rounded-[10px] border border-amber/30 bg-amber/10 p-5"><h3 className="font-serif text-lg text-plum">No stylists listed: the salon is the booking resource</h3><p className="mt-2 text-xs leading-5 text-ink/65">This is supported intentionally. Every appointment blocks the entire salon for the service duration plus buffer. Use the salon-full controls above for walk-in overrides.</p></div>}
-      </Panel>
-      <Panel><h2 className="font-serif text-xl text-plum">Active Blocks</h2><div className="mt-3 space-y-2">{activeBlockouts.map((blockout)=><div key={blockout.id} className="rounded-[8px] border border-plum/10 p-3 text-xs"><div className="flex items-start justify-between gap-3"><span><b>{blockout.stylist_id?stylistName(c,blockout.stylist_id):"Whole salon"}</b><span className="mt-1 block text-ink/55">Until {dateText(blockout.ends_at,timeZone)}</span></span><button disabled={busy===`delete:${blockout.id}`} onClick={()=>void unblock(String(blockout.id))} className="font-bold text-magenta">Release</button></div></div>)}{!activeBlockouts.length?<Empty text="No active availability blocks."/>:null}</div></Panel>
-    </div>
-  </>
+    </Panel>
+  );
 }
 
-function Bookings({c}:{c:Ctx}) {
-  const [filter,setFilter]=useState("All");
-  const [selectedId,setSelectedId]=useState(c.initialBookingId||"");
-  const [reason,setReason]=useState("");
-  const [detail,setDetail]=useState("");
-  const [busy,setBusy]=useState(false);
-  const visible=c.bookings.filter((booking)=>filter==="All"||String(booking.status)===filter);
-  const selected=c.bookings.find((booking)=>booking.id===selectedId)||null;
-  const activeSelected=selected&&!/cancelled|completed|refunded/i.test(String(selected.status||""));
-  async function startService(){
-    if(!selected?.id)return;
-    const startedAt=new Date().toISOString();
-    const data=await c.saveRecord("bookings",{service_started_at:startedAt,status:"In Progress"},selected.id);
-    if(!data)return;
-    c.setBookings((rows)=>rows.map((booking)=>booking.id===selected.id?data:booking));
+function Photos({ c }: { c: Ctx }) {
+  const [cover, setCover] = useState(c.salon.cover_photo_url || "");
+  const [gallery, setGallery] = useState<string[]>(
+    Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : [],
+  );
+  return (
+    <>
+      <Title
+        title="Photos"
+        subtitle="Manage the media that tells your salon’s story."
+        action={
+          <button
+            onClick={() =>
+              c.updateSalon({
+                cover_photo_url: cover,
+                gallery_photos: gallery,
+                media_consent: true,
+              })
+            }
+            className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
+          >
+            Save media
+          </button>
+        }
+      />
+      <div className="grid gap-4 xl:grid-cols-[.7fr_1.3fr]">
+        <Panel>
+          <ImageUpload
+            bucket="salon-photos"
+            folder={`salons/${c.salon.id}`}
+            label="Cover Photo"
+            value={cover}
+            onChange={(v) => setCover(typeof v === "string" ? v : "")}
+            helperText="JPG or PNG, maximum 2MB after optimization."
+          />
+        </Panel>
+        <Panel>
+          <ImageUpload
+            bucket="salon-photos"
+            multiple
+            maxFiles={16}
+            folder={`salons/${c.salon.id}/gallery`}
+            label="Media Library"
+            value={gallery}
+            onChange={(v) => setGallery(Array.isArray(v) ? v : [])}
+            helperText="Upload, remove, and reorder salon work photos."
+          />
+          <label className="mt-5 flex gap-3 text-xs font-semibold">
+            <input type="checkbox" defaultChecked className="accent-magenta" />I
+            confirm I have permission to use these images and the right to
+            display them.
+          </label>
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function Styles({ c }: { c: Ctx }) {
+  const active = c.styles.find((s) => s.id === c.selectedStyle) || null;
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const priced = (key: string) =>
+      String(f.get(key) || "")
+        .split("\n")
+        .map((line) => {
+          const [label, price_add] = line.split("|");
+          return { label: label?.trim(), price_add: Number(price_add || 0) };
+        })
+        .filter((x) => x.label);
+    const saved = await c.saveRecord(
+      "styles",
+      {
+        name: f.get("name"),
+        category: f.get("category"),
+        description: f.get("description"),
+        duration_min_hours: Number(f.get("duration_min")),
+        duration_max_hours: Number(f.get("duration_max")),
+        base_price: Number(f.get("base_price")),
+        price_display_min: Number(f.get("base_price")),
+        price_display_max: Number(f.get("max_price") || f.get("base_price")),
+        size_options: priced("sizes"),
+        length_options: priced("lengths"),
+        addons: priced("addons"),
+        included_items: String(f.get("included") || "")
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean),
+      },
+      active?.id,
+    );
+    if (saved) {
+      c.setStyles((rows) =>
+        active
+          ? rows.map((r) => (r.id === active.id ? saved : r))
+          : [saved, ...rows],
+      );
+      c.setSelectedStyle(saved.id || null);
+    }
+  }
+  return (
+    <>
+      <Title
+        title="Styles & Pricing"
+        subtitle="Manage your signature styles, pricing, options, and inclusions."
+        action={
+          <button
+            onClick={() => c.setSelectedStyle(null)}
+            className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
+          >
+            <Plus className="mr-1 inline" size={16} />
+            Add Style
+          </button>
+        }
+      />
+      <div className="grid gap-4 xl:grid-cols-[.72fr_1.28fr]">
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Your Styles</h2>
+          <div className="mt-3 space-y-2">
+            {c.styles.map((style, i) => {
+              const min = Number(style.duration_min_hours || 0);
+              const max = Number(style.duration_max_hours || 0);
+              const duration =
+                min && max ? `${min}–${max} hrs` : "Duration not set";
+              return (
+                <button
+                  key={style.id}
+                  onClick={() => c.setSelectedStyle(style.id || null)}
+                  className={`grid w-full grid-cols-[64px_1fr_auto] gap-3 rounded-[10px] border p-2 text-left ${c.selectedStyle === style.id ? "border-magenta bg-blush/30" : "border-plum/10"}`}
+                >
+                  <SafeImage
+                    src={(style.photos as string[])?.[0]}
+                    fallbackSrc={fallbackPhotos[i % fallbackPhotos.length]}
+                    alt={style.name || "Style"}
+                    className="h-16 w-16 rounded-[8px] object-cover"
+                  />
+                  <span>
+                    <b className="font-serif text-base">{style.name}</b>
+                    <span className="mt-1 block text-[10px] text-ink/55">
+                      {String(style.category || "Uncategorized")} • {duration}
+                    </span>
+                  </span>
+                  <span className="text-right text-[10px]">
+                    From
+                    <br />
+                    <b className="text-sm">
+                      $
+                      {Number(style.price_display_min || style.base_price || 0)}
+                    </b>
+                  </span>
+                </button>
+              );
+            })}
+            {!c.styles.length ? <Empty text="Add your first service." /> : null}
+          </div>
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">
+            {active ? "Edit Style" : "Add Style"}
+          </h2>
+          <form
+            key={active?.id || "new"}
+            onSubmit={submit}
+            className="mt-4 grid gap-4 sm:grid-cols-2"
+          >
+            <Field
+              label="Style Name"
+              name="name"
+              defaultValue={active?.name}
+              required
+            />
+            <Field
+              label="Category"
+              name="category"
+              defaultValue={active?.category || ""}
+            />
+            <TextArea
+              label="Description"
+              name="description"
+              defaultValue={active?.description}
+              wide
+            />
+            <Field
+              label="Duration Min (hrs)"
+              name="duration_min"
+              type="number"
+              defaultValue={active?.duration_min_hours ?? ""}
+            />
+            <Field
+              label="Duration Max (hrs)"
+              name="duration_max"
+              type="number"
+              defaultValue={active?.duration_max_hours ?? ""}
+            />
+            <Field
+              label="Base Price"
+              name="base_price"
+              type="number"
+              defaultValue={active?.base_price ?? ""}
+            />
+            <Field
+              label="Maximum Price"
+              name="max_price"
+              type="number"
+              defaultValue={
+                active?.price_display_max ?? active?.base_price ?? ""
+              }
+            />
+            <TextArea
+              label="Size Options — one per line: Name|Price Add"
+              name="sizes"
+              defaultValue={optionText(active?.size_options)}
+            />
+            <TextArea
+              label="Length Options — one per line: Name|Price Add"
+              name="lengths"
+              defaultValue={optionText(active?.length_options)}
+            />
+            <TextArea
+              label="Add-ons — one per line: Name|Price"
+              name="addons"
+              defaultValue={optionText(active?.addons)}
+            />
+            <TextArea
+              label="Hair / Material — Name|Price|Longevity|Quality"
+              name="materials"
+              defaultValue=""
+            />
+            <TextArea
+              label="What’s Included — comma separated"
+              name="included"
+              defaultValue={
+                Array.isArray(active?.included_items)
+                  ? (active?.included_items as string[]).join(", ")
+                  : ""
+              }
+              wide
+            />
+            <button className="sm:col-span-2 min-h-11 rounded-[8px] bg-magenta text-xs font-bold text-white">
+              Save Changes
+            </button>
+          </form>
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function Stylists({ c }: { c: Ctx }) {
+  const active = c.stylists.find((s) => s.id === c.selectedStylist) || null;
+  const [avatar, setAvatar] = useState(String(active?.avatar_url || ""));
+  const [portfolio, setPortfolio] = useState<string[]>(
+    Array.isArray(active?.photos) ? (active?.photos as string[]) : [],
+  );
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const saved = await c.saveRecord(
+      "stylists",
+      {
+        name: f.get("name"),
+        bio: f.get("bio"),
+        specialties: String(f.get("specialties") || "")
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean),
+        years_experience: f.get("years") === "" ? null : Number(f.get("years")),
+        avatar_url: avatar,
+        photos: portfolio,
+        is_active: true,
+      },
+      active?.id,
+    );
+    if (saved) {
+      c.setStylists((rows) =>
+        active
+          ? rows.map((r) => (r.id === active.id ? saved : r))
+          : [saved, ...rows],
+      );
+      c.setSelectedStylist(saved.id || null);
+    }
+  }
+  return (
+    <>
+      <Title
+        title="Stylists"
+        subtitle="Manage your talented team and their expertise."
+        action={
+          <button
+            onClick={() => {
+              c.setSelectedStylist(null);
+              setAvatar("");
+              setPortfolio([]);
+            }}
+            className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
+          >
+            <Plus className="mr-1 inline" size={16} />
+            Add Stylist
+          </button>
+        }
+      />
+      <div className="flex gap-3 overflow-x-auto pb-3">
+        {c.stylists.map((stylist, i) => {
+          const rating = Number(stylist.rating || 0);
+          return (
+            <button
+              key={stylist.id}
+              onClick={() => {
+                c.setSelectedStylist(stylist.id || null);
+                setAvatar(String(stylist.avatar_url || ""));
+                setPortfolio(
+                  Array.isArray(stylist.photos)
+                    ? (stylist.photos as string[])
+                    : [],
+                );
+              }}
+              className={`min-w-[170px] rounded-[11px] border p-3 text-left ${active?.id === stylist.id ? "border-magenta bg-blush/30" : "border-plum/10 bg-white"}`}
+            >
+              <SafeImage
+                src={stylist.avatar_url as string}
+                fallbackSrc={fallbackPhotos[i % fallbackPhotos.length]}
+                alt={stylist.name || "Stylist"}
+                className="h-16 w-16 rounded-full object-cover"
+              />
+              <p className="mt-2 font-serif text-lg">{stylist.name}</p>
+              {rating > 0 ? (
+                <Stars value={rating} />
+              ) : (
+                <p className="mt-1 text-[10px] text-ink/55">New</p>
+              )}
+              <p className="mt-1 text-[10px] text-ink/55">
+                {Number(stylist.years_experience || 0) > 0
+                  ? `${Number(stylist.years_experience)} years experience`
+                  : "Experience not added"}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+      <Panel>
+        <h2 className="font-serif text-xl text-plum">
+          {active ? "Edit Stylist" : "Add Stylist"}
+        </h2>
+        <form
+          key={active?.id || "new"}
+          onSubmit={submit}
+          className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1fr_1.3fr]"
+        >
+          <div>
+            <ImageUpload
+              bucket="stylist-photos"
+              folder={`stylists/${active?.id || "new"}`}
+              label="Profile Photo"
+              value={avatar}
+              onChange={(v) => setAvatar(typeof v === "string" ? v : "")}
+            />
+          </div>
+          <div className="space-y-4">
+            <Field
+              label="Name"
+              name="name"
+              defaultValue={active?.name}
+              required
+            />
+            <TextArea
+              label="Bio / Description"
+              name="bio"
+              defaultValue={active?.bio}
+            />
+            <Field
+              label="Specialties (comma separated)"
+              name="specialties"
+              defaultValue={
+                Array.isArray(active?.specialties)
+                  ? (active?.specialties as string[]).join(", ")
+                  : ""
+              }
+            />
+            <Field
+              label="Years of Experience"
+              name="years"
+              type="number"
+              defaultValue={active?.years_experience ?? ""}
+            />
+            <button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
+              Save Changes
+            </button>
+          </div>
+          <ImageUpload
+            bucket="stylist-photos"
+            multiple
+            maxFiles={10}
+            folder={`stylists/${active?.id || "new"}/portfolio`}
+            label="Work Portfolio"
+            value={portfolio}
+            onChange={(v) => setPortfolio(Array.isArray(v) ? v : [])}
+          />
+        </form>
+      </Panel>
+    </>
+  );
+}
+
+function TruthfulProducts({ c }: { c: Ctx }) {
+  const active =
+    c.products.find((product) => product.id === c.selectedProduct) || null;
+  const [photo, setPhoto] = useState(String(active?.photo_url || ""));
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const saved = await c.saveRecord(
+      "salon_products",
+      {
+        name: form.get("name"),
+        description: form.get("description"),
+        price: Number(form.get("price")),
+        photo_url: photo || null,
+        is_visible: form.get("visible") === "on",
+        in_person_only: true,
+      },
+      active?.id,
+    );
+    if (saved) {
+      c.setProducts((rows) =>
+        active
+          ? rows.map((row) => (row.id === active.id ? saved : row))
+          : [saved, ...rows],
+      );
+      c.setSelectedProduct(saved.id || null);
+    }
+  }
+  return (
+    <>
+      <Title
+        title="Products"
+        subtitle="Advertise products for in-person purchase at your salon."
+        action={
+          <button
+            onClick={() => {
+              c.setSelectedProduct(null);
+              setPhoto("");
+            }}
+            className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
+          >
+            <Plus className="mr-1 inline" size={16} />
+            Add Product
+          </button>
+        }
+      />
+      <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+        <Info size={16} className="shrink-0" aria-hidden="true" />
+        <span>
+          These products are advertised for in-person purchase only and appear
+          on your salon’s public page. No online checkout.
+        </span>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {c.products.map((product) => (
+            <button
+              key={product.id}
+              onClick={() => {
+                c.setSelectedProduct(product.id || null);
+                setPhoto(String(product.photo_url || ""));
+              }}
+              className="overflow-hidden rounded-[10px] border border-plum/10 bg-white text-left"
+            >
+              <div className="grid aspect-square w-full place-items-center bg-blush/35 text-plum/30">
+                {product.photo_url ? (
+                  <SafeImage
+                    src={String(product.photo_url)}
+                    fallbackSrc={String(product.photo_url)}
+                    alt={product.name || "Product"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImageOff
+                    size={30}
+                    strokeWidth={1.2}
+                    aria-label="No product photo uploaded"
+                  />
+                )}
+              </div>
+              <div className="p-2.5">
+                <b className="line-clamp-1 text-xs">{product.name}</b>
+                <p className="mt-1 line-clamp-1 text-[9px] text-ink/60">
+                  {String(product.description || "")}
+                </p>
+                <p className="mt-2 text-sm font-semibold">
+                  ${Number(product.price || 0).toFixed(2)}
+                </p>
+              </div>
+            </button>
+          ))}
+          {!c.products.length ? (
+            <Empty text="Add products sold at your salon." />
+          ) : null}
+        </div>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Add / Edit Product</h2>
+          <form
+            key={active?.id || "new"}
+            onSubmit={submit}
+            className="mt-4 space-y-4"
+          >
+            <ImageUpload
+              bucket="salon-photos"
+              folder={`salons/${c.salon.id}/products`}
+              label="Product Photo"
+              value={photo}
+              onChange={(value) =>
+                setPhoto(typeof value === "string" ? value : "")
+              }
+            />
+            <Field label="Name" name="name" defaultValue={active?.name} />
+            <TextArea
+              label="Description"
+              name="description"
+              defaultValue={active?.description}
+            />
+            <Field
+              label="Price (USD)"
+              name="price"
+              type="number"
+              defaultValue={active?.price ?? ""}
+            />
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                name="visible"
+                defaultChecked={active?.is_visible !== false}
+                className="accent-magenta"
+              />
+              Visible on Public Page
+            </label>
+            <button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
+              Save Product
+            </button>
+          </form>
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function Availability({ c }: { c: Ctx }) {
+  const hours = c.salon.hours || {};
+  const settings = c.salon.booking_settings || {};
+  const timeZone = c.salon.time_zone || "America/New_York";
+  const week = salonWeek(timeZone);
+  const activeBookings = c.bookings.filter(
+    (booking) =>
+      !["cancelled", "declined", "refunded"].includes(
+        String(booking.status || "").toLowerCase(),
+      ),
+  );
+  const [stylistId, setStylistId] = useState(c.stylists[0]?.id || "");
+  const [until, setUntil] = useState("17:00");
+  const [busy, setBusy] = useState("");
+  const [renderedAt] = useState(() => Date.now());
+  const activeStylist =
+    c.stylists.find((stylist) => stylist.id === stylistId) || null;
+  const activeBlockouts = c.blockouts.filter(
+    (blockout) =>
+      new Date(String(blockout.ends_at || 0)).getTime() > renderedAt,
+  );
+
+  async function saveHours(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    await c.updateSalon({
+      hours: Object.fromEntries(
+        days.map((day) => [
+          day,
+          {
+            open: String(f.get(`${day}_open`) || "09:00"),
+            close: String(f.get(`${day}_close`) || "17:00"),
+            closed: f.get(`${day}_closed`) === "on",
+          },
+        ]),
+      ),
+    });
+  }
+  async function saveBookingSettings(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    await c.updateSalon({
+      booking_settings: {
+        ...settings,
+        slot_minutes: Number(f.get("slot")),
+        buffer_minutes: Number(f.get("buffer")),
+        any_available_stylist: true,
+      },
+    });
+  }
+  async function saveStylistSchedule(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!activeStylist?.id) return;
+    const form = new FormData(e.currentTarget);
+    const availability = Object.fromEntries(
+      days.map((day) => {
+        const working = form.get(`${day}_working`) === "on";
+        return [
+          day,
+          {
+            open: String(form.get(`${day}_open`) || "09:00"),
+            close: String(form.get(`${day}_close`) || "17:00"),
+            closed: !working,
+          },
+        ];
+      }),
+    );
+    const data = await c.saveRecord(
+      "stylists",
+      { availability },
+      activeStylist.id,
+    );
+    if (!data) return;
+    c.setStylists((rows) =>
+      rows.map((row) => (row.id === activeStylist.id ? data : row)),
+    );
+    c.setNotice(`${activeStylist.name || "Stylist"} availability saved.`);
+  }
+  async function block(mode: string, targetStylistId?: string) {
+    setBusy(`${mode}:${targetStylistId || "salon"}`);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch("/api/salon/availability/block", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          mode,
+          stylist_id: targetStylistId || null,
+          until,
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to block availability.");
+      c.setBlockouts((rows) => [body.blockout as Row, ...rows]);
+      c.setNotice(
+        "Availability blocked immediately. Customers can no longer book that window.",
+      );
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to block availability.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  async function unblock(id: string) {
+    setBusy(`delete:${id}`);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(
+        `/api/salon/availability/block?id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        },
+      );
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to restore availability.");
+      c.setBlockouts((rows) => rows.filter((row) => row.id !== id));
+      c.setNotice("Availability restored.");
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to restore availability.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <>
+      <Title
+        title="Availability & Calendar"
+        subtitle={`Appointments are shown in ${timeZone.replaceAll("_", " ")}.`}
+      />
+      <Panel className="mb-4 border-magenta/20 bg-blush/25">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="flex-1">
+            <h2 className="font-serif text-xl text-plum">
+              Salon is full right now
+            </h2>
+            <p className="mt-1 text-xs text-ink/60">
+              Stop all new bookings immediately when walk-ins fill every chair.
+            </p>
+          </div>
+          <button
+            disabled={Boolean(busy)}
+            onClick={() => void block("salon_today")}
+            className="min-h-11 rounded-[8px] bg-plum px-5 text-xs font-bold text-white disabled:opacity-60"
+          >
+            Mark salon full today
+          </button>
+          <label className="text-[10px] font-bold">
+            Booked until
+            <div className="mt-1 flex">
+              <input
+                type="time"
+                value={until}
+                onChange={(event) => setUntil(event.target.value)}
+                className="min-h-11 rounded-l-[8px] border border-plum/15 px-3"
+              />
+              <button
+                disabled={Boolean(busy)}
+                onClick={() => void block("salon_until")}
+                className="rounded-r-[8px] bg-magenta px-4 text-white disabled:opacity-60"
+              >
+                Block
+              </button>
+            </div>
+          </label>
+        </div>
+      </Panel>
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+        <Panel className="overflow-x-auto">
+          <div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">
+            {week.map((date) => (
+              <section
+                key={date.key}
+                className="min-h-[430px] border-r border-plum/10 bg-cream/20 last:border-r-0"
+              >
+                <header className="border-b border-plum/10 bg-white/80 px-2 py-3 text-center">
+                  <b className="block text-[10px] uppercase tracking-wide text-plum">
+                    {date.label}
+                  </b>
+                  <span className="mt-1 block font-serif text-lg">
+                    {date.day}
+                  </span>
+                </header>
+                <div className="space-y-2 p-2">
+                  {activeBookings
+                    .filter(
+                      (booking) =>
+                        dateKeyInTimeZone(
+                          String(booking.appointment_datetime || ""),
+                          timeZone,
+                        ) === date.key,
+                    )
+                    .sort((a, b) =>
+                      String(a.appointment_datetime).localeCompare(
+                        String(b.appointment_datetime),
+                      ),
+                    )
+                    .map((booking, index) => (
+                      <article
+                        key={booking.id || index}
+                        className="rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-[9px] leading-4"
+                      >
+                        <b className="block text-plum">
+                          {bookingTime(booking.appointment_datetime, timeZone)}
+                        </b>
+                        <span className="font-semibold">
+                          {styleName(c, booking.style_id)}
+                        </span>
+                        <span className="block text-ink/60">
+                          {stylistName(c, booking.stylist_id)}
+                        </span>
+                      </article>
+                    ))}
+                  {!activeBookings.some(
+                    (booking) =>
+                      dateKeyInTimeZone(
+                        String(booking.appointment_datetime || ""),
+                        timeZone,
+                      ) === date.key,
+                  ) ? (
+                    <p className="py-5 text-center text-[9px] text-ink/35">
+                      No appointments
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            ))}
+          </div>
+        </Panel>
+        <div className="space-y-4">
+          <Panel>
+            <h2 className="font-serif text-xl text-plum">Store Hours</h2>
+            <p className="mt-1 text-[10px] text-ink/55">
+              Choose times in 15-minute increments. No typed time values are
+              accepted.
+            </p>
+            <form onSubmit={saveHours} className="mt-3 space-y-2">
+              {days.map((day) => {
+                const value = hours[day] as Row | undefined;
+                const legacyClosed =
+                  typeof hours[day] === "string" &&
+                  String(hours[day]).toLowerCase() === "closed";
+                const closed = value?.closed === true || legacyClosed;
+                return (
+                  <div
+                    key={day}
+                    className="grid grid-cols-[32px_1fr_1fr] gap-2 rounded-[8px] border border-plum/10 p-2 text-[10px]"
+                  >
+                    <b>{day}</b>
+                    <select
+                      aria-label={`${day} opening time`}
+                      name={`${day}_open`}
+                      defaultValue={String(value?.open || "09:00")}
+                      className="min-w-0 rounded-[6px] border border-plum/10 bg-white px-1"
+                    >
+                      {STORE_TIME_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label={`${day} closing time`}
+                      name={`${day}_close`}
+                      defaultValue={String(value?.close || "17:00")}
+                      className="min-w-0 rounded-[6px] border border-plum/10 bg-white px-1"
+                    >
+                      {STORE_TIME_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="col-span-3 flex items-center justify-end gap-2">
+                      <input
+                        name={`${day}_closed`}
+                        type="checkbox"
+                        defaultChecked={closed}
+                        className="accent-magenta"
+                      />
+                      Closed
+                    </label>
+                  </div>
+                );
+              })}
+              <button className="min-h-10 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
+                Save hours
+              </button>
+            </form>
+          </Panel>
+          <Panel>
+            <h2 className="font-serif text-xl text-plum">
+              Bookable Time Slots
+            </h2>
+            <form
+              onSubmit={saveBookingSettings}
+              className="mt-3 grid grid-cols-2 gap-2"
+            >
+              <label className="text-[10px] font-bold">
+                Slot interval
+                <select
+                  name="slot"
+                  defaultValue={Number(settings.slot_minutes || 30)}
+                  className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-2"
+                >
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="60">60 min</option>
+                </select>
+              </label>
+              <label className="text-[10px] font-bold">
+                Default buffer
+                <select
+                  name="buffer"
+                  defaultValue={Number(settings.buffer_minutes || 15)}
+                  className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-2"
+                >
+                  <option value="0">No buffer</option>
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="45">45 min</option>
+                  <option value="60">60 min</option>
+                </select>
+              </label>
+              <button className="col-span-2 min-h-10 rounded-[8px] border border-magenta text-xs font-bold text-magenta">
+                Save booking settings
+              </button>
+            </form>
+          </Panel>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+        <Panel>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-serif text-xl text-plum">
+                Per-Stylist Availability
+              </h2>
+              <p className="mt-1 text-xs text-ink/55">
+                A stylist only appears for customers inside these working hours.
+              </p>
+            </div>
+            {c.stylists.length ? (
+              <select
+                value={stylistId}
+                onChange={(event) => setStylistId(event.target.value)}
+                className="min-h-10 rounded-[8px] border border-plum/15 px-3 text-xs"
+              >
+                {c.stylists.map((stylist) => (
+                  <option key={stylist.id} value={stylist.id}>
+                    {stylist.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+          {activeStylist ? (
+            <>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    void block("stylist_three_hours", activeStylist.id)
+                  }
+                  className="min-h-11 rounded-[8px] bg-plum px-3 text-xs font-bold text-white disabled:opacity-60"
+                >
+                  Block next 3 hours
+                </button>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() => void block("stylist_today", activeStylist.id)}
+                  className="min-h-11 rounded-[8px] bg-magenta px-3 text-xs font-bold text-white disabled:opacity-60"
+                >
+                  Unavailable today
+                </button>
+                <div className="flex">
+                  <input
+                    type="time"
+                    value={until}
+                    onChange={(event) => setUntil(event.target.value)}
+                    className="min-h-11 min-w-0 flex-1 rounded-l-[8px] border border-plum/15 px-2"
+                  />
+                  <button
+                    disabled={Boolean(busy)}
+                    onClick={() =>
+                      void block("stylist_until", activeStylist.id)
+                    }
+                    className="rounded-r-[8px] border border-magenta px-3 text-[10px] font-bold text-magenta disabled:opacity-60"
+                  >
+                    Until
+                  </button>
+                </div>
+              </div>
+              <form
+                key={activeStylist.id}
+                onSubmit={saveStylistSchedule}
+                className="mt-5 space-y-2"
+              >
+                {days.map((day) => {
+                  const schedule = (
+                    activeStylist.availability as
+                      | Record<string, Row>
+                      | undefined
+                  )?.[day];
+                  const working =
+                    schedule?.closed !== true &&
+                    Boolean(schedule?.open && schedule?.close);
+                  return (
+                    <div
+                      key={day}
+                      className="grid grid-cols-[42px_22px_1fr_1fr] items-center gap-2 rounded-[8px] border border-plum/10 p-2 text-xs"
+                    >
+                      <b>{day}</b>
+                      <input
+                        type="checkbox"
+                        name={`${day}_working`}
+                        defaultChecked={working}
+                        className="accent-magenta"
+                      />
+                      <input
+                        aria-label={`${day} opening time`}
+                        type="time"
+                        name={`${day}_open`}
+                        defaultValue={String(schedule?.open || "09:00")}
+                        className="min-w-0 rounded-[6px] border border-plum/10 p-2"
+                      />
+                      <input
+                        aria-label={`${day} closing time`}
+                        type="time"
+                        name={`${day}_close`}
+                        defaultValue={String(schedule?.close || "17:00")}
+                        className="min-w-0 rounded-[6px] border border-plum/10 p-2"
+                      />
+                    </div>
+                  );
+                })}
+                <button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
+                  Save {activeStylist.name || "stylist"} schedule
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="mt-4 rounded-[10px] border border-amber/30 bg-amber/10 p-5">
+              <h3 className="font-serif text-lg text-plum">
+                No stylists listed: the salon is the booking resource
+              </h3>
+              <p className="mt-2 text-xs leading-5 text-ink/65">
+                This is supported intentionally. Every appointment blocks the
+                entire salon for the service duration plus buffer. Use the
+                salon-full controls above for walk-in overrides.
+              </p>
+            </div>
+          )}
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Active Blocks</h2>
+          <div className="mt-3 space-y-2">
+            {activeBlockouts.map((blockout) => (
+              <div
+                key={blockout.id}
+                className="rounded-[8px] border border-plum/10 p-3 text-xs"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span>
+                    <b>
+                      {blockout.stylist_id
+                        ? stylistName(c, blockout.stylist_id)
+                        : "Whole salon"}
+                    </b>
+                    <span className="mt-1 block text-ink/55">
+                      Until {dateText(blockout.ends_at, timeZone)}
+                    </span>
+                  </span>
+                  <button
+                    disabled={busy === `delete:${blockout.id}`}
+                    onClick={() => void unblock(String(blockout.id))}
+                    className="font-bold text-magenta"
+                  >
+                    Release
+                  </button>
+                </div>
+              </div>
+            ))}
+            {!activeBlockouts.length ? (
+              <Empty text="No active availability blocks." />
+            ) : null}
+          </div>
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function Bookings({ c }: { c: Ctx }) {
+  const [filter, setFilter] = useState("All");
+  const [selectedId, setSelectedId] = useState(c.initialBookingId || "");
+  const [reason, setReason] = useState("");
+  const [detail, setDetail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const visible = c.bookings.filter(
+    (booking) => filter === "All" || String(booking.status) === filter,
+  );
+  const selected =
+    c.bookings.find((booking) => booking.id === selectedId) || null;
+  const activeSelected =
+    selected &&
+    !/cancelled|completed|refunded/i.test(String(selected.status || ""));
+  async function startService() {
+    if (!selected?.id) return;
+    const startedAt = new Date().toISOString();
+    const data = await c.saveRecord(
+      "bookings",
+      { service_started_at: startedAt, status: "In Progress" },
+      selected.id,
+    );
+    if (!data) return;
+    c.setBookings((rows) =>
+      rows.map((booking) => (booking.id === selected.id ? data : booking)),
+    );
     c.setNotice("Service start recorded for on-time performance.");
   }
-  async function cancelBooking(){
-    if(!selected?.id||!reason){c.setNotice("Choose a cancellation reason.");return;}
-    if(reason==="Other"&&!detail.trim()){c.setNotice("Add a short explanation for Other.");return;}
+  async function cancelBooking() {
+    if (!selected?.id || !reason) {
+      c.setNotice("Choose a cancellation reason.");
+      return;
+    }
+    if (reason === "Other" && !detail.trim()) {
+      c.setNotice("Add a short explanation for Other.");
+      return;
+    }
     setBusy(true);
-    try{
-      const session=await getSessionForScope("salon");
-      if(!session)throw new Error("Please sign in again.");
-      const response=await fetch(`/api/salon/bookings/${selected.id}/cancel`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({reason,detail})});
-      const body=await response.json();
-      if(!response.ok)throw new Error(body.error||"Unable to cancel this booking.");
-      c.setBookings((rows)=>rows.map((booking)=>booking.id===selected.id?body.booking as Row:booking));
-      c.setNotice(body.refund_status==="Succeeded"?"Booking cancelled, customer notified, and deposit refunded in full.":"Booking cancelled and customer notified.");
-      setReason("");setDetail("");
-    }catch(error){c.setNotice(error instanceof Error?error.message:"Unable to cancel this booking.");}finally{setBusy(false);}
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(
+        `/api/salon/bookings/${selected.id}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ reason, detail }),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to cancel this booking.");
+      c.setBookings((rows) =>
+        rows.map((booking) =>
+          booking.id === selected.id ? (body.booking as Row) : booking,
+        ),
+      );
+      c.setNotice(
+        body.refund_status === "Succeeded"
+          ? "Booking cancelled, customer notified, and deposit refunded in full."
+          : "Booking cancelled and customer notified.",
+      );
+      setReason("");
+      setDetail("");
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to cancel this booking.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
-  return <>
-    <Title title="Bookings & Appointments" subtitle="Available slots confirm instantly. Keep availability current and cancel only when necessary."/>
-    <div className="mb-4 flex flex-wrap gap-2">{["All","Confirmed","Completed","Cancelled"].map((item)=><button key={item} onClick={()=>setFilter(item)} className={`rounded-[8px] px-4 py-2 text-xs font-semibold ${filter===item?"bg-plum text-white":"border border-plum/10 bg-white"}`}>{item}</button>)}</div>
-    <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-      <Panel className="overflow-x-auto">
-        <div className="space-y-3 lg:hidden">{visible.map((booking)=><button key={booking.id} onClick={()=>setSelectedId(String(booking.id))} className={`w-full rounded-[10px] border p-4 text-left ${selectedId===booking.id?"border-magenta bg-blush/25":"border-plum/10"}`}><div className="flex items-start justify-between gap-3"><span><b className="font-serif text-lg text-plum">{String(booking.guest_name||"Customer")}</b><span className="mt-1 block text-xs">{styleName(c,booking.style_id)} · {stylistName(c,booking.stylist_id)}</span></span><Status value={String(booking.status||"Confirmed")}/></div><p className="mt-3 text-xs font-semibold">{dateText(booking.appointment_datetime,c.salon.time_zone)}</p><div className="mt-3 flex justify-between text-xs"><span>Deposit <b className="text-green-700">${Number(booking.deposit_amount||0).toFixed(2)}</b></span><span>Balance <b className="text-magenta">${Number(booking.balance_due||0).toFixed(2)}</b></span></div></button>)}{!visible.length?<Empty text="No bookings in this status."/>:null}</div>
-        <table className="hidden w-full min-w-[850px] text-left text-xs lg:table"><thead><tr className="border-b border-plum/10 text-[9px] uppercase tracking-wider">{["Customer","Style","Stylist","Date / Time","Deposit","Balance","Status","Actions"].map((heading)=><th key={heading} className="px-3 py-3">{heading}</th>)}</tr></thead><tbody>{visible.map((booking)=><tr key={booking.id} className={`border-b border-plum/10 ${selectedId===booking.id?"bg-blush/25":""}`}><td className="px-3 py-3">{String(booking.guest_name||"Customer")}</td><td className="px-3">{styleName(c,booking.style_id)}</td><td className="px-3">{stylistName(c,booking.stylist_id)}</td><td className="px-3">{dateText(booking.appointment_datetime,c.salon.time_zone)}</td><td className="px-3 text-green-700">${Number(booking.deposit_amount||0).toFixed(2)}</td><td className="px-3 text-magenta">${Number(booking.balance_due||0).toFixed(2)}</td><td className="px-3"><Status value={String(booking.status||"Confirmed")}/></td><td className="px-3"><button onClick={()=>setSelectedId(String(booking.id))} className="font-bold text-magenta">Open</button></td></tr>)}</tbody></table>
+  return (
+    <>
+      <Title
+        title="Bookings & Appointments"
+        subtitle="Available slots confirm instantly. Keep availability current and cancel only when necessary."
+      />
+      <div className="mb-4 flex flex-wrap gap-2">
+        {["All", "Confirmed", "Completed", "Cancelled"].map((item) => (
+          <button
+            key={item}
+            onClick={() => setFilter(item)}
+            className={`rounded-[8px] px-4 py-2 text-xs font-semibold ${filter === item ? "bg-plum text-white" : "border border-plum/10 bg-white"}`}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+        <Panel className="overflow-x-auto">
+          <div className="space-y-3 lg:hidden">
+            {visible.map((booking) => (
+              <button
+                key={booking.id}
+                onClick={() => setSelectedId(String(booking.id))}
+                className={`w-full rounded-[10px] border p-4 text-left ${selectedId === booking.id ? "border-magenta bg-blush/25" : "border-plum/10"}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span>
+                    <b className="font-serif text-lg text-plum">
+                      {String(booking.guest_name || "Customer")}
+                    </b>
+                    <span className="mt-1 block text-xs">
+                      {styleName(c, booking.style_id)} ·{" "}
+                      {stylistName(c, booking.stylist_id)}
+                    </span>
+                  </span>
+                  <Status value={String(booking.status || "Confirmed")} />
+                </div>
+                <p className="mt-3 text-xs font-semibold">
+                  {dateText(booking.appointment_datetime, c.salon.time_zone)}
+                </p>
+                <div className="mt-3 flex justify-between text-xs">
+                  <span>
+                    Deposit{" "}
+                    <b className="text-green-700">
+                      ${Number(booking.deposit_amount || 0).toFixed(2)}
+                    </b>
+                  </span>
+                  <span>
+                    Balance{" "}
+                    <b className="text-magenta">
+                      ${Number(booking.balance_due || 0).toFixed(2)}
+                    </b>
+                  </span>
+                </div>
+              </button>
+            ))}
+            {!visible.length ? (
+              <Empty text="No bookings in this status." />
+            ) : null}
+          </div>
+          <table className="hidden w-full min-w-[850px] text-left text-xs lg:table">
+            <thead>
+              <tr className="border-b border-plum/10 text-[9px] uppercase tracking-wider">
+                {[
+                  "Customer",
+                  "Style",
+                  "Stylist",
+                  "Date / Time",
+                  "Deposit",
+                  "Balance",
+                  "Status",
+                  "Actions",
+                ].map((heading) => (
+                  <th key={heading} className="px-3 py-3">
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((booking) => (
+                <tr
+                  key={booking.id}
+                  className={`border-b border-plum/10 ${selectedId === booking.id ? "bg-blush/25" : ""}`}
+                >
+                  <td className="px-3 py-3">
+                    {String(booking.guest_name || "Customer")}
+                  </td>
+                  <td className="px-3">{styleName(c, booking.style_id)}</td>
+                  <td className="px-3">{stylistName(c, booking.stylist_id)}</td>
+                  <td className="px-3">
+                    {dateText(booking.appointment_datetime, c.salon.time_zone)}
+                  </td>
+                  <td className="px-3 text-green-700">
+                    ${Number(booking.deposit_amount || 0).toFixed(2)}
+                  </td>
+                  <td className="px-3 text-magenta">
+                    ${Number(booking.balance_due || 0).toFixed(2)}
+                  </td>
+                  <td className="px-3">
+                    <Status value={String(booking.status || "Confirmed")} />
+                  </td>
+                  <td className="px-3">
+                    <button
+                      onClick={() => setSelectedId(String(booking.id))}
+                      className="font-bold text-magenta"
+                    >
+                      Open
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+        <Panel>
+          {selected ? (
+            <>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-serif text-2xl text-plum">
+                    Booking Details
+                  </h2>
+                  <p className="mt-1 text-xs text-ink/50">
+                    #
+                    {String(selected.confirmation_code || selected.id).slice(
+                      0,
+                      14,
+                    )}
+                  </p>
+                </div>
+                <Status value={String(selected.status || "Confirmed")} />
+              </div>
+              <div className="mt-5 space-y-3 text-xs">
+                <p>
+                  <b className="block text-ink/50">Customer</b>
+                  {String(selected.guest_name || "Customer")}
+                  <br />
+                  {String(selected.guest_phone || "")}
+                  <br />
+                  {String(selected.guest_email || "")}
+                </p>
+                <p>
+                  <b className="block text-ink/50">Appointment</b>
+                  {dateText(selected.appointment_datetime, c.salon.time_zone)}
+                  <br />
+                  {styleName(c, selected.style_id)} ·{" "}
+                  {stylistName(c, selected.stylist_id)}
+                  <br />
+                  {Number(selected.duration_hours || 0)} hours
+                </p>
+                <p className="flex justify-between">
+                  <span>Deposit paid</span>
+                  <b className="text-green-700">
+                    ${Number(selected.deposit_amount || 0).toFixed(2)}
+                  </b>
+                </p>
+                <p className="flex justify-between">
+                  <span>Remaining balance</span>
+                  <b className="text-magenta">
+                    ${Number(selected.balance_due || 0).toFixed(2)}
+                  </b>
+                </p>
+              </div>
+              {activeSelected ? (
+                <>
+                  <button
+                    disabled={Boolean(selected.service_started_at)}
+                    onClick={() => void startService()}
+                    className="mt-5 min-h-11 w-full rounded-[8px] border border-plum text-xs font-bold text-plum disabled:border-green-500 disabled:text-green-700"
+                  >
+                    {selected.service_started_at
+                      ? `Service started ${dateText(selected.service_started_at, c.salon.time_zone)}`
+                      : "Start service now"}
+                  </button>
+                  <div className="mt-6 border-t border-plum/10 pt-5">
+                    <h3 className="font-serif text-lg text-plum">
+                      Cancel booking
+                    </h3>
+                    <p className="mt-1 text-[10px] leading-4 text-ink/55">
+                      This refunds the deposit, releases the slot, notifies the
+                      customer, and affects your cancellation rate.
+                    </p>
+                    <select
+                      value={reason}
+                      onChange={(event) => setReason(event.target.value)}
+                      className="mt-3 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                    >
+                      <option value="">Choose required reason</option>
+                      {c.cancellationReasons.map((item) => (
+                        <option key={item}>{item}</option>
+                      ))}
+                    </select>
+                    {reason === "Other" ? (
+                      <textarea
+                        value={detail}
+                        onChange={(event) =>
+                          setDetail(event.target.value.slice(0, 300))
+                        }
+                        placeholder="Brief explanation"
+                        rows={3}
+                        className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
+                      />
+                    ) : null}
+                    <button
+                      disabled={busy || !reason}
+                      onClick={() => void cancelBooking()}
+                      className="mt-3 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-50"
+                    >
+                      {busy
+                        ? "Cancelling and refunding…"
+                        : "Cancel and refund deposit"}
+                    </button>
+                  </div>
+                </>
+              ) : selected.cancellation_reason ? (
+                <div className="mt-5 rounded-[9px] bg-blush/30 p-3 text-xs">
+                  <b>Cancellation reason</b>
+                  <p className="mt-1">{String(selected.cancellation_reason)}</p>
+                  <p className="mt-1 text-ink/55">
+                    Refund: {String(selected.refund_status || "Not recorded")}
+                  </p>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <Empty text="Open a booking to see details and actions." />
+          )}
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function Reviews({ c }: { c: Ctx }) {
+  const count = c.reviews.length;
+  const rating = count
+    ? c.reviews.reduce(
+        (sum, review) => sum + Number(review.rating_overall || 0),
+        0,
+      ) / count
+    : 0;
+  const distribution = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: c.reviews.filter(
+      (review) => Math.round(Number(review.rating_overall || 0)) === star,
+    ).length,
+  }));
+  return (
+    <>
+      <Title
+        title="Reviews"
+        subtitle="See what clients are saying about your salon."
+      />
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+        <div>
+          <Panel>
+            <div className="grid gap-4 sm:grid-cols-[.6fr_.6fr_1.2fr]">
+              <div>
+                <p className="text-xs font-semibold">Overall Rating</p>
+                <p className="mt-2 font-serif text-5xl">
+                  {count ? rating.toFixed(1) : "New"}
+                </p>
+                {count ? <Stars value={rating} /> : null}
+              </div>
+              <div>
+                <p className="text-xs font-semibold">Total Reviews</p>
+                <p className="mt-2 font-serif text-5xl">{count}</p>
+              </div>
+              <div className="space-y-2">
+                {distribution.map((item) => {
+                  const percent = count
+                    ? Math.round((item.count / count) * 100)
+                    : 0;
+                  return (
+                    <div
+                      key={item.star}
+                      className="grid grid-cols-[25px_1fr_45px] items-center gap-2 text-[10px]"
+                    >
+                      <span>{item.star}</span>
+                      <span className="h-1.5 rounded-full bg-blush">
+                        <span
+                          className="block h-full rounded-full bg-magenta"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </span>
+                      <span>{percent}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Panel>
+          <h2 className="mb-3 mt-5 font-serif text-xl text-plum">
+            All Reviews
+          </h2>
+          <div className="space-y-3">
+            {c.reviews.map((review, index) => (
+              <Panel key={review.id || index}>
+                <div className="flex justify-between">
+                  <div>
+                    <b>Verified Client</b>
+                    <span className="ml-2 rounded-full bg-blush px-2 py-1 text-[8px] text-magenta">
+                      Verified
+                    </span>
+                    <Stars value={Number(review.rating_overall || 0)} />
+                  </div>
+                  <span className="text-[10px] text-ink/50">
+                    {dateText(review.created_at)}
+                  </span>
+                </div>
+                {review.written_review ? (
+                  <p className="mt-3 text-sm">
+                    {String(review.written_review)}
+                  </p>
+                ) : null}
+                <div className="mt-4 flex gap-4 text-xs font-semibold text-magenta">
+                  <button
+                    onClick={() =>
+                      c.setNotice(
+                        "Open this review from the public salon page to reply.",
+                      )
+                    }
+                  >
+                    Reply
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (review.id)
+                        await supabase.rpc("dispute_review", {
+                          target_review_id: review.id,
+                        });
+                      c.setNotice("Review sent for moderation.");
+                    }}
+                  >
+                    Flag / Dispute
+                  </button>
+                </div>
+              </Panel>
+            ))}
+            {!c.reviews.length ? (
+              <Panel>
+                <Empty text="Completed-booking reviews will appear here automatically." />
+              </Panel>
+            ) : null}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Panel>
+            <h2 className="font-serif text-xl text-plum">
+              Review Response Tips
+            </h2>
+            {[
+              "Respond to all reviews",
+              "Be professional and personal",
+              "Resolve issues constructively",
+            ].map((tip) => (
+              <div key={tip} className="mt-4 flex gap-3 text-xs">
+                <Sparkles size={20} className="text-magenta" />
+                <span>
+                  <b>{tip}</b>
+                  <span className="mt-1 block text-ink/60">
+                    Keep your response warm, respectful, and on-brand.
+                  </span>
+                </span>
+              </div>
+            ))}
+          </Panel>
+          <Panel>
+            <h2 className="font-serif text-xl text-plum">
+              Review Distribution
+            </h2>
+            {count ? (
+              <div className="mx-auto mt-5 flex h-36 w-36 items-center justify-center rounded-full border-[18px] border-magenta">
+                <span className="text-center font-serif text-3xl">
+                  {count}
+                  <span className="block text-[10px]">Total</span>
+                </span>
+              </div>
+            ) : (
+              <Empty text="No reviews yet." />
+            )}
+          </Panel>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Earnings({ c }: { c: Ctx }) {
+  const completed = c.bookings.filter((b) =>
+    ["complete", "completed"].includes(String(b.status || "").toLowerCase()),
+  );
+  const paidDeposits = c.bookings.filter((b) =>
+    ["paid", "succeeded", "complete", "completed"].includes(
+      String(b.deposit_status || "").toLowerCase(),
+    ),
+  );
+  const total = completed.reduce(
+    (s, b) => s + Number(b.estimated_total || 0),
+    0,
+  );
+  const deposits = paidDeposits.reduce(
+    (s, b) => s + Number(b.deposit_amount || 0),
+    0,
+  );
+  const pending = c.bookings
+    .filter((b) => String(b.payout_status || "").toLowerCase() === "pending")
+    .reduce((s, b) => s + Number(b.deposit_amount || 0), 0);
+  const now = new Date();
+  const thisMonth = completed
+    .filter((b) => {
+      const d = new Date(String(b.appointment_datetime || b.created_at || ""));
+      return (
+        !Number.isNaN(d.getTime()) &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      );
+    })
+    .reduce((s, b) => s + Number(b.estimated_total || 0), 0);
+  return (
+    <>
+      <Title
+        title="Earnings & Payouts"
+        subtitle="Track your earnings, manage payouts, and view your transaction history."
+      />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric
+          label="Paid Deposits"
+          value={`$${deposits.toLocaleString()}`}
+          icon={CircleDollarSign}
+        />
+        <Metric
+          label="Completed Booking Value"
+          value={`$${total.toLocaleString()}`}
+          icon={CircleDollarSign}
+        />
+        <Metric
+          label="Pending Payouts"
+          value={`$${pending.toLocaleString()}`}
+          icon={Clock3}
+        />
+        <Metric
+          label="Completed This Month"
+          value={`$${thisMonth.toLocaleString()}`}
+          icon={CalendarDays}
+        />
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_.65fr_1.1fr]">
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Payout Account</h2>
+          {c.salon.stripe_account_id ? (
+            <>
+              <p className="mt-4 flex items-center gap-2 text-green-700">
+                <BadgeCheck size={18} aria-hidden="true" />
+                Account connected
+              </p>
+              <p className="mt-2 text-xs text-ink/60">
+                Connection details are managed securely in Stripe.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 font-semibold">Connect your payout account</p>
+              <p className="mt-2 text-xs leading-5 text-ink/65">
+                Connect your Stripe account to receive payouts securely. Girlz
+                Culture never stores your bank details.
+              </p>
+              <button
+                onClick={() =>
+                  c.setNotice(
+                    "Stripe Connect requires the platform’s live Stripe credentials before onboarding can begin.",
+                  )
+                }
+                className="mt-5 min-h-11 w-full rounded-[8px] bg-[linear-gradient(90deg,#5b1a6b,#d6186b)] text-xs font-bold text-white"
+              >
+                Connect with Stripe
+              </button>
+            </>
+          )}
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Account Status</h2>
+          <p className="mt-4 text-sm text-green-700">
+            {c.salon.stripe_account_id ? "Account connected" : "Not connected"}
+          </p>
+          <p className="mt-3 text-xs text-ink/60">
+            {c.salon.stripe_account_id
+              ? "Payout timing and account details are available in Stripe."
+              : "Connect Stripe before accepting payouts."}
+          </p>
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Earnings Trend</h2>
+          <p className="mt-3 font-serif text-3xl">${total.toLocaleString()}</p>
+          <div className="mt-8">
+            <MiniLine />
+          </div>
+        </Panel>
+      </div>
+      <Panel className="mt-4 overflow-x-auto">
+        <h2 className="font-serif text-xl text-plum">Transaction History</h2>
+        <table className="mt-3 w-full min-w-[700px] text-left text-xs">
+          <thead>
+            <tr>
+              {[
+                "Date",
+                "Booking",
+                "Deposit Amount",
+                "Balance",
+                "Payment / Payout Status",
+                "Payout Date",
+              ].map((h) => (
+                <th className="border-b border-plum/10 py-3" key={h}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {c.bookings.map((b, i) => (
+              <tr key={b.id || i} className="border-b border-plum/10">
+                <td className="py-3">{dateText(b.created_at)}</td>
+                <td>
+                  Booking #
+                  {String(b.confirmation_code || b.id || "").slice(0, 8)}
+                </td>
+                <td>${Number(b.deposit_amount || 0).toFixed(2)}</td>
+                <td>${Number(b.balance_due || 0).toFixed(2)}</td>
+                <td>
+                  <Status
+                    value={String(
+                      b.payout_status || b.deposit_status || "Not recorded",
+                    )}
+                  />
+                </td>
+                <td>{dateText(b.payout_date)}</td>
+              </tr>
+            ))}
+            {!c.bookings.length ? (
+              <tr>
+                <td colSpan={6}>
+                  <Empty text="Transactions will appear after real bookings and payments." />
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
       </Panel>
-      <Panel>{selected?<><div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Booking Details</h2><p className="mt-1 text-xs text-ink/50">#{String(selected.confirmation_code||selected.id).slice(0,14)}</p></div><Status value={String(selected.status||"Confirmed")}/></div><div className="mt-5 space-y-3 text-xs"><p><b className="block text-ink/50">Customer</b>{String(selected.guest_name||"Customer")}<br/>{String(selected.guest_phone||"")}<br/>{String(selected.guest_email||"")}</p><p><b className="block text-ink/50">Appointment</b>{dateText(selected.appointment_datetime,c.salon.time_zone)}<br/>{styleName(c,selected.style_id)} · {stylistName(c,selected.stylist_id)}<br/>{Number(selected.duration_hours||0)} hours</p><p className="flex justify-between"><span>Deposit paid</span><b className="text-green-700">${Number(selected.deposit_amount||0).toFixed(2)}</b></p><p className="flex justify-between"><span>Remaining balance</span><b className="text-magenta">${Number(selected.balance_due||0).toFixed(2)}</b></p></div>{activeSelected?<><button disabled={Boolean(selected.service_started_at)} onClick={()=>void startService()} className="mt-5 min-h-11 w-full rounded-[8px] border border-plum text-xs font-bold text-plum disabled:border-green-500 disabled:text-green-700">{selected.service_started_at?`Service started ${dateText(selected.service_started_at,c.salon.time_zone)}`:"Start service now"}</button><div className="mt-6 border-t border-plum/10 pt-5"><h3 className="font-serif text-lg text-plum">Cancel booking</h3><p className="mt-1 text-[10px] leading-4 text-ink/55">This refunds the deposit, releases the slot, notifies the customer, and affects your cancellation rate.</p><select value={reason} onChange={(event)=>setReason(event.target.value)} className="mt-3 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"><option value="">Choose required reason</option>{c.cancellationReasons.map((item)=><option key={item}>{item}</option>)}</select>{reason==="Other"?<textarea value={detail} onChange={(event)=>setDetail(event.target.value.slice(0,300))} placeholder="Brief explanation" rows={3} className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"/>:null}<button disabled={busy||!reason} onClick={()=>void cancelBooking()} className="mt-3 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-50">{busy?"Cancelling and refunding…":"Cancel and refund deposit"}</button></div></>:selected.cancellation_reason?<div className="mt-5 rounded-[9px] bg-blush/30 p-3 text-xs"><b>Cancellation reason</b><p className="mt-1">{String(selected.cancellation_reason)}</p><p className="mt-1 text-ink/55">Refund: {String(selected.refund_status||"Not recorded")}</p></div>:null}</>:<Empty text="Open a booking to see details and actions."/>}</Panel>
+    </>
+  );
+}
+
+// Retained temporarily for compatibility with saved dashboard tab references.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function Promotions({ c }: { c: Ctx }) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const saved = await c.saveRecord("salon_promotions", {
+      title: f.get("title"),
+      description: f.get("description"),
+      discount_label: f.get("discount"),
+      starts_at: f.get("start"),
+      ends_at: f.get("end"),
+      is_active: f.get("active") === "on",
+    });
+    if (saved) c.setPromotions((rows) => [saved, ...rows]);
+  }
+  return (
+    <>
+      <Title
+        title="Business Growth & Admin"
+        subtitle="Manage promotions and marketing activity."
+      />
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">
+            Create a Deal or Offer
+          </h2>
+          <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Title"
+              name="title"
+              placeholder="Describe your offer"
+              wide
+            />
+            <TextArea
+              label="Description"
+              name="description"
+              placeholder="Describe the offer and any terms."
+              wide
+            />
+            <Field label="Discount" name="discount" />
+            <Field label="Start Date" name="start" type="date" />
+            <Field label="End Date" name="end" type="date" />
+            <label className="flex items-center gap-2 text-xs">
+              <input type="checkbox" name="active" className="accent-magenta" />
+              Activate promotion
+            </label>
+            <button className="sm:col-span-2 min-h-11 rounded-[8px] bg-magenta text-xs font-bold text-white">
+              Create Promotion
+            </button>
+          </form>
+        </Panel>
+        <Panel className="bg-blush/35">
+          <Megaphone className="text-magenta" />
+          <h2 className="mt-4 font-serif text-2xl text-plum">
+            Promotion visibility
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-ink/65">
+            Published promotions are shown according to your active plan.
+            Performance reporting will remain empty until real views, clicks,
+            and attributed bookings are collected.
+          </p>
+          {c.isOwner ? (
+            <Link
+              href="/salon/dashboard/subscription"
+              className="mt-5 inline-flex rounded-[8px] border border-magenta px-5 py-3 text-xs font-bold text-magenta"
+            >
+              Review plan features
+            </Link>
+          ) : (
+            <p className="mt-5 text-xs font-semibold text-plum">
+              The salon owner manages plan changes.
+            </p>
+          )}
+        </Panel>
+      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">
+            Promotion Performance
+          </h2>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <Metric label="Views" value={0} />
+            <Metric label="Clicks" value={0} />
+            <Metric label="Bookings" value={0} />
+          </div>
+          <p className="mt-4 text-xs text-ink/50">
+            Attribution data has not been collected yet.
+          </p>
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Recent Promotions</h2>
+          {c.promotions.map((p) => (
+            <div
+              key={p.id}
+              className="mt-3 flex items-center justify-between border-b border-plum/10 pb-3 text-xs"
+            >
+              <span>
+                <b>{String(p.title || "Promotion")}</b>
+                <span className="block text-ink/50">
+                  {dateText(p.starts_at)} – {dateText(p.ends_at)}
+                </span>
+              </span>
+              <Status value={p.is_active ? "Active" : "Ended"} />
+            </div>
+          ))}
+          {!c.promotions.length ? (
+            <Empty text="Create your first offer." />
+          ) : null}
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function SettingsPage({ c }: { c: Ctx }) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    await c.updateSalon({
+      email: form.get("email"),
+      phone: form.get("phone"),
+      notification_preferences: {
+        in_app: true,
+        email: true,
+        sms: true,
+        reviews: form.get("reviews") === "on",
+        marketing: form.get("marketing") === "on",
+      },
+    });
+  }
+  return (
+    <>
+      <Title
+        title="Settings"
+        subtitle="Manage login, notifications, publication, and business account details."
+      />
+      <form onSubmit={submit} className="grid gap-4 xl:grid-cols-2">
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">Account Details</h2>
+          <div className="mt-4 space-y-4">
+            <Field
+              label="Login Email"
+              name="email"
+              type="email"
+              defaultValue={c.salon.email}
+            />
+            <Field
+              label="Business Phone / SMS Number"
+              name="phone"
+              defaultValue={c.salon.phone}
+            />
+            <p className="rounded-[8px] bg-blush/30 p-3 text-[10px] leading-4 text-ink/60">
+              Keep both current. Every auto-confirmed booking sends mandatory
+              email and SMS alerts here.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                c.setNotice(
+                  "A secure password-reset email can be sent from the login screen.",
+                )
+              }
+              className="text-xs font-bold text-magenta"
+            >
+              Change password
+            </button>
+          </div>
+        </Panel>
+        <Panel>
+          <h2 className="font-serif text-xl text-plum">
+            Notification Preferences
+          </h2>
+          <p className="mt-2 text-[10px] leading-4 text-ink/55">
+            Booking alerts cannot be disabled because appointments confirm
+            instantly.
+          </p>
+          <div className="mt-4 space-y-3">
+            {[
+              "In-app booking alerts",
+              "Email for every booking",
+              "SMS for every booking",
+            ].map((label) => (
+              <label
+                key={label}
+                className="flex items-center justify-between rounded-[9px] border border-magenta/15 bg-blush/20 p-4 text-xs"
+              >
+                <span>
+                  {label}
+                  <small className="mt-1 block text-ink/45">Required</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked
+                  disabled
+                  readOnly
+                  className="accent-magenta"
+                />
+              </label>
+            ))}
+            {[
+              ["reviews", "New reviews and replies"],
+              ["marketing", "Marketing and growth tips"],
+            ].map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-center justify-between rounded-[9px] border border-plum/10 p-4 text-xs"
+              >
+                <span>{label}</span>
+                <input
+                  type="checkbox"
+                  name={key}
+                  defaultChecked={
+                    c.salon.notification_preferences?.[key] !== false
+                  }
+                  className="accent-magenta"
+                />
+              </label>
+            ))}
+          </div>
+          <button className="mt-5 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
+            Save Settings
+          </button>
+        </Panel>
+      </form>
+      {c.isOwner ? <PublicationControls c={c} /> : null}
+    </>
+  );
+}
+
+function PublicationControls({ c }: { c: Ctx }) {
+  const [busy, setBusy] = useState("");
+  const [reason, setReason] = useState("");
+  const [state, setState] = useState({
+    published: c.salon.is_discoverable === true,
+    accepting: c.salon.accepting_bookings !== false,
+    unpublished: Boolean(c.salon.owner_unpublished_at),
+    closure: Boolean(c.salon.closure_requested_at),
+  });
+  async function action(next: string) {
+    if (
+      (next === "unpublish" || next === "request_closure") &&
+      !reason.trim()
+    ) {
+      c.setNotice("Add a short reason first.");
+      return;
+    }
+    setBusy(next);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Your salon session expired.");
+      const response = await fetch("/api/salon/lifecycle", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: next, reason }),
+      });
+      const body = await response.json();
+      if (!response.ok && response.status !== 409)
+        throw new Error(body.error || "We couldn't update the salon status.");
+      const lifecycle = body.lifecycle || {};
+      setState({
+        published: lifecycle.is_discoverable === true,
+        accepting: lifecycle.accepting_bookings !== false,
+        unpublished: Boolean(lifecycle.owner_unpublished_at),
+        closure: Boolean(lifecycle.closure_requested_at),
+      });
+      c.setNotice(body.error || "Salon status updated.");
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "We couldn't update the salon status.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  return (
+    <Panel className="mt-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-xl text-plum">Marketplace status</h2>
+          <p className="mt-1 text-xs text-ink/60">
+            Publication and booking availability are separate controls. Closing
+            permanently requires a reviewed request so booking and payment
+            history stays protected.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Status value={state.published ? "Published" : "Hidden"} />
+          <Status
+            value={state.accepting ? "Accepting bookings" : "Bookings paused"}
+          />
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <button
+          disabled={Boolean(busy)}
+          onClick={() =>
+            void action(state.accepting ? "pause_bookings" : "resume_bookings")
+          }
+          className="min-h-11 rounded-[8px] border border-magenta px-4 text-xs font-bold text-magenta"
+        >
+          {state.accepting ? "Pause bookings" : "Resume bookings"}
+        </button>
+        <button
+          disabled={Boolean(busy)}
+          onClick={() =>
+            void action(state.unpublished ? "publish" : "unpublish")
+          }
+          className="min-h-11 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum"
+        >
+          {state.unpublished ? "Publish salon" : "Temporarily hide salon"}
+        </button>
+        <button
+          disabled={Boolean(busy)}
+          onClick={() => void action("reconcile")}
+          className="min-h-11 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum"
+        >
+          Recheck eligibility
+        </button>
+        <button
+          disabled={Boolean(busy) || state.closure}
+          onClick={() => void action("request_closure")}
+          className="min-h-11 rounded-[8px] border border-red-200 px-4 text-xs font-bold text-red-700"
+        >
+          {state.closure ? "Closure requested" : "Request permanent closure"}
+        </button>
+      </div>
+      <label className="mt-4 block text-[10px] font-bold">
+        Reason for hiding or closure request
+        <textarea
+          value={reason}
+          onChange={(event) => setReason(event.target.value.slice(0, 1000))}
+          rows={3}
+          className="mt-1 w-full rounded-[8px] border border-plum/15 p-3 text-xs font-normal"
+          placeholder="This is kept with the status audit."
+        />
+      </label>
+    </Panel>
+  );
+}
+
+function Field({
+  label,
+  name,
+  defaultValue,
+  placeholder,
+  type = "text",
+  required = false,
+  wide = false,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: unknown;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+  wide?: boolean;
+}) {
+  const inputType = name === "phone" ? "tel" : type;
+  const pattern =
+    inputType === "email"
+      ? EMAIL_PATTERN
+      : inputType === "tel"
+        ? US_PHONE_PATTERN
+        : undefined;
+  const numeric = type === "number";
+  return (
+    <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
+      <span className="mb-1.5 block text-[10px] font-bold">
+        {label}
+        {required ? <span className="text-magenta"> *</span> : null}
+      </span>
+      <input
+        name={name}
+        type={inputType}
+        inputMode={
+          inputType === "tel" ? "tel" : numeric ? "decimal" : undefined
+        }
+        pattern={pattern}
+        title={
+          inputType === "email"
+            ? "Enter a valid email address such as name@example.com"
+            : inputType === "tel"
+              ? "Please enter a US phone number"
+              : undefined
+        }
+        required={required}
+        min={numeric ? 0 : undefined}
+        max={numeric ? 10000 : undefined}
+        defaultValue={String(defaultValue ?? "")}
+        placeholder={
+          placeholder || (inputType === "tel" ? "+1 (555) 123-4567" : undefined)
+        }
+        step={numeric ? "0.01" : undefined}
+        onKeyDown={
+          numeric
+            ? (event) => {
+                if (/[eE+-]/.test(event.key)) event.preventDefault();
+              }
+            : undefined
+        }
+        className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta"
+      />
+    </label>
+  );
+}
+function TextArea({
+  label,
+  name,
+  defaultValue,
+  placeholder,
+  wide = false,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: unknown;
+  placeholder?: string;
+  wide?: boolean;
+}) {
+  return (
+    <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
+      <span className="mb-1.5 block text-[10px] font-bold">{label}</span>
+      <textarea
+        name={name}
+        defaultValue={String(defaultValue ?? "")}
+        placeholder={placeholder}
+        rows={4}
+        className="w-full rounded-[7px] border border-plum/15 bg-white px-3 py-2 text-xs outline-none focus:border-magenta"
+      />
+    </label>
+  );
+}
+function Status({ value }: { value: string }) {
+  const color = /confirmed|paid|active|completed/i.test(value)
+    ? "bg-green-100 text-green-800"
+    : /cancel|declin|ended/i.test(value)
+      ? "bg-red-100 text-red-700"
+      : /request|pending|scheduled/i.test(value)
+        ? "bg-amber/20 text-[#9b5a00]"
+        : "bg-blue-100 text-blue-700";
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-semibold ${color}`}
+    >
+      {value}
+    </span>
+  );
+}
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="mt-1 flex gap-0.5 text-amber">
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star
+          key={i}
+          size={13}
+          className={
+            i < Math.round(value) ? "fill-amber text-amber" : "text-ink/20"
+          }
+          aria-hidden="true"
+        />
+      ))}
+    </span>
+  );
+}
+function Empty({ text }: { text: string }) {
+  return (
+    <div className="mt-4 rounded-[9px] border border-dashed border-plum/20 bg-blush/20 p-5 text-center text-xs text-ink/60">
+      {text}
     </div>
-  </>
+  );
 }
-
-function Reviews({c}:{c:Ctx}){
-  const count=c.reviews.length;
-  const rating=count?c.reviews.reduce((sum,review)=>sum+Number(review.rating_overall||0),0)/count:0;
-  const distribution=[5,4,3,2,1].map(star=>({star,count:c.reviews.filter(review=>Math.round(Number(review.rating_overall||0))===star).length}));
-  return <><Title title="Reviews" subtitle="See what clients are saying about your salon."/><div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]"><div><Panel><div className="grid gap-4 sm:grid-cols-[.6fr_.6fr_1.2fr]"><div><p className="text-xs font-semibold">Overall Rating</p><p className="mt-2 font-serif text-5xl">{count?rating.toFixed(1):"New"}</p>{count?<Stars value={rating}/>:null}</div><div><p className="text-xs font-semibold">Total Reviews</p><p className="mt-2 font-serif text-5xl">{count}</p></div><div className="space-y-2">{distribution.map(item=>{const percent=count?Math.round(item.count/count*100):0;return <div key={item.star} className="grid grid-cols-[25px_1fr_45px] items-center gap-2 text-[10px]"><span>{item.star}</span><span className="h-1.5 rounded-full bg-blush"><span className="block h-full rounded-full bg-magenta" style={{width:`${percent}%`}}/></span><span>{percent}%</span></div>})}</div></div></Panel><h2 className="mb-3 mt-5 font-serif text-xl text-plum">All Reviews</h2><div className="space-y-3">{c.reviews.map((review,index)=><Panel key={review.id||index}><div className="flex justify-between"><div><b>Verified Client</b><span className="ml-2 rounded-full bg-blush px-2 py-1 text-[8px] text-magenta">Verified</span><Stars value={Number(review.rating_overall||0)}/></div><span className="text-[10px] text-ink/50">{dateText(review.created_at)}</span></div>{review.written_review?<p className="mt-3 text-sm">{String(review.written_review)}</p>:null}<div className="mt-4 flex gap-4 text-xs font-semibold text-magenta"><button onClick={()=>c.setNotice("Open this review from the public salon page to reply.")}>Reply</button><button onClick={async()=>{if(review.id)await supabase.rpc("dispute_review",{target_review_id:review.id});c.setNotice("Review sent for moderation.")}}>Flag / Dispute</button></div></Panel>)}{!c.reviews.length?<Panel><Empty text="Completed-booking reviews will appear here automatically."/></Panel>:null}</div></div><div className="space-y-4"><Panel><h2 className="font-serif text-xl text-plum">Review Response Tips</h2>{["Respond to all reviews","Be professional and personal","Resolve issues constructively"].map(tip=><div key={tip} className="mt-4 flex gap-3 text-xs"><Sparkles size={20} className="text-magenta"/><span><b>{tip}</b><span className="mt-1 block text-ink/60">Keep your response warm, respectful, and on-brand.</span></span></div>)}</Panel><Panel><h2 className="font-serif text-xl text-plum">Review Distribution</h2>{count?<div className="mx-auto mt-5 flex h-36 w-36 items-center justify-center rounded-full border-[18px] border-magenta"><span className="text-center font-serif text-3xl">{count}<span className="block text-[10px]">Total</span></span></div>:<Empty text="No reviews yet."/>}</Panel></div></div></>;
-}
-
-function Earnings({c}:{c:Ctx}){const completed=c.bookings.filter(b=>["complete","completed"].includes(String(b.status||"").toLowerCase()));const paidDeposits=c.bookings.filter(b=>["paid","succeeded","complete","completed"].includes(String(b.deposit_status||"").toLowerCase()));const total=completed.reduce((s,b)=>s+Number(b.estimated_total||0),0);const deposits=paidDeposits.reduce((s,b)=>s+Number(b.deposit_amount||0),0);const pending=c.bookings.filter(b=>String(b.payout_status||"").toLowerCase()==="pending").reduce((s,b)=>s+Number(b.deposit_amount||0),0);const now=new Date();const thisMonth=completed.filter(b=>{const d=new Date(String(b.appointment_datetime||b.created_at||""));return !Number.isNaN(d.getTime())&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}).reduce((s,b)=>s+Number(b.estimated_total||0),0);return <><Title title="Earnings & Payouts" subtitle="Track your earnings, manage payouts, and view your transaction history."/><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Paid Deposits" value={`$${deposits.toLocaleString()}`} icon={CircleDollarSign}/><Metric label="Completed Booking Value" value={`$${total.toLocaleString()}`} icon={CircleDollarSign}/><Metric label="Pending Payouts" value={`$${pending.toLocaleString()}`} icon={Clock3}/><Metric label="Completed This Month" value={`$${thisMonth.toLocaleString()}`} icon={CalendarDays}/></div><div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_.65fr_1.1fr]"><Panel><h2 className="font-serif text-xl text-plum">Payout Account</h2>{c.salon.stripe_account_id?<><p className="mt-4 flex items-center gap-2 text-green-700"><BadgeCheck size={18} aria-hidden="true"/>Account connected</p><p className="mt-2 text-xs text-ink/60">Connection details are managed securely in Stripe.</p></>:<><p className="mt-4 font-semibold">Connect your payout account</p><p className="mt-2 text-xs leading-5 text-ink/65">Connect your Stripe account to receive payouts securely. Girlz Culture never stores your bank details.</p><button onClick={()=>c.setNotice("Stripe Connect requires the platform’s live Stripe credentials before onboarding can begin.")} className="mt-5 min-h-11 w-full rounded-[8px] bg-[linear-gradient(90deg,#5b1a6b,#d6186b)] text-xs font-bold text-white">Connect with Stripe</button></>}</Panel><Panel><h2 className="font-serif text-xl text-plum">Account Status</h2><p className="mt-4 text-sm text-green-700">{c.salon.stripe_account_id?"Account connected":"Not connected"}</p><p className="mt-3 text-xs text-ink/60">{c.salon.stripe_account_id?"Payout timing and account details are available in Stripe.":"Connect Stripe before accepting payouts."}</p></Panel><Panel><h2 className="font-serif text-xl text-plum">Earnings Trend</h2><p className="mt-3 font-serif text-3xl">${total.toLocaleString()}</p><div className="mt-8"><MiniLine/></div></Panel></div><Panel className="mt-4 overflow-x-auto"><h2 className="font-serif text-xl text-plum">Transaction History</h2><table className="mt-3 w-full min-w-[700px] text-left text-xs"><thead><tr>{["Date","Booking","Deposit Amount","Balance","Payment / Payout Status","Payout Date"].map(h=><th className="border-b border-plum/10 py-3" key={h}>{h}</th>)}</tr></thead><tbody>{c.bookings.map((b,i)=><tr key={b.id||i} className="border-b border-plum/10"><td className="py-3">{dateText(b.created_at)}</td><td>Booking #{String(b.confirmation_code||b.id||"").slice(0,8)}</td><td>${Number(b.deposit_amount||0).toFixed(2)}</td><td>${Number(b.balance_due||0).toFixed(2)}</td><td><Status value={String(b.payout_status||b.deposit_status||"Not recorded")}/></td><td>{dateText(b.payout_date)}</td></tr>)}{!c.bookings.length?<tr><td colSpan={6}><Empty text="Transactions will appear after real bookings and payments." /></td></tr>:null}</tbody></table></Panel></>}
-
-function Promotions({c}:{c:Ctx}){
-  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const saved=await c.saveRecord("salon_promotions",{title:f.get("title"),description:f.get("description"),discount_label:f.get("discount"),starts_at:f.get("start"),ends_at:f.get("end"),is_active:f.get("active")==="on"});if(saved)c.setPromotions(rows=>[saved,...rows])}
-  return <><Title title="Business Growth & Admin" subtitle="Manage promotions and marketing activity."/><div className="grid gap-4 xl:grid-cols-2"><Panel><h2 className="font-serif text-xl text-plum">Create a Deal or Offer</h2><form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Title" name="title" placeholder="Describe your offer" wide/><TextArea label="Description" name="description" placeholder="Describe the offer and any terms." wide/><Field label="Discount" name="discount"/><Field label="Start Date" name="start" type="date"/><Field label="End Date" name="end" type="date"/><label className="flex items-center gap-2 text-xs"><input type="checkbox" name="active" className="accent-magenta"/>Activate promotion</label><button className="sm:col-span-2 min-h-11 rounded-[8px] bg-magenta text-xs font-bold text-white">Create Promotion</button></form></Panel><Panel className="bg-blush/35"><Megaphone className="text-magenta"/><h2 className="mt-4 font-serif text-2xl text-plum">Promotion visibility</h2><p className="mt-3 text-sm leading-6 text-ink/65">Published promotions are shown according to your active plan. Performance reporting will remain empty until real views, clicks, and attributed bookings are collected.</p>{c.isOwner?<Link href="/salon/dashboard/subscription" className="mt-5 inline-flex rounded-[8px] border border-magenta px-5 py-3 text-xs font-bold text-magenta">Review plan features</Link>:<p className="mt-5 text-xs font-semibold text-plum">The salon owner manages plan changes.</p>}</Panel></div><div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_.8fr]"><Panel><h2 className="font-serif text-xl text-plum">Promotion Performance</h2><div className="mt-4 grid grid-cols-3 gap-3"><Metric label="Views" value={0}/><Metric label="Clicks" value={0}/><Metric label="Bookings" value={0}/></div><p className="mt-4 text-xs text-ink/50">Attribution data has not been collected yet.</p></Panel><Panel><h2 className="font-serif text-xl text-plum">Recent Promotions</h2>{c.promotions.map(p=><div key={p.id} className="mt-3 flex items-center justify-between border-b border-plum/10 pb-3 text-xs"><span><b>{String(p.title||"Promotion")}</b><span className="block text-ink/50">{dateText(p.starts_at)} – {dateText(p.ends_at)}</span></span><Status value={p.is_active?"Active":"Ended"}/></div>)}{!c.promotions.length?<Empty text="Create your first offer."/>:null}</Panel></div></>;
-}
-
-
-function SettingsPage({c}:{c:Ctx}) {
-  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const form=new FormData(e.currentTarget);await c.updateSalon({email:form.get("email"),phone:form.get("phone"),notification_preferences:{in_app:true,email:true,sms:true,reviews:form.get("reviews")==="on",marketing:form.get("marketing")==="on"}})}
-  return <><Title title="Settings" subtitle="Manage login, notifications, publication, and business account details."/><form onSubmit={submit} className="grid gap-4 xl:grid-cols-2"><Panel><h2 className="font-serif text-xl text-plum">Account Details</h2><div className="mt-4 space-y-4"><Field label="Login Email" name="email" type="email" defaultValue={c.salon.email}/><Field label="Business Phone / SMS Number" name="phone" defaultValue={c.salon.phone}/><p className="rounded-[8px] bg-blush/30 p-3 text-[10px] leading-4 text-ink/60">Keep both current. Every auto-confirmed booking sends mandatory email and SMS alerts here.</p><button type="button" onClick={()=>c.setNotice("A secure password-reset email can be sent from the login screen.")} className="text-xs font-bold text-magenta">Change password</button></div></Panel><Panel><h2 className="font-serif text-xl text-plum">Notification Preferences</h2><p className="mt-2 text-[10px] leading-4 text-ink/55">Booking alerts cannot be disabled because appointments confirm instantly.</p><div className="mt-4 space-y-3">{["In-app booking alerts","Email for every booking","SMS for every booking"].map((label)=><label key={label} className="flex items-center justify-between rounded-[9px] border border-magenta/15 bg-blush/20 p-4 text-xs"><span>{label}<small className="mt-1 block text-ink/45">Required</small></span><input type="checkbox" checked disabled readOnly className="accent-magenta"/></label>)}{[["reviews","New reviews and replies"],["marketing","Marketing and growth tips"]].map(([key,label])=><label key={key} className="flex items-center justify-between rounded-[9px] border border-plum/10 p-4 text-xs"><span>{label}</span><input type="checkbox" name={key} defaultChecked={c.salon.notification_preferences?.[key]!==false} className="accent-magenta"/></label>)}</div><button className="mt-5 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save Settings</button></Panel></form>{c.isOwner?<PublicationControls c={c}/>:null}</>;
-}
-
-function PublicationControls({c}:{c:Ctx}){
-  const [busy,setBusy]=useState("");const [reason,setReason]=useState("");const [state,setState]=useState({published:c.salon.is_discoverable===true,accepting:c.salon.accepting_bookings!==false,unpublished:Boolean(c.salon.owner_unpublished_at),closure:Boolean(c.salon.closure_requested_at)});
-  async function action(next:string){if((next==="unpublish"||next==="request_closure")&&!reason.trim()){c.setNotice("Add a short reason first.");return;}setBusy(next);try{const session=await getSessionForScope("salon");if(!session)throw new Error("Your salon session expired.");const response=await fetch("/api/salon/lifecycle",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({action:next,reason})});const body=await response.json();if(!response.ok&&response.status!==409)throw new Error(body.error||"We couldn't update the salon status.");const lifecycle=body.lifecycle||{};setState({published:lifecycle.is_discoverable===true,accepting:lifecycle.accepting_bookings!==false,unpublished:Boolean(lifecycle.owner_unpublished_at),closure:Boolean(lifecycle.closure_requested_at)});c.setNotice(body.error||"Salon status updated.");}catch(error){c.setNotice(error instanceof Error?error.message:"We couldn't update the salon status.");}finally{setBusy("");}}
-  return <Panel className="mt-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-xl text-plum">Marketplace status</h2><p className="mt-1 text-xs text-ink/60">Publication and booking availability are separate controls. Closing permanently requires a reviewed request so booking and payment history stays protected.</p></div><div className="flex gap-2"><Status value={state.published?"Published":"Hidden"}/><Status value={state.accepting?"Accepting bookings":"Bookings paused"}/></div></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><button disabled={Boolean(busy)} onClick={()=>void action(state.accepting?"pause_bookings":"resume_bookings")} className="min-h-11 rounded-[8px] border border-magenta px-4 text-xs font-bold text-magenta">{state.accepting?"Pause bookings":"Resume bookings"}</button><button disabled={Boolean(busy)} onClick={()=>void action(state.unpublished?"publish":"unpublish")} className="min-h-11 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum">{state.unpublished?"Publish salon":"Temporarily hide salon"}</button><button disabled={Boolean(busy)} onClick={()=>void action("reconcile")} className="min-h-11 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum">Recheck eligibility</button><button disabled={Boolean(busy)||state.closure} onClick={()=>void action("request_closure")} className="min-h-11 rounded-[8px] border border-red-200 px-4 text-xs font-bold text-red-700">{state.closure?"Closure requested":"Request permanent closure"}</button></div><label className="mt-4 block text-[10px] font-bold">Reason for hiding or closure request<textarea value={reason} onChange={(event)=>setReason(event.target.value.slice(0,1000))} rows={3} className="mt-1 w-full rounded-[8px] border border-plum/15 p-3 text-xs font-normal" placeholder="This is kept with the status audit."/></label></Panel>;
-}
-
-function Field({label,name,defaultValue,placeholder,type="text",required=false,wide=false}:{label:string;name:string;defaultValue?:unknown;placeholder?:string;type?:string;required?:boolean;wide?:boolean}){const inputType=name==="phone"?"tel":type;const pattern=inputType==="email"?EMAIL_PATTERN:inputType==="tel"?US_PHONE_PATTERN:undefined;const numeric=type==="number";return <label className={`block ${wide?"sm:col-span-2":""}`}><span className="mb-1.5 block text-[10px] font-bold">{label}{required?<span className="text-magenta"> *</span>:null}</span><input name={name} type={inputType} inputMode={inputType==="tel"?"tel":numeric?"decimal":undefined} pattern={pattern} title={inputType==="email"?"Enter a valid email address such as name@example.com":inputType==="tel"?"Please enter a US phone number":undefined} required={required} min={numeric?0:undefined} max={numeric?10000:undefined} defaultValue={String(defaultValue??"")} placeholder={placeholder||(inputType==="tel"?"+1 (555) 123-4567":undefined)} step={numeric?"0.01":undefined} onKeyDown={numeric?(event)=>{if(/[eE+-]/.test(event.key))event.preventDefault()}:undefined} className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta"/></label>}
-function TextArea({label,name,defaultValue,placeholder,wide=false}:{label:string;name:string;defaultValue?:unknown;placeholder?:string;wide?:boolean}){return <label className={`block ${wide?"sm:col-span-2":""}`}><span className="mb-1.5 block text-[10px] font-bold">{label}</span><textarea name={name} defaultValue={String(defaultValue??"")} placeholder={placeholder} rows={4} className="w-full rounded-[7px] border border-plum/15 bg-white px-3 py-2 text-xs outline-none focus:border-magenta"/></label>}
-function Status({value}:{value:string}){const color=/confirmed|paid|active|completed/i.test(value)?"bg-green-100 text-green-800":/cancel|declin|ended/i.test(value)?"bg-red-100 text-red-700":/request|pending|scheduled/i.test(value)?"bg-amber/20 text-[#9b5a00]":"bg-blue-100 text-blue-700";return <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-semibold ${color}`}>{value}</span>}
-function Stars({value}:{value:number}){return <span className="mt-1 flex gap-0.5 text-amber">{Array.from({length:5},(_,i)=><Star key={i} size={13} className={i<Math.round(value)?"fill-amber text-amber":"text-ink/20"} aria-hidden="true"/>)}</span>}
-function Empty({text}:{text:string}){return <div className="mt-4 rounded-[9px] border border-dashed border-plum/20 bg-blush/20 p-5 text-center text-xs text-ink/60">{text}</div>}
-function salonWeek(timeZone:string){
-  const today=dateKeyInTimeZone(new Date(),timeZone);
-  const cursor=new Date(`${today}T12:00:00Z`);
-  const daysFromMonday=(cursor.getUTCDay()+6)%7;
-  cursor.setUTCDate(cursor.getUTCDate()-daysFromMonday);
-  return Array.from({length:7},(_,index)=>{
-    const date=new Date(cursor);
-    date.setUTCDate(cursor.getUTCDate()+index);
-    return {key:date.toISOString().slice(0,10),label:date.toLocaleDateString("en-US",{weekday:"short",timeZone:"UTC"}),day:date.toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"UTC"})};
+function salonWeek(timeZone: string) {
+  const today = dateKeyInTimeZone(new Date(), timeZone);
+  const cursor = new Date(`${today}T12:00:00Z`);
+  const daysFromMonday = (cursor.getUTCDay() + 6) % 7;
+  cursor.setUTCDate(cursor.getUTCDate() - daysFromMonday);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(cursor);
+    date.setUTCDate(cursor.getUTCDate() + index);
+    return {
+      key: date.toISOString().slice(0, 10),
+      label: date.toLocaleDateString("en-US", {
+        weekday: "short",
+        timeZone: "UTC",
+      }),
+      day: date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      }),
+    };
   });
 }
-function bookingTime(value:unknown,timeZone:string){if(!value)return "Time not set";const date=new Date(String(value));return Number.isNaN(date.getTime())?"Time not set":date.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone})}
-function dateText(value:unknown,timeZone="America/New_York"){if(!value)return "—";const d=new Date(String(value));return Number.isNaN(d.getTime())?String(value):d.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone})}
-function styleName(c:Ctx,id:unknown){return String(c.styles.find(s=>s.id===id)?.name||"Braiding Service")}
-function stylistName(c:Ctx,id:unknown){return String(c.stylists.find(s=>s.id===id)?.name||"Any stylist")}
-function optionText(value:unknown){if(!Array.isArray(value))return "";return value.map((o)=>{const x=o as Record<string,unknown>;return `${x.label||x.name||"Option"}|${x.price_add||x.price||0}`}).join("\n")}
+function bookingTime(value: unknown, timeZone: string) {
+  if (!value) return "Time not set";
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime())
+    ? "Time not set"
+    : date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone,
+      });
+}
+function dateText(value: unknown, timeZone = "America/New_York") {
+  if (!value) return "—";
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime())
+    ? String(value)
+    : d.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone,
+      });
+}
+function styleName(c: Ctx, id: unknown) {
+  return String(c.styles.find((s) => s.id === id)?.name || "Braiding Service");
+}
+function stylistName(c: Ctx, id: unknown) {
+  return String(c.stylists.find((s) => s.id === id)?.name || "Any stylist");
+}
+function optionText(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((o) => {
+      const x = o as Record<string, unknown>;
+      return `${x.label || x.name || "Option"}|${x.price_add || x.price || 0}`;
+    })
+    .join("\n");
+}

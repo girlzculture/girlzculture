@@ -17,6 +17,20 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: girlzculture_clean
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d girlzculture_clean"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       # Pull-request builds cannot access protected production secrets. These
       # nonfunctional values only allow Next.js to evaluate the client module.
@@ -24,6 +38,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: "1"
+      CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +47,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify:migrations
+      - name: Execute the complete migration chain from an empty database
+        run: npm run verify:database-clean
       - run: npm run verify:engine-expansion
       - run: npm run verify:catalog-management
       - run: npx tsc --noEmit
@@ -63,12 +80,23 @@ jobs:
           test -n "$SUPABASE_PROJECT_ID"
       - name: Link reviewed project
         run: npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+      - name: Verify canonical production prerequisites without changing data
+        shell: bash
+        run: |
+          schema_dump="$RUNNER_TEMP/girlz-culture-production-public-schema.sql"
+          npx --yes supabase@latest db dump --linked --schema public --file "$schema_dump" --password "$SUPABASE_DB_PASSWORD"
+          node scripts/verify-production-baseline-dump.mjs "$schema_dump"
       - name: Reconcile approved legacy SQL-editor migration history
         shell: bash
         run: |
-          # Approved one-time baseline: these 46 migrations through
-          # 20260716170000 were applied before automated migration tracking.
-          npx --yes supabase@latest migration repair --status applied --linked --password "$SUPABASE_DB_PASSWORD" 20260710143000 20260710190000 20260710213000 20260711110000 20260711150000 20260711190000 20260713110000 20260713130000 20260713180000 20260713190000 20260713200000 20260713210000 20260713220000 20260714100000 20260714110000 20260714120000 20260714130000 20260714140000 20260714150000 20260714160000 20260714170000 20260714180000 20260714190000 20260714200000 20260714210000 20260714220000 20260714230000 20260714240000 20260714250000 20260715100000 20260715110000 20260715120000 20260715130000 20260715140000 20260715150000 20260715160000 20260715170000 20260715180000 20260715190000 20260715200000 20260716120000 20260716130000 20260716140000 20260716150000 20260716160000 20260716170000
+          # Approved one-time history reconciliation. Production was manually
+          # provisioned with the canonical eleven-table baseline before SQL
+          # migrations were tracked, and these 46 evolutions through
+          # 20260716170000 were applied in the SQL editor. The prior read-only
+          # schema dump must prove the baseline objects exist before this step.
+          # migration repair changes only Supabase migration-history metadata;
+          # it does not execute baseline SQL or mutate application rows.
+          npx --yes supabase@latest migration repair --status applied --linked --password "$SUPABASE_DB_PASSWORD" 20260708120000 20260710143000 20260710190000 20260710213000 20260711110000 20260711150000 20260711190000 20260713110000 20260713130000 20260713180000 20260713190000 20260713200000 20260713210000 20260713220000 20260714100000 20260714110000 20260714120000 20260714130000 20260714140000 20260714150000 20260714160000 20260714170000 20260714180000 20260714190000 20260714200000 20260714210000 20260714220000 20260714230000 20260714240000 20260714250000 20260715100000 20260715110000 20260715120000 20260715130000 20260715140000 20260715150000 20260715160000 20260715170000 20260715180000 20260715190000 20260715200000 20260716120000 20260716130000 20260716140000 20260716150000 20260716160000 20260716170000
       - name: Show reconciled migration plan
         run: npx --yes supabase@latest migration list --linked
       - name: Dry-run pending continuation migrations

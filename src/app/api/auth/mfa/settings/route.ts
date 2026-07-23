@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -10,7 +11,7 @@ async function userFor(request: Request) {
   return { admin, user: data.user };
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin, user } = await userFor(request);
     const { data, error } = await admin.from("account_security_settings").select("mfa_enabled,preferred_channel,verified_phone").eq("user_id", user.id).maybeSingle();
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   } catch (error) { return errorResponse(error, "Unable to load security settings."); }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     const { admin, user } = await userFor(request);
     const body = await request.json() as Record<string, unknown>;
@@ -30,3 +31,5 @@ export async function POST(request: Request) {
     return Response.json({ saved: true });
   } catch (error) { return errorResponse(error, "Unable to save security settings."); }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/auth/mfa/settings", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/mfa/settings", "POST"), POSTHandler);

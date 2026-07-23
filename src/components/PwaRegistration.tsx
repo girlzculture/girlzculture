@@ -6,7 +6,7 @@ export default function PwaRegistration(){
     navigator.serviceWorker
       .register("/sw.js", { updateViaCache: "none" })
       .then((registration) => registration.update())
-      .catch((error)=>console.error("Service worker registration failed",error));
+      .catch(()=>undefined);
   },[]);
   return null;
 }

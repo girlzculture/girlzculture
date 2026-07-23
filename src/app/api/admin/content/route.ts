@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { revalidatePath } from "next/cache";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
@@ -60,7 +61,7 @@ function revalidatePublishedContent() {
   revalidatePath("/salon/[slug]", "page");
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let monitoringAdmin;
   try {
     const { admin } = await requireAdminPermission(request, "content");
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+async function PUTHandler(request: Request) {
   let monitoringAdmin;
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
@@ -128,7 +129,7 @@ export async function PUT(request: Request) {
       if (error) throw error;
       await auditContentChange(admin, user.id, "master_style", data.id, data.name, before, data);
       revalidatePublishedContent();
-      console.info("Admin master style saved", { styleId: data.id, name: data.name, admin: user.email });
+      console.info("Admin master style saved", { styleId: data.id, adminUserId: user.id });
       return Response.json({ data });
     }
 
@@ -143,7 +144,7 @@ export async function PUT(request: Request) {
       if (error) throw error;
       await auditContentChange(admin, user.id, "service_category", data.id, data.name, before, data);
       revalidatePublishedContent();
-      console.info("Admin service category saved", { id: data.id, name: data.name, admin: user.email });
+      console.info("Admin service category saved", { id: data.id, adminUserId: user.id });
       return Response.json({ data });
     }
 
@@ -162,7 +163,7 @@ export async function PUT(request: Request) {
       if (error) throw error;
       await auditContentChange(admin, user.id, type, data.id, data.name, before, data);
       revalidatePublishedContent();
-      console.info(`Admin ${type} saved`, { id: data.id, name: data.name, admin: user.email });
+      console.info(`Admin ${type} saved`, { id: data.id, adminUserId: user.id });
       return Response.json({ data });
     }
 
@@ -183,7 +184,7 @@ export async function PUT(request: Request) {
       if (error) throw error;
       await auditContentChange(admin, user.id, "content_page", data.slug, data.title, before, data);
       revalidatePublishedContent();
-      console.info("Admin page content saved", { slug: data.slug, admin: user.email });
+      console.info("Admin page content saved", { slug: data.slug, adminUserId: user.id });
       return Response.json({ data });
     }
 
@@ -194,7 +195,7 @@ export async function PUT(request: Request) {
       if (error) throw error;
       await auditContentChange(admin, user.id, "blog_post", data.id, data.title, before, data);
       revalidatePublishedContent();
-      console.info("Admin blog post saved", { slug: data.slug, admin: user.email });
+      console.info("Admin blog post saved", { slug: data.slug, adminUserId: user.id });
       return Response.json({ data });
     }
 
@@ -204,7 +205,7 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   let monitoringAdmin;
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
@@ -226,9 +227,12 @@ export async function DELETE(request: Request) {
       if (/still used|must be archived|cannot|reassign/i.test(error.message)) return Response.json({ error: error.message }, { status: 409 });
       throw error;
     }
-    console.info("Admin content record deleted", { id, type, admin: user.email });
+    console.info("Admin content record deleted", { id, type, adminUserId: user.id });
     return Response.json({ ok: true, result: data });
   } catch (error) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "content-management", action: "delete", actorRole: "admin", safeMessage: "The record could not be deleted safely. Nothing was changed." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/content", "GET"), GETHandler);
+export const PUT = withOperationalMonitoring(routeMonitoringProfile("/api/admin/content", "PUT"), PUTHandler);
+export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/admin/content", "DELETE"), DELETEHandler);

@@ -1,20 +1,22 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import { capturePlatformError } from "@/lib/platformErrors";
 import { createHash } from "node:crypto";
 import { clientAddress, cleanEmail, cleanText, enforceRateLimit, errorResponse, RateLimitError, rejectBot } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { getEngineList } from "@/lib/engineConfigServer";
 
-export async function GET() {
+async function GETHandler() {
   try {
     const { data, error } = await getSupabaseAdmin().from("salons").select("id,name,address_city,address_state").ilike("status", "active").order("name").limit(1000);
     if (error) throw error;
     return Response.json({ salons: data || [] });
   } catch (error) {
-    console.error("Complaint salon list failed", error);
+    noteOperationalFailure("Complaint salon list failed", error);
     return Response.json({ error: "Unable to load businesses." }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "public-complaint", 3, 60 * 60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -86,11 +88,33 @@ export async function POST(request: Request) {
     }).select("id").single();
     if (ticketError) throw ticketError;
     await admin.from("complaints_log").update({ support_ticket_id: ticket.id }).eq("id", complaint.id);
-    await sendEmail(email, `We received your Girlz Culture complaint — ${salon.name}`, `<h1>Your complaint was received</h1><p>Hello ${name},</p><p>Our support team received your complaint about ${salon.name}. Reference: ${ticket.id}.</p><p>We will review the details and respond to this email address.</p>`, "support").catch((deliveryError) => console.error("Complaint receipt email failed", { ticketId: ticket.id, deliveryError }));
+    let deliveryReference: string | null = null;
+    try {
+      await sendEmail(email, `We received your Girlz Culture complaint — ${salon.name}`, `<h1>Your complaint was received</h1><p>Hello ${name},</p><p>Our support team received your complaint about ${salon.name}. Reference: ${ticket.id}.</p><p>We will review the details and respond to this email address.</p>`, "support");
+    } catch (deliveryError) {
+      deliveryReference = await capturePlatformError({
+        request, admin, error: deliveryError, feature: "complaints", action: "send-receipt",
+        actorRole: "public", salonId, recordType: "complaint", recordId: complaint.id,
+        provider: "email",
+        safeMessage: "Your complaint was saved, but its confirmation email could not be delivered.",
+      });
+    }
     console.info("Public complaint created", { complaintId: complaint.id, ticketId: ticket.id, verified });
-    return Response.json({ ok: true, ticketId: ticket.id, verified });
+    return Response.json({
+      ok: true,
+      ticketId: ticket.id,
+      verified,
+      warning: deliveryReference
+        ? {
+            message: `Your complaint was saved, but its confirmation email could not be delivered. Reference ${deliveryReference}.`,
+            request_id: deliveryReference,
+          }
+        : null,
+    });
   } catch (error) {
-    console.error("Public complaint submission failed", error);
+    noteOperationalFailure("Public complaint submission failed", error);
     return errorResponse(error, "Unable to submit your complaint.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/complaints", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/complaints", "POST"), POSTHandler);

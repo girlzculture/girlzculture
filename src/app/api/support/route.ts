@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cleanEmail, cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { getEngineList } from "@/lib/engineConfigServer";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request,"public-support",5,10*60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -21,7 +22,12 @@ export async function POST(request: Request) {
     console.info("Public support request created", { ticketId: data.id, category });
     return Response.json({ ok: true, ticketId: data.id });
   } catch (error) {
-    console.error("Public support request failed", error);
+    noteOperationalFailure("Public support request failed", error);
     return errorResponse(error,"Unable to submit your request");
   }
 }
+
+export const POST = withOperationalMonitoring(
+  routeMonitoringProfile("/api/support", "POST"),
+  POSTHandler,
+);

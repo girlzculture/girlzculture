@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 
@@ -14,7 +15,7 @@ function validateTemplate(body:Record<string,unknown>, allowedVariables:string[]
   return { subject, templateBody };
 }
 
-export async function GET(request:Request) {
+async function GETHandler(request:Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
     const [{data:templates,error},{data:versions,error:versionError}] = await Promise.all([
@@ -25,12 +26,12 @@ export async function GET(request:Request) {
     if (versionError) throw versionError;
     return Response.json({ templates:templates || [], versions:versions || [] });
   } catch (error) {
-    console.error("Notification templates load failed", error);
+    noteOperationalFailure("Notification templates load failed", error);
     return errorResponse(error, "Unable to load notification templates.");
   }
 }
 
-export async function PATCH(request:Request) {
+async function PATCHHandler(request:Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
     const body = await request.json() as Record<string,unknown>;
@@ -53,7 +54,9 @@ export async function PATCH(request:Request) {
     await admin.from("admin_security_events").insert({ actor_user_id:user.id, action:`notification_template_${action}`, result:"Allowed", details:{template_key:templateKey,reason:reason||null} });
     return Response.json({ template:result.data });
   } catch (error) {
-    console.error("Notification template update failed", error);
+    noteOperationalFailure("Notification template update failed", error);
     return errorResponse(error, "Unable to update the notification template.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/notifications", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/notifications", "PATCH"), PATCHHandler);

@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanEmail, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { createResetCode, findAuthUserByEmail, resetHash } from "@/lib/passwordResetServer";
 import { getSupabaseAdmin, sendEmail, sendSms } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "password-reset-request", 5, 15 * 60_000);
     const body = await request.json() as Record<string, unknown>; rejectBot(body);
@@ -24,5 +25,6 @@ export async function POST(request: Request) {
       if (delivery?.skipped) throw new Error("Email reset delivery is not configured yet.");
     }
     return Response.json({ ok: true, requestId: data.id, message: `A reset code was sent by ${channel === "sms" ? "text message" : "email"}.` });
-  } catch (error) { console.error("Password reset request failed", error); return errorResponse(error, "Unable to send reset code."); }
+  } catch (error) { noteOperationalFailure("Password reset request failed", error); return errorResponse(error, "Unable to send reset code."); }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/password-reset/request", "POST"), POSTHandler);

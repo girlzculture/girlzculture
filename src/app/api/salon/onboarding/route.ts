@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 
@@ -69,16 +70,16 @@ async function evaluate(
   }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     return await evaluate(request);
   } catch (error) {
-    console.error("Salon onboarding evaluation failed", error);
+    noteOperationalFailure("Salon onboarding evaluation failed", error);
     return errorResponse(error, "Unable to evaluate onboarding.");
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const requestedAction = String(body.action || "refresh");
@@ -87,7 +88,9 @@ export async function POST(request: Request) {
       : "refresh") as "refresh" | "finish" | "set_sole_stylist";
     return await evaluate(request, action, body.owner_is_sole_stylist === true);
   } catch (error) {
-    console.error("Salon onboarding refresh failed", error);
+    noteOperationalFailure("Salon onboarding refresh failed", error);
     return errorResponse(error, "Unable to refresh onboarding.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/onboarding", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/onboarding", "POST"), POSTHandler);

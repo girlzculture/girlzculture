@@ -21,6 +21,7 @@ import SalonPhotoGallery from "@/components/public/SalonPhotoGallery";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
+import { promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 
 type SalonRecord = {
   id: string;
@@ -47,6 +48,7 @@ type SalonRecord = {
   review_count?: number | null;
   status?: string | null;
   is_discoverable?: boolean | null;
+  subscription_tier?: string | null;
 };
 
 type StyleRecord = {
@@ -188,7 +190,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable")
+    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -200,16 +202,19 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   }
   if (slug.startsWith("pending-") || salon.status !== "Active" || salon.is_discoverable !== true) notFound();
 
-  const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult] = await Promise.all([
+  const now = new Date().toISOString();
+  const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult, promotionsResult] = await Promise.all([
     supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
     supabase.from("stylists").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
+    supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order("created_at",{ascending:false}),
   ]);
 
   const styles = (stylesResult.data || []) as StyleRecord[];
   const stylists = ((stylistsResult.data || []) as StylistRecord[]).filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
   const products = (productsResult.data || []) as ProductRecord[];
+  const promotions = ["Growth","Premium"].includes(String(salon.subscription_tier || "")) ? (promotionsResult.data || []) as SalonPromotion[] : [];
 
   let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
   if (reviewsWithCustomerResult.error) {
@@ -284,6 +289,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
           </div>
         </section>
 
+        {promotions.length ? <section aria-labelledby="current-offers" className="mb-4 rounded-[15px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(243,217,228,.72),rgba(255,255,255,.78))] p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Tag size={15}/>Current offers</p><h2 id="current-offers" className="mt-2 font-serif text-2xl font-semibold text-plum">{promotions[0].public_headline || promotions[0].title}</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-ink/65">{promotions[0].description || promotionLabel(promotions[0])}</p><p className="mt-2 text-[10px] font-bold text-magenta">{promotionLabel(promotions[0])}{(promotions[0].restrictions as Record<string,unknown> | null)?.terms ? ` · ${String((promotions[0].restrictions as Record<string,unknown>).terms)}` : ""}</p></div><Link href={`/salon/${salon.slug || slug}/book?promotion=${encodeURIComponent(String(promotions[0].id))}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Book this offer</Link></div></section> : null}
+
         <section className="grid gap-4 border-t border-plum/10 py-4 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <h2 className="font-serif text-[22px] font-semibold text-ink">Styles & Pricing</h2>
@@ -305,7 +312,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             <div className="mt-5 -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
               {products.map((product, index) => (
                 <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(26,18,32,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
-                  <div className="relative aspect-[4/3] w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}</div>
+                  <div className="relative aspect-square w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}</div>
                   <div className="p-4"><div className="flex items-start justify-between gap-3"><h3 className="font-serif text-[19px] font-semibold leading-tight text-ink">{product.name}</h3><p className="shrink-0 text-[13px] font-bold">${Number(product.price || 0).toFixed(2)}</p></div><p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/55">{product.description || "Available at the salon."}</p><p className="mt-3 text-[11px] font-bold text-magenta">View product details</p></div>
                 </Link>
               ))}

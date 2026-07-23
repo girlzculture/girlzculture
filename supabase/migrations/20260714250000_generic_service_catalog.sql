@@ -113,7 +113,7 @@ begin
       end if;
     end loop;
     for option_row in select value from jsonb_array_elements(coalesce(new.addons,'[]'::jsonb)) loop
-      if coalesce(option_row->>'label', option_row->>'value','') not in ('Boho curls','Beads','Color','Curly ends','Wash & blow-dry','Scalp treatment','Take-down/removal',E'Kids\' style',E'Men\'s style')
+      if coalesce(option_row->>'label', option_row->>'value','') not in ('Boho curls','Beads','Color','Curly ends','Wash & blow-dry','Scalp treatment','Take-down/removal','Kids'' style','Men''s style')
         and coalesce(option_row->>'label', option_row->>'value','') not like 'Other: %' then
         raise exception 'Invalid braiding add-on option.' using errcode = '23514';
       end if;

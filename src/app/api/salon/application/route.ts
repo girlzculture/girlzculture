@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizePlan } from "@/lib/plans";
@@ -37,7 +38,7 @@ function applicationDocumentPaths(value: unknown, userId: string) {
   });
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   const admin = getSupabaseAdmin();
   let createdSalonId: string | null = null;
   try {
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
     } catch (geocodeError) {
       // Do not reject a valid application if provider configuration or a
       // transient provider request is unavailable. The address stays pending.
-      console.error("Salon application geocoding deferred", { applicationId: saved.id, salonId: salon.id, geocodeError });
+      noteOperationalFailure("Salon application geocoding deferred", { applicationId: saved.id, salonId: salon.id, geocodeError });
     }
     const receipt = await sendEmail(
       salonPatch.email,
@@ -118,14 +119,15 @@ export async function POST(request: Request) {
       "<p>Thank you for applying to partner with Girlz Culture. Our team will review your application and get back to you within 24–48 hours. You'll receive an email once you're approved, and then you can set up your page.</p>",
       "account",
     ).catch((deliveryError) => {
-      console.error("Salon application confirmation email failed", { applicationId: saved.id, salonId: salon.id, deliveryError });
+      noteOperationalFailure("Salon application confirmation email failed", { applicationId: saved.id, salonId: salon.id, deliveryError });
       return { skipped: true, failed: true };
     });
-    console.info("Salon application confirmation email processed", { applicationId: saved.id, to: salonPatch.email, skipped: "skipped" in receipt ? receipt.skipped : false });
+    console.info("Salon application confirmation email processed", { applicationId: saved.id, skipped: "skipped" in receipt ? receipt.skipped : false });
     return Response.json({ ok: true, application: saved, salon, confirmation_email_sent: !("skipped" in receipt && receipt.skipped) });
   } catch (error) {
     if (createdSalonId) await admin.from("salons").delete().eq("id", createdSalonId);
-    console.error("Salon application submission failed", error);
+    noteOperationalFailure("Salon application submission failed", error);
     return errorResponse(error, "Unable to submit application");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/application", "POST"), POSTHandler);

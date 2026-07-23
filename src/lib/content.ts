@@ -1,4 +1,8 @@
+import "server-only";
+
 import { supabase } from "@/lib/supabase";
+import { capturePlatformError } from "@/lib/platformErrors";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type ContentCard = {
   id?: string;
@@ -42,6 +46,33 @@ export type NavigationItem = { id?:string;surface:"header"|"mobile_menu"|"mobile
 // Kept as an empty compatibility export while older routes transition away from fallbacks.
 export const fallbackPosts: BlogPost[] = [];
 
+async function reportPublicContentFailure(
+  error: unknown,
+  action: string,
+  recordType: string,
+  recordId?: string,
+) {
+  let admin;
+  try {
+    admin = getSupabaseAdmin();
+  } catch {
+    admin = undefined;
+  }
+  return capturePlatformError({
+    admin,
+    error,
+    feature: "public-content",
+    action,
+    actorRole: "public",
+    recordType,
+    recordId: recordId || null,
+    provider: "supabase",
+    safeMessage: "Published content could not be loaded.",
+    severity: "high",
+    metadata: { fallback_used: true },
+  });
+}
+
 export const LEGAL_LINKS = [
   ["Terms of Service", "/terms", "terms"],
   ["Privacy Policy", "/privacy", "privacy"],
@@ -57,13 +88,13 @@ export const LEGAL_LINKS = [
 
 export async function getContentPage(slug: string, fallback: ContentPage) {
   const { data, error } = await supabase.from("content_pages").select("*").eq("slug", slug).eq("status", "Published").maybeSingle();
-  if (error) console.error("Public content load failed", { slug, error: error.message });
+  if (error) await reportPublicContentFailure(error, "load-content-page", "content_page", slug);
   return (data as ContentPage | null) || fallback;
 }
 
 export async function getPublishedContentPage(slug: string) {
   const { data, error } = await supabase.from("content_pages").select("*").eq("slug", slug).eq("status", "Published").eq("is_enabled", true).maybeSingle();
-  if (error) console.error("Published content load failed", { slug, error: error.message });
+  if (error) await reportPublicContentFailure(error, "load-published-content-page", "content_page", slug);
   return data as ContentPage | null;
 }
 
@@ -71,7 +102,7 @@ export async function getVisibleLegalLinks() {
   const slugs = LEGAL_LINKS.map(([, , slug]) => slug);
   const { data, error } = await supabase.from("content_pages").select("slug").in("slug", slugs).eq("status", "Published").eq("is_enabled", true);
   if (error) {
-    console.error("Legal footer visibility load failed", error.message);
+    await reportPublicContentFailure(error, "load-visible-legal-links", "content_page");
     return [];
   }
   const visible = new Set((data || []).map((row) => row.slug));
@@ -80,17 +111,17 @@ export async function getVisibleLegalLinks() {
 
 export async function getNavigationItems(surface:NavigationItem["surface"],fallback:NavigationItem[]){
   const{data,error}=await supabase.from("navigation_items").select("id,surface,group_key,item_key,label,translation_key,href,sort_order,is_enabled,show_new_badge").eq("surface",surface).eq("is_enabled",true).is("archived_at",null).order("sort_order");
-  if(error){console.warn("Navigation registry unavailable; using safe built-in navigation",{surface,code:error.code});return fallback}
+  if(error){await reportPublicContentFailure(error,"load-navigation-items","navigation_surface",surface);return fallback}
   return(data?.length?data:fallback) as NavigationItem[];
 }
 
 export async function getBlogPosts() {
   try {
     const { data, error } = await supabase.from("blog_posts").select("*").eq("status", "Published").is("archived_at", null).order("featured", { ascending: false }).order("published_at", { ascending: false }).abortSignal(AbortSignal.timeout(7_000));
-    if (error) console.error("Blog list load failed", { code: error.code, message: error.message });
+    if (error) await reportPublicContentFailure(error, "load-blog-post-list", "blog_post");
     return (data || []) as BlogPost[];
   } catch (error) {
-    console.error("Blog list upstream timed out", { message: error instanceof Error ? error.message : "unknown" });
+    await reportPublicContentFailure(error, "load-blog-post-list", "blog_post");
     return [];
   }
 }
@@ -98,10 +129,10 @@ export async function getBlogPosts() {
 export async function getBlogPost(slug: string) {
   try {
     const { data, error } = await supabase.from("blog_posts").select("*").eq("slug", slug).eq("status", "Published").is("archived_at", null).abortSignal(AbortSignal.timeout(7_000)).maybeSingle();
-    if (error) console.error("Blog post load failed", { slug, code: error.code, message: error.message });
+    if (error) await reportPublicContentFailure(error, "load-blog-post", "blog_post", slug);
     return data as BlogPost | null;
   } catch (error) {
-    console.error("Blog post upstream timed out", { slug, message: error instanceof Error ? error.message : "unknown" });
+    await reportPublicContentFailure(error, "load-blog-post", "blog_post", slug);
     return null;
   }
 }

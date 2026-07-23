@@ -17,8 +17,21 @@ export async function stripeRequest<T>(path: string, values: Record<string, stri
     body: form,
     cache: "no-store",
   });
-  const data = await response.json() as T & { error?: { message?: string } };
-  if (!response.ok) throw new Error(data.error?.message || "Stripe request failed.");
+  let data: T;
+  try {
+    data = await response.json() as T;
+  } catch {
+    throw Object.assign(
+      new Error(`STRIPE_RESPONSE_INVALID:${response.status}`),
+      { provider: "stripe", code: `HTTP_${response.status}` },
+    );
+  }
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(`STRIPE_PROVIDER_FAILURE:${response.status}`),
+      { provider: "stripe", code: `HTTP_${response.status}` },
+    );
+  }
   return data;
 }
 
@@ -26,8 +39,21 @@ export async function stripeGet<T>(path: string) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
   const response = await fetch(`${STRIPE_API}${path}`, { headers: { Authorization: `Bearer ${secret}` }, cache: "no-store" });
-  const data = await response.json() as T & { error?: { message?: string } };
-  if (!response.ok) throw new Error(data.error?.message || "Stripe request failed.");
+  let data: T;
+  try {
+    data = await response.json() as T;
+  } catch {
+    throw Object.assign(
+      new Error(`STRIPE_RESPONSE_INVALID:${response.status}`),
+      { provider: "stripe", code: `HTTP_${response.status}` },
+    );
+  }
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(`STRIPE_PROVIDER_FAILURE:${response.status}`),
+      { provider: "stripe", code: `HTTP_${response.status}` },
+    );
+  }
   return data;
 }
 

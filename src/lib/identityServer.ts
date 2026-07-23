@@ -67,7 +67,7 @@ export async function auditIdentityEvent({
     request_fingerprint: request ? protectedHash(clientAddress(request)) : null,
     details: details || {},
   });
-  if (error) console.error("Identity security event could not be recorded", { eventType, source, code: error.code });
+  if (error) throw error;
 }
 
 export async function assertEmailAvailableForNewIdentity(
@@ -120,4 +120,3 @@ export function identityRoleToLoginScope(role: PrimaryIdentityRole) {
   if (role === "salon_owner" || role === "salon_team") return "salon" as const;
   return "customer" as const;
 }
-

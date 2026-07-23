@@ -1,10 +1,11 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { addMinutesToLocal, dateKeyInTimeZone, salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
 
 const modes = new Set(["stylist_three_hours", "stylist_today", "stylist_until", "salon_today", "salon_until"]);
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "salon-availability-block", 40, 10 * 60_000);
     const { admin, user, salon } = await requireSalonPermission(request, "availability");
@@ -50,12 +51,12 @@ export async function POST(request: Request) {
     if (error) throw error;
     return Response.json({ ok: true, blockout: data, time_zone: timeZone });
   } catch (error) {
-    console.error("Salon availability override failed", error);
+    noteOperationalFailure("Salon availability override failed", error);
     return errorResponse(error, "Unable to block availability.");
   }
 }
 
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   try {
     enforceRateLimit(request, "salon-availability-unblock", 40, 10 * 60_000);
     const { admin, salon } = await requireSalonPermission(request, "availability");
@@ -65,7 +66,9 @@ export async function DELETE(request: Request) {
     if (error) throw error;
     return Response.json({ ok: true });
   } catch (error) {
-    console.error("Salon availability unblock failed", error);
+    noteOperationalFailure("Salon availability unblock failed", error);
     return errorResponse(error, "Unable to restore availability.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/availability/block", "POST"), POSTHandler);
+export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/salon/availability/block", "DELETE"), DELETEHandler);

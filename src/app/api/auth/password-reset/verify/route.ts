@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { createResetTicket, resetHash } from "@/lib/passwordResetServer";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "password-reset-verify", 10, 15 * 60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -17,5 +18,6 @@ export async function POST(request: Request) {
     const { error: updateError } = await admin.from("password_reset_codes").update({ verified_at: new Date().toISOString(), ticket_hash: resetHash(ticket) }).eq("id", requestId);
     if (updateError) throw updateError;
     return Response.json({ ok: true, ticket });
-  } catch (error) { console.error("Password reset verification failed", error); return errorResponse(error, "Unable to verify reset code."); }
+  } catch (error) { noteOperationalFailure("Password reset verification failed", error); return errorResponse(error, "Unable to verify reset code."); }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/password-reset/verify", "POST"), POSTHandler);

@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cleanText } from "@/lib/requestSecurity";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
@@ -5,7 +6,7 @@ import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const SECTION_KEYS = new Set(["salons_near_you", "featured_salons", "trending_now", "trending_picks"]);
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin, user } = await requireAdminPermission(request, "marketing");
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
@@ -83,3 +84,6 @@ export async function DELETE(request: Request) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "remove_trending_video", actorRole: "admin", safeMessage: "We couldn't remove this trending video." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/marketing", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/marketing", "POST"), POSTHandler);
+export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/admin/marketing", "DELETE"), DELETEHandler);

@@ -17,7 +17,7 @@ const checks = [
   ["admin login failures are generic", start.includes("ADMIN_LOGIN_ERROR")],
   ["MFA challenge is request-bound and single-use", login.includes("request_fingerprint") && login.includes('.is("used_at", null).select("id")')],
   ["MFA has expiry, attempts, resend cooldown, and audit", login.includes("resendCooldownSeconds") && login.includes("max_attempts") && login.includes("mfa_challenge_verified")],
-  ["admin lifecycle actions exist", ["resend","suspend","revoke","reactivate","prepareAndDeleteIdentity","export async function DELETE"].every((value) => team.includes(value))],
+  ["admin lifecycle actions exist", ["resend","suspend","revoke","reactivate","prepareAndDeleteIdentity","async function DELETEHandler","export const DELETE"].every((value) => team.includes(value))],
   ["acting and last super admin are protected", team.includes("You cannot suspend, revoke, or remove your own admin account") && migration.includes("protect_last_active_super_admin")],
   ["legacy master-email bypass is absent", !read("src/lib/supabaseAdmin.ts").includes("process.env.ADMIN_EMAIL")],
 ];

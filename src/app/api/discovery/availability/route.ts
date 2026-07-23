@@ -1,7 +1,8 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import { enforceRateLimit } from "@/lib/requestSecurity";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "discovery-availability", 30, 60_000);
     const body = await request.json() as { date?: string; salons?: Array<{ salonId?: string; styleId?: string }> };
@@ -11,11 +12,18 @@ export async function POST(request: Request) {
       try {
         const result = await bookingAvailability({ salonId: row.salonId!, styleId: row.styleId!, date: body.date! });
         return [row.salonId!, result.slots.length > 0] as const;
-      } catch { return [row.salonId!, false] as const; }
+      } catch (error) {
+        noteOperationalFailure("Salon availability lookup failed", {
+          salonId: row.salonId,
+          error,
+        });
+        return [row.salonId!, false] as const;
+      }
     }));
     return Response.json({ availability: Object.fromEntries(entries) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Discovery availability batch failed", error);
+    noteOperationalFailure("Discovery availability batch failed", error);
     return Response.json({ error: "Availability could not be checked." }, { status: 500 });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/discovery/availability", "POST"), POSTHandler);

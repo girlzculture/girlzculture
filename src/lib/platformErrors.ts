@@ -7,16 +7,23 @@ export type ErrorContext = {
   feature: string;
   action: string;
   actorRole?: string;
+  actorId?: string | null;
   salonId?: string | null;
+  recordType?: string | null;
+  recordId?: string | null;
+  provider?: string | null;
   safeMessage: string;
   severity?: "critical" | "high" | "medium" | "low";
   metadata?: Record<string, unknown>;
 };
 
 export class UserSafeRequestError extends Error {
-  constructor(message: string, public status = 400) {
+  public status: number;
+
+  constructor(message: string, status = 400) {
     super(message);
     this.name = "UserSafeRequestError";
+    this.status = status;
   }
 }
 
@@ -29,7 +36,12 @@ const SECRET_PATTERN = /(authorization|cookie|password|secret|token|api[-_]?key|
 function safeText(value: unknown, max = 2_000) {
   return String(value ?? "")
     .replace(/bearer\s+[a-z0-9._~+/-]+/gi, "[redacted]")
+    .replace(/\b(?:sk|pk)_(?:live|test)_[a-z0-9_-]+\b/gi, "[key redacted]")
+    .replace(/\bwhsec_[a-z0-9_-]+\b/gi, "[secret redacted]")
+    .replace(/\beyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+\b/gi, "[token redacted]")
+    .replace(/\b(api[-_ ]?key|secret|token)\s*[:=]\s*[^\s,;]+/gi, "$1=[redacted]")
     .replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[email redacted]")
+    .replace(/\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, "[phone redacted]")
     .replace(/\b(?:\d[ -]*?){13,19}\b/g, "[number redacted]")
     .replace(/[\u0000-\u001f]/g, " ")
     .slice(0, max);
@@ -81,7 +93,16 @@ export async function capturePlatformError(context: ErrorContext) {
     technical_message: technicalMessage,
     technical_stack: technicalStack || null,
     user_safe_message: context.safeMessage,
-    metadata: safeMetadata({ code: record.code, hint: record.hint, ...context.metadata }),
+    metadata: safeMetadata({
+      code: record.code,
+      hint: record.hint,
+      acting_account_id: context.actorId || null,
+      affected_record: context.recordType || context.recordId
+        ? { type: context.recordType || "record", id: context.recordId || null }
+        : null,
+      provider: context.provider || null,
+      ...context.metadata,
+    }),
   };
 
   console.error("Platform operation failed", logRecord);

@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { createClient } from "@supabase/supabase-js";
 import { normalizePlan } from "@/lib/plans";
 import {
@@ -37,7 +38,7 @@ function publicFailure(error: unknown) {
   );
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let createdUserId = "";
   try {
     enforceRateLimit(request, "canonical-signup", 5, 15 * 60_000);
@@ -126,16 +127,17 @@ export async function POST(request: Request) {
     if (createdUserId) {
       const cleanup = await getSupabaseAdmin().auth.admin.deleteUser(createdUserId);
       if (cleanup.error) {
-        console.error("Failed to remove incomplete signup identity", {
+        noteOperationalFailure("Failed to remove incomplete signup identity", {
           userId: createdUserId,
           code: cleanup.error.code,
         });
       }
     }
-    console.error("Canonical signup failed", {
+    noteOperationalFailure("Canonical signup failed", {
       kind: error instanceof IdentityUnavailableError ? "identity_unavailable" : "validation_or_provider",
     });
     return publicFailure(error);
   }
 }
 
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/signup", "POST"), POSTHandler);

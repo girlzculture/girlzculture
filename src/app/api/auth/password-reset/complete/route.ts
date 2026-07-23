@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { resetHash } from "@/lib/passwordResetServer";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "password-reset-complete", 8, 15 * 60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -15,5 +16,6 @@ export async function POST(request: Request) {
     if (authError) throw authError;
     await admin.from("password_reset_codes").update({ used_at: new Date().toISOString(), ticket_hash: null }).eq("id", requestId);
     return Response.json({ ok: true });
-  } catch (error) { console.error("Password reset completion failed", error); return errorResponse(error, "Unable to update password."); }
+  } catch (error) { noteOperationalFailure("Password reset completion failed", error); return errorResponse(error, "Unable to update password."); }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/password-reset/complete", "POST"), POSTHandler);

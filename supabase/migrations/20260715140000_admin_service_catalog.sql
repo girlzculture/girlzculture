@@ -5,7 +5,7 @@ values
   ('braiding', 'Braiding', 'Braided and protective styles.', true),
   ('kids', 'Kids', 'Services designed for children.', true),
   ('locs', 'Locs', 'Loc installation, styling, and maintenance.', true),
-  ('mens', E'Men\'s', E'Men\'s grooming and protective styles.', true),
+  ('mens', 'Men''s', 'Men''s grooming and protective styles.', true),
   ('natural-hair', 'Natural Hair', 'Natural hair care and styling.', true),
   ('twists', 'Twists', 'Protective twist services.', true),
   ('weaves', 'Weaves', 'Weave installation and maintenance.', true)
@@ -42,7 +42,7 @@ insert into public.service_groups(category_id, name)
 select category.id, seed.group_name
 from (values
   ('braiding', 'Protective Styles'), ('kids', 'Kids Styles'),
-  ('locs', 'Locs'), ('mens', E'Men\'s Styles'),
+  ('locs', 'Locs'), ('mens', 'Men''s Styles'),
   ('natural-hair', 'Natural Hair'), ('twists', 'Twists'),
   ('weaves', 'Weaves')
 ) as seed(category_slug, group_name)
@@ -103,11 +103,11 @@ update public.master_styles master
 set service_group_id = groups.id
 from public.service_groups groups
 join public.service_categories category on category.id = groups.category_id
-where (master.category = 'Braids' and master.name not in (E'Kids\' Braids', E'Men\'s Braids') and category.slug = 'braiding' and groups.name = 'Protective Styles')
+where (master.category = 'Braids' and master.name not in ('Kids'' Braids', 'Men''s Braids') and category.slug = 'braiding' and groups.name = 'Protective Styles')
    or (master.category = 'Locs' and category.slug = 'locs' and groups.name = 'Locs')
    or (master.category = 'Twists' and category.slug = 'twists' and groups.name = 'Twists')
-   or (master.name = E'Kids\' Braids' and category.slug = 'kids' and groups.name = 'Kids Styles')
-   or (master.name = E'Men\'s Braids' and category.slug = 'mens' and groups.name = E'Men\'s Styles');
+   or (master.name = 'Kids'' Braids' and category.slug = 'kids' and groups.name = 'Kids Styles')
+   or (master.name = 'Men''s Braids' and category.slug = 'mens' and groups.name = 'Men''s Styles');
 
 insert into public.master_styles(name, category, category_id, service_group_id, is_active, sort_order)
 select seed.name, groups.name, groups.category_id, groups.id, true, 0

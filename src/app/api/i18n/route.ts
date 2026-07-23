@@ -1,8 +1,10 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
   BUNDLED_MESSAGES,
   ENGLISH_MESSAGES,
   normalizeLocale,
 } from "@/i18n/catalog";
+import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const FALLBACK_LOCALES = [
@@ -44,7 +46,7 @@ const FALLBACK_LOCALES = [
   },
 ];
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   const requested = normalizeLocale(
     new URL(request.url).searchParams.get("locale"),
   );
@@ -71,6 +73,14 @@ export async function GET(request: Request) {
       .eq("locale", locale)
       .eq("status", "Published");
     if (error) throw error;
+    const total = new Set([
+      ...Object.keys(ENGLISH_MESSAGES),
+      ...Object.keys(GENERATED_SOURCE_MESSAGES),
+    ]).size;
+    const published = locale === "en" ? total : new Set([
+      ...Object.keys(BUNDLED_MESSAGES[locale] || {}),
+      ...(data || []).map((row) => row.translation_key),
+    ]).size;
     return Response.json(
       {
         locale,
@@ -92,23 +102,26 @@ export async function GET(request: Request) {
               row.translated_text,
             ]),
         ),
+        coverage: { published: Math.min(published, total), total, incomplete: locale !== "en" && published < total },
       },
       {
         headers: {
-          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+          "Cache-Control": "private, no-store",
         },
       },
     );
   } catch (error) {
-    console.warn(
+    noteOperationalFailure(
       "Dynamic localization registry unavailable; using bundled fallback",
-      { message: error instanceof Error ? error.message : "unknown" },
+      error,
     );
     return Response.json({
       locale: requested,
       locales: FALLBACK_LOCALES,
       messages: BUNDLED_MESSAGES[requested] || ENGLISH_MESSAGES,
       sourceMessages: {},
+      coverage: { published: requested === "en" ? Object.keys(ENGLISH_MESSAGES).length : Object.keys(BUNDLED_MESSAGES[requested] || {}).length, total: Object.keys(ENGLISH_MESSAGES).length, incomplete: requested !== "en" },
     });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/i18n", "GET"), GETHandler);

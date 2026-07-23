@@ -27,7 +27,7 @@ assert.match(home,/homepage\.featured_card_count/);
 assert.match(placement,/We will not fill this row with distant\s+or unpaid salons/);
 assert.match(placement,/Own a business\? Get featured here/);
 assert.doesNotMatch(placement,/subscription_tier|Premium|Growth|Basic/);
-assert.match(admin,/traceable paid or credited entitlement/);
+assert.match(admin, /traceable\s+paid or credited entitlement/);
 assert.match(admin,/Audit history/);
 assert.match(home,/FeaturedSalonPlacement/);
 console.log("Featured Salon campaign verification passed.");

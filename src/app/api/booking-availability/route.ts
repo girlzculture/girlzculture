@@ -1,7 +1,8 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     enforceRateLimit(request, "booking-availability", 120, 10 * 60_000);
     const query = new URL(request.url).searchParams;
@@ -14,7 +15,8 @@ export async function GET(request: Request) {
     const next = result.slots.length ? null : await nextAvailableSlot({ salonId, styleId, stylistId, afterDate: date });
     return Response.json({ ...result, next });
   } catch (error) {
-    console.error("Booking availability failed", error);
+    noteOperationalFailure("Booking availability failed", error);
     return errorResponse(error, "Unable to load live availability.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/booking-availability", "GET"), GETHandler);

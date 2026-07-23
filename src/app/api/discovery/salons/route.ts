@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { discoverNearbySalons } from "@/lib/discoveryServer";
 import { MAX_DISCOVERY_RADIUS_MILES, validCoordinates } from "@/lib/location";
 import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
@@ -19,7 +20,7 @@ function boundedInteger(value: string | null, fallback: number, minimum: number,
   return parsed;
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     enforceRateLimit(request, "public-discovery", 120, 60_000);
     const search = new URL(request.url).searchParams;
@@ -57,10 +58,11 @@ export async function GET(request: Request) {
     });
     return Response.json(result, { headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" } });
   } catch (error) {
-    console.error("Public salon discovery failed", error);
+    noteOperationalFailure("Public salon discovery failed", error);
     const message = error instanceof Error && /must|cannot|between|negative/i.test(error.message)
       ? error.message
       : "Nearby salons could not be loaded. Please try again.";
     return Response.json({ error: message }, { status: message.includes("could not") ? 500 : 400 });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/discovery/salons", "GET"), GETHandler);

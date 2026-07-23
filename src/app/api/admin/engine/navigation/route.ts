@@ -1,5 +1,7 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
+import { revalidatePath } from "next/cache";
 
 const SURFACES = new Set(["header", "mobile_menu", "mobile_bottom", "footer"]);
 const KEY_PATTERN = /^[a-z][a-z0-9_.-]{1,79}$/;
@@ -26,22 +28,28 @@ function validated(body:Record<string,unknown>) {
 
 async function audit(admin:Awaited<ReturnType<typeof requireAdminPermission>>["admin"], actorUserId:string, action:string, details:Record<string,unknown>) {
   const { error } = await admin.from("admin_security_events").insert({ actor_user_id:actorUserId, action, result:"Allowed", details });
-  if (error) console.error("Navigation audit write failed", { action, code:error.code });
+  if (error) noteOperationalFailure("Navigation audit write failed", { action, code:error.code });
 }
 
-export async function GET(request:Request) {
+function revalidateNavigation() {
+  revalidatePath("/", "layout");
+  revalidatePath("/salons");
+  revalidatePath("/styles");
+}
+
+async function GETHandler(request:Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
     const { data, error } = await admin.from("navigation_items").select("*").order("surface").order("group_key").order("sort_order");
     if (error) throw error;
     return Response.json({ items:data || [] });
   } catch (error) {
-    console.error("Navigation registry load failed", error);
+    noteOperationalFailure("Navigation registry load failed", error);
     return errorResponse(error, "Unable to load navigation.");
   }
 }
 
-export async function POST(request:Request) {
+async function POSTHandler(request:Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
     const body = await request.json() as Record<string,unknown>;
@@ -49,14 +57,15 @@ export async function POST(request:Request) {
     const { data, error } = await admin.from("navigation_items").insert({ ...values, updated_by:user.id }).select().single();
     if (error) throw error;
     await audit(admin, user.id, "navigation_item_created", { id:data.id, surface:data.surface, item_key:data.item_key });
+    revalidateNavigation();
     return Response.json({ item:data }, { status:201 });
   } catch (error) {
-    console.error("Navigation item create failed", error);
+    noteOperationalFailure("Navigation item create failed", error);
     return errorResponse(error, "Unable to create the navigation item.");
   }
 }
 
-export async function PATCH(request:Request) {
+async function PATCHHandler(request:Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "content");
     const body = await request.json() as Record<string,unknown>;
@@ -73,9 +82,13 @@ export async function PATCH(request:Request) {
     const { data, error } = await admin.from("navigation_items").update(patch).eq("id", id).select().single();
     if (error) throw error;
     await audit(admin, user.id, `navigation_item_${action}`, { id, before, after:data });
+    revalidateNavigation();
     return Response.json({ item:data });
   } catch (error) {
-    console.error("Navigation item update failed", error);
+    noteOperationalFailure("Navigation item update failed", error);
     return errorResponse(error, "Unable to update the navigation item.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/navigation", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/navigation", "POST"), POSTHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/navigation", "PATCH"), PATCHHandler);

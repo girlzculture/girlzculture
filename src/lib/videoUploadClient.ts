@@ -80,11 +80,25 @@ function inferredMime(file: File) {
   return "";
 }
 
-function videoReadFailure(video: HTMLVideoElement, file: File) {
+async function validateContainerSignature(file: File) {
+  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   const mime = inferredMime(file);
-  const codecUnsupported = mime && video.canPlayType(mime) === "";
+  const mp4 = bytes.length >= 8 && String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
+  const webm = bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
+  if (mime === "video/mp4" && !mp4) throw new Error("This file is named as MP4, but its container is not a readable MP4. Export a genuine H.264/AAC MP4 and try again.");
+  if (mime === "video/webm" && !webm) throw new Error("This file is named as WebM, but its container is not a readable WebM. Export a genuine VP8/VP9 WebM and try again.");
+}
+
+function videoReadFailure(video: HTMLVideoElement, file: File, failure: "error" | "timeout" = "error") {
+  const mime = inferredMime(file);
+  const mediaCode = video.error?.code || 0;
+  const codecUnsupported = mediaCode === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || Boolean(mime && video.canPlayType(mime) === "");
   const reference = crypto.randomUUID();
-  const reason = codecUnsupported
+  const reason = failure === "timeout"
+    ? "The browser timed out while reading this video's metadata. The file may be fragmented or damaged; export a standard H.264/AAC MP4 or VP8/VP9 WebM."
+    : mediaCode === MediaError.MEDIA_ERR_DECODE
+      ? "The video container opened, but the browser could not decode its tracks. The file may be corrupt or use an unsupported codec; export H.264/AAC MP4 or VP8/VP9 WebM."
+      : codecUnsupported
     ? "This browser does not support the video codec inside this file. Export it as H.264/AAC MP4 or VP8/VP9 WebM."
     : "The browser could not read this video container. Try H.264/AAC MP4 or VP8/VP9 WebM.";
   return new Error(`${reason} Reference ${reference}.`);
@@ -97,7 +111,7 @@ function loadVideo(file: File, event: "loadedmetadata" | "loadeddata") {
   video.muted = true;
   video.playsInline = true;
   const ready = new Promise<HTMLVideoElement>((resolve, reject) => {
-    const timeout = window.setTimeout(() => reject(videoReadFailure(video, file)), 15_000);
+    const timeout = window.setTimeout(() => reject(videoReadFailure(video, file, "timeout")), 15_000);
     video.addEventListener(event, () => { window.clearTimeout(timeout); resolve(video); }, { once: true });
     video.addEventListener("error", () => { window.clearTimeout(timeout); reject(videoReadFailure(video, file)); }, { once: true });
   });
@@ -119,6 +133,7 @@ function seekVideo(video: HTMLVideoElement, seconds: number) {
 }
 
 export async function getVideoDuration(file: File) {
+  await validateContainerSignature(file);
   const { url, video, ready } = loadVideo(file, "loadedmetadata");
   try {
     await ready;

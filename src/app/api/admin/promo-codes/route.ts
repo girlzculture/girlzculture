@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { stripeRequest } from "@/lib/stripeServer";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
     const { data, error } = await admin.from("promo_codes").select("*").order("created_at", { ascending: false });
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   } catch (error) { return errorResponse(error, "Unable to load promo codes."); }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "marketing");
     const body = await request.json() as Record<string, unknown>;
@@ -45,12 +46,12 @@ export async function POST(request: Request) {
     if (error) throw error;
     return Response.json({ code: data });
   } catch (error) {
-    console.error("Promo code creation failed", error);
+    noteOperationalFailure("Promo code creation failed", error);
     return errorResponse(error, "Unable to create promo code.");
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
     const body = await request.json() as Record<string, unknown>;
@@ -64,3 +65,6 @@ export async function PATCH(request: Request) {
     return Response.json({ code: data });
   } catch (error) { return errorResponse(error, "Unable to update promo code."); }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/promo-codes", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/promo-codes", "POST"), POSTHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/promo-codes", "PATCH"), PATCHHandler);

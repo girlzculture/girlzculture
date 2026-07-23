@@ -1,0 +1,7 @@
+project_id = "girlzculture"
+
+# Keep repository-managed Auth settings explicit. Omitting these values causes
+# the Supabase CLI defaults (false and 6) to weaken a linked preview/project.
+[auth.email]
+enable_confirmations = true
+otp_length = 8

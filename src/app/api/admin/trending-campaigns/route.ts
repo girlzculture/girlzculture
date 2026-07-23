@@ -1,7 +1,9 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cleanText } from "@/lib/requestSecurity";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
+import { verifyMarketingEntitlement } from "@/lib/marketingEntitlements";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STATUSES = new Set(["Draft", "Scheduled", "Active", "Paused", "Expired"]);
@@ -22,7 +24,7 @@ function validTimezone(value: unknown) {
   return timezone;
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin, user } = await requireAdminPermission(request, "marketing");
@@ -102,9 +104,11 @@ export async function POST(request: Request) {
     if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) rejectRequest("Choose a valid paid entitlement source.");
     const entitlementReference = cleanText(body.entitlement_reference, 160) || null;
     if (entitlementSource && !entitlementReference) rejectRequest("Enter the verified payment, invoice, or credit reference.");
-    const entitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
+    const requestedEntitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
       ? null
       : boundedNumber(body.entitlement_amount_minor, 0, 0, 100_000_000, "Entitlement amount", true);
+    const verifiedEntitlement = await verifyMarketingEntitlement({ admin, source: entitlementSource, reference: entitlementReference, salonId, placement: "Trending Video", startsAt: new Date(startTime).toISOString(), endsAt: new Date(endTime).toISOString() });
+    const entitlementAmount = verifiedEntitlement?.amountMinor ?? requestedEntitlementAmount;
 
     const { data, error } = await admin.rpc("admin_save_trending_campaign", {
       acting_admin_id: user.id,
@@ -136,3 +140,5 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "save_trending_campaign", actorRole: "admin", safeMessage: "We couldn't save this Trending Picks campaign." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/trending-campaigns", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/trending-campaigns", "POST"), POSTHandler);

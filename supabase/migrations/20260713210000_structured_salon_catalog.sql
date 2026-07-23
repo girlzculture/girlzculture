@@ -21,8 +21,8 @@ values
   ('Boho Braids','Braids',70), ('Fulani/Tribal Braids','Braids',80), ('Passion Twists','Twists',90),
   ('Senegalese Twists','Twists',100), ('Kinky Twists','Twists',110), ('Butterfly Locs','Locs',120),
   ('Faux Locs','Locs',130), ('Stitch Braids','Braids',140), ('Lemonade Braids','Braids',150),
-  ('Crochet Braids','Braids',160), ('Micro Braids','Braids',170), (E'Kids\' Braids','Braids',180),
-  (E'Men\'s Braids','Braids',190), ('Two-Strand Twists','Twists',200)
+  ('Crochet Braids','Braids',160), ('Micro Braids','Braids',170), ('Kids'' Braids','Braids',180),
+  ('Men''s Braids','Braids',190), ('Two-Strand Twists','Twists',200)
 on conflict ((lower(name))) do update set category = excluded.category, sort_order = excluded.sort_order;
 
 -- Preserve unmatched legacy services without silently converting their names.
@@ -73,7 +73,7 @@ begin
     end if;
   end loop;
   for option_row in select value from jsonb_array_elements(coalesce(new.addons,'[]'::jsonb)) loop
-    if coalesce(option_row->>'label', option_row->>'value','') not in ('Boho curls','Beads','Color','Curly ends','Wash & blow-dry','Scalp treatment','Take-down/removal',E'Kids\' style',E'Men\'s style')
+    if coalesce(option_row->>'label', option_row->>'value','') not in ('Boho curls','Beads','Color','Curly ends','Wash & blow-dry','Scalp treatment','Take-down/removal','Kids'' style','Men''s style')
       and coalesce(option_row->>'label', option_row->>'value','') not like 'Other: %' then
       raise exception 'Invalid add-on option.' using errcode = '23514';
     end if;

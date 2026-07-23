@@ -1,10 +1,11 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
 import { getEngineList } from "@/lib/engineConfigServer";
 import { cleanText } from "@/lib/requestSecurity";
 
 const escapeHtml=(value:string)=>value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function POSTHandler(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { admin, user } = await requireAdminPermission(request, "support");
     const { id } = await context.params;
@@ -25,10 +26,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (ticket.requester_email) {
       await sendEmail(ticket.requester_email, `Re: ${ticket.subject}`, `<p>Hello ${escapeHtml(String(ticket.requester_name || "there"))},</p><p>${escapeHtml(response).replaceAll("\n", "<br/>")}</p><p>Girlz Culture Support</p>`, "support");
     }
-    console.info("Support response saved", { ticketId: id, admin: user.email });
+    console.info("Support response saved", { ticketId: id, adminUserId: user.id });
     return Response.json({ data });
   } catch (error) {
-    console.error("Support response failed", error);
+    noteOperationalFailure("Support response failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "Unable to send response" }, { status: 500 });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/support/[id]/respond", "POST"), POSTHandler);

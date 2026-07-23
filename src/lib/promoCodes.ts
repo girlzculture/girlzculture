@@ -9,7 +9,7 @@ function promoError(message: string) {
   if (/PROMO_LIMIT_REACHED/.test(message)) return "This code has reached its usage limit.";
   if (/PROMO_NOT_APPLICABLE/.test(message)) return "This code cannot be used for this checkout.";
   if (/PROMO_INVALID/.test(message)) return "That promo code is not valid.";
-  return message;
+  return "";
 }
 
 export function discountAmount(promo: Pick<Promo, "discount_type" | "discount_value">, amount: number) {
@@ -27,7 +27,8 @@ export async function previewPromoCode(code: string, purpose: PromoPurpose, amou
   if (new Date(data.starts_at).getTime() > now) throw new Error("This code is not active yet.");
   if (new Date(data.ends_at).getTime() <= now) throw new Error("This code has expired.");
   if (![purpose, "both"].includes(data.applies_to)) throw new Error("This code cannot be used for this checkout.");
-  const { count } = await admin.from("promo_code_redemptions").select("id", { count: "exact", head: true }).eq("promo_code_id", data.id).eq("status", "pending").gt("expires_at", new Date().toISOString());
+  const { count, error: countError } = await admin.from("promo_code_redemptions").select("id", { count: "exact", head: true }).eq("promo_code_id", data.id).eq("status", "pending").gt("expires_at", new Date().toISOString());
+  if (countError) throw countError;
   if (data.usage_limit !== null && Number(data.usage_count || 0) + Number(count || 0) >= Number(data.usage_limit)) throw new Error("This code has reached its usage limit.");
   const promo = { id: data.id, code: String(data.code).toUpperCase(), discount_type: data.discount_type, discount_value: Number(data.discount_value), stripe_coupon_id: data.stripe_coupon_id } as Promo;
   const discount = discountAmount(promo, amount);
@@ -37,6 +38,10 @@ export async function previewPromoCode(code: string, purpose: PromoPurpose, amou
 export async function reservePromoCode(code: string, purpose: PromoPurpose, values: { userId?: string | null; salonId?: string | null; bookingIntentId?: string | null }) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.rpc("reserve_promo_code", { p_code: code, p_purpose: purpose, p_user_id: values.userId || null, p_salon_id: values.salonId || null, p_booking_intent_id: values.bookingIntentId || null });
-  if (error) throw new Error(promoError(error.message));
+  if (error) {
+    const expectedMessage = promoError(error.message);
+    if (expectedMessage) throw new Error(expectedMessage);
+    throw Object.assign(new Error("PROMO_RESERVATION_DATABASE_FAILURE"), { code: error.code });
+  }
   return data as Promo;
 }

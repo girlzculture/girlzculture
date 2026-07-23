@@ -11,3 +11,6 @@
 
 [functions."booking-reminders"]
   schedule = "*/15 * * * *"
+
+[functions."media-cleanup"]
+  schedule = "15 4 * * *"

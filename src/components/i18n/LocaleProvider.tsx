@@ -21,6 +21,7 @@ import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
 type I18nContextValue = {
   locale: AppLocale;
   locales: LocaleOption[];
+  coverage: { published: number; total: number; incomplete: boolean };
   direction: "ltr" | "rtl";
   setLocale: (locale: AppLocale) => void;
   t: (
@@ -102,6 +103,7 @@ export default function LocaleProvider({
     {},
   );
   const [locales, setLocales] = useState<LocaleOption[]>(FALLBACK_LOCALES);
+  const [coverage, setCoverage] = useState({ published: 0, total: 0, incomplete: false });
   const persistAccountLocale = useCallback(async (safe: string) => {
     try {
       const client = getSupabaseForScope(scopeForPath());
@@ -116,7 +118,7 @@ export default function LocaleProvider({
         body: JSON.stringify({ locale: safe }),
       });
     } catch (error) {
-      console.warn("Account language preference could not be saved", error);
+      void error;
     }
   }, []);
   const setLocale = useCallback(
@@ -193,10 +195,16 @@ export default function LocaleProvider({
             body.locales.find((item: LocaleOption) => item.locale === locale)
               ?.text_direction || localeDirection(locale);
         }
+        setCoverage({
+          published: Number(body?.coverage?.published || 0),
+          total: Number(body?.coverage?.total || 0),
+          incomplete: body?.coverage?.incomplete === true,
+        });
       })
       .catch(() => {
         setRemote({});
         setSourceMessages({});
+        setCoverage({ published: 0, total: 0, incomplete: locale !== "en" });
       });
     return () => controller.abort();
   }, [locale]);
@@ -206,12 +214,14 @@ export default function LocaleProvider({
       fallback = "",
       values: Record<string, string | number> = {},
     ) => {
-      let text =
-        remote[key] ||
-        BUNDLED_MESSAGES[locale]?.[key] ||
-        ENGLISH_MESSAGES[key] ||
-        fallback ||
-        "";
+      // In English, founder-managed text supplied by the rendering surface is
+      // authoritative unless a reviewed/published Engine override exists.
+      // This keeps editable navigation and labels from being hidden by the
+      // code fallback catalog. Other locales continue to prefer reviewed
+      // translations and then use their safe bundled/English fallbacks.
+      let text = locale === "en"
+        ? remote[key] || fallback || ENGLISH_MESSAGES[key] || ""
+        : remote[key] || BUNDLED_MESSAGES[locale]?.[key] || ENGLISH_MESSAGES[key] || fallback || "";
       for (const [name, value] of Object.entries(values))
         text = text.replaceAll(`{${name}}`, String(value));
       return text;
@@ -230,6 +240,7 @@ export default function LocaleProvider({
     () => ({
       locale,
       locales,
+      coverage,
       direction,
       setLocale,
       t,
@@ -250,7 +261,7 @@ export default function LocaleProvider({
           ? forms.one
           : forms.other,
     }),
-    [locale, locales, direction, setLocale, t, translateSource],
+    [locale, locales, coverage, direction, setLocale, t, translateSource],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

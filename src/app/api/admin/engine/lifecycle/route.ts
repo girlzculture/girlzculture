@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
@@ -44,19 +45,19 @@ function sanitize(value: unknown) {
   };
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const { data, error } = await admin.from("admin_settings").select("value,updated_at").eq("key", "salon_lifecycle").single();
     if (error) throw error;
     return Response.json({ config: data.value, updated_at: data.updated_at }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    console.error("Salon lifecycle settings load failed", error);
+    noteOperationalFailure("Salon lifecycle settings load failed", error);
     return errorResponse(error, "Unable to load salon lifecycle settings.");
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const config = sanitize(await request.json());
@@ -73,10 +74,12 @@ export async function PATCH(request: Request) {
       });
       if (result.error) failures.push(salon.id);
     }
-    if (failures.length) console.error("Lifecycle settings reconciliation failures", { salonIds: failures });
+    if (failures.length) noteOperationalFailure("Lifecycle settings reconciliation failures", { salonIds: failures });
     return Response.json({ config, reconciled: (salons || []).length - failures.length, failures: failures.length });
   } catch (error) {
-    console.error("Salon lifecycle settings update failed", error);
+    noteOperationalFailure("Salon lifecycle settings update failed", error);
     return errorResponse(error, "Unable to update salon lifecycle settings.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/lifecycle", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/lifecycle", "PATCH"), PATCHHandler);

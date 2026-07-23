@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { randomUUID } from "node:crypto";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
@@ -40,15 +41,15 @@ async function dependencyPlan(admin:Awaited<ReturnType<typeof requireAdminPermis
   for(const dependency of resource.dependencies||[]){
     const query=admin.from(dependency.table).select("*",{count:"exact",head:true}).eq(dependency.column,id);
     const{count,error}=await query;
-    if(error){console.warn("Record dependency unavailable",{table:dependency.table,code:error.code});continue;}
+    if(error){noteOperationalFailure("Record dependency unavailable",{table:dependency.table,error});continue;}
     details.push({label:dependency.label,count:count||0,retention:["bookings","subscriptions","redemptions","complaints","messages"].some(word=>dependency.label.includes(word))?"must be retained":"can be reassigned or removed when eligible"});
   }
   return{details,total:details.reduce((sum,item)=>sum+item.count,0)};
 }
 
-function friendlyFailure(error:unknown,requestId:string){const message=error instanceof Error?error.message:"The record could not be changed.";if(/still used|must be archived|retained|cannot|Choose|permission|not found|reason|reassign/i.test(message))return message;console.error("Managed record operation failed",{requestId,error});return `The operation could not be completed safely. Nothing was changed. Reference ${requestId}.`;}
+function friendlyFailure(error:unknown,requestId:string){const message=error instanceof Error?error.message:"The record could not be changed.";if(/still used|must be archived|retained|cannot|Choose|permission|not found|reason|reassign/i.test(message))return message;noteOperationalFailure("Managed record operation failed",{requestId,error});return `The operation could not be completed safely. Nothing was changed. Reference ${requestId}.`;}
 
-export async function GET(request:Request){
+async function GETHandler(request:Request){
   const requestId=randomUUID();
   try{
     const type=new URL(request.url).searchParams.get("resource")||"";const id=new URL(request.url).searchParams.get("id")||"";
@@ -57,10 +58,10 @@ export async function GET(request:Request){
     if(type&&base){const{data,error}=await admin.from(base.table).select("*").order(base.table==="content_pages"?"slug":base.nameFields[0],{ascending:true}).limit(250);if(error)throw error;return Response.json({resource:{type,label:base.label,actions:base.actions},records:(data||[]).map(row=>publicSummary(row,base))});}
     const available=Object.entries(resources).map(([key,value])=>({type:key,label:value.label,actions:value.actions}));
     return Response.json({resources:available});
-  }catch(error){console.error("Managed record load failed",{requestId,error});return Response.json({error:`Unable to load record management. Reference ${requestId}.`},{status:500});}
+  }catch(error){noteOperationalFailure("Managed record load failed",{requestId,error});return Response.json({error:`Unable to load record management. Reference ${requestId}.`},{status:500});}
 }
 
-export async function POST(request:Request){
+async function POSTHandler(request:Request){
   const requestId=randomUUID();
   try{
     const body=await request.json() as Record<string,unknown>;const type=cleanText(body.resource,60);const id=cleanText(body.id,100);const action=cleanText(body.action,30);const reason=cleanText(body.reason,500);const reassignTo=cleanText(body.reassign_to,100)||null;const resource=resources[type];
@@ -120,3 +121,5 @@ export async function POST(request:Request){
     return Response.json({result:{ok:true,action,label:record.label},dependencies});
   }catch(error){const message=friendlyFailure(error,requestId);return Response.json({error:message},{status:/not found/i.test(message)?404:409});}
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/records", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/records", "POST"), POSTHandler);

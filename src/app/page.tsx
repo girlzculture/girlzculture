@@ -9,6 +9,7 @@ import FeaturedSalonPlacement from "@/components/public/FeaturedSalonPlacement";
 import TrendingVideoPlacement from "@/components/public/TrendingVideoPlacement";
 import NearbySalonPlacement from "@/components/public/NearbySalonPlacement";
 import { getEngineNumber } from "@/lib/engineConfigServer";
+import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 import {
   CustomerBottomNav,
   PublicFooter,
@@ -30,7 +31,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const depthPreview = previewQuery.homepage3d === "1";
   const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
   const { data: sectionData, error: sectionError } = await supabase.from("homepage_sections").select("*").order("sort_order");
-  if (sectionError) console.warn("Homepage section controls unavailable", sectionError.message);
+  if (sectionError) await capturePublicPageFailure(sectionError, "homepage", "load-section-controls");
   const sectionOverrides = new Map(((sectionData || []) as HomeSection[]).map((section) => [section.section_key, section]));
   const subtitleKeys: Record<HomeSectionKey, string> = { salons_near_you: "salons_near_you_subheading", featured_salons: "featured_salons_subheading", trending_now: "trending_now_subheading", trending_picks: "trending_picks_subheading" };
   const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {

@@ -18,7 +18,6 @@ export default function NewsletterForm() {
       if (!response.ok) throw new Error(body.error || "Unable to subscribe");
       setEmail(""); setMessage("Subscription saved.");
     } catch (error) {
-      console.error("Newsletter form error", error);
       setMessage(error instanceof Error ? error.message : "Unable to subscribe");
     } finally { setSaving(false); }
   }

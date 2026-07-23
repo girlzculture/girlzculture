@@ -37,7 +37,7 @@ export default function RoleLogoutButton({ scope, className = "", compact = fals
       // role's independent browser session.
       await getSupabaseForScope(scope).auth.signOut({ scope: "local" });
     } catch (error) {
-      console.error("Role-scoped logout failed", { scope, error });
+      void error;
     } finally {
       sessionStorage.setItem(`girlz-culture-signed-out:${scope}`, String(Date.now()));
       window.location.replace(destinationFor[scope]);

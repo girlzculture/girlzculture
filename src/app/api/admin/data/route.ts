@@ -1,6 +1,7 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const section = new URL(request.url).searchParams.get("section") || "overview";
     const permission = section === "complaints" ? "support" : section === "engine" ? "settings" : section;
@@ -11,18 +12,22 @@ export async function GET(request: Request) {
       ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
       ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
       ["billing_events", "event_date", false], ["identity_conflict_queue", "email_normalized", false],
+      ["subscription_change_requests", "requested_at", false],
     ] as const;
     const needed: Record<string, string[]> = {
       overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: [],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
-      reviews: ["reviews", "salons"], finance: ["subscriptions", "salons", "billing_events"], marketing: ["salon_promotions", "blog_posts", "salons"],
+      reviews: ["reviews", "salons"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
       content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
     };
     const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));
     const results = await Promise.all(sources.map(async ([table, order, required]) => {
       const result = await admin.from(table).select("*").order(order, { ascending: false }).limit(500);
       if (result.error && !required) {
-        console.warn("Optional admin data source unavailable", { table, error: result.error.message });
+        noteOperationalFailure("Optional admin data source unavailable", {
+          table,
+          error: result.error,
+        });
         return { data: [], error: null };
       }
       return result;
@@ -45,14 +50,15 @@ export async function GET(request: Request) {
       const signed = await Promise.all(paths.map(async (path) => {
         if (/^https?:\/\//i.test(path)) return path;
         const { data, error } = await admin.storage.from("application-documents").createSignedUrl(path, 3600);
-        if (error) { console.error("Application document signing failed", { applicationId: application.id, path, error }); return null; }
+        if (error) { noteOperationalFailure("Application document signing failed", { applicationId: application.id, path, error }); return null; }
         return data.signedUrl;
       }));
       application.document_urls = signed.filter(Boolean);
     }));
     return Response.json(payload);
   } catch (error) {
-    console.error("Admin data load failed", error);
+    noteOperationalFailure("Admin data load failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load admin data" }, { status: 403 });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/data", "GET"), GETHandler);

@@ -20,10 +20,12 @@ requireMatch("subscription lifecycle columns", lifecycleMigration, /scheduled_ch
 requireMatch("upgrade waits for payment", changeRoute, /payment_behavior:\s*"pending_if_incomplete"/);
 requireMatch("upgrade invoices immediately", changeRoute, /proration_behavior:\s*"always_invoice"/);
 const failedUpgradeBranch = changeRoute.slice(
-  changeRoute.indexOf("if (updated.pending_update || !upgradePaid)"),
+  changeRoute.indexOf("if (!upgradeConfirmed)"),
   changeRoute.indexOf("const status = String(updated.status"),
 );
 requireMatch("failed upgrade returns the existing plan", failedUpgradeBranch, /currentPlan/);
+requireMatch("requires-action payment stays pending", failedUpgradeBranch, /requiresAction/);
+requireMatch("hosted payment URL is returned", failedUpgradeBranch, /paymentUrl/);
 if (/\btier\s*:/.test(failedUpgradeBranch)) failures.push("failed upgrade must not write a replacement tier");
 requireMatch("downgrade uses a schedule", changeRoute, /subscription_schedules/);
 requireMatch("downgrade has no proration", changeRoute, /proration_behavior:\s*"none"/);

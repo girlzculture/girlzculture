@@ -3,13 +3,66 @@ import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
 import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
+import { capturePlatformError } from "@/lib/platformErrors";
+import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
+import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+async function monitoredSupabaseFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) {
+  let response: Response;
+  try {
+    response = await fetch(input, init);
+  } catch (error) {
+    noteOperationalFailure(
+      "Supabase provider network request failed",
+      Object.assign(new Error("SUPABASE_PROVIDER_NETWORK_FAILURE"), {
+        provider: "supabase",
+        code: error instanceof Error && error.name === "TimeoutError"
+          ? "TIMEOUT"
+          : "NETWORK",
+      }),
+    );
+    throw error;
+  }
+  if (!response.ok) {
+    let code = "";
+    let message = "";
+    try {
+      const payload = await response.clone().json() as Record<string, unknown>;
+      code = String(payload.code || payload.error_code || "").slice(0, 80);
+      message = String(payload.message || payload.error || "").slice(0, 300);
+    } catch {
+      // Provider response bodies are deliberately not retained.
+    }
+    const operationalFailure = shouldCaptureProviderResponse(
+      response.status,
+      code,
+      message,
+    );
+    if (operationalFailure) {
+      noteOperationalFailure(
+        "Supabase provider request failed",
+        Object.assign(
+          new Error(`SUPABASE_PROVIDER_FAILURE:${response.status}`),
+          { code: code || `HTTP_${response.status}`, provider: "supabase" },
+        ),
+      );
+    }
+  }
+  return response;
+}
+
 export function getSupabaseAdmin() {
   if (!url || !serviceKey) throw new Error("Missing Supabase server credentials.");
-  return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: monitoredSupabaseFetch },
+  });
 }
 
 export async function requireAdmin(request: Request) {
@@ -79,7 +132,7 @@ export async function sendEmail(to: string, subject: string, html: string, categ
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: senderFor(category), to, subject, html }),
   });
-  if (!response.ok) throw new Error(`Email delivery failed: ${await response.text()}`);
+  if (!response.ok) throw new Error(`EMAIL_DELIVERY_FAILED_${response.status}`);
   return response.json();
 }
 
@@ -93,7 +146,7 @@ export async function sendSms(to: string, body: string) {
     headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ From: from, To: to, Body: body }),
   });
-  if (!response.ok) throw new Error(`SMS delivery failed: ${await response.text()}`);
+  if (!response.ok) throw new Error(`SMS_DELIVERY_FAILED_${response.status}`);
   return response.json();
 }
 
@@ -116,15 +169,18 @@ async function bookingNotificationContext(bookingId: string) {
   const salonAuth = salon.user_id
     ? await admin.auth.admin.getUserById(String(salon.user_id))
     : null;
+  if (salonAuth?.error) throw salonAuth.error;
   const customerLocale = normalizeLocale(booking.preferred_locale);
   const salonLocale = normalizeLocale(
     salonAuth?.data.user?.user_metadata?.locale,
   );
   let stylistContact: { email: string; phone: string; userId: string; locale: string } | null = null;
   if (stylist?.id) {
-    const { data: member } = await admin.from("salon_team_members").select("user_id,email,phone").eq("salon_id", booking.salon_id).eq("stylist_id", stylist.id).eq("status", "Active").maybeSingle();
+    const { data: member, error: memberError } = await admin.from("salon_team_members").select("user_id,email,phone").eq("salon_id", booking.salon_id).eq("stylist_id", stylist.id).eq("status", "Active").maybeSingle();
+    if(memberError)throw memberError;
     const userId = String(stylist.user_id || member?.user_id || "");
     const authResult = userId ? await admin.auth.admin.getUserById(userId) : null;
+    if(authResult?.error)throw authResult.error;
     stylistContact = {
       email: String(member?.email || authResult?.data.user?.email || ""),
       phone: String(member?.phone || authResult?.data.user?.user_metadata?.phone || ""),
@@ -156,9 +212,18 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject"];
   const locales=[...new Set(requestedLocales.map(normalizeLocale).filter(locale=>locale!=="en"))];
   const[{data,error},{data:templateRows,error:templateError},{data:translationRows,error:translationError}]=await Promise.all([admin.from("engine_settings").select("setting_key,published_value").eq("status","Published").in("setting_key",keys),admin.from("notification_templates").select("template_key,published_subject,published_body,allowed_variables").eq("status","Published"),locales.length?admin.from("translation_entries").select("translation_key,locale,translated_text").eq("status","Published").in("locale",locales).like("translation_key","notification.%"):Promise.resolve({data:[],error:null})]);
-  if(error)console.warn("Booking notification Engine settings unavailable; using safe defaults",{code:error.code});
-  if(templateError)console.warn("Booking notification templates unavailable; using safe defaults",{code:templateError.code});
-  if(translationError)console.warn("Localized notification copy unavailable; using English fallback",{code:translationError.code});
+  const warningReferences:string[]=[];
+  for(const [action,failure] of [["load_engine_settings",error],["load_templates",templateError],["load_translations",translationError]] as const){
+    if(failure)warningReferences.push(await capturePlatformError({
+      admin,
+      error:failure,
+      feature:"booking-notifications",
+      action,
+      actorRole:"system",
+      provider:"supabase",
+      safeMessage:"Notification configuration was unavailable, so safe defaults were used.",
+    }));
+  }
   const values=Object.fromEntries((data||[]).map(row=>[row.setting_key,row.published_value]));
   const templates=Object.fromEntries((templateRows||[]).map(row=>[row.template_key,row])) as NotificationTemplateMap;
   const translations=Object.fromEntries((translationRows||[]).map(row=>[`${row.locale}:${row.translation_key}`,row.translated_text])) as NotificationTranslationMap;
@@ -166,25 +231,56 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const channels=new Set((rawChannels.length?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
   const subject=(key:string,fallback:string)=>{const value=String(values[key]||"").trim();return value&&value.length<=140?value:fallback};
   const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
-  return{channels,templates,translations,reminderHours:reminderHours.length?reminderHours:[24,2],customerConfirmed:subject("notifications.booking_customer_confirmed_subject","Your Girlz Culture appointment is confirmed"),salonConfirmed:subject("notifications.booking_salon_confirmed_subject","New confirmed Girlz Culture booking"),customerCancelled:subject("notifications.booking_customer_cancelled_subject","Your Girlz Culture appointment was cancelled"),salonCancelled:subject("notifications.booking_salon_cancelled_subject","Girlz Culture booking cancelled"),reminderSubject:subject("notifications.booking_reminder_subject","Your Girlz Culture appointment is coming up")};
+  return{channels,templates,translations,warningReferences,reminderHours:reminderHours.length?reminderHours:[24,2],customerConfirmed:subject("notifications.booking_customer_confirmed_subject","Your Girlz Culture appointment is confirmed"),salonConfirmed:subject("notifications.booking_salon_confirmed_subject","New confirmed Girlz Culture booking"),customerCancelled:subject("notifications.booking_customer_cancelled_subject","Your Girlz Culture appointment was cancelled"),salonCancelled:subject("notifications.booking_salon_cancelled_subject","Girlz Culture booking cancelled"),reminderSubject:subject("notifications.booking_reminder_subject","Your Girlz Culture appointment is coming up")};
 }
 
 async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
   const admin = getSupabaseAdmin();
-  const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; error?: string }> = [];
+  const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; request_id?: string }> = [];
   for (const task of tasks) {
     let status: "delivered" | "failed" | "skipped" = "delivered";
-    let errorMessage = "";
+    let reference = "";
     try {
-      const response = await task.run() as { skipped?: boolean } | undefined;
+      const response = await task.run() as {
+        skipped?: boolean;
+        failed?: number;
+        warnings?: Array<{ request_id?: string }>;
+      } | undefined;
       if (response?.skipped) status = "skipped";
+      if(Number(response?.failed||0)>0){
+        status="failed";
+        reference=String(response?.warnings?.[0]?.request_id||"");
+      }
     } catch (error) {
       status = "failed";
-      errorMessage = error instanceof Error ? error.message : "Delivery failed";
-      console.error("Transactional notification delivery failed", { bookingId, eventType, recipientType: task.recipientType, channel: task.channel, error });
+      reference = await capturePlatformError({
+        admin,
+        error,
+        feature:"booking-notifications",
+        action:`deliver:${eventType}:${task.channel}`,
+        actorRole:"system",
+        recordType:"booking",
+        recordId:bookingId,
+        provider:task.channel,
+        safeMessage:"A booking notification could not be delivered.",
+      });
     }
-    await admin.from("notification_delivery_log").insert({ booking_id: bookingId, recipient_type: task.recipientType, channel: task.channel, destination: task.destination, event_type: eventType, delivery_status: status, error_message: errorMessage || null });
-    results.push({ recipientType: task.recipientType, channel: task.channel, status, ...(errorMessage ? { error: errorMessage } : {}) });
+    const deliveryLog=await admin.from("notification_delivery_log").insert({ booking_id: bookingId, recipient_type: task.recipientType, channel: task.channel, destination: task.destination, event_type: eventType, delivery_status: status, error_message: reference?`DELIVERY_FAILED_REFERENCE:${reference}`:null });
+    if(deliveryLog.error){
+      const logReference=await capturePlatformError({
+        admin,
+        error:deliveryLog.error,
+        feature:"booking-notifications",
+        action:"write_delivery_log",
+        actorRole:"system",
+        recordType:"booking",
+        recordId:bookingId,
+        provider:"supabase",
+        safeMessage:"A booking notification result could not be recorded.",
+      });
+      if(!reference)reference=logReference;
+    }
+    results.push({ recipientType: task.recipientType, channel: task.channel, status, ...(reference ? { request_id: reference } : {}) });
   }
   return results;
 }
@@ -225,9 +321,14 @@ export async function deliverBookingNotifications(bookingId: string) {
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_confirmed.push_title","A booking was assigned to you"), body: stylistSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
   const deliveries = await runDeliveries(bookingId, "booking_confirmed", tasks.filter(task=>notification.channels.has(task.channel)));
   const delivered = deliveries.every((item) => item.status === "delivered");
-  if (delivered) await admin.from("bookings").update({ notifications_sent_at: new Date().toISOString() }).eq("id", bookingId).is("notifications_sent_at", null);
-  await admin.from("notifications").update({ delivery_status: delivered ? "delivered" : "attention_required" }).eq("booking_id", bookingId);
-  return { deliveries, delivered };
+  const warningReferences=[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))];
+  if (delivered) {
+    const sentUpdate=await admin.from("bookings").update({ notifications_sent_at: new Date().toISOString() }).eq("id", bookingId).is("notifications_sent_at", null);
+    if(sentUpdate.error)warningReferences.push(await capturePlatformError({admin,error:sentUpdate.error,feature:"booking-notifications",action:"mark_notifications_sent",actorRole:"system",recordType:"booking",recordId:bookingId,provider:"supabase",safeMessage:"Notification delivery completed, but its booking status could not be recorded."}));
+  }
+  const attentionUpdate=await admin.from("notifications").update({ delivery_status: delivered ? "delivered" : "attention_required" }).eq("booking_id", bookingId);
+  if(attentionUpdate.error)warningReferences.push(await capturePlatformError({admin,error:attentionUpdate.error,feature:"booking-notifications",action:"update_notification_status",actorRole:"system",recordType:"booking",recordId:bookingId,provider:"supabase",safeMessage:"Notification delivery completed, but its status could not be recorded."}));
+  return { deliveries, delivered, warnings:warningReferences.map(reference=>({message:`A booking notification needs attention. Reference ${reference}.`,request_id:reference})) };
 }
 
 export async function deliverCancellationNotifications(bookingId: string, reason: string) {
@@ -260,7 +361,8 @@ export async function deliverCancellationNotifications(bookingId: string, reason
   if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings") });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_cancelled.sms",`Girlz Culture: ${stylistMessage}`,{message:stylistMessage})) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_cancelled.push_title","Assigned booking cancelled"), body: stylistMessage, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
-  return { deliveries: await runDeliveries(bookingId, "booking_cancelled", tasks.filter(task=>notification.channels.has(task.channel))) };
+  const deliveries=await runDeliveries(bookingId, "booking_cancelled", tasks.filter(task=>notification.channels.has(task.channel)));
+  return { deliveries, warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A cancellation notification needs attention. Reference ${reference}.`,request_id:reference})) };
 }
 
 export async function deliverBookingReminder(bookingId:string,reminderHours:number){
@@ -290,7 +392,8 @@ export async function deliverBookingReminder(bookingId:string,reminderHours:numb
   if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,stylistEmail.subject,stylistEmail.html,"bookings")});
   if(stylistContact?.phone)tasks.push({recipientType:"stylist",channel:"sms",destination:stylistContact.phone,run:()=>sendSms(stylistContact.phone,renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.sms",`Girlz Culture: ${stylistSummary}`,{summary:stylistSummary}))});
   if(stylistContact?.userId)tasks.push({recipientType:"stylist",channel:"push",destination:stylistContact.userId,run:()=>sendPushToUsers([stylistContact.userId],{title:renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_reminder.push_title","Upcoming assigned appointment"),body:stylistSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
-  return{deliveries:await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)))};
+  const deliveries=await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)));
+  return{deliveries,warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A reminder notification needs attention. Reference ${reference}.`,request_id:reference}))};
 }
 
 export async function processBookingReminders(){
@@ -302,9 +405,9 @@ export async function processBookingReminders(){
     for(const booking of bookings||[]){
       const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:booking.id,p_reminder_hours:reminderHours});
       if(claim.error)throw claim.error;if(claim.data!==true)continue;
-      try{const delivery=await deliverBookingReminder(booking.id,reminderHours);await admin.from("booking_reminder_claims").update({completed_at:new Date().toISOString(),error_message:null}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);results.push({bookingId:booking.id,reminderHours,status:"processed",delivery});}
-      catch(error){const message=error instanceof Error?error.message:"Reminder failed";await admin.from("booking_reminder_claims").update({error_message:message}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);console.error("Booking reminder delivery failed",{bookingId:booking.id,reminderHours,error});results.push({bookingId:booking.id,reminderHours,status:"failed"});}
+      try{const delivery=await deliverBookingReminder(booking.id,reminderHours);const claimUpdate=await admin.from("booking_reminder_claims").update({completed_at:new Date().toISOString(),error_message:null}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);if(claimUpdate.error)throw claimUpdate.error;results.push({bookingId:booking.id,reminderHours,status:"processed",delivery});}
+      catch(error){const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"deliver_booking_reminder",actorRole:"system",recordType:"booking",recordId:booking.id,provider:"transactional-notifications",safeMessage:"A scheduled booking reminder could not be delivered."});const claimUpdate=await admin.from("booking_reminder_claims").update({error_message:`REMINDER_FAILED_REFERENCE:${reference}`}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);if(claimUpdate.error)await capturePlatformError({admin,error:claimUpdate.error,feature:"booking-reminders",action:"record_reminder_failure",actorRole:"system",recordType:"booking",recordId:booking.id,provider:"supabase",safeMessage:"A reminder failure could not be recorded."});results.push({bookingId:booking.id,reminderHours,status:"failed",request_id:reference});}
     }
   }
-  return{configuredHours:notification.reminderHours,processed:results.length,results};
+  return{configuredHours:notification.reminderHours,processed:results.length,results,warnings:notification.warningReferences.map(reference=>({message:`Reminder configuration needs attention. Reference ${reference}.`,request_id:reference}))};
 }

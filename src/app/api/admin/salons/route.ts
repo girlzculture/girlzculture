@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { validCoordinates } from "@/lib/location";
@@ -35,7 +36,7 @@ function adminListError(error: unknown, requestId: string) {
   const record = error && typeof error === "object" ? error as Record<string, unknown> : {};
   const message = error instanceof Error ? error.message : String(record.message || "");
   const status = message === "Unauthorized" ? 401 : message.startsWith("Forbidden") ? 403 : record.code ? 500 : 400;
-  console.error("Admin salon list failed", {
+  noteOperationalFailure("Admin salon list failed", {
     requestId,
     status,
     code: record.code || null,
@@ -52,7 +53,7 @@ function adminListError(error: unknown, requestId: string) {
   );
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   const requestId = crypto.randomUUID();
   try {
     const { admin, user } = await requireAdminPermission(request, "salons");
@@ -155,3 +156,4 @@ export async function GET(request: Request) {
     return adminListError(error, requestId);
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/salons", "GET"), GETHandler);

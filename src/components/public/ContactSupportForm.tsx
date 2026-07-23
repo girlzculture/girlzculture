@@ -16,7 +16,7 @@ export default function ContactSupportForm({categories}:{categories:string[]}) {
       const response = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to submit your request");
       setSent(true); setNotice(`Your request was received. Reference: ${body.ticketId}`); setForm({...initial,category:categories[0]||"Other"});
-    } catch (error) { console.error("Contact support form error", error); setNotice(error instanceof Error ? error.message : "Unable to submit your request"); }
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to submit your request"); }
     finally { setSaving(false); }
   }
   return <form onSubmit={submit} className="rounded-3xl border border-plum/10 bg-white p-5 shadow-[0_18px_55px_rgba(26,18,32,.08)] sm:p-8">

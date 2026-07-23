@@ -1,10 +1,11 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText } from "@/lib/requestSecurity";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 const statuses = new Set(["Open", "Investigating", "Resolved", "Ignored"]);
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let admin;
   try {
     const context = await requireAdminPermission(request, "settings");
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   let admin;
   try {
     const { admin: client, user } = await requireAdminPermission(request, "settings");
@@ -73,3 +74,5 @@ export async function PATCH(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "engine-error-monitoring", action: "update", actorRole: "admin", safeMessage: "The error event could not be updated." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/errors", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/errors", "PATCH"), PATCHHandler);

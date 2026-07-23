@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { errorResponse } from "@/lib/requestSecurity";
 import { aiProviderConfigured, approvedAiProviders } from "@/lib/aiAutomationServer";
@@ -6,7 +7,7 @@ const EXPECTED_MIGRATION = "20260721100000";
 type State = "healthy" | "configuration_required" | "migration_required" | "optional";
 type Status = { key:string;label:string;state:State;detail:string;required:boolean };
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const statuses: Status[] = [];
@@ -33,7 +34,8 @@ export async function GET(request: Request) {
     statuses.push({ key:"deployment",label:"Migration deployment workflow",state:process.env.GITHUB_ACTIONS||process.env.NETLIFY?"healthy":"optional",detail:process.env.GITHUB_ACTIONS?"This status check is running in the repository CI environment.":process.env.NETLIFY?"This status check is running in Netlify.":"Local environment detected; CI workflow configuration is verified separately.",required:true });
     return Response.json({ expectedMigration:EXPECTED_MIGRATION, checkedAt:new Date().toISOString(), statuses });
   } catch (error) {
-    console.error("Engine system status failed", error);
+    noteOperationalFailure("Engine system status failed", error);
     return errorResponse(error, "Unable to check connected platform systems.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/system-status", "GET"), GETHandler);

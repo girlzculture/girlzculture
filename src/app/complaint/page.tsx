@@ -2,6 +2,7 @@ import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import ComplaintForm from "@/components/public/ComplaintForm";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEngineList } from "@/lib/engineConfigServer";
+import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function ComplaintPage() {
     .in("status", ["Active", "Approved"])
     .order("name")
     .limit(1000),getEngineList("quality.complaint_reasons",["Service quality","Safety or hygiene","Appointment timing","Pricing or payment","Professional conduct","Other"],40)]);
-  if (error) console.error("Complaint salon list failed", error);
+  if (error) await capturePublicPageFailure(error, "complaint-page", "load-salon-list");
 
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader />

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, Search, X } from "lucide-react";
 import type { CustomerLocation } from "@/lib/location";
+import { reportClientOperationalFailure } from "@/lib/supabase";
 
 let googleMapsPromise: Promise<void> | null = null;
 export function loadGoogleMaps() {
@@ -331,11 +332,16 @@ export function LocationAutocomplete({
               .slice(0, 6),
           );
           setActiveIndex(-1);
-        } catch (error) {
+        } catch {
           if (requestId === requestSequence.current) {
-            console.error("Places autocomplete failed", error);
+            const report = await reportClientOperationalFailure({
+              status: 502,
+              code: "GOOGLE_PLACES_AUTOCOMPLETE_FAILED",
+              operation: "maps:place-autocomplete",
+              provider: "google-maps",
+            });
             setSuggestions([]);
-            setError(error instanceof Error ? error.message : "Location suggestions could not load.");
+            setError(report.message);
           }
         } finally {
           if (requestId === requestSequence.current) setLoading(false);
@@ -382,11 +388,16 @@ export function LocationAutocomplete({
         setError("That location could not be resolved. Choose another suggestion.");
       }
       sessionToken.current = null;
-    } catch (error) {
-      console.error("Place details failed", error);
+    } catch {
+      const report = await reportClientOperationalFailure({
+        status: 502,
+        code: "GOOGLE_PLACE_DETAILS_FAILED",
+        operation: "maps:place-details",
+        provider: "google-maps",
+      });
       onCoordinates?.(null);
       onResolved?.(null);
-      setError("That location could not be resolved. Choose another suggestion.");
+      setError(report.message);
     }
   }
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {

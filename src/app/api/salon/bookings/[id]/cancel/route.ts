@@ -1,9 +1,10 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { deliverCancellationNotifications, requireSalonPermission } from "@/lib/supabaseAdmin";
 import { stripeRequest } from "@/lib/stripeServer";
 import { getEngineList } from "@/lib/engineConfigServer";
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function POSTHandler(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     enforceRateLimit(request, "salon-booking-cancel", 20, 10 * 60_000);
     const { id } = await context.params;
@@ -65,17 +66,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       stripe_refund_id: refundId || null,
       created_by_user_id: user.id,
     }, { onConflict: "booking_id" });
-    if (auditError) console.error("Salon cancellation audit write failed", { bookingId: booking.id, auditError });
+    if (auditError) noteOperationalFailure("Salon cancellation audit write failed", { bookingId: booking.id, auditError });
     const refundMessage = refundStatus === "Succeeded" ? `Your $${depositAmount.toFixed(2)} deposit was refunded in full.` : "No deposit refund was due.";
     if (booking.customer_id) await admin.from("notifications").insert({ user_id: booking.customer_id, salon_id: salon.id, booking_id: booking.id, title: "Appointment cancelled by salon", body: `${salon.name} cancelled your appointment. Reason: ${reason}. ${refundMessage}`, action_url: "/account?tab=past", delivery_status: "delivered" });
     await admin.from("notifications").insert({ user_id: user.id, salon_id: salon.id, booking_id: booking.id, title: "Booking cancelled", body: `You cancelled this booking. Reason: ${reason}.`, action_url: `/salon/dashboard/bookings?booking=${booking.id}`, delivery_status: "delivered" });
     const notificationResult = await deliverCancellationNotifications(booking.id, reason).catch((notificationError) => {
-      console.error("Customer cancellation notification failed", { bookingId: booking.id, notificationError });
-      return { deliveries: [] };
+      noteOperationalFailure("Customer cancellation notification failed", { bookingId: booking.id, notificationError });
+      return { deliveries: [], warnings: [] };
     });
-    return Response.json({ ok: true, booking: cancelled, refund_status: refundStatus, notifications: notificationResult.deliveries });
+    return Response.json({ ok: true, booking: cancelled, refund_status: refundStatus, notifications: notificationResult.deliveries, warnings: notificationResult.warnings });
   } catch (error) {
-    console.error("Salon booking cancellation failed", error);
+    noteOperationalFailure("Salon booking cancellation failed", error);
     return errorResponse(error, "Unable to cancel this booking.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/bookings/[id]/cancel", "POST"), POSTHandler);

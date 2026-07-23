@@ -6,7 +6,8 @@ import Image from "next/image";
 import { ImageIcon, Plus, Trash2, UserRound } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
-import { salonSupabase as supabase } from "@/lib/supabase";
+import { getSessionForScope, salonSupabase as supabase } from "@/lib/supabase";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 import {
   INCLUDED_ITEM_OPTIONS,
   LENGTH_OPTIONS,
@@ -18,7 +19,7 @@ import {
 
 type Row = Record<string, any> & { id?: string; name?: string };
 type MasterStyle = Record<string, any> & { id: string; name: string; category?: string; category_id?: string; service_group_id?: string; service_category?: { id?: string; name?: string; slug?: string } | null; service_group?: { id?: string; name?: string; category_id?: string } | null };
-type NumericValue = number | "";
+type NumericValue = string;
 type OptionRow = { label: string; price_add: NumericValue };
 type MaterialRow = { id?: string; name: string; price: NumericValue; longevity_weeks: number; quality_grade: string };
 type Context = {
@@ -40,14 +41,14 @@ const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <Ba
 
 function normalizedOptions(raw: unknown): OptionRow[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((item) => typeof item === "string" ? { label: item, price_add: 0 } : {
+  return raw.map((item) => typeof item === "string" ? { label: item, price_add: "0" } : {
     label: String(item?.label || item?.value || ""),
-    price_add: Number(item?.price_add ?? item?.price ?? 0),
+    price_add: String(item?.price_add ?? item?.price ?? 0),
   }).filter((item) => item.label);
 }
 
 function MoneyInput({ value, onChange, label = "Price" }: { value: NumericValue; onChange: (value: NumericValue) => void; label?: string }) {
-  return <label className="text-[10px] font-bold">{label}<span className="mt-1 flex min-h-10 items-center rounded-[7px] border border-plum/15 bg-white px-3"><span className="mr-1 text-ink/45">$</span><input type="number" inputMode="decimal" min="0" max="10000" step="0.01" value={value} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} onKeyDown={(event)=>{if(/[eE+-]/.test(event.key))event.preventDefault()}} className="min-w-0 flex-1 outline-none" /></span></label>;
+  return <label className="text-[10px] font-bold">{label}<span className="mt-1 flex min-h-10 items-center rounded-[7px] border border-plum/15 bg-white px-3"><span className="mr-1 text-ink/45">$</span><input type="number" inputMode="decimal" min="0" max="10000" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={(event)=>{if(/[eE+]/.test(event.key))event.preventDefault()}} className="min-w-0 flex-1 appearance-none outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /></span></label>;
 }
 
 function OptionEditor({ title, options, rows, setRows, allowOther = false }: { title: string; options: readonly string[]; rows: OptionRow[]; setRows: React.Dispatch<React.SetStateAction<OptionRow[]>>; allowOther?: boolean }) {
@@ -74,6 +75,7 @@ function ManagedAddonEditor({ options, rows, setRows }: { options: string[]; row
 }
 
 export function StructuredStylesEditor({ c }: { c: Context }) {
+  const { t } = useI18n();
   const active = c.styles.find((style) => style.id === c.selectedStyle) || null;
   const [masters, setMasters] = useState<MasterStyle[]>([]);
   const [categories, setCategories] = useState<Row[]>([]);
@@ -98,7 +100,7 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
   const [saving, setSaving] = useState(false);
   const [engineOptions,setEngineOptions]=useState({sizes:[...SIZE_OPTIONS] as string[],lengths:[...LENGTH_OPTIONS] as string[],materials:[...MATERIAL_OPTIONS] as string[],quality:[...MATERIAL_QUALITY_OPTIONS] as string[],longevity:[...MATERIAL_LONGEVITY_WEEKS] as number[],included:[...INCLUDED_ITEM_OPTIONS] as string[],defaultBuffer:15});
 
-  useEffect(()=>{let live=true;void fetch("/api/config?keys=catalog.size_options,catalog.length_options,catalog.material_options,catalog.material_quality_grades,catalog.material_longevity_weeks,catalog.included_items,booking.default_buffer_minutes").then(response=>response.json()).then(body=>{if(!live)return;const config=(body.config||{}) as Record<string,unknown>;const list=(key:string,fallback:string[])=>Array.isArray(config[key])?config[key].map(String).filter(Boolean):fallback;const longevity=list("catalog.material_longevity_weeks",MATERIAL_LONGEVITY_WEEKS.map(String)).map(Number).filter(value=>Number.isInteger(value)&&value>0&&value<=52);const defaultBuffer=Number(config["booking.default_buffer_minutes"]);setEngineOptions({sizes:list("catalog.size_options",[...SIZE_OPTIONS]),lengths:list("catalog.length_options",[...LENGTH_OPTIONS]),materials:list("catalog.material_options",[...MATERIAL_OPTIONS]),quality:list("catalog.material_quality_grades",[...MATERIAL_QUALITY_OPTIONS]),longevity:longevity.length?longevity:[...MATERIAL_LONGEVITY_WEEKS],included:list("catalog.included_items",[...INCLUDED_ITEM_OPTIONS]),defaultBuffer:Number.isFinite(defaultBuffer)&&defaultBuffer>=0&&defaultBuffer<=180?defaultBuffer:15});}).catch(error=>console.warn("Salon catalog Engine options unavailable; using safe defaults",error));return()=>{live=false}},[]);
+  useEffect(()=>{let live=true;void fetch("/api/config?keys=catalog.size_options,catalog.length_options,catalog.material_options,catalog.material_quality_grades,catalog.material_longevity_weeks,catalog.included_items,booking.default_buffer_minutes").then(response=>response.json()).then(body=>{if(!live)return;const config=(body.config||{}) as Record<string,unknown>;const list=(key:string,fallback:string[])=>Array.isArray(config[key])?config[key].map(String).filter(Boolean):fallback;const longevity=list("catalog.material_longevity_weeks",MATERIAL_LONGEVITY_WEEKS.map(String)).map(Number).filter(value=>Number.isInteger(value)&&value>0&&value<=52);const defaultBuffer=Number(config["booking.default_buffer_minutes"]);setEngineOptions({sizes:list("catalog.size_options",[...SIZE_OPTIONS]),lengths:list("catalog.length_options",[...LENGTH_OPTIONS]),materials:list("catalog.material_options",[...MATERIAL_OPTIONS]),quality:list("catalog.material_quality_grades",[...MATERIAL_QUALITY_OPTIONS]),longevity:longevity.length?longevity:[...MATERIAL_LONGEVITY_WEEKS],included:list("catalog.included_items",[...INCLUDED_ITEM_OPTIONS]),defaultBuffer:Number.isFinite(defaultBuffer)&&defaultBuffer>=0&&defaultBuffer<=180?defaultBuffer:15});}).catch(()=>undefined);return()=>{live=false}},[]);
 
   useEffect(() => {
     let live = true;
@@ -118,10 +120,10 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
     setCategoryId(String(active?.category_id || ""));
     setDisplayName(String(active?.name || ""));
     setDescription(String(active?.description || ""));
-    setDurationMin(active?.duration_min_hours == null ? "" : Number(active.duration_min_hours));
-    setDurationMax(active?.duration_max_hours == null ? "" : Number(active.duration_max_hours));
-    setBasePrice(active?.base_price == null ? "" : Number(active.base_price));
-    setMaxPrice(active?.price_display_max == null ? (active?.base_price == null ? "" : Number(active.base_price)) : Number(active.price_display_max));
+    setDurationMin(active?.duration_min_hours == null ? "" : String(active.duration_min_hours));
+    setDurationMax(active?.duration_max_hours == null ? "" : String(active.duration_max_hours));
+    setBasePrice(active?.base_price == null ? "" : String(active.base_price));
+    setMaxPrice(active?.price_display_max == null ? (active?.base_price == null ? "" : String(active.base_price)) : String(active.price_display_max));
     setBufferMinutes(Number(active?.buffer_minutes ?? engineOptions.defaultBuffer));
     setSizes(normalizedOptions(active?.size_options));
     setLengths(normalizedOptions(active?.length_options));
@@ -129,10 +131,14 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
     setIncluded(Array.isArray(active?.included_items) ? active.included_items.map(String) : []);
     setPhotos(Array.isArray(active?.photos) ? active.photos.map(String) : []);
     if (!active?.id) { setMaterials([]); return () => { live = false; }; }
-    supabase.from("style_materials").select("*").eq("style_id", active.id).order("created_at").then(({ data, error }) => {
+    void getSessionForScope("salon").then(async(session)=>{
+      if(!session)throw new Error("Your salon session expired. Please sign in again.");
+      const response=await fetch(`/api/salon/records?table=style_materials&style_id=${encodeURIComponent(String(active.id))}`,{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+      const body=await response.json() as {records?:Row[];error?:string};
+      if(!response.ok)throw new Error(body.error||"We couldn't load the service materials.");
       if (!live) return;
-      if (error) c.setNotice(error.message); else setMaterials((data || []).map((row) => ({ id: row.id, name: row.name, price: Number(row.price || 0), longevity_weeks: Number(row.longevity_weeks || 4), quality_grade: row.quality_grade || "Good" })));
-    });
+      setMaterials((body.records || []).map((row) => ({ id: row.id, name: String(row.name||""), price: String(row.price ?? 0), longevity_weeks: Number(row.longevity_weeks || 4), quality_grade: String(row.quality_grade || "Good") })));
+    }).catch((error)=>{if(live)c.setNotice(error instanceof Error?error.message:"We couldn't load the service materials.");});
     return () => { live = false; };
   }, [active?.id,engineOptions.defaultBuffer]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -151,9 +157,9 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
     const customerFacingName = chosenMaster?.name || displayName.trim() || String(chosenGroup.name || "").trim();
     if (!customerFacingName) { c.setNotice("Enter the service name customers should see."); return; }
     if (durationMin === "" || durationMax === "" || basePrice === "") { c.setNotice("Enter the service duration and base price before saving."); return; }
-    if (durationMax < durationMin) { c.setNotice("Maximum duration must be equal to or greater than minimum duration."); return; }
+    if (Number(durationMax) < Number(durationMin)) { c.setNotice("Maximum duration must be equal to or greater than minimum duration."); return; }
     const resolvedMaxPrice = maxPrice === "" ? basePrice : maxPrice;
-    if (resolvedMaxPrice < basePrice) { c.setNotice("Maximum price must be equal to or greater than base price."); return; }
+    if (Number(resolvedMaxPrice) < Number(basePrice)) { c.setNotice("Maximum price must be equal to or greater than base price."); return; }
     setSaving(true);
     const saved = await c.saveRecord("styles", {
       master_style_id: masterId || null,
@@ -162,21 +168,21 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
       category: String(chosenGroup.name || ""),
       category_id: categoryId,
       description,
-      duration_min_hours: durationMin,
-      duration_max_hours: durationMax,
+      duration_min_hours: Number(durationMin),
+      duration_max_hours: Number(durationMax),
       buffer_minutes: bufferMinutes,
-      base_price: basePrice,
-      price_display_min: basePrice,
-      price_display_max: resolvedMaxPrice,
-      size_options: sizes.map((row)=>({...row,price_add:row.price_add === "" ? 0 : row.price_add})),
-      length_options: lengths.map((row)=>({...row,price_add:row.price_add === "" ? 0 : row.price_add})),
-      addons: addons.map((row)=>({...row,price_add:row.price_add === "" ? 0 : row.price_add})),
+      base_price: Number(basePrice),
+      price_display_min: Number(basePrice),
+      price_display_max: Number(resolvedMaxPrice),
+      size_options: sizes.map((row)=>({...row,price_add:row.price_add === "" ? 0 : Number(row.price_add)})),
+      length_options: lengths.map((row)=>({...row,price_add:row.price_add === "" ? 0 : Number(row.price_add)})),
+      addons: addons.map((row)=>({...row,price_add:row.price_add === "" ? 0 : Number(row.price_add)})),
       included_items: included,
       option_groups: Array.isArray(active?.option_groups) ? active.option_groups : [],
       photos,
       style_materials: materials.map((material) => ({
         name: material.name,
-        price: material.price === "" ? 0 : material.price,
+        price: material.price === "" ? 0 : Number(material.price),
         longevity_weeks: material.longevity_weeks,
         quality_grade: material.quality_grade,
       })),
@@ -198,7 +204,7 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
     <div className="grid gap-4 xl:grid-cols-[.7fr_1.3fr]">
       <EditorPanel><h2 className="font-serif text-xl text-plum">Your Services</h2><div className="mt-3 space-y-2">{c.styles.map((style) => { const managed = masters.find((master) => master.id === style.master_style_id); return <button key={style.id} type="button" onClick={() => c.setSelectedStyle(style.id || null)} className={`grid w-full ${style.photos?.[0] ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[1fr_auto]"} gap-3 rounded-[10px] border p-3 text-left ${active?.id === style.id ? "border-magenta bg-blush/30" : "border-plum/10"}`}>{style.photos?.[0] ? <Image unoptimized width={64} height={64} src={String(style.photos[0])} alt={style.name || "Service"} className="h-16 w-16 rounded-[8px] object-cover" /> : null}<span><b className="font-serif text-base">{style.name}</b><span className="mt-1 block text-[10px] text-ink/55">{managed?.service_category?.name || "Service"} · {style.category || "General"} · {Number(style.duration_min_hours || 0)}–{Number(style.duration_max_hours || 0)} hrs</span>{!style.photos?.[0] ? <span className="mt-1 flex items-center gap-1 text-[9px] text-ink/40"><ImageIcon size={11} />No service image uploaded</span> : null}</span><span className="text-right text-[10px]">From<br /><b className="text-sm">${Number(style.price_display_min || style.base_price || 0)}</b></span></button>; })}{!c.styles.length ? <Empty text="Add your first service." /> : null}</div></EditorPanel>
       <form key={active?.id || "new"} onSubmit={save}><EditorPanel><div className="flex items-center justify-between"><h2 className="font-serif text-xl text-plum">{active ? "Edit Service" : "Add Service"}</h2><span className="text-[9px] font-bold uppercase text-green-700">Category-aware</span></div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2"><SelectField label="Top-level category" value={categoryId} onChange={(value)=>{setCategoryId(value);setGroupId("");setMasterId("");setDisplayName("");setAddons([]);}} options={categories.map((category)=>({value:String(category.id),label:String(category.name)}))} placeholder="Choose category" /><SelectField label="Service group" value={groupId} onChange={(value)=>{setGroupId(value);setMasterId("");setDisplayName(String(groups.find((group)=>group.id===value)?.name||""));}} options={availableGroups.map((group)=>({value:String(group.id),label:String(group.name)}))} placeholder="Choose service group" /><SelectField required={false} label="Specific service name (optional)" value={masterId} onChange={(value)=>{setMasterId(value);const managed=masters.find((master)=>master.id===value);if(managed)setDisplayName(managed.name);}} options={availableServices.map((master)=>({value:String(master.id),label:master.name}))} placeholder="Sell the whole group" /><label className="text-[10px] font-bold">Customer-facing service name<input required value={displayName} onChange={(event)=>setDisplayName(event.target.value.slice(0,120))} disabled={Boolean(chosenMaster)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 font-normal disabled:bg-blush/35" /><span className="mt-1 block font-normal text-ink/50">Choose a managed name above, or enter the name customers should see.</span></label><label className="sm:col-span-2 text-[10px] font-bold">Description<textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 500))} rows={3} className="mt-1 w-full rounded-[7px] border border-plum/15 p-3 font-normal" /></label><NumberField label="Duration minimum (hours)" value={durationMin} onChange={setDurationMin} step="0.25" max={24}/><NumberField label="Duration maximum (hours)" value={durationMax} onChange={setDurationMax} step="0.25" max={24}/><MoneyInput label="Base price" value={basePrice} onChange={setBasePrice} /><MoneyInput label="Maximum displayed price" value={maxPrice} onChange={setMaxPrice} /><SelectField label="Cleanup buffer" value={String(bufferMinutes)} onChange={(value) => setBufferMinutes(Number(value))} options={[0,15,30,45,60].map((value) => ({ value: String(value), label: `${value} minutes` }))} /></div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2"><SelectField label="Top-level category" value={categoryId} onChange={(value)=>{setCategoryId(value);setGroupId("");setMasterId("");setDisplayName("");setAddons([]);}} options={categories.map((category)=>({value:String(category.id),label:String(category.name)}))} placeholder="Choose category" /><SelectField label="Service group" value={groupId} onChange={(value)=>{setGroupId(value);setMasterId("");setDisplayName(String(groups.find((group)=>group.id===value)?.name||""));}} options={availableGroups.map((group)=>({value:String(group.id),label:String(group.name)}))} placeholder="Choose service group" /><SelectField required={false} label="Specific service name (optional)" value={masterId} onChange={(value)=>{setMasterId(value);const managed=masters.find((master)=>master.id===value);if(managed)setDisplayName(managed.name);}} options={availableServices.map((master)=>({value:String(master.id),label:master.name}))} placeholder="Sell the whole group" /><label className="text-[10px] font-bold">{t("services.customer_name_label", "Service name customers will see")}<input required value={displayName} onChange={(event)=>setDisplayName(event.target.value.slice(0,120))} disabled={Boolean(chosenMaster)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 font-normal disabled:bg-blush/35" /><span className="mt-1 block font-normal text-ink/50">{t("services.customer_name_help", "Enter the name you want customers to see when browsing and booking.")}</span></label><label className="sm:col-span-2 text-[10px] font-bold">Description<textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 500))} rows={3} className="mt-1 w-full rounded-[7px] border border-plum/15 p-3 font-normal" /></label><NumberField label="Duration minimum (hours)" value={durationMin} onChange={setDurationMin} step="0.25" max={24}/><NumberField label="Duration maximum (hours)" value={durationMax} onChange={setDurationMax} step="0.25" max={24}/><MoneyInput label="Base price" value={basePrice} onChange={setBasePrice} /><MoneyInput label="Maximum displayed price" value={maxPrice} onChange={setMaxPrice} /><SelectField label="Cleanup buffer" value={String(bufferMinutes)} onChange={(value) => setBufferMinutes(Number(value))} options={[0,15,30,45,60].map((value) => ({ value: String(value), label: `${value} minutes` }))} /></div>
         {isBraiding ? <><div className="mt-5 grid gap-4 lg:grid-cols-2"><OptionEditor title="Size Options" options={engineOptions.sizes} rows={sizes} setRows={setSizes} /><OptionEditor title="Length Options" options={engineOptions.lengths} rows={lengths} setRows={setLengths} /><ManagedAddonEditor options={availableAddons} rows={addons} setRows={setAddons} />
           <section className="rounded-[11px] border border-plum/10 bg-cream/35 p-4"><div className="flex items-center justify-between"><h3 className="font-serif text-lg text-plum">Hair / Material</h3><button type="button" onClick={addMaterial} className="flex items-center gap-1 text-[10px] font-bold text-magenta"><Plus size={13} />Add another</button></div><div className="mt-3 space-y-3">{materials.map((material, index) => <div key={`${material.name}-${index}`} className="rounded-[8px] border border-plum/10 bg-white p-3"><div className="grid gap-2 sm:grid-cols-2"><SelectField label="Material" value={material.name} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, name: value } : item))} options={engineOptions.materials.map((value) => ({ value, label: value }))} /><MoneyInput value={material.price} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, price: value } : item))} /><SelectField label="Longevity" value={String(material.longevity_weeks)} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, longevity_weeks: Number(value) } : item))} options={engineOptions.longevity.map((value) => ({ value: String(value), label: `${value} week${value === 1 ? "" : "s"}` }))} /><SelectField label="Quality" value={material.quality_grade} onChange={(value) => setMaterials((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, quality_grade: value } : item))} options={engineOptions.quality.map((value) => ({ value, label: value }))} /></div><button type="button" onClick={() => setMaterials((current) => current.filter((_, rowIndex) => rowIndex !== index))} className="mt-2 flex items-center gap-1 text-[10px] text-magenta"><Trash2 size={12} />Remove material</button></div>)}{!materials.length ? <Empty text="No material choices selected." /> : null}</div></section>
         </div>
@@ -219,23 +225,36 @@ export function StructuredStylistsEditor({ c }: { c: Context }) {
   const [years, setYears] = useState<NumericValue>("");
   const [avatar, setAvatar] = useState("");
   const [portfolio, setPortfolio] = useState<string[]>([]);
+  const [temporaryPhotoKey, setTemporaryPhotoKey] = useState(() => crypto.randomUUID());
 
   useEffect(() => { let live = true; supabase.from("master_styles").select("id,name,sort_order").eq("is_active", true).order("sort_order").order("name").then(({ data, error }) => { if (!live) return; if (error) c.setNotice(error.message); else setMasters(sortCatalogRecords((data || []) as MasterStyle[])); }); return () => { live = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setName(String(active?.name || "")); setBio(String(active?.bio || "").slice(0, 250)); setSpecialties(Array.isArray(active?.specialties) ? active.specialties.map(String) : []); setYears(active?.years_experience == null ? "" : Number(active.years_experience)); setAvatar(String(active?.avatar_url || "")); setPortfolio(Array.isArray(active?.photos) ? active.photos.map(String) : []); }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setName(String(active?.name || "")); setBio(String(active?.bio || "").slice(0, 250)); setSpecialties(Array.isArray(active?.specialties) ? active.specialties.map(String) : []); setYears(active?.years_experience == null ? "" : String(active.years_experience)); setAvatar(String(active?.avatar_url || "")); setPortfolio(Array.isArray(active?.photos) ? active.photos.map(String) : []); }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const saved = await c.saveRecord("stylists", { name: name.trim(), bio: bio.slice(0, 250), specialties, years_experience: years === "" ? 0 : Math.min(70,Math.max(0,years)), avatar_url: avatar || null, photos: portfolio, is_active: true, is_draft: false }, active?.id);
+    const saved = await c.saveRecord("stylists", { name: name.trim(), bio: bio.slice(0, 250), specialties, years_experience: years === "" ? 0 : Math.min(70, Math.max(0, Number(years))), avatar_url: avatar || null, photos: portfolio, is_active: true, is_draft: false }, active?.id);
     if (!saved) return;
     c.setStylists((rows) => active ? rows.map((row) => row.id === active.id ? saved : row) : [saved, ...rows]);
     c.setSelectedStylist(saved.id || null);
+    setTemporaryPhotoKey(crypto.randomUUID());
   }
 
   const selectedNames = useMemo(() => new Set(specialties), [specialties]);
+  const temporaryFolder = `salons/${c.salon.id}/staging/stylist-${temporaryPhotoKey}`;
+  function startNewStylist() {
+    c.setSelectedStylist(null);
+    setName("");
+    setBio("");
+    setSpecialties([]);
+    setYears("");
+    setAvatar("");
+    setPortfolio([]);
+    setTemporaryPhotoKey(crypto.randomUUID());
+  }
   return <>
-    <EditorTitle title="Stylists" subtitle="Manage your team with consistent specialties drawn from the platform style list." action={<button type="button" onClick={() => c.setSelectedStylist(null)} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16} />Add Stylist</button>} />
+    <EditorTitle title="Stylists" subtitle="Manage your team with consistent specialties drawn from the platform style list." action={<button type="button" onClick={startNewStylist} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16} />Add Stylist</button>} />
     <div className="flex gap-3 overflow-x-auto pb-4">{c.stylists.map((stylist) => <button key={stylist.id} type="button" onClick={() => c.setSelectedStylist(stylist.id || null)} className={`min-w-[190px] rounded-[11px] border p-4 text-left ${active?.id === stylist.id ? "border-magenta bg-blush/30" : "border-plum/10 bg-white"}`}>{stylist.avatar_url ? <Image unoptimized width={80} height={80} src={String(stylist.avatar_url)} alt={stylist.name || "Stylist"} className="h-20 w-20 rounded-full object-cover" /> : <span className="grid h-20 w-20 place-items-center rounded-full bg-blush text-plum"><UserRound size={30} /></span>}<p className="mt-3 font-serif text-xl text-plum">{stylist.name || "New stylist"}</p><p className="mt-1 text-[10px] text-ink/55">{Number(stylist.years_experience || 0)} years experience</p><p className="mt-2 line-clamp-2 text-[10px] text-ink/55">{Array.isArray(stylist.specialties) && stylist.specialties.length ? stylist.specialties.join(" · ") : "No specialties selected"}</p></button>)}</div>
-    <form key={active?.id || "new"} onSubmit={save}><EditorPanel><h2 className="font-serif text-xl text-plum">{active ? "Edit Stylist" : "Add Stylist"}</h2><div className="mt-4 grid gap-5 xl:grid-cols-[.75fr_1fr_1.25fr]"><div>{active?.id ? <ImageUpload bucket="stylist-photos" folder={`stylists/${active.id}`} label="Profile photo" value={avatar} onChange={(value) => setAvatar(typeof value === "string" ? value : "")} /> : <div className="rounded-[12px] border border-dashed border-plum/20 bg-blush/25 p-5 text-center text-xs text-plum">Save the new stylist once to create their secure photo folder.</div>}</div><div className="space-y-4"><label className="block text-[10px] font-bold">Name<input required value={name} onChange={(event) => setName(event.target.value.slice(0, 120))} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label><label className="block text-[10px] font-bold">Bio / Description<textarea value={bio} maxLength={250} onChange={(event) => setBio(event.target.value)} rows={6} className="mt-1 w-full rounded-[7px] border border-plum/15 p-3 font-normal" /><span className="mt-1 block text-right font-normal text-ink/45">{bio.length}/250</span></label><NumberField label="Years of Experience" value={years} onChange={setYears} step="1" max={70}/><button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save Stylist</button></div><div><h3 className="font-serif text-lg text-plum">Specialties</h3><p className="mt-1 text-[10px] text-ink/55">Select from the centrally managed style list.</p><div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded-[10px] border border-plum/10 p-3 sm:grid-cols-2">{masters.map((master) => <label key={master.id} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={selectedNames.has(master.name)} onChange={() => setSpecialties((current) => current.includes(master.name) ? current.filter((item) => item !== master.name) : [...current, master.name])} className="accent-magenta" />{master.name}</label>)}</div>{active?.id ? <div className="mt-5"><ImageUpload bucket="stylist-photos" multiple maxFiles={10} folder={`stylists/${active.id}/portfolio`} label="Work Portfolio" value={portfolio} onChange={(value) => setPortfolio(Array.isArray(value) ? value : [])} /></div> : null}</div></div></EditorPanel></form>
+    <form key={active?.id || temporaryPhotoKey} onSubmit={save}><EditorPanel><h2 className="font-serif text-xl text-plum">{active ? "Edit Stylist" : "Add Stylist"}</h2><p className="mt-1 text-[10px] text-ink/55">Start with any field. Nothing appears publicly until the complete form saves successfully.</p><div className="mt-4 grid gap-5 xl:grid-cols-[.75fr_1fr_1.25fr]"><div><ImageUpload bucket="stylist-photos" folder={active?.id ? `stylists/${active.id}` : temporaryFolder} label="Profile photo" helperText="Add or adjust the photo now, or come back to it before saving." value={avatar} onChange={(value) => setAvatar(typeof value === "string" ? value : "")} /></div><div className="space-y-4"><label className="block text-[10px] font-bold">Name<input required value={name} onChange={(event) => setName(event.target.value.slice(0, 120))} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label><label className="block text-[10px] font-bold">Bio / Description<textarea value={bio} maxLength={250} onChange={(event) => setBio(event.target.value)} rows={6} className="mt-1 w-full rounded-[7px] border border-plum/15 p-3 font-normal" /><span className="mt-1 block text-right font-normal text-ink/45">{bio.length}/250</span></label><NumberField label="Years of Experience" value={years} onChange={setYears} step="1" max={70}/><button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save Stylist</button>{active?.id ? <button type="button" onClick={() => void c.removeRecord("stylists", active.id!, c.setStylists)} className="min-h-11 w-full rounded-[8px] border border-red-200 text-xs font-bold text-red-700">Archive or remove stylist</button> : null}</div><div><h3 className="font-serif text-lg text-plum">Specialties</h3><p className="mt-1 text-[10px] text-ink/55">Select from the centrally managed style list.</p><div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded-[10px] border border-plum/10 p-3 sm:grid-cols-2">{masters.map((master) => <label key={master.id} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={selectedNames.has(master.name)} onChange={() => setSpecialties((current) => current.includes(master.name) ? current.filter((item) => item !== master.name) : [...current, master.name])} className="accent-magenta" />{master.name}</label>)}</div><div className="mt-5"><ImageUpload bucket="stylist-photos" multiple maxFiles={10} folder={active?.id ? `stylists/${active.id}/portfolio` : `${temporaryFolder}/portfolio`} label="Work Portfolio" helperText="You can add work photos before or after the profile details." value={portfolio} onChange={(value) => setPortfolio(Array.isArray(value) ? value : [])} /></div></div></div></EditorPanel></form>
   </>;
 }
 
@@ -243,4 +262,4 @@ function EditorTitle({ title, subtitle, action }: { title: string; subtitle: str
 function EditorPanel({ children }: { children: React.ReactNode }) { return <section className="min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5">{children}</section>; }
 function Empty({ text }: { text: string }) { return <p className="rounded-[8px] border border-dashed border-plum/15 p-4 text-center text-[10px] text-ink/50">{text}</p>; }
 function SelectField({ label, value, onChange, options, placeholder, required = true }: { label: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }>; placeholder?: string; required?: boolean }) { return <label className="text-[10px] font-bold">{label}<select value={value} required={required} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-2 font-normal">{placeholder ? <option value="">{placeholder}</option> : null}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
-function NumberField({ label, value, onChange, step, max=10000 }: { label: string; value: NumericValue; onChange: (value: NumericValue) => void; step: string; max?: number }) { return <label className="text-[10px] font-bold">{label}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={value} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} onKeyDown={(event)=>{if(/[eE+-]/.test(event.key))event.preventDefault()}} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label>; }
+function NumberField({ label, value, onChange, step, max=10000 }: { label: string; value: NumericValue; onChange: (value: NumericValue) => void; step: string; max?: number }) { return <label className="text-[10px] font-bold">{label}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={(event)=>{if(/[eE+]/.test(event.key))event.preventDefault()}} className="mt-1 min-h-10 w-full appearance-none rounded-[7px] border border-plum/15 px-3 font-normal [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /></label>; }

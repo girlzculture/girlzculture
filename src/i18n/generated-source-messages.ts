@@ -9,6 +9,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "15 min",
     "impact": "standard"
   },
+  "source.801663ffab21": {
+    "source": "20% off",
+    "impact": "standard"
+  },
   "source.d3ddf7a34d22": {
     "source": "30 min",
     "impact": "standard"
@@ -101,12 +105,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Admin Login",
     "impact": "security"
   },
+  "source.dff73a258538": {
+    "source": "Admin notes",
+    "impact": "standard"
+  },
   "source.eeaa13a51a89": {
     "source": "Admin response",
     "impact": "standard"
   },
   "source.e20c4bf694c2": {
     "source": "admin@girlzculture.com",
+    "impact": "standard"
+  },
+  "source.45449576972d": {
+    "source": "Affected feature",
     "impact": "standard"
   },
   "source.ab43eb50ea62": {
@@ -117,9 +129,17 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "After you sign up, you’ll complete a short application to list your salon.",
     "impact": "security"
   },
+  "source.4c7ac989857c": {
+    "source": "Alert thresholds",
+    "impact": "standard"
+  },
   "source.8da023614791": {
     "source": "All Bookings",
     "impact": "booking"
+  },
+  "source.f136c558660a": {
+    "source": "All features",
+    "impact": "standard"
   },
   "source.a438b7180dd4": {
     "source": "All markets",
@@ -133,12 +153,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "All Reviews",
     "impact": "standard"
   },
+  "source.8721d71a0a5b": {
+    "source": "All severity",
+    "impact": "standard"
+  },
   "source.1740d80893cd": {
     "source": "All states",
     "impact": "standard"
   },
   "source.6405179d241b": {
     "source": "All statuses",
+    "impact": "standard"
+  },
+  "source.2a153ef29153": {
+    "source": "Alphabetical (recommended)",
     "impact": "standard"
   },
   "source.8559034a07c9": {
@@ -183,6 +211,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.39e8fad00ff2": {
     "source": "Asked Questions",
+    "impact": "standard"
+  },
+  "source.317cf96bbf4d": {
+    "source": "Assigned admin",
     "impact": "standard"
   },
   "source.e01eacc119b7": {
@@ -301,8 +333,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Business Information",
     "impact": "standard"
   },
-  "source.b995b40ba2d1": {
-    "source": "c.cancellationThreshold?",
+  "source.b7ba36c7a167": {
+    "source": "c.cancellationThreshold ? (",
     "impact": "booking"
   },
   "source.21636936db94": {
@@ -315,6 +347,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.35b7999ad273": {
     "source": "Cancel Booking & Process Refund",
+    "impact": "booking"
+  },
+  "source.4f8b84ac75e8": {
+    "source": "Cancel upload",
     "impact": "booking"
   },
   "source.68b8022f1a7c": {
@@ -401,6 +437,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Choose from the platform catalog, then set your price.",
     "impact": "booking"
   },
+  "source.7801b461c742": {
+    "source": "Choose replacement",
+    "impact": "standard"
+  },
   "source.1608eb005071": {
     "source": "Choose salon",
     "impact": "standard"
@@ -423,6 +463,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.67300d0fed7c": {
     "source": "Clear search",
+    "impact": "standard"
+  },
+  "source.247fd63183c7": {
+    "source": "Clear selection",
     "impact": "standard"
   },
   "source.e4ba801351dc": {
@@ -448,6 +492,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.2c0f9b9317e6": {
     "source": "Confirmation Code",
     "impact": "standard"
+  },
+  "source.4999d673201c": {
+    "source": "Confirmed invoice, renewal, plan-change, refund, and credit events received through the signed Stripe webhook.",
+    "impact": "booking"
   },
   "source.2b658ffd9420": {
     "source": "Contact support",
@@ -477,6 +525,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Current language",
     "impact": "standard"
   },
+  "source.1bf6e6464d46": {
+    "source": "Current offers",
+    "impact": "standard"
+  },
   "source.ec5cfba8f01b": {
     "source": "Current plan",
     "impact": "standard"
@@ -487,6 +539,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.d28ea62b8b54": {
     "source": "Custom destination",
+    "impact": "standard"
+  },
+  "source.3b992ca6cd0b": {
+    "source": "Custom position",
     "impact": "standard"
   },
   "source.77d433f98236": {
@@ -509,6 +565,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Default buffer",
     "impact": "standard"
   },
+  "source.bdf337f85aad": {
+    "source": "Dependencies & safe actions",
+    "impact": "standard"
+  },
   "source.bbe27c93e727": {
     "source": "Deposit Amount",
     "impact": "booking"
@@ -521,12 +581,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Describe the issue, what happened, and the resolution you are seeking.",
     "impact": "standard"
   },
-  "source.ed1f09c70524": {
-    "source": "Desktop crop preview · safe area is inside the dashed line",
+  "source.0467d447c351": {
+    "source": "Describe the style, area, date, budget, or rating. Every result comes from current Girlz Culture salon, price, location, and availability data.",
+    "impact": "booking"
+  },
+  "source.91bdda6b3687": {
+    "source": "Descriptive offer",
     "impact": "standard"
   },
   "source.60b334c71dab": {
     "source": "Directions available",
+    "impact": "standard"
+  },
+  "source.5f1293a21937": {
+    "source": "Display order",
     "impact": "standard"
   },
   "source.89f24f888e28": {
@@ -535,6 +603,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.87682e27aacd": {
     "source": "Draft preview:",
+    "impact": "standard"
+  },
+  "source.6c0bed6e704d": {
+    "source": "Drag and drop, or choose a file.",
     "impact": "standard"
   },
   "source.973e7486db4f": {
@@ -563,6 +635,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.0821dec60212": {
     "source": "Eligible salon",
+    "impact": "standard"
+  },
+  "source.11d4ef334a15": {
+    "source": "Eligible targets",
     "impact": "standard"
   },
   "source.c94d3175a656": {
@@ -605,16 +681,28 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Enter code",
     "impact": "standard"
   },
-  "source.08332bc4d7de": {
-    "source": "Enter the verified payment, invoice, or credit reference.",
-    "impact": "booking"
+  "source.c127459d607f": {
+    "source": "Enter the stylist's name.",
+    "impact": "standard"
   },
   "source.5a5376ab4997": {
     "source": "Enter valid display, native, and Intl locale values.",
     "impact": "standard"
   },
+  "source.bef203b477cd": {
+    "source": "Entire salon",
+    "impact": "standard"
+  },
   "source.f3d7eb2b15aa": {
     "source": "Environment:",
+    "impact": "standard"
+  },
+  "source.1a3ee7793a6d": {
+    "source": "Error severity",
+    "impact": "standard"
+  },
+  "source.39322e7fa017": {
+    "source": "Error status",
     "impact": "standard"
   },
   "source.1636f5a9808d": {
@@ -671,6 +759,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.c516d2dfc833": {
     "source": "Finish setup",
+    "impact": "standard"
+  },
+  "source.42695908def8": {
+    "source": "Fixed discount",
     "impact": "standard"
   },
   "source.399f2cd9ffe3": {
@@ -757,10 +849,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Identity deletion & email reuse",
     "impact": "security"
   },
-  "source.036a76756821": {
-    "source": "Image zoom",
-    "impact": "standard"
-  },
   "source.5d40f9f2cd92": {
     "source": "Impact:",
     "impact": "standard"
@@ -779,6 +867,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.aa3a4dd907c8": {
     "source": "Join Now",
+    "impact": "standard"
+  },
+  "source.18f45cc042de": {
+    "source": "JPG or PNG · maximum original size 12 MB",
     "impact": "standard"
   },
   "source.d600f02ffecd": {
@@ -861,6 +953,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Loading lifecycle rules…",
     "impact": "standard"
   },
+  "source.b88d45b249d9": {
+    "source": "Loading monitored errors…",
+    "impact": "standard"
+  },
   "source.73d48e68ce4a": {
     "source": "Loading navigation…",
     "impact": "standard"
@@ -897,8 +993,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Main navigation",
     "impact": "standard"
   },
-  "source.87af43d349cf": {
-    "source": "Manage login, notifications, and business account details.",
+  "source.b68be532ac2a": {
+    "source": "Manage login, notifications, publication, and business account details.",
     "impact": "security"
   },
   "source.c2e19cee771a": {
@@ -939,6 +1035,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.f497ad9eb7f9": {
     "source": "Marketplace setup",
+    "impact": "standard"
+  },
+  "source.1266ed22824c": {
+    "source": "Marketplace status",
     "impact": "standard"
   },
   "source.7f68ad89ec31": {
@@ -1041,6 +1141,18 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "New password",
     "impact": "security"
   },
+  "source.c6a9afc3f9ef": {
+    "source": "New promotion",
+    "impact": "standard"
+  },
+  "source.ffc791243176": {
+    "source": "Next opening",
+    "impact": "standard"
+  },
+  "source.fe6687820101": {
+    "source": "Next photo",
+    "impact": "standard"
+  },
   "source.933d88cd451c": {
     "source": "Next review",
     "impact": "standard"
@@ -1055,6 +1167,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.72a49518a002": {
     "source": "No promotions",
+    "impact": "standard"
+  },
+  "source.0b1c4eb8424c": {
+    "source": "No promotions yet. Create a draft, preview it, then activate it when ready.",
     "impact": "standard"
   },
   "source.a5bdc2715ec4": {
@@ -1093,6 +1209,14 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Object.entries(preview.reduce",
     "impact": "standard"
   },
+  "source.de73518a399a": {
+    "source": "Occurrences by day · last 14 days",
+    "impact": "standard"
+  },
+  "source.28cdc4bd1e13": {
+    "source": "Offers only",
+    "impact": "standard"
+  },
   "source.aafd9b645990": {
     "source": "Only approved, paid video campaigns within their real radius are shown.",
     "impact": "standard"
@@ -1115,6 +1239,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.35e8e17ec7bc": {
     "source": "Open Roles",
+    "impact": "standard"
+  },
+  "source.79f2032ea42c": {
+    "source": "Open salon",
     "impact": "standard"
   },
   "source.930a9018d50d": {
@@ -1173,6 +1301,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Per-Stylist Availability",
     "impact": "standard"
   },
+  "source.6d291177ef59": {
+    "source": "Percentage discount",
+    "impact": "standard"
+  },
   "source.aaf61f3b409c": {
     "source": "Percentage off",
     "impact": "standard"
@@ -1201,8 +1333,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Please enter a valid ZIP code (12345 or 12345-6789).",
     "impact": "standard"
   },
+  "source.b2e2352e9043": {
+    "source": "Preview for",
+    "impact": "standard"
+  },
   "source.d3f3ef51e589": {
     "source": "Preview import",
+    "impact": "standard"
+  },
+  "source.09972524c11e": {
+    "source": "Previous photo",
     "impact": "standard"
   },
   "source.fd6211f2a982": {
@@ -1289,6 +1429,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Ready to shape the future of beauty?",
     "impact": "standard"
   },
+  "source.7d09b29bf74b": {
+    "source": "Reassign to",
+    "impact": "standard"
+  },
   "source.8aebf36d41d7": {
     "source": "Recent Activity",
     "impact": "standard"
@@ -1305,6 +1449,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Recent verification is required. Sign out, sign in again, complete the verification code, and retry within 15 minutes.",
     "impact": "security"
   },
+  "source.851f13c19369": {
+    "source": "Recheck eligibility",
+    "impact": "standard"
+  },
   "source.6bc9ee86ca82": {
     "source": "Recommended: booking alerts",
     "impact": "booking"
@@ -1312,6 +1460,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.d6369430e67e": {
     "source": "Reconnect to view live availability, pricing, and bookings. Previously visited public pages may still be available.",
     "impact": "booking"
+  },
+  "source.5654774fed87": {
+    "source": "Reference, route, or technical cause",
+    "impact": "standard"
   },
   "source.9cf53df4cc60": {
     "source": "Refresh checklist",
@@ -1441,6 +1593,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Salon, style, and date are required.",
     "impact": "standard"
   },
+  "source.164a1a95864f": {
+    "source": "Sanitized cause",
+    "impact": "standard"
+  },
   "source.179359b39edb": {
     "source": "Save changes",
     "impact": "standard"
@@ -1493,6 +1649,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Save the service details first, then upload its images.",
     "impact": "standard"
   },
+  "source.0a228a597fb4": {
+    "source": "Saved promotions",
+    "impact": "standard"
+  },
   "source.bbcbe4b247f4": {
     "source": "Saving and recalculating salons…",
     "impact": "standard"
@@ -1504,6 +1664,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.638126ff582e": {
     "source": "Saving decision...",
     "impact": "standard"
+  },
+  "source.00a509366d18": {
+    "source": "Scheduled and Active campaigns require a verified Stripe payment, paid invoice, or approved platform credit covering the full campaign period.",
+    "impact": "booking"
   },
   "source.b1bd47e1b093": {
     "source": "Search keys, source, or translation",
@@ -1536,6 +1700,22 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.939120cda962": {
     "source": "Secure booking",
     "impact": "booking"
+  },
+  "source.391394c8f82b": {
+    "source": "Selected add-ons",
+    "impact": "standard"
+  },
+  "source.60c04eca58f2": {
+    "source": "Selected products",
+    "impact": "standard"
+  },
+  "source.b985e2bcf177": {
+    "source": "Selected services",
+    "impact": "standard"
+  },
+  "source.0077552211f1": {
+    "source": "Selected styles",
+    "impact": "standard"
   },
   "source.cca3ee791365": {
     "source": "Selected Work",
@@ -1601,6 +1781,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Social channels",
     "impact": "standard"
   },
+  "source.b291fb0a20b7": {
+    "source": "Starting price",
+    "impact": "booking"
+  },
   "source.21bd05b0c1b0": {
     "source": "State *",
     "impact": "standard"
@@ -1645,6 +1829,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Super Admin only. This removes the canonical Auth account, revokes access, preserves required history by anonymizing or detaching personal data, and releases the normalized email only after Auth deletion succeeds.",
     "impact": "standard"
   },
+  "source.43782b37f011": {
+    "source": "Test mode",
+    "impact": "standard"
+  },
   "source.693040ed6979": {
     "source": "TEST MODE:",
     "impact": "standard"
@@ -1669,6 +1857,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "The last active Super Admin cannot be suspended, revoked, or removed.",
     "impact": "standard"
   },
+  "source.99d294df9f49": {
+    "source": "The link may have changed, or this salon may not be published yet. Browse available salons to keep looking.",
+    "impact": "standard"
+  },
   "source.1756d7b8e5b7": {
     "source": "The record now carries an explicit, durable test-data marker.",
     "impact": "standard"
@@ -1685,12 +1877,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "These salons have active, paid Featured campaigns and are shown only when they are genuinely within the campaign radius of your location.",
     "impact": "standard"
   },
-  "source.10ca2d6e4ff2": {
-    "source": "This browser cannot compress video. Export the clip under 10 MB, then upload it again.",
-    "impact": "standard"
-  },
   "source.4e4812b6c5a0": {
     "source": "This browser does not support Web Push. Use current Safari, Chrome, Edge, or Firefox.",
+    "impact": "standard"
+  },
+  "source.ce98a3825ec9": {
+    "source": "This file is named as MP4, but its container is not a readable MP4. Export a genuine H.264/AAC MP4 and try again.",
+    "impact": "standard"
+  },
+  "source.b17721d71935": {
+    "source": "This file is named as WebM, but its container is not a readable WebM. Export a genuine VP8/VP9 WebM and try again.",
     "impact": "standard"
   },
   "source.fef059380e2b": {
@@ -1737,6 +1933,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Try again",
     "impact": "standard"
   },
+  "source.0faa668453e0": {
+    "source": "Try: Affordable knotless braids near Harlem this Saturday morning",
+    "impact": "standard"
+  },
   "source.b1f9bfea5f64": {
     "source": "Two-factor verification",
     "impact": "security"
@@ -1760,10 +1960,6 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.535b127dc82e": {
     "source": "Upcoming Bookings",
     "impact": "booking"
-  },
-  "source.7cd45d43d336": {
-    "source": "Upload a video, select a salon, and enter a description.",
-    "impact": "standard"
   },
   "source.705e0f84982e": {
     "source": "Upload, trim where your browser supports it, choose a poster frame, preview, moderate, and schedule local placement.",
@@ -1943,6 +2139,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.cd57da690919": {
     "source": "Your way.",
+    "impact": "standard"
+  },
+  "source.4fc05f2763ba": {
+    "source": "Zoom in",
+    "impact": "standard"
+  },
+  "source.a4ae4b24a1f5": {
+    "source": "Zoom out",
     "impact": "standard"
   }
 } as const;

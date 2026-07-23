@@ -33,7 +33,7 @@ export default function AdminSupportInbox({
   const visible = useMemo(() => filter === "All" ? tickets : tickets.filter((ticket) => ticket.status === filter), [filter, tickets]);
   const unread = tickets.filter((ticket) => !ticket.admin_read_at).length;
 
-  useEffect(()=>{let live=true;void fetch("/api/config?keys=support.ticket_statuses",{cache:"no-store"}).then(response=>response.json()).then(body=>{const configured=body?.config?.["support.ticket_statuses"];if(live&&Array.isArray(configured)&&configured.length)setStatuses(configured.map(String).filter(Boolean).slice(0,20));}).catch(error=>console.warn("Support status configuration unavailable; using safe defaults",error));return()=>{live=false}},[]);
+  useEffect(()=>{let live=true;void fetch("/api/config?keys=support.ticket_statuses",{cache:"no-store"}).then(response=>response.json()).then(body=>{const configured=body?.config?.["support.ticket_statuses"];if(live&&Array.isArray(configured)&&configured.length)setStatuses(configured.map(String).filter(Boolean).slice(0,20));}).catch(()=>undefined);return()=>{live=false}},[]);
 
   async function openTicket(ticket: Ticket) {
     setSelectedId(ticket.id || "");
@@ -51,7 +51,6 @@ export default function AdminSupportInbox({
       setTickets((rows) => rows.map((row) => row.id === ticket.id ? { ...row, ...body.data } : row));
       onRead?.(mode);
     } catch (error) {
-      console.error("Admin support read error", error);
       setNotice(error instanceof Error ? error.message : "Unable to mark request as read");
     }
   }
@@ -72,7 +71,6 @@ export default function AdminSupportInbox({
       setTickets((rows) => rows.map((row) => row.id === body.data.id ? body.data : row));
       setResponse(""); setNotice(`Response saved and the request is ${responseStatus.toLowerCase()}.`);
     } catch (error) {
-      console.error("Admin support response error", error);
       setNotice(error instanceof Error ? error.message : "Unable to respond");
     } finally { setSending(false); }
   }

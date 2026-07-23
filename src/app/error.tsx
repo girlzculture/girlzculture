@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    console.error("Girlz Culture route error", { digest: error.digest, error });
-  }, [error]);
+  void error;
 
   return (
     <main className="grid min-h-[70vh] place-items-center bg-cream px-4 py-16 text-center text-ink">
