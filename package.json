@@ -37,6 +37,7 @@
     "verify:database-clean": "node scripts/verify-clean-database.mjs",
     "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs",
     "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
+    "verify:owner-realtime": "node scripts/verify-owner-session-realtime.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

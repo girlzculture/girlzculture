@@ -1,5 +1,6 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
+import { shouldPreserveSupabaseAuthResponse } from "@/lib/supabaseFetchPolicy";
 
 const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -112,7 +113,7 @@ async function monitoredBrowserSupabaseFetch(
   if (!shouldCaptureProviderResponse(response.status, code, message)) {
     return response;
   }
-  const report = await reportClientOperationalFailure({
+  const reportPromise = reportClientOperationalFailure({
     status: response.status,
     code: /^[A-Z0-9_.:-]{1,80}$/i.test(code)
       ? code
@@ -121,6 +122,15 @@ async function monitoredBrowserSupabaseFetch(
     provider: "supabase",
     authorization: requestAuthorization(input, init),
   });
+  // Supabase Auth owns token refresh, session recovery, MFA and confirmation
+  // response parsing. Rewriting those responses can turn a temporary provider
+  // error into a false sign-out. Capture the incident asynchronously and let
+  // the Auth client receive the original response unchanged.
+  if (shouldPreserveSupabaseAuthResponse(input)) {
+    void reportPromise;
+    return response;
+  }
+  const report = await reportPromise;
   const reference = report.reference;
   const safeMessage = report.message;
   return Response.json(

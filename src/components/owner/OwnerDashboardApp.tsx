@@ -128,6 +128,7 @@ export default function OwnerDashboardApp({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [realtimeNotice, setRealtimeNotice] = useState("");
   const [salon, setSalon] = useState<Salon | null>(null);
   const [bookings, setBookings] = useState<Row[]>([]);
   const [reviews, setReviews] = useState<Row[]>([]);
@@ -162,14 +163,10 @@ export default function OwnerDashboardApp({
   useEffect(() => {
     let live = true;
     let removeRealtime: (() => Promise<void>) | null = null;
+    let currentAccessToken = "";
 
     async function loadDashboard() {
-      const session = await Promise.race([
-        getSessionForScope("salon"),
-        new Promise<null>((resolve) =>
-          window.setTimeout(() => resolve(null), 2500),
-        ),
-      ]);
+      const session = await getSessionForScope("salon");
       const userId = session?.user?.id || "";
       if (!live) return;
       if (!session || !userId) {
@@ -179,8 +176,9 @@ export default function OwnerDashboardApp({
         setLoading(false);
         return;
       }
+      currentAccessToken = session.access_token;
       const workspaceResponse = await fetch("/api/salon/workspace", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${currentAccessToken}` },
         cache: "no-store",
       });
       const workspace = (await workspaceResponse.json()) as {
@@ -269,33 +267,63 @@ export default function OwnerDashboardApp({
         onBooking: (row) => {
           if (live) setBookings((current) => [row as Row, ...current]);
         },
-        onStatus: (status) => {
-          if (status === "CHANNEL_ERROR" && live) {
-            void getSessionForScope("salon").then((session) =>
-              reportClientOperationalFailure({
+        onConnectionState: (state, status) => {
+          if (!live) return;
+          if (state === "connected") {
+            setRealtimeNotice("");
+            return;
+          }
+          if (state === "degraded") {
+            setRealtimeNotice(
+              "Live updates are reconnecting. Your dashboard remains available and refreshes automatically in the meantime.",
+            );
+            void reportClientOperationalFailure({
                 status: 503,
-                code: "REALTIME_CHANNEL_ERROR",
+                code: `REALTIME_${status || "DISCONNECTED"}`,
                 operation: "realtime:owner-dashboard",
                 provider: "supabase-realtime",
-                authorization: session
-                  ? `Bearer ${session.access_token}`
+                authorization: currentAccessToken
+                  ? `Bearer ${currentAccessToken}`
                   : "",
-              }),
-            ).then((report) => {
-              if (live) setError(report.message);
             });
+          }
+        },
+        onFallbackRefresh: async () => {
+          if (!live || !currentAccessToken) return;
+          try {
+            const response = await fetch("/api/salon/workspace", {
+              headers: { Authorization: `Bearer ${currentAccessToken}` },
+              cache: "no-store",
+            });
+            if (response.status === 401 || response.status === 403) {
+              if (live) {
+                setError(
+                  "Your salon session has expired. Sign in again to continue.",
+                );
+              }
+              return;
+            }
+            if (!response.ok) return;
+            const refreshed = (await response.json()) as {
+              records?: Record<string, Row[]>;
+            };
+            if (!live) return;
+            const refreshedRecords = refreshed.records || {};
+            setBookings(refreshedRecords.bookings || []);
+            setNotifications(refreshedRecords.notifications || []);
+          } catch {
+            // Polling is a temporary fallback. The next scheduled attempt or
+            // realtime reconnect continues without taking down the dashboard.
           }
         },
       });
       if (!live && removeRealtime) await removeRealtime();
     }
 
-    void loadDashboard().catch((loadError) => {
+    void loadDashboard().catch(() => {
       if (!live) return;
       setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to load the dashboard.",
+        "The salon workspace is temporarily unavailable. Please try again in a moment.",
       );
       setLoading(false);
     });
@@ -686,6 +714,14 @@ export default function OwnerDashboardApp({
       <div className="mb-4">
         <PushSetup scope="salon" compact />
       </div>
+      {realtimeNotice ? (
+        <div
+          role="status"
+          className="mb-4 rounded-[10px] border border-amber/35 bg-amber/10 px-4 py-3 text-xs leading-5 text-plum"
+        >
+          {realtimeNotice}
+        </div>
+      ) : null}
       {notice ? (
         <div
           role="status"

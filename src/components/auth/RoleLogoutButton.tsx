@@ -14,8 +14,11 @@ export function RoleSessionBoundary({ scope }: { scope: AuthScope }) {
   useEffect(() => {
     let active = true;
     const verify = async () => {
-      const { data } = await getSupabaseForScope(scope).auth.getSession();
-      if (active && !data.session) window.location.replace(destinationFor[scope]);
+      const { data, error } = await getSupabaseForScope(scope).auth.getSession();
+      // A provider/network failure is not proof that the user signed out.
+      // Redirect only when Supabase completed the check without an error.
+      if (active && !error && !data.session)
+        window.location.replace(destinationFor[scope]);
     };
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted || sessionStorage.getItem(`girlz-culture-signed-out:${scope}`)) void verify();
