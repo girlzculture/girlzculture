@@ -10,7 +10,7 @@ export function classifyOperationalRoute(
   method: string,
 ): MonitoringClassification {
   const providerBacked =
-    /(?:stripe|media|messages|notifications|reminders|concierge|application|support|complaints|password-reset|engine\/ai|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|salon\/bookings)/.test(
+    /(?:stripe|media|messages|notifications|reminders|concierge|application|support|complaints|password-reset|engine\/ai|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|salon\/bookings|guest\/bookings)/.test(
       route,
     );
   const protectedRoute =

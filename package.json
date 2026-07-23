@@ -40,6 +40,7 @@
     "verify:owner-realtime": "node scripts/verify-owner-session-realtime.mjs",
     "verify:auto-location": "node scripts/verify-automatic-location.mjs",
     "verify:booking-comms": "node scripts/verify-booking-communications.mjs",
+    "verify:guest-bookings": "node scripts/verify-secure-guest-bookings.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

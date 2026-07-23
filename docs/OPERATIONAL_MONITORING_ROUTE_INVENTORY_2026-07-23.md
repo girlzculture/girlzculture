@@ -66,6 +66,9 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/discovery/featured` | GET | public/read-only | Covered |
 | `/api/discovery/salons` | GET | public/read-only | Covered |
 | `/api/discovery/trending` | GET | public/read-only | Covered |
+| `/api/guest/bookings/manage` | GET, POST | provider-backed | Covered |
+| `/api/guest/bookings/recovery/request` | POST | provider-backed | Covered |
+| `/api/guest/bookings/recovery/verify` | POST | provider-backed | Covered |
 | `/api/i18n/preference` | POST | protected | Covered |
 | `/api/i18n` | GET | public/read-only | Covered |
 | `/api/location/geocode-salon` | POST | provider-backed | Covered |
@@ -146,6 +149,7 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 | `src/lib/publicPageMonitoring.ts` | server-rendered public discovery/catalog/content fallbacks | public/read-only | Unexpected database/provider failures create sanitized Engine events; raw errors are never written by page components |
 | `src/lib/discoveryServer.ts` | service resolution and ranked nearby discovery | provider-backed/public | Main failures fail safely; secondary service-resolution failures produce warning references through the route context |
 | `src/lib/bookingAvailabilityServer.ts` | booking, hold, customer-overlap and blockout reads | provider-backed | Service-role monitored transport covers every query, including legacy result objects, and booking routes expose matching references |
+| `src/lib/guestBookingAccess.ts` | signed booking access, token rotation, recovery verification and access audit | provider-backed/guest | Tokens are scoped, hashed, expiring and revocable; expected invalid/expired responses remain inline while database and delivery failures create sanitized Engine events |
 | `src/lib/supabase.ts` | browser role-scoped sessions and direct Supabase transport | provider-backed/client | Unexpected RLS/session/storage/database responses are replaced with safe text containing the exact reference returned by `/api/monitor/client-provider`; expected auth/validation/no-row outcomes pass through unchanged |
 | `src/app/api/monitor/client-provider/route.ts` | rate-limited sanitized client-provider bridge | provider-backed | Accepts only status, safe code, allowlisted provider, operation and page path; persists no provider body, query, token, cookie or user-entered content and returns the event reference |
 

@@ -12,6 +12,7 @@ import {
   renderSalonBookingConfirmation,
   type BookingCommunicationInput,
 } from "@/lib/bookingCommunications";
+import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -375,7 +376,10 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
   return results;
 }
 
-export async function deliverBookingNotifications(bookingId: string) {
+export async function deliverBookingNotifications(
+  bookingId: string,
+  options: { manageUrl?: string } = {},
+) {
   const context = await bookingNotificationContext(bookingId);
   const { admin, booking, salon, style, stylist, stylistContact, customerLocale, salonLocale } = context;
   const stylistLocale=stylistContact?.locale||salonLocale;
@@ -388,7 +392,12 @@ export async function deliverBookingNotifications(bookingId: string) {
   const customer = String(booking.guest_name || "Customer");
   const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
   const dashboardUrl = `${root}/salon/dashboard/bookings?booking=${booking.id}`;
-  const accountUrl = `${root}/account?tab=upcoming`;
+  const accountUrl = options.manageUrl || (
+    await issueGuestBookingToken(admin, booking.id, {
+      reason: "Booking confirmation",
+      rootUrl: root,
+    })
+  ).url;
   const directionsUrl = salon.full_address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(salon.full_address))}`
     : "";
