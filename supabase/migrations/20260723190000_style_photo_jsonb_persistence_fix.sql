@@ -1,14 +1,8 @@
 begin;
 
--- Draft state belongs to both team-member creation and service publication.
--- The original prototype only introduced this field for stylists, while the
--- atomic service RPC and discovery query below require it on styles as well.
-alter table public.styles
-  add column if not exists is_draft boolean not null default false;
-
--- A service and its material choices are one owner action. Keeping them in one
--- database function prevents partial/ghost services when material validation
--- fails after the service row was already committed.
+-- Repair the production RPC created by 20260722100000. The styles.photos
+-- column is jsonb, so its empty fallback must also be jsonb. The prior text[]
+-- fallback caused every owner service insert to fail before persistence.
 create or replace function public.save_salon_style_with_materials(
   p_salon_id uuid,
   p_style_id uuid,

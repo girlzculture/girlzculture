@@ -43,7 +43,10 @@ const launchCorrectionSequence=[
 const correctionIndexes=launchCorrectionSequence.map((file)=>files.indexOf(file));
 if(correctionIndexes.some((index)=>index<0))failures.push("Live-correction migration sequence is incomplete");
 if(correctionIndexes.some((index,position)=>position>0&&index<=correctionIndexes[position-1]))failures.push("Live-correction migrations are not in dependency order");
-const expansion=files.at(-1);
-if(expansion!==launchCorrectionSequence.at(-1))failures.push(`Expected subscription change tracking to be the latest migration; found ${expansion||"none"}`);
+const stylePersistenceRecovery="20260723190000_style_photo_jsonb_persistence_fix.sql";
+const stylePersistenceRecoveryIndex=files.indexOf(stylePersistenceRecovery);
+if(stylePersistenceRecoveryIndex<0)failures.push("Style persistence recovery migration is missing");
+if(stylePersistenceRecoveryIndex<=correctionIndexes.at(-1))failures.push("Style persistence recovery must follow the live-correction migration sequence");
+const latest=files.at(-1);
 if(failures.length){console.error(failures.join("\n"));process.exit(1)}
-console.log(`Migration order verified: ${files.length} unique migrations; latest ${expansion}.`);
+console.log(`Migration order verified: ${files.length} unique migrations; latest ${latest}.`);
