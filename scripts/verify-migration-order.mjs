@@ -16,6 +16,11 @@ for(const file of files){
   const indexStatements=sql.match(/create\s+(?:unique\s+)?index\b[\s\S]*?;/gi)??[];
   if(indexStatements.some((statement)=>/\b(?:now|timezone)\s*\(|\bcurrent_timestamp\b/i.test(statement)))failures.push(`${file}: index expression may use a non-immutable time function`);
 }
+const canonicalBaseline="20260708120000_canonical_application_schema.sql";
+if(files[0]!==canonicalBaseline)failures.push(`Expected ${canonicalBaseline} to be the first migration; found ${files[0]||"none"}`);
+const authConfig=fs.readFileSync(path.join(process.cwd(),"supabase","config.toml"),"utf8");
+if(!/enable_confirmations\s*=\s*true/.test(authConfig))failures.push("Supabase Auth email confirmations must remain enabled");
+if(!/otp_length\s*=\s*8/.test(authConfig))failures.push("Supabase Auth OTP length must remain 8");
 const launchBlockerSequence=[
   "20260721110000_launch_blocker_core_stabilization.sql",
   "20260721120000_salon_publication_controls.sql",

@@ -1,5 +1,11 @@
 begin;
 
+-- Draft state belongs to both team-member creation and service publication.
+-- The original prototype only introduced this field for stylists, while the
+-- atomic service RPC and discovery query below require it on styles as well.
+alter table public.styles
+  add column if not exists is_draft boolean not null default false;
+
 -- A service and its material choices are one owner action. Keeping them in one
 -- database function prevents partial/ghost services when material validation
 -- fails after the service row was already committed.

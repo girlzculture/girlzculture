@@ -34,6 +34,7 @@
     "verify:engine-governance": "node scripts/verify-engine-governance.mjs",
     "verify:self-audit": "node scripts/verify-platform-self-audit.mjs",
     "verify:migrations": "node scripts/verify-migration-order.mjs",
+    "verify:database-clean": "node scripts/verify-clean-database.mjs",
     "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs",
     "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
