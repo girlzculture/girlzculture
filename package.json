@@ -39,6 +39,7 @@
     "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
     "verify:owner-realtime": "node scripts/verify-owner-session-realtime.mjs",
     "verify:auto-location": "node scripts/verify-automatic-location.mjs",
+    "verify:booking-comms": "node scripts/verify-booking-communications.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

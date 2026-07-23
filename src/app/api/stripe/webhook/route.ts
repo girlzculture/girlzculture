@@ -22,6 +22,15 @@ type StripeObject = Record<string, unknown> & {
   mode?: string;
   payment_status?: string;
   payment_intent?: string | { last_payment_error?: { message?: string } };
+  livemode?: boolean;
+  latest_charge?: string | {
+    id?: string;
+    receipt_url?: string | null;
+    payment_method_details?: {
+      type?: string;
+      card?: { brand?: string; last4?: string };
+    };
+  };
   current_period_start?: number;
   current_period_end?: number;
   cancel_at_period_end?: boolean;
@@ -330,7 +339,38 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
   if (!intentId) return;
   const { data: intent } = await admin.from("booking_checkout_intents").select("*").eq("id", intentId).single();
   if (!intent || intent.status === "Paid") return;
-  const payload: Record<string, unknown> = { ...(intent.payload as Record<string, unknown>), stripe_payment_id: session.payment_intent || session.id, deposit_status: "Paid" };
+  const paymentIntentId = stripeId(session.payment_intent);
+  let chargeId = "";
+  let receiptUrl = "";
+  let paymentMethodLabel = "No payment required";
+  if (String(session.payment_status) === "paid" && paymentIntentId) {
+    const paymentIntent = await stripeGet<StripeObject>(
+      `/payment_intents/${paymentIntentId}?expand[]=latest_charge`,
+    );
+    const charge =
+      paymentIntent.latest_charge &&
+      typeof paymentIntent.latest_charge === "object"
+        ? paymentIntent.latest_charge
+        : null;
+    chargeId = stripeId(paymentIntent.latest_charge) || "";
+    receiptUrl = String(charge?.receipt_url || "");
+    const method = charge?.payment_method_details;
+    const brand = String(method?.card?.brand || "").trim();
+    const last4 = String(method?.card?.last4 || "").trim();
+    paymentMethodLabel = brand && last4
+      ? `${brand[0].toUpperCase()}${brand.slice(1)} ending in ${last4}`
+      : String(method?.type || "Secure card payment").replaceAll("_", " ");
+  }
+  const payload: Record<string, unknown> = {
+    ...(intent.payload as Record<string, unknown>),
+    stripe_payment_id: paymentIntentId || session.id,
+    stripe_checkout_session_id: session.id || null,
+    stripe_charge_id: chargeId || null,
+    stripe_receipt_url: receiptUrl || null,
+    payment_method_label: paymentMethodLabel,
+    payment_mode: session.livemode ? "live" : "test",
+    deposit_status: "Paid",
+  };
   const { data: booking, error } = await admin.from("bookings").insert(payload).select("id").single();
   if (error) throw error;
   await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intent.id);

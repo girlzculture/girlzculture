@@ -221,6 +221,9 @@ async function POSTHandler(request: Request) {
       const { data: booking, error: bookingError } = await admin.from("bookings").insert({
         ...payload,
         stripe_payment_id: null,
+        stripe_checkout_session_id: `no_payment_required:${intentId}`,
+        payment_method_label: "No payment required",
+        payment_mode: "test",
       }).select("id,confirmation_code,status,appointment_datetime").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
