@@ -13,6 +13,7 @@ for(const file of files){
   const sql=fs.readFileSync(path.join(directory,file),"utf8");
   if(!sql.trim())failures.push(`${file}: migration is empty`);
   if(/\b(drop\s+database|alter\s+system|copy\s+.+\s+program)\b/i.test(sql))failures.push(`${file}: contains a prohibited infrastructure statement`);
+  if(/E'[^\r\n]*\\'/i.test(sql))failures.push(`${file}: backslash-escaped SQL literals are not accepted by the Supabase migration parser; use doubled quotes`);
   const indexStatements=sql.match(/create\s+(?:unique\s+)?index\b[\s\S]*?;/gi)??[];
   if(indexStatements.some((statement)=>/\b(?:now|timezone)\s*\(|\bcurrent_timestamp\b/i.test(statement)))failures.push(`${file}: index expression may use a non-immutable time function`);
 }
