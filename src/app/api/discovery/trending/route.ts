@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, publicErrorResponse } from "@/lib/requestSecurity";
 import { MAX_DISCOVERY_RADIUS_MILES, validCoordinates } from "@/lib/location";
 import { supabase } from "@/lib/supabase";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     enforceRateLimit(request, "trending-discovery", 120, 60_000);
     const search = new URL(request.url).searchParams;
@@ -45,7 +46,8 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
     );
   } catch (error) {
-    console.error("Trending discovery failed", error);
+    noteOperationalFailure("Trending discovery failed", error);
     return publicErrorResponse(error, "Trending Picks could not be loaded.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/discovery/trending", "GET"), GETHandler);

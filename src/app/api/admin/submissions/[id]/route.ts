@@ -1,6 +1,7 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
+async function GETHandler(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { admin } = await requireAdminPermission(request, "submissions");
     const { id } = await context.params;
@@ -12,7 +13,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       if (/^https?:\/\//i.test(path)) return path;
       const { data, error: signError } = await admin.storage.from("application-documents").createSignedUrl(path, 3600);
       if (signError) {
-        console.error("Application document signing failed", { applicationId: id, path, error: signError });
+        noteOperationalFailure("Application document signing failed", { applicationId: id, path, error: signError });
         return null;
       }
       return data.signedUrl;
@@ -20,7 +21,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return Response.json({ application: { ...application, document_urls: signedDocuments.filter(Boolean) } });
   } catch (error) {
-    console.error("Admin application detail load failed", error);
+    noteOperationalFailure("Admin application detail load failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load application" }, { status: 403 });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/submissions/[id]", "GET"), GETHandler);

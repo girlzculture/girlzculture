@@ -1,3 +1,5 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import { capturePlatformError } from "@/lib/platformErrors";
 import { normalizePlan, planFromStripePriceId, planRank, type SubscriptionPlan } from "@/lib/plans";
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripeGet, verifyStripeEvent } from "@/lib/stripeServer";
@@ -178,7 +180,12 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
   if (!supported.includes(event.type)) return;
   const context = await billingContext(object);
   if (!context.salonId) {
-    console.warn("Stripe financial event was not linked to a salon", { eventId: event.id, type: event.type, objectId: object.id });
+    noteOperationalFailure("Stripe financial event was not linked to a salon", {
+      eventId: event.id,
+      type: event.type,
+      objectId: object.id,
+      error: new Error("STRIPE_FINANCIAL_EVENT_UNLINKED"),
+    });
     return;
   }
 
@@ -316,18 +323,29 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
   }
 }
 
-async function completeBookingCheckout(session: StripeObject) {
+async function completeBookingCheckout(session: StripeObject, request: Request) {
   if (session.metadata?.type !== "booking_deposit" || !["paid", "no_payment_required"].includes(String(session.payment_status))) return;
   const admin = getSupabaseAdmin();
   const intentId = session.metadata.booking_intent_id;
   if (!intentId) return;
   const { data: intent } = await admin.from("booking_checkout_intents").select("*").eq("id", intentId).single();
   if (!intent || intent.status === "Paid") return;
-  const payload = { ...(intent.payload as Record<string, unknown>), stripe_payment_id: session.payment_intent || session.id, deposit_status: "Paid" };
+  const payload: Record<string, unknown> = { ...(intent.payload as Record<string, unknown>), stripe_payment_id: session.payment_intent || session.id, deposit_status: "Paid" };
   const { data: booking, error } = await admin.from("bookings").insert(payload).select("id").single();
   if (error) throw error;
   await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intent.id);
-  await deliverBookingNotifications(booking.id).catch((notificationError) => console.error("Paid booking notification delivery failed", { bookingId: booking.id, notificationError }));
+  try {
+    await deliverBookingNotifications(booking.id);
+  } catch (notificationError) {
+    await capturePlatformError({
+      request, admin, error: notificationError, feature: "stripe-webhooks",
+      action: "deliver-paid-booking-notifications", actorRole: "provider",
+      salonId: String(payload.salon_id || "") || null,
+      recordType: "booking", recordId: booking.id,
+      provider: "transactional-notifications",
+      safeMessage: "The payment was recorded, but one booking notification could not be delivered.",
+    });
+  }
 }
 
 async function trackPromoRedemption(session: StripeObject) {
@@ -356,21 +374,21 @@ async function trackPromoRedemption(session: StripeObject) {
   await admin.rpc("record_stripe_promo_redemption", { p_promo_code_id: promo.id, p_purpose: purpose, p_user_id: userId, p_salon_id: session.metadata?.salon_id || null, p_checkout_session_id: session.id });
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   const rawBody = await request.text();
   let event: StripeEvent;
   try { event = verifyStripeEvent(rawBody, request.headers.get("stripe-signature")); }
-  catch (error) { console.error("Stripe webhook signature failed", error); return Response.json({ error: "Invalid signature" }, { status: 400 }); }
+  catch (error) { noteOperationalFailure("Stripe webhook signature failed", error); return Response.json({ error: "Invalid signature" }, { status: 400 }); }
   const admin = getSupabaseAdmin();
   const { error: dedupeError } = await admin.from("stripe_webhook_events").insert({ id: event.id, event_type: event.type });
   if (dedupeError?.code === "23505") return Response.json({ received: true, duplicate: true });
-  if (dedupeError) { console.error("Stripe webhook dedupe failed", dedupeError); return Response.json({ error: "Webhook storage failed" }, { status: 500 }); }
+  if (dedupeError) { noteOperationalFailure("Stripe webhook dedupe failed", dedupeError); return Response.json({ error: "Webhook storage failed" }, { status: 500 }); }
   try {
     const object = event.data.object as StripeObject;
     await recordBillingEvent(event, object);
     if (event.type === "checkout.session.completed") {
       await trackPromoRedemption(object);
-      await completeBookingCheckout(object);
+      await completeBookingCheckout(object, request);
       if (object.mode === "subscription" && object.subscription) {
         const subscription = await stripeGet<StripeObject>(`/subscriptions/${stripeId(object.subscription)}`);
         await syncSubscription(subscription);
@@ -381,7 +399,18 @@ export async function POST(request: Request) {
     return Response.json({ received: true });
   } catch (error) {
     await admin.from("stripe_webhook_events").delete().eq("id", event.id);
-    console.error("Stripe webhook processing failed", { eventId: event.id, type: event.type, error });
+    noteOperationalFailure("Stripe webhook processing failed", { eventId: event.id, type: event.type, error });
     return Response.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }
+
+export const POST = withOperationalMonitoring(
+  routeMonitoringProfile("/api/stripe/webhook", "POST", {
+    classification: "provider-backed",
+    feature: "stripe-webhooks",
+    actorRole: "provider",
+    provider: "stripe",
+    safeMessage: "The payment update could not be processed.",
+  }),
+  POSTHandler,
+);

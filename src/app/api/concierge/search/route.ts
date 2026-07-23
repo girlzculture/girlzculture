@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { runBeautyConcierge } from "@/lib/beautyConciergeServer";
 import { validCoordinates } from "@/lib/location";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
@@ -6,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let admin;
   try {
     admin = getSupabaseAdmin();
@@ -25,3 +26,4 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "ai_concierge", action: "search", actorRole: "public", safeMessage: "We couldn't complete that search." });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/concierge/search", "POST"), POSTHandler);

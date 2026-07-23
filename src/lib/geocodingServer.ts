@@ -74,7 +74,8 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   if (!key) throw new Error("Server geocoding is not configured.");
   const query = addressText(salon);
   if (!salon.address_street || !salon.address_city || !salon.address_state || !salon.address_zip) {
-    await admin.from("salons").update({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: "Structured address is incomplete.", latitude: null, longitude: null, geocoded_at: null }).eq("id", salonId);
+    const { error: reviewError } = await admin.from("salons").update({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: "Structured address is incomplete.", latitude: null, longitude: null, geocoded_at: null }).eq("id", salonId);
+    if (reviewError) throw reviewError;
     return { status: "needs_review" as const, reason: "Complete every required address field." };
   }
 
@@ -86,13 +87,13 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   if (!response.ok) throw new Error("Geocoding provider is temporarily unavailable.");
   const body = await response.json() as { status: string; results?: GoogleResult[]; error_message?: string };
   if (!["OK", "ZERO_RESULTS"].includes(body.status)) {
-    console.error("Google geocoding provider error", { salonId, status: body.status });
-    throw new Error("Geocoding provider could not process the request.");
+    throw new Error(`GEOCODING_PROVIDER_FAILED_${String(body.status).slice(0,40)}`);
   }
   const results = body.results || [];
   const failure = confidenceFailure(results);
   if (failure) {
-    await admin.from("salons").update({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: failure, latitude: null, longitude: null, formatted_address: null, geocoded_at: new Date().toISOString(), address_fingerprint: currentFingerprint, market_id: null, borough: null }).eq("id", salonId);
+    const { error: reviewError } = await admin.from("salons").update({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: failure, latitude: null, longitude: null, formatted_address: null, geocoded_at: new Date().toISOString(), address_fingerprint: currentFingerprint, market_id: null, borough: null }).eq("id", salonId);
+    if (reviewError) throw reviewError;
     return { status: "needs_review" as const, reason: "Review the street address and try again." };
   }
 
@@ -102,7 +103,8 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   const state = component(result, "administrative_area_level_1", true);
   const city = component(result, "locality") || component(result, "postal_town") || String(salon.address_city || "");
   const borough = boroughFor(result);
-  const { data: markets } = await admin.from("location_markets").select("id,name,slug,center_latitude,center_longitude").eq("state_code", state).eq("is_active", true);
+  const { data: markets, error: marketError } = await admin.from("location_markets").select("id,name,slug,center_latitude,center_longitude").eq("state_code", state).eq("is_active", true);
+  if (marketError) throw marketError;
   const preferred = (markets || []).find((market) => market.name === borough)
     || (markets || []).find((market) => market.name.toLowerCase() === city.toLowerCase())
     || [...(markets || [])].sort((a, b) => distanceMiles(coordinates, { lat: Number(a.center_latitude), lng: Number(a.center_longitude) }) - distanceMiles(coordinates, { lat: Number(b.center_latitude), lng: Number(b.center_longitude) }))[0];

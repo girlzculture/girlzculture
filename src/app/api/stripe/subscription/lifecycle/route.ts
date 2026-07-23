@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { stripeGet, stripeRequest } from "@/lib/stripeServer";
@@ -20,7 +21,7 @@ function isoFromSeconds(value?: number) {
   return value ? new Date(value * 1000).toISOString() : null;
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "subscription-lifecycle", 10, 10 * 60_000);
     const { admin, salon, isOwner } = await requireSalonOwner(request);
@@ -103,7 +104,8 @@ export async function POST(request: Request) {
     console.info("Subscription reactivated", { salonId: salon.id, subscriptionId: current.id });
     return Response.json({ changed: true, cancelAtPeriodEnd: false, message: "Cancellation was reversed. Your current plan will renew on its normal billing date." });
   } catch (error) {
-    console.error("Subscription lifecycle action failed", error);
+    noteOperationalFailure("Subscription lifecycle action failed", error);
     return errorResponse(error, "Unable to update the subscription.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/subscription/lifecycle", "POST"), POSTHandler);

@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cleanText } from "@/lib/requestSecurity";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
@@ -23,7 +24,7 @@ function validTimezone(value: unknown) {
   return timezone;
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   try {
     const { admin, user } = await requireAdminPermission(request, "marketing");
@@ -113,3 +114,5 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "save_featured_campaign", actorRole: "admin", safeMessage: "We couldn't save this Featured Salon campaign." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/featured-campaigns", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/featured-campaigns", "POST"), POSTHandler);

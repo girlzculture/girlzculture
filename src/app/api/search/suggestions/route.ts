@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { createHash } from "node:crypto";
 import { cleanText, enforceRateLimit, publicErrorResponse } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
@@ -35,7 +36,7 @@ type Suggestion = {
 const safeArray = (value: unknown) => Array.isArray(value) ? value.map(String).map((item) => item.trim()).filter(Boolean) : [];
 const publicSuggestion = (item: Suggestion) => Object.fromEntries(Object.entries(item).filter(([key]) => key !== "score"));
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     enforceRateLimit(request, "search-suggestions", 120, 10 * 60_000);
     const params = new URL(request.url).searchParams;
@@ -158,13 +159,13 @@ export async function GET(request: Request) {
       const queryHash = createHash("sha256").update(term).digest("hex");
       const locale = cleanText(request.headers.get("accept-language")?.split(",")[0] || "en", 20) || "en";
       const { error: existingError, data: existing } = await admin.from("search_zero_result_aggregates").select("id,searches").eq("occurred_on", new Date().toISOString().slice(0, 10)).eq("query_hash", queryHash).eq("locale", locale).eq("search_context", "public").maybeSingle();
-      if (existingError) console.error("Zero-result aggregate lookup failed", existingError);
+      if (existingError) noteOperationalFailure("Zero-result aggregate lookup failed", existingError);
       else if (existing) {
         const { error } = await admin.from("search_zero_result_aggregates").update({ searches: Number(existing.searches || 0) + 1, last_seen_at: new Date().toISOString() }).eq("id", existing.id);
-        if (error) console.error("Zero-result aggregate update failed", error);
+        if (error) noteOperationalFailure("Zero-result aggregate update failed", error);
       } else {
         const { error } = await admin.from("search_zero_result_aggregates").insert({ query_hash: queryHash, token_count: searchTokens(term).length, locale, search_context: "public" });
-        if (error) console.error("Zero-result aggregate insert failed", error);
+        if (error) noteOperationalFailure("Zero-result aggregate insert failed", error);
       }
     }
 
@@ -174,7 +175,8 @@ export async function GET(request: Request) {
       no_result: noResult,
     }, { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=60" } });
   } catch (error) {
-    console.error("Search suggestion load failed", error);
+    noteOperationalFailure("Search suggestion load failed", error);
     return publicErrorResponse(error, "Search suggestions are temporarily unavailable.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/search/suggestions", "GET"), GETHandler);

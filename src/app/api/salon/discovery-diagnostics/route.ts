@@ -1,8 +1,9 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { distanceMiles, validCoordinates } from "@/lib/location";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 
-export async function GET(request:Request){
+async function GETHandler(request:Request){
   let admin;
   let salonId:string|null=null;
   try{
@@ -43,3 +44,4 @@ export async function GET(request:Request){
     return monitoredRouteFailure({request,admin,error,feature:"salon-discovery",action:"diagnostics",actorRole:"salon",salonId,safeMessage:"We couldn't verify marketplace eligibility."});
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/discovery-diagnostics", "GET"), GETHandler);

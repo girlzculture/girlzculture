@@ -65,38 +65,48 @@ function deterministicDraft(featureKey: string, input: string) {
 export async function runAiSandbox(admin: SupabaseClient, feature: AiFeature, userId: string, rawInput: unknown) {
   const input = redactSensitiveText(rawInput);
   if (input.length < 3) throw new Error("Enter at least three characters for the sandbox test.");
-  const { data: killSetting } = await admin.from("engine_settings").select("published_value").eq("setting_key", "ai.emergency_kill_switch").maybeSingle();
+  const { data: killSetting, error: killError } = await admin.from("engine_settings").select("published_value").eq("setting_key", "ai.emergency_kill_switch").maybeSingle();
+  if (killError) throw killError;
   const killed = killSetting?.published_value !== false;
   if (killed || !feature.is_enabled) {
-    await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "blocked", requested_by: userId, safe_error_code: killed ? "KILL_SWITCH" : "FEATURE_DISABLED" });
+    const { error } = await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "blocked", requested_by: userId, safe_error_code: killed ? "KILL_SWITCH" : "FEATURE_DISABLED" });
+    if (error) throw error;
     return { outcome: "blocked" as const, fallback: feature.fallback_behavior, message: killed ? "AI is disabled by the emergency kill switch. Core behavior continues with its deterministic fallback." : "This AI feature is disabled. Core behavior continues with its configured fallback." };
   }
   const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
-  const [{ count: dayCount }, { data: monthUsage }] = await Promise.all([
+  const [dailyResult, monthlyResult] = await Promise.all([
     admin.from("ai_usage_events").select("id", { count: "exact", head: true }).eq("feature_key", feature.feature_key).gte("created_at", startOfDay.toISOString()),
     admin.from("ai_usage_events").select("estimated_cost_cents").eq("feature_key", feature.feature_key).gte("created_at", startOfMonth.toISOString()),
   ]);
+  if (dailyResult.error) throw dailyResult.error;
+  if (monthlyResult.error) throw monthlyResult.error;
+  const dayCount = dailyResult.count;
+  const monthUsage = monthlyResult.data;
   const spent = (monthUsage || []).reduce((sum, row) => sum + Number(row.estimated_cost_cents || 0), 0);
   if (Number(dayCount || 0) >= feature.daily_request_limit || spent >= feature.monthly_budget_cents) {
-    await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "blocked", requested_by: userId, safe_error_code: "LIMIT_REACHED" });
+    const { error } = await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "blocked", requested_by: userId, safe_error_code: "LIMIT_REACHED" });
+    if (error) throw error;
     return { outcome: "blocked" as const, fallback: feature.fallback_behavior, message: "The configured request or budget limit has been reached. No provider request was made." };
   }
   const allowedModels = approvedAiModels(feature.provider_key);
   if (!approvedAiProviders().includes(feature.provider_key) || !allowedModels.includes(feature.model_key) || !aiProviderConfigured(feature.provider_key)) {
-    await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "fallback", requested_by: userId, safe_error_code: "PROVIDER_UNAVAILABLE" });
+    const { error } = await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "fallback", requested_by: userId, safe_error_code: "PROVIDER_UNAVAILABLE" });
+    if (error) throw error;
     return { outcome: "fallback" as const, fallback: feature.fallback_behavior, message: "The approved provider is not configured. No external request was made." };
   }
   // The repository intentionally ships only a deterministic adapter. External
   // adapters are enabled only after their reviewed package and data agreement
   // are added; selecting an external provider cannot silently transmit data.
   if (feature.provider_key !== "test") {
-    await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "fallback", requested_by: userId, safe_error_code: "ADAPTER_NOT_INSTALLED" });
+    const { error } = await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "fallback", requested_by: userId, safe_error_code: "ADAPTER_NOT_INSTALLED" });
+    if (error) throw error;
     return { outcome: "fallback" as const, fallback: feature.fallback_behavior, message: "This provider is approved but its reviewed server adapter is not installed. No data was transmitted." };
   }
   const output = deterministicDraft(feature.feature_key, input);
   const { data: draft, error } = await admin.from("ai_generation_drafts").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, input_summary: input.slice(0, 500), output_text: output, requested_by: userId, safety_flags: input.includes("[REDACTED]") ? ["pii_redacted"] : [] }).select("id,status,output_text,safety_flags,created_at").single();
   if (error) throw error;
-  await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "completed", input_units: input.length, output_units: output.length, requested_by: userId });
+  const { error: usageError } = await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "completed", input_units: input.length, output_units: output.length, requested_by: userId });
+  if (usageError) throw usageError;
   return { outcome: "completed" as const, draft, humanReviewRequired: true };
 }

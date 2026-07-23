@@ -8,7 +8,7 @@ export async function assertRecentHighRiskVerification(admin:SupabaseClient,user
   if(error)throw error;if(!data)throw new Error("Recent verification is required. Sign out, sign in again, complete the verification code, and retry within 15 minutes.");
 }
 
-async function count(admin:SupabaseClient,table:string,column:string,value:string){const{count,error}=await admin.from(table).select("*",{count:"exact",head:true}).eq(column,value);if(error){console.warn("Identity dependency count unavailable",{table,code:error.code});return 0;}return count||0}
+async function count(admin:SupabaseClient,table:string,column:string,value:string){const{count,error}=await admin.from(table).select("*",{count:"exact",head:true}).eq(column,value);if(error)throw error;return count||0}
 
 export async function identityDependencySummary(admin:SupabaseClient,userId:string,role:DeletionRole,recordId:string){
   if(role==="customer")return{bookings:await count(admin,"bookings","customer_id",userId),reviews:await count(admin,"reviews","customer_id",userId),support_requests:await count(admin,"support_tickets","customer_id",userId),complaints:await count(admin,"complaints_log","customer_id",userId),favorites:await count(admin,"customer_favorites","customer_id",userId)};

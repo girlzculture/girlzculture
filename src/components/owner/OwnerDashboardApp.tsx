@@ -22,7 +22,7 @@ import {
   UserPlus,
   UsersRound,
 } from "lucide-react";
-import { getSessionForScope, salonSupabase as supabase } from "@/lib/supabase";
+import { getSessionForScope, reportClientOperationalFailure, salonSupabase as supabase } from "@/lib/supabase";
 import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
 import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
@@ -252,11 +252,8 @@ export default function OwnerDashboardApp({
           configuredThreshold <= 100
         )
           setCancellationThreshold(configuredThreshold);
-      } catch (configError) {
-        console.warn(
-          "Cancellation quality configuration unavailable; using safe defaults",
-          configError,
-        );
+      } catch {
+        // The monitored configuration API supplies safe defaults and references.
       }
       setSelectedStyle(loadedStyles[0]?.id || null);
       setSelectedStylist(loadedStylists[0]?.id || null);
@@ -273,8 +270,21 @@ export default function OwnerDashboardApp({
           if (live) setBookings((current) => [row as Row, ...current]);
         },
         onStatus: (status) => {
-          if (status === "CHANNEL_ERROR" && live)
-            console.error("Salon realtime channel failed", { salonId, status });
+          if (status === "CHANNEL_ERROR" && live) {
+            void getSessionForScope("salon").then((session) =>
+              reportClientOperationalFailure({
+                status: 503,
+                code: "REALTIME_CHANNEL_ERROR",
+                operation: "realtime:owner-dashboard",
+                provider: "supabase-realtime",
+                authorization: session
+                  ? `Bearer ${session.access_token}`
+                  : "",
+              }),
+            ).then((report) => {
+              if (live) setError(report.message);
+            });
+          }
         },
       });
       if (!live && removeRealtime) await removeRealtime();
@@ -282,7 +292,6 @@ export default function OwnerDashboardApp({
 
     void loadDashboard().catch((loadError) => {
       if (!live) return;
-      console.error("Salon dashboard load failed", loadError);
       setError(
         loadError instanceof Error
           ? loadError.message

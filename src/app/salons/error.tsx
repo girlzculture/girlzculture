@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { RotateCcw, SearchX } from "lucide-react";
 
 export default function SalonDiscoveryError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    console.error("Salon discovery route error", { digest: error.digest, error });
-  }, [error]);
+  void error;
 
   return (
     <section role="alert" className="mx-auto my-12 w-[calc(100%-2rem)] max-w-2xl rounded-[20px] border border-plum/10 bg-white p-8 text-center shadow-[0_14px_45px_rgba(26,18,32,.07)]">

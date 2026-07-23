@@ -1,7 +1,8 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanEmail, cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const rawEmail = new URL(request.url).searchParams.get("email");
@@ -11,12 +12,12 @@ export async function GET(request: Request) {
     if (error) throw error;
     return Response.json({ conflicts: data || [] });
   } catch (error) {
-    console.error("Identity conflict inventory load failed", error);
+    noteOperationalFailure("Identity conflict inventory load failed", error);
     return errorResponse(error, "Unable to load identity conflicts.");
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "settings");
     const body = await request.json() as Record<string, unknown>;
@@ -39,7 +40,9 @@ export async function PATCH(request: Request) {
     if (error) throw error;
     return Response.json({ resolution: data });
   } catch (error) {
-    console.error("Identity conflict review update failed", error);
+    noteOperationalFailure("Identity conflict review update failed", error);
     return errorResponse(error, "Unable to update identity conflict review.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/identity-conflicts", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/identity-conflicts", "PATCH"), PATCHHandler);

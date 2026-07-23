@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { capturePlatformError, monitoredRouteFailure, safeFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -55,7 +56,7 @@ function permissionFor(keys: string[]) {
   return "my_page";
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let admin;
   try {
     const context = await requireSalonOwner(request);
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   let admin;
   let salonId: string | null = null;
   try {
@@ -92,3 +93,5 @@ export async function PATCH(request: Request) {
     return safeFailure(safeMessage, reference);
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "PATCH"), PATCHHandler);

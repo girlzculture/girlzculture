@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, createMfaChallenge, LoginLockedError, MfaCooldownError, recordLoginAttempt, requiresMfa, sessionPayload, signInAndVerifyRole, type LoginScope } from "@/lib/secureLoginServer";
 import { ADMIN_LOGIN_ERROR, assertCompanyAdminEmail } from "@/lib/adminSecurityServer";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let requestedRole = "";
   try {
     enforceRateLimit(request, "login-start", 10, 15 * 60_000);
@@ -25,8 +26,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof LoginLockedError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
     if (error instanceof MfaCooldownError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
-    console.error("Secure login start failed", error);
+    noteOperationalFailure("Secure login start failed", error);
     if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400 });
     return errorResponse(error, "Unable to sign in.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/login/start", "POST"), POSTHandler);

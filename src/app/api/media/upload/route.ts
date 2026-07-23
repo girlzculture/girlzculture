@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { createHash, randomUUID } from "crypto";
 import { getSupabaseAdmin, requireAdminPermission, requireSalonPermission } from "@/lib/supabaseAdmin";
 import { IMAGE_UPLOAD_PROFILES, type ImagePresetKey } from "@/lib/imageUpload";
@@ -25,7 +26,7 @@ function imageDimensions(buffer: Buffer, mime: string) {
   throw new Error("This file is damaged or its image format does not match its extension.");
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   const kind = new URL(request.url).searchParams.get("kind") as ImagePresetKey | null;
   const fallback = kind ? IMAGE_UPLOAD_PROFILES[kind] : null;
   if (!fallback) return Response.json({ error: "Unknown media placement." }, { status: 400 });
@@ -35,7 +36,10 @@ export async function GET(request: Request) {
       getEngineNumber("media.public_image_quality",88,60,100),
     ]);
     return Response.json({ profile: data ? { key: kind, label: data.display_name, aspectWidth: data.aspect_width, aspectHeight: data.aspect_height, minWidth: data.min_width_px, minHeight: data.min_height_px, outputWidth: data.output_width_px, maxBytes: data.max_bytes, safeArea: data.safe_area_enabled, quality } : { ...fallback, quality } });
-  } catch { return Response.json({ profile: fallback }); }
+  } catch (error) {
+    noteOperationalFailure("Media upload profile lookup failed", error);
+    return Response.json({ profile: fallback });
+  }
 }
 
 async function authorize(request: Request, bucket: string, folder: string) {
@@ -72,7 +76,7 @@ async function authorize(request: Request, bucket: string, folder: string) {
   return { admin, user: auth.user };
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   const correlationId = requestId();
   let monitoringAdmin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
@@ -122,7 +126,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   const admin = getSupabaseAdmin();
   try {
     const body = await request.json() as { url?: string }; const url = String(body.url || "");
@@ -143,3 +147,6 @@ export async function DELETE(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "media", action: "remove_staged_media", actorRole: "authenticated", safeMessage: "The image was removed from the form, but storage cleanup needs attention." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/media/upload", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/media/upload", "POST"), POSTHandler);
+export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/media/upload", "DELETE"), DELETEHandler);

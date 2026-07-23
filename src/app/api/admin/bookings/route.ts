@@ -1,10 +1,12 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import { capturePlatformError } from "@/lib/platformErrors";
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { deliverBookingNotifications, requireAdminPermission } from "@/lib/supabaseAdmin";
 import { getEngineNumber } from "@/lib/engineConfigServer";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "admin-manual-booking", 30, 10 * 60_000);
     const { admin, user } = await requireAdminPermission(request, "bookings");
@@ -56,11 +58,33 @@ export async function POST(request: Request) {
       if (error.code === "23P01") return Response.json({ error: "That appointment overlaps an existing booking." }, { status: 409 });
       throw error;
     }
-    await deliverBookingNotifications(data.id).catch((notificationError) => console.error("Admin booking notification delivery failed", { bookingId: data.id, notificationError }));
+    let notificationReference: string | null = null;
+    try {
+      const delivery = await deliverBookingNotifications(data.id);
+      notificationReference = delivery.warnings?.[0]?.request_id || null;
+    } catch (notificationError) {
+      notificationReference = await capturePlatformError({
+        request, admin, error: notificationError, feature: "admin-bookings",
+        action: "deliver-manual-booking-notifications", actorRole: "admin",
+        actorId: user.id, salonId, recordType: "booking", recordId: data.id,
+        provider: "transactional-notifications",
+        safeMessage: "The booking was created, but one notification could not be delivered.",
+      });
+    }
     console.info("Admin manual booking created", { bookingId: data.id, salonId, adminUserId: user.id });
-    return Response.json({ ok: true, booking: data });
+    return Response.json({
+      ok: true,
+      booking: data,
+      warning: notificationReference
+        ? {
+            message: `The booking was created, but one notification could not be delivered. Reference ${notificationReference}.`,
+            request_id: notificationReference,
+          }
+        : null,
+    });
   } catch (error) {
-    console.error("Admin manual booking failed", error);
+    noteOperationalFailure("Admin manual booking failed", error);
     return errorResponse(error, "Unable to create booking.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/bookings", "POST"), POSTHandler);

@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
@@ -16,5 +17,7 @@ async function run(request: Request, execute: boolean) {
   }
 }
 
-export async function GET(request: Request) { return run(request, false); }
-export async function POST(request: Request) { return run(request, true); }
+async function GETHandler(request: Request) { return run(request, false); }
+async function POSTHandler(request: Request) { return run(request, true); }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/salons/reconcile", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/salons/reconcile", "POST"), POSTHandler);

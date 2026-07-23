@@ -64,7 +64,6 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
       if (!response.ok) throw new Error(body.error || "Unable to submit application");
       router.push("/salon/application-submitted");
     } catch (error) {
-      console.error("Salon application submit error",error);
       setMessage(error instanceof Error ? error.message : "Unable to submit application");
     } finally { setSaving(false); }
   }

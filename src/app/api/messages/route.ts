@@ -1,3 +1,5 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import { capturePlatformError } from "@/lib/platformErrors";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail, sendSms } from "@/lib/supabaseAdmin";
 import { sendPushToUsers } from "@/lib/webPushServer";
@@ -47,7 +49,7 @@ async function authorizedBookings(admin: ReturnType<typeof getSupabaseAdmin>, us
   return { bookings: data || [], role };
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin, user } = await identity(request);
     const url = new URL(request.url);
@@ -73,12 +75,12 @@ export async function GET(request: Request) {
       .map((booking) => ({ booking, messages: grouped.get(booking.id) || [] }));
     return Response.json({ role: access.role, threads });
   } catch (error) {
-    console.error("Booking message load failed", error);
+    noteOperationalFailure("Booking message load failed", error);
     return errorResponse(error, "Unable to load booking messages.");
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "booking-message", 20, 60_000);
     const { admin, user } = await identity(request);
@@ -102,28 +104,68 @@ export async function POST(request: Request) {
     const preview = messageBody.length > 140 ? `${messageBody.slice(0, 137)}...` : messageBody;
     const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
     let recipientIds: string[] = [];
+    const warningReferences: string[] = [];
     if (access.role === "customer") {
       const { data: team } = await admin.from("salon_team_members").select("user_id,email,phone,permissions").eq("salon_id", access.booking.salon_id).eq("status", "Active");
       const eligibleTeam = (team || []).filter((row) => Boolean((row.permissions as Row | null)?.bookings));
       recipientIds = [String(salon.user_id || ""), ...eligibleTeam.map((row) => String(row.user_id || ""))].filter(Boolean);
-      await Promise.allSettled([
+      const deliveries = await Promise.allSettled([
         sendEmail(String(salon.email || ""), "New customer booking message", `<h1>New booking message</h1><p>${preview}</p><p><a href="${root}/salon/dashboard/messages">Reply in Girlz Culture</a></p>`, "bookings"),
         sendSms(String(salon.phone || ""), `Girlz Culture booking message: ${preview} ${root}/salon/dashboard/messages`),
       ]);
+      for (const failure of deliveries.filter((result) => result.status === "rejected")) {
+        warningReferences.push(await capturePlatformError({
+          request, admin, error: failure.reason, feature: "booking-messages",
+          action: "deliver-salon-message-notification", actorRole: access.role,
+          actorId: user.id, salonId: String(access.booking.salon_id),
+          recordType: "booking", recordId: bookingId, provider: "transactional-notifications",
+          safeMessage: "The message was saved, but one notification could not be delivered.",
+        }));
+      }
     } else {
       recipientIds = access.booking.customer_id ? [String(access.booking.customer_id)] : [];
-      await Promise.allSettled([
+      const deliveries = await Promise.allSettled([
         sendEmail(String(access.booking.guest_email || ""), `New message from ${String(salon.name || "your salon")}`, `<h1>New booking message</h1><p>${preview}</p><p><a href="${root}/account?tab=inbox">Reply in Girlz Culture</a></p>`, "bookings"),
         sendSms(String(access.booking.guest_phone || ""), `Girlz Culture booking message: ${preview} ${root}/account?tab=inbox`),
       ]);
+      for (const failure of deliveries.filter((result) => result.status === "rejected")) {
+        warningReferences.push(await capturePlatformError({
+          request, admin, error: failure.reason, feature: "booking-messages",
+          action: "deliver-customer-message-notification", actorRole: access.role,
+          actorId: user.id, salonId: String(access.booking.salon_id),
+          recordType: "booking", recordId: bookingId, provider: "transactional-notifications",
+          safeMessage: "The message was saved, but one notification could not be delivered.",
+        }));
+      }
     }
     if (recipientIds.length) {
       await admin.from("notifications").insert(recipientIds.map((userId) => ({ user_id: userId, salon_id: access.booking.salon_id, booking_id: bookingId, channel: "in_app", title: "New booking message", body: preview, delivery_status: "delivered" })));
-      await sendPushToUsers(recipientIds, { title: "New booking message", body: preview, url: access.role === "customer" ? "/salon/dashboard/messages" : "/account?tab=inbox", tag: `message-${bookingId}` }).catch((pushError) => console.error("Booking message push failed", pushError));
+      try {
+        const pushResult=await sendPushToUsers(recipientIds, { title: "New booking message", body: preview, url: access.role === "customer" ? "/salon/dashboard/messages" : "/account?tab=inbox", tag: `message-${bookingId}` });
+        for(const warning of pushResult.warnings||[]){
+          if(warning.request_id)warningReferences.push(warning.request_id);
+        }
+      } catch (pushError) {
+        warningReferences.push(await capturePlatformError({
+          request, admin, error: pushError, feature: "booking-messages",
+          action: "deliver-push-notification", actorRole: access.role,
+          actorId: user.id, salonId: String(access.booking.salon_id),
+          recordType: "booking", recordId: bookingId, provider: "web-push",
+          safeMessage: "The message was saved, but its push notification could not be delivered.",
+        }));
+      }
     }
-    return Response.json({ message });
+    return Response.json({
+      message,
+      warnings: warningReferences.map((reference) => ({
+        message: `A notification could not be delivered. Reference ${reference}.`,
+        request_id: reference,
+      })),
+    });
   } catch (error) {
-    console.error("Booking message send failed", error);
+    noteOperationalFailure("Booking message send failed", error);
     return errorResponse(error, "Unable to send booking message.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/messages", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/messages", "POST"), POSTHandler);

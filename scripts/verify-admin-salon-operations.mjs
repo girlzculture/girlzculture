@@ -41,6 +41,6 @@ assert.match(manager, /future bookings will remain\s+in place/);
 assert.match(manager, /Status history/);
 assert.match(dashboard, /<AdminSalonsManager/);
 assert.match(owner, /This salon is suspended/);
-assert.match(owner, /lifecycleStatus==="offboarded"/);
+assert.match(owner, /lifecycleStatus\s*===\s*"offboarded"/);
 
 console.log("Admin salon operations verification passed.");

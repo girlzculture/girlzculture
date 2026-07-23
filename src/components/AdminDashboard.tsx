@@ -87,8 +87,6 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       if (countsResponse.ok) {
         const counts = await countsResponse.json() as Partial<InboxCounts>;
         setInboxCounts({ support: Number(counts.support || 0), complaints: Number(counts.complaints || 0) });
-      } else {
-        console.error("Admin inbox counts load failed", await countsResponse.text());
       }
     }
   }
@@ -97,7 +95,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     let active = true;
     (async () => {
       try { await load(); }
-      catch (loadError) { console.error("Admin dashboard load error", loadError); if (active) setError(loadError instanceof Error ? loadError.message : "Unable to load admin data."); }
+      catch (loadError) { if (active) setError(loadError instanceof Error ? loadError.message : "Unable to load admin data."); }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -118,7 +116,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
 
   async function update(table: string, id: string, changes: Row) {
     const { error: updateError } = await supabase.from(table).update(changes).eq(table === "admin_settings" ? "key" : "id", id);
-    if (updateError) { console.error("Admin record update failed", { table, id, updateError }); setNotice(updateError.message); return; }
+    if (updateError) { setNotice(updateError.message); return; }
     await load();
     setNotice("Saved.");
   }

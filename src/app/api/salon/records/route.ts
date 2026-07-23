@@ -1,10 +1,11 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
 
 const allowed={styles:{permission:"styles",label:"service"},stylists:{permission:"stylists",label:"stylist"},salon_products:{permission:"products",label:"product"},salon_promotions:{permission:"promotions",label:"promotion"},salon_blockouts:{permission:"availability",label:"blocked time"}} as const;
 
-export async function GET(request:Request){
+async function GETHandler(request:Request){
   let admin;
   let salonId:string|null=null;
   try{
@@ -26,7 +27,7 @@ export async function GET(request:Request){
   }
 }
 
-export async function POST(request:Request){
+async function POSTHandler(request:Request){
   try{
     const body=await request.json() as Record<string,unknown>;const table=cleanText(body.table,50) as keyof typeof allowed;const id=cleanText(body.id,60);const config=allowed[table];if(!config||!/^[0-9a-f-]{36}$/i.test(id))return Response.json({error:"Choose a valid salon record."},{status:400});
     const{admin,user,salon}=await requireSalonPermission(request,config.permission);const{data:record,error:readError}=await admin.from(table).select("*").eq("id",id).eq("salon_id",salon.id).maybeSingle();if(readError)throw readError;if(!record)return Response.json({error:`The ${config.label} was not found in this salon.`},{status:404});
@@ -45,5 +46,7 @@ export async function POST(request:Request){
     else{const result=await admin.from(table).delete().eq("id",id).eq("salon_id",salon.id);if(result.error)throw result.error;}
     await admin.from("record_management_events").insert({record_type:table,record_id:id,record_label:name,action,dependency_summary:dependencySummary,before_values:record,after_values:after,reason:cleanText(body.reason,300)||"Removed from salon dashboard",acting_user_id:user.id,acting_scope:"salon_owner"});
     return Response.json({ok:true,action:action.toLowerCase(),message:action==="Archived"?`This ${config.label} has history, so it was hidden and archived safely.`:`The ${config.label} was removed.`});
-  }catch(error){console.error("Salon record management failed",error);return errorResponse(error,"The record could not be changed safely. Nothing was removed.");}
+  }catch(error){noteOperationalFailure("Salon record management failed",error);return errorResponse(error,"The record could not be changed safely. Nothing was removed.");}
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/records", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/records", "POST"), POSTHandler);

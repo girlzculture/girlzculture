@@ -118,7 +118,7 @@ export default function LocaleProvider({
         body: JSON.stringify({ locale: safe }),
       });
     } catch (error) {
-      console.warn("Account language preference could not be saved", error);
+      void error;
     }
   }, []);
   const setLocale = useCallback(

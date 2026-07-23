@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayload, signInAndVerifyRole, verifyMfaChallenge, type LoginScope } from "@/lib/secureLoginServer";
 import { ADMIN_LOGIN_ERROR } from "@/lib/adminSecurityServer";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let requestedRole = "";
   try {
     enforceRateLimit(request, "login-verify", 15, 15 * 60_000);
@@ -19,8 +20,9 @@ export async function POST(request: Request) {
     return Response.json({ session: sessionPayload(auth.session) });
   } catch (error) {
     if (error instanceof LoginLockedError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
-    console.error("Secure login verification failed", error);
+    noteOperationalFailure("Secure login verification failed", error);
     if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400 });
     return errorResponse(error, "Unable to verify sign-in.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/login/verify", "POST"), POSTHandler);

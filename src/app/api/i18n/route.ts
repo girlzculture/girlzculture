@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
   BUNDLED_MESSAGES,
   ENGLISH_MESSAGES,
@@ -45,7 +46,7 @@ const FALLBACK_LOCALES = [
   },
 ];
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   const requested = normalizeLocale(
     new URL(request.url).searchParams.get("locale"),
   );
@@ -110,9 +111,9 @@ export async function GET(request: Request) {
       },
     );
   } catch (error) {
-    console.warn(
+    noteOperationalFailure(
       "Dynamic localization registry unavailable; using bundled fallback",
-      { message: error instanceof Error ? error.message : "unknown" },
+      error,
     );
     return Response.json({
       locale: requested,
@@ -123,3 +124,4 @@ export async function GET(request: Request) {
     });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/i18n", "GET"), GETHandler);

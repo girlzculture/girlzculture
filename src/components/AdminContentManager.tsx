@@ -69,7 +69,6 @@ export default function AdminContentManager() {
       }
       return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, serviceGroups: loadedGroups, serviceAddons: loadedAddons, linkTargets: loadedTargets };
     } catch (error) {
-      console.error("Content Management load error", error);
       setNotice(error instanceof Error ? error.message : "Unable to load content");
       throw error;
     } finally {
@@ -92,7 +91,6 @@ export default function AdminContentManager() {
         const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
         setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
-        console.error("Content Management load error", error);
         if (active) setNotice(error instanceof Error ? error.message : "Unable to load content");
       } finally { if (active) setLoading(false); }
     })();
@@ -132,7 +130,6 @@ export default function AdminContentManager() {
     setPages(rows => rows.some(row => row.slug === data.slug) ? rows.map(row => row.slug === data.slug ? data : row) : [...rows, data]);
       setNotice("Page saved, verified in Supabase, and published content is updated.");
     } catch (error) {
-      console.error("Content Management page save error", { slug: page.slug, error });
       setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Page save failed");
     } finally { setSaving(false); }
   }
@@ -161,7 +158,6 @@ export default function AdminContentManager() {
     setPosts(rows => rows.some(row => row.id === data.id) ? rows.map(row => row.id === data.id ? data : row) : [data, ...rows]);
       setNotice("Blog post saved and verified in Supabase.");
     } catch (error) {
-      console.error("Content Management blog save error", { slug: post.slug, error });
       setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Post save failed");
     } finally { setSaving(false); }
   }
@@ -176,7 +172,6 @@ export default function AdminContentManager() {
       setPost(null);
       setNotice("Blog post deleted.");
     } catch (error) {
-      console.error("Content Management delete error", error);
       setNotice(error instanceof Error ? error.message : "Delete failed");
     }
   }
@@ -345,7 +340,6 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
       if (kind === "master_style") setInitialService(refreshed);
       setNotice(`${labels[kind].replace(/s$/, "")} saved and available to salon owners.`);
     } catch (error) {
-      console.error("Service Catalog save error", { kind, selected, error });
       setNotice(error instanceof Error ? error.message : "Catalog save failed");
     } finally { setSaving(false); }
   }
@@ -378,7 +372,6 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
           results.push({ id: String(target.id), name: String(target.name), ok: true, message: "Completed" });
         } catch (error) {
           const message = error instanceof Error ? error.message : `${action} failed`;
-          console.error("Service Catalog record action failed", { kind, id: target.id, action, error });
           results.push({ id: String(target.id), name: String(target.name), ok: false, message });
         }
       }
@@ -394,7 +387,6 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
       const completed = results.filter((result) => result.ok).length;
       setNotice(`${completed} of ${results.length} catalog item${results.length === 1 ? "" : "s"} completed. ${failedIds.length ? "Review the item results below; failed items were not changed." : "All selected changes were verified after reload."}`);
     } catch (error) {
-      console.error("Service Catalog managed action error", { kind, targetIds: targets.map((target) => target.id), action, error });
       setNotice(error instanceof Error ? error.message : `${action} failed`);
     } finally { setSaving(false); }
   }

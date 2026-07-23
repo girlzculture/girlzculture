@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { loadGoogleMaps } from "@/components/search/AutocompleteInputs";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
+import { reportClientOperationalFailure } from "@/lib/supabase";
 
 type MapSalon = { id: string; name: string; slug: string; starting_price?: number | null; startingPrice?: number | null; latitude?: number | null; longitude?: number | null };
 
@@ -53,7 +54,15 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
         });
         if (mapped.length > 10) clusterer = new MarkerClusterer({ map, markers });
         if (mapped.length > 1) map.fitBounds(bounds, 48);
-      } catch (error) { console.error("Google salon map failed", error); if (active) setMessage("The live map could not load. You can still use List view."); }
+      } catch {
+        const report = await reportClientOperationalFailure({
+          status: 502,
+          code: "GOOGLE_MAP_LOAD_FAILED",
+          operation: "maps:render-salon-results",
+          provider: "google-maps",
+        });
+        if (active) setMessage(`${report.message} You can still use List view.`);
+      }
     })(), 0);
     return () => { active = false; window.clearTimeout(timer); clusterer?.clearMarkers(); buttons.clear(); };
   }, [onSelect, salons]);

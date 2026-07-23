@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 
@@ -9,7 +10,7 @@ function authorized(request: Request) {
   return Boolean(secret && supplied && secret === supplied);
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   const admin = getSupabaseAdmin();
   try {
     if (!authorized(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,3 +41,4 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "media", action: "cleanup_staged_media", actorRole: "system", safeMessage: "Staged media cleanup could not finish." });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/media/cleanup", "POST"), POSTHandler);

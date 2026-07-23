@@ -1,15 +1,37 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { capturePlatformError } from "@/lib/platformErrors";
+import { hasOperationalContext } from "@/lib/operationalTelemetryContext";
 
 export async function getPublishedEngineConfig(keys?: string[], options: { publicOnly?: boolean } = {}) {
+  const admin = getSupabaseAdmin();
   try {
-    let query = getSupabaseAdmin().from("engine_settings").select("setting_key,published_value,published_version").eq("status", "Published");
+    let query = admin.from("engine_settings").select("setting_key,published_value,published_version").eq("status", "Published");
     if (keys?.length) query = query.in("setting_key", keys);
     if (options.publicOnly) query = query.eq("is_public", true);
     const { data, error } = await query;
     if (error) throw error;
     return Object.fromEntries((data || []).map((row) => [row.setting_key, row.published_value])) as Record<string, unknown>;
   } catch (error) {
-    console.warn("Published Engine configuration unavailable; using integrity-safe defaults", error);
+    // Service-role transport monitoring has already attached this failure to an
+    // active API request. Outside a route (for example server rendering), persist
+    // the same sanitized operational event directly.
+    if (!hasOperationalContext()) {
+      await capturePlatformError({
+        admin,
+        error,
+        feature: "engine-configuration",
+        action: "load-published-configuration",
+        actorRole: "system",
+        provider: "supabase",
+        safeMessage: "Published configuration could not be loaded.",
+        severity: "high",
+        metadata: {
+          public_only: Boolean(options.publicOnly),
+          requested_key_count: keys?.length || 0,
+          fallback_used: true,
+        },
+      });
+    }
     return {};
   }
 }

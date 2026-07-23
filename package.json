@@ -27,6 +27,7 @@
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
     "verify:engine": "node scripts/verify-platform-engine.mjs",
     "verify:concierge": "node scripts/verify-ai-beauty-concierge.mjs",
+    "verify:monitoring": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-operational-monitoring.mjs",
     "verify:records": "node scripts/verify-record-lifecycle.mjs",
     "verify:identity-deletion": "node scripts/verify-identity-deletion.mjs",
     "verify:test-data": "node scripts/verify-test-data-management.mjs",

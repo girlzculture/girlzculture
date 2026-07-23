@@ -1,9 +1,10 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { geocodeSalonAddress } from "@/lib/geocodingServer";
 import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let admin;
   let salonId: string | null = null;
   try {
@@ -20,3 +21,4 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "salon-profile", action: "verify-address", actorRole: "salon", salonId, safeMessage: "The address was saved, but its map location could not be verified." });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/location/geocode-salon", "POST"), POSTHandler);

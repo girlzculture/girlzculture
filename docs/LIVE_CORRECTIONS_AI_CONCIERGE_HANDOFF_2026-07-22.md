@@ -6,7 +6,7 @@ Safety boundary: this pass did **not** merge, deploy, apply database migrations,
 
 ## Executive result
 
-The requested implementation is present on the branch and passes the local build, type, lint, security-audit, migration-order, and 28 focused verification suites. It is not yet production-complete because six migrations still need to be applied in a protected test/preview environment and several flows require authenticated Supabase, Stripe test-mode, OpenAI, and real media-provider verification. Those release gates are called out explicitly below.
+The requested implementation is present on the branch and passes the local build, type, lint, security-audit, migration-order, and 29 focused verification suites. It is not yet production-complete because six migrations still need to be applied in a protected test/preview environment and several flows require authenticated Supabase, Stripe test-mode, OpenAI, and real media-provider verification. Those release gates are called out explicitly below.
 
 ## Root causes and corrections
 
@@ -18,7 +18,7 @@ The requested implementation is present on the branch and passes the local build
 - **P5 media:** a crop preview was not a guarantee that the persisted output or every responsive surface used the crop. Media now stores crop metadata and desktop/tablet/mobile rendition paths, validates ownership and transforms on the server, cleans all staged renditions together, and displays product imagery in the intended square aspect.
 - **P6 marketing/video:** campaign funding/reference evidence and delivery validation were too generic, while browser/provider video failures surfaced as raw upload errors. Campaign administration now records readable funding/evidence context and validates delivery entitlements. Video handling classifies container, codec, size, and provider failures for actionable feedback.
 - **P7 localization/Engine:** the translation catalog and live UI were only partially connected. Locale state now persists across navigation/refresh, the runtime translation bridge applies published values, Engine changes trigger revalidation, and coverage reports distinguish translated from incomplete locales. The extractor currently registers 537 source messages.
-- **P8 monitoring:** important new protected paths now emit sanitized monitored failures and support references instead of raw provider/database errors. A complete audit of every older API route is still outstanding.
+- **P8 monitoring:** all 84 Next API route modules / 130 method handlers now use the shared operational wrapper, both scheduled Netlify functions use the sanitized function monitor, and the repository contains no server actions outside this inventory. Seventeen provider entry points, including direct browser-backed operations, are explicitly inventoried. Expected validation/rate-limit/not-found/permission-safe outcomes remain ordinary responses; unexpected 5xx, unsafe database/provider responses, protected session failures, timeouts, and uncaught exceptions produce deduplicated Engine occurrences with matching response references. Partial notification failures are captured at their provider call sites.
 - **P9 AI concierge:** there was no governed customer beauty assistant. The new concierge has a narrow beauty-discovery scope, strict structured output, locale-aware clarification, deterministic fallback, verified salon/style actions only, rate limits, daily cost controls, approved-provider/model controls, prompt versioning, and a database feature flag that defaults off.
 - **P10-P13:** existing identity/lifecycle behavior was preserved; shared public eligibility/ranking is reused by homepage/search; compact campaign controls and evidence validation were added; stable Engine keys were added for founder-manageable labels and AI configuration.
 
@@ -36,7 +36,7 @@ The status below is deliberately release-oriented. “Not complete” means the 
 | P5 media crop/renditions | Not complete | Upload/crop real images in an authenticated migrated preview and inspect desktop/tablet/mobile output plus cleanup. |
 | P6 marketing/video | Not complete | Upload known-good MP4 and WebM fixtures to the configured provider and verify campaign evidence/delivery in preview. |
 | P7 localization/Engine | Not complete | Runtime is wired; non-English locales still require reviewed, published human translations. Portuguese correctly reports incomplete coverage. |
-| P8 monitoring | Not complete | New/key changed paths are covered; every legacy protected route still needs a route-by-route monitoring audit. |
+| P8 monitoring | Complete | All 84 API route modules / 130 method handlers, 2 Netlify functions, 0 server actions, 17 provider entry points, and 10 representative protected feature groups are inventoried and behavior-tested. See `docs/OPERATIONAL_MONITORING_ROUTE_INVENTORY_2026-07-23.md`. |
 | P9 AI beauty concierge | Not complete | Apply migration, configure approved OpenAI model/key and budget in preview, enable the DB flag, then run provider and cost-limit tests. |
 | P10 account security/lifecycle | Not complete | Existing checks pass, but disposable-identity deletion was not executed against a real isolated auth project in this pass. |
 | P11 salon lifecycle/public status | Complete | Existing lifecycle/public-tier regression suites pass and no production state was changed. |
@@ -93,9 +93,10 @@ Do not enable the concierge feature flag until the model allowlist, daily reques
 - `npm run i18n:extract` — pass, 537 interface source messages from 251 TypeScript files
 - `npx tsc --noEmit` — pass
 - `npm run lint` — pass
-- All 28 `verify:*` suites — pass
-- `npm audit --omit=dev --audit-level=moderate` — 0 vulnerabilities
-- `npm run build` — pass, 105 application routes
+- All 29 `verify:*` suites — pass
+- `npm audit --audit-level=high` — 0 vulnerabilities
+- `npm run build` — pass, 106 application routes
+- `npm run verify:monitoring` — pass, 84 API route modules / 130 method handlers, 2 Netlify functions, 0 server actions, 17 provider entry points, and representative behavior failures in 10 protected feature groups
 - Responsive browser smoke checks at desktop and 390px mobile — no horizontal overflow on homepage/search/styles; locale persists; truthful incomplete-translation badge; “Salons Near You” remains first; hidden footer links remain hidden; unauthenticated `/admin` denies cleanly without corrupting the salon session.
 - Native keyboard activation should still be repeated manually because the automation driver did not reliably move/activate native controls.
 
@@ -116,7 +117,6 @@ Do not enable the concierge feature flag until the model allowlist, daily reques
 - Apply and validate the six migrations in a protected Supabase preview project.
 - Complete provider-backed Stripe, OpenAI, image, and video tests.
 - Populate reviewed translations; the runtime must continue to report incomplete coverage until then.
-- Audit monitoring/error sanitization on every legacy protected API route.
 - Complete real isolated identity-deletion coverage.
 - Repeat keyboard-only and assistive-technology checks manually.
 

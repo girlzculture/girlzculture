@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
@@ -18,12 +19,12 @@ async function contextFor(request: Request, id: string) {
   return { ...context, booking, salon, styles: styles || [], stylists: stylists || [], audit: audit || [] };
 }
 
-export async function GET(request: Request, route: { params: Promise<{ id: string }> }) {
+async function GETHandler(request: Request, route: { params: Promise<{ id: string }> }) {
   try { const { id } = await route.params; const { booking, salon, styles, stylists, audit } = await contextFor(request, id); return Response.json({ booking, salon, styles, stylists, audit }); }
   catch (error) { return errorResponse(error, "Unable to load booking."); }
 }
 
-export async function PATCH(request: Request, route: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(request: Request, route: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await route.params; const ctx = await contextFor(request, id); const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 30); const reason = cleanText(body.reason, 500);
@@ -60,7 +61,7 @@ export async function PATCH(request: Request, route: { params: Promise<{ id: str
     if (updated.customer_id) inApp.push({ user_id: updated.customer_id, salon_id: ctx.salon.id, booking_id: updated.id, title: "Your booking was updated", body: text, action_url: "/account?tab=upcoming", delivery_status: "delivered" });
     await ctx.admin.from("notifications").insert(inApp);
     return Response.json({ booking: updated });
-  } catch (error) { console.error("Admin booking update failed", error); return errorResponse(error, "Unable to update booking."); }
+  } catch (error) { noteOperationalFailure("Admin booking update failed", error); return errorResponse(error, "Unable to update booking."); }
 }
 
 async function cancelBooking(ctx: Awaited<ReturnType<typeof contextFor>>, reason: string) {
@@ -80,6 +81,8 @@ async function cancelBooking(ctx: Awaited<ReturnType<typeof contextFor>>, reason
   const inApp = [{ user_id: ctx.salon.user_id, salon_id: ctx.salon.id, booking_id: booking.id, title: "Booking cancelled by platform support", body: salonMessage, action_url: `/salon/dashboard/bookings?booking=${booking.id}`, delivery_status: "delivered" }];
   if (booking.customer_id) inApp.push({ user_id: booking.customer_id, salon_id: ctx.salon.id, booking_id: booking.id, title: "Your booking was cancelled", body: customerMessage, action_url: "/account?tab=past", delivery_status: "delivered" });
   await ctx.admin.from("notifications").insert(inApp);
-  await deliverCancellationNotifications(booking.id, reason);
-  return Response.json({ booking: cancelled, refund_status: refundStatus });
+  const notificationResult=await deliverCancellationNotifications(booking.id, reason);
+  return Response.json({ booking: cancelled, refund_status: refundStatus, warnings:notificationResult.warnings });
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/bookings/[id]", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/bookings/[id]", "PATCH"), PATCHHandler);

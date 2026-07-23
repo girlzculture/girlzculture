@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { normalizePlan } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function POSTHandler(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     enforceRateLimit(request, "admin-submission-decision", 30, 60_000);
     const { admin, user } = await requireAdminPermission(request, "submissions");
@@ -77,7 +78,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     await sendEmail(application.business_email, subject, html, "account");
     return Response.json({ ok: true, status, plan });
   } catch (error) {
-    console.error("Application decision failed", error);
+    noteOperationalFailure("Application decision failed", error);
     return errorResponse(error, "Request failed");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/submissions/[id]/decision", "POST"), POSTHandler);

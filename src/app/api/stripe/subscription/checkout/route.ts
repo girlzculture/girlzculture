@@ -1,10 +1,11 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { normalizePlan, stripePriceEnv, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { siteUrl, stripeGet, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "subscription-checkout", 8, 10 * 60_000);
     const { admin, user, salon, isOwner } = await requireSalonOwner(request);
@@ -47,7 +48,8 @@ export async function POST(request: Request) {
     await admin.from("subscriptions").upsert({ salon_id:salon.id, tier:plan, status:"checkout_pending", stripe_customer_id:customerId, price_id:priceId, stripe_schedule_id:null, scheduled_tier:null, scheduled_price_id:null, scheduled_change_effective_at:null, cancel_at_period_end:false, cancellation_requested_at:null, ended_at:null, last_payment_failure:null, updated_at:new Date().toISOString() }, { onConflict:"salon_id" });
     return Response.json({ url:session.url, testMode:true });
   } catch (error) {
-    console.error("Subscription checkout failed", error);
+    noteOperationalFailure("Subscription checkout failed", error);
     return errorResponse(error, "Unable to start subscription checkout.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/subscription/checkout", "POST"), POSTHandler);

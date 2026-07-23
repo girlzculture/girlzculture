@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
@@ -114,7 +115,7 @@ function isUserInputError(error: unknown) {
   return error instanceof Error && !/permission denied|violates|constraint|record\s+"|column|relation|postgres|supabase|pgrst/i.test(error.message);
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let admin;
   let salonId: string | null = null;
   try {
@@ -173,3 +174,4 @@ export async function POST(request: Request) {
     return safeFailure(safeMessage, reference);
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/records/save", "POST"), POSTHandler);

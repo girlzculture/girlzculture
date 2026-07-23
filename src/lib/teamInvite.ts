@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   assertEmailAvailableForNewIdentity,
   auditIdentityEvent,
-  IdentityUnavailableError,
   type PrimaryIdentityRole,
 } from "@/lib/identityServer";
 
@@ -32,7 +31,10 @@ export async function inviteNewIdentity(
       actorUserId: context.actorUserId,
       details: { provider_code: error?.code || "no_user" },
     });
-    throw new IdentityUnavailableError();
+    throw Object.assign(
+      new Error("SUPABASE_AUTH_INVITATION_FAILED"),
+      { code: error?.code || "NO_USER_RETURNED" },
+    );
   }
   await auditIdentityEvent({
     request: context.request,

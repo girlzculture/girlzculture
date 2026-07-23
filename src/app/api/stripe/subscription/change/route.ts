@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { normalizePlan, planFromStripePriceId, planRank, stripePriceEnv } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse, RateLimitError } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -46,7 +47,7 @@ async function invoiceDetails(value: StripeSubscription["latest_invoice"]) {
   return stripeGet<StripeInvoice>(`/invoices/${value}?expand[]=payment_intent`);
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   let salonId: string | null = null;
   try {
@@ -163,7 +164,7 @@ export async function POST(request: Request) {
       } catch (scheduleError) {
         if (schedule?.id) {
           await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {}, { idempotencyKey: `release-failed-schedule:${schedule.id}` }).catch((releaseError) => {
-            console.error("Failed downgrade schedule cleanup failed", { salonId: salon.id, scheduleId: schedule?.id, releaseError });
+            noteOperationalFailure("Failed downgrade schedule cleanup failed", { salonId: salon.id, scheduleId: schedule?.id, releaseError });
           });
         }
         throw scheduleError;
@@ -259,7 +260,7 @@ export async function POST(request: Request) {
         last_payment_failure: failureReason || "Stripe did not confirm payment for the prorated upgrade invoice.",
         updated_at: new Date().toISOString(),
       }).eq("salon_id", salon.id);
-      if (failureSaveError) console.error("Upgrade failure state could not be saved", { salonId: salon.id, failureSaveError });
+      if (failureSaveError) noteOperationalFailure("Upgrade failure state could not be saved", { salonId: salon.id, failureSaveError });
       return Response.json({
         error: failureReason || "Stripe did not confirm the prorated upgrade invoice and replacement subscription item. Your current plan and access remain active.",
         currentPlan,
@@ -335,3 +336,4 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "subscriptions", action: "change_plan", actorRole: "salon-owner", salonId, safeMessage: "We couldn't change the subscription plan." });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/subscription/change", "POST"), POSTHandler);

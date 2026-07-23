@@ -1,15 +1,16 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const { data, error } = await admin.from("media_upload_profiles").select("*").order("display_name");
     if (error) throw error;
     return Response.json({ profiles: data || [] });
-  } catch (error) { console.error("Media profile load failed", error); return Response.json({ error: error instanceof Error ? error.message : "Unable to load media rules." }, { status: 403 }); }
+  } catch (error) { noteOperationalFailure("Media profile load failed", error); return Response.json({ error: error instanceof Error ? error.message : "Unable to load media rules." }, { status: 403 }); }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "settings");
     const body = await request.json() as { profile_key?: string; min_width_px?: number; min_height_px?: number; output_width_px?: number; max_bytes?: number; help_text?: string; safe_area_enabled?: boolean };
@@ -21,5 +22,7 @@ export async function PATCH(request: Request) {
     const { data, error } = await admin.from("media_upload_profiles").update(update).eq("profile_key", key).select().single(); if (error) throw error;
     await admin.from("admin_security_events").insert({ actor_user_id: user.id, action: "media_profile_updated", details: { profile_key: key, before: before || {}, after: data, reason: "Media placement rules updated in Engine" } });
     return Response.json({ profile: data });
-  } catch (error) { console.error("Media profile save failed", error); return Response.json({ error: error instanceof Error ? error.message : "Unable to save media rules." }, { status: 400 }); }
+  } catch (error) { noteOperationalFailure("Media profile save failed", error); return Response.json({ error: error instanceof Error ? error.message : "Unable to save media rules." }, { status: 400 }); }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/media", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/media", "PATCH"), PATCHHandler);

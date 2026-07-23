@@ -78,7 +78,7 @@ export default function AdminTrendingCampaigns() {
       const response = await fetch(`/api/admin/trending-campaigns?mode=salons&q=${encodeURIComponent(query)}`, { headers: await headers(), signal: controller.signal });
       const body = await response.json();
       if (response.ok) setSalons(Array.isArray(body.salons) ? body.salons : []);
-    })().catch((error) => { if (error.name !== "AbortError") console.error("Trending salon search failed", error); }), 220);
+    })().catch(()=>undefined), 220);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [editing, query]);
 

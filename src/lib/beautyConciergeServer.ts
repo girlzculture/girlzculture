@@ -239,6 +239,7 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
   let intent = deterministicConciergeIntent(input.prompt, input.language);
   let mode: "openai" | "deterministic" = "deterministic";
   let safeError: string | null = null;
+  const warningReferences: string[] = [];
   const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
   const startOfMonth = new Date(Date.UTC(startOfDay.getUTCFullYear(), startOfDay.getUTCMonth(), 1));
   const [dailyUsageResult, monthlyUsageResult] = await Promise.all([
@@ -261,16 +262,44 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
       if (usageWrite.error) throw usageWrite.error;
       intent = parsed.intent; mode = "openai";
     } catch (error) {
-      safeError = error instanceof Error && error.name === "AbortError" ? "TIMEOUT" : error instanceof Error ? error.message.slice(0, 80) : "AI_FAILED";
-      await admin.from("ai_usage_events").insert({ feature_key: "beauty_concierge", provider_key: "openai", model_key: model, outcome: "fallback", safe_error_code: safeError });
-      await capturePlatformError({ request: input.request, admin, error, feature: "ai_concierge", action: "extract_intent", actorRole: "public", safeMessage: "AI assistance was unavailable, so standard search was used.", severity: "medium", metadata: { fallback: "deterministic", language: input.language } });
+      safeError = error instanceof Error && error.name === "AbortError" ? "TIMEOUT" : "AI_FAILED";
+      const fallbackUsage = await admin.from("ai_usage_events").insert({ feature_key: "beauty_concierge", provider_key: "openai", model_key: model, outcome: "fallback", safe_error_code: safeError });
+      if (fallbackUsage.error) {
+        warningReferences.push(await capturePlatformError({
+          request: input.request,
+          admin,
+          error: fallbackUsage.error,
+          feature: "ai_concierge",
+          action: "record_fallback_usage",
+          actorRole: "public",
+          provider: "supabase",
+          safeMessage: "AI assistance used standard search, but usage reporting needs attention.",
+          severity: "medium",
+        }));
+      }
+      warningReferences.push(await capturePlatformError({
+        request: input.request,
+        admin,
+        error,
+        feature: "ai_concierge",
+        action: "extract_intent",
+        actorRole: "public",
+        provider: "openai",
+        safeMessage: "AI assistance was unavailable, so standard search was used.",
+        severity: "medium",
+        metadata: { fallback: "deterministic", language: input.language },
+      }));
     }
   }
   const resolved = await resolveStyleAndLocation(input.prompt, intent, input.origin);
   intent = resolved.intent;
-  if (!intent.style) { const question = conciergeClarification(input.language, "style"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError }; }
-  if (!resolved.origin || !validCoordinates(resolved.origin)) { const question = conciergeClarification(input.language, "location"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError }; }
-  if (intent.needs_clarification && intent.clarifying_question) return { mode, intent, clarification: intent.clarifying_question, salons: [] as ConciergeSalonResult[], safeError };
+  const warnings = () => warningReferences.map((reference) => ({
+    message: `A secondary search service needs attention. Reference ${reference}.`,
+    request_id: reference,
+  }));
+  if (!intent.style) { const question = conciergeClarification(input.language, "style"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings() }; }
+  if (!resolved.origin || !validCoordinates(resolved.origin)) { const question = conciergeClarification(input.language, "location"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings() }; }
+  if (intent.needs_clarification && intent.clarifying_question) return { mode, intent, clarification: intent.clarifying_question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings() };
 
   const [defaultRadius, resultLimit] = await Promise.all([
     getEngineNumber("ai.concierge.default_radius", 50, 1, 100),
@@ -292,10 +321,26 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
         const availability = await bookingAvailability({ salonId: salon.id, styleId: salon.services[0].id, date: intent.date });
         const slot = availability.slots.find((candidate) => timeMatches(candidate.value, intent.time_period));
         if (slot) nextSlot = { date: intent.date, value: slot.value, label: slot.label };
-      } catch { nextSlot = null; }
+      } catch (error) {
+        nextSlot = null;
+        warningReferences.push(await capturePlatformError({
+          request: input.request,
+          admin,
+          error,
+          feature: "ai_concierge",
+          action: "resolve_salon_availability",
+          actorRole: "public",
+          salonId: salon.id,
+          recordType: "salon",
+          recordId: salon.id,
+          provider: "booking-availability",
+          safeMessage: "One salon's live availability could not be checked.",
+          severity: "medium",
+        }));
+      }
       if (intent.availability_required && !nextSlot) return null;
     }
     return { ...salon, promotion, next_slot: nextSlot, deposit_amount: salon.starting_price === null ? null : Math.round(Number(salon.starting_price) * 10) / 100 };
   }));
-  return { mode, intent, clarification: null, salons: enriched.filter(Boolean) as ConciergeSalonResult[], safeError, latencyMs: Date.now() - started };
+  return { mode, intent, clarification: null, salons: enriched.filter(Boolean) as ConciergeSalonResult[], safeError, warnings: warnings(), latencyMs: Date.now() - started };
 }

@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 
@@ -16,7 +17,7 @@ const TABLE_ACCESS: Record<WorkspaceKey, string | null> = {
   salon_blockouts: "availability",
 };
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   let admin;
   try {
     const context = await requireSalonOwner(request);
@@ -40,3 +41,4 @@ export async function GET(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "salon-dashboard", action: "load-workspace", actorRole: "salon", safeMessage: "We couldn't load the salon workspace." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/workspace", "GET"), GETHandler);

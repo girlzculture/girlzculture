@@ -1,3 +1,4 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -11,7 +12,7 @@ async function context(request: Request) {
   return { admin, user: data.user };
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
     const auth = await context(request); admin = auth.admin;
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
     const auth = await context(request); admin = auth.admin;
@@ -40,3 +41,5 @@ export async function DELETE(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "customer_favorites", action: "remove", actorRole: "customer", safeMessage: "We couldn't update this saved salon." });
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/customer/favorites", "POST"), POSTHandler);
+export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/customer/favorites", "DELETE"), DELETEHandler);

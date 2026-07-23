@@ -1,6 +1,7 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { admin, user } = await requireAdminPermission(request, "support");
     const { id } = await context.params;
@@ -24,10 +25,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       .maybeSingle();
     if (error) throw error;
 
-    console.info("Admin support request marked read", { ticketId: id, admin: user.email });
+    console.info("Admin support request marked read", { ticketId: id, adminUserId: user.id });
     return Response.json({ data: data || existing });
   } catch (error) {
-    console.error("Admin support read update failed", error);
+    noteOperationalFailure("Admin support read update failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "Unable to mark request as read" }, { status: 500 });
   }
 }
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/support/[id]/read", "PATCH"), PATCHHandler);

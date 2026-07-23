@@ -2,6 +2,7 @@ import { Compass } from "lucide-react";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import StyleCatalog, { StyleCatalogItem } from "@/components/public/StyleCatalog";
 import { supabase } from "@/lib/supabase";
+import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 
 type StyleRow = {
   name?: string | null;
@@ -24,7 +25,7 @@ export default async function StylesPage() {
     .is("archived_at", null)
     .order("name");
 
-  if (error) console.error("Unable to load public style catalog", error);
+  if (error) await capturePublicPageFailure(error, "style-catalog-page", "load-published-styles");
 
   const grouped = new Map<string, StyleCatalogItem & { salons: Set<string> }>();
   for (const raw of (data || []) as StyleRow[]) {

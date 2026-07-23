@@ -91,9 +91,8 @@ export default function AdminFeaturedCampaigns() {
             const body = await response.json();
             if (response.ok)
               setSalons(Array.isArray(body.salons) ? body.salons : []);
-          } catch (error) {
-            if ((error as Error).name !== "AbortError")
-              console.error("Featured salon lookup failed", error);
+          } catch {
+            // The protected API owns operational monitoring for this lookup.
           }
         })(),
       220,

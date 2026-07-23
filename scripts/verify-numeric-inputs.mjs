@@ -15,7 +15,7 @@ const checks = [
   ["new option prices start blank", /price_add: ""/.test(structured)],
   ["new material prices start blank", /price: ""/.test(structured)],
   ["legacy service fields no longer default to zero", !/defaultValue=\{active\?\.(?:duration_min_hours|duration_max_hours|base_price|years_experience|price)\|\|0\}/.test(legacyOwner)],
-  ["phone is a tel input", /name==="phone"\?"tel"/.test(legacyOwner)],
+  ["phone is a tel input", /name\s*===\s*"phone"\s*\?\s*"tel"/.test(legacyOwner)],
   ["ZIP remains text", /label="ZIP Code"[\s\S]{0,180}value=\{form\.zip_code\}/.test(application)],
   ["server rejects non-finite application counts", /Number\.isFinite\(yearsInOperation\)[\s\S]*Number\.isFinite\(stylistCount\)/.test(applicationApi)],
   ["database pricing and duration bounds", /styles_price_bounds_check[\s\S]*styles_duration_bounds_check[\s\S]*styles_validate_numeric_bounds/.test(bounds)],

@@ -1,6 +1,7 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("session_id") || "";
   if (!sessionId.startsWith("cs_")) return Response.json({error:"Invalid checkout session."},{status:400});
   const admin=getSupabaseAdmin();
@@ -9,3 +10,4 @@ export async function GET(request: Request) {
   const {data:booking}=intent.booking_id?await admin.from("bookings").select("confirmation_code,status,appointment_datetime").eq("id",intent.booking_id).single():{data:null};
   return Response.json({status:intent.status,booking});
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/booking-status", "GET"), GETHandler);

@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -21,7 +22,7 @@ async function updateSalonReachability(admin: ReturnType<typeof getSupabaseAdmin
   return reachable;
 }
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin, user, salon } = await authenticatedUser(request);
     const { data, error } = await admin
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     const { admin, user, salon } = await authenticatedUser(request);
     const body = await request.json() as {
@@ -72,13 +73,13 @@ export async function POST(request: Request) {
     if (salon?.id) await admin.from("salons").update({ pwa_installed_at: body.installed ? now : null, push_enabled_at: now, push_last_seen_at: now, push_reachable: true }).eq("id", salon.id);
     return NextResponse.json({ ok: true, configured: true, salonReachable: Boolean(salon?.id) });
   } catch (error) {
-    console.error("Web Push subscription save failed", error);
+    noteOperationalFailure("Web Push subscription save failed", error);
     const message = error instanceof Error ? error.message : "Unable to save push notification settings.";
     return NextResponse.json({ error: message }, { status: message === "Unauthorized" ? 401 : 500 });
   }
 }
 
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   try {
     const { admin, user, salon } = await authenticatedUser(request);
     const body = await request.json().catch(() => ({})) as { endpoint?: string };
@@ -93,3 +94,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: message }, { status: message === "Unauthorized" ? 401 : 500 });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/push/subscription", "GET"), GETHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/push/subscription", "POST"), POSTHandler);
+export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/push/subscription", "DELETE"), DELETEHandler);

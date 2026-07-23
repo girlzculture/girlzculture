@@ -1,9 +1,10 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isPromotionActive, type SalonPromotion } from "@/lib/salonPromotions";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   const admin = getSupabaseAdmin();
   let salonId: string | null = null;
   try {
@@ -23,3 +24,4 @@ export async function GET(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "promotions", action: "load-public-offer", actorRole: "public", salonId, safeMessage: "We couldn't load this salon offer." });
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/promotions/salon", "GET"), GETHandler);

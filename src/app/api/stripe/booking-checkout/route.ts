@@ -1,3 +1,5 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import { capturePlatformError } from "@/lib/platformErrors";
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
@@ -14,7 +16,7 @@ type ServiceOption = PriceOption & { duration_add_minutes?: number | string };
 type ServiceOptionGroup = { id?: string; label?: string; selection?: string; required?: boolean; options?: ServiceOption[] };
 const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(value) ? value as ServiceOptionGroup[] : [];
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   const admin = getSupabaseAdmin();
   let intentId = "";
   try {
@@ -222,16 +224,44 @@ export async function POST(request: Request) {
       }).select("id,confirmation_code,status,appointment_datetime").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
-      if (intentError) console.error("Zero-deposit booking intent finalization failed", { intentId, bookingId: booking.id, error: intentError });
+      if (intentError) throw intentError;
       if (promoReservation?.redemption_id) {
         const { error: redemptionError } = await admin.rpc("redeem_promo_code", {
           p_redemption_id: promoReservation.redemption_id,
           p_checkout_session_id: `no_payment_required:${intentId}`,
         });
-        if (redemptionError) console.error("Zero-deposit promo redemption failed", { intentId, bookingId: booking.id, error: redemptionError });
+        if (redemptionError) throw redemptionError;
       }
-      await deliverBookingNotifications(booking.id).catch((notificationError) => console.error("Zero-deposit booking notification delivery failed", { bookingId: booking.id, notificationError }));
-      return Response.json({ booking, deposit, originalDeposit, discount, salonPromotionDiscount, total, noPaymentRequired: true, testMode: true });
+      let notificationReference: string | null = null;
+      try {
+        const delivery = await deliverBookingNotifications(booking.id);
+        notificationReference = delivery.warnings?.[0]?.request_id || null;
+      } catch (notificationError) {
+        notificationReference = await capturePlatformError({
+          request, admin, error: notificationError, feature: "booking-checkout",
+          action: "deliver-zero-deposit-notifications",
+          actorRole: customerId ? "customer" : "guest", actorId: customerId || null,
+          salonId, recordType: "booking", recordId: booking.id,
+          provider: "transactional-notifications",
+          safeMessage: "Your booking was confirmed, but one notification could not be delivered.",
+        });
+      }
+      return Response.json({
+        booking,
+        deposit,
+        originalDeposit,
+        discount,
+        salonPromotionDiscount,
+        total,
+        noPaymentRequired: true,
+        testMode: true,
+        warning: notificationReference
+          ? {
+              message: `Your booking was confirmed, but one notification could not be delivered. Reference ${notificationReference}.`,
+              request_id: notificationReference,
+            }
+          : null,
+      });
     }
 
     const session = await stripeRequest<{ id: string; url: string }>("/checkout/sessions", {
@@ -259,7 +289,8 @@ export async function POST(request: Request) {
     return Response.json({ url: session.url, deposit, originalDeposit, discount, salonPromotionDiscount, total, testMode: true });
   } catch (error) {
     if (intentId) await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
-    console.error("Booking checkout failed", error);
+    noteOperationalFailure("Booking checkout failed", error);
     return errorResponse(error, "Unable to start secure checkout.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/booking-checkout", "POST"), POSTHandler);

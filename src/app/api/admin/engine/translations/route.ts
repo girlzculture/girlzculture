@@ -1,3 +1,4 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
@@ -26,7 +27,7 @@ const HIGH_IMPACT = new Set([
 ]);
 const VALID_STATUSES = new Set(["Missing", "Draft", "Reviewed", "Published"]);
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
     const requestedLocale=normalizeLocale(new URL(request.url).searchParams.get("locale")||"en");
@@ -89,12 +90,12 @@ export async function GET(request: Request) {
       versions: versions || [],
     });
   } catch (error) {
-    console.error("Translation manager load failed", error);
+    noteOperationalFailure("Translation manager load failed", error);
     return errorResponse(error, "Unable to load translations.");
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const action = cleanText(body.action, 40) || "save_draft";
@@ -396,7 +397,9 @@ export async function PATCH(request: Request) {
     if (status === "Published") revalidatePath("/", "layout");
     return Response.json({ entry: data });
   } catch (error) {
-    console.error("Translation manager save failed", error);
+    noteOperationalFailure("Translation manager save failed", error);
     return errorResponse(error, "Unable to save translation changes.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/translations", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/translations", "PATCH"), PATCHHandler);

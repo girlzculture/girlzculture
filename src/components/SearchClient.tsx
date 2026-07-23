@@ -37,7 +37,6 @@ export default function SearchClient() {
     setLoading(true);
     const { data: salonsData, error } = await supabase.from("salons").select("id,name,slug,address_city,address_state,address_zip,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,hours");
     if (error) {
-      console.error("search salons error", error);
       setSalons([]);
       setLoading(false);
       return;

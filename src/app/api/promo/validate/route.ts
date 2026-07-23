@@ -1,7 +1,8 @@
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { previewPromoCode } from "@/lib/promoCodes";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "promo-preview", 12, 10 * 60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -15,3 +16,4 @@ export async function POST(request: Request) {
     return errorResponse(error, "Unable to validate promo code.");
   }
 }
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/promo/validate", "POST"), POSTHandler);

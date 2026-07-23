@@ -1,8 +1,9 @@
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { aiProviderConfigured, approvedAiModels, approvedAiProviders, runAiSandbox } from "@/lib/aiAutomationServer";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "settings");
     const month = new Date(); month.setUTCDate(1); month.setUTCHours(0, 0, 0, 0);
@@ -17,12 +18,12 @@ export async function GET(request: Request) {
     const providers = approvedAiProviders().map((key) => ({ key, configured: aiProviderConfigured(key), models: approvedAiModels(key) }));
     return Response.json({ features: features || [], prompts: prompts || [], usage: usage || [], drafts: drafts || [], providers, killSwitch: kill?.published_value !== false });
   } catch (error) {
-    console.error("AI Engine load failed", error);
+    noteOperationalFailure("AI Engine load failed", error);
     return errorResponse(error, "Unable to load AI and automation controls.");
   }
 }
 
-export async function PATCH(request: Request) {
+async function PATCHHandler(request: Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "settings");
     const body = await request.json() as Record<string, unknown>;
@@ -45,12 +46,12 @@ export async function PATCH(request: Request) {
     await admin.from("admin_security_events").insert({ actor_user_id: user.id, action: "ai_feature_configuration_updated", result: "Allowed", details: { feature_key: featureKey, before: existing, after: data } });
     return Response.json({ feature: data });
   } catch (error) {
-    console.error("AI Engine configuration failed", error);
+    noteOperationalFailure("AI Engine configuration failed", error);
     return errorResponse(error, "Unable to save AI feature configuration.");
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   try {
     const { admin, user } = await requireAdminPermission(request, "settings");
     const body = await request.json() as Record<string, unknown>;
@@ -63,7 +64,10 @@ export async function POST(request: Request) {
     await admin.from("admin_security_events").insert({ actor_user_id: user.id, action: "ai_sandbox_run", result: result.outcome, details: { feature_key: featureKey, outcome: result.outcome } });
     return Response.json({ result });
   } catch (error) {
-    console.error("AI Engine sandbox failed", error);
+    noteOperationalFailure("AI Engine sandbox failed", error);
     return errorResponse(error, "The AI sandbox could not complete this test.");
   }
 }
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/ai", "GET"), GETHandler);
+export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/ai", "PATCH"), PATCHHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/admin/engine/ai", "POST"), POSTHandler);
