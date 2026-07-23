@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import SalonBookingWizard from "@/components/SalonBookingWizard";
 import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome";
@@ -91,23 +90,28 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     description: salonRecord.description,
   };
 
-  const { data: stylesData } = await supabase
-    .from("styles")
-    .select("*,service_category:service_categories(name,slug)")
-    .eq("salon_id", salonData.id)
-    .is("archived_at", null)
-    .eq("is_active", true);
+  const [stylesResult, stylistsResult] = await Promise.all([
+    admin
+      .from("styles")
+      .select("*,service_category:service_categories(name,slug)")
+      .eq("salon_id", salonData.id)
+      .is("archived_at", null)
+      .or("is_draft.is.null,is_draft.eq.false")
+      .order("created_at", { ascending: true }),
+    admin
+      .from("stylists")
+      .select("*")
+      .eq("salon_id", salonData.id)
+      .is("archived_at", null)
+      .order("created_at", { ascending: true }),
+  ]);
 
-  const { data: stylistsData } = await supabase
-    .from("stylists")
-    .select("*")
-    .eq("salon_id", salonData.id)
-    .is("archived_at", null)
-    .eq("is_active", true)
-    .eq("is_draft", false);
+  if (stylesResult.error) throw stylesResult.error;
+  if (stylistsResult.error) throw stylistsResult.error;
 
-  const styles = (stylesData || []) as StyleRecord[];
-  const stylists = (stylistsData || []) as StylistRecord[];
+  const styles = (stylesResult.data || []) as StyleRecord[];
+  const stylists = ((stylistsResult.data || []) as StylistRecord[])
+    .filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
   const [depositPercentage,maximumAdvanceDays,clientNotesMaxLength]=await Promise.all([getEngineNumber("booking.deposit_percentage",10,0,100),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000)]);
 
   return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} depositPercentage={depositPercentage} maximumAdvanceDays={maximumAdvanceDays} clientNotesMaxLength={clientNotesMaxLength}/></Suspense>;
