@@ -26,7 +26,18 @@ const launchBlockerSequence=[
 const launchBlockerIndexes=launchBlockerSequence.map((file)=>files.indexOf(file));
 if(launchBlockerIndexes.some((index)=>index<0))failures.push("Launch-blocker migration sequence is incomplete");
 if(launchBlockerIndexes.some((index,position)=>position>0&&index<=launchBlockerIndexes[position-1]))failures.push("Launch-blocker migrations are not in dependency order");
+const launchCorrectionSequence=[
+  "20260722100000_atomic_owner_catalog_persistence.sql",
+  "20260722110000_discovery_authoritative_eligibility.sql",
+  "20260722120000_responsive_media_renditions.sql",
+  "20260722130000_beauty_concierge_engine.sql",
+  "20260722140000_salon_promotion_management.sql",
+  "20260722150000_subscription_change_tracking.sql",
+];
+const correctionIndexes=launchCorrectionSequence.map((file)=>files.indexOf(file));
+if(correctionIndexes.some((index)=>index<0))failures.push("Live-correction migration sequence is incomplete");
+if(correctionIndexes.some((index,position)=>position>0&&index<=correctionIndexes[position-1]))failures.push("Live-correction migrations are not in dependency order");
 const expansion=files.at(-1);
-if(expansion!==launchBlockerSequence.at(-1))failures.push(`Expected launch-blocker monitoring migration to be latest; found ${expansion||"none"}`);
+if(expansion!==launchCorrectionSequence.at(-1))failures.push(`Expected subscription change tracking to be the latest migration; found ${expansion||"none"}`);
 if(failures.length){console.error(failures.join("\n"));process.exit(1)}
 console.log(`Migration order verified: ${files.length} unique migrations; latest ${expansion}.`);

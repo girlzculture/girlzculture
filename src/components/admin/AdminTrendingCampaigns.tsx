@@ -41,6 +41,7 @@ export default function AdminTrendingCampaigns() {
   const [trimEnd, setTrimEnd] = useState(0);
   const [posterTime, setPosterTime] = useState(0);
   const [notice, setNotice] = useState("");
+  const [mediaError, setMediaError] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [retryReady, setRetryReady] = useState(false);
@@ -89,6 +90,7 @@ export default function AdminTrendingCampaigns() {
     setTrimEnd(0);
     setPosterTime(0);
     setProgress(0);
+    setMediaError("");
   }
 
   async function selectVideo(next: File | null) {
@@ -107,7 +109,9 @@ export default function AdminTrendingCampaigns() {
       setNotice(duration > 30.5 ? "Choose a trim range of 30 seconds or less, then choose a poster frame." : "Preview the clip and choose a poster frame before saving.");
     } catch (error) {
       setFile(null);
-      setNotice(error instanceof Error ? error.message : "Unable to read this video.");
+      const message = error instanceof Error ? error.message : "Unable to read this video.";
+      setMediaError(message);
+      setNotice(message);
     }
   }
 
@@ -151,6 +155,8 @@ export default function AdminTrendingCampaigns() {
     if (!salonId) { setNotice("Search for and select an eligible salon."); return; }
     if (!editing && !file) { setNotice("Choose a video to upload."); return; }
     if (file && (trimEnd - trimStart <= 0 || trimEnd - trimStart > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
+    const requestedStatus=String(form.get("status")||"Draft");
+    if (["Scheduled","Active"].includes(requestedStatus) && (!String(form.get("entitlement_source")||"") || !String(form.get("entitlement_reference")||"").trim())) { setNotice("Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign."); return; }
     setBusy(true);
     setUploading(true);
     setRetryReady(false);
@@ -263,6 +269,7 @@ export default function AdminTrendingCampaigns() {
         <div className="relative sm:col-span-2"><Label text="Eligible salon"><div className="relative"><Search className="absolute left-3 top-3.5 text-ink/40" size={15} /><input disabled={Boolean(editing)} value={editing?.salon?.name || query} onChange={(event) => { setQuery(event.target.value); setSelectedSalon(null); }} className="min-h-11 w-full rounded-lg border border-plum/15 pl-9 text-xs" placeholder="Search salons" /></div></Label>{salons.length && !selectedSalon ? <div className="absolute z-20 mt-1 w-full rounded-lg border bg-white p-1 shadow-xl">{salons.map((salon) => <button type="button" key={salon.id} onClick={() => { setSelectedSalon(salon); setQuery(salon.name); setSalons([]); }} className="block w-full rounded p-3 text-left text-xs hover:bg-blush"><b>{salon.name}</b> · {salon.address_city}, {salon.address_state}</button>)}</div> : null}</div>
         <label onDragOver={(event) => event.preventDefault()} onDrop={dropVideo} className="block rounded-lg border border-dashed border-magenta/40 bg-blush/20 p-3 text-[10px] font-bold transition-colors hover:bg-blush/40 focus-within:ring-2 focus-within:ring-magenta"><span>{editing ? "Replacement video (optional; resets moderation)" : "Video (MP4/WebM, final clip ≤30 sec)"}</span><span className="mt-1 block font-normal text-ink/55">Drag and drop, or choose a file.</span><input type="file" accept="video/mp4,video/webm,.mp4,.webm" required={!editing} onChange={(event) => void selectVideo(event.target.files?.[0] || null)} className="mt-2 min-h-11 w-full rounded-lg border bg-white p-2 text-xs" /></label>
         <Field name="description" label="Description" defaultValue={editing?.description} />
+        {mediaError?<p role="alert" className="rounded-lg bg-red-50 p-3 text-[10px] leading-4 text-red-700 sm:col-span-2 xl:col-span-4">{mediaError}</p>:null}
         {file && previewUrl ? <div className="space-y-3 rounded-xl border border-plum/10 bg-cream p-3 sm:col-span-2 xl:col-span-4">
           <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
             <video ref={previewRef} src={previewUrl} controls playsInline preload="metadata" poster={activePoster || undefined} className="aspect-video w-full rounded-lg bg-ink object-contain" />
@@ -282,8 +289,8 @@ export default function AdminTrendingCampaigns() {
         <Field name="radius" label="Radius miles" type="number" min="1" max="250" defaultValue={editing?.radius_miles || 25} />
         <Field name="priority" label="Priority" type="number" min="0" max="100" defaultValue={editing?.priority ?? 50} />
         <Field name="weight" label="Rotation weight" type="number" min="0.1" max="100" step="0.1" defaultValue={editing?.rotation_weight || 1} />
-        <Select name="entitlement_source" label="Entitlement" defaultValue="" options={["", "stripe_payment", "verified_invoice", "platform_credit"]} />
-        <Field name="entitlement_reference" label="Payment / credit reference" placeholder={editing?.entitlement?.external_reference || "Reference ID"} />
+        <Select name="entitlement_source" label="Required funding source for Scheduled / Active" defaultValue="" options={["", "stripe_payment", "verified_invoice", "platform_credit"]} />
+        <Field name="entitlement_reference" label="Required verified payment / credit reference" placeholder={editing?.entitlement?.external_reference || "pi_, in_, or approved platform-credit reference"} />
         <Field name="amount" label="Amount USD" type="number" min="0" step="0.01" />
         <Field name="note" label="Internal note" defaultValue={editing?.internal_note} />
         {editing ? <Field name="reason" label="Change reason" required /> : null}

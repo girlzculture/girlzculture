@@ -276,6 +276,35 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
   if (error?.code === "23505") return;
   if (error) throw error;
 
+  if (["invoice.paid", "invoice.payment_failed"].includes(event.type) && context.subscriptionId) {
+    const pendingRequest = await context.admin.from("subscription_change_requests").select("id").eq("stripe_subscription_id", context.subscriptionId).eq("new_plan", newPlan).in("status", ["Awaiting confirmation", "Processing", "Requires action"]).order("requested_at", { ascending: false }).limit(1).maybeSingle();
+    if (pendingRequest.error) throw pendingRequest.error;
+    if (pendingRequest.data?.id) {
+      const lines = context.invoice?.lines?.data || [];
+      const prorationCredit = lines.filter((line) => Number(line.amount || 0) < 0).reduce((sum, line) => sum + Math.abs(Number(line.amount || 0)), 0);
+      const prorationCharge = lines.filter((line) => Number(line.amount || 0) > 0).reduce((sum, line) => sum + Number(line.amount || 0), 0);
+      const due = Number(context.invoice?.amount_due || 0);
+      const collected = Number(context.invoice?.amount_paid || 0);
+      const requestUpdate = await context.admin.from("subscription_change_requests").update({
+        status: event.type === "invoice.paid" ? "Paid" : "Failed",
+        effective_at: event.type === "invoice.paid" ? eventDate : null,
+        event_source: "stripe_webhook",
+        currency: String(context.invoice?.currency || object.currency || "usd").toLowerCase(),
+        proration_credit: prorationCredit,
+        proration_charge: prorationCharge,
+        amount_due: due,
+        amount_collected: collected,
+        amount_pending: event.type === "invoice.paid" ? 0 : Math.max(0, due - collected),
+        amount_failed: event.type === "invoice.payment_failed" ? due : 0,
+        stripe_invoice_id: context.invoiceId,
+        stripe_payment_reference: stripeId(context.invoice?.payment_intent),
+        failure_reason: event.type === "invoice.payment_failed" ? failureReason || "Stripe reported that the invoice payment failed." : null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", pendingRequest.data.id);
+      if (requestUpdate.error) throw requestUpdate.error;
+    }
+  }
+
   if (context.subscriptionId && ["invoice.paid", "invoice.payment_failed"].includes(event.type)) {
     const { error: stateError } = await context.admin.from("subscriptions").update({
       last_invoice_id: context.invoiceId,

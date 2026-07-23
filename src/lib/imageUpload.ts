@@ -63,6 +63,18 @@ export async function inspectImageFile(file: File) {
 }
 
 export type ImageTransform = { zoom?: number; positionX?: number; positionY?: number; rotation?: 0 | 90 | 180 | 270 };
+export type ImageRenditionDevice = "desktop" | "tablet" | "mobile";
+export type ResponsiveImageTransforms = Record<ImageRenditionDevice, ImageTransform>;
+
+export function profileForRendition(profile: ImageUploadProfile, device: ImageRenditionDevice): ImageUploadProfile {
+  if ((profile.key === "cover" || profile.key === "content") && device === "tablet") {
+    return { ...profile, aspectWidth: 4, aspectHeight: 3, outputWidth: Math.min(profile.outputWidth, 1440) };
+  }
+  if ((profile.key === "cover" || profile.key === "content") && device === "mobile") {
+    return { ...profile, aspectWidth: 9, aspectHeight: 16, outputWidth: Math.min(profile.outputWidth, 1080) };
+  }
+  return { ...profile };
+}
 
 export async function optimizeImageFile(file: File, profileOrWidth: ImageUploadProfile | number = IMAGE_UPLOAD_PROFILES.gallery, transform: ImageTransform = {}) {
   if (typeof window === "undefined" || !isSupportedImageType(file)) return file;

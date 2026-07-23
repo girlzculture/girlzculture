@@ -1,7 +1,30 @@
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
+import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
 
 const allowed={styles:{permission:"styles",label:"service"},stylists:{permission:"stylists",label:"stylist"},salon_products:{permission:"products",label:"product"},salon_promotions:{permission:"promotions",label:"promotion"},salon_blockouts:{permission:"availability",label:"blocked time"}} as const;
+
+export async function GET(request:Request){
+  let admin;
+  let salonId:string|null=null;
+  try{
+    const search=new URL(request.url).searchParams;
+    const table=cleanText(search.get("table"),50);
+    if(table!=="style_materials")return Response.json({error:"Choose a supported salon record type."},{status:400});
+    const styleId=cleanText(search.get("style_id"),60);
+    if(!/^[0-9a-f-]{36}$/i.test(styleId))return Response.json({error:"Choose a valid service."},{status:400});
+    const context=await requireSalonPermission(request,"styles");
+    admin=context.admin;salonId=context.salon.id;
+    const style=await admin.from("styles").select("id").eq("id",styleId).eq("salon_id",salonId).maybeSingle();
+    if(style.error)throw style.error;
+    if(!style.data)return Response.json({error:"The service was not found in this salon."},{status:404});
+    const result=await admin.from("style_materials").select("*").eq("style_id",styleId).order("created_at");
+    if(result.error)throw result.error;
+    return Response.json({records:result.data||[]},{headers:{"Cache-Control":"private, no-store"}});
+  }catch(error){
+    return monitoredRouteFailure({request,admin,error,feature:"salon-dashboard",action:"load-style-materials",actorRole:"salon",salonId,safeMessage:"We couldn't load the service materials."});
+  }
+}
 
 export async function POST(request:Request){
   try{
@@ -12,7 +35,13 @@ export async function POST(request:Request){
       const column=table==="styles"?"style_id":"stylist_id";const{count,error}=await admin.from("bookings").select("*",{count:"exact",head:true}).eq(column,id);if(error)throw error;dependencySummary={bookings:count||0};
       if((count||0)>0){const result=await admin.from(table).update({archived_at:new Date().toISOString()}).eq("id",id).eq("salon_id",salon.id).select().single();if(result.error)throw result.error;after=result.data;action="Archived";}else{const result=await admin.from(table).delete().eq("id",id).eq("salon_id",salon.id);if(result.error)throw result.error;}
     }else if(table==="salon_products"){const result=await admin.from(table).update({is_visible:false,archived_at:new Date().toISOString()}).eq("id",id).eq("salon_id",salon.id).select().single();if(result.error)throw result.error;after=result.data;action="Archived";}
-    else if(table==="salon_promotions"){const result=await admin.from(table).update({is_active:false,archived_at:new Date().toISOString()}).eq("id",id).eq("salon_id",salon.id).select().single();if(result.error)throw result.error;after=result.data;action="Archived";}
+    else if(table==="salon_promotions"){
+      const linked=await admin.from("bookings").select("id",{count:"exact",head:true}).eq("salon_promotion_id",id);
+      if(linked.error)throw linked.error;
+      dependencySummary={bookings:linked.count||0};
+      if((linked.count||0)>0){const result=await admin.from(table).update({status:"Archived",is_active:false,archived_at:new Date().toISOString()}).eq("id",id).eq("salon_id",salon.id).select().single();if(result.error)throw result.error;after=result.data;action="Archived";}
+      else{const result=await admin.from(table).delete().eq("id",id).eq("salon_id",salon.id);if(result.error)throw result.error;}
+    }
     else{const result=await admin.from(table).delete().eq("id",id).eq("salon_id",salon.id);if(result.error)throw result.error;}
     await admin.from("record_management_events").insert({record_type:table,record_id:id,record_label:name,action,dependency_summary:dependencySummary,before_values:record,after_values:after,reason:cleanText(body.reason,300)||"Removed from salon dashboard",acting_user_id:user.id,acting_scope:"salon_owner"});
     return Response.json({ok:true,action:action.toLowerCase(),message:action==="Archived"?`This ${config.label} has history, so it was hidden and archived safely.`:`The ${config.label} was removed.`});

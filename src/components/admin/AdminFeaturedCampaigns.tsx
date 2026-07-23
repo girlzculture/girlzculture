@@ -2,25 +2,686 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { CalendarClock, CheckCircle2, Pause, Play, Search, ShieldCheck } from "lucide-react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  Pause,
+  Play,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 
-type Row=Record<string,any>;
-const defaultSettings={empty_title:"Own a business? Get featured here.",empty_body:"Put your salon in front of nearby clients with a clearly labeled featured placement.",empty_href:"/partner"};
-function localDateTime(value?:string){const date=value?new Date(value):new Date(Date.now()+60*60_000);return new Date(date.getTime()-date.getTimezoneOffset()*60_000).toISOString().slice(0,16)}
-async function headers(json=false){const session=await getSessionForScope("admin");if(!session)throw new Error("Your admin session has expired.");return{Authorization:`Bearer ${session.access_token}`,...(json?{"Content-Type":"application/json"}:{})}}
-
-export default function AdminFeaturedCampaigns(){
-  const [campaigns,setCampaigns]=useState<Row[]>([]);const [settings,setSettings]=useState<Row>(defaultSettings);const [salons,setSalons]=useState<Row[]>([]);const [salonQuery,setSalonQuery]=useState("");const [selectedSalon,setSelectedSalon]=useState<Row|null>(null);const [editing,setEditing]=useState<Row|null>(null);const [notice,setNotice]=useState("");const [busy,setBusy]=useState(false);const [newWindow]=useState(()=>({start:localDateTime(),end:localDateTime(new Date(Date.now()+8*24*60*60_000).toISOString())}));
-  async function load(){const response=await fetch("/api/admin/featured-campaigns",{headers:await headers(),cache:"no-store"});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to load campaigns.");setCampaigns(Array.isArray(body.campaigns)?body.campaigns:[]);setSettings(body.settings||defaultSettings)}
-  useEffect(()=>{const timer=window.setTimeout(()=>void load().catch((error)=>setNotice(error instanceof Error?error.message:"Unable to load campaigns.")),0);return()=>window.clearTimeout(timer)},[]);
-  useEffect(()=>{if(salonQuery.trim().length<2){const timer=window.setTimeout(()=>setSalons([]),0);return()=>window.clearTimeout(timer)}const controller=new AbortController();const timer=window.setTimeout(()=>void(async()=>{try{const response=await fetch(`/api/admin/featured-campaigns?mode=salons&q=${encodeURIComponent(salonQuery)}`,{headers:await headers(),signal:controller.signal});const body=await response.json();if(response.ok)setSalons(Array.isArray(body.salons)?body.salons:[])}catch(error){if((error as Error).name!=="AbortError")console.error("Featured salon lookup failed",error)}})(),220);return()=>{window.clearTimeout(timer);controller.abort()}},[salonQuery]);
-  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const formElement=event.currentTarget;const form=new FormData(formElement);const salonId=editing?.salon_id||selectedSalon?.id;if(!salonId){setNotice("Search for and select an eligible salon.");return}setBusy(true);setNotice("");try{const payload={action:"save",id:editing?.id||null,salon_id:salonId,status:form.get("status"),starts_at:form.get("starts_at"),ends_at:form.get("ends_at"),timezone:form.get("timezone"),radius_miles:form.get("radius"),priority:form.get("priority"),rotation_weight:form.get("weight"),internal_note:form.get("note"),entitlement_source:form.get("entitlement_source"),entitlement_reference:form.get("entitlement_reference"),entitlement_amount_minor:form.get("amount")?Math.round(Number(form.get("amount"))*100):null,reason:form.get("reason")};const response=await fetch("/api/admin/featured-campaigns",{method:"POST",headers:await headers(true),body:JSON.stringify(payload)});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to save campaign.");await load();setEditing(null);setSelectedSalon(null);setSalonQuery("");formElement.reset();setNotice("Featured Salon campaign saved and audited.")}catch(error){setNotice(error instanceof Error?error.message:"Unable to save campaign.")}finally{setBusy(false)}}
-  async function changeStatus(campaign:Row,status:string){const reason=window.prompt(`Internal reason for ${status.toLowerCase()}:`)?.trim()||"";if(reason.length<5){setNotice("Enter an internal reason of at least 5 characters.");return}setBusy(true);try{const response=await fetch("/api/admin/featured-campaigns",{method:"POST",headers:await headers(true),body:JSON.stringify({action:"save",id:campaign.id,salon_id:campaign.salon_id,status,starts_at:campaign.starts_at,ends_at:campaign.ends_at,timezone:campaign.timezone,radius_miles:campaign.radius_miles,priority:campaign.priority,rotation_weight:campaign.rotation_weight,internal_note:campaign.internal_note,reason})});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to change campaign status.");await load();setNotice(`Campaign ${status.toLowerCase()} and audit recorded.`)}catch(error){setNotice(error instanceof Error?error.message:"Unable to change campaign status.")}finally{setBusy(false)}}
-  async function saveSettings(){setBusy(true);try{const response=await fetch("/api/admin/featured-campaigns",{method:"POST",headers:await headers(true),body:JSON.stringify({action:"settings",...settings})});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to save promotional card.");setSettings(body.settings);setNotice("Zero-result promotional card saved.")}catch(error){setNotice(error instanceof Error?error.message:"Unable to save promotional card.")}finally{setBusy(false)}}
-  return <div className="space-y-5">{notice?<p role="status" className="rounded-[10px] border border-magenta/20 bg-blush/45 p-3 text-xs text-plum">{notice}</p>:null}<section className="rounded-[15px] border border-plum/10 bg-white p-5"><div className="flex items-start gap-3"><ShieldCheck className="text-magenta"/><div><h2 className="font-serif text-2xl text-plum">Paid placement controls</h2><p className="mt-1 text-xs leading-5 text-ink/60">A campaign cannot become Scheduled or Active without a traceable paid or credited entitlement. Subscription tier alone never qualifies a placement.</p></div></div><form onSubmit={submit} className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><div className="relative sm:col-span-2"><label className="text-[10px] font-bold">Eligible salon</label><div className="relative mt-1"><Search className="absolute left-3 top-3.5 text-ink/40" size={15}/><input disabled={Boolean(editing)} value={editing?.salon?.name||salonQuery} onChange={(event)=>{setSalonQuery(event.target.value);setSelectedSalon(null)}} placeholder="Search active salons" className="min-h-11 w-full rounded-lg border border-plum/15 pl-9 pr-3 text-xs disabled:bg-cream"/></div>{salons.length&&!selectedSalon?<div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border bg-white p-1 shadow-xl">{salons.map((salon)=><button type="button" key={salon.id} onClick={()=>{setSelectedSalon(salon);setSalonQuery(salon.name);setSalons([])}} className="block w-full rounded p-3 text-left text-xs hover:bg-blush"><b>{salon.name}</b><span className="block text-ink/50">{[salon.address_city,salon.address_state].filter(Boolean).join(", ")}</span></button>)}</div>:null}</div><Field label="Start" name="starts_at" type="datetime-local" defaultValue={editing?.starts_at?localDateTime(editing.starts_at):newWindow.start}/><Field label="End" name="ends_at" type="datetime-local" defaultValue={editing?.ends_at?localDateTime(editing.ends_at):newWindow.end}/><Field label="Timezone" name="timezone" defaultValue={editing?.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone}/><Select label="Status" name="status" defaultValue={editing?.status||"Draft"} options={["Draft","Scheduled","Active","Paused","Expired"]}/><Field label="Radius (miles)" name="radius" type="number" min="1" max="250" step="1" defaultValue={editing?.radius_miles||25}/><Field label="Priority (0–100)" name="priority" type="number" min="0" max="100" defaultValue={editing?.priority??50}/><Field label="Rotation weight" name="weight" type="number" min="0.1" max="100" step="0.1" defaultValue={editing?.rotation_weight||1}/><Select label="Entitlement source" name="entitlement_source" defaultValue="" options={["","stripe_payment","verified_invoice","platform_credit"]}/><Field label="Payment / credit reference" name="entitlement_reference" placeholder={editing?.entitlement?.external_reference||"Stripe payment, invoice, or credit ID"}/><Field label="Amount (USD)" name="amount" type="number" min="0" step="0.01" placeholder={editing?.entitlement?.amount_minor!=null?String(editing.entitlement.amount_minor/100):"Optional"}/><Field label="Internal note" name="note" defaultValue={editing?.internal_note||""}/>{editing?<Field label="Change reason (required)" name="reason" required placeholder="Why this campaign is changing"/>:null}<div className="flex items-end gap-2 xl:col-span-2"><button disabled={busy} className="min-h-11 flex-1 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-50">{busy?"Saving…":editing?"Save audited changes":"Create campaign"}</button>{editing?<button type="button" onClick={()=>setEditing(null)} className="min-h-11 rounded-lg border border-plum/15 px-5 text-xs font-bold">Cancel</button>:null}</div></form></section><section className="rounded-[15px] border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Campaigns</h2><div className="mt-4 space-y-3">{campaigns.map((campaign)=><article key={campaign.id} className="rounded-[12px] border border-plum/10 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h3 className="font-serif text-lg text-plum">{campaign.salon?.name||"Salon unavailable"}</h3><Badge value={campaign.status}/></div><p className="mt-1 text-[10px] text-ink/55">{new Date(campaign.starts_at).toLocaleString()} → {new Date(campaign.ends_at).toLocaleString()} · {campaign.radius_miles} mi</p><p className="mt-1 text-[10px] text-ink/55">Entitlement: {campaign.entitlement?`${campaign.entitlement.source} · ${campaign.entitlement.external_reference} · ${campaign.entitlement.status}`:"Not attached"}</p></div><div className="flex flex-wrap gap-2"><button onClick={()=>setEditing(campaign)} className="min-h-10 rounded-lg border border-magenta px-4 text-[10px] font-bold text-magenta">Edit</button>{campaign.status==="Active"?<button disabled={busy} onClick={()=>void changeStatus(campaign,"Paused")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-4 text-[10px] font-bold"><Pause size={13}/>Pause</button>:campaign.status==="Paused"?<button disabled={busy} onClick={()=>void changeStatus(campaign,"Active")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-plum px-4 text-[10px] font-bold text-white"><Play size={13}/>Resume</button>:null}{campaign.status!=="Expired"?<button disabled={busy} onClick={()=>void changeStatus(campaign,"Expired")} className="min-h-10 rounded-lg border border-red-300 px-4 text-[10px] font-bold text-red-700">Expire</button>:null}</div></div>{campaign.audit?.length?<details className="mt-3 text-[10px]"><summary className="cursor-pointer font-bold text-magenta">Audit history ({campaign.audit.length})</summary><div className="mt-2 space-y-2">{[...campaign.audit].sort((a:Row,b:Row)=>String(b.created_at).localeCompare(String(a.created_at))).map((entry:Row)=><p key={entry.id} className="border-l-2 border-magenta pl-2"><b>{entry.action}</b> · {new Date(entry.created_at).toLocaleString()}<span className="block text-ink/55">{entry.reason||"Initial creation"}</span></p>)}</div></details>:null}</article>)}{!campaigns.length?<p className="rounded-lg bg-cream p-8 text-center text-xs text-ink/55">No Featured Salon campaigns yet.</p>:null}</div></section><section className="rounded-[15px] border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Zero-result promotional card</h2><p className="mt-1 text-xs text-ink/55">This single honest card appears only when no paid featured campaign qualifies near a customer.</p><div className="mt-4 grid gap-3 sm:grid-cols-3"><FieldControlled label="Title" value={settings.empty_title||""} onChange={(value)=>setSettings({...settings,empty_title:value})}/><FieldControlled label="Body" value={settings.empty_body||""} onChange={(value)=>setSettings({...settings,empty_body:value})}/><FieldControlled label="Internal link" value={settings.empty_href||""} onChange={(value)=>setSettings({...settings,empty_href:value})}/></div><button disabled={busy} onClick={()=>void saveSettings()} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><CheckCircle2 size={15}/>Save promotional card</button></section><p className="flex items-center gap-2 text-[10px] text-ink/50"><CalendarClock size={13}/>Campaign expiration is enforced in database discovery and by the scheduled expiry function.</p></div>
+type Row = Record<string, any>;
+const defaultSettings = {
+  empty_title: "Own a business? Get featured here.",
+  empty_body:
+    "Put your salon in front of nearby clients with a clearly labeled featured placement.",
+  empty_href: "/partner",
+};
+function localDateTime(value?: string) {
+  const date = value ? new Date(value) : new Date(Date.now() + 60 * 60_000);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
 }
-function Field({label,name,type="text",defaultValue,placeholder,required=false,min,max,step}:{label:string;name:string;type?:string;defaultValue?:string|number;placeholder?:string;required?:boolean;min?:string;max?:string;step?:string}){return <label className="text-[10px] font-bold">{label}<input key={`${name}-${defaultValue}`} required={required} name={name} type={type} defaultValue={defaultValue} placeholder={placeholder} min={min} max={max} step={step} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal"/></label>}
-function Select({label,name,defaultValue,options}:{label:string;name:string;defaultValue:string;options:string[]}){return <label className="text-[10px] font-bold">{label}<select key={`${name}-${defaultValue}`} name={name} defaultValue={defaultValue} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal">{options.map((option)=><option key={option} value={option}>{option||"Attach later (Draft only)"}</option>)}</select></label>}
-function FieldControlled({label,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}){return <label className="text-[10px] font-bold">{label}<input value={value} onChange={(event)=>onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal"/></label>}
-function Badge({value}:{value:string}){const active=value==="Active";const expired=value==="Expired";return <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${active?"bg-green-100 text-green-800":expired?"bg-slate-100 text-slate-600":"bg-blush text-plum"}`}>{value}</span>}
+async function headers(json = false) {
+  const session = await getSessionForScope("admin");
+  if (!session) throw new Error("Your admin session has expired.");
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    ...(json ? { "Content-Type": "application/json" } : {}),
+  };
+}
+
+export default function AdminFeaturedCampaigns() {
+  const [campaigns, setCampaigns] = useState<Row[]>([]);
+  const [settings, setSettings] = useState<Row>(defaultSettings);
+  const [salons, setSalons] = useState<Row[]>([]);
+  const [salonQuery, setSalonQuery] = useState("");
+  const [selectedSalon, setSelectedSalon] = useState<Row | null>(null);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [newWindow] = useState(() => ({
+    start: localDateTime(),
+    end: localDateTime(
+      new Date(Date.now() + 8 * 24 * 60 * 60_000).toISOString(),
+    ),
+  }));
+  async function load() {
+    const response = await fetch("/api/admin/featured-campaigns", {
+      headers: await headers(),
+      cache: "no-store",
+    });
+    const body = await response.json();
+    if (!response.ok)
+      throw new Error(body.error || "Unable to load campaigns.");
+    setCampaigns(Array.isArray(body.campaigns) ? body.campaigns : []);
+    setSettings(body.settings || defaultSettings);
+  }
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () =>
+        void load().catch((error) =>
+          setNotice(
+            error instanceof Error
+              ? error.message
+              : "Unable to load campaigns.",
+          ),
+        ),
+      0,
+    );
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (salonQuery.trim().length < 2) {
+      const timer = window.setTimeout(() => setSalons([]), 0);
+      return () => window.clearTimeout(timer);
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(
+      () =>
+        void (async () => {
+          try {
+            const response = await fetch(
+              `/api/admin/featured-campaigns?mode=salons&q=${encodeURIComponent(salonQuery)}`,
+              { headers: await headers(), signal: controller.signal },
+            );
+            const body = await response.json();
+            if (response.ok)
+              setSalons(Array.isArray(body.salons) ? body.salons : []);
+          } catch (error) {
+            if ((error as Error).name !== "AbortError")
+              console.error("Featured salon lookup failed", error);
+          }
+        })(),
+      220,
+    );
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [salonQuery]);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const salonId = editing?.salon_id || selectedSalon?.id;
+    if (!salonId) {
+      setNotice("Search for and select an eligible salon.");
+      return;
+    }
+    const requestedStatus = String(form.get("status") || "Draft");
+    const entitlementSource = String(form.get("entitlement_source") || "");
+    const entitlementReference = String(
+      form.get("entitlement_reference") || "",
+    ).trim();
+    if (
+      ["Scheduled", "Active"].includes(requestedStatus) &&
+      !editing?.entitlement &&
+      (!entitlementSource || !entitlementReference)
+    ) {
+      setNotice(
+        "Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign.",
+      );
+      return;
+    }
+    setBusy(true);
+    setNotice("");
+    try {
+      const payload = {
+        action: "save",
+        id: editing?.id || null,
+        salon_id: salonId,
+        status: requestedStatus,
+        starts_at: form.get("starts_at"),
+        ends_at: form.get("ends_at"),
+        timezone: form.get("timezone"),
+        radius_miles: form.get("radius"),
+        priority: form.get("priority"),
+        rotation_weight: form.get("weight"),
+        internal_note: form.get("note"),
+        entitlement_source: entitlementSource || null,
+        entitlement_reference: entitlementReference || null,
+        entitlement_amount_minor: form.get("amount")
+          ? Math.round(Number(form.get("amount")) * 100)
+          : null,
+        reason: form.get("reason"),
+      };
+      const response = await fetch("/api/admin/featured-campaigns", {
+        method: "POST",
+        headers: await headers(true),
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to save campaign.");
+      await load();
+      setEditing(null);
+      setSelectedSalon(null);
+      setSalonQuery("");
+      formElement.reset();
+      setNotice("Featured Salon campaign saved and audited.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "Unable to save campaign.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function changeStatus(campaign: Row, status: string) {
+    const reason =
+      window.prompt(`Internal reason for ${status.toLowerCase()}:`)?.trim() ||
+      "";
+    if (reason.length < 5) {
+      setNotice("Enter an internal reason of at least 5 characters.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/featured-campaigns", {
+        method: "POST",
+        headers: await headers(true),
+        body: JSON.stringify({
+          action: "save",
+          id: campaign.id,
+          salon_id: campaign.salon_id,
+          status,
+          starts_at: campaign.starts_at,
+          ends_at: campaign.ends_at,
+          timezone: campaign.timezone,
+          radius_miles: campaign.radius_miles,
+          priority: campaign.priority,
+          rotation_weight: campaign.rotation_weight,
+          internal_note: campaign.internal_note,
+          reason,
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to change campaign status.");
+      await load();
+      setNotice(`Campaign ${status.toLowerCase()} and audit recorded.`);
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to change campaign status.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function saveSettings() {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/featured-campaigns", {
+        method: "POST",
+        headers: await headers(true),
+        body: JSON.stringify({ action: "settings", ...settings }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to save promotional card.");
+      setSettings(body.settings);
+      setNotice("Zero-result promotional card saved.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to save promotional card.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="space-y-5">
+      {notice ? (
+        <p
+          role="status"
+          className="rounded-[10px] border border-magenta/20 bg-blush/45 p-3 text-xs text-plum"
+        >
+          {notice}
+        </p>
+      ) : null}
+      <section className="rounded-[15px] border border-plum/10 bg-white p-5">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="text-magenta" />
+          <div>
+            <h2 className="font-serif text-2xl text-plum">
+              Paid placement controls
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-ink/60">
+              A campaign cannot become Scheduled or Active without a traceable
+              paid or credited entitlement. Subscription tier alone never
+              qualifies a placement.
+            </p>
+            <p className="mt-1 text-[10px] font-semibold leading-4 text-magenta">
+              Scheduled and Active campaigns require a verified Stripe payment,
+              paid invoice, or approved platform credit covering the full
+              campaign period.
+            </p>
+          </div>
+        </div>
+        <form
+          onSubmit={submit}
+          className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          <div className="relative sm:col-span-2">
+            <label className="text-[10px] font-bold">Eligible salon</label>
+            <div className="relative mt-1">
+              <Search
+                className="absolute left-3 top-3.5 text-ink/40"
+                size={15}
+              />
+              <input
+                disabled={Boolean(editing)}
+                value={editing?.salon?.name || salonQuery}
+                onChange={(event) => {
+                  setSalonQuery(event.target.value);
+                  setSelectedSalon(null);
+                }}
+                placeholder="Search active salons"
+                className="min-h-11 w-full rounded-lg border border-plum/15 pl-9 pr-3 text-xs disabled:bg-cream"
+              />
+            </div>
+            {salons.length && !selectedSalon ? (
+              <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border bg-white p-1 shadow-xl">
+                {salons.map((salon) => (
+                  <button
+                    type="button"
+                    key={salon.id}
+                    onClick={() => {
+                      setSelectedSalon(salon);
+                      setSalonQuery(salon.name);
+                      setSalons([]);
+                    }}
+                    className="block w-full rounded p-3 text-left text-xs hover:bg-blush"
+                  >
+                    <b>{salon.name}</b>
+                    <span className="block text-ink/50">
+                      {[salon.address_city, salon.address_state]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <Field
+            label="Start"
+            name="starts_at"
+            type="datetime-local"
+            defaultValue={
+              editing?.starts_at
+                ? localDateTime(editing.starts_at)
+                : newWindow.start
+            }
+          />
+          <Field
+            label="End"
+            name="ends_at"
+            type="datetime-local"
+            defaultValue={
+              editing?.ends_at ? localDateTime(editing.ends_at) : newWindow.end
+            }
+          />
+          <Field
+            label="Timezone"
+            name="timezone"
+            defaultValue={
+              editing?.timezone ||
+              Intl.DateTimeFormat().resolvedOptions().timeZone
+            }
+          />
+          <Select
+            label="Status"
+            name="status"
+            defaultValue={editing?.status || "Draft"}
+            options={["Draft", "Scheduled", "Active", "Paused", "Expired"]}
+          />
+          <Field
+            label="Radius (miles)"
+            name="radius"
+            type="number"
+            min="1"
+            max="250"
+            step="1"
+            defaultValue={editing?.radius_miles || 25}
+          />
+          <Field
+            label="Priority (0–100)"
+            name="priority"
+            type="number"
+            min="0"
+            max="100"
+            defaultValue={editing?.priority ?? 50}
+          />
+          <Field
+            label="Rotation weight"
+            name="weight"
+            type="number"
+            min="0.1"
+            max="100"
+            step="0.1"
+            defaultValue={editing?.rotation_weight || 1}
+          />
+          <Select
+            label="Required funding source for Scheduled / Active"
+            name="entitlement_source"
+            defaultValue=""
+            options={[
+              "",
+              "stripe_payment",
+              "verified_invoice",
+              "platform_credit",
+            ]}
+          />
+          <Field
+            label="Required verified payment / credit reference"
+            name="entitlement_reference"
+            placeholder={
+              editing?.entitlement?.external_reference ||
+              "pi_, in_, or approved platform-credit reference"
+            }
+          />
+          <Field
+            label="Amount (USD)"
+            name="amount"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder={
+              editing?.entitlement?.amount_minor != null
+                ? String(editing.entitlement.amount_minor / 100)
+                : "Optional"
+            }
+          />
+          <Field
+            label="Internal note"
+            name="note"
+            defaultValue={editing?.internal_note || ""}
+          />
+          {editing ? (
+            <Field
+              label="Change reason (required)"
+              name="reason"
+              required
+              placeholder="Why this campaign is changing"
+            />
+          ) : null}
+          <div className="flex items-end gap-2 xl:col-span-2">
+            <button
+              disabled={busy}
+              className="min-h-11 flex-1 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-50"
+            >
+              {busy
+                ? "Saving…"
+                : editing
+                  ? "Save audited changes"
+                  : "Create campaign"}
+            </button>
+            {editing ? (
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="min-h-11 rounded-lg border border-plum/15 px-5 text-xs font-bold"
+              >
+                Cancel
+              </button>
+            ) : null}
+          </div>
+        </form>
+      </section>
+      <section className="rounded-[15px] border border-plum/10 bg-white p-5">
+        <h2 className="font-serif text-2xl text-plum">Campaigns</h2>
+        <div className="mt-4 space-y-3">
+          {campaigns.map((campaign) => (
+            <article
+              key={campaign.id}
+              className="rounded-[12px] border border-plum/10 p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif text-lg text-plum">
+                      {campaign.salon?.name || "Salon unavailable"}
+                    </h3>
+                    <Badge value={campaign.status} />
+                  </div>
+                  <p className="mt-1 text-[10px] text-ink/55">
+                    {new Date(campaign.starts_at).toLocaleString()} →{" "}
+                    {new Date(campaign.ends_at).toLocaleString()} ·{" "}
+                    {campaign.radius_miles} mi
+                  </p>
+                  <p className="mt-1 text-[10px] text-ink/55">
+                    Entitlement:{" "}
+                    {campaign.entitlement
+                      ? `${campaign.entitlement.source} · ${campaign.entitlement.external_reference} · ${campaign.entitlement.status}`
+                      : "Not attached"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setEditing(campaign)}
+                    className="min-h-10 rounded-lg border border-magenta px-4 text-[10px] font-bold text-magenta"
+                  >
+                    Edit
+                  </button>
+                  {campaign.status === "Active" ? (
+                    <button
+                      disabled={busy}
+                      onClick={() => void changeStatus(campaign, "Paused")}
+                      className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-4 text-[10px] font-bold"
+                    >
+                      <Pause size={13} />
+                      Pause
+                    </button>
+                  ) : campaign.status === "Paused" ? (
+                    <button
+                      disabled={busy}
+                      onClick={() => void changeStatus(campaign, "Active")}
+                      className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-plum px-4 text-[10px] font-bold text-white"
+                    >
+                      <Play size={13} />
+                      Resume
+                    </button>
+                  ) : null}
+                  {campaign.status !== "Expired" ? (
+                    <button
+                      disabled={busy}
+                      onClick={() => void changeStatus(campaign, "Expired")}
+                      className="min-h-10 rounded-lg border border-red-300 px-4 text-[10px] font-bold text-red-700"
+                    >
+                      Expire
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {campaign.audit?.length ? (
+                <details className="mt-3 text-[10px]">
+                  <summary className="cursor-pointer font-bold text-magenta">
+                    Audit history ({campaign.audit.length})
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {[...campaign.audit]
+                      .sort((a: Row, b: Row) =>
+                        String(b.created_at).localeCompare(
+                          String(a.created_at),
+                        ),
+                      )
+                      .map((entry: Row) => (
+                        <p
+                          key={entry.id}
+                          className="border-l-2 border-magenta pl-2"
+                        >
+                          <b>{entry.action}</b> ·{" "}
+                          {new Date(entry.created_at).toLocaleString()}
+                          <span className="block text-ink/55">
+                            {entry.reason || "Initial creation"}
+                          </span>
+                        </p>
+                      ))}
+                  </div>
+                </details>
+              ) : null}
+            </article>
+          ))}
+          {!campaigns.length ? (
+            <p className="rounded-lg bg-cream p-8 text-center text-xs text-ink/55">
+              No Featured Salon campaigns yet.
+            </p>
+          ) : null}
+        </div>
+      </section>
+      <section className="rounded-[15px] border border-plum/10 bg-white p-5">
+        <h2 className="font-serif text-2xl text-plum">
+          Zero-result promotional card
+        </h2>
+        <p className="mt-1 text-xs text-ink/55">
+          This single honest card appears only when no paid featured campaign
+          qualifies near a customer.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <FieldControlled
+            label="Title"
+            value={settings.empty_title || ""}
+            onChange={(value) =>
+              setSettings({ ...settings, empty_title: value })
+            }
+          />
+          <FieldControlled
+            label="Body"
+            value={settings.empty_body || ""}
+            onChange={(value) =>
+              setSettings({ ...settings, empty_body: value })
+            }
+          />
+          <FieldControlled
+            label="Internal link"
+            value={settings.empty_href || ""}
+            onChange={(value) =>
+              setSettings({ ...settings, empty_href: value })
+            }
+          />
+        </div>
+        <button
+          disabled={busy}
+          onClick={() => void saveSettings()}
+          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"
+        >
+          <CheckCircle2 size={15} />
+          Save promotional card
+        </button>
+      </section>
+      <p className="flex items-center gap-2 text-[10px] text-ink/50">
+        <CalendarClock size={13} />
+        Campaign expiration is enforced in database discovery and by the
+        scheduled expiry function.
+      </p>
+    </div>
+  );
+}
+function Field({
+  label,
+  name,
+  type = "text",
+  defaultValue,
+  placeholder,
+  required = false,
+  min,
+  max,
+  step,
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  defaultValue?: string | number;
+  placeholder?: string;
+  required?: boolean;
+  min?: string;
+  max?: string;
+  step?: string;
+}) {
+  return (
+    <label className="text-[10px] font-bold">
+      {label}
+      <input
+        key={`${name}-${defaultValue}`}
+        required={required}
+        name={name}
+        type={type}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        min={min}
+        max={max}
+        step={step}
+        className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal"
+      />
+    </label>
+  );
+}
+function Select({
+  label,
+  name,
+  defaultValue,
+  options,
+}: {
+  label: string;
+  name: string;
+  defaultValue: string;
+  options: string[];
+}) {
+  return (
+    <label className="text-[10px] font-bold">
+      {label}
+      <select
+        key={`${name}-${defaultValue}`}
+        name={name}
+        defaultValue={defaultValue}
+        className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option || "Attach later (Draft only)"}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+function FieldControlled({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="text-[10px] font-bold">
+      {label}
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal"
+      />
+    </label>
+  );
+}
+function Badge({ value }: { value: string }) {
+  const active = value === "Active";
+  const expired = value === "Expired";
+  return (
+    <span
+      className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${active ? "bg-green-100 text-green-800" : expired ? "bg-slate-100 text-slate-600" : "bg-blush text-plum"}`}
+    >
+      {value}
+    </span>
+  );
+}

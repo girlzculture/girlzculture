@@ -11,6 +11,7 @@ import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHO
 import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import { calculateSalonPromotion, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 
 type Row = Record<string, any>;
 type Props = { salon: Row; styles: Row[]; stylists: Row[];depositPercentage:number;maximumAdvanceDays:number;clientNotesMaxLength:number };
@@ -50,6 +51,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const requestedStyle = searchParams.get("style") || searchParams.get("service");
+  const requestedPromotion = searchParams.get("promotion");
   const [styleId, setStyleId] = useState(requestedStyle && styles.some((row) => row.id === requestedStyle) ? requestedStyle : styles[0]?.id || "");
   const requestedStylist = searchParams.get("stylist");
   const [stylistId, setStylistId] = useState(requestedStylist && stylists.some((row) => row.id === requestedStylist) ? requestedStylist : "any");
@@ -63,6 +65,8 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
+  const [salonPromotion, setSalonPromotion] = useState<SalonPromotion | null>(null);
+  const [salonPromotionMessage, setSalonPromotionMessage] = useState("");
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState(searchParams.get("payment") === "cancelled" ? "Checkout was cancelled. Your appointment was not booked." : closedToday ? "This salon is closed today. You can still choose a future date." : "");
@@ -82,11 +86,14 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const selectedGenericOptions = genericOptionGroups.flatMap((group) => group.options.filter((item) => (selectedOptions[group.id] || []).includes(item.value)));
   const genericOptionPrice = selectedGenericOptions.reduce((sum, item) => sum + item.price_add, 0);
   const genericDurationAdjustmentMinutes = selectedGenericOptions.reduce((sum, item) => sum + item.duration_add_minutes, 0);
-  const total = Math.max(0, Number(style?.price_display_min || style?.base_price || 0)
+  const subtotal = Math.max(0, Number(style?.price_display_min || style?.base_price || 0)
     + Number(sizeOptions.find((item: Row) => item.value === size)?.price_add || 0)
     + Number(lengthOptions.find((item: Row) => item.value === length)?.price_add || 0)
     + addonOptions.filter((item: Row) => addons.includes(item.value)).reduce((sum: number, item: Row) => sum + item.price_add, 0)
     + genericOptionPrice);
+  const selectedAddonDetails = addonOptions.filter((item: Row) => addons.includes(item.value)).map((item: Row) => ({ value: String(item.value), label: String(item.label || item.value), price: Number(item.price_add || 0) }));
+  const promotionPrice = calculateSalonPromotion(salonPromotion, { salonId: String(salon.id || ""), styleId: String(style?.id || ""), serviceGroupId: style?.service_group_id, masterStyleId: style?.master_style_id, basePrice: Number(style?.base_price || style?.price_display_min || 0), selectedAddons: selectedAddonDetails, subtotal });
+  const total = promotionPrice.eligible ? promotionPrice.total : subtotal;
   const originalDeposit = Number((total * (depositPercentage/100)).toFixed(2));
   const calculatedDeposit = Math.max(0, Number((originalDeposit - promoDiscount).toFixed(2)));
   const deposit = Math.round(calculatedDeposit * 100) >= 50 ? calculatedDeposit : 0;
@@ -100,6 +107,15 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     setAddons([]);
     setSelectedOptions({});
   }, [styleId]);
+
+  useEffect(() => {
+    if (!requestedPromotion || !salon.id) { setSalonPromotion(null); return; }
+    let current = true;
+    fetch(`/api/promotions/salon?id=${encodeURIComponent(requestedPromotion)}&salon_id=${encodeURIComponent(String(salon.id))}`, { cache: "no-store" })
+      .then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error || "This salon offer is unavailable."); if (current) { setSalonPromotion(body.promotion as SalonPromotion); setSalonPromotionMessage(""); } })
+      .catch((error) => { if (current) { setSalonPromotion(null); setSalonPromotionMessage(error instanceof Error ? error.message : "This salon offer is unavailable."); } });
+    return () => { current = false; };
+  }, [requestedPromotion, salon.id]);
 
   useEffect(() => {
     if (date) return;
@@ -196,6 +212,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
           selected_options: selectedOptions,
           client_notes: clientNotes,
           promo_code: promoCode.trim() || null,
+          salon_promotion_id: promotionPrice.eligible ? salonPromotion?.id || null : null,
           appointment_local: `${date}T${time}`,
           guest_name: guest.name,
           guest_email: guest.email,
@@ -231,7 +248,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];
 
-  return <main className="min-h-screen bg-cream text-ink"><header className="flex h-16 items-center justify-between border-b border-plum/10 bg-white/75 px-5 lg:px-10"><Link href="/" className="font-serif text-2xl font-bold text-plum">Girlz Culture</Link><div data-language-selector-host className="flex items-center gap-5"><nav className="hidden items-center gap-7 text-sm md:flex"><Link href="/salons">Discover</Link><Link href="/styles">Styles</Link><Link href="/account?tab=upcoming">Bookings</Link><Link href="/account?tab=favorites">Saved</Link></nav><LanguageSelector compact/></div></header><div className="mx-auto max-w-[1760px] px-4 py-7 lg:px-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-4xl font-semibold text-plum">Book Your Appointment</h1><p className="mt-2 text-ink/60">Your beauty, your way. We make it effortless.</p></div><p className="flex items-center gap-2 text-sm font-semibold text-amber"><ShieldCheck size={18} aria-hidden="true" />Secure booking</p></div><div className="mt-7 flex items-center justify-between gap-2">{["Choose Style", "Choose Stylist", "Date & Time", "Review & Confirm", "Pay Deposit"].map((label, index) => <button key={label} onClick={() => setStep(index + 1)} className="flex min-w-0 items-center gap-2 text-[10px] sm:text-xs"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${step === index + 1 ? "border-magenta bg-magenta text-white" : "border-plum/20"}`}>{index + 1}</span><span className="hidden md:inline">{label}</span></button>)}</div>{message ? <p className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}<div className="mt-6 hidden grid-cols-5 gap-3 xl:grid">{panels.map((panel, index) => <section key={index} className={`min-w-0 rounded-[15px] border bg-white/70 p-4 ${step === index + 1 ? "border-magenta" : "border-plum/10"}`}><PanelTitle n={index + 1} title={["Choose Style & Options", "Choose Your Stylist", "Select Date & Time", "Review & Confirm", "Pay Deposit"][index]} />{panel}{index < 4 ? <button onClick={() => setStep(index + 2)} className="mt-5 w-full rounded-[8px] bg-magenta py-3 text-xs font-bold text-white">Continue</button> : null}</section>)}</div><section className="mt-5 rounded-[15px] border border-plum/10 bg-white/75 p-4 xl:hidden"><PanelTitle n={step} title={["Choose Style & Options", "Choose Your Stylist", "Select Date & Time", "Review & Confirm", "Pay Deposit"][step - 1]} />{panels[step - 1]}{step < 5 ? <button onClick={() => setStep(step + 1)} className="mt-5 w-full rounded-[8px] bg-magenta py-3 font-bold text-white">Continue</button> : null}</section><div className="mt-7 grid gap-4 rounded-[14px] bg-blush/35 p-5 sm:grid-cols-4">{[[ShieldCheck, "Salon information"], [LockKeyhole, "Secure Payments"], [CalendarDays, "Flexible Scheduling"], [Star, "Customer Reviews"]].map(([Icon, label]) => <div key={label as string} className="flex items-center gap-3 text-xs font-semibold"><Icon className="text-plum" />{label as string}</div>)}</div></div></main>;
+  return <main className="min-h-screen bg-cream text-ink"><header className="flex h-16 items-center justify-between border-b border-plum/10 bg-white/75 px-5 lg:px-10"><Link href="/" className="font-serif text-2xl font-bold text-plum">Girlz Culture</Link><div data-language-selector-host className="flex items-center gap-5"><nav className="hidden items-center gap-7 text-sm md:flex"><Link href="/salons">Discover</Link><Link href="/styles">Styles</Link><Link href="/account?tab=upcoming">Bookings</Link><Link href="/account?tab=favorites">Saved</Link></nav><LanguageSelector compact/></div></header><div className="mx-auto max-w-[1760px] px-4 py-7 lg:px-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-4xl font-semibold text-plum">Book Your Appointment</h1><p className="mt-2 text-ink/60">Your beauty, your way. We make it effortless.</p></div><p className="flex items-center gap-2 text-sm font-semibold text-amber"><ShieldCheck size={18} aria-hidden="true" />Secure booking</p></div>{salonPromotion && promotionPrice.eligible ? <p className="mt-5 rounded-lg border border-magenta/20 bg-blush/50 p-3 text-sm text-plum"><b>{salonPromotion.public_headline || salonPromotion.title}</b> · {promotionLabel(salonPromotion)} applied to this selection.</p> : salonPromotionMessage ? <p className="mt-5 rounded-lg bg-amber/10 p-3 text-sm text-[#7a4b00]">{salonPromotionMessage} You can continue without it.</p> : null}<div className="mt-7 flex items-center justify-between gap-2">{["Choose Style", "Choose Stylist", "Date & Time", "Review & Confirm", "Pay Deposit"].map((label, index) => <button key={label} onClick={() => setStep(index + 1)} className="flex min-w-0 items-center gap-2 text-[10px] sm:text-xs"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${step === index + 1 ? "border-magenta bg-magenta text-white" : "border-plum/20"}`}>{index + 1}</span><span className="hidden md:inline">{label}</span></button>)}</div>{message ? <p className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}<div className="mt-6 hidden grid-cols-5 gap-3 xl:grid">{panels.map((panel, index) => <section key={index} className={`min-w-0 rounded-[15px] border bg-white/70 p-4 ${step === index + 1 ? "border-magenta" : "border-plum/10"}`}><PanelTitle n={index + 1} title={["Choose Style & Options", "Choose Your Stylist", "Select Date & Time", "Review & Confirm", "Pay Deposit"][index]} />{panel}{index < 4 ? <button onClick={() => setStep(index + 2)} className="mt-5 w-full rounded-[8px] bg-magenta py-3 text-xs font-bold text-white">Continue</button> : null}</section>)}</div><section className="mt-5 rounded-[15px] border border-plum/10 bg-white/75 p-4 xl:hidden"><PanelTitle n={step} title={["Choose Style & Options", "Choose Your Stylist", "Select Date & Time", "Review & Confirm", "Pay Deposit"][step - 1]} />{panels[step - 1]}{step < 5 ? <button onClick={() => setStep(step + 1)} className="mt-5 w-full rounded-[8px] bg-magenta py-3 font-bold text-white">Continue</button> : null}</section><div className="mt-7 grid gap-4 rounded-[14px] bg-blush/35 p-5 sm:grid-cols-4">{[[ShieldCheck, "Salon information"], [LockKeyhole, "Secure Payments"], [CalendarDays, "Flexible Scheduling"], [Star, "Customer Reviews"]].map(([Icon, label]) => <div key={label as string} className="flex items-center gap-3 text-xs font-semibold"><Icon className="text-plum" />{label as string}</div>)}</div></div></main>;
 }
 
 function PanelTitle({ n, title }: { n: number; title: string }) { return <h2 className="mb-4 flex items-center gap-2 font-serif text-lg font-semibold text-plum"><span className="grid h-6 w-6 place-items-center rounded-full bg-plum text-xs text-white">{n}</span>{title}</h2>; }

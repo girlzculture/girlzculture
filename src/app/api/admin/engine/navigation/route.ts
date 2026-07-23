@@ -1,5 +1,6 @@
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
+import { revalidatePath } from "next/cache";
 
 const SURFACES = new Set(["header", "mobile_menu", "mobile_bottom", "footer"]);
 const KEY_PATTERN = /^[a-z][a-z0-9_.-]{1,79}$/;
@@ -29,6 +30,12 @@ async function audit(admin:Awaited<ReturnType<typeof requireAdminPermission>>["a
   if (error) console.error("Navigation audit write failed", { action, code:error.code });
 }
 
+function revalidateNavigation() {
+  revalidatePath("/", "layout");
+  revalidatePath("/salons");
+  revalidatePath("/styles");
+}
+
 export async function GET(request:Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
@@ -49,6 +56,7 @@ export async function POST(request:Request) {
     const { data, error } = await admin.from("navigation_items").insert({ ...values, updated_by:user.id }).select().single();
     if (error) throw error;
     await audit(admin, user.id, "navigation_item_created", { id:data.id, surface:data.surface, item_key:data.item_key });
+    revalidateNavigation();
     return Response.json({ item:data }, { status:201 });
   } catch (error) {
     console.error("Navigation item create failed", error);
@@ -73,6 +81,7 @@ export async function PATCH(request:Request) {
     const { data, error } = await admin.from("navigation_items").update(patch).eq("id", id).select().single();
     if (error) throw error;
     await audit(admin, user.id, `navigation_item_${action}`, { id, before, after:data });
+    revalidateNavigation();
     return Response.json({ item:data });
   } catch (error) {
     console.error("Navigation item update failed", error);

@@ -1,6 +1,7 @@
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
+import { hasPlanFeature, isSubscriptionActive, normalizePlan } from "@/lib/plans";
 
 type SaveConfig = { permission: string; fields: ReadonlySet<string>; label: string };
 
@@ -23,7 +24,7 @@ const CONFIG: Record<string, SaveConfig> = {
   salon_promotions: {
     permission: "promotions",
     label: "promotion",
-    fields: new Set(["title", "description", "discount_label", "starts_at", "ends_at", "is_active", "archived_at"]),
+    fields: new Set(["title", "description", "public_headline", "promotion_type", "discount_value", "discount_label", "starts_at", "ends_at", "timezone", "status", "is_active", "paused_at", "target_scope", "target_ids", "restrictions", "archived_at"]),
   },
   bookings: {
     permission: "bookings",
@@ -69,10 +70,39 @@ function sanitize(table: string, values: Record<string, unknown>, isInsert: bool
     patch.description = cleanText(patch.description, 1_000);
     patch.price = finiteNumber(patch.price, "Product price", 0, 100_000);
   } else if (table === "salon_promotions") {
-    patch.title = cleanText(patch.title, 160);
-    patch.description = cleanText(patch.description, 1_000);
-    patch.discount_label = cleanText(patch.discount_label, 80);
-    if (!patch.title) throw new Error("Enter a promotion title.");
+    if ("title" in patch || isInsert) { patch.title = cleanText(patch.title, 160); if (!patch.title) throw new Error("Enter a promotion title."); }
+    if ("public_headline" in patch || isInsert) { patch.public_headline = cleanText(patch.public_headline, 160); if (!patch.public_headline) patch.public_headline = patch.title; }
+    if ("description" in patch) patch.description = cleanText(patch.description, 1_000);
+    if ("discount_label" in patch) patch.discount_label = cleanText(patch.discount_label, 80);
+    if ("promotion_type" in patch || isInsert) {
+      const type = cleanText(patch.promotion_type || "descriptive", 30);
+      if (!new Set(["percentage", "fixed", "free_addon", "free_service", "descriptive"]).has(type)) throw new Error("Choose a supported offer type.");
+      patch.promotion_type = type;
+    }
+    if ("discount_value" in patch || isInsert) patch.discount_value = finiteNumber(patch.discount_value ?? 0, "Discount value", 0, patch.promotion_type === "percentage" ? 100 : 100_000);
+    if ("status" in patch || isInsert) {
+      const status = cleanText(patch.status || "Draft", 20);
+      if (!new Set(["Draft", "Active", "Paused", "Archived"]).has(status)) throw new Error("Choose a supported promotion status.");
+      patch.status = status;
+      patch.is_active = status === "Active";
+    }
+    if ("target_scope" in patch || isInsert) {
+      const scope = cleanText(patch.target_scope || "salon", 30);
+      if (!new Set(["salon", "services", "service_groups", "master_styles", "products", "addons"]).has(scope)) throw new Error("Choose where this promotion applies.");
+      patch.target_scope = scope;
+    }
+    if ("target_ids" in patch) patch.target_ids = Array.isArray(patch.target_ids) ? patch.target_ids.map((value) => cleanText(value, 120)).filter(Boolean).slice(0, 100) : [];
+    if ("restrictions" in patch) {
+      const restrictions = patch.restrictions && typeof patch.restrictions === "object" && !Array.isArray(patch.restrictions) ? patch.restrictions as Record<string, unknown> : {};
+      patch.restrictions = {
+        minimum_subtotal: finiteNumber(restrictions.minimum_subtotal ?? 0, "Minimum booking subtotal", 0, 100_000),
+        new_customers_only: restrictions.new_customers_only === true,
+        terms: cleanText(restrictions.terms, 500),
+      };
+    }
+    for (const key of ["starts_at", "ends_at", "paused_at"] as const) if (key in patch && patch[key]) patch[key] = new Date(String(patch[key])).toISOString();
+    if (patch.starts_at && patch.ends_at && new Date(String(patch.ends_at)) <= new Date(String(patch.starts_at))) throw new Error("The promotion end must be after its start.");
+    if ("timezone" in patch) patch.timezone = cleanText(patch.timezone, 80) || "America/New_York";
   } else if (table === "bookings") {
     if (patch.status !== "In Progress") throw new Error("Choose a supported booking action.");
     patch.service_started_at = new Date(String(patch.service_started_at || "")).toISOString();
@@ -95,15 +125,14 @@ export async function POST(request: Request) {
     const context = await requireSalonPermission(request, config.permission);
     admin = context.admin;
     salonId = context.salon.id;
+    if (table === "salon_promotions") {
+      const subscription = await admin.from("subscriptions").select("tier,status,current_period_end").eq("salon_id", salonId).maybeSingle();
+      if (subscription.error) throw subscription.error;
+      if (!subscription.data || !isSubscriptionActive(subscription.data.status, subscription.data.current_period_end) || !hasPlanFeature(normalizePlan(subscription.data.tier), "promotions")) throw new Error("Promotions require an active Growth or Premium plan.");
+    }
     const id = cleanText(body.id, 60) || null;
     const rawValues = body.values && typeof body.values === "object" && !Array.isArray(body.values) ? body.values as Record<string, unknown> : {};
     const values = sanitize(table, rawValues, !id);
-
-    const result = id
-      ? await admin.from(table).update(values).eq("id", id).eq("salon_id", salonId).select("*").maybeSingle()
-      : await admin.from(table).insert({ ...values, salon_id: salonId }).select("*").single();
-    if (result.error) throw result.error;
-    if (!result.data) throw new Error(`The ${config.label} was not found in this salon.`);
 
     if (table === "styles" && Array.isArray(rawValues.style_materials)) {
       const materials = rawValues.style_materials.slice(0, 30).map((item) => {
@@ -111,17 +140,32 @@ export async function POST(request: Request) {
         return {
           name: cleanText(row.name, 120),
           price: finiteNumber(row.price ?? 0, "Material price", 0, 100_000),
-          longevity_weeks: finiteNumber(row.longevity_weeks ?? 4, "Material longevity", 1, 52),
+          longevity_weeks: finiteNumber(row.longevity_weeks ?? 4, "Material longevity", 1, 12),
           quality_grade: cleanText(row.quality_grade, 50) || "Good",
           option_type: "material",
           metadata: {},
         };
       }).filter((row) => row.name);
-      const materialResult = await admin.rpc("replace_style_materials", { p_style_id: result.data.id, p_materials: materials });
-      if (materialResult.error) throw materialResult.error;
+      const atomicResult = await admin.rpc("save_salon_style_with_materials", {
+        p_salon_id: salonId,
+        p_style_id: id,
+        p_values: values,
+        p_materials: materials,
+      });
+      if (atomicResult.error) throw atomicResult.error;
+      const payload = atomicResult.data as { record?: Record<string, unknown>; materials?: Record<string, unknown>[] } | null;
+      if (!payload?.record) throw new Error("The service could not be verified after saving.");
+      return Response.json({ record: payload.record, materials: payload.materials || [], verified: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
-    return Response.json({ record: result.data }, { headers: { "Cache-Control": "private, no-store" } });
+    const result = id
+      ? await admin.from(table).update(values).eq("id", id).eq("salon_id", salonId).select("*").maybeSingle()
+      : await admin.from(table).insert({ ...values, salon_id: salonId }).select("*").single();
+    if (result.error) throw result.error;
+    if (!result.data) throw new Error(`The ${config.label} was not found in this salon.`);
+    const readBack = await admin.from(table).select("*").eq("id", result.data.id).eq("salon_id", salonId).single();
+    if (readBack.error || !readBack.data) throw readBack.error || new Error(`The ${config.label} could not be verified after saving.`);
+    return Response.json({ record: readBack.data, verified: true }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (isUserInputError(error)) return Response.json({ error: (error as Error).message }, { status: /Unauthorized/.test((error as Error).message) ? 401 : /Forbidden/.test((error as Error).message) ? 403 : 400 });
     const safeMessage = "We couldn't save this change.";

@@ -2,6 +2,7 @@ import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
 import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
+import { revalidatePath } from "next/cache";
 
 function impactForKey(key:string){
   if(/login|signup|password|identity|security/.test(key))return"security";
@@ -392,6 +393,7 @@ export async function PATCH(request: Request) {
           impact_level: existing.impact_level,
         },
       });
+    if (status === "Published") revalidatePath("/", "layout");
     return Response.json({ entry: data });
   } catch (error) {
     console.error("Translation manager save failed", error);

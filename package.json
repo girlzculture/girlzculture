@@ -26,6 +26,7 @@
     "verify:i18n": "node scripts/verify-localization-engine.mjs",
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
     "verify:engine": "node scripts/verify-platform-engine.mjs",
+    "verify:concierge": "node scripts/verify-ai-beauty-concierge.mjs",
     "verify:records": "node scripts/verify-record-lifecycle.mjs",
     "verify:identity-deletion": "node scripts/verify-identity-deletion.mjs",
     "verify:test-data": "node scripts/verify-test-data-management.mjs",

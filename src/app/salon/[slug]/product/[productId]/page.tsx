@@ -22,7 +22,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <div className="mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:px-10 lg:py-12">
         <Link href={`/salon/${slug}#products`} className="inline-flex items-center gap-2 text-[12px] font-semibold text-plum hover:text-magenta"><ArrowLeft size={16} />Back to Our Products</Link>
         <section className="mt-5 grid overflow-hidden rounded-[20px] border border-plum/10 bg-white/80 shadow-[0_18px_50px_rgba(26,18,32,0.07)] lg:grid-cols-2">
-          <div className="relative min-h-[360px] bg-blush/45 sm:min-h-[560px]">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} priority className="absolute inset-0 h-full w-full object-cover" /> : <span className="absolute inset-0 grid place-items-center text-plum/30"><Package size={104} strokeWidth={1.1} aria-hidden="true" /></span>}</div>
+          <div className="relative aspect-square bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} priority className="absolute inset-0 h-full w-full object-cover" /> : <span className="absolute inset-0 grid place-items-center text-plum/30"><Package size={104} strokeWidth={1.1} aria-hidden="true" /></span>}</div>
           <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-14">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-magenta">Our Products</p>
             <h1 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.035em] text-plum sm:text-5xl">{product.name || "Salon product"}</h1>

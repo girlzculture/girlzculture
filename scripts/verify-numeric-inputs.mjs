@@ -11,7 +11,7 @@ const bounds = read("supabase/migrations/20260715150000_numeric_input_bounds.sql
 const checks = [
   ["number spinners disabled", /input\[type="number"\][\s\S]*appearance:\s*textfield[\s\S]*::-webkit-inner-spin-button/.test(globals)],
   ["new service prices start blank", /useState<NumericValue>\(""\)/.test(structured)],
-  ["clearing a controlled number stays blank", /event\.target\.value === "" \? "" : Number/.test(structured)],
+  ["clearing a controlled number stays blank", /onChange=\{\(event\) => onChange\(event\.target\.value\)\}/.test(structured)],
   ["new option prices start blank", /price_add: ""/.test(structured)],
   ["new material prices start blank", /price: ""/.test(structured)],
   ["legacy service fields no longer default to zero", !/defaultValue=\{active\?\.(?:duration_min_hours|duration_max_hours|base_price|years_experience|price)\|\|0\}/.test(legacyOwner)],

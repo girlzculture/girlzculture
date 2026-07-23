@@ -144,6 +144,19 @@ section {
   min-width: 0;
 }
 
+/* The Engine's Trending Now inventory is intentionally compact so validation,
+   moderation, and upload feedback stay visible without excessive scrolling. */
+@media (min-width: 1280px) {
+  section.grid:has(> article > video[controls][playsinline][preload="metadata"]) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  section.grid:has(> article > video[controls][playsinline][preload="metadata"]) > article > video {
+    max-height: 9rem;
+  }
+}
+
 /* Homepage-only depth preview. The standard homepage remains the default;
    append ?homepage3d=1 to compare this isolated, CSS-only treatment. */
 .gc-home-depth {
