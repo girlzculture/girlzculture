@@ -16,6 +16,8 @@ import {
   type AppLocale,
   type LocaleOption,
 } from "@/i18n/catalog";
+import { resolveSourceTranslation } from "@/lib/localizationCore";
+import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
 
 type I18nContextValue = {
@@ -233,8 +235,12 @@ export default function LocaleProvider({
     localeDirection(locale);
   const translateSource = useCallback(
     (source: string) =>
-      sourceMessages[source.replace(/\s+/g, " ").trim()] || source,
-    [sourceMessages],
+      resolveSourceTranslation(
+        source,
+        sourceMessages,
+        DASHBOARD_SOURCE_MESSAGES[locale],
+      ),
+    [locale, sourceMessages],
   );
   const value = useMemo<I18nContextValue>(
     () => ({

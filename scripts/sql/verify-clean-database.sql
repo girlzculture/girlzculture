@@ -63,6 +63,35 @@ begin
   end loop;
 
   if not exists (
+    select 1
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname = 'booking_integrity_conflicts'
+      and relation.relrowsecurity
+  ) then
+    raise exception 'RLS is not enabled on public.booking_integrity_conflicts';
+  end if;
+
+  if has_table_privilege('anon', 'public.booking_integrity_conflicts', 'SELECT')
+     or has_table_privilege('anon', 'public.booking_integrity_conflicts', 'INSERT')
+     or has_table_privilege('anon', 'public.booking_integrity_conflicts', 'UPDATE')
+     or has_table_privilege('anon', 'public.booking_integrity_conflicts', 'DELETE')
+     or has_table_privilege('authenticated', 'public.booking_integrity_conflicts', 'SELECT')
+     or has_table_privilege('authenticated', 'public.booking_integrity_conflicts', 'INSERT')
+     or has_table_privilege('authenticated', 'public.booking_integrity_conflicts', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.booking_integrity_conflicts', 'DELETE')
+  then
+    raise exception 'Browser roles retain direct privileges on public.booking_integrity_conflicts';
+  end if;
+
+  if not has_table_privilege('service_role', 'public.booking_integrity_conflicts', 'SELECT')
+     or not has_table_privilege('service_role', 'public.booking_integrity_conflicts', 'INSERT')
+  then
+    raise exception 'Service role cannot operate public.booking_integrity_conflicts';
+  end if;
+
+  if not exists (
     select 1 from pg_constraint
     where conrelid = 'public.bookings'::regclass
       and conname = 'bookings_resource_no_overlap'

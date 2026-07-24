@@ -64,6 +64,7 @@ import {
 import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
+import SalonVanityManager from "@/components/owner/SalonVanityManager";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -76,6 +77,10 @@ const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => (
 );
 type Salon = Row & {
   slug?: string;
+  vanity_slug?: string;
+  instagram_url?: string;
+  tiktok_url?: string;
+  google_business_url?: string;
   status?: string;
   subscription_status?: string;
   description?: string;
@@ -128,6 +133,7 @@ export default function OwnerDashboardApp({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [realtimeNotice, setRealtimeNotice] = useState("");
   const [salon, setSalon] = useState<Salon | null>(null);
   const [bookings, setBookings] = useState<Row[]>([]);
   const [reviews, setReviews] = useState<Row[]>([]);
@@ -162,14 +168,10 @@ export default function OwnerDashboardApp({
   useEffect(() => {
     let live = true;
     let removeRealtime: (() => Promise<void>) | null = null;
+    let currentAccessToken = "";
 
     async function loadDashboard() {
-      const session = await Promise.race([
-        getSessionForScope("salon"),
-        new Promise<null>((resolve) =>
-          window.setTimeout(() => resolve(null), 2500),
-        ),
-      ]);
+      const session = await getSessionForScope("salon");
       const userId = session?.user?.id || "";
       if (!live) return;
       if (!session || !userId) {
@@ -179,8 +181,9 @@ export default function OwnerDashboardApp({
         setLoading(false);
         return;
       }
+      currentAccessToken = session.access_token;
       const workspaceResponse = await fetch("/api/salon/workspace", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${currentAccessToken}` },
         cache: "no-store",
       });
       const workspace = (await workspaceResponse.json()) as {
@@ -269,33 +272,63 @@ export default function OwnerDashboardApp({
         onBooking: (row) => {
           if (live) setBookings((current) => [row as Row, ...current]);
         },
-        onStatus: (status) => {
-          if (status === "CHANNEL_ERROR" && live) {
-            void getSessionForScope("salon").then((session) =>
-              reportClientOperationalFailure({
+        onConnectionState: (state, status) => {
+          if (!live) return;
+          if (state === "connected") {
+            setRealtimeNotice("");
+            return;
+          }
+          if (state === "degraded") {
+            setRealtimeNotice(
+              "Live updates are reconnecting. Your dashboard remains available and refreshes automatically in the meantime.",
+            );
+            void reportClientOperationalFailure({
                 status: 503,
-                code: "REALTIME_CHANNEL_ERROR",
+                code: `REALTIME_${status || "DISCONNECTED"}`,
                 operation: "realtime:owner-dashboard",
                 provider: "supabase-realtime",
-                authorization: session
-                  ? `Bearer ${session.access_token}`
+                authorization: currentAccessToken
+                  ? `Bearer ${currentAccessToken}`
                   : "",
-              }),
-            ).then((report) => {
-              if (live) setError(report.message);
             });
+          }
+        },
+        onFallbackRefresh: async () => {
+          if (!live || !currentAccessToken) return;
+          try {
+            const response = await fetch("/api/salon/workspace", {
+              headers: { Authorization: `Bearer ${currentAccessToken}` },
+              cache: "no-store",
+            });
+            if (response.status === 401 || response.status === 403) {
+              if (live) {
+                setError(
+                  "Your salon session has expired. Sign in again to continue.",
+                );
+              }
+              return;
+            }
+            if (!response.ok) return;
+            const refreshed = (await response.json()) as {
+              records?: Record<string, Row[]>;
+            };
+            if (!live) return;
+            const refreshedRecords = refreshed.records || {};
+            setBookings(refreshedRecords.bookings || []);
+            setNotifications(refreshedRecords.notifications || []);
+          } catch {
+            // Polling is a temporary fallback. The next scheduled attempt or
+            // realtime reconnect continues without taking down the dashboard.
           }
         },
       });
       if (!live && removeRealtime) await removeRealtime();
     }
 
-    void loadDashboard().catch((loadError) => {
+    void loadDashboard().catch(() => {
       if (!live) return;
       setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to load the dashboard.",
+        "The salon workspace is temporarily unavailable. Please try again in a moment.",
       );
       setLoading(false);
     });
@@ -686,6 +719,14 @@ export default function OwnerDashboardApp({
       <div className="mb-4">
         <PushSetup scope="salon" compact />
       </div>
+      {realtimeNotice ? (
+        <div
+          role="status"
+          className="mb-4 rounded-[10px] border border-amber/35 bg-amber/10 px-4 py-3 text-xs leading-5 text-plum"
+        >
+          {realtimeNotice}
+        </div>
+      ) : null}
       {notice ? (
         <div
           role="status"
@@ -775,6 +816,7 @@ function DashboardContent({
       <>
         <MyPage c={c} />
         <SalonLogoEditor c={c} />
+        {c.isOwner ? <SalonVanityManager salon={c.salon} /> : null}
       </>
     );
   if (section === "photos") return <Photos c={c} />;
@@ -901,6 +943,23 @@ function UpgradeRequired({
 
 function SubscriptionV2({ c }: { c: Ctx }) {
   const [busy, setBusy] = useState("");
+  const [upgradePreview, setUpgradePreview] = useState<null | {
+    path: string;
+    key: string;
+    payload: Record<string, unknown>;
+    currentPlan: string;
+    requestedPlan: string;
+    message: string;
+    preview: {
+      unusedPeriodCredit: number;
+      proratedCharge: number;
+      tax: number;
+      amountDueNow: number;
+      currency: string;
+      renewalAmount: number;
+      renewalDate: string | null;
+    };
+  }>(null);
   const scheduledPlan = c.subscription?.scheduled_tier
     ? normalizePlan(c.subscription.scheduled_tier)
     : null;
@@ -930,46 +989,22 @@ function SubscriptionV2({ c }: { c: Ctx }) {
       if (!response.ok)
         throw new Error(body.error || "Unable to update the subscription.");
       if (body.requiresConfirmation) {
-        const confirmed = window.confirm(
-          String(
+        if (!body.preview) {
+          throw new Error("Stripe did not return a complete upgrade preview.");
+        }
+        setUpgradePreview({
+          path,
+          key,
+          payload,
+          currentPlan: String(body.currentPlan || c.plan),
+          requestedPlan: String(body.requestedPlan || payload.plan || ""),
+          message: String(
             body.message ||
-              "Confirm this plan upgrade and allow Stripe to calculate and collect the prorated invoice?",
+              "Review the verified Stripe preview before confirming.",
           ),
-        );
-        if (!confirmed) {
-          c.setNotice(
-            "Upgrade cancelled. Your current plan and access are unchanged.",
-          );
-          setBusy("");
-          return;
-        }
-        const confirmedResponse = await fetch(path, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ ...payload, confirm: true }),
+          preview: body.preview,
         });
-        const confirmedBody = await confirmedResponse.json();
-        if (!confirmedResponse.ok)
-          throw new Error(
-            confirmedBody.error ||
-              "Stripe did not confirm the upgrade. Your current plan is unchanged.",
-          );
-        if (confirmedBody.requiresAction && confirmedBody.paymentUrl) {
-          c.setNotice(
-            "Stripe needs one more confirmation. Your current plan remains active until payment succeeds.",
-          );
-          window.location.assign(confirmedBody.paymentUrl);
-          return;
-        }
-        c.setNotice(
-          confirmedBody.message ||
-            "Stripe confirmed the prorated invoice and activated the new plan.",
-        );
         setBusy("");
-        window.setTimeout(() => window.location.reload(), 1200);
         return;
       }
       if (body.url) {
@@ -989,6 +1024,55 @@ function SubscriptionV2({ c }: { c: Ctx }) {
       setBusy("");
     }
   }
+  async function confirmUpgrade() {
+    if (!upgradePreview) return;
+    setBusy("confirm-upgrade");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(upgradePreview.path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ ...upgradePreview.payload, confirm: true }),
+      });
+      const body = await response.json();
+      if (body.requiresAction && body.paymentUrl) {
+        c.setNotice(
+          "Stripe needs one more confirmation. Your current plan remains active until payment succeeds.",
+        );
+        window.location.assign(body.paymentUrl);
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(
+          body.error ||
+            "Stripe did not confirm the upgrade. Your current plan is unchanged.",
+        );
+      }
+      setUpgradePreview(null);
+      c.setNotice(
+        body.message ||
+          "Stripe confirmed the prorated invoice and activated the new plan.",
+      );
+      window.setTimeout(() => window.location.reload(), 1200);
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error ? error.message : "Unable to confirm upgrade.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  const previewMoney = (value: number, currency: string) =>
+    (Number(value || 0) / 100).toLocaleString("en-US", {
+      style: "currency",
+      currency: String(currency || "usd").toUpperCase(),
+    });
   return (
     <>
       <Title
@@ -999,6 +1083,101 @@ function SubscriptionV2({ c }: { c: Ctx }) {
         <b>TEST MODE:</b> No real charges are processed while Girlz Culture is
         in pre-launch testing.
       </div>
+      {upgradePreview ? (
+        <Panel className="mb-4 border-magenta/30 bg-blush/25">
+          <h2 className="font-serif text-2xl text-plum">
+            Confirm plan upgrade
+          </h2>
+          <p className="mt-2 text-xs leading-5 text-ink/65">
+            {upgradePreview.message}
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Current plan", upgradePreview.currentPlan],
+              ["New plan", upgradePreview.requestedPlan],
+              [
+                "Unused-period credit",
+                previewMoney(
+                  upgradePreview.preview.unusedPeriodCredit,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Prorated plan charge",
+                previewMoney(
+                  upgradePreview.preview.proratedCharge,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Tax",
+                previewMoney(
+                  upgradePreview.preview.tax,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Amount due now",
+                previewMoney(
+                  upgradePreview.preview.amountDueNow,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Renewal price",
+                previewMoney(
+                  upgradePreview.preview.renewalAmount,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Renewal date",
+                dateText(upgradePreview.preview.renewalDate),
+              ],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-xl border border-plum/10 bg-white p-3"
+              >
+                <p className="text-[9px] font-bold uppercase text-ink/50">
+                  {label}
+                </p>
+                <p className="mt-1 text-sm font-bold text-plum">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-[10px] leading-4 text-ink/55">
+            Features remain on {upgradePreview.currentPlan} until Stripe
+            verifies the invoice and replacement subscription price. You will
+            leave Girlz Culture only if Stripe requires a payment action.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => void confirmUpgrade()}
+              className="rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
+            >
+              {busy === "confirm-upgrade"
+                ? "Confirming with Stripe…"
+                : `Confirm ${upgradePreview.requestedPlan} upgrade`}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => {
+                setUpgradePreview(null);
+                c.setNotice(
+                  "Upgrade cancelled. Your current plan and access are unchanged.",
+                );
+              }}
+              className="rounded-lg border border-magenta px-5 py-3 text-xs font-bold text-magenta"
+            >
+              Keep current plan
+            </button>
+          </div>
+        </Panel>
+      ) : null}
       {scheduledPlan ? (
         <Panel className="mb-4 border-amber/35 bg-amber/10">
           <div className="grid gap-4 sm:grid-cols-4">
@@ -2891,6 +3070,10 @@ function Bookings({ c }: { c: Ctx }) {
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  const [rescheduleMessage, setRescheduleMessage] = useState("");
+  const [rescheduleOptions, setRescheduleOptions] = useState(["", "", ""]);
+  const [proposalSummary, setProposalSummary] = useState<Row | null>(null);
   const visible = c.bookings.filter(
     (booking) => filter === "All" || String(booking.status) === filter,
   );
@@ -2899,6 +3082,32 @@ function Bookings({ c }: { c: Ctx }) {
   const activeSelected =
     selected &&
     !/cancelled|completed|refunded/i.test(String(selected.status || ""));
+  useEffect(() => {
+    if (!selectedId) return;
+    let active = true;
+    getSessionForScope("salon")
+      .then((session) =>
+        session
+          ? fetch(`/api/salon/bookings/${selectedId}/reschedule`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+              cache: "no-store",
+            })
+          : null,
+      )
+      .then(async (response) => {
+        if (!response?.ok) return null;
+        return (await response.json()) as { proposals?: Row[] };
+      })
+      .then((body) => {
+        if (active) setProposalSummary(body?.proposals?.[0] || null);
+      })
+      .catch(() => {
+        if (active) setProposalSummary(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedId]);
   async function startService() {
     if (!selected?.id) return;
     const startedAt = new Date().toISOString();
@@ -2957,6 +3166,63 @@ function Bookings({ c }: { c: Ctx }) {
         error instanceof Error
           ? error.message
           : "Unable to cancel this booking.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function proposeReschedule() {
+    if (!selected?.id || !rescheduleReason.trim()) {
+      c.setNotice("Add a reason for the reschedule proposal.");
+      return;
+    }
+    const options = rescheduleOptions.filter(Boolean);
+    if (!options.length) {
+      c.setNotice("Choose at least one proposed appointment time.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(
+        `/api/salon/bookings/${selected.id}/reschedule`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            reason: rescheduleReason,
+            message: rescheduleMessage,
+            options,
+          }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        proposal?: Row;
+        warnings?: Array<{ message?: string }>;
+      };
+      if (!response.ok) {
+        throw new Error(
+          body.error || "Unable to propose new appointment times.",
+        );
+      }
+      setProposalSummary(body.proposal || null);
+      setRescheduleReason("");
+      setRescheduleMessage("");
+      setRescheduleOptions(["", "", ""]);
+      c.setNotice(
+        body.warnings?.[0]?.message ||
+          "Proposal sent. The appointment remains unchanged until the customer accepts.",
+      );
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to propose new appointment times.",
       );
     } finally {
       setBusy(false);
@@ -3138,6 +3404,82 @@ function Bookings({ c }: { c: Ctx }) {
                       ? `Service started ${dateText(selected.service_started_at, c.salon.time_zone)}`
                       : "Start service now"}
                   </button>
+                  <div className="mt-6 border-t border-plum/10 pt-5">
+                    <h3 className="font-serif text-lg text-plum">
+                      Propose reschedule
+                    </h3>
+                    <p className="mt-1 text-[10px] leading-4 text-ink/55">
+                      Offer up to three available times. The current appointment
+                      stays confirmed until the customer accepts one.
+                    </p>
+                    {proposalSummary ? (
+                      <div className="mt-3 rounded-[9px] bg-blush/35 p-3 text-xs">
+                        <b>
+                          Latest proposal:{" "}
+                          {String(proposalSummary.status || "Pending")}
+                        </b>
+                        <p className="mt-1 text-ink/60">
+                          {String(proposalSummary.reason || "")}
+                        </p>
+                      </div>
+                    ) : null}
+                    <input
+                      value={rescheduleReason}
+                      onChange={(event) =>
+                        setRescheduleReason(event.target.value.slice(0, 300))
+                      }
+                      placeholder="Reason for proposing a change"
+                      className="mt-3 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                    />
+                    <textarea
+                      value={rescheduleMessage}
+                      onChange={(event) =>
+                        setRescheduleMessage(event.target.value.slice(0, 600))
+                      }
+                      placeholder="Optional message to the customer"
+                      rows={2}
+                      className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
+                    />
+                    <div className="mt-2 grid gap-2">
+                      {rescheduleOptions.map((value, index) => (
+                        <label
+                          key={index}
+                          className="text-[10px] font-bold text-ink/60"
+                        >
+                          {index === 0
+                            ? "Preferred time"
+                            : `Alternative ${index}`}
+                          <input
+                            type="datetime-local"
+                            value={value}
+                            onChange={(event) =>
+                              setRescheduleOptions((current) =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? event.target.value
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <button
+                      disabled={
+                        busy ||
+                        !rescheduleReason.trim() ||
+                        !rescheduleOptions.some(Boolean)
+                      }
+                      onClick={() => void proposeReschedule()}
+                      className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                    >
+                      {busy
+                        ? "Checking availability…"
+                        : "Send proposal for customer approval"}
+                    </button>
+                  </div>
                   <div className="mt-6 border-t border-plum/10 pt-5">
                     <h3 className="font-serif text-lg text-plum">
                       Cancel booking

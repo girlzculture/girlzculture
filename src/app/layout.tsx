@@ -9,34 +9,59 @@ import { localeDirection, normalizeLocale } from "@/i18n/catalog";
 import { getEngineColor } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
 import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBridge";
+import { getPublishedBrandAssets } from "@/lib/brandAssets";
 
-export const metadata: Metadata = {
-  title: {
-    default: "Girlz Culture — Book braids with confidence",
-    template: "%s | Girlz Culture",
-  },
-  description:
-    "Discover braiding salons, compare services and prices, and book an appointment.",
-  applicationName: "Girlz Culture",
-  keywords: [
-    "hair braiding",
-    "braiding salons",
-    "knotless braids",
-    "box braids",
-    "beauty booking",
-  ],
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Girlz Culture",
-  },
-  formatDetection: { telephone: false },
-  robots:
-    process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true"
-      ? { index: true, follow: true }
-      : { index: false, follow: false, noarchive: true, nosnippet: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const assets = await getPublishedBrandAssets();
+  const favicon = assets.favicon?.published_url || "/pwa-icon-192.png";
+  const appIcon = assets.app_icon?.published_url || "/pwa-icon-512.png";
+  const socialImage = assets.social_share_image?.published_url;
+  const description =
+    "Discover braiding salons, compare services and prices, and book an appointment.";
+  return {
+    title: {
+      default: "Girlz Culture — Book braids with confidence",
+      template: "%s | Girlz Culture",
+    },
+    description,
+    applicationName: "Girlz Culture",
+    keywords: [
+      "hair braiding",
+      "braiding salons",
+      "knotless braids",
+      "box braids",
+      "beauty booking",
+    ],
+    manifest: "/manifest.webmanifest",
+    icons: {
+      icon: [{ url: favicon }],
+      apple: [{ url: appIcon }],
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Girlz Culture",
+    },
+    openGraph: {
+      type: "website",
+      siteName: "Girlz Culture",
+      title: "Girlz Culture — Book braids with confidence",
+      description,
+      ...(socialImage ? { images: [{ url: socialImage }] } : {}),
+    },
+    twitter: {
+      card: socialImage ? "summary_large_image" : "summary",
+      title: "Girlz Culture — Book braids with confidence",
+      description,
+      ...(socialImage ? { images: [socialImage] } : {}),
+    },
+    formatDetection: { telephone: false },
+    robots:
+      process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true"
+        ? { index: true, follow: true }
+        : { index: false, follow: false, noarchive: true, nosnippet: true },
+  };
+}
 
 export default async function RootLayout({
   children,

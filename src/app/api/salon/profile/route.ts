@@ -1,8 +1,9 @@
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
-import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
+import { cleanEmail, cleanText, cleanUsPhone, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { capturePlatformError, monitoredRouteFailure, safeFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
+import { normalizeSalonVanitySlug } from "@/lib/salonVanity";
 
 const TEXT_FIELDS = new Set(["name", "description", "address_street", "address_line2", "address_city", "address_state", "address_zip", "phone", "email", "logo_url", "cover_photo_url"]);
 const ALLOWED_FIELDS = new Set([...TEXT_FIELDS, "gallery_photos", "languages", "trust_info", "media_consent", "hours", "booking_settings", "notification_preferences"]);
@@ -12,6 +13,21 @@ function httpsUrl(value: unknown) {
   if (!text) return null;
   const url = new URL(text);
   if (url.protocol !== "https:") throw new Error("Media links must use HTTPS.");
+  return url.toString();
+}
+
+function socialUrl(value: unknown, allowedHosts: string[]) {
+  const text = cleanText(value, 500);
+  if (!text) return null;
+  const url = new URL(text);
+  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (
+    url.protocol !== "https:" ||
+    !allowedHosts.some(
+      (allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`),
+    )
+  )
+    throw new Error("Use a valid HTTPS business profile link.");
   return url.toString();
 }
 
@@ -61,9 +77,77 @@ async function GETHandler(request: Request) {
   try {
     const context = await requireSalonOwner(request);
     admin = context.admin;
-    return Response.json({ salon: context.salon }, { headers: { "Cache-Control": "private, no-store" } });
+    const latestRequest = await admin
+      .from("salon_vanity_requests")
+      .select("id,requested_slug,instagram_url,tiktok_url,google_business_url,status,approved_slug,review_note,created_at,reviewed_at")
+      .eq("salon_id", context.salon.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latestRequest.error) throw latestRequest.error;
+    return Response.json(
+      { salon: context.salon, vanity_request: latestRequest.data || null },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     return monitoredRouteFailure({ request, admin, error, feature: "salon-profile", action: "load", actorRole: "salon", safeMessage: "We couldn't load the salon profile." });
+  }
+}
+
+async function POSTHandler(request: Request) {
+  let admin;
+  let salonId: string | null = null;
+  try {
+    enforceRateLimit(request, "salon-vanity-request", 6, 60 * 60_000);
+    const context = await requireSalonOwner(request);
+    admin = context.admin;
+    salonId = context.salon.id;
+    if (!context.isOwner)
+      throw new Error("Forbidden: only the salon owner can request a public URL.");
+    const body = (await request.json()) as Record<string, unknown>;
+    if (cleanText(body.action, 30) !== "request_vanity")
+      throw new Error("Choose a valid vanity URL action.");
+    const requestedSlug = normalizeSalonVanitySlug(body.requested_slug);
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requestedSlug) || requestedSlug.length < 3)
+      throw new Error("Use 3–72 letters, numbers, or single hyphens.");
+    const availability = await admin.rpc("salon_vanity_slug_available", {
+      p_slug: requestedSlug,
+      p_salon_id: context.salon.id,
+    });
+    if (availability.error) throw availability.error;
+    if (availability.data !== true)
+      throw new Error("That public URL is reserved or already in use.");
+    const created = await admin.rpc("request_salon_vanity_url", {
+      p_salon_id: context.salon.id,
+      p_requested_by: context.user.id,
+      p_requested_slug: requestedSlug,
+      p_instagram_url: socialUrl(body.instagram_url, ["instagram.com"]),
+      p_tiktok_url: socialUrl(body.tiktok_url, ["tiktok.com"]),
+      p_google_business_url: socialUrl(body.google_business_url, [
+        "google.com",
+        "goo.gl",
+        "g.page",
+        "business.site",
+      ]),
+    });
+    if (created.error) throw created.error;
+    return Response.json({ request: created.data }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/^(Unauthorized|Forbidden)|valid vanity|Use 3|reserved|already pending|valid HTTPS/i.test(message))
+      return errorResponse(error, "Unable to request this public URL.");
+    const safeMessage = "We couldn't submit this public URL request.";
+    const reference = await capturePlatformError({
+      request,
+      admin,
+      error,
+      feature: "salon-vanity-url",
+      action: "request",
+      actorRole: "salon",
+      salonId,
+      safeMessage,
+    });
+    return safeFailure(safeMessage, reference);
   }
 }
 
@@ -95,3 +179,4 @@ async function PATCHHandler(request: Request) {
 }
 export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "GET"), GETHandler);
 export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "PATCH"), PATCHHandler);
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/salon/profile", "POST"), POSTHandler);

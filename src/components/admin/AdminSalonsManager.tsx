@@ -885,6 +885,7 @@ function SalonDetail({
   const [data, setData] = useState<Row | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [vanitySlug, setVanitySlug] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
   async function load() {
     setError("");
@@ -897,6 +898,12 @@ function SalonDetail({
       if (!response.ok)
         throw new Error(body.error || "Unable to load salon details.");
       setData(body);
+      setVanitySlug(
+        body.vanity_request?.approved_slug ||
+          body.vanity_request?.requested_slug ||
+          body.salon?.vanity_slug ||
+          "",
+      );
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -1034,6 +1041,52 @@ function SalonDetail({
       await refreshed();
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Unable to reconcile salon eligibility.");
+    } finally {
+      setBusy("");
+    }
+  }
+  async function reviewVanity(decision: "approve" | "reject") {
+    const request = data?.vanity_request;
+    if (!request?.id) {
+      setError("There is no vanity URL request to review.");
+      return;
+    }
+    const note =
+      decision === "reject"
+        ? window.prompt("Optional review note for the salon owner:")?.trim() || ""
+        : "";
+    if (
+      decision === "approve" &&
+      !window.confirm(
+        `Approve girlzculture.com/${vanitySlug || request.requested_slug} for ${data?.salon?.name}?`,
+      )
+    )
+      return;
+    setBusy(`vanity-${decision}`);
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/salons/${salonId}`, {
+        method: "POST",
+        headers: await authHeaders(true),
+        body: JSON.stringify({
+          action: "vanity",
+          request_id: request.id,
+          decision,
+          approved_slug: vanitySlug || request.requested_slug,
+          note,
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "Unable to review this public URL.");
+      await load();
+      await refreshed();
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : "Unable to review this public URL.",
+      );
     } finally {
       setBusy("");
     }
@@ -1191,6 +1244,137 @@ function SalonDetail({
                       </button>
                     ))}
                 </div>
+              </section>
+              <section className="rounded-[13px] border border-plum/10 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-serif text-xl text-plum">
+                      Public URL & social profiles
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-ink/60">
+                      Root-level links publish only after review. Previous
+                      approved links remain permanent redirects.
+                    </p>
+                  </div>
+                  {salon.vanity_slug ? (
+                    <Link
+                      href={`/${salon.vanity_slug}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-magenta"
+                    >
+                      /{salon.vanity_slug} <ExternalLink size={13} />
+                    </Link>
+                  ) : null}
+                </div>
+                {data.vanity_request ? (
+                  <div className="mt-4 rounded-xl bg-cream p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span>
+                        Requested: <b>/{data.vanity_request.requested_slug}</b>
+                      </span>
+                      <StatusBadge value={data.vanity_request.status} />
+                    </div>
+                    <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-ink/55">
+                      Approved slug
+                      <input
+                        value={vanitySlug}
+                        onChange={(event) => setVanitySlug(event.target.value)}
+                        disabled={data.vanity_request.status !== "Pending"}
+                        className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-sm font-normal lowercase disabled:bg-cream"
+                      />
+                    </label>
+                    <div className="mt-3 grid gap-2 text-xs text-ink/65">
+                      {data.vanity_request.instagram_url ? (
+                        <a
+                          href={data.vanity_request.instagram_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="break-all text-magenta"
+                        >
+                          Instagram: {data.vanity_request.instagram_url}
+                        </a>
+                      ) : null}
+                      {data.vanity_request.tiktok_url ? (
+                        <a
+                          href={data.vanity_request.tiktok_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="break-all text-magenta"
+                        >
+                          TikTok: {data.vanity_request.tiktok_url}
+                        </a>
+                      ) : null}
+                      {data.vanity_request.google_business_url ? (
+                        <a
+                          href={data.vanity_request.google_business_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="break-all text-magenta"
+                        >
+                          Google Business:{" "}
+                          {data.vanity_request.google_business_url}
+                        </a>
+                      ) : null}
+                    </div>
+                    {data.vanity_request.status === "Pending" ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => void reviewVanity("approve")}
+                          className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-45"
+                        >
+                          {busy === "vanity-approve"
+                            ? "Approving…"
+                            : "Approve public URL"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => void reviewVanity("reject")}
+                          className="min-h-10 rounded-lg border border-red-400 px-4 text-xs font-bold text-red-700 disabled:opacity-45"
+                        >
+                          {busy === "vanity-reject" ? "Rejecting…" : "Reject"}
+                        </button>
+                      </div>
+                    ) : data.vanity_request.review_note ? (
+                      <p className="mt-3 text-xs text-ink/60">
+                        Review note: {data.vanity_request.review_note}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-4 rounded-lg bg-cream p-3 text-xs text-ink/55">
+                    No salon-owner vanity URL request has been submitted.
+                  </p>
+                )}
+                {Array.isArray(data.vanity_history) &&
+                data.vanity_history.length ? (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-ink/50">
+                      URL history
+                    </p>
+                    {data.vanity_history.slice(0, 5).map((entry: Row) => (
+                      <div
+                        key={entry.id}
+                        className="flex flex-wrap justify-between gap-2 border-l-2 border-magenta pl-3 text-xs"
+                      >
+                        <span>
+                          <b>{entry.action}</b>
+                          {entry.previous_slug
+                            ? ` /${entry.previous_slug}`
+                            : ""}
+                          {entry.resulting_slug
+                            ? ` → /${entry.resulting_slug}`
+                            : ""}
+                        </span>
+                        <span className="text-ink/45">
+                          {new Date(entry.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </section>
               <section className="rounded-[13px] border border-plum/10 bg-white p-4">
                 <h3 className="font-serif text-xl text-plum">References</h3>

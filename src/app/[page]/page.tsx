@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { getContentPage, getPublishedContentPage, LEGAL_LINKS } from "@/lib/content";
 import PublicContentSections from "@/components/site/PublicContentSections";
+import SalonPage from "@/app/salon/[slug]/page";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 
 const pages: Record<string, { title: string; body: string }> = {
   safety: { title: "Safety & Trust", body: "Girlz Culture is committed to verified professionals, transparent pricing, and secure booking experiences." },
@@ -21,10 +25,57 @@ const pages: Record<string, { title: string; body: string }> = {
 
 export const dynamic = "force-dynamic";
 
-export default async function InfoPage({ params }: { params: Promise<{ page: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ page: string }>;
+}): Promise<Metadata> {
+  const { page: slug } = await params;
+  if (pages[slug]) return { title: pages[slug].title };
+  return (
+    (await getSalonPublicMetadata(slug, "vanity_slug")) || {
+      title: "Page not found",
+      robots: { index: false, follow: false },
+    }
+  );
+}
+
+export default async function InfoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ page: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { page: slug } = await params;
   const fallback = pages[slug];
-  if (!fallback) notFound();
+  if (!fallback) {
+    const admin = getSupabaseAdmin();
+    const vanity = await admin
+      .from("salons")
+      .select("slug")
+      .eq("vanity_slug", slug)
+      .eq("status", "Active")
+      .eq("is_discoverable", true)
+      .maybeSingle();
+    if (vanity.error) throw vanity.error;
+    if (vanity.data?.slug) {
+      return SalonPage({
+        params: Promise.resolve({ slug: vanity.data.slug }),
+        searchParams,
+      });
+    }
+    const redirect = await admin
+      .from("salon_slug_redirects")
+      .select("new_slug")
+      .eq("route_scope", "vanity")
+      .eq("old_slug", slug)
+      .is("retired_at", null)
+      .maybeSingle();
+    if (redirect.error) throw redirect.error;
+    if (redirect.data?.new_slug) permanentRedirect(`/${redirect.data.new_slug}`);
+    notFound();
+  }
   const isLegal = LEGAL_LINKS.some(([, , legalSlug]) => legalSlug === slug);
   const page = isLegal
     ? await getPublishedContentPage(slug)
