@@ -21,7 +21,8 @@ other production data was changed.
 | Migration created | Complete where listed below |
 | Automated application verification | Passed |
 | Local desktop read-only smoke test | Passed |
-| Clean empty-database execution | Blocked: no disposable `CLEAN_DATABASE_URL`, `psql`, Docker, or local Supabase runtime is available in this workspace |
+| Clean empty-database execution | Passed in GitHub Actions: 85/85 migrations plus post-migration assertions and 148 public policies |
+| Netlify deploy preview | Passed and available for read-only smoke testing |
 | Preview migration applied | Not performed |
 | Preview provider workflows | Not performed |
 | Production migration applied | Not performed |
@@ -346,18 +347,21 @@ other production data was changed.
 
 ### 15. Required tests and release evidence
 
-- **Status:** Automated application matrix complete; local desktop smoke
-  complete; clean-database, role/RLS preview, provider, mobile/tablet, and
-  production verification remain blocked/not performed.
-- **Root cause of remaining block:** The workspace has no disposable
-  `CLEAN_DATABASE_URL` and no `psql`, Docker, or Supabase CLI runtime. The clean
-  database verifier correctly refuses to substitute source-string checks.
+- **Status:** Automated application matrix and real clean-database execution
+  complete; local and Netlify desktop read-only smoke complete; role/RLS preview,
+  provider, mobile/tablet, and production verification remain not performed.
+- **Clean-database result:** The first GitHub run correctly found that
+  `notifications.booking_policy_summary` used unsupported Engine
+  `value_type='textarea'`. Commit `6689ceb` changed it to the established
+  `rich_text` type and added a focused regression assertion. The restarted
+  GitHub Actions job then executed all 85 migrations against an empty PostgreSQL
+  17 database and passed post-migration object/RLS assertions with 148 public
+  policies.
 - **Verification changes:** Refreshed the Engine/API inventory; updated stale
   location and Featured empty-state assertions to the implemented requirement;
   added location resynchronization after back/forward and page restoration; and
   documented the optional media transcoder environment.
-- **Commit:** The final verification commit containing this report; use the PR
-  head hash in the handoff.
+- **Commits:** `3f38641` (release evidence) and `6689ceb` (clean-database CI fix).
 
 ## Migration order
 
@@ -419,11 +423,14 @@ The following completed successfully on this branch:
 - `npm run verify:catalog-management`
 - all Section 1–14 focused verifiers listed above
 
-`npm run verify:database-clean` is **blocked, not passed**. It requires a
-disposable empty Postgres/Supabase connection in `CLEAN_DATABASE_URL` and a
-`PSQL_BIN` executable when `psql` is not on `PATH`.
+The local `npm run verify:database-clean` command cannot run on this Windows
+workspace because no disposable `CLEAN_DATABASE_URL`, `psql`, Docker, or local
+Supabase runtime is installed. This is no longer an evidence gap: the protected
+GitHub Actions `verify` job supplied a disposable PostgreSQL 17 service, ran the
+same executable verifier, applied migrations 1–85 in order, and reported
+`clean database assertions passed` with 148 public policies.
 
-## Local manual smoke evidence
+## Local and deploy-preview manual smoke evidence
 
 Read-only desktop testing used the production build at
 `http://127.0.0.1:3200`. No form was submitted and no database was written.
@@ -447,6 +454,20 @@ Authenticated, mutation, provider, tablet, and true mobile device workflows were
 not manually tested in this local environment. Responsive source checks and the
 production build passed, but that is not a substitute for the preview device
 matrix.
+
+Netlify created the non-production draft preview at
+`https://deploy-preview-21--girlzculture.netlify.app`. The homepage, About,
+Browse Styles, How It Works, customer login, admin login, and salon login return
+HTTP 200. Browser inspection confirmed automatic approximate location
+(`New York, NY`), the four public language choices, expected page headings, and
+no horizontal overflow on the inspected desktop routes.
+
+The Supabase Preview integration was skipped and the migration job stayed
+skipped, as required for a pull request. Consequently, database-backed discovery
+requests in the Netlify preview return the shared sanitized error with a matching
+reference ID instead of results. This preview environment has not been treated
+as a valid provider/RLS test environment, and no attempt was made to apply
+migrations or write data to the configured remote database.
 
 ## Environment and provider checklist
 
@@ -474,9 +495,10 @@ No provider configuration was changed by this branch.
 1. Review the draft PR file-by-file and confirm all required checks are green.
 2. Create or reset an isolated, data-less Supabase preview branch. Do not point
    any local verifier at production.
-3. Provide its direct Postgres connection as `CLEAN_DATABASE_URL`; install or
-   point `PSQL_BIN` to `psql`; run `npm run verify:database-clean`. Require all 85
-   migrations and post-migration RLS/object checks to pass.
+3. Confirm the protected GitHub `verify` job remains green. It has already run
+   all 85 migrations plus post-migration object/RLS checks in a disposable
+   PostgreSQL 17 service. If independently repeating it, provide an empty
+   preview connection in `CLEAN_DATABASE_URL` and point `PSQL_BIN` to `psql`.
 4. Apply the branch migrations to the Supabase preview through the repository
    migration workflow. Do not repair history as applied without execution.
 5. Add the preview environment/provider values above in Netlify. Use only Stripe
@@ -514,7 +536,6 @@ No provider configuration was changed by this branch.
 
 ## Known remaining verification gaps
 
-- Clean empty-database execution for the 85-migration chain.
 - Preview application and RLS matrix for all five roles.
 - Real Supabase Realtime 503/recovery and multi-tab token renewal.
 - Resend/Twilio delivery and Stripe test webhooks/reconciliation.
