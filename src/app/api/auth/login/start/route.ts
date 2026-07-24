@@ -2,6 +2,7 @@ import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitori
 import { cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, createMfaChallenge, LoginLockedError, MfaCooldownError, recordLoginAttempt, requiresMfa, sessionPayload, signInAndVerifyRole, type LoginScope } from "@/lib/secureLoginServer";
 import { ADMIN_LOGIN_ERROR, assertCompanyAdminEmail } from "@/lib/adminSecurityServer";
+import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
 async function POSTHandler(request: Request) {
   let requestedRole = "";
@@ -12,6 +13,7 @@ async function POSTHandler(request: Request) {
     const role = cleanText(body.role, 20) as LoginScope;
     requestedRole = role;
     if (!(["customer", "salon", "admin"] as string[]).includes(role)) throw new Error("Invalid login destination.");
+    if (role === "admin" || role === "salon") assertRoleSurfaceHost(request, role);
     if (role === "admin") assertCompanyAdminEmail(body.email);
     const { email } = await assertLoginNotLocked(request, role, body.email);
     const password = cleanText(body.password, 200);

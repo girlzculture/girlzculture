@@ -49,6 +49,7 @@
     "verify:trending-video-processing": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-trending-video-processing.mjs",
     "verify:promotion-enforcement": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-promotion-enforcement.mjs",
     "verify:brand-appearance": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-brand-appearance.mjs",
+    "verify:dashboard-subdomains": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-dashboard-subdomains.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

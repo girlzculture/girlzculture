@@ -2,6 +2,7 @@ import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitori
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayload, signInAndVerifyRole, verifyMfaChallenge, type LoginScope } from "@/lib/secureLoginServer";
 import { ADMIN_LOGIN_ERROR } from "@/lib/adminSecurityServer";
+import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
 async function POSTHandler(request: Request) {
   let requestedRole = "";
@@ -11,6 +12,7 @@ async function POSTHandler(request: Request) {
     const role = cleanText(body.role, 20) as LoginScope;
     requestedRole = role;
     if (!(["customer", "salon", "admin"] as string[]).includes(role)) throw new Error("Invalid login destination.");
+    if (role === "admin" || role === "salon") assertRoleSurfaceHost(request, role);
     const { email } = await assertLoginNotLocked(request, role, body.email);
     const code = cleanText(body.code, 6);
     if (!/^\d{6}$/.test(code)) throw new Error("Enter the six-digit verification code.");

@@ -14,6 +14,7 @@ import {
 } from "@/lib/bookingCommunications";
 import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
 import { getPublishedBrandAsset } from "@/lib/brandAssets";
+import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -74,6 +75,7 @@ export function getSupabaseAdmin() {
 }
 
 export async function requireAdmin(request: Request) {
+  assertRoleSurfaceHost(request, "admin");
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) throw new Error("Unauthorized");
   const admin = getSupabaseAdmin();
@@ -101,6 +103,7 @@ export async function requireAdminPermission(request: Request, permission: strin
 }
 
 export async function requireSalonOwner(request: Request) {
+  assertRoleSurfaceHost(request, "salon");
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) throw new Error("Unauthorized");
   const admin = getSupabaseAdmin();
