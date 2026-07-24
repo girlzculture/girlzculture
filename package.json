@@ -42,6 +42,7 @@
     "verify:booking-comms": "node scripts/verify-booking-communications.mjs",
     "verify:guest-bookings": "node scripts/verify-secure-guest-bookings.mjs",
     "verify:rescheduling": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-customer-approved-rescheduling.mjs",
+    "verify:finance-reconciliation": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-finance-reconciliation.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

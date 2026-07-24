@@ -163,6 +163,7 @@ async function POSTHandler(request: Request) {
       estimated_total: total,
       subtotal_before_promotion: subtotalBeforeSalonPromotion,
       deposit_amount: deposit,
+      deposit_percentage: depositPercentage,
       original_deposit_amount: originalDeposit,
       discount_amount: discount,
       promo_code_id: promoPreview?.promo.id || null,
@@ -224,6 +225,11 @@ async function POSTHandler(request: Request) {
         stripe_checkout_session_id: `no_payment_required:${intentId}`,
         payment_method_label: "No payment required",
         payment_mode: "test",
+        payment_verified_at: new Date().toISOString(),
+        platform_fee: 0,
+        stripe_processing_fee: 0,
+        net_amount_owed_salon: deposit,
+        payout_status: "Not required",
       }).select("id,confirmation_code,status,appointment_datetime").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);

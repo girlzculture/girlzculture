@@ -937,6 +937,23 @@ function UpgradeRequired({
 
 function SubscriptionV2({ c }: { c: Ctx }) {
   const [busy, setBusy] = useState("");
+  const [upgradePreview, setUpgradePreview] = useState<null | {
+    path: string;
+    key: string;
+    payload: Record<string, unknown>;
+    currentPlan: string;
+    requestedPlan: string;
+    message: string;
+    preview: {
+      unusedPeriodCredit: number;
+      proratedCharge: number;
+      tax: number;
+      amountDueNow: number;
+      currency: string;
+      renewalAmount: number;
+      renewalDate: string | null;
+    };
+  }>(null);
   const scheduledPlan = c.subscription?.scheduled_tier
     ? normalizePlan(c.subscription.scheduled_tier)
     : null;
@@ -966,46 +983,22 @@ function SubscriptionV2({ c }: { c: Ctx }) {
       if (!response.ok)
         throw new Error(body.error || "Unable to update the subscription.");
       if (body.requiresConfirmation) {
-        const confirmed = window.confirm(
-          String(
+        if (!body.preview) {
+          throw new Error("Stripe did not return a complete upgrade preview.");
+        }
+        setUpgradePreview({
+          path,
+          key,
+          payload,
+          currentPlan: String(body.currentPlan || c.plan),
+          requestedPlan: String(body.requestedPlan || payload.plan || ""),
+          message: String(
             body.message ||
-              "Confirm this plan upgrade and allow Stripe to calculate and collect the prorated invoice?",
+              "Review the verified Stripe preview before confirming.",
           ),
-        );
-        if (!confirmed) {
-          c.setNotice(
-            "Upgrade cancelled. Your current plan and access are unchanged.",
-          );
-          setBusy("");
-          return;
-        }
-        const confirmedResponse = await fetch(path, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ ...payload, confirm: true }),
+          preview: body.preview,
         });
-        const confirmedBody = await confirmedResponse.json();
-        if (!confirmedResponse.ok)
-          throw new Error(
-            confirmedBody.error ||
-              "Stripe did not confirm the upgrade. Your current plan is unchanged.",
-          );
-        if (confirmedBody.requiresAction && confirmedBody.paymentUrl) {
-          c.setNotice(
-            "Stripe needs one more confirmation. Your current plan remains active until payment succeeds.",
-          );
-          window.location.assign(confirmedBody.paymentUrl);
-          return;
-        }
-        c.setNotice(
-          confirmedBody.message ||
-            "Stripe confirmed the prorated invoice and activated the new plan.",
-        );
         setBusy("");
-        window.setTimeout(() => window.location.reload(), 1200);
         return;
       }
       if (body.url) {
@@ -1025,6 +1018,55 @@ function SubscriptionV2({ c }: { c: Ctx }) {
       setBusy("");
     }
   }
+  async function confirmUpgrade() {
+    if (!upgradePreview) return;
+    setBusy("confirm-upgrade");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(upgradePreview.path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ ...upgradePreview.payload, confirm: true }),
+      });
+      const body = await response.json();
+      if (body.requiresAction && body.paymentUrl) {
+        c.setNotice(
+          "Stripe needs one more confirmation. Your current plan remains active until payment succeeds.",
+        );
+        window.location.assign(body.paymentUrl);
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(
+          body.error ||
+            "Stripe did not confirm the upgrade. Your current plan is unchanged.",
+        );
+      }
+      setUpgradePreview(null);
+      c.setNotice(
+        body.message ||
+          "Stripe confirmed the prorated invoice and activated the new plan.",
+      );
+      window.setTimeout(() => window.location.reload(), 1200);
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error ? error.message : "Unable to confirm upgrade.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  const previewMoney = (value: number, currency: string) =>
+    (Number(value || 0) / 100).toLocaleString("en-US", {
+      style: "currency",
+      currency: String(currency || "usd").toUpperCase(),
+    });
   return (
     <>
       <Title
@@ -1035,6 +1077,101 @@ function SubscriptionV2({ c }: { c: Ctx }) {
         <b>TEST MODE:</b> No real charges are processed while Girlz Culture is
         in pre-launch testing.
       </div>
+      {upgradePreview ? (
+        <Panel className="mb-4 border-magenta/30 bg-blush/25">
+          <h2 className="font-serif text-2xl text-plum">
+            Confirm plan upgrade
+          </h2>
+          <p className="mt-2 text-xs leading-5 text-ink/65">
+            {upgradePreview.message}
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Current plan", upgradePreview.currentPlan],
+              ["New plan", upgradePreview.requestedPlan],
+              [
+                "Unused-period credit",
+                previewMoney(
+                  upgradePreview.preview.unusedPeriodCredit,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Prorated plan charge",
+                previewMoney(
+                  upgradePreview.preview.proratedCharge,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Tax",
+                previewMoney(
+                  upgradePreview.preview.tax,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Amount due now",
+                previewMoney(
+                  upgradePreview.preview.amountDueNow,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Renewal price",
+                previewMoney(
+                  upgradePreview.preview.renewalAmount,
+                  upgradePreview.preview.currency,
+                ),
+              ],
+              [
+                "Renewal date",
+                dateText(upgradePreview.preview.renewalDate),
+              ],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-xl border border-plum/10 bg-white p-3"
+              >
+                <p className="text-[9px] font-bold uppercase text-ink/50">
+                  {label}
+                </p>
+                <p className="mt-1 text-sm font-bold text-plum">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-[10px] leading-4 text-ink/55">
+            Features remain on {upgradePreview.currentPlan} until Stripe
+            verifies the invoice and replacement subscription price. You will
+            leave Girlz Culture only if Stripe requires a payment action.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => void confirmUpgrade()}
+              className="rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
+            >
+              {busy === "confirm-upgrade"
+                ? "Confirming with Stripe…"
+                : `Confirm ${upgradePreview.requestedPlan} upgrade`}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => {
+                setUpgradePreview(null);
+                c.setNotice(
+                  "Upgrade cancelled. Your current plan and access are unchanged.",
+                );
+              }}
+              className="rounded-lg border border-magenta px-5 py-3 text-xs font-bold text-magenta"
+            >
+              Keep current plan
+            </button>
+          </div>
+        </Panel>
+      ) : null}
       {scheduledPlan ? (
         <Panel className="mb-4 border-amber/35 bg-amber/10">
           <div className="grid gap-4 sm:grid-cols-4">

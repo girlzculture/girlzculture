@@ -26,6 +26,9 @@ type StripeObject = Record<string, unknown> & {
   latest_charge?: string | {
     id?: string;
     receipt_url?: string | null;
+    balance_transaction?:
+      | string
+      | { amount?: number; fee?: number; net?: number; currency?: string };
     payment_method_details?: {
       type?: string;
       card?: { brand?: string; last4?: string };
@@ -343,9 +346,11 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
   let chargeId = "";
   let receiptUrl = "";
   let paymentMethodLabel = "No payment required";
+  let processingFee = 0;
+  let chargeNet = 0;
   if (String(session.payment_status) === "paid" && paymentIntentId) {
     const paymentIntent = await stripeGet<StripeObject>(
-      `/payment_intents/${paymentIntentId}?expand[]=latest_charge`,
+      `/payment_intents/${paymentIntentId}?expand[]=latest_charge.balance_transaction`,
     );
     const charge =
       paymentIntent.latest_charge &&
@@ -355,6 +360,13 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
     chargeId = stripeId(paymentIntent.latest_charge) || "";
     receiptUrl = String(charge?.receipt_url || "");
     const method = charge?.payment_method_details;
+    const balanceTransaction =
+      charge?.balance_transaction &&
+      typeof charge.balance_transaction === "object"
+        ? charge.balance_transaction
+        : null;
+    processingFee = Number(balanceTransaction?.fee || 0) / 100;
+    chargeNet = Number(balanceTransaction?.net || 0) / 100;
     const brand = String(method?.card?.brand || "").trim();
     const last4 = String(method?.card?.last4 || "").trim();
     paymentMethodLabel = brand && last4
@@ -369,6 +381,13 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
     stripe_receipt_url: receiptUrl || null,
     payment_method_label: paymentMethodLabel,
     payment_mode: session.livemode ? "live" : "test",
+    payment_verified_at: new Date().toISOString(),
+    stripe_processing_fee: processingFee,
+    platform_fee: 0,
+    net_amount_owed_salon:
+      chargeNet ||
+      Math.max(0, Number(intent.deposit_amount || 0) - processingFee),
+    payout_status: "Awaiting payout",
     deposit_status: "Paid",
   };
   const { data: booking, error } = await admin.from("bookings").insert(payload).select("id").single();
@@ -420,11 +439,22 @@ async function POSTHandler(request: Request) {
   try { event = verifyStripeEvent(rawBody, request.headers.get("stripe-signature")); }
   catch (error) { noteOperationalFailure("Stripe webhook signature failed", error); return Response.json({ error: "Invalid signature" }, { status: 400 }); }
   const admin = getSupabaseAdmin();
-  const { error: dedupeError } = await admin.from("stripe_webhook_events").insert({ id: event.id, event_type: event.type });
-  if (dedupeError?.code === "23505") return Response.json({ received: true, duplicate: true });
+  const eventObject = event.data.object as StripeObject;
+  const { data: shouldProcess, error: dedupeError } = await admin.rpc(
+    "begin_stripe_webhook_event",
+    {
+      p_id: event.id,
+      p_event_type: event.type,
+      p_livemode: Boolean(eventObject.livemode),
+      p_provider_created_at: event.created
+        ? new Date(event.created * 1000).toISOString()
+        : null,
+    },
+  );
   if (dedupeError) { noteOperationalFailure("Stripe webhook dedupe failed", dedupeError); return Response.json({ error: "Webhook storage failed" }, { status: 500 }); }
+  if (!shouldProcess) return Response.json({ received: true, duplicate: true });
   try {
-    const object = event.data.object as StripeObject;
+    const object = eventObject;
     await recordBillingEvent(event, object);
     if (event.type === "checkout.session.completed") {
       await trackPromoRedemption(object);
@@ -436,10 +466,38 @@ async function POSTHandler(request: Request) {
     }
     if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) await syncSubscription(object);
     if (event.type.startsWith("subscription_schedule.")) await syncScheduleState(object, event.type);
+    const { error: processedError } = await admin
+      .from("stripe_webhook_events")
+      .update({
+        processing_status: "Processed",
+        processed_at: new Date().toISOString(),
+        last_attempt_at: new Date().toISOString(),
+        error_reference: null,
+      })
+      .eq("id", event.id);
+    if (processedError) throw processedError;
     return Response.json({ received: true });
   } catch (error) {
-    await admin.from("stripe_webhook_events").delete().eq("id", event.id);
-    noteOperationalFailure("Stripe webhook processing failed", { eventId: event.id, type: event.type, error });
+    const reference = await capturePlatformError({
+      request,
+      admin,
+      error,
+      feature: "stripe-webhooks",
+      action: "process_event",
+      actorRole: "provider",
+      recordType: "stripe_event",
+      recordId: event.id,
+      provider: "stripe",
+      safeMessage: "A Stripe payment update could not be processed.",
+    });
+    await admin
+      .from("stripe_webhook_events")
+      .update({
+        processing_status: "Failed",
+        last_attempt_at: new Date().toISOString(),
+        error_reference: reference,
+      })
+      .eq("id", event.id);
     return Response.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

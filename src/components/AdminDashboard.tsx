@@ -18,6 +18,7 @@ import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
 import AdminMarketingWorkspace from "@/components/admin/AdminMarketingWorkspace";
+import AdminFinanceDashboard from "@/components/admin/AdminFinanceDashboard";
 import EngineControlCenter from "@/components/admin/EngineControlCenter";
 import IdentityDeletionManager from "@/components/admin/IdentityDeletionManager";
 import { US_STATES } from "@/lib/usStates";
@@ -165,7 +166,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "bookings": return <Bookings {...props} />;
     case "quality": return <Quality {...props} />;
     case "reviews": return <Reviews {...props} />;
-    case "finance": return <Finance {...props} />;
+    case "finance": return <AdminFinanceDashboard />;
     case "marketing": return <AdminMarketingWorkspace overview={<div className="space-y-5"><AdminPromoCodes /><Marketing {...props} /></div>} />;
     case "content": return <AdminContentManager />;
     case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} mode="support" onRead={onTicketRead} /><BookingInbox scope="admin" /></div>;
@@ -260,6 +261,9 @@ function Reviews(p: any) {
   return <Panel title="Reviews & Moderation"><DataTable headers={["Reviewer", "Salon", "Rating", "Review", "Date", "Status", "Actions"]}>{p.reviews.length ? p.reviews.map((review: Row) => <tr key={review.id} className={`border-b ${review.dispute_status && review.dispute_status !== "None" ? "bg-red-50" : ""}`}><Td>{review.customer_name || "Customer"}</Td><Td>{p.salons.find((salon: Row) => salon.id === review.salon_id)?.name || "Salon unavailable"}</Td><Td>{Number(review.rating_overall || 0).toFixed(1)}</Td><Td>{review.written_review || "No written review"}</Td><Td>{date(review.created_at)}</Td><Td><Badge value={review.dispute_status || "Published"} /></Td><Td><select value={review.dispute_status || "Published"} onChange={(event) => p.update("reviews", review.id, { dispute_status: event.target.value })} className="rounded border p-1"><option>Published</option><option>Removed</option><option>Resolved</option></select></Td></tr>) : <EmptyTable columns={7} text="No reviews yet." />}</DataTable></Panel>;
 }
 
+// Retained temporarily for rollback comparison until the launch Finance
+// workspace has completed preview review.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function Finance(p: any) {
   const [stateFilter,setStateFilter]=useState("all");
   const [planFilter,setPlanFilter]=useState("all");

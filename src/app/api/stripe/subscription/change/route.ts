@@ -1,5 +1,11 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
-import { normalizePlan, planFromStripePriceId, planRank, stripePriceEnv } from "@/lib/plans";
+import {
+  normalizePlan,
+  planFromStripePriceId,
+  planRank,
+  stripePriceEnv,
+  SUBSCRIPTION_PLANS,
+} from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse, RateLimitError } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { stripeGet, stripeRequest } from "@/lib/stripeServer";
@@ -13,7 +19,15 @@ type StripeInvoice = {
   currency?: string;
   status?: string;
   hosted_invoice_url?: string | null;
-  lines?: { data?: Array<{ amount?: number }> };
+  lines?: {
+    data?: Array<{
+      amount?: number;
+      proration?: boolean;
+      parent?: { subscription_item_details?: { proration?: boolean } };
+    }>;
+  };
+  total_taxes?: Array<{ amount?: number }>;
+  total_tax_amounts?: Array<{ amount?: number }>;
   payment_intent?: { id?: string; status?: string; last_payment_error?: { message?: string } } | string | null;
 };
 
@@ -197,15 +211,96 @@ async function POSTHandler(request: Request) {
     }
 
     if (body.confirm !== true) {
-      await trackChange({ status: "Awaiting confirmation", event_source: "owner_request", effective_at: null, failure_reason: null });
+      const prorationDate = Math.floor(Date.now() / 1000);
+      const preview = await stripeRequest<StripeInvoice>(
+        "/invoices/create_preview",
+        {
+          subscription: current.id,
+          "subscription_details[items][0][id]": item.id,
+          "subscription_details[items][0][price]": priceId,
+          "subscription_details[items][0][quantity]": item.quantity || 1,
+          "subscription_details[proration_behavior]": "always_invoice",
+          "subscription_details[proration_date]": prorationDate,
+          "expand[0]":
+            "lines.data.parent.subscription_item_details",
+        },
+      );
+      const prorationLines = (preview.lines?.data || []).filter(
+        (line) =>
+          line.proration === true ||
+          line.parent?.subscription_item_details?.proration === true,
+      );
+      const prorationCredit = prorationLines
+        .filter((line) => Number(line.amount || 0) < 0)
+        .reduce((sum, line) => sum + Math.abs(Number(line.amount || 0)), 0);
+      const prorationCharge = prorationLines
+        .filter((line) => Number(line.amount || 0) > 0)
+        .reduce((sum, line) => sum + Number(line.amount || 0), 0);
+      const taxAmount = (
+        preview.total_taxes ||
+        preview.total_tax_amounts ||
+        []
+      ).reduce((sum, tax) => sum + Number(tax.amount || 0), 0);
+      const renewalAmount = Math.round(
+        SUBSCRIPTION_PLANS[plan].monthlyPrice * 100,
+      );
+      const previewedAt = new Date().toISOString();
+      const renewalDate = isoFromSeconds(currentPeriodEnd);
+      await trackChange({
+        status: "Awaiting confirmation",
+        event_source: "stripe_preview",
+        effective_at: null,
+        failure_reason: null,
+        previewed_at: previewedAt,
+        preview_proration_date: prorationDate,
+        currency: preview.currency || "usd",
+        proration_credit: prorationCredit,
+        proration_charge: prorationCharge,
+        tax_amount: taxAmount,
+        amount_due: Number(preview.amount_due || 0),
+        amount_pending: Number(preview.amount_due || 0),
+        renewal_amount: renewalAmount,
+        renewal_date: renewalDate,
+      });
       return Response.json({
         requiresConfirmation: true,
         currentPlan,
         requestedPlan: plan,
-        message: `Confirm the upgrade from ${currentPlan} to ${plan}. Stripe will calculate the unused ${currentPlan} credit, the remaining-period ${plan} charge, and any tax. Access changes only after Stripe reports the resulting invoice paid.`,
+        preview: {
+          unusedPeriodCredit: prorationCredit,
+          proratedCharge: prorationCharge,
+          tax: taxAmount,
+          amountDueNow: Number(preview.amount_due || 0),
+          currency: preview.currency || "usd",
+          renewalAmount,
+          renewalDate,
+          previewedAt,
+        },
+        message: `Review the verified Stripe preview before upgrading from ${currentPlan} to ${plan}. Access changes only after Stripe reports the resulting invoice paid.`,
       });
     }
 
+    const { data: previewRecord, error: previewError } = await admin
+      .from("subscription_change_requests")
+      .select("previewed_at,preview_proration_date")
+      .eq("idempotency_key", requestKey)
+      .eq("status", "Awaiting confirmation")
+      .maybeSingle();
+    if (previewError) throw previewError;
+    const previewAge = previewRecord?.previewed_at
+      ? Date.now() - new Date(previewRecord.previewed_at).getTime()
+      : Number.POSITIVE_INFINITY;
+    if (
+      !previewRecord?.preview_proration_date ||
+      previewAge < 0 ||
+      previewAge > 15 * 60_000
+    ) {
+      rejectRequest(
+        "This Stripe preview expired. Review a fresh plan-change preview before confirming.",
+        409,
+      );
+    }
+    const prorationDate = Number(previewRecord.preview_proration_date);
     await trackChange({ status: "Processing", event_source: "stripe_api", failure_reason: null });
 
     const updated = await stripeRequest<StripeSubscription>(`/subscriptions/${current.id}`, {
@@ -213,6 +308,7 @@ async function POSTHandler(request: Request) {
       "items[0][price]": priceId,
       "items[0][quantity]": item.quantity || 1,
       proration_behavior: "always_invoice",
+      proration_date: prorationDate,
       payment_behavior: "pending_if_incomplete",
       "expand[0]": "latest_invoice.payment_intent",
       "metadata[salon_id]": salon.id,

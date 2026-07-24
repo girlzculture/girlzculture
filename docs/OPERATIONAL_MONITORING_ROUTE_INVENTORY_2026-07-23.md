@@ -30,6 +30,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/admin/engine/system-status` | GET | protected | Covered |
 | `/api/admin/engine/translations` | GET, PATCH | protected | Covered |
 | `/api/admin/featured-campaigns` | GET, POST | protected | Covered |
+| `/api/admin/finance` | GET | protected | Covered |
 | `/api/admin/identity-conflicts` | GET, PATCH | protected | Covered |
 | `/api/admin/identity-deletion` | GET, POST | protected | Covered |
 | `/api/admin/inbox-counts` | GET | protected | Covered |

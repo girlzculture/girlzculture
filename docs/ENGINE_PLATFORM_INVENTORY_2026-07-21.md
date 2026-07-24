@@ -7,11 +7,11 @@ This is a source inventory, not proof that migrations are applied or authenticat
 ## Inventory totals
 
 - Application pages: **44**
-- API routes: **89**
-- Components/modules under `src/components`: **83**
-- Ordered SQL migrations: **77**
+- API routes: **90**
+- Components/modules under `src/components`: **84**
+- Ordered SQL migrations: **78**
 - Tables/views discovered in migrations: **99**
-- Functions discovered in migrations: **100**
+- Functions discovered in migrations: **101**
 - RLS policies discovered in migrations: **168**
 
 ## Application page inventory
@@ -82,6 +82,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `/api/admin/engine/system-status` | GET | `src/app/api/admin/engine/system-status/route.ts` | Supabase/database-backed operation | Engine control center | Admin bearer session plus explicit permission | server authorization | verify:engine-expansion |
 | `/api/admin/engine/translations` | GET, PATCH | `src/app/api/admin/engine/translations/route.ts` | Supabase/database-backed operation | Engine control center | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling, server authorization | verify:i18n, verify:engine-expansion |
 | `/api/admin/featured-campaigns` | GET, POST | `src/app/api/admin/featured-campaigns/route.ts` | Provider-neutral AI, disabled fail-closed | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | verify:media |
+| `/api/admin/finance` | GET | `src/app/api/admin/finance/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/admin/identity-conflicts` | GET, PATCH | `src/app/api/admin/identity-conflicts/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling, server authorization | verify:identity |
 | `/api/admin/identity-deletion` | GET, POST | `src/app/api/admin/identity-deletion/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling | verify:identity |
 | `/api/admin/inbox-counts` | GET | `src/app/api/admin/inbox-counts/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | route-specific bounds and safe errors | TypeScript/lint/build and route smoke where public |
@@ -186,6 +187,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `src/components/admin/AdminApplicationReview.tsx` | Platform admin / Engine |
 | `src/components/admin/AdminBookingEditor.tsx` | Platform admin / Engine |
 | `src/components/admin/AdminFeaturedCampaigns.tsx` | Platform admin / Engine |
+| `src/components/admin/AdminFinanceDashboard.tsx` | Platform admin / Engine |
 | `src/components/admin/AdminHomepageMarketing.tsx` | Platform admin / Engine |
 | `src/components/admin/AdminMarketingWorkspace.tsx` | Platform admin / Engine |
 | `src/components/admin/AdminPromoCodes.tsx` | Platform admin / Engine |
@@ -365,6 +367,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `attach_registered_media`
 - `audit_declined_reschedule_proposal`
 - `audit_salon_promotion_change`
+- `begin_stripe_webhook_event`
 - `capture_platform_error`
 - `claim_booking_reminder`
 - `create_booking_notification`
@@ -704,6 +707,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | 75 | `20260723210000_booking_communications.sql` | `supabase/migrations/20260723210000_booking_communications.sql` |
 | 76 | `20260723220000_secure_guest_booking_management.sql` | `supabase/migrations/20260723220000_secure_guest_booking_management.sql` |
 | 77 | `20260723230000_customer_approved_rescheduling.sql` | `supabase/migrations/20260723230000_customer_approved_rescheduling.sql` |
+| 78 | `20260723240000_finance_reconciliation.sql` | `supabase/migrations/20260723240000_finance_reconciliation.sql` |
 
 ## Protected values deliberately left outside Engine
 
