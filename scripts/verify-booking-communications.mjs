@@ -119,6 +119,10 @@ const webhookSource = fs.readFileSync(
   "src/app/api/stripe/webhook/route.ts",
   "utf8",
 );
+const migrationSource = fs.readFileSync(
+  "supabase/migrations/20260723210000_booking_communications.sql",
+  "utf8",
+);
 assert.match(adminSource, /renderCustomerBookingConfirmation/);
 assert.match(adminSource, /renderSalonBookingConfirmation/);
 assert.match(adminSource, /renderBookingCancellation/);
@@ -126,6 +130,11 @@ assert.match(adminSource, /reply_to/);
 assert.match(webhookSource, /stripe_receipt_url/);
 assert.match(webhookSource, /expand\[\]=latest_charge/);
 assert.match(webhookSource, /payment_method_label/);
+assert.match(
+  migrationSource,
+  /notifications\.booking_policy_summary[\s\S]*?'rich_text'/,
+);
+assert.doesNotMatch(migrationSource, /'textarea'/);
 
 console.log(
   "Booking communication verification passed: locked confirmation, financial, receipt, salon, and cancellation details are rendered and wired.",
