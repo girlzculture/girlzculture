@@ -375,6 +375,8 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
   }
   const payload: Record<string, unknown> = {
     ...(intent.payload as Record<string, unknown>),
+    salon_promotion_redemption_id: intent.salon_promotion_redemption_id || null,
+    promotion_snapshot: intent.promotion_snapshot || {},
     stripe_payment_id: paymentIntentId || session.id,
     stripe_checkout_session_id: session.id || null,
     stripe_charge_id: chargeId || null,

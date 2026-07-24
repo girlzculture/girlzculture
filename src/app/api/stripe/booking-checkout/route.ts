@@ -19,6 +19,7 @@ const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(val
 async function POSTHandler(request: Request) {
   const admin = getSupabaseAdmin();
   let intentId = "";
+  let salonPromotionRedemptionId = "";
   try {
     enforceRateLimit(request, "booking-checkout", 8, 10 * 60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -108,6 +109,7 @@ async function POSTHandler(request: Request) {
     const subtotalBeforeSalonPromotion = total;
     const salonPromotionId = cleanText(body.salon_promotion_id, 50) || null;
     let salonPromotionDiscount = 0;
+    let salonPromotionSnapshot: Record<string, unknown> = {};
     if (salonPromotionId) {
       if (!["Growth","Premium"].includes(String(salon.subscription_tier || ""))) throw new Error("This salon offer is no longer available.");
       if (!/^[0-9a-f-]{36}$/i.test(salonPromotionId)) throw new Error("The selected salon offer is not valid.");
@@ -136,6 +138,22 @@ async function POSTHandler(request: Request) {
       if (!priceResult.eligible) throw new Error("This offer does not apply to the selected service or options.");
       salonPromotionDiscount = priceResult.discount;
       total = priceResult.total;
+      salonPromotionSnapshot = {
+        promotion_id: promotionResult.data.id,
+        title: promotionResult.data.public_headline || promotionResult.data.title,
+        promotion_type: promotionResult.data.promotion_type,
+        discount_value: Number(promotionResult.data.discount_value || 0),
+        discount_label: promotionResult.data.discount_label,
+        target_scope: promotionResult.data.target_scope,
+        target_ids: promotionResult.data.target_ids || [],
+        restrictions,
+        starts_at: promotionResult.data.starts_at,
+        ends_at: promotionResult.data.ends_at,
+        subtotal_before_promotion: subtotalBeforeSalonPromotion,
+        discount_amount: salonPromotionDiscount,
+        adjusted_total: total,
+        captured_at: new Date().toISOString(),
+      };
     }
     const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
     const originalDeposit = Math.round(total * depositPercentage) / 100;
@@ -146,7 +164,7 @@ async function POSTHandler(request: Request) {
     const discount = promoPreview?.discount || 0;
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
-    const payload = {
+    const payload: Record<string, unknown> = {
       customer_id: customerId,
       salon_id: salonId,
       style_id: styleId,
@@ -169,7 +187,9 @@ async function POSTHandler(request: Request) {
       promo_code_id: promoPreview?.promo.id || null,
       promo_code: promoPreview?.promo.code || null,
       salon_promotion_id: salonPromotionId,
+      salon_promotion_redemption_id: null,
       promotion_discount_amount: salonPromotionDiscount,
+      promotion_snapshot: salonPromotionSnapshot,
       balance_due: Math.round((total - deposit) * 100) / 100,
       confirmation_code: `GC-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       status: "Confirmed",
@@ -203,7 +223,26 @@ async function POSTHandler(request: Request) {
     }
     intentId = String(reservationId);
     if (salonPromotionId) {
-      const promotionIntent = await admin.from("booking_checkout_intents").update({ salon_promotion_id: salonPromotionId, promotion_discount_amount: salonPromotionDiscount }).eq("id", intentId).eq("salon_id", salonId);
+      const promotionReservation = await admin.rpc("reserve_salon_promotion", {
+        p_promotion_id: salonPromotionId,
+        p_booking_intent_id: intentId,
+        p_customer_id: customerId,
+        p_customer_email: guestEmail,
+        p_snapshot: salonPromotionSnapshot,
+      });
+      if (promotionReservation.error || !promotionReservation.data) {
+        await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
+        if (/USAGE_LIMIT|CUSTOMER_LIMIT|NOT_AVAILABLE/i.test(promotionReservation.error?.message || "")) throw new Error("This offer has reached its use limit or is no longer available.");
+        throw promotionReservation.error || new Error("This offer could not be reserved.");
+      }
+      salonPromotionRedemptionId = String(promotionReservation.data);
+      payload.salon_promotion_redemption_id = salonPromotionRedemptionId;
+      const promotionIntent = await admin.from("booking_checkout_intents").update({
+        salon_promotion_id: salonPromotionId,
+        salon_promotion_redemption_id: salonPromotionRedemptionId,
+        promotion_discount_amount: salonPromotionDiscount,
+        promotion_snapshot: salonPromotionSnapshot,
+      }).eq("id", intentId).eq("salon_id", salonId);
       if (promotionIntent.error) throw promotionIntent.error;
     }
 
@@ -287,6 +326,7 @@ async function POSTHandler(request: Request) {
       "metadata[salon_id]": salonId,
       "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
       "metadata[promo_code]": promoReservation?.code || "",
+      "metadata[salon_promotion_redemption_id]": salonPromotionRedemptionId,
       "payment_intent_data[description]": `${depositPercentage}% reservation deposit for ${style.name}`,
       allow_promotion_codes: !promoReservation,
       ...(promoReservation?.stripe_coupon_id ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id } : {}),
@@ -298,6 +338,7 @@ async function POSTHandler(request: Request) {
     return Response.json({ url: session.url, deposit, originalDeposit, discount, salonPromotionDiscount, total, testMode: true });
   } catch (error) {
     if (intentId) await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
+    if (salonPromotionRedemptionId) await admin.rpc("cancel_salon_promotion_reservation", { p_redemption_id: salonPromotionRedemptionId });
     noteOperationalFailure("Booking checkout failed", error);
     return errorResponse(error, "Unable to start secure checkout.");
   }

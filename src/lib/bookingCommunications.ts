@@ -106,6 +106,12 @@ function appointmentDetails(input: BookingCommunicationInput) {
 
 function priceDetails(input: BookingCommunicationInput) {
   const { booking, style } = input;
+  const promotionSnapshot =
+    booking.promotion_snapshot &&
+    typeof booking.promotion_snapshot === "object" &&
+    !Array.isArray(booking.promotion_snapshot)
+      ? booking.promotion_snapshot as Row
+      : {};
   const promotionDiscount =
     Number(booking.promotion_discount_amount || 0) +
     Number(booking.discount_amount || 0);
@@ -131,7 +137,7 @@ function priceDetails(input: BookingCommunicationInput) {
       ),
     ) +
     row(
-      "Promotion / discount",
+      promotionSnapshot.title ? `Promotion: ${String(promotionSnapshot.title)}` : "Promotion / discount",
       promotionDiscount ? `-${money(promotionDiscount)}` : "$0.00",
     ) +
     row("Adjusted total", money(total), true) +

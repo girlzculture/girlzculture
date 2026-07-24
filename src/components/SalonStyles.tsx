@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, ChevronDown } from "lucide-react";
+import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 
 type StyleRecord = {
   id?: string;
@@ -18,6 +20,8 @@ type StyleRecord = {
   addons?: unknown;
   hair_included?: boolean | null;
   included_items?: unknown;
+  service_group_id?: string | null;
+  master_style_id?: string | null;
 };
 
 type StyleMaterialRecord = {
@@ -35,6 +39,8 @@ type SalonStylesProps = {
   styles: StyleRecord[];
   styleMaterialsByStyleId: Record<string, StyleMaterialRecord[]>;
   salonSlug: string;
+  salonId: string;
+  promotions?: SalonPromotion[];
 };
 
 function normalizeOptions(value: unknown): OptionRecord[] {
@@ -74,7 +80,7 @@ function formatAddOnPrice(value: number) {
   return value > 0 ? `+$${value}` : "$0";
 }
 
-export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonStylesProps) {
+export default function SalonStyles({ styles, styleMaterialsByStyleId, salonSlug, salonId, promotions = [] }: SalonStylesProps) {
   const defaultOpenId = styles[1]?.id || styles[1]?.name || styles[0]?.id || styles[0]?.name || null;
   const [openId, setOpenId] = useState<string | null>(defaultOpenId);
 
@@ -90,16 +96,27 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
       quality_note: typeof option.quality_note === "string" ? option.quality_note : null,
     }));
 
+    const basePrice = style.workmanship_base_price ?? style.base_price ?? style.price_display_min ?? style.price_display_max ?? 0;
+    const offer = bestPromotionForContext(promotions, {
+      salonId,
+      styleId: style.id || null,
+      serviceGroupId: style.service_group_id,
+      masterStyleId: style.master_style_id,
+      basePrice,
+      selectedAddons: [],
+      subtotal: style.price_display_min ?? basePrice,
+    });
     return {
       id,
       style,
-      basePrice: style.workmanship_base_price ?? style.base_price ?? style.price_display_min ?? style.price_display_max ?? 0,
+      basePrice,
+      offer,
       lengthOptions: normalizeOptions(style.length_options),
       addons: normalizeOptions(style.addons),
       materials: savedMaterials.length ? savedMaterials : inlineMaterials,
       includedItems: Array.isArray(style.included_items) ? style.included_items.map(String).filter(Boolean) : [],
     };
-  }), [styles, styleMaterialsByStyleId]);
+  }), [promotions, salonId, styles, styleMaterialsByStyleId]);
 
   if (!styleCards.length) {
     return <div className="rounded-[12px] border border-dashed border-plum/20 bg-blush/25 p-5 text-sm text-ink/65">This salon has not published its styles yet.</div>;
@@ -117,8 +134,8 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
               aria-expanded={isOpen}
               className={`grid w-full grid-cols-[minmax(0,1fr)_auto_48px_14px] items-center gap-2 px-4 py-3 text-left transition sm:grid-cols-[minmax(0,1fr)_auto_auto_18px] sm:gap-3 sm:px-5 ${isOpen ? "bg-blush/45 text-magenta" : "bg-white/70 text-ink hover:bg-cream/70"}`}
             >
-              <span data-no-translate="true" className="truncate text-[12px] font-semibold sm:text-[13px]">{card.style.name || "Style"}</span>
-              <span className="whitespace-nowrap text-[11px] font-semibold text-ink/75">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span>
+              <span data-no-translate="true" className="min-w-0 text-[12px] font-semibold sm:text-[13px]"><span className="block truncate">{card.style.name || "Style"}</span>{card.offer ? <span className="mt-1 inline-flex rounded-full bg-amber/20 px-2 py-0.5 text-[8px] font-bold text-[#805000]">{promotionLabel(card.offer.promotion)}</span> : null}</span>
+              <span className="whitespace-nowrap text-right text-[11px] font-semibold text-ink/75">{card.offer ? <><span className="block text-[9px] font-medium text-ink/40 line-through">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span><span className="text-magenta">From ${card.offer.price.total.toFixed(2)}</span></> : formatRange(card.style.price_display_min, card.style.price_display_max)}</span>
               <span className={`whitespace-nowrap text-right text-[8px] sm:min-w-20 sm:text-[10px] ${isOpen ? "text-magenta" : "text-ink/50"}`}>{formatDuration(card.style.duration_min_hours, card.style.duration_max_hours)}</span>
               <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${isOpen ? "rotate-180 text-magenta" : "text-ink/55"}`} />
             </button>
@@ -178,6 +195,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                   </div>
                 </div>
                 <p className="mt-4 text-[9px] font-medium text-magenta">Price may vary based on hair density and length.</p>
+                {card.offer ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-magenta/20 bg-white/75 p-3"><p className="text-[10px] text-ink/70"><b className="text-plum">{card.offer.promotion.public_headline || card.offer.promotion.title}</b><br/><span className="line-through">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span> <span className="font-bold text-magenta">From ${card.offer.price.total.toFixed(2)}</span></p><Link href={`/salon/${salonSlug}/book?style=${encodeURIComponent(String(card.style.id || ""))}&promotion=${encodeURIComponent(String(card.offer.promotion.id || ""))}`} className="inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white">Book this offer</Link></div> : null}
               </div>
             ) : null}
           </div>
