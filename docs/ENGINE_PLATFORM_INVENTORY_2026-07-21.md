@@ -7,12 +7,12 @@ This is a source inventory, not proof that migrations are applied or authenticat
 ## Inventory totals
 
 - Application pages: **44**
-- API routes: **92**
-- Components/modules under `src/components`: **85**
-- Ordered SQL migrations: **82**
-- Tables/views discovered in migrations: **102**
-- Functions discovered in migrations: **108**
-- RLS policies discovered in migrations: **172**
+- API routes: **94**
+- Components/modules under `src/components`: **87**
+- Ordered SQL migrations: **85**
+- Tables/views discovered in migrations: **108**
+- Functions discovered in migrations: **119**
+- RLS policies discovered in migrations: **175**
 
 ## Application page inventory
 
@@ -72,6 +72,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `/api/admin/content` | GET, PUT, DELETE | `src/app/api/admin/content/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling, server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/admin/data` | GET | `src/app/api/admin/data/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/admin/engine/ai` | GET, POST, PATCH | `src/app/api/admin/engine/ai/route.ts` | Provider-neutral AI, disabled fail-closed | Engine control center | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | verify:engine-expansion |
+| `/api/admin/engine/brand-assets` | GET, POST, PATCH | `src/app/api/admin/engine/brand-assets/route.ts` | Supabase/database-backed operation | Engine control center | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | verify:engine-expansion |
 | `/api/admin/engine/config` | GET, POST, PATCH | `src/app/api/admin/engine/config/route.ts` | Supabase/database-backed operation | Engine control center | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling, server authorization | verify:engine-expansion |
 | `/api/admin/engine/errors` | GET, PATCH | `src/app/api/admin/engine/errors/route.ts` | Supabase/database-backed operation | Engine control center | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | verify:engine-expansion |
 | `/api/admin/engine/lifecycle` | GET, PATCH | `src/app/api/admin/engine/lifecycle/route.ts` | Supabase/database-backed operation | Engine control center | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | verify:engine-expansion |
@@ -145,11 +146,12 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `/api/salon/lifecycle` | GET, POST | `src/app/api/salon/lifecycle/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, dependency/confirmation handling, server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/salon/onboarding` | GET, POST | `src/app/api/salon/onboarding/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/salon/open-status` | POST | `src/app/api/salon/open-status/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | server authorization | TypeScript/lint/build and route smoke where public |
-| `/api/salon/profile` | GET, PATCH | `src/app/api/salon/profile/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, server authorization | TypeScript/lint/build and route smoke where public |
+| `/api/salon/profile` | GET, POST, PATCH | `src/app/api/salon/profile/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, server authorization, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/salon/records/save` | POST | `src/app/api/salon/records/save/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, dependency/confirmation handling, server authorization | verify:records |
 | `/api/salon/records` | GET, POST | `src/app/api/salon/records/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, dependency/confirmation handling, server authorization | verify:records |
 | `/api/salon/team` | GET, POST, PATCH, DELETE | `src/app/api/salon/team/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, dependency/confirmation handling, server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/salon/workspace` | GET | `src/app/api/salon/workspace/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | server authorization | TypeScript/lint/build and route smoke where public |
+| `/api/salons/[slug]/qr` | GET | `src/app/api/salons/[slug]/qr/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input | TypeScript/lint/build and route smoke where public |
 | `/api/search/suggestions` | GET | `src/app/api/search/suggestions/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, dependency/confirmation handling, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/stripe/booking-checkout` | POST | `src/app/api/stripe/booking-checkout/route.ts` | Stripe/provider-backed financial operation | Stripe provider plus Engine presentation | Public/owner scope validated per operation | typed/sanitized input, dependency/confirmation handling, server authorization, abuse protection | verify:billing, verify:hardening |
 | `/api/stripe/booking-status` | GET | `src/app/api/stripe/booking-status/route.ts` | Stripe/provider-backed financial operation | Stripe provider plus Engine presentation | Public/owner scope validated per operation | dependency/confirmation handling | verify:billing, verify:hardening |
@@ -196,6 +198,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `src/components/admin/AdminSalonsManager.tsx` | Platform admin / Engine |
 | `src/components/admin/AdminTrendingCampaigns.tsx` | Platform admin / Engine |
 | `src/components/admin/AiAutomationManager.tsx` | Platform admin / Engine |
+| `src/components/admin/BrandAppearanceManager.tsx` | Platform admin / Engine |
 | `src/components/admin/EngineControlCenter.tsx` | Platform admin / Engine |
 | `src/components/admin/ErrorMonitoringManager.tsx` | Platform admin / Engine |
 | `src/components/admin/HeroImageFraming.tsx` | Platform admin / Engine |
@@ -225,6 +228,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `src/components/owner/OwnerDashboardShell.tsx` | Shared/public/customer surface |
 | `src/components/owner/SalonOpenStatusControl.tsx` | Shared/public/customer surface |
 | `src/components/owner/SalonPromotionsManager.tsx` | Shared/public/customer surface |
+| `src/components/owner/SalonVanityManager.tsx` | Shared/public/customer surface |
 | `src/components/owner/StructuredCatalogEditors.tsx` | Shared/public/customer surface |
 | `src/components/public/BeautyConcierge.tsx` | Shared/public/customer surface |
 | `src/components/public/ComplaintForm.tsx` | Shared/public/customer surface |
@@ -307,6 +311,8 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `notification_templates`
 - `notifications`
 - `password_reset_codes`
+- `platform_brand_asset_versions`
+- `platform_brand_assets`
 - `platform_content`
 - `platform_error_affected_businesses`
 - `platform_error_alert_rules`
@@ -325,13 +331,17 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `salon_closure_requests`
 - `salon_products`
 - `salon_promotion_audit`
+- `salon_promotion_redemptions`
 - `salon_promotions`
 - `salon_quality_metrics`
 - `salon_reconciliation_items`
 - `salon_reconciliation_runs`
 - `salon_slug_redirects`
+- `salon_slug_reserved_words`
 - `salon_status_audit`
 - `salon_team_members`
+- `salon_vanity_audit`
+- `salon_vanity_requests`
 - `salons`
 - `search_engine_settings`
 - `search_language_rules`
@@ -367,6 +377,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `admin_moderate_trending_campaign`
 - `admin_reassign_service_group`
 - `admin_reconcile_salon_publication`
+- `admin_review_salon_vanity_request`
 - `admin_save_featured_campaign`
 - `admin_save_trending_campaign`
 - `assert_primary_identity`
@@ -374,6 +385,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `audit_declined_reschedule_proposal`
 - `audit_salon_promotion_change`
 - `begin_stripe_webhook_event`
+- `cancel_salon_promotion_reservation`
 - `capture_platform_error`
 - `claim_booking_reminder`
 - `create_booking_notification`
@@ -393,6 +405,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `enforce_complaint_verification`
 - `enforce_customer_identity`
 - `enforce_salon_owner_identity`
+- `enforce_salon_slug_namespaces`
 - `enforce_salon_team_identity`
 - `enforce_salon_wide_booking_overlap`
 - `enforce_salon_wide_intent_overlap`
@@ -402,6 +415,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `engine_number_setting`
 - `execute_test_batch_cleanup`
 - `expire_featured_campaigns`
+- `finalize_booking_salon_promotion`
 - `generate_unique_salon_slug`
 - `has_active_subscription`
 - `is_admin`
@@ -410,6 +424,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `normalize_identity_email`
 - `normalize_marketplace_search`
 - `normalized_salon_address_fingerprint`
+- `normalized_salon_vanity_slug`
 - `notify_active_admins`
 - `owns_salon`
 - `owns_style`
@@ -418,9 +433,11 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `prepare_identity_deletion`
 - `prepare_salon_geocoding`
 - `preserve_salon_slug_redirect`
+- `prevent_brand_asset_version_mutation`
 - `prevent_featured_audit_mutation`
 - `prevent_salon_promotion_audit_mutation`
 - `prevent_salon_status_audit_mutation`
+- `prevent_salon_vanity_audit_mutation`
 - `prevent_trending_audit_mutation`
 - `propagate_master_style_name`
 - `protect_last_active_super_admin`
@@ -430,6 +447,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `reconcile_salon_publication`
 - `record_stripe_promo_redemption`
 - `redeem_promo_code`
+- `redeem_salon_promotion`
 - `refresh_salon_lifecycle_from_child`
 - `refresh_salon_lifecycle_from_salon`
 - `refresh_salon_lifecycle_trigger`
@@ -438,8 +456,10 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `remove_expired_auth_security_rows`
 - `replace_style_materials`
 - `reply_to_review`
+- `request_salon_vanity_url`
 - `reserve_booking_checkout`
 - `reserve_promo_code`
+- `reserve_salon_promotion`
 - `resolve_search_service_query`
 - `respond_booking_reschedule`
 - `safe_uuid`
@@ -450,6 +470,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `salon_setup_complete`
 - `salon_slugify`
 - `salon_team_stylist_id`
+- `salon_vanity_slug_available`
 - `save_salon_style_with_materials`
 - `set_booking_checkout_integrity_fields`
 - `set_booking_integrity_fields`
@@ -551,6 +572,8 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `notification_templates_admin_manage` on `notification_templates`
 - `notifications_recipient_read` on `notifications`
 - `notifications_recipient_update` on `notifications`
+- `platform_brand_assets_admin_read` on `platform_brand_assets`
+- `platform_brand_versions_admin_read` on `platform_brand_asset_versions`
 - `platform_content_admin_write` on `platform_content`
 - `platform_content_public_read` on `platform_content`
 - `platform_error_affected_businesses_admin_read` on `platform_error_affected_businesses`
@@ -585,6 +608,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `salon_products_owner_write` on `salon_products`
 - `salon_products_public_read` on `salon_products`
 - `salon_promotion_audit_owner_read` on `salon_promotion_audit`
+- `salon_promotion_redemptions_authorized_read` on `salon_promotion_redemptions`
 - `salon_promotions_owner_write` on `salon_promotions`
 - `salon_promotions_public_read` on `salon_promotions`
 - `salon_slug_redirects_public_read` on `salon_slug_redirects`
@@ -729,6 +753,9 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | 80 | `20260723260000_monitoring_context_promotion_audit.sql` | `supabase/migrations/20260723260000_monitoring_context_promotion_audit.sql` |
 | 81 | `20260723270000_localization_completion.sql` | `supabase/migrations/20260723270000_localization_completion.sql` |
 | 82 | `20260723280000_trending_video_processing.sql` | `supabase/migrations/20260723280000_trending_video_processing.sql` |
+| 83 | `20260723290000_promotion_targeting_enforcement.sql` | `supabase/migrations/20260723290000_promotion_targeting_enforcement.sql` |
+| 84 | `20260723300000_engine_brand_appearance.sql` | `supabase/migrations/20260723300000_engine_brand_appearance.sql` |
+| 85 | `20260723310000_salon_vanity_urls.sql` | `supabase/migrations/20260723310000_salon_vanity_urls.sql` |
 
 ## Protected values deliberately left outside Engine
 

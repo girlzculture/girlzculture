@@ -158,7 +158,8 @@ export default function FeaturedSalonPlacement({
           </h3>
           <p className="mt-1 text-xs leading-5 text-ink/65">
             Choose a city or ZIP in Find Salons. We only show eligible paid
-            placements within their real campaign radius.
+            placements within their real campaign radius. We will not fill this row with distant
+            or unpaid salons.
           </p>
           <Link
             href="/salons"

@@ -201,12 +201,26 @@ export default function CustomerLocationProvider({ children }: { children: React
       const next = readStoredLocation();
       if (active) setLocationState(validStoredLocation(next) ? next : null);
     };
+    const syncNavigationLocation = () => {
+      const explicit = locationFromUrl();
+      if (explicit) {
+        setLocationState(explicit);
+        persistLocation(explicit);
+        return;
+      }
+      const stored = readStoredLocation();
+      setLocationState(validStoredLocation(stored) ? stored : null);
+    };
     window.addEventListener("storage", onStorage);
+    window.addEventListener("popstate", syncNavigationLocation);
+    window.addEventListener("pageshow", syncNavigationLocation);
     return () => {
       active = false;
       controller.abort();
       window.clearTimeout(timer);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("popstate", syncNavigationLocation);
+      window.removeEventListener("pageshow", syncNavigationLocation);
     };
   }, []);
 
