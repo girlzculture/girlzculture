@@ -94,11 +94,12 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/salon/lifecycle` | GET, POST | protected | Covered |
 | `/api/salon/onboarding` | GET, POST | protected | Covered |
 | `/api/salon/open-status` | POST | protected | Covered |
-| `/api/salon/profile` | GET, PATCH | protected | Covered |
+| `/api/salon/profile` | GET, PATCH, POST | protected | Covered |
 | `/api/salon/records` | GET, POST | protected | Covered |
 | `/api/salon/records/save` | POST | protected | Covered |
 | `/api/salon/team` | GET, POST, PATCH, DELETE | protected | Covered |
 | `/api/salon/workspace` | GET | protected | Covered |
+| `/api/salons/[slug]/qr` | GET | public/read-only | Covered |
 | `/api/search/suggestions` | GET | public/read-only | Covered |
 | `/api/stripe/booking-checkout` | POST | provider-backed | Covered |
 | `/api/stripe/booking-status` | GET | provider-backed | Covered |

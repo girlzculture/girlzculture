@@ -14,7 +14,7 @@ export function classifyOperationalRoute(
       route,
     );
   const protectedRoute =
-    /^(?:\/api\/admin|\/api\/salon|\/api\/customer|\/api\/messages|\/api\/push|\/api\/stripe\/(?:portal|subscription|booking-checkout)|\/api\/bookings|\/api\/auth\/(?:destination|mfa\/settings)|\/api\/i18n\/preference)/.test(
+    /^(?:\/api\/admin(?:\/|$)|\/api\/salon(?:\/|$)|\/api\/customer(?:\/|$)|\/api\/messages(?:\/|$)|\/api\/push(?:\/|$)|\/api\/stripe\/(?:portal|subscription|booking-checkout)|\/api\/bookings(?:\/|$)|\/api\/auth\/(?:destination|mfa\/settings)|\/api\/i18n\/preference)/.test(
       route,
     );
   const expectedOnly =

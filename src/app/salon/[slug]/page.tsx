@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   BadgeCheck,
@@ -22,6 +23,7 @@ import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
+import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 
 type SalonRecord = {
   id: string;
@@ -49,6 +51,10 @@ type SalonRecord = {
   status?: string | null;
   is_discoverable?: boolean | null;
   subscription_tier?: string | null;
+  vanity_slug?: string | null;
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
+  google_business_url?: string | null;
 };
 
 type StyleRecord = {
@@ -180,6 +186,20 @@ function renderStars(rating: number) {
   return Array.from({ length: 5 }, (_, index) => <Star key={index} size={14} className={index < Math.round(rating) ? "fill-amber text-amber" : "fill-transparent text-ink/20"} />);
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  return (
+    (await getSalonPublicMetadata(slug, "slug")) || {
+      title: "Salon unavailable",
+      robots: { index: false, follow: false },
+    }
+  );
+}
+
 export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const supabase = getSupabaseAdmin();
   const { slug } = await params;
@@ -192,13 +212,13 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
   if (salonError) throw salonError;
   if (!salon) {
-    const { data: redirectRecord } = await supabase.from("salon_slug_redirects").select("new_slug").eq("old_slug", slug).is("retired_at", null).maybeSingle();
+    const { data: redirectRecord } = await supabase.from("salon_slug_redirects").select("new_slug").eq("route_scope", "salon").eq("old_slug", slug).is("retired_at", null).maybeSingle();
     if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
     notFound();
   }
@@ -312,7 +332,15 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
             <div className="mt-4 flex items-center gap-2">
               <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>
-              <SalonProfileActions salonId={salon.id} salonName={salon.name || "Salon"} />
+              <SalonProfileActions
+                salonId={salon.id}
+                salonName={salon.name || "Salon"}
+                salonSlug={salon.slug || slug}
+                vanitySlug={salon.vanity_slug}
+                instagramUrl={salon.instagram_url}
+                tiktokUrl={salon.tiktok_url}
+                googleBusinessUrl={salon.google_business_url}
+              />
             </div>
           </div>
         </section>

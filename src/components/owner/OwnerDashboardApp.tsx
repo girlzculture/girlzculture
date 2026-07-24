@@ -64,6 +64,7 @@ import {
 import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
+import SalonVanityManager from "@/components/owner/SalonVanityManager";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -76,6 +77,10 @@ const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => (
 );
 type Salon = Row & {
   slug?: string;
+  vanity_slug?: string;
+  instagram_url?: string;
+  tiktok_url?: string;
+  google_business_url?: string;
   status?: string;
   subscription_status?: string;
   description?: string;
@@ -811,6 +816,7 @@ function DashboardContent({
       <>
         <MyPage c={c} />
         <SalonLogoEditor c={c} />
+        {c.isOwner ? <SalonVanityManager salon={c.salon} /> : null}
       </>
     );
   if (section === "photos") return <Photos c={c} />;
