@@ -7,11 +7,11 @@ This is a source inventory, not proof that migrations are applied or authenticat
 ## Inventory totals
 
 - Application pages: **44**
-- API routes: **88**
+- API routes: **89**
 - Components/modules under `src/components`: **83**
-- Ordered SQL migrations: **76**
+- Ordered SQL migrations: **77**
 - Tables/views discovered in migrations: **99**
-- Functions discovered in migrations: **98**
+- Functions discovered in migrations: **100**
 - RLS policies discovered in migrations: **168**
 
 ## Application page inventory
@@ -136,6 +136,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `/api/salon/application` | POST | `src/app/api/salon/application/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, dependency/confirmation handling, server authorization, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/salon/availability/block` | POST, DELETE | `src/app/api/salon/availability/block/route.ts` | Provider-neutral AI, disabled fail-closed | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, server authorization, abuse protection | verify:hardening |
 | `/api/salon/bookings/[id]/cancel` | POST | `src/app/api/salon/bookings/[id]/cancel/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, server authorization, abuse protection | verify:hardening |
+| `/api/salon/bookings/[id]/reschedule` | GET, POST | `src/app/api/salon/bookings/[id]/reschedule/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | server authorization, abuse protection | verify:hardening |
 | `/api/salon/bootstrap` | POST | `src/app/api/salon/bootstrap/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | server authorization, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/salon/discovery-diagnostics` | GET | `src/app/api/salon/discovery-diagnostics/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | dependency/confirmation handling, server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/salon/lifecycle` | GET, POST | `src/app/api/salon/lifecycle/route.ts` | Supabase/database-backed operation | Salon dashboard under Engine policy | Salon bearer session plus salon membership/team permission | typed/sanitized input, dependency/confirmation handling, server authorization | TypeScript/lint/build and route smoke where public |
@@ -362,10 +363,12 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `admin_save_trending_campaign`
 - `assert_primary_identity`
 - `attach_registered_media`
+- `audit_declined_reschedule_proposal`
 - `audit_salon_promotion_change`
 - `capture_platform_error`
 - `claim_booking_reminder`
 - `create_booking_notification`
+- `create_booking_reschedule_proposal`
 - `create_stylist_draft`
 - `discover_featured_salons`
 - `discover_nearby_salons`
@@ -700,6 +703,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | 74 | `20260723190000_style_photo_jsonb_persistence_fix.sql` | `supabase/migrations/20260723190000_style_photo_jsonb_persistence_fix.sql` |
 | 75 | `20260723210000_booking_communications.sql` | `supabase/migrations/20260723210000_booking_communications.sql` |
 | 76 | `20260723220000_secure_guest_booking_management.sql` | `supabase/migrations/20260723220000_secure_guest_booking_management.sql` |
+| 77 | `20260723230000_customer_approved_rescheduling.sql` | `supabase/migrations/20260723230000_customer_approved_rescheduling.sql` |
 
 ## Protected values deliberately left outside Engine
 

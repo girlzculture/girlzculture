@@ -101,6 +101,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
         error?: string;
         manage_url?: string;
         status?: string;
+        warnings?: Array<{ message?: string }>;
       };
       if (!response.ok) throw new Error(body.error || "Unable to update booking.");
       if (action === "cancel") {
@@ -116,9 +117,10 @@ export default function GuestBookingManager({ token }: { token: string }) {
         return;
       }
       setNotice(
-        action === "accept_reschedule"
-          ? "The new appointment time is confirmed. An updated confirmation is on its way."
-          : "The salon has been told that you declined this proposal.",
+        body.warnings?.[0]?.message ||
+          (action === "accept_reschedule"
+            ? "The new appointment time is confirmed. An updated confirmation is on its way."
+            : "The salon has been told that you declined this proposal."),
       );
       if (body.manage_url) window.location.assign(body.manage_url);
     } catch (actionError) {

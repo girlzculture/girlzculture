@@ -2927,6 +2927,10 @@ function Bookings({ c }: { c: Ctx }) {
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  const [rescheduleMessage, setRescheduleMessage] = useState("");
+  const [rescheduleOptions, setRescheduleOptions] = useState(["", "", ""]);
+  const [proposalSummary, setProposalSummary] = useState<Row | null>(null);
   const visible = c.bookings.filter(
     (booking) => filter === "All" || String(booking.status) === filter,
   );
@@ -2935,6 +2939,32 @@ function Bookings({ c }: { c: Ctx }) {
   const activeSelected =
     selected &&
     !/cancelled|completed|refunded/i.test(String(selected.status || ""));
+  useEffect(() => {
+    if (!selectedId) return;
+    let active = true;
+    getSessionForScope("salon")
+      .then((session) =>
+        session
+          ? fetch(`/api/salon/bookings/${selectedId}/reschedule`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+              cache: "no-store",
+            })
+          : null,
+      )
+      .then(async (response) => {
+        if (!response?.ok) return null;
+        return (await response.json()) as { proposals?: Row[] };
+      })
+      .then((body) => {
+        if (active) setProposalSummary(body?.proposals?.[0] || null);
+      })
+      .catch(() => {
+        if (active) setProposalSummary(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedId]);
   async function startService() {
     if (!selected?.id) return;
     const startedAt = new Date().toISOString();
@@ -2993,6 +3023,63 @@ function Bookings({ c }: { c: Ctx }) {
         error instanceof Error
           ? error.message
           : "Unable to cancel this booking.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function proposeReschedule() {
+    if (!selected?.id || !rescheduleReason.trim()) {
+      c.setNotice("Add a reason for the reschedule proposal.");
+      return;
+    }
+    const options = rescheduleOptions.filter(Boolean);
+    if (!options.length) {
+      c.setNotice("Choose at least one proposed appointment time.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(
+        `/api/salon/bookings/${selected.id}/reschedule`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            reason: rescheduleReason,
+            message: rescheduleMessage,
+            options,
+          }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        proposal?: Row;
+        warnings?: Array<{ message?: string }>;
+      };
+      if (!response.ok) {
+        throw new Error(
+          body.error || "Unable to propose new appointment times.",
+        );
+      }
+      setProposalSummary(body.proposal || null);
+      setRescheduleReason("");
+      setRescheduleMessage("");
+      setRescheduleOptions(["", "", ""]);
+      c.setNotice(
+        body.warnings?.[0]?.message ||
+          "Proposal sent. The appointment remains unchanged until the customer accepts.",
+      );
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "Unable to propose new appointment times.",
       );
     } finally {
       setBusy(false);
@@ -3174,6 +3261,82 @@ function Bookings({ c }: { c: Ctx }) {
                       ? `Service started ${dateText(selected.service_started_at, c.salon.time_zone)}`
                       : "Start service now"}
                   </button>
+                  <div className="mt-6 border-t border-plum/10 pt-5">
+                    <h3 className="font-serif text-lg text-plum">
+                      Propose reschedule
+                    </h3>
+                    <p className="mt-1 text-[10px] leading-4 text-ink/55">
+                      Offer up to three available times. The current appointment
+                      stays confirmed until the customer accepts one.
+                    </p>
+                    {proposalSummary ? (
+                      <div className="mt-3 rounded-[9px] bg-blush/35 p-3 text-xs">
+                        <b>
+                          Latest proposal:{" "}
+                          {String(proposalSummary.status || "Pending")}
+                        </b>
+                        <p className="mt-1 text-ink/60">
+                          {String(proposalSummary.reason || "")}
+                        </p>
+                      </div>
+                    ) : null}
+                    <input
+                      value={rescheduleReason}
+                      onChange={(event) =>
+                        setRescheduleReason(event.target.value.slice(0, 300))
+                      }
+                      placeholder="Reason for proposing a change"
+                      className="mt-3 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                    />
+                    <textarea
+                      value={rescheduleMessage}
+                      onChange={(event) =>
+                        setRescheduleMessage(event.target.value.slice(0, 600))
+                      }
+                      placeholder="Optional message to the customer"
+                      rows={2}
+                      className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
+                    />
+                    <div className="mt-2 grid gap-2">
+                      {rescheduleOptions.map((value, index) => (
+                        <label
+                          key={index}
+                          className="text-[10px] font-bold text-ink/60"
+                        >
+                          {index === 0
+                            ? "Preferred time"
+                            : `Alternative ${index}`}
+                          <input
+                            type="datetime-local"
+                            value={value}
+                            onChange={(event) =>
+                              setRescheduleOptions((current) =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? event.target.value
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <button
+                      disabled={
+                        busy ||
+                        !rescheduleReason.trim() ||
+                        !rescheduleOptions.some(Boolean)
+                      }
+                      onClick={() => void proposeReschedule()}
+                      className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                    >
+                      {busy
+                        ? "Checking availability…"
+                        : "Send proposal for customer approval"}
+                    </button>
+                  </div>
                   <div className="mt-6 border-t border-plum/10 pt-5">
                     <h3 className="font-serif text-lg text-plum">
                       Cancel booking

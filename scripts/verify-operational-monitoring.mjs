@@ -14,7 +14,7 @@ function walk(directory) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 88, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 89, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -291,6 +291,7 @@ const providerEntryPoints = [
   ["src/lib/publicPageMonitoring.ts", /capturePublicPageFailure/, /capturePlatformError/],
   ["src/lib/discoveryServer.ts", /getSupabaseAdmin/, /discover_nearby_salons_ranked/],
   ["src/lib/bookingAvailabilityServer.ts", /getSupabaseAdmin/, /booking_checkout_intents/],
+  ["src/lib/bookingRescheduleServer.ts", /capturePlatformError/, /Promise\.allSettled/],
   ["src/lib/supabase.ts", /protected destination route owns server-side incident monitoring/, /catch\s*\{/],
 ];
 for (const [relative, firstEvidence, secondEvidence] of providerEntryPoints) {

@@ -14,7 +14,10 @@ import {
   deliverBookingNotifications,
   deliverCancellationNotifications,
   getSupabaseAdmin,
+  sendEmail,
+  sendSms,
 } from "@/lib/supabaseAdmin";
+import { capturePlatformError } from "@/lib/platformErrors";
 
 class GuestBookingError extends Error {
   constructor(message: string, public status = 400) {
@@ -70,7 +73,7 @@ async function loadManagedBooking(
       admin
         .from("salons")
         .select(
-          "id,name,slug,email,phone,time_zone,address_street,address_line2,address_city,address_state,address_zip",
+          "id,name,slug,email,phone,time_zone,user_id,address_street,address_line2,address_city,address_state,address_zip",
         )
         .eq("id", booking.salon_id)
         .single(),
@@ -295,21 +298,95 @@ async function POSTHandler(request: Request) {
         outcome: "completed",
         metadata: { proposal_id: proposalId },
       });
+      const warningReferences: string[] = [];
+      const responseLabel =
+        response === "accept" ? "accepted" : "declined";
+      if (current.salon.user_id) {
+        const { error: noticeError } = await admin.from("notifications").insert({
+          user_id: current.salon.user_id,
+          salon_id: current.salon.id,
+          booking_id: access.bookingId,
+          title: `Customer ${responseLabel} reschedule`,
+          body:
+            response === "accept"
+              ? "The customer accepted a proposed time. The booking and calendar are updated."
+              : "The customer declined the proposed times. The original booking remains unchanged.",
+          action_url: `/salon/dashboard/bookings?booking=${access.bookingId}`,
+          delivery_status: "delivered",
+        });
+        if (noticeError) {
+          warningReferences.push(
+            await capturePlatformError({
+              request,
+              admin,
+              error: noticeError,
+              feature: "booking-rescheduling",
+              action: "notify_salon_in_app",
+              actorRole: "guest",
+              salonId: String(current.salon.id),
+              recordType: "booking",
+              recordId: access.bookingId,
+              provider: "supabase",
+              safeMessage:
+                "The response was recorded, but its salon alert could not be saved.",
+            }),
+          );
+        }
+      }
       if (response === "accept") {
         const { error: resetError } = await admin
           .from("bookings")
           .update({ notifications_sent_at: null })
           .eq("id", access.bookingId);
         if (resetError) throw resetError;
-        await deliverBookingNotifications(access.bookingId, {
+        const confirmation = await deliverBookingNotifications(access.bookingId, {
           manageUrl: rotated.url,
         });
+        warningReferences.push(
+          ...(confirmation.warnings || []).map((warning) => warning.request_id),
+        );
+      } else {
+        const declineText = `The customer declined the proposed times for booking ${String(
+          current.booking.confirmation_code || access.bookingId,
+        )}. The original appointment remains unchanged.`;
+        const deliveries = await Promise.allSettled([
+          sendEmail(
+            String(current.salon.email || ""),
+            "Customer declined proposed appointment times",
+            `<h1>Reschedule proposal declined</h1><p>${declineText}</p>`,
+            "bookings",
+          ),
+          sendSms(String(current.salon.phone || ""), declineText),
+        ]);
+        for (const [index, delivery] of deliveries.entries()) {
+          if (delivery.status === "fulfilled") continue;
+          warningReferences.push(
+            await capturePlatformError({
+              request,
+              admin,
+              error: delivery.reason,
+              feature: "booking-rescheduling",
+              action: index === 0 ? "notify_salon_email" : "notify_salon_sms",
+              actorRole: "guest",
+              salonId: String(current.salon.id),
+              recordType: "booking",
+              recordId: access.bookingId,
+              provider: index === 0 ? "email" : "sms",
+              safeMessage:
+                "The response was recorded, but one salon notification could not be delivered.",
+            }),
+          );
+        }
       }
       return Response.json({
         ok: true,
         response,
         booking: updated,
         manage_url: rotated.url,
+        warnings: warningReferences.map((reference) => ({
+          message: `Your response was saved, but one notification needs attention. Reference ${reference}.`,
+          request_id: reference,
+        })),
       });
     }
     throw new GuestBookingError("Choose a valid booking action.");

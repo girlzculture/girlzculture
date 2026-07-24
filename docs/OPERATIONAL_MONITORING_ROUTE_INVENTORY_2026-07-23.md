@@ -84,6 +84,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/salon/application` | POST | provider-backed | Covered |
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/reschedule` | GET, POST | provider-backed | Covered |
 | `/api/salon/bootstrap` | POST | protected | Covered |
 | `/api/salon/discovery-diagnostics` | GET | protected | Covered |
 | `/api/salon/lifecycle` | GET, POST | protected | Covered |
@@ -149,6 +150,7 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 | `src/lib/publicPageMonitoring.ts` | server-rendered public discovery/catalog/content fallbacks | public/read-only | Unexpected database/provider failures create sanitized Engine events; raw errors are never written by page components |
 | `src/lib/discoveryServer.ts` | service resolution and ranked nearby discovery | provider-backed/public | Main failures fail safely; secondary service-resolution failures produce warning references through the route context |
 | `src/lib/bookingAvailabilityServer.ts` | booking, hold, customer-overlap and blockout reads | provider-backed | Service-role monitored transport covers every query, including legacy result objects, and booking routes expose matching references |
+| `src/lib/bookingRescheduleServer.ts` | customer-approved proposal validation, secure access delivery and multi-channel notifications | provider-backed/protected | Authoritative availability is rechecked before the service-only proposal RPC; partial delivery failures create sanitized Engine references without undoing the saved proposal |
 | `src/lib/guestBookingAccess.ts` | signed booking access, token rotation, recovery verification and access audit | provider-backed/guest | Tokens are scoped, hashed, expiring and revocable; expected invalid/expired responses remain inline while database and delivery failures create sanitized Engine events |
 | `src/lib/supabase.ts` | browser role-scoped sessions and direct Supabase transport | provider-backed/client | Unexpected RLS/session/storage/database responses are replaced with safe text containing the exact reference returned by `/api/monitor/client-provider`; expected auth/validation/no-row outcomes pass through unchanged |
 | `src/app/api/monitor/client-provider/route.ts` | rate-limited sanitized client-provider bridge | provider-backed | Accepts only status, safe code, allowlisted provider, operation and page path; persists no provider body, query, token, cookie or user-entered content and returns the event reference |
