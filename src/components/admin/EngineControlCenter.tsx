@@ -27,6 +27,7 @@ import SystemStatusManager from "@/components/admin/SystemStatusManager";
 import ErrorMonitoringManager from "@/components/admin/ErrorMonitoringManager";
 import NavigationMenuManager from "@/components/admin/NavigationMenuManager";
 import NotificationTemplateManager from "@/components/admin/NotificationTemplateManager";
+import BrandAppearanceManager from "@/components/admin/BrandAppearanceManager";
 
 type Setting = {
   id: string;
@@ -754,6 +755,7 @@ export default function EngineControlCenter() {
             </section>
           ) : null}
           {category === "salon_lifecycle" ? <SalonLifecycleSettings /> : null}
+          {category === "branding_design" ? <BrandAppearanceManager /> : null}
           {category === "search_discovery" ? <SearchLanguageSettings /> : null}
           {category === "media_uploads" ? <MediaRulesSettings /> : null}
           {category === "languages_translations" ? (

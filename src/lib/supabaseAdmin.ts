@@ -13,6 +13,7 @@ import {
   type BookingCommunicationInput,
 } from "@/lib/bookingCommunications";
 import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
+import { getPublishedBrandAsset } from "@/lib/brandAssets";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -300,14 +301,16 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   };
 }
 
-function bookingCommunicationInput(
+async function bookingCommunicationInput(
   context: Awaited<ReturnType<typeof bookingNotificationContext>>,
   notification: Awaited<ReturnType<typeof bookingNotificationSettings>>,
   urls: Pick<BookingCommunicationInput, "manageUrl" | "dashboardUrl" | "directionsUrl">,
   intro: string,
-): BookingCommunicationInput {
+): Promise<BookingCommunicationInput> {
   const { booking, salon, style, stylist, material } = context;
   const durationValue = Number(booking.duration_hours || 0);
+  const emailLogoUrl =
+    (await getPublishedBrandAsset("email_logo"))?.published_url || undefined;
   return {
     booking,
     salon,
@@ -321,6 +324,7 @@ function bookingCommunicationInput(
     policy: notification.policy,
     intro,
     footer: notification.footer,
+    emailLogoUrl,
     ...urls,
   };
 }
@@ -407,7 +411,7 @@ export async function deliverBookingNotifications(
   const customerSummary=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.summary",`${service} at ${salon.name} is confirmed for ${when}. Stylist: ${professional}.`,summaryVariables);
   const salonSubject=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_confirmed",{summary:salonSummary,dashboard_url:dashboardUrl},notification.salonConfirmed,`A new booking is confirmed.\n\n${salonSummary}\n\nOpen this booking: ${dashboardUrl}`).subject;
   const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_confirmed",{summary:customerSummary,confirmation_code:String(booking.confirmation_code||""),account_url:accountUrl},notification.customerConfirmed,`Your appointment is confirmed.\n\n${customerSummary}\n\nConfirmation code: ${booking.confirmation_code||""}\n\nView your booking: ${accountUrl}`).subject;
-  const communication = bookingCommunicationInput(
+  const communication = await bookingCommunicationInput(
     context,
     notification,
     { manageUrl: accountUrl, dashboardUrl, directionsUrl },
@@ -463,7 +467,7 @@ export async function deliverCancellationNotifications(bookingId: string, reason
   const accountUrl=`${root}/account?tab=past`;
   const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_cancelled",{message,browse_url:`${root}/salons`},notification.customerCancelled,`Your appointment was cancelled.\n\n${message}\n\nWe are sorry for the disruption. Find another available salon: ${root}/salons`).subject;
   const salonSubject=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_cancelled",{message:businessMessage},notification.salonCancelled,`A booking was cancelled.\n\n${businessMessage}`).subject;
-  const communication=bookingCommunicationInput(
+  const communication=await bookingCommunicationInput(
     context,
     notification,
     {manageUrl:accountUrl,dashboardUrl},

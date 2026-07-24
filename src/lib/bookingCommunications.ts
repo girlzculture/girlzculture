@@ -51,8 +51,17 @@ function button(label: string, href: string, secondary = false) {
   return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 8px 0 0;padding:12px 18px;border-radius:9px;${secondary ? "border:1px solid #D6186B;color:#D6186B;background:#fff" : "color:#fff;background:#D6186B"};font-size:13px;font-weight:800;text-decoration:none">${escapeHtml(label)}</a>`;
 }
 
-function shell(title: string, intro: string, content: string, footer: string) {
-  return `<!doctype html><html><body style="margin:0;background:#FBF4EE;font-family:Arial,sans-serif;color:#1A1220"><table role="presentation" width="100%" style="background:#FBF4EE"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:680px;border-radius:18px;background:#fffaf7;padding:28px;border:1px solid #eadce4"><tr><td><div style="font-family:Georgia,serif;font-size:27px;font-weight:800;color:#5B1A6B">Girlz Culture<span style="color:#D6186B">.</span></div><h1 style="margin:22px 0 8px;font-family:Georgia,serif;font-size:30px;line-height:1.1;color:#5B1A6B">${escapeHtml(title)}</h1><p style="margin:0;color:#5f5664;font-size:14px;line-height:1.6">${escapeHtml(intro)}</p>${content}<p style="margin:24px 0 0;color:#776d7a;font-size:11px;line-height:1.6">${escapeHtml(footer)}</p></td></tr></table></td></tr></table></body></html>`;
+function shell(
+  title: string,
+  intro: string,
+  content: string,
+  footer: string,
+  emailLogoUrl?: string,
+) {
+  const logo = emailLogoUrl && /^https:\/\//i.test(emailLogoUrl)
+    ? `<img src="${escapeHtml(emailLogoUrl)}" alt="Girlz Culture" width="210" style="display:block;max-width:210px;max-height:70px;width:auto;height:auto;border:0" />`
+    : `<div style="font-family:Georgia,serif;font-size:27px;font-weight:800;color:#5B1A6B">Girlz Culture<span style="color:#D6186B">.</span></div>`;
+  return `<!doctype html><html><body style="margin:0;background:#FBF4EE;font-family:Arial,sans-serif;color:#1A1220"><table role="presentation" width="100%" style="background:#FBF4EE"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:680px;border-radius:18px;background:#fffaf7;padding:28px;border:1px solid #eadce4"><tr><td>${logo}<h1 style="margin:22px 0 8px;font-family:Georgia,serif;font-size:30px;line-height:1.1;color:#5B1A6B">${escapeHtml(title)}</h1><p style="margin:0;color:#5f5664;font-size:14px;line-height:1.6">${escapeHtml(intro)}</p>${content}<p style="margin:24px 0 0;color:#776d7a;font-size:11px;line-height:1.6">${escapeHtml(footer)}</p></td></tr></table></td></tr></table></body></html>`;
 }
 
 export type BookingCommunicationInput = {
@@ -71,6 +80,7 @@ export type BookingCommunicationInput = {
   policy: string;
   intro: string;
   footer: string;
+  emailLogoUrl?: string;
 };
 
 function bookingIdentity(input: BookingCommunicationInput) {
@@ -171,6 +181,7 @@ export function renderCustomerBookingConfirmation(
     input.intro,
     content,
     input.footer,
+    input.emailLogoUrl,
   );
 }
 
@@ -198,6 +209,7 @@ export function renderSalonBookingConfirmation(
     input.intro,
     content,
     input.footer,
+    input.emailLogoUrl,
   );
 }
 
@@ -233,5 +245,6 @@ export function renderBookingCancellation(
       card("Cancellation", cancellationRows) +
       actions,
     input.footer,
+    input.emailLogoUrl,
   );
 }

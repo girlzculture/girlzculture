@@ -20,6 +20,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/admin/content` | GET, PUT, DELETE | protected | Covered |
 | `/api/admin/data` | GET | provider-backed | Covered |
 | `/api/admin/engine/ai` | GET, PATCH, POST | provider-backed | Covered |
+| `/api/admin/engine/brand-assets` | GET, POST, PATCH | protected | Covered |
 | `/api/admin/engine/config` | GET, PATCH, POST | protected | Covered |
 | `/api/admin/engine/errors` | GET, PATCH | protected | Covered |
 | `/api/admin/engine/lifecycle` | GET, PATCH | protected | Covered |
