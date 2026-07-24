@@ -9,10 +9,10 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - Application pages: **44**
 - API routes: **91**
 - Components/modules under `src/components`: **85**
-- Ordered SQL migrations: **79**
-- Tables/views discovered in migrations: **99**
-- Functions discovered in migrations: **107**
-- RLS policies discovered in migrations: **168**
+- Ordered SQL migrations: **80**
+- Tables/views discovered in migrations: **100**
+- Functions discovered in migrations: **108**
+- RLS policies discovered in migrations: **169**
 
 ## Application page inventory
 
@@ -306,6 +306,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `notifications`
 - `password_reset_codes`
 - `platform_content`
+- `platform_error_affected_businesses`
 - `platform_error_alert_rules`
 - `platform_error_events`
 - `platform_error_occurrences`
@@ -452,6 +453,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `sync_platform_identity_from_auth`
 - `sync_search_language_target`
 - `sync_service_group_name`
+- `track_platform_error_affected_business`
 - `translation_version_guard`
 - `upsert_dashboard_notification`
 - `validate_application_structured_us_address`
@@ -546,6 +548,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `notifications_recipient_update` on `notifications`
 - `platform_content_admin_write` on `platform_content`
 - `platform_content_public_read` on `platform_content`
+- `platform_error_affected_businesses_admin_read` on `platform_error_affected_businesses`
 - `platform_error_alert_rules_admin_read` on `platform_error_alert_rules`
 - `platform_error_alert_rules_admin_write` on `platform_error_alert_rules`
 - `platform_error_events_admin_read` on `platform_error_events`
@@ -717,6 +720,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | 77 | `20260723230000_customer_approved_rescheduling.sql` | `supabase/migrations/20260723230000_customer_approved_rescheduling.sql` |
 | 78 | `20260723240000_finance_reconciliation.sql` | `supabase/migrations/20260723240000_finance_reconciliation.sql` |
 | 79 | `20260723250000_dashboard_notifications.sql` | `supabase/migrations/20260723250000_dashboard_notifications.sql` |
+| 80 | `20260723260000_monitoring_context_promotion_audit.sql` | `supabase/migrations/20260723260000_monitoring_context_promotion_audit.sql` |
 
 ## Protected values deliberately left outside Engine
 
