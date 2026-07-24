@@ -117,7 +117,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
               aria-expanded={isOpen}
               className={`grid w-full grid-cols-[minmax(0,1fr)_auto_48px_14px] items-center gap-2 px-4 py-3 text-left transition sm:grid-cols-[minmax(0,1fr)_auto_auto_18px] sm:gap-3 sm:px-5 ${isOpen ? "bg-blush/45 text-magenta" : "bg-white/70 text-ink hover:bg-cream/70"}`}
             >
-              <span className="truncate text-[12px] font-semibold sm:text-[13px]">{card.style.name || "Style"}</span>
+              <span data-no-translate="true" className="truncate text-[12px] font-semibold sm:text-[13px]">{card.style.name || "Style"}</span>
               <span className="whitespace-nowrap text-[11px] font-semibold text-ink/75">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span>
               <span className={`whitespace-nowrap text-right text-[8px] sm:min-w-20 sm:text-[10px] ${isOpen ? "text-magenta" : "text-ink/50"}`}>{formatDuration(card.style.duration_min_hours, card.style.duration_max_hours)}</span>
               <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${isOpen ? "rotate-180 text-magenta" : "text-ink/55"}`} />
@@ -131,7 +131,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                     <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
                       {card.lengthOptions.map((option, index) => (
                         <li key={`${optionLabel(option)}-${index}`} className="flex items-center justify-between gap-3">
-                          <span>{optionLabel(option)}</span>
+                          <span data-no-translate="true">{optionLabel(option)}</span>
                           <span className="font-semibold text-ink">${card.basePrice + optionPrice(option)}</span>
                         </li>
                       ))}
@@ -144,7 +144,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                     <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
                       {card.addons.map((option, index) => (
                         <li key={`${optionLabel(option)}-${index}`} className="flex items-center justify-between gap-3">
-                          <span>{optionLabel(option)}</span>
+                          <span data-no-translate="true">{optionLabel(option)}</span>
                           <span className="font-semibold text-ink">{formatAddOnPrice(optionPrice(option))}</span>
                         </li>
                       ))}
@@ -157,7 +157,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                     <ul className="mt-3 space-y-2 text-[9px] text-ink/70">
                       {card.materials.slice(0, 4).map((material) => (
                         <li key={material.id || material.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-plum/10 pb-2 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:gap-2">
-                          <span className="min-w-0 truncate font-medium text-ink">{material.name || "Material"}</span>
+                          <span data-no-translate="true" className="min-w-0 truncate font-medium text-ink">{material.name || "Material"}</span>
                           <span className="font-semibold text-ink">{formatAddOnPrice(material.price || 0)}</span>
                           <span className="whitespace-nowrap text-ink/55 max-sm:col-start-1">{material.longevity || "Varies"}</span>
                           <span className="whitespace-nowrap text-plum max-sm:text-right">{material.quality_note || "Quality"}</span>
@@ -171,7 +171,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId }: SalonSt
                     <h4 className="text-[11px] font-bold text-plum">What&apos;s Included</h4>
                     <ul className="mt-3 space-y-2 text-[10px] text-ink/75">
                       {card.includedItems.map((item) => (
-                        <li key={item} className="flex items-start gap-2"><Check aria-hidden="true" size={13} className="mt-0.5 shrink-0 text-magenta" /><span>{item}</span></li>
+                        <li key={item} className="flex items-start gap-2"><Check aria-hidden="true" size={13} className="mt-0.5 shrink-0 text-magenta" /><span data-no-translate="true">{item}</span></li>
                       ))}
                       {!card.includedItems.length ? <li className="text-ink/45">No inclusions published</li> : null}
                     </ul>

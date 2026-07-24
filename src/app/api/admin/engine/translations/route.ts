@@ -4,6 +4,8 @@ import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
 import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
 import { revalidatePath } from "next/cache";
+import { generateTranslationDraft } from "@/lib/aiAutomationServer";
+import { canGenerateTranslationDraft } from "@/lib/localizationCore";
 
 function impactForKey(key:string){
   if(/login|signup|password|identity|security/.test(key))return"security";
@@ -229,6 +231,63 @@ async function PATCHHandler(request: Request) {
         });
       return Response.json({ entries: data || [] });
     }
+    if (action === "generate_draft") {
+      const key = cleanText(body.translation_key, 180);
+      const locale = normalizeLocale(body.locale);
+      const definition = SOURCE_DEFINITIONS[key];
+      if (!definition || locale === "en")
+        throw new Error("Choose non-English interface text to translate.");
+      if (!canGenerateTranslationDraft(definition.impact))
+        throw new Error(
+          "Legal, refund, cancellation, payment, safety, security, and booking text must be translated and reviewed by a person.",
+        );
+      const { data: feature, error: featureError } = await admin
+        .from("ai_automation_features")
+        .select("*")
+        .eq("feature_key", "translation_drafts")
+        .single();
+      if (featureError || !feature)
+        throw featureError || new Error("The translation draft feature is unavailable.");
+      const generated = await generateTranslationDraft(
+        admin,
+        feature,
+        user.id,
+        definition.source,
+        locale,
+      );
+      const { data, error } = await admin
+        .from("translation_entries")
+        .upsert(
+          {
+            translation_key: key,
+            locale,
+            namespace: key.split(".")[0],
+            source_text: definition.source,
+            translated_text: generated.translatedText,
+            status: "Draft",
+            impact_level: definition.impact,
+            machine_generated: true,
+            updated_by: user.id,
+          },
+          { onConflict: "translation_key,locale" },
+        )
+        .select()
+        .single();
+      if (error) throw error;
+      await admin.from("admin_security_events").insert({
+        actor_user_id: user.id,
+        action: "translation_draft_generated",
+        result: "Allowed",
+        details: {
+          translation_key: key,
+          locale,
+          provider: generated.provider,
+          model: generated.model,
+          requires_human_review: true,
+        },
+      });
+      return Response.json({ entry: data, generated: true });
+    }
     const id = cleanText(body.id, 80);
     if (action === "rollback") {
       if (!id) throw new Error("Choose a saved translation.");
@@ -328,7 +387,19 @@ async function PATCHHandler(request: Request) {
       updated_by: user.id,
       machine_generated: body.machine_generated === true,
     };
-    if (action === "publish") {
+    if (action === "review") {
+      if (HIGH_IMPACT.has(String(existing.impact_level)) && body.confirm_review !== true)
+        throw new Error(
+          "Confirm that a person reviewed this high-impact translation.",
+        );
+      status = "Reviewed";
+      Object.assign(update, {
+        status,
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
+        machine_generated: false,
+      });
+    } else if (action === "publish") {
       if (
         HIGH_IMPACT.has(String(existing.impact_level)) &&
         body.confirm_review !== true

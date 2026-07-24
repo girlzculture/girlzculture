@@ -5,6 +5,7 @@ import {
   normalizeLocale,
 } from "@/i18n/catalog";
 import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
+import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const FALLBACK_LOCALES = [
@@ -95,12 +96,15 @@ async function GETHandler(request: Request) {
           ),
         },
         sourceMessages: Object.fromEntries(
-          (data || [])
+          Object.entries({
+            ...(DASHBOARD_SOURCE_MESSAGES[locale] || {}),
+            ...Object.fromEntries((data || [])
             .filter((row) => row.source_text && row.translated_text)
             .map((row) => [
               String(row.source_text).replace(/\s+/g, " ").trim(),
               row.translated_text,
-            ]),
+            ])),
+          }),
         ),
         coverage: { published: Math.min(published, total), total, incomplete: locale !== "en" && published < total },
       },
@@ -119,7 +123,7 @@ async function GETHandler(request: Request) {
       locale: requested,
       locales: FALLBACK_LOCALES,
       messages: BUNDLED_MESSAGES[requested] || ENGLISH_MESSAGES,
-      sourceMessages: {},
+      sourceMessages: DASHBOARD_SOURCE_MESSAGES[requested] || {},
       coverage: { published: requested === "en" ? Object.keys(ENGLISH_MESSAGES).length : Object.keys(BUNDLED_MESSAGES[requested] || {}).length, total: Object.keys(ENGLISH_MESSAGES).length, incomplete: requested !== "en" },
     });
   }

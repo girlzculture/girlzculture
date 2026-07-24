@@ -11,6 +11,10 @@ import {
   Search,
 } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
+import {
+  canGenerateTranslationDraft,
+  translationWorkflowState,
+} from "@/lib/localizationCore";
 
 type Locale = {
   locale: string;
@@ -109,7 +113,8 @@ export default function TranslationManager() {
   const namespaces = ["All", ...new Set(entries.map((item) => item.namespace))];
   const visible = localeEntries.filter(
     (item) =>
-      (status === "All" || item.status === status) &&
+      (status === "All" ||
+        translationWorkflowState(item) === status) &&
       (namespace === "All" || item.namespace === namespace) &&
       (!query ||
         `${item.translation_key} ${item.source_text} ${item.translated_text}`
@@ -117,10 +122,10 @@ export default function TranslationManager() {
           .includes(query.toLowerCase())),
   );
   const counts = localeEntries.reduce<Record<string, number>>(
-    (result, item) => ({
-      ...result,
-      [item.status]: (result[item.status] || 0) + 1,
-    }),
+    (result, item) => {
+      const display = translationWorkflowState(item);
+      return { ...result, [display]: (result[display] || 0) + 1 };
+    },
     {},
   );
   const completion = localeEntries.length
@@ -153,7 +158,7 @@ export default function TranslationManager() {
     if (!response.ok) throw new Error(result.error);
     return result;
   }
-  async function save(action: "save_draft" | "publish") {
+  async function save(action: "save_draft" | "review" | "publish") {
     if (!selected) return;
     setBusy(true);
     setMessage("");
@@ -172,12 +177,38 @@ export default function TranslationManager() {
       setMessage(
         action === "publish"
           ? "Translation reviewed and published."
+          : action === "review"
+            ? "Translation marked reviewed. Published copy is unchanged."
           : "Translation draft saved. Published copy is unchanged.",
       );
       await load(selected.translation_key);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to save translation.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function generateDraft() {
+    if (!selected) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await patch({
+        action: "generate_draft",
+        translation_key: selected.translation_key,
+        locale: selected.locale,
+      });
+      setMessage(
+        "A provider-assisted draft was saved in Engine. Review it before publishing.",
+      );
+      await load(selected.translation_key);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to generate a translation draft.",
       );
     } finally {
       setBusy(false);
@@ -333,8 +364,10 @@ export default function TranslationManager() {
                 />
               </div>
               <p className="mt-1 text-[10px] text-ink/55">
-                {completion}% published · Missing {counts.Missing || 0} · Draft{" "}
-                {counts.Draft || 0} · Published {counts.Published || 0}
+                {completion}% published · Untranslated{" "}
+                {counts.Untranslated || 0} · Generated {counts.Generated || 0} ·
+                Reviewed {counts.Reviewed || 0} · Published{" "}
+                {counts.Published || 0}
               </p>
             </div>
             <button
@@ -465,8 +498,8 @@ export default function TranslationManager() {
               className="min-h-10 rounded-lg border px-3 text-xs"
             >
               <option>All</option>
-              <option>Missing</option>
-              <option>Draft</option>
+              <option>Untranslated</option>
+              <option>Generated</option>
               <option>Reviewed</option>
               <option>Published</option>
             </select>
@@ -500,7 +533,8 @@ export default function TranslationManager() {
                 >
                   <b className="block text-xs text-plum">{row.source_text}</b>
                   <span className="mt-1 block text-[9px] text-ink/45">
-                    {row.translation_key} · {row.status}
+                    {row.translation_key} ·{" "}
+                    {translationWorkflowState(row)}
                   </span>
                 </button>
               ))}
@@ -564,6 +598,17 @@ export default function TranslationManager() {
                   </label>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
+                  {canGenerateTranslationDraft(selected.impact_level) &&
+                  selected.locale !== "en" ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void generateDraft()}
+                      className="min-h-10 rounded-lg border px-4 text-xs font-bold text-plum"
+                    >
+                      Generate draft
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     disabled={busy || !text.trim()}
@@ -571,6 +616,18 @@ export default function TranslationManager() {
                     className="min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta"
                   >
                     Save draft
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      busy ||
+                      !text.trim() ||
+                      Boolean(HIGH.has(selected.impact_level) && !reviewed)
+                    }
+                    onClick={() => void save("review")}
+                    className="min-h-10 rounded-lg border border-plum px-4 text-xs font-bold text-plum disabled:opacity-50"
+                  >
+                    Mark reviewed
                   </button>
                   <button
                     type="button"

@@ -281,6 +281,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Booking Details",
     "impact": "booking"
   },
+  "source.6033485be2be": {
+    "source": "Booking email",
+    "impact": "booking"
+  },
   "source.2f266d8f6179": {
     "source": "Booking Management",
     "impact": "booking"
@@ -449,10 +453,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Choose your location, compare real prices and reviews, and book with confidence.",
     "impact": "booking"
   },
-  "source.8d3409a337e2": {
-    "source": "City, neighborhood, or ZIP",
-    "impact": "standard"
-  },
   "source.412226715c56": {
     "source": "Clear filters",
     "impact": "standard"
@@ -473,6 +473,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Clear slot",
     "impact": "standard"
   },
+  "source.f0252bf7d604": {
+    "source": "Close notifications",
+    "impact": "standard"
+  },
   "source.a4c41c6ef844": {
     "source": "Compare plans",
     "impact": "standard"
@@ -488,6 +492,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.4a7c565d4c44": {
     "source": "Confirm password",
     "impact": "security"
+  },
+  "source.4e9e48fdd225": {
+    "source": "Confirmation code",
+    "impact": "standard"
   },
   "source.2c0f9b9317e6": {
     "source": "Confirmation Code",
@@ -559,6 +567,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.726ab6b6c805": {
     "source": "Daily request limit must be between 0 and 10,000.",
+    "impact": "standard"
+  },
+  "source.9e3b0491299c": {
+    "source": "Decline proposal",
     "impact": "standard"
   },
   "source.0336b2bf650e": {
@@ -661,10 +673,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Enter a city, neighborhood, or ZIP above, or share your location when you are ready. We never ask for location permission automatically.",
     "impact": "standard"
   },
-  "source.6c1c8a6ca3f4": {
-    "source": "Enter a city, neighborhood, or ZIP, or share your location when you are ready.",
-    "impact": "standard"
-  },
   "source.a77ff8607fc4": {
     "source": "Enter a valid contact email address (name@example.com).",
     "impact": "standard"
@@ -731,6 +739,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.1542d1d3d9ca": {
     "source": "Filters:",
+    "impact": "standard"
+  },
+  "source.d4cdadc4899f": {
+    "source": "Finance unavailable",
     "impact": "standard"
   },
   "source.9b72bfcc1cfd": {
@@ -803,6 +815,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.1183cee68c86": {
     "source": "Fuzzy tolerance",
+    "impact": "standard"
+  },
+  "source.c72f553c70ee": {
+    "source": "Generate draft",
     "impact": "standard"
   },
   "source.0e16b52652e2": {
@@ -909,6 +925,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Legal, payment, safety, security, and booking translations require explicit human review confirmation.",
     "impact": "security"
   },
+  "source.a37d6ce152a2": {
+    "source": "Legal, refund, cancellation, payment, safety, security, and booking text must be translated and reviewed by a person.",
+    "impact": "security"
+  },
   "source.af36dc7b9be2": {
     "source": "Length Options",
     "impact": "standard"
@@ -932,6 +952,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.6155044e8645": {
     "source": "Loading application…",
     "impact": "standard"
+  },
+  "source.078cf5af9eb8": {
+    "source": "Loading booking",
+    "impact": "booking"
   },
   "source.153f2deb31b8": {
     "source": "Loading booking messages…",
@@ -1023,6 +1047,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.26f12c39b3c9": {
     "source": "Manual workflow",
+    "impact": "standard"
+  },
+  "source.277c924370a5": {
+    "source": "Mark reviewed",
     "impact": "standard"
   },
   "source.96968ac5e163": {
@@ -1121,6 +1149,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Need help?",
     "impact": "standard"
   },
+  "source.88d95a7967d0": {
+    "source": "Need to cancel?",
+    "impact": "booking"
+  },
   "source.cbdcde2413d8": {
     "source": "Needs Attention + hide",
     "impact": "standard"
@@ -1217,10 +1249,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Offers only",
     "impact": "standard"
   },
-  "source.aafd9b645990": {
-    "source": "Only approved, paid video campaigns within their real radius are shown.",
-    "impact": "standard"
-  },
   "source.a970c9a90f3c": {
     "source": "Only records explicitly registered in a named batch can be touched. Names, email domains, dates, and empty fields are never used to guess. Paid and audited history is retained or anonymized.",
     "impact": "standard"
@@ -1233,16 +1261,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Open batch",
     "impact": "standard"
   },
-  "source.ff5b51387f28": {
-    "source": "Open booking",
-    "impact": "booking"
-  },
   "source.35e8e17ec7bc": {
     "source": "Open Roles",
     "impact": "standard"
   },
   "source.79f2032ea42c": {
     "source": "Open salon",
+    "impact": "standard"
+  },
+  "source.a31d83ac508a": {
+    "source": "Operational Monitoring",
     "impact": "standard"
   },
   "source.930a9018d50d": {
@@ -1341,6 +1369,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Preview import",
     "impact": "standard"
   },
+  "source.1c43c795d02e": {
+    "source": "Preview translation",
+    "impact": "standard"
+  },
   "source.09972524c11e": {
     "source": "Previous photo",
     "impact": "standard"
@@ -1348,6 +1380,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.fd6211f2a982": {
     "source": "Previous review",
     "impact": "standard"
+  },
+  "source.f05d12203b78": {
+    "source": "Price summary",
+    "impact": "booking"
   },
   "source.63af45e3593d": {
     "source": "Private documents",
@@ -1379,6 +1415,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.0a56b1d27c31": {
     "source": "Promotion visibility",
+    "impact": "standard"
+  },
+  "source.035f8d761e94": {
+    "source": "Propose reschedule",
     "impact": "standard"
   },
   "source.9e54993aed01": {
@@ -1461,8 +1501,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Reconnect to view live availability, pricing, and bookings. Previously visited public pages may still be available.",
     "impact": "booking"
   },
-  "source.5654774fed87": {
-    "source": "Reference, route, or technical cause",
+  "source.c21586d27916": {
+    "source": "Reference, route, or action",
     "impact": "standard"
   },
   "source.9cf53df4cc60": {
@@ -1492,6 +1532,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.5c4bc97ee5d0": {
     "source": "Reset password",
     "impact": "security"
+  },
+  "source.7bb0affc6532": {
+    "source": "Response needed",
+    "impact": "standard"
   },
   "source.ab300c41bc74": {
     "source": "Restore draft",
@@ -1591,10 +1635,6 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.089447226155": {
     "source": "Salon, style, and date are required.",
-    "impact": "standard"
-  },
-  "source.164a1a95864f": {
-    "source": "Sanitized cause",
     "impact": "standard"
   },
   "source.179359b39edb": {
@@ -1721,10 +1761,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Selected Work",
     "impact": "standard"
   },
-  "source.c70a890d1411": {
-    "source": "Send message",
-    "impact": "standard"
-  },
   "source.b449b942c8ef": {
     "source": "Service group",
     "impact": "standard"
@@ -1829,6 +1865,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Super Admin only. This removes the canonical Auth account, revokes access, preserves required history by anonymizing or detaching personal data, and releases the normalized email only after Auth deletion succeeds.",
     "impact": "standard"
   },
+  "source.4be37be90bfc": {
+    "source": "Technical details",
+    "impact": "standard"
+  },
   "source.43782b37f011": {
     "source": "Test mode",
     "impact": "standard"
@@ -1889,6 +1929,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "This file is named as WebM, but its container is not a readable WebM. Export a genuine VP8/VP9 WebM and try again.",
     "impact": "standard"
   },
+  "source.739c64f46be6": {
+    "source": "This is a sanitized processing ledger. It contains event IDs and statuses, never provider payloads, card data, tokens, or secrets.",
+    "impact": "standard"
+  },
   "source.fef059380e2b": {
     "source": "This record has booking history and must be archived, not deleted.",
     "impact": "booking"
@@ -1919,6 +1963,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.4ed32a0e08a9": {
     "source": "Transaction History",
+    "impact": "standard"
+  },
+  "source.0b85f9e56e97": {
+    "source": "Translation language",
     "impact": "standard"
   },
   "source.6be8a417a40d": {
@@ -1973,6 +2021,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Uploading documents…",
     "impact": "standard"
   },
+  "source.a66ad13dba0c": {
+    "source": "Use “Propose to customer” for approval. “Save Changes” is an audited platform intervention and changes the booking immediately.",
+    "impact": "booking"
+  },
   "source.a3a446cc6c34": {
     "source": "Use # for a large heading, ## or ### for smaller headings, - for bullets, and [label](/page) for a link. HTML is not accepted.",
     "impact": "standard"
@@ -2000,6 +2052,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.953de2202761": {
     "source": "Verified coordinates",
     "impact": "standard"
+  },
+  "source.f11f93587440": {
+    "source": "Verify a contact method already saved with your booking. For your privacy, we do not confirm whether a booking exists until the code is verified.",
+    "impact": "booking"
   },
   "source.91f86581f16b": {
     "source": "Version history",
@@ -2031,6 +2087,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.1951520ad9ac": {
     "source": "View salon",
+    "impact": "standard"
+  },
+  "source.82dd83fdd3d3": {
+    "source": "We could not estimate your area. Choose a city, neighborhood, or ZIP in Find Salons.",
     "impact": "standard"
   },
   "source.2dad0a7efa21": {
@@ -2093,10 +2153,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "You will add and crop your logo, cover image, and gallery in the setup dashboard. Your salon will not become marketplace-visible until all required media is complete.",
     "impact": "standard"
   },
-  "source.8ec250898102": {
-    "source": "You’re all caught up.",
-    "impact": "standard"
-  },
   "source.7fe7b9ae48d9": {
     "source": "You’re All Set!",
     "impact": "standard"
@@ -2123,6 +2179,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.ab42293e29e1": {
     "source": "Your name",
+    "impact": "standard"
+  },
+  "source.02963d38fdb2": {
+    "source": "Your salon",
     "impact": "standard"
   },
   "source.26ce41c3476e": {
