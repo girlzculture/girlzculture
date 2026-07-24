@@ -7,11 +7,11 @@ This is a source inventory, not proof that migrations are applied or authenticat
 ## Inventory totals
 
 - Application pages: **44**
-- API routes: **90**
-- Components/modules under `src/components`: **84**
-- Ordered SQL migrations: **78**
+- API routes: **91**
+- Components/modules under `src/components`: **85**
+- Ordered SQL migrations: **79**
 - Tables/views discovered in migrations: **99**
-- Functions discovered in migrations: **101**
+- Functions discovered in migrations: **107**
 - RLS policies discovered in migrations: **168**
 
 ## Application page inventory
@@ -131,6 +131,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `/api/messages` | GET, POST | `src/app/api/messages/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, dependency/confirmation handling, server authorization, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/monitor/client-provider` | POST | `src/app/api/monitor/client-provider/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, server authorization, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/newsletter` | POST | `src/app/api/newsletter/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, abuse protection | TypeScript/lint/build and route smoke where public |
+| `/api/notifications` | GET, POST | `src/app/api/notifications/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/promo/validate` | POST | `src/app/api/promo/validate/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, dependency/confirmation handling, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/promotions/salon` | GET | `src/app/api/promotions/salon/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | typed/sanitized input, dependency/confirmation handling, abuse protection | TypeScript/lint/build and route smoke where public |
 | `/api/push/subscription` | GET, POST, DELETE | `src/app/api/push/subscription/route.ts` | Supabase/database-backed operation | Public/customer/salon workflow | Public/owner scope validated per operation | server authorization | TypeScript/lint/build and route smoke where public |
@@ -217,6 +218,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `src/components/i18n/LanguageSelector.tsx` | Localization runtime |
 | `src/components/i18n/LocaleProvider.tsx` | Localization runtime |
 | `src/components/location/CustomerLocationProvider.tsx` | Shared/public/customer surface |
+| `src/components/notifications/DashboardNotificationCenter.tsx` | Shared/public/customer surface |
 | `src/components/notifications/PushSetup.tsx` | Shared/public/customer surface |
 | `src/components/owner/OwnerDashboardApp.tsx` | Shared/public/customer surface |
 | `src/components/owner/OwnerDashboardShell.tsx` | Shared/public/customer surface |
@@ -373,6 +375,10 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `create_booking_notification`
 - `create_booking_reschedule_proposal`
 - `create_stylist_draft`
+- `dashboard_notify_application`
+- `dashboard_notify_billing_event`
+- `dashboard_notify_platform_error`
+- `dashboard_notify_support_ticket`
 - `discover_featured_salons`
 - `discover_nearby_salons`
 - `discover_nearby_salons_ranked`
@@ -400,6 +406,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `normalize_identity_email`
 - `normalize_marketplace_search`
 - `normalized_salon_address_fingerprint`
+- `notify_active_admins`
 - `owns_salon`
 - `owns_style`
 - `owns_stylist`
@@ -446,6 +453,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `sync_search_language_target`
 - `sync_service_group_name`
 - `translation_version_guard`
+- `upsert_dashboard_notification`
 - `validate_application_structured_us_address`
 - `validate_master_service_catalog`
 - `validate_salon_store_hours`
@@ -708,6 +716,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | 76 | `20260723220000_secure_guest_booking_management.sql` | `supabase/migrations/20260723220000_secure_guest_booking_management.sql` |
 | 77 | `20260723230000_customer_approved_rescheduling.sql` | `supabase/migrations/20260723230000_customer_approved_rescheduling.sql` |
 | 78 | `20260723240000_finance_reconciliation.sql` | `supabase/migrations/20260723240000_finance_reconciliation.sql` |
+| 79 | `20260723250000_dashboard_notifications.sql` | `supabase/migrations/20260723250000_dashboard_notifications.sql` |
 
 ## Protected values deliberately left outside Engine
 

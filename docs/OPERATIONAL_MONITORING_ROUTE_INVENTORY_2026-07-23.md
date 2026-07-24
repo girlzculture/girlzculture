@@ -79,6 +79,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/messages` | GET, POST | provider-backed | Covered |
 | `/api/monitor/client-provider` | POST | provider-backed | Covered |
 | `/api/newsletter` | POST | expected-only | Covered |
+| `/api/notifications` | GET, POST | provider-backed | Covered |
 | `/api/promo/validate` | POST | expected-only | Covered |
 | `/api/promotions/salon` | GET | public/read-only | Covered |
 | `/api/push/subscription` | GET, POST, DELETE | provider-backed | Covered |

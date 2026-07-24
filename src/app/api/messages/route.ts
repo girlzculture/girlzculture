@@ -139,7 +139,21 @@ async function POSTHandler(request: Request) {
       }
     }
     if (recipientIds.length) {
-      await admin.from("notifications").insert(recipientIds.map((userId) => ({ user_id: userId, salon_id: access.booking.salon_id, booking_id: bookingId, channel: "in_app", title: "New booking message", body: preview, delivery_status: "delivered" })));
+      const recipientRole = access.role === "customer" ? "salon" : "customer";
+      await admin.from("notifications").insert(recipientIds.map((userId) => ({
+        user_id: userId,
+        salon_id: access.booking.salon_id,
+        booking_id: bookingId,
+        recipient_role: recipientRole,
+        category: "messages",
+        severity: "info",
+        dedupe_key: `booking-message:${bookingId}:${recipientRole}`,
+        channel: "in_app",
+        title: "New booking message",
+        body: preview,
+        action_url: recipientRole === "salon" ? "/salon/dashboard/messages" : "/account?tab=inbox",
+        delivery_status: "delivered",
+      })));
       try {
         const pushResult=await sendPushToUsers(recipientIds, { title: "New booking message", body: preview, url: access.role === "customer" ? "/salon/dashboard/messages" : "/account?tab=inbox", tag: `message-${bookingId}` });
         for(const warning of pushResult.warnings||[]){

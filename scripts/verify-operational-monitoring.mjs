@@ -14,7 +14,7 @@ function walk(directory) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 90, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 91, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");

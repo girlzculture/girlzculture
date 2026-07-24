@@ -306,6 +306,10 @@ async function POSTHandler(request: Request) {
           user_id: current.salon.user_id,
           salon_id: current.salon.id,
           booking_id: access.bookingId,
+          recipient_role: "salon",
+          category: "bookings",
+          severity: response === "accept" ? "success" : "warning",
+          dedupe_key: `reschedule-response:${proposalId}`,
           title: `Customer ${responseLabel} reschedule`,
           body:
             response === "accept"
