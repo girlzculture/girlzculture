@@ -19,7 +19,8 @@ export type SalonPromotion = {
 
 export type PromotionPriceContext = {
   salonId: string;
-  styleId: string;
+  styleId?: string | null;
+  productId?: string | null;
   serviceGroupId?: string | null;
   masterStyleId?: string | null;
   basePrice: number;
@@ -46,12 +47,26 @@ function targetMatches(promotion: SalonPromotion, context: PromotionPriceContext
   const targets = new Set((promotion.target_ids || []).map(normalized).filter(Boolean));
   switch (promotion.target_scope || "salon") {
     case "salon": return promotion.salon_id === context.salonId;
-    case "services": return targets.has(normalized(context.styleId));
+    case "services": return Boolean(context.styleId && targets.has(normalized(context.styleId)));
     case "service_groups": return Boolean(context.serviceGroupId && targets.has(normalized(context.serviceGroupId)));
     case "master_styles": return Boolean(context.masterStyleId && targets.has(normalized(context.masterStyleId)));
+    case "products": return Boolean(context.productId && targets.has(normalized(context.productId)));
     case "addons": return context.selectedAddons.some((addon) => targets.has(normalized(addon.value)) || targets.has(normalized(addon.label)));
     default: return false;
   }
+}
+
+export function bestPromotionForContext(
+  promotions: SalonPromotion[],
+  context: PromotionPriceContext,
+) {
+  return promotions
+    .map((promotion) => ({
+      promotion,
+      price: calculateSalonPromotion(promotion, context),
+    }))
+    .filter((entry) => entry.price.eligible)
+    .sort((a, b) => b.price.discount - a.price.discount)[0] || null;
 }
 
 export function calculateSalonPromotion(promotion: SalonPromotion | null | undefined, context: PromotionPriceContext) {

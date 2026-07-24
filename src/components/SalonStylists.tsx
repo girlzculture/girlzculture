@@ -58,11 +58,11 @@ export default function SalonStylists({ stylists, salonSlug }: { stylists: Styli
 
               <div className="min-w-0 py-1">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-serif text-[22px] font-semibold leading-tight text-ink">{stylist.name || "Stylist"}</h3>
+                  <h3 data-no-translate="true" className="font-serif text-[22px] font-semibold leading-tight text-ink">{stylist.name || "Stylist"}</h3>
                   {rating > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-bold text-ink"><Star size={13} className="fill-amber text-amber" />{rating.toFixed(1)}</span> : null}
                 </div>
                 <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-ink/60"><BriefcaseBusiness size={13} className="text-magenta" />{experience > 0 ? `${experience} ${experience === 1 ? "year" : "years"} experience` : "Experience details coming soon"}</p>
-                <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/65">{specialties.length ? specialties.join(" · ") : stylist.bio || "Specialties not listed"}</p>
+                <p data-no-translate="true" className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/65">{specialties.length ? specialties.join(" · ") : stylist.bio || "Specialties not listed"}</p>
                 <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-magenta">View profile <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" /></span>
               </div>
             </div>

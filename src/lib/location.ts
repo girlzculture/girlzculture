@@ -1,7 +1,7 @@
 export type Coordinates = { lat: number; lng: number };
 export type CustomerLocation = Coordinates & {
   label: string;
-  source: "explicit" | "device" | "saved";
+  source: "explicit" | "device" | "saved" | "approximate";
   placeId?: string;
 };
 

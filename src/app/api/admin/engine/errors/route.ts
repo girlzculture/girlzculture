@@ -2,6 +2,7 @@ import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operati
 import { cleanText } from "@/lib/requestSecurity";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
+import { operationalErrorPresentation } from "@/lib/operationalErrorPresentation";
 
 const statuses = new Set(["Open", "Investigating", "Resolved", "Ignored"]);
 
@@ -32,20 +33,44 @@ async function GETHandler(request: Request) {
     const from = (page - 1) * pageSize;
     const { data, error, count } = await query.order("last_occurred_at", { ascending: false }).range(from, from + pageSize - 1);
     if (error) throw error;
-    const [rules, trend, assignees] = await Promise.all([
+    const eventIds = (data || []).map((row) => row.id);
+    const [rules, trend, assignees, affected] = await Promise.all([
       admin.from("platform_error_alert_rules").select("*").order("severity"),
       admin.from("platform_error_occurrences").select("occurred_at,event:platform_error_events(severity)").gte("occurred_at", new Date(Date.now() - 14 * 86400000).toISOString()).limit(5000),
       admin.from("admin_users").select("id,user_id,name,email,status").eq("status", "Active").order("name"),
+      eventIds.length
+        ? admin.from("platform_error_affected_businesses")
+          .select("event_id,salon_id,occurrence_count,first_seen_at,last_seen_at,salon:salons(id,name,address_city,address_state,address_zip)")
+          .in("event_id", eventIds)
+          .order("last_seen_at", { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
     ]);
     if (rules.error) throw rules.error;
     if (trend.error) throw trend.error;
     if (assignees.error) throw assignees.error;
+    if (affected.error) throw affected.error;
     const features = [...new Set((data || []).map((row) => row.feature).filter(Boolean))].sort();
     const trendRows = (trend.data || []).map((rawRow) => {
       const row = rawRow as unknown as { occurred_at: string; event: { severity?: string } | Array<{ severity?: string }> | null };
       return { severity: Array.isArray(row.event) ? row.event[0]?.severity : row.event?.severity, occurred_at: row.occurred_at, occurrence_count: 1 };
     }).filter((row) => row.severity);
-    return Response.json({ events: data || [], total: count || 0, page, pageSize, rules: rules.data || [], trend: trendRows, features, assignees: (assignees.data || []).map((row) => ({ id: row.user_id || row.id, name: row.name || row.email, email: row.email })) }, { headers: { "Cache-Control": "private, no-store" } });
+    const affectedByEvent = new Map<string, unknown[]>();
+    for (const row of affected.data || []) {
+      affectedByEvent.set(row.event_id, [
+        ...(affectedByEvent.get(row.event_id) || []),
+        row,
+      ]);
+    }
+    const enrichedEvents = (data || []).map((row) => {
+      const businesses = affectedByEvent.get(row.id) || [];
+      return {
+        ...row,
+        presentation: operationalErrorPresentation(row),
+        affected_business_count: businesses.length,
+        affected_businesses: businesses,
+      };
+    });
+    return Response.json({ events: enrichedEvents, total: count || 0, page, pageSize, rules: rules.data || [], trend: trendRows, features, assignees: (assignees.data || []).map((row) => ({ id: row.user_id || row.id, name: row.name || row.email, email: row.email })) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     return monitoredRouteFailure({ request, admin, error, feature: "engine-error-monitoring", action: "load", actorRole: "admin", safeMessage: "Error monitoring could not be loaded." });
   }

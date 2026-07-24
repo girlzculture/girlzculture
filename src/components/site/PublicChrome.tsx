@@ -17,17 +17,21 @@ import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 import { getNavigationItems, getVisibleLegalLinks, type NavigationItem } from "@/lib/content";
 import LanguageSelector, { LocalizedText } from "@/components/i18n/LanguageSelector";
+import { getPublishedBrandAssets } from "@/lib/brandAssets";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
-export function Wordmark({ compact = false }: { compact?: boolean }) {
+export async function Wordmark({ compact = false }: { compact?: boolean }) {
+  const assets = await getPublishedBrandAssets();
+  const desktop = assets.primary_header_logo || assets.dark_logo;
+  const mobile = assets.mobile_logo || desktop;
   return (
     <Link
       href="/"
       aria-label="Girlz Culture home"
-      className={`font-serif font-bold tracking-[-0.045em] text-plum ${compact ? "text-[22px] md:text-[30px]" : "text-[30px]"}`}
+      className={`inline-flex items-center font-serif font-bold tracking-[-0.045em] text-plum ${compact ? "text-[22px] md:text-[30px]" : "text-[30px]"}`}
     >
-      Girlz Culture
+      {desktop?.published_url ? <><img src={mobile?.published_url || desktop.published_url} alt={mobile?.published_alt_text || desktop.published_alt_text || "Girlz Culture"} className="h-8 w-auto max-w-[150px] object-contain md:hidden" style={{objectPosition:`${mobile?.published_focal_x ?? 50}% ${mobile?.published_focal_y ?? 50}%`}}/><img src={desktop.published_url} alt={desktop.published_alt_text || "Girlz Culture"} className="hidden h-9 w-auto max-w-[210px] object-contain md:block" style={{objectPosition:`${desktop.published_focal_x ?? 50}% ${desktop.published_focal_y ?? 50}%`}}/></> : "Girlz Culture"}
     </Link>
   );
 }
@@ -160,7 +164,8 @@ const footerGroupLabels:Record<string,{title:string;key:string}> = {
 };
 
 export async function PublicFooter() {
-  const [legalLinks, footerItems] = await Promise.all([getVisibleLegalLinks(), getNavigationItems("footer", defaultFooter)]);
+  const [legalLinks, footerItems, brandAssets] = await Promise.all([getVisibleLegalLinks(), getNavigationItems("footer", defaultFooter), getPublishedBrandAssets()]);
+  const footerLogo=brandAssets.light_logo;
   const legalColumns = [legalLinks.slice(0, 5), legalLinks.slice(5, 10)];
   const footerGroups = Array.from(new Set(footerItems.map((item) => item.group_key))).map((groupKey) => ({
     groupKey,
@@ -171,7 +176,7 @@ export async function PublicFooter() {
     <footer className="bg-[#211027] text-white">
       <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
         <div>
-          <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>
+          {footerLogo?.published_url ? <img src={footerLogo.published_url} alt={footerLogo.published_alt_text || "Girlz Culture"} className="h-10 w-auto max-w-[220px] object-contain object-left"/> : <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>}
           <div className="mt-5 flex gap-3 text-white/75">
             <Camera aria-label="Instagram" size={17} />
             <Share2 aria-label="Social channels" size={17} />

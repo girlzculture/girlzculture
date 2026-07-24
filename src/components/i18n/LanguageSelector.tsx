@@ -12,7 +12,7 @@ export default function LanguageSelector({
   compact?: boolean;
   className?: string;
 }) {
-  const { locale, locales, coverage, setLocale, t } = useI18n();
+  const { locale, locales, setLocale, t } = useI18n();
   const handleInput = (event: FormEvent<HTMLSelectElement>) => {
     setLocale(event.currentTarget.value as AppLocale);
   };
@@ -38,11 +38,6 @@ export default function LanguageSelector({
           </option>
         ))}
       </select>
-      {locale !== "en" && coverage.incomplete ? (
-        <span className="rounded-full bg-amber/15 px-1.5 py-0.5 text-[8px] text-[#7a4b00]" title={`${coverage.published} of ${coverage.total} reviewed interface translations are published. English is used for the rest.`}>
-          Incomplete
-        </span>
-      ) : null}
     </label>
   );
 }

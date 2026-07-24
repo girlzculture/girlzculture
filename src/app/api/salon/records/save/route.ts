@@ -98,9 +98,17 @@ function sanitize(table: string, values: Record<string, unknown>, isInsert: bool
       patch.restrictions = {
         minimum_subtotal: finiteNumber(restrictions.minimum_subtotal ?? 0, "Minimum booking subtotal", 0, 100_000),
         new_customers_only: restrictions.new_customers_only === true,
+        usage_limit: finiteNumber(restrictions.usage_limit ?? 0, "Total use limit", 0, 1_000_000),
+        per_customer_limit: finiteNumber(restrictions.per_customer_limit ?? 0, "Per-customer use limit", 0, 100),
         terms: cleanText(restrictions.terms, 500),
       };
     }
+    if (
+      patch.target_scope &&
+      patch.target_scope !== "salon" &&
+      Array.isArray(patch.target_ids) &&
+      patch.target_ids.length === 0
+    ) throw new Error("Choose at least one eligible item for this promotion.");
     for (const key of ["starts_at", "ends_at", "paused_at"] as const) if (key in patch && patch[key]) patch[key] = new Date(String(patch[key])).toISOString();
     if (patch.starts_at && patch.ends_at && new Date(String(patch.ends_at)) <= new Date(String(patch.starts_at))) throw new Error("The promotion end must be after its start.");
     if ("timezone" in patch) patch.timezone = cleanText(patch.timezone, 80) || "America/New_York";

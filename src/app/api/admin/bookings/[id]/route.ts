@@ -4,6 +4,7 @@ import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { deliverCancellationNotifications, requireAdminPermission, sendEmail, sendSms } from "@/lib/supabaseAdmin";
 import { stripeRequest } from "@/lib/stripeServer";
+import { createCustomerApprovedReschedule } from "@/lib/bookingRescheduleServer";
 
 async function contextFor(request: Request, id: string) {
   const context = await requireAdminPermission(request, "bookings");
@@ -30,6 +31,21 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     const action = cleanText(body.action, 30); const reason = cleanText(body.reason, 500);
     if (!reason) throw new Error("Add a reason for the audit trail and customer notification.");
     if (action === "cancel") return await cancelBooking(ctx, reason);
+    if (action === "propose_reschedule") {
+      const result=await createCustomerApprovedReschedule({
+        admin:ctx.admin,
+        request,
+        booking:ctx.booking,
+        salon:ctx.salon,
+        actorUserId:ctx.user.id,
+        actorRole:String((ctx.adminUser as {role?:string}).role||"Platform admin"),
+        reason,
+        message:body.message,
+        localOptions:body.options,
+        rootUrl:(process.env.NEXT_PUBLIC_SITE_URL||new URL(request.url).origin).replace(/\/$/,""),
+      });
+      return Response.json({booking:ctx.booking,...result});
+    }
     const patch: Record<string, unknown> = {};
     if (body.guest_name !== undefined) patch.guest_name = cleanText(body.guest_name, 120);
     if (body.guest_email !== undefined) patch.guest_email = cleanEmail(body.guest_email);
@@ -47,7 +63,7 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     }
     if (!Object.keys(patch).length) throw new Error("No booking changes were submitted.");
     const { data: updated, error } = await ctx.admin.from("bookings").update(patch).eq("id", id).select("*").single(); if (error) throw error;
-    await ctx.admin.from("booking_audit_log").insert({ booking_id: id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: auditAction, reason, before_data: ctx.booking, after_data: updated });
+    await ctx.admin.from("booking_audit_log").insert({ booking_id: id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: auditAction, reason: `Admin intervention: ${reason}`, before_data: ctx.booking, after_data: updated });
     const when = new Date(updated.appointment_datetime).toLocaleString("en-US", { timeZone: salonTimeZone(ctx.salon.time_zone), dateStyle: "medium", timeStyle: "short" });
     const text = `Girlz Culture updated your booking at ${ctx.salon.name} to ${when}. Reason: ${reason}`;
     const salonText = `Girlz Culture updated ${String(updated.guest_name || "a customer's")} booking to ${when}. Reason: ${reason}`;

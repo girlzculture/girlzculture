@@ -6,6 +6,7 @@ import { salonSupabase } from "@/lib/supabase";
 import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 import { startSecureLogin, verifySecureLogin, type LoginChallenge, type LoginSession } from "@/lib/secureLoginClient";
 import MfaCodeField from "@/components/auth/MfaCodeField";
+import { surfacePathForHost } from "@/lib/hostRouting";
 
 export default function SalonLogin() {
   const [email, setEmail] = useState("");
@@ -22,7 +23,13 @@ export default function SalonLogin() {
     const destination = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
     const result = await destination.json() as { path?: string; role?: string };
     if (!destination.ok || result.role !== "salon_owner") throw new Error("This account is not linked to an active salon profile.");
-    window.location.replace(result.path || "/salon/dashboard");
+    window.location.replace(
+      surfacePathForHost(
+        "salon",
+        result.path || "/salon/dashboard",
+        window.location.hostname,
+      ),
+    );
   }
 
   async function submit(event: FormEvent) {

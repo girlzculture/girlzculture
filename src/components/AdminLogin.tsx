@@ -7,6 +7,7 @@ import { adminSupabase } from "@/lib/supabase";
 import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 import { startSecureLogin, verifySecureLogin, type LoginChallenge, type LoginSession } from "@/lib/secureLoginClient";
 import MfaCodeField from "@/components/auth/MfaCodeField";
+import { surfacePathForHost } from "@/lib/hostRouting";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -21,7 +22,10 @@ export default function AdminLogin() {
     const { error } = await adminSupabase.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
     if (error) throw error;
     sessionStorage.removeItem("girlz-culture-signed-out:admin");
-    window.location.replace("/admin");
+    sessionStorage.setItem("girlz-culture-admin-session-started", String(Date.now()));
+    window.location.replace(
+      surfacePathForHost("admin", "/admin", window.location.hostname),
+    );
   }
 
   async function submit(event: FormEvent) {

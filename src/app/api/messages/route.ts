@@ -3,6 +3,9 @@ import { capturePlatformError } from "@/lib/platformErrors";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail, sendSms } from "@/lib/supabaseAdmin";
 import { sendPushToUsers } from "@/lib/webPushServer";
+import { generateTranslationDraft } from "@/lib/aiAutomationServer";
+import { normalizeLocale } from "@/i18n/catalog";
+import { translatedMessageFields } from "@/lib/localizationCore";
 
 type Row = Record<string, unknown>;
 type Role = "customer" | "salon" | "admin";
@@ -89,19 +92,61 @@ async function POSTHandler(request: Request) {
     const messageBody = cleanText(body.body, 2000);
     if (!bookingId || !messageBody) throw new Error("Enter a message before sending.");
     const access = await accessForBooking(admin, user.id, user.email || "", bookingId);
+    if (body.action === "translate_preview") {
+      const targetLocale = normalizeLocale(body.target_locale);
+      if (targetLocale === "en")
+        throw new Error("Choose a non-English language for the translation preview.");
+      const { data: feature, error: featureError } = await admin
+        .from("ai_automation_features")
+        .select("*")
+        .eq("feature_key", "translation_drafts")
+        .single();
+      if (featureError || !feature)
+        throw featureError || new Error("Message translation is unavailable.");
+      const generated = await generateTranslationDraft(
+        admin,
+        feature,
+        user.id,
+        messageBody,
+        targetLocale,
+      );
+      return Response.json({
+        preview: {
+          original: messageBody,
+          translated: generated.translatedText,
+          locale: targetLocale,
+          provider: generated.provider,
+        },
+      });
+    }
+    const translatedBody = cleanText(body.translated_body, 2000);
+    const translationLocale = translatedBody
+      ? normalizeLocale(body.translation_locale)
+      : "";
+    if (translatedBody && body.translation_previewed !== true)
+      throw new Error("Preview the translation before sending it.");
     const now = new Date().toISOString();
+    const translatedFields = translatedMessageFields({
+      original: messageBody,
+      translated: translatedBody,
+      locale: translationLocale,
+      provider: cleanText(body.translation_provider, 40),
+      previewed: body.translation_previewed === true,
+      now,
+    });
     const { data: message, error } = await admin.from("booking_messages").insert({
       booking_id: bookingId,
       salon_id: access.booking.salon_id,
       sender_user_id: user.id,
       sender_role: access.role,
-      body: messageBody,
+      ...translatedFields,
       ...(access.role === "customer" ? { read_by_customer_at: now } : { read_by_salon_at: now }),
     }).select().single();
     if (error) throw error;
 
     const salon = access.booking.salon as Row;
-    const preview = messageBody.length > 140 ? `${messageBody.slice(0, 137)}...` : messageBody;
+    const notificationBody = translatedBody || messageBody;
+    const preview = notificationBody.length > 140 ? `${notificationBody.slice(0, 137)}...` : notificationBody;
     const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
     let recipientIds: string[] = [];
     const warningReferences: string[] = [];
@@ -139,7 +184,21 @@ async function POSTHandler(request: Request) {
       }
     }
     if (recipientIds.length) {
-      await admin.from("notifications").insert(recipientIds.map((userId) => ({ user_id: userId, salon_id: access.booking.salon_id, booking_id: bookingId, channel: "in_app", title: "New booking message", body: preview, delivery_status: "delivered" })));
+      const recipientRole = access.role === "customer" ? "salon" : "customer";
+      await admin.from("notifications").insert(recipientIds.map((userId) => ({
+        user_id: userId,
+        salon_id: access.booking.salon_id,
+        booking_id: bookingId,
+        recipient_role: recipientRole,
+        category: "messages",
+        severity: "info",
+        dedupe_key: `booking-message:${bookingId}:${recipientRole}`,
+        channel: "in_app",
+        title: "New booking message",
+        body: preview,
+        action_url: recipientRole === "salon" ? "/salon/dashboard/messages" : "/account?tab=inbox",
+        delivery_status: "delivered",
+      })));
       try {
         const pushResult=await sendPushToUsers(recipientIds, { title: "New booking message", body: preview, url: access.role === "customer" ? "/salon/dashboard/messages" : "/account?tab=inbox", tag: `message-${bookingId}` });
         for(const warning of pushResult.warnings||[]){

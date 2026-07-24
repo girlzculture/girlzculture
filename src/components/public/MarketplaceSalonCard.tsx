@@ -39,13 +39,13 @@ export default function MarketplaceSalonCard({ salon, variant = "grid", selected
       <button type="button" aria-label={`Save ${salon.name} to favorites`} className="absolute right-2 top-2 z-10 grid min-h-10 min-w-10 place-items-center rounded-full bg-white/90 text-plum shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><Heart size={17}/></button>
       <div className={`min-w-0 ${isList ? "grid gap-3 p-3 sm:grid-cols-[1fr_auto] sm:p-4" : "p-3"}`}>
         <div>
-          <Link href={profileHref} className="font-serif text-lg font-semibold text-ink hover:text-magenta sm:text-xl">{salon.name}</Link>
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-ink/65"><MapPin size={12}/>{area || "Location available on profile"}{Number.isFinite(salon.distance_miles) ? <> · {salon.distance_miles < 0.1 ? "Under 0.1" : salon.distance_miles.toFixed(1)} mi away</> : null}</p>
+          <Link data-no-translate="true" href={profileHref} className="font-serif text-lg font-semibold text-ink hover:text-magenta sm:text-xl">{salon.name}</Link>
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-ink/65"><MapPin size={12}/><span data-no-translate="true">{area || "Location available on profile"}</span>{Number.isFinite(salon.distance_miles) ? <> · {salon.distance_miles < 0.1 ? "Under 0.1" : salon.distance_miles.toFixed(1)} mi away</> : null}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
             {salon.review_count > 0 && salon.rating_overall > 0 ? <span className="inline-flex items-center gap-1"><Star size={13} className="fill-amber text-amber"/><b>{Number(salon.rating_overall).toFixed(1)}</b> <span className="text-ink/55">({salon.review_count})</span></span> : <span className="rounded-full bg-blush px-2 py-1 font-bold text-plum">New</span>}
             {salon.starting_price !== null ? <span>From <b className="font-serif text-base">${Number(salon.starting_price).toFixed(0)}</b></span> : null}
           </div>
-          {isList && salon.services.length ? <p className="mt-2 line-clamp-1 text-[10px] text-ink/55">{salon.services.map((service) => service.name).join(" · ")}</p> : null}
+          {isList && salon.services.length ? <p data-no-translate="true" className="mt-2 line-clamp-1 text-[10px] text-ink/55">{salon.services.map((service) => service.name).join(" · ")}</p> : null}
         </div>
         <div className={`flex items-end gap-2 ${isList ? "sm:flex-col sm:justify-end" : "mt-3"}`}>
           <Link href={profileHref} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta">View salon</Link>

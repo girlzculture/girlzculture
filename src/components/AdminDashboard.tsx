@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3, Bell, Building2, CalendarDays, CircleDollarSign, ClipboardList, CreditCard,
@@ -18,10 +18,12 @@ import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
 import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
 import AdminMarketingWorkspace from "@/components/admin/AdminMarketingWorkspace";
+import AdminFinanceDashboard from "@/components/admin/AdminFinanceDashboard";
 import EngineControlCenter from "@/components/admin/EngineControlCenter";
 import IdentityDeletionManager from "@/components/admin/IdentityDeletionManager";
 import { US_STATES } from "@/lib/usStates";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import DashboardNotificationCenter from "@/components/notifications/DashboardNotificationCenter";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
@@ -130,21 +132,26 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
   }
 
   return <AdminShell section={section} access={access} inboxCounts={inboxCounts}><RoleSessionBoundary scope="admin" />
-    <div data-language-selector-host className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-[40px] font-semibold leading-none text-plum">{navigation.find((item) => item[0] === section)?.[1]}</h1><p className="mt-2 text-sm text-ink/55">{subtitle(section)}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><LanguageSelector compact/><div className="flex items-center gap-3 rounded-[11px] border border-plum/10 bg-white px-4 py-3 text-xs"><Search size={17} /><input className="w-44 bg-transparent outline-none sm:w-64" placeholder="Search platform records" /><Bell size={19} /></div></div></div>
+    <div data-language-selector-host className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-[40px] font-semibold leading-none text-plum">{navigation.find((item) => item[0] === section)?.[1]}</h1><p className="mt-2 text-sm text-ink/55">{subtitle(section)}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><LanguageSelector compact/><div className="flex items-center gap-3 rounded-[11px] border border-plum/10 bg-white px-4 py-3 text-xs"><Search size={17} /><input className="w-44 bg-transparent outline-none sm:w-64" placeholder="Search platform records" /></div></div></div>
     {notice ? <div className="mb-4 rounded-lg bg-blush/55 p-3 text-sm text-plum">{notice}</div> : null}
     <AdminSectionView section={section} data={data} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} onTicketRead={(mode) => setInboxCounts((counts) => ({ ...counts, [mode]: Math.max(0, counts[mode] - 1) }))} />
   </AdminShell>;
 }
 
 function AdminShell({ section, children, access, inboxCounts }: { section: AdminSection; children: React.ReactNode; access: Record<string,boolean>|null; inboxCounts: InboxCounts }) {
+  const [notificationCounts,setNotificationCounts]=useState<Record<string,number>>({});
+  const handleNotificationCounts=useCallback((counts:Record<string,number>)=>setNotificationCounts(counts),[]);
   const visibleNavigation = access === null ? navigation : navigation.filter(([id]) => access[permissionForSection(id)]);
   const mobileNavigation = ([
     ["overview", "Overview", Home], ["bookings", "Bookings", CalendarDays], ["submissions", "Alerts", Bell], ["quality", "Reports", BarChart3], ["settings", "More", Menu],
   ] as Array<[AdminSection, string, typeof Home]>).filter(([id]) => access === null || access[permissionForSection(id)]);
   const homeId = visibleNavigation[0]?.[0];
   const homeHref = homeId === "overview" ? "/admin" : homeId ? `/admin/${homeId}` : "/admin/login";
-  const navCount = (id: AdminSection) => id === "support" ? inboxCounts.support : id === "complaints" ? inboxCounts.complaints : 0;
-  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-[linear-gradient(160deg,#25102d,#16081d)] p-4 text-white lg:block"><Link href={homeHref} className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{navCount(id)}</span> : null}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:hidden"><details><summary className="list-none"><Menu /></summary><nav className="absolute left-4 z-50 mt-3 w-72 rounded-xl bg-white p-2 shadow-2xl">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm"><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold text-white">{navCount(id)}</span> : null}</Link>)}</nav></details><b className="font-serif text-xl text-plum">Girlz Culture</b><div className="flex items-center gap-2"><Bell /><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush" /></div></header>{children}</main><nav className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label}</Link>)}</nav></div>;
+  const navCount = (id: AdminSection) => {
+    const notificationCount=id==="bookings"?notificationCounts.bookings:id==="finance"?notificationCounts.payments:id==="support"?notificationCounts.support:id==="submissions"?notificationCounts.lifecycle:id==="engine"||id==="overview"?notificationCounts.errors:0;
+    return Number(notificationCount||0)+(id==="support"?inboxCounts.support:id==="complaints"?inboxCounts.complaints:0);
+  };
+  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-[linear-gradient(160deg,#25102d,#16081d)] p-4 text-white lg:block"><Link href={homeHref} className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{Math.min(navCount(id),99)}</span> : null}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:justify-end"><details className="lg:hidden"><summary className="list-none"><Menu /></summary><nav className="absolute left-4 z-50 mt-3 w-72 rounded-xl bg-white p-2 shadow-2xl">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm"><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold text-white">{Math.min(navCount(id),99)}</span> : null}</Link>)}</nav></details><b className="font-serif text-xl text-plum lg:hidden">Girlz Culture</b><div className="flex items-center gap-2"><DashboardNotificationCenter scope="admin" onCounts={handleNotificationCounts}/><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div></header>{children}</main><nav className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`relative flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label}{navCount(id)?<span className="absolute right-1 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[8px] text-white">{Math.min(navCount(id),99)}</span>:null}</Link>)}</nav></div>;
 }
 
 function AdminSectionView({ section, data, selected, setSelected, decide, update, onCreated, onTicketRead }: { section: AdminSection; data: DataState; selected: Row | null; setSelected: (row: Row) => void; decide: (id: string, decision: "approve" | "reject" | "activate") => void; update: (table: string, id: string, changes: Row) => Promise<void>; onCreated: () => Promise<void>; onTicketRead: (mode: "support" | "complaints") => void }) {
@@ -165,7 +172,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "bookings": return <Bookings {...props} />;
     case "quality": return <Quality {...props} />;
     case "reviews": return <Reviews {...props} />;
-    case "finance": return <Finance {...props} />;
+    case "finance": return <AdminFinanceDashboard />;
     case "marketing": return <AdminMarketingWorkspace overview={<div className="space-y-5"><AdminPromoCodes /><Marketing {...props} /></div>} />;
     case "content": return <AdminContentManager />;
     case "support": return <div className="space-y-6"><AdminSupportInbox initialTickets={safeData.tickets} mode="support" onRead={onTicketRead} /><BookingInbox scope="admin" /></div>;
@@ -260,6 +267,9 @@ function Reviews(p: any) {
   return <Panel title="Reviews & Moderation"><DataTable headers={["Reviewer", "Salon", "Rating", "Review", "Date", "Status", "Actions"]}>{p.reviews.length ? p.reviews.map((review: Row) => <tr key={review.id} className={`border-b ${review.dispute_status && review.dispute_status !== "None" ? "bg-red-50" : ""}`}><Td>{review.customer_name || "Customer"}</Td><Td>{p.salons.find((salon: Row) => salon.id === review.salon_id)?.name || "Salon unavailable"}</Td><Td>{Number(review.rating_overall || 0).toFixed(1)}</Td><Td>{review.written_review || "No written review"}</Td><Td>{date(review.created_at)}</Td><Td><Badge value={review.dispute_status || "Published"} /></Td><Td><select value={review.dispute_status || "Published"} onChange={(event) => p.update("reviews", review.id, { dispute_status: event.target.value })} className="rounded border p-1"><option>Published</option><option>Removed</option><option>Resolved</option></select></Td></tr>) : <EmptyTable columns={7} text="No reviews yet." />}</DataTable></Panel>;
 }
 
+// Retained temporarily for rollback comparison until the launch Finance
+// workspace has completed preview review.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function Finance(p: any) {
   const [stateFilter,setStateFilter]=useState("all");
   const [planFilter,setPlanFilter]=useState("all");

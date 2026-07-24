@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 
 type AiFeature = {
   feature_key: string;
@@ -109,4 +110,124 @@ export async function runAiSandbox(admin: SupabaseClient, feature: AiFeature, us
   const { error: usageError } = await admin.from("ai_usage_events").insert({ feature_key: feature.feature_key, provider_key: feature.provider_key, model_key: feature.model_key, outcome: "completed", input_units: input.length, output_units: output.length, requested_by: userId });
   if (usageError) throw usageError;
   return { outcome: "completed" as const, draft, humanReviewRequired: true };
+}
+
+function providerResponseText(payload: unknown) {
+  const row = payload as {
+    output_text?: unknown;
+    output?: Array<{ content?: Array<{ text?: unknown }> }>;
+  };
+  if (typeof row.output_text === "string") return row.output_text;
+  return (row.output || [])
+    .flatMap((item) => item.content || [])
+    .map((item) => (typeof item.text === "string" ? item.text : ""))
+    .join("")
+    .trim();
+}
+
+/** Creates a draft only; a separate human action must publish it. */
+export async function generateTranslationDraft(
+  admin: SupabaseClient,
+  feature: AiFeature,
+  userId: string,
+  source: string,
+  targetLocale: string,
+) {
+  const input = redactSensitiveText(source).replace(/\s+/g, " ").trim();
+  if (!input || input.length > 12_000)
+    throw new Error("Choose ordinary interface text to translate.");
+  const { data: killSetting, error: killError } = await admin
+    .from("engine_settings")
+    .select("published_value")
+    .eq("setting_key", "ai.emergency_kill_switch")
+    .maybeSingle();
+  if (killError) throw killError;
+  if (killSetting?.published_value !== false || !feature.is_enabled)
+    throw new Error(
+      "Provider-assisted translation is disabled. You can still enter a reviewed translation manually.",
+    );
+  if (
+    !approvedAiProviders().includes(feature.provider_key) ||
+    !approvedAiModels(feature.provider_key).includes(feature.model_key) ||
+    !aiProviderConfigured(feature.provider_key)
+  )
+    throw new Error(
+      "The approved translation provider is not configured. You can still enter a reviewed translation manually.",
+    );
+
+  let translated = "";
+  if (feature.provider_key === "test") {
+    translated = DASHBOARD_SOURCE_MESSAGES[targetLocale]?.[input] || "";
+    if (!translated)
+      throw new Error(
+        "The test translation adapter has no draft for this text. Configure an approved provider or enter the translation manually.",
+      );
+  } else if (feature.provider_key === "openai") {
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      Math.min(Math.max(Number(feature.timeout_ms || 20_000), 1_000), 120_000),
+    );
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: feature.model_key,
+          instructions:
+            "Translate the supplied ordinary software interface text into the requested language. Preserve variables, punctuation, brand names, and meaning. Return only the translation. Do not add commentary.",
+          input: `Target locale: ${targetLocale}\nSource text:\n${input}`,
+          max_output_tokens: Math.min(4_000, Math.max(128, input.length * 2)),
+        }),
+      });
+      if (!response.ok)
+        throw new Error("TRANSLATION_PROVIDER_REQUEST_FAILED");
+      translated = providerResponseText(await response.json());
+    } finally {
+      clearTimeout(timer);
+    }
+  } else {
+    throw new Error(
+      "The selected translation provider adapter is not installed. No text was transmitted.",
+    );
+  }
+  translated = translated.trim().slice(0, 12_000);
+  if (!translated)
+    throw new Error("The translation provider returned no usable draft.");
+
+  const { data: draft, error } = await admin
+    .from("ai_generation_drafts")
+    .insert({
+      feature_key: feature.feature_key,
+      provider_key: feature.provider_key,
+      model_key: feature.model_key,
+      input_summary: `Translation to ${targetLocale}: ${input.slice(0, 420)}`,
+      output_text: translated,
+      requested_by: userId,
+      safety_flags: input.includes("[REDACTED]") ? ["pii_redacted"] : [],
+    })
+    .select("id,status,output_text,safety_flags,created_at")
+    .single();
+  if (error) throw error;
+  const { error: usageError } = await admin.from("ai_usage_events").insert({
+    feature_key: feature.feature_key,
+    provider_key: feature.provider_key,
+    model_key: feature.model_key,
+    outcome: "completed",
+    input_units: input.length,
+    output_units: translated.length,
+    requested_by: userId,
+  });
+  if (usageError) throw usageError;
+  return {
+    translatedText: translated,
+    draft,
+    provider: feature.provider_key,
+    model: feature.model_key,
+    humanReviewRequired: true,
+  };
 }

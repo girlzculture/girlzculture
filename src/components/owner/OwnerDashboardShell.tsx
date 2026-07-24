@@ -1,10 +1,12 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronDown, CircleDollarSign, Crown, ExternalLink, Home, Images, Menu, Megaphone, MessageSquare, Package, Scissors, Settings, Star, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, ChevronDown, CircleDollarSign, Crown, ExternalLink, Home, Images, Menu, Megaphone, MessageSquare, Package, Scissors, Settings, Star, UserRound, UsersRound } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import DashboardNotificationCenter, { type DashboardNotification } from "@/components/notifications/DashboardNotificationCenter";
 
 export type DashboardSection = "overview" | "my-page" | "photos" | "styles" | "stylists" | "products" | "availability" | "bookings" | "messages" | "reviews" | "earnings" | "promotions" | "subscription" | "settings";
 
@@ -14,17 +16,28 @@ const nav = [
 
 const hrefFor = (section: string) => section === "overview" ? "/salon/dashboard" : `/salon/dashboard/${section}`;
 
-export default function OwnerDashboardShell({ children, section, salonName, salonSlug, avatar, notifications = [], access = null }: { children: React.ReactNode; section: DashboardSection; salonName: string; salonSlug: string; avatar?: string | null; notifications?: Array<{id?:string;title?:string;body?:string;action_url?:string;read_at?:string|null}>; access?: Record<string,boolean>|null }) {
+export default function OwnerDashboardShell({ children, section, salonName, salonSlug, avatar, notifications = [], access = null }: { children: React.ReactNode; section: DashboardSection; salonName: string; salonSlug: string; avatar?: string | null; notifications?: DashboardNotification[]; access?: Record<string,boolean>|null }) {
+  const [notificationCounts, setNotificationCounts] = useState<Record<string,number>>({});
+  const handleNotificationCounts = useCallback((counts:Record<string,number>) => setNotificationCounts(counts),[]);
   const canAccess = (id: string) => access === null || (id !== "subscription" && Boolean(access[id === "messages" ? "bookings" : id.replace("-", "_")]));
   const visibleNav = nav.filter(([id]) => canAccess(id));
   const homeHref = visibleNav.length ? hrefFor(visibleNav[0][0]) : "/salon/login";
   const mobileNav = ([
     ["overview","Overview",Home], ["bookings","Bookings",CalendarDays], ["availability","Calendar",CalendarDays], ["messages","Messages",MessageSquare], ["settings","More",Menu],
   ] as const).filter(([id]) => canAccess(id));
+  const navBadge = (id:string) => id === "bookings"
+    ? Number(notificationCounts.bookings || 0)
+    : id === "messages"
+      ? Number(notificationCounts.messages || 0)
+      : id === "earnings" || id === "subscription"
+        ? Number(notificationCounts.payments || 0)
+        : id === "settings"
+          ? Number(notificationCounts.errors || 0) + Number(notificationCounts.support || 0)
+          : 0;
   return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]"><RoleSessionBoundary scope="salon" />
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] overflow-y-auto bg-[radial-gradient(circle_at_60%_20%,#6b176f,#2b0835_70%)] px-4 py-5 text-white lg:block">
       <Link href={homeHref} className="block px-3 font-serif text-[31px] font-bold leading-none">Girlz<span className="block pl-1 text-[10px] uppercase tracking-[0.35em] text-amber">Culture</span></Link>
-      <nav aria-label="Salon owner navigation" className="mt-7 space-y-1">{visibleNav.map(([id,label,Icon]) => { const active=section===id; return <Link key={id} href={hrefFor(id)} aria-current={active?"page":undefined} className={`flex min-h-10 items-center gap-3 rounded-[9px] px-3 text-[12px] font-medium transition ${active?"bg-magenta/70 text-white shadow-[0_8px_24px_rgba(214,24,107,.2)]":"text-white/85 hover:bg-white/10"}`}><Icon size={18} strokeWidth={1.7}/>{label}</Link>; })}</nav>
+      <nav aria-label="Salon owner navigation" className="mt-7 space-y-1">{visibleNav.map(([id,label,Icon]) => { const active=section===id; const count=navBadge(id); return <Link key={id} href={hrefFor(id)} aria-current={active?"page":undefined} className={`flex min-h-10 items-center gap-3 rounded-[9px] px-3 text-[12px] font-medium transition ${active?"bg-magenta/70 text-white shadow-[0_8px_24px_rgba(214,24,107,.2)]":"text-white/85 hover:bg-white/10"}`}><Icon size={18} strokeWidth={1.7}/>{label}{count?<span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{Math.min(count,99)}</span>:null}</Link>; })}</nav>
       {canAccess("promotions") ? <div className="mt-7 overflow-hidden rounded-[12px] border border-white/15 bg-white/5 p-4"><p className="font-serif text-base">Grow your brand<br />with Girlz Culture</p><p className="mt-3 text-[10px] leading-4 text-white/70">Reach more clients and build your beauty empire.</p><div className="mt-4 h-28 rounded-[10px] bg-[url('/images/hero-braids.jpg')] bg-cover bg-[center_20%]" /><Link href="/salon/dashboard/promotions" className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-[#ff68aa]">Learn more →</Link></div> : null}
       <RoleLogoutButton scope="salon" className="mt-5 flex w-full items-center gap-3 rounded-[9px] px-3 py-3 text-sm text-white/85 hover:bg-white/10" />
     </aside>
@@ -33,7 +46,7 @@ export default function OwnerDashboardShell({ children, section, salonName, salo
         <details className="relative lg:hidden"><summary aria-label="Open owner navigation" className="flex h-11 w-11 cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"><Menu size={24}/></summary><nav className="absolute left-0 top-12 w-72 rounded-[14px] border border-plum/10 bg-white p-2 shadow-2xl">{visibleNav.map(([id,label,Icon])=><Link key={id} href={hrefFor(id)} className={`flex items-center gap-3 rounded-[9px] px-3 py-3 text-sm ${section===id?"bg-blush text-magenta":""}`}><Icon size={18}/>{label}</Link>)}</nav></details>
         <Link href={homeHref} className="font-serif text-[27px] font-bold text-plum lg:block">Girlz<span className="ml-1 text-[9px] uppercase tracking-[0.22em] text-amber">Culture</span></Link>
         <LanguageSelector compact className="ml-auto mr-2 sm:mr-4" />
-        <div className="flex items-center gap-2 sm:gap-4"><Link href={`/salon/${salonSlug}`} className="hidden items-center gap-1 text-xs font-semibold text-plum sm:inline-flex">View Public Page <ExternalLink size={14}/></Link><details className="relative"><summary aria-label="Notifications" className="relative flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full [&::-webkit-details-marker]:hidden"><Bell size={21}/>{notifications.filter(n=>!n.read_at).length?<span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-magenta px-1 text-[9px] font-bold text-white">{notifications.filter(n=>!n.read_at).length}</span>:null}</summary><div className="absolute right-0 top-12 w-80 rounded-xl border border-plum/10 bg-white p-3 shadow-2xl"><h2 className="px-2 py-2 font-serif text-lg text-plum">Notifications</h2>{notifications.length?notifications.slice(0,6).map(n=><Link href={n.action_url||"/salon/dashboard/bookings"} key={n.id} className="block border-t border-plum/10 px-2 py-3 text-xs hover:bg-blush/25"><b>{n.title}</b><p className="mt-1 text-ink/55">{n.body}</p><span className="mt-2 inline-flex font-bold text-magenta">Open booking</span></Link>):<p className="p-3 text-xs text-ink/50">You’re all caught up.</p>}</div></details><div className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-blush text-plum">{avatar?<SafeImage src={avatar} fallbackSrc={avatar} alt={`${salonName} logo`} className="h-full w-full object-cover" />:<UserRound size={19}/>}</div><span className="hidden max-w-44 truncate text-xs font-semibold sm:block">{salonName}</span><ChevronDown size={16} className="hidden sm:block" /></div>
+        <div className="flex items-center gap-2 sm:gap-4"><Link href={`/salon/${salonSlug}`} className="hidden items-center gap-1 text-xs font-semibold text-plum sm:inline-flex">View Public Page <ExternalLink size={14}/></Link><DashboardNotificationCenter scope="salon" initialNotifications={notifications} onCounts={handleNotificationCounts}/><div className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-blush text-plum">{avatar?<SafeImage src={avatar} fallbackSrc={avatar} alt={`${salonName} logo`} className="h-full w-full object-cover" />:<UserRound size={19}/>}</div><span className="hidden max-w-44 truncate text-xs font-semibold sm:block">{salonName}</span><ChevronDown size={16} className="hidden sm:block" /></div>
       </header>
       <main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">{children}</main>
     </div>

@@ -4,16 +4,23 @@ import { ArrowLeft, CalendarDays, Package, Store } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
+import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 
 type Salon = { id: string; name?: string | null; slug?: string | null; address_city?: string | null; address_state?: string | null };
 type Product = { id: string; name?: string | null; description?: string | null; price?: number | null; photo_url?: string | null; in_person_only?: boolean | null };
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string; productId: string }> }) {
+export default async function ProductDetailPage({ params, searchParams }: { params: Promise<{ slug: string; productId: string }>; searchParams: Promise<Record<string,string | string[] | undefined>> }) {
   const { slug, productId } = await params;
+  const query = await searchParams;
   const { data: salon } = await supabase.from("salons").select("id,name,slug,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
   if (!salon) notFound();
   const { data: product } = await supabase.from("salon_products").select("*").eq("id", productId).eq("salon_id", salon.id).eq("is_visible", true).maybeSingle<Product>();
   if (!product) notFound();
+  let promotionQuery = supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null);
+  const requestedPromotion = typeof query.promotion === "string" ? query.promotion : "";
+  if (requestedPromotion) promotionQuery = promotionQuery.eq("id",requestedPromotion);
+  const { data: promotionRows } = await promotionQuery;
+  const offer = bestPromotionForContext((promotionRows || []) as SalonPromotion[], { salonId: salon.id, productId: product.id, basePrice: Number(product.price || 0), selectedAddons: [], subtotal: Number(product.price || 0) });
   const location = [salon.address_city, salon.address_state].filter(Boolean).join(", ");
 
   return (
@@ -26,7 +33,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-14">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-magenta">Our Products</p>
             <h1 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.035em] text-plum sm:text-5xl">{product.name || "Salon product"}</h1>
-            <p className="mt-4 text-2xl font-bold text-ink">${Number(product.price || 0).toFixed(2)}</p>
+            {offer ? <div className="mt-4"><span className="inline-flex rounded-full bg-amber/20 px-3 py-1 text-[10px] font-bold text-[#805000]">{promotionLabel(offer.promotion)}</span><p className="mt-2 text-sm text-ink/45 line-through">${Number(product.price || 0).toFixed(2)}</p><p className="text-2xl font-bold text-magenta">${offer.price.total.toFixed(2)}</p><p className="mt-2 text-[11px] text-plum">{offer.promotion.public_headline || offer.promotion.title}</p></div> : <p className="mt-4 text-2xl font-bold text-ink">${Number(product.price || 0).toFixed(2)}</p>}
             {product.description ? <p className="mt-6 text-[14px] leading-7 text-ink/70">{product.description}</p> : null}
             <div className="mt-7 rounded-[13px] border border-amber/30 bg-[#fff7e9] p-4"><p className="flex items-start gap-3 text-[12px] font-semibold text-ink"><Store size={19} className="shrink-0 text-amber" />Available for in-person purchase at {salon.name || "the salon"}. There is no online checkout.</p>{location ? <p className="ml-8 mt-1 text-[11px] text-ink/55">{location}</p> : null}</div>
             <Link href={`/salon/${slug}/book`} className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(214,24,107,0.2)] hover:bg-[#bb145d]"><CalendarDays size={17} />Book an Appointment</Link>

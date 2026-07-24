@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   BadgeCheck,
@@ -21,7 +22,8 @@ import SalonPhotoGallery from "@/components/public/SalonPhotoGallery";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
-import { promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
+import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
+import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 
 type SalonRecord = {
   id: string;
@@ -49,11 +51,17 @@ type SalonRecord = {
   status?: string | null;
   is_discoverable?: boolean | null;
   subscription_tier?: string | null;
+  vanity_slug?: string | null;
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
+  google_business_url?: string | null;
 };
 
 type StyleRecord = {
   id?: string;
   salon_id?: string | null;
+  service_group_id?: string | null;
+  master_style_id?: string | null;
   name?: string | null;
   price_display_min?: number | null;
   price_display_max?: number | null;
@@ -178,6 +186,20 @@ function renderStars(rating: number) {
   return Array.from({ length: 5 }, (_, index) => <Star key={index} size={14} className={index < Math.round(rating) ? "fill-amber text-amber" : "fill-transparent text-ink/20"} />);
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  return (
+    (await getSalonPublicMetadata(slug, "slug")) || {
+      title: "Salon unavailable",
+      robots: { index: false, follow: false },
+    }
+  );
+}
+
 export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const supabase = getSupabaseAdmin();
   const { slug } = await params;
@@ -190,13 +212,13 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
   if (salonError) throw salonError;
   if (!salon) {
-    const { data: redirectRecord } = await supabase.from("salon_slug_redirects").select("new_slug").eq("old_slug", slug).is("retired_at", null).maybeSingle();
+    const { data: redirectRecord } = await supabase.from("salon_slug_redirects").select("new_slug").eq("route_scope", "salon").eq("old_slug", slug).is("retired_at", null).maybeSingle();
     if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
     notFound();
   }
@@ -215,6 +237,32 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const stylists = ((stylistsResult.data || []) as StylistRecord[]).filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
   const products = (productsResult.data || []) as ProductRecord[];
   const promotions = ["Growth","Premium"].includes(String(salon.subscription_tier || "")) ? (promotionsResult.data || []) as SalonPromotion[] : [];
+  const promotionCards = promotions.map((promotion) => {
+    const eligibleStyles = styles.filter((style) => bestPromotionForContext([promotion], {
+      salonId: salon.id,
+      styleId: style.id || null,
+      serviceGroupId: style.service_group_id,
+      masterStyleId: style.master_style_id,
+      basePrice: Number(style.base_price || style.price_display_min || 0),
+      selectedAddons: [],
+      subtotal: Number(style.price_display_min || style.base_price || 0),
+    }));
+    const eligibleProducts = products.filter((product) => bestPromotionForContext([promotion], {
+      salonId: salon.id,
+      productId: product.id || null,
+      basePrice: Number(product.price || 0),
+      selectedAddons: [],
+      subtotal: Number(product.price || 0),
+    }));
+    const primaryStyle = eligibleStyles[0];
+    const primaryProduct = eligibleProducts[0];
+    const href = primaryStyle?.id
+      ? `/salon/${salon.slug || slug}/book?style=${encodeURIComponent(primaryStyle.id)}&promotion=${encodeURIComponent(String(promotion.id || ""))}`
+      : primaryProduct?.id
+        ? `/salon/${salon.slug || slug}/product/${primaryProduct.id}?promotion=${encodeURIComponent(String(promotion.id || ""))}`
+        : `/salon/${salon.slug || slug}`;
+    return { promotion, eligibleStyles, eligibleProducts, href };
+  }).filter((entry) => entry.eligibleStyles.length || entry.eligibleProducts.length);
 
   let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
   if (reviewsWithCustomerResult.error) {
@@ -284,18 +332,42 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
             <div className="mt-4 flex items-center gap-2">
               <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>
-              <SalonProfileActions salonId={salon.id} salonName={salon.name || "Salon"} />
+              <SalonProfileActions
+                salonId={salon.id}
+                salonName={salon.name || "Salon"}
+                salonSlug={salon.slug || slug}
+                vanitySlug={salon.vanity_slug}
+                instagramUrl={salon.instagram_url}
+                tiktokUrl={salon.tiktok_url}
+                googleBusinessUrl={salon.google_business_url}
+              />
             </div>
           </div>
         </section>
 
-        {promotions.length ? <section aria-labelledby="current-offers" className="mb-4 rounded-[15px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(243,217,228,.72),rgba(255,255,255,.78))] p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Tag size={15}/>Current offers</p><h2 id="current-offers" className="mt-2 font-serif text-2xl font-semibold text-plum">{promotions[0].public_headline || promotions[0].title}</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-ink/65">{promotions[0].description || promotionLabel(promotions[0])}</p><p className="mt-2 text-[10px] font-bold text-magenta">{promotionLabel(promotions[0])}{(promotions[0].restrictions as Record<string,unknown> | null)?.terms ? ` · ${String((promotions[0].restrictions as Record<string,unknown>).terms)}` : ""}</p></div><Link href={`/salon/${salon.slug || slug}/book?promotion=${encodeURIComponent(String(promotions[0].id))}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Book this offer</Link></div></section> : null}
+        {promotionCards.length ? (
+          <section aria-labelledby="current-offers" className="mb-4 rounded-[15px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(243,217,228,.72),rgba(255,255,255,.78))] p-4 sm:p-5">
+            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Tag size={15}/>Current offers</p>
+            <h2 id="current-offers" className="mt-2 font-serif text-2xl font-semibold text-plum">Offers for specific services and products</h2>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {promotionCards.map(({ promotion, eligibleStyles, eligibleProducts, href }) => (
+                <article key={promotion.id} className="rounded-[12px] border border-plum/10 bg-white/75 p-4">
+                  <h3 className="font-serif text-xl font-semibold text-plum">{promotion.public_headline || promotion.title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-ink/65">{promotion.description || promotionLabel(promotion)}</p>
+                  <p className="mt-2 text-[10px] font-bold text-magenta">{promotionLabel(promotion)}{(promotion.restrictions as Record<string,unknown> | null)?.terms ? ` · ${String((promotion.restrictions as Record<string,unknown>).terms)}` : ""}</p>
+                  <p className="mt-3 text-[10px] leading-5 text-ink/60"><b>Eligible:</b> {[...eligibleStyles.map((item) => item.name), ...eligibleProducts.map((item) => item.name)].filter(Boolean).join(", ")}</p>
+                  <Link href={href} className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="grid gap-4 border-t border-plum/10 py-4 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <h2 className="font-serif text-[22px] font-semibold text-ink">Styles & Pricing</h2>
             <p className="mt-1 text-[9px] text-ink/55">Select a style to see full pricing and time details.</p>
-            <div className="mt-3"><SalonStyles styles={styles} styleMaterialsByStyleId={styleMaterialsByStyleId} salonSlug={salon.slug || slug} /></div>
+            <div className="mt-3"><SalonStyles styles={styles} styleMaterialsByStyleId={styleMaterialsByStyleId} salonSlug={salon.slug || slug} salonId={salon.id} promotions={promotions} /></div>
           </div>
 
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
@@ -310,12 +382,13 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
           <section id="products" className="mb-4 rounded-[15px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <div className="flex items-end justify-between gap-3"><div><h2 className="flex items-center gap-2 font-serif text-[24px] font-semibold text-ink"><Package size={21} className="text-magenta" />Our Products</h2><p className="mt-1 text-[11px] text-ink/55">Explore products available for in-person purchase at your appointment.</p></div><span className="hidden text-[10px] font-semibold text-plum sm:block">No online checkout</span></div>
             <div className="mt-5 -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
-              {products.map((product, index) => (
-                <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(26,18,32,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
-                  <div className="relative aspect-square w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}</div>
-                  <div className="p-4"><div className="flex items-start justify-between gap-3"><h3 className="font-serif text-[19px] font-semibold leading-tight text-ink">{product.name}</h3><p className="shrink-0 text-[13px] font-bold">${Number(product.price || 0).toFixed(2)}</p></div><p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/55">{product.description || "Available at the salon."}</p><p className="mt-3 text-[11px] font-bold text-magenta">View product details</p></div>
-                </Link>
-              ))}
+              {products.map((product, index) => {
+                const offer = bestPromotionForContext(promotions, { salonId: salon.id, productId: product.id || null, basePrice: Number(product.price || 0), selectedAddons: [], subtotal: Number(product.price || 0) });
+                return <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}${offer ? `?promotion=${encodeURIComponent(String(offer.promotion.id || ""))}` : ""}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(26,18,32,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
+                  <div className="relative aspect-square w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}{offer ? <span className="absolute bottom-2 left-2 rounded-full bg-amber px-2 py-1 text-[9px] font-bold text-ink">{promotionLabel(offer.promotion)}</span> : null}</div>
+                  <div className="p-4"><div className="flex items-start justify-between gap-3"><h3 className="font-serif text-[19px] font-semibold leading-tight text-ink">{product.name}</h3><p className="shrink-0 text-right text-[13px] font-bold">{offer ? <><span className="block text-[10px] text-ink/40 line-through">${Number(product.price || 0).toFixed(2)}</span><span className="text-magenta">${offer.price.total.toFixed(2)}</span></> : `$${Number(product.price || 0).toFixed(2)}`}</p></div><p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/55">{product.description || "Available at the salon."}</p><p className="mt-3 text-[11px] font-bold text-magenta">{offer ? "View product offer" : "View product details"}</p></div>
+                </Link>;
+              })}
             </div>
           </section>
         ) : null}
