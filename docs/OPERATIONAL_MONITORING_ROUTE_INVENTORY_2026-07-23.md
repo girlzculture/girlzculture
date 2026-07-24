@@ -35,6 +35,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/admin/identity-deletion` | GET, POST | protected | Covered |
 | `/api/admin/inbox-counts` | GET | protected | Covered |
 | `/api/admin/marketing` | GET, POST, DELETE | protected | Covered |
+| `/api/admin/media/video-jobs` | GET, POST | provider-backed | Covered |
 | `/api/admin/promo-codes` | GET, POST, PATCH | protected | Covered |
 | `/api/admin/records` | GET, POST | protected | Covered |
 | `/api/admin/salons/[id]` | GET, POST | protected | Covered |

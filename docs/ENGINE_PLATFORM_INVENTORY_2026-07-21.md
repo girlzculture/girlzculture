@@ -7,12 +7,12 @@ This is a source inventory, not proof that migrations are applied or authenticat
 ## Inventory totals
 
 - Application pages: **44**
-- API routes: **91**
+- API routes: **92**
 - Components/modules under `src/components`: **85**
-- Ordered SQL migrations: **80**
-- Tables/views discovered in migrations: **100**
+- Ordered SQL migrations: **82**
+- Tables/views discovered in migrations: **102**
 - Functions discovered in migrations: **108**
-- RLS policies discovered in migrations: **169**
+- RLS policies discovered in migrations: **172**
 
 ## Application page inventory
 
@@ -87,6 +87,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | `/api/admin/identity-deletion` | GET, POST | `src/app/api/admin/identity-deletion/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling | verify:identity |
 | `/api/admin/inbox-counts` | GET | `src/app/api/admin/inbox-counts/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | route-specific bounds and safe errors | TypeScript/lint/build and route smoke where public |
 | `/api/admin/marketing` | GET, POST, DELETE | `src/app/api/admin/marketing/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | TypeScript/lint/build and route smoke where public |
+| `/api/admin/media/video-jobs` | GET, POST | `src/app/api/admin/media/video-jobs/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | verify:media |
 | `/api/admin/promo-codes` | GET, POST, PATCH | `src/app/api/admin/promo-codes/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | TypeScript/lint/build and route smoke where public |
 | `/api/admin/records` | GET, POST | `src/app/api/admin/records/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, dependency/confirmation handling, server authorization | verify:records |
 | `/api/admin/salons/[id]` | GET, POST | `src/app/api/admin/salons/[id]/route.ts` | Supabase/database-backed operation | Dedicated admin workspace | Admin bearer session plus explicit permission | typed/sanitized input, server authorization | TypeScript/lint/build and route smoke where public |
@@ -298,6 +299,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `master_styles`
 - `media_assets`
 - `media_upload_profiles`
+- `media_video_profiles`
 - `navigation_items`
 - `newsletter_subscribers`
 - `notification_delivery_log`
@@ -353,6 +355,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `trending_campaign_audit`
 - `trending_video_campaigns`
 - `trending_videos`
+- `video_processing_jobs`
 
 ### Functions and RPCs
 
@@ -537,6 +540,8 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `media_assets_owner_read` on `media_assets`
 - `media_profiles_admin_write` on `media_upload_profiles`
 - `media_profiles_public_read` on `media_upload_profiles`
+- `media_video_profiles_admin_manage` on `media_video_profiles`
+- `media_video_profiles_read` on `media_video_profiles`
 - `navigation_items_admin_manage` on `navigation_items`
 - `navigation_items_public_read` on `navigation_items`
 - `newsletter_subscribers_admin_read` on `newsletter_subscribers`
@@ -636,6 +641,7 @@ This is a source inventory, not proof that migrations are applied or authenticat
 - `trending_video_public_read` on `storage`
 - `trending_videos_admin_write` on `trending_videos`
 - `trending_videos_public_read` on `trending_videos`
+- `video_processing_jobs_admin_manage` on `video_processing_jobs`
 
 ## Exact migration order
 
@@ -721,6 +727,8 @@ This is a source inventory, not proof that migrations are applied or authenticat
 | 78 | `20260723240000_finance_reconciliation.sql` | `supabase/migrations/20260723240000_finance_reconciliation.sql` |
 | 79 | `20260723250000_dashboard_notifications.sql` | `supabase/migrations/20260723250000_dashboard_notifications.sql` |
 | 80 | `20260723260000_monitoring_context_promotion_audit.sql` | `supabase/migrations/20260723260000_monitoring_context_promotion_audit.sql` |
+| 81 | `20260723270000_localization_completion.sql` | `supabase/migrations/20260723270000_localization_completion.sql` |
+| 82 | `20260723280000_trending_video_processing.sql` | `supabase/migrations/20260723280000_trending_video_processing.sql` |
 
 ## Protected values deliberately left outside Engine
 

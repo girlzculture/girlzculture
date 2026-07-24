@@ -128,7 +128,7 @@ export default function TrendingVideoPlacement({
           <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} aria-label={viewAll ? undefined : "Trending Picks carousel"} className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}>
             {videos.map((video) => (
               <article key={video.campaign_id} className="w-[54vw] max-w-[250px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_5px_18px_rgba(26,18,32,.07)] sm:w-auto sm:max-w-none">
-                <SafeCampaignVideo src={video.video_url} poster={video.thumbnail_url} label={`${video.salon_name} Trending Pick`} className="aspect-[9/13] w-full" />
+                <SafeCampaignVideo src={video.video_url} poster={video.thumbnail_url} label={`${video.salon_name} Trending Pick`} className="aspect-video w-full" />
                 <div className="p-3">
                   <Link href={`/salon/${video.salon_slug}`} className="font-serif text-base font-semibold text-plum">{video.salon_name}</Link>
                   <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60">{video.description}</p>
@@ -150,5 +150,5 @@ export default function TrendingVideoPlacement({
 }
 
 function Skeletons() {
-  return <div aria-label="Loading Trending Picks" className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{Array.from({ length: 6 }, (_, index) => <div key={index} className="animate-pulse overflow-hidden rounded-[14px] bg-white"><div className="aspect-[9/13] bg-blush" /><div className="space-y-2 p-3"><div className="h-4 rounded bg-blush" /><div className="h-3 w-2/3 rounded bg-blush/60" /></div></div>)}</div>;
+  return <div aria-label="Loading Trending Picks" className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{Array.from({ length: 6 }, (_, index) => <div key={index} className="animate-pulse overflow-hidden rounded-[14px] bg-white"><div className="aspect-video bg-blush" /><div className="space-y-2 p-3"><div className="h-4 rounded bg-blush" /><div className="h-3 w-2/3 rounded bg-blush/60" /></div></div>)}</div>;
 }

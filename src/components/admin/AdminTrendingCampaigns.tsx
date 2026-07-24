@@ -37,6 +37,7 @@ export default function AdminTrendingCampaigns() {
   const [file, setFile] = useState<File | null>(null);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [sourceDuration, setSourceDuration] = useState(0);
+  const [needsServerPipeline, setNeedsServerPipeline] = useState(false);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
   const [posterTime, setPosterTime] = useState(0);
@@ -86,6 +87,7 @@ export default function AdminTrendingCampaigns() {
     setFile(null);
     setPosterFile(null);
     setSourceDuration(0);
+    setNeedsServerPipeline(false);
     setTrimStart(0);
     setTrimEnd(0);
     setPosterTime(0);
@@ -108,10 +110,25 @@ export default function AdminTrendingCampaigns() {
       setPosterTime(Math.max(0, Math.min(duration / 3, Math.min(duration, 30) - 0.05)));
       setNotice(duration > 30.5 ? "Choose a trim range of 30 seconds or less, then choose a poster frame." : "Preview the clip and choose a poster frame before saving.");
     } catch (error) {
-      setFile(null);
-      const message = error instanceof Error ? error.message : "Unable to read this video.";
-      setMediaError(message);
-      setNotice(message);
+      const ordinaryVideo =
+        next.size <= 100 * 1024 * 1024 &&
+        (/\.mp4$/i.test(next.name) || next.type === "video/mp4");
+      if (!ordinaryVideo) {
+        setFile(null);
+        const message =
+          error instanceof Error ? error.message : "Unable to read this video.";
+        setMediaError(message);
+        setNotice(message);
+        return;
+      }
+      setNeedsServerPipeline(true);
+      setTrimStart(0);
+      setTrimEnd(30);
+      setPosterTime(0);
+      setMediaError("");
+      setNotice(
+        "This MP4 needs secure server preparation. It will be inspected and converted to H.264/AAC automatically after upload.",
+      );
     }
   }
 
@@ -154,7 +171,7 @@ export default function AdminTrendingCampaigns() {
     const salonId = editing?.salon_id || selectedSalon?.id;
     if (!salonId) { setNotice("Search for and select an eligible salon."); return; }
     if (!editing && !file) { setNotice("Choose a video to upload."); return; }
-    if (file && (trimEnd - trimStart <= 0 || trimEnd - trimStart > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
+    if (file && !needsServerPipeline && (trimEnd - trimStart <= 0 || trimEnd - trimStart > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
     const requestedStatus=String(form.get("status")||"Draft");
     if (["Scheduled","Active"].includes(requestedStatus) && (!String(form.get("entitlement_source")||"") || !String(form.get("entitlement_reference")||"").trim())) { setNotice("Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign."); return; }
     setBusy(true);
@@ -176,22 +193,64 @@ export default function AdminTrendingCampaigns() {
         mime_type: editing?.mime_type,
       };
       if (file) {
-        const optimized = await optimizeTrendingVideo(file, { startSeconds: trimStart, endSeconds: trimEnd, signal: controller.signal });
-        if (controller.signal.aborted) throw new DOMException("Upload cancelled.", "AbortError");
-        setProgress(24);
-        setNotice("Uploading optimized video…");
-        uploadedPath = `campaigns/${salonId}/${Date.now()}-${crypto.randomUUID()}.${optimized.file.type === "video/webm" ? "webm" : "mp4"}`;
         const session = await getSessionForScope("admin");
         if (!session) throw new Error("Your admin session has expired. Sign in and try again.");
-        await uploadTrendingFile(uploadedPath, optimized.file, { accessToken: session.access_token, signal: controller.signal, onProgress: (value) => setProgress(24 + Math.round(value * .44)) });
-        const { data } = adminSupabase.storage.from("trending-videos").getPublicUrl(uploadedPath);
-        setProgress(68);
-        setNotice("Uploading poster frame…");
-        const selectedPoster = posterFile || await createVideoPoster(file, posterTime);
-        uploadedPosterPath = `campaigns/${salonId}/posters/${Date.now()}-${crypto.randomUUID()}.jpg`;
-        await uploadTrendingFile(uploadedPosterPath, selectedPoster, { accessToken: session.access_token, signal: controller.signal, onProgress: (value) => setProgress(68 + Math.round(value * .16)) });
-        const poster = adminSupabase.storage.from("trending-videos").getPublicUrl(uploadedPosterPath);
-        video = { video_url: data.publicUrl, storage_path: uploadedPath, thumbnail_url: poster.data.publicUrl, duration_seconds: optimized.duration, file_size_bytes: optimized.file.size, mime_type: optimized.file.type };
+        if (needsServerPipeline) {
+          setProgress(18);
+          setNotice("Uploading the original MP4 for secure inspection…");
+          uploadedPath = `incoming/${session.user.id}/${Date.now()}-${crypto.randomUUID()}.mp4`;
+          await uploadTrendingFile(uploadedPath, file, {
+            accessToken: session.access_token,
+            signal: controller.signal,
+            onProgress: (value) => setProgress(18 + Math.round(value * .42)),
+          });
+          setProgress(62);
+          setNotice("Inspecting codecs and preparing a browser-safe MP4…");
+          const processingResponse = await fetch("/api/admin/media/video-jobs", {
+            method: "POST",
+            headers: await headers(true),
+            body: JSON.stringify({
+              action: "create",
+              salon_id: salonId,
+              source_path: uploadedPath,
+              mime_type: file.type || "video/mp4",
+              file_size_bytes: file.size,
+            }),
+            signal: controller.signal,
+          });
+          const processingBody = await processingResponse.json();
+          if (!processingResponse.ok)
+            throw new Error(
+              processingBody.error ||
+                "We couldn't prepare this video for browser playback.",
+            );
+          const job = processingBody.job;
+          if (job?.status !== "Ready" || !job.output_url)
+            throw new Error("Video preparation did not finish. Retry the upload.");
+          video = {
+            video_url: job.output_url,
+            storage_path: job.output_path || uploadedPath,
+            thumbnail_url: job.poster_url || null,
+            duration_seconds: job.duration_seconds || 30,
+            file_size_bytes: job.output_size_bytes || Math.min(file.size, 25 * 1024 * 1024),
+            mime_type: "video/mp4",
+          };
+        } else {
+          const optimized = await optimizeTrendingVideo(file, { startSeconds: trimStart, endSeconds: trimEnd, signal: controller.signal });
+          if (controller.signal.aborted) throw new DOMException("Upload cancelled.", "AbortError");
+          setProgress(24);
+          setNotice("Uploading optimized video…");
+          uploadedPath = `campaigns/${salonId}/${Date.now()}-${crypto.randomUUID()}.${optimized.file.type === "video/webm" ? "webm" : "mp4"}`;
+          await uploadTrendingFile(uploadedPath, optimized.file, { accessToken: session.access_token, signal: controller.signal, onProgress: (value) => setProgress(24 + Math.round(value * .44)) });
+          const { data } = adminSupabase.storage.from("trending-videos").getPublicUrl(uploadedPath);
+          setProgress(68);
+          setNotice("Uploading poster frame…");
+          const selectedPoster = posterFile || await createVideoPoster(file, posterTime);
+          uploadedPosterPath = `campaigns/${salonId}/posters/${Date.now()}-${crypto.randomUUID()}.jpg`;
+          await uploadTrendingFile(uploadedPosterPath, selectedPoster, { accessToken: session.access_token, signal: controller.signal, onProgress: (value) => setProgress(68 + Math.round(value * .16)) });
+          const poster = adminSupabase.storage.from("trending-videos").getPublicUrl(uploadedPosterPath);
+          video = { video_url: data.publicUrl, storage_path: uploadedPath, thumbnail_url: poster.data.publicUrl, duration_seconds: optimized.duration, file_size_bytes: optimized.file.size, mime_type: optimized.file.type };
+        }
       }
       setProgress(84);
       setNotice("Saving the governed campaign record…");
@@ -270,7 +329,8 @@ export default function AdminTrendingCampaigns() {
         <label onDragOver={(event) => event.preventDefault()} onDrop={dropVideo} className="block rounded-lg border border-dashed border-magenta/40 bg-blush/20 p-3 text-[10px] font-bold transition-colors hover:bg-blush/40 focus-within:ring-2 focus-within:ring-magenta"><span>{editing ? "Replacement video (optional; resets moderation)" : "Video (MP4/WebM, final clip ≤30 sec)"}</span><span className="mt-1 block font-normal text-ink/55">Drag and drop, or choose a file.</span><input type="file" accept="video/mp4,video/webm,.mp4,.webm" required={!editing} onChange={(event) => void selectVideo(event.target.files?.[0] || null)} className="mt-2 min-h-11 w-full rounded-lg border bg-white p-2 text-xs" /></label>
         <Field name="description" label="Description" defaultValue={editing?.description} />
         {mediaError?<p role="alert" className="rounded-lg bg-red-50 p-3 text-[10px] leading-4 text-red-700 sm:col-span-2 xl:col-span-4">{mediaError}</p>:null}
-        {file && previewUrl ? <div className="space-y-3 rounded-xl border border-plum/10 bg-cream p-3 sm:col-span-2 xl:col-span-4">
+        {file && needsServerPipeline ? <div className="rounded-xl border border-amber/30 bg-amber/10 p-4 text-xs text-plum sm:col-span-2 xl:col-span-4"><b>Automatic browser-safe conversion</b><p className="mt-1 text-ink/65">The original MP4 will be inspected after upload. Incompatible video or audio tracks are converted to H.264/AAC MP4 and a poster frame is generated by the configured secure media processor.</p></div> : null}
+        {file && previewUrl && !needsServerPipeline ? <div className="space-y-3 rounded-xl border border-plum/10 bg-cream p-3 sm:col-span-2 xl:col-span-4">
           <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
             <video ref={previewRef} src={previewUrl} controls playsInline preload="metadata" poster={activePoster || undefined} className="aspect-video w-full rounded-lg bg-ink object-contain" />
             <div className="space-y-3">

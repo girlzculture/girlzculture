@@ -46,6 +46,7 @@
     "verify:dashboard-notifications": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-dashboard-notifications.mjs",
     "verify:monitoring-usability": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-monitoring-usability.mjs",
     "verify:localization-completion": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-localization-completion.mjs",
+    "verify:trending-video-processing": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-trending-video-processing.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },
