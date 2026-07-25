@@ -53,7 +53,7 @@ async function POSTHandler(request: Request) {
       status: "Confirmed",
       deposit_status: "Manual",
       source: "Admin",
-    }).select("id").single();
+    }).select("id,public_reference,confirmation_code,status").single();
     if (error) {
       if (error.code === "23P01") return Response.json({ error: "That appointment overlaps an existing booking." }, { status: 409 });
       throw error;

@@ -41,7 +41,7 @@ async function POSTHandler(
     const { data: booking, error: bookingError } = await context.admin
       .from("bookings")
       .select(
-        "id,salon_id,stylist_id,status,guest_name,guest_email,customer_id,confirmation_code",
+        "id,salon_id,stylist_id,status,guest_name,guest_email,customer_id,public_reference,confirmation_code",
       )
       .eq("id", id)
       .eq("salon_id", context.salon.id)

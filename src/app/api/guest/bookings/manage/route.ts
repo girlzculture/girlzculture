@@ -63,7 +63,7 @@ async function loadManagedBooking(
   const { data: booking, error } = await admin
     .from("bookings")
     .select(
-      "id,confirmation_code,status,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancellation_reason,cancellation_initiated_by",
+      "id,public_reference,confirmation_code,status,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancellation_reason,cancellation_initiated_by",
     )
     .eq("id", bookingId)
     .single();
@@ -353,7 +353,9 @@ async function POSTHandler(request: Request) {
         );
       } else {
         const declineText = `The customer declined the proposed times for booking ${String(
-          current.booking.confirmation_code || access.bookingId,
+          current.booking.public_reference ||
+            current.booking.confirmation_code ||
+            access.bookingId,
         )}. The original appointment remains unchanged.`;
         const deliveries = await Promise.allSettled([
           sendEmail(

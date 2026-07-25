@@ -44,6 +44,7 @@
     "verify:guest-bookings": "node scripts/verify-secure-guest-bookings.mjs",
     "verify:rescheduling": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-customer-approved-rescheduling.mjs",
     "verify:booking-workflow": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-booking-workflow-completion.mjs",
+    "verify:booking-references": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-booking-public-references.mjs",
     "verify:finance-reconciliation": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-finance-reconciliation.mjs",
     "verify:dashboard-notifications": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-dashboard-notifications.mjs",
     "verify:monitoring-usability": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-monitoring-usability.mjs",

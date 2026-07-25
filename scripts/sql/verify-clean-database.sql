@@ -108,6 +108,34 @@ begin
   ) then
     raise exception 'Customer-email overlap exclusion constraint is missing';
   end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema='public'
+      and table_name='bookings'
+      and column_name='public_reference'
+      and is_nullable='NO'
+  ) then
+    raise exception 'Required non-null bookings.public_reference is missing';
+  end if;
+
+  if public.booking_public_reference_from_number(1)<>'GC-A-01'
+    or public.booking_public_reference_from_number(99)<>'GC-A-99'
+    or public.booking_public_reference_from_number(100)<>'GC-B-01'
+    or public.booking_public_reference_from_number(2575)<>'GC-AA-01'
+  then
+    raise exception 'Booking public reference sequence mapping is incorrect';
+  end if;
+
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public'
+      and tablename='bookings'
+      and indexname='bookings_public_reference_unique'
+  ) then
+    raise exception 'Unique booking public reference index is missing';
+  end if;
 end
 $$;
 

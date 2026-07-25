@@ -386,7 +386,13 @@ function BookingLedger({
               <Mode value={row.payment_mode} />
             </Td>
             <Td>
-              <b>{String(row.confirmation_code || "No code")}</b>
+              <b>
+                {String(
+                  row.public_reference ||
+                    row.confirmation_code ||
+                    "Reference pending",
+                )}
+              </b>
               {!payoutView ? (
                 <>
                   <small>{String(row.booking_id)}</small>
@@ -612,7 +618,13 @@ function RefundLedger({
               key={String(row.booking_id)}
               className="border-b border-plum/10"
             >
-              <Td>{String(row.confirmation_code || row.booking_id)}</Td>
+              <Td>
+                {String(
+                  row.public_reference ||
+                    row.confirmation_code ||
+                    row.booking_id,
+                )}
+              </Td>
               <Td>{String(row.customer)}</Td>
               <Td>{String(row.salon)}</Td>
               <Td>{money(row.deposit_collected)}</Td>

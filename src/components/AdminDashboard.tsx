@@ -24,6 +24,7 @@ import IdentityDeletionManager from "@/components/admin/IdentityDeletionManager"
 import { US_STATES } from "@/lib/usStates";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
 import DashboardNotificationCenter from "@/components/notifications/DashboardNotificationCenter";
+import { bookingReference } from "@/lib/bookingReference";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
@@ -217,7 +218,19 @@ function Customers(p: any) {
 function Bookings(p: any) {
   const [manual, setManual] = useState(false);
   const [editing, setEditing] = useState<string|null>(null);
-  return <>{editing ? <AdminBookingEditor bookingId={editing} close={() => setEditing(null)} saved={p.onCreated} /> : null}<div className="mb-4 flex justify-end"><button onClick={() => setManual(!manual)} className="rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">{manual ? "Close booking form" : "Create booking manually"}</button></div>{manual ? <ManualBooking salons={p.salons} onCreated={p.onCreated} /> : null}<Panel title="All Bookings"><DataTable headers={["Booking ID", "Salon", "Customer", "Date & Time", "Status", "Deposit", "Source", "Actions"]}>{p.bookings.length ? p.bookings.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <tr key={booking.id} className="border-b"><Td>{String(booking.id).slice(0, 10)}</Td><Td>{salon?.name || "Salon unavailable"}</Td><Td>{booking.guest_name || "Customer"}</Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}</Td><Td><Badge value={booking.status} /></Td><Td>{money(Number(booking.deposit_amount || 0))}</Td><Td>{booking.source || "Website"}</Td><Td><button type="button" onClick={() => setEditing(String(booking.id))} className="rounded-lg border border-magenta px-3 py-2 font-bold text-magenta">Manage</button></Td></tr>; }) : <EmptyTable columns={8} text="No bookings yet." />}</DataTable></Panel></>;
+  const [query,setQuery]=useState("");
+  const normalizedQuery=query.trim().toLowerCase();
+  const visible=p.bookings.filter((booking:Row)=>{
+    if(!normalizedQuery)return true;
+    return [
+      booking.public_reference,
+      booking.confirmation_code,
+      booking.id,
+      booking.guest_name,
+      booking.guest_email,
+    ].some((value)=>String(value||"").toLowerCase().includes(normalizedQuery));
+  });
+  return <>{editing ? <AdminBookingEditor bookingId={editing} close={() => setEditing(null)} saved={p.onCreated} /> : null}<div className="mb-4 flex flex-wrap justify-end gap-3"><label className="flex min-h-11 min-w-[260px] items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs"><Search size={15}/><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search reference, UUID, or customer" className="w-full outline-none"/></label><button onClick={() => setManual(!manual)} className="rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">{manual ? "Close booking form" : "Create booking manually"}</button></div>{manual ? <ManualBooking salons={p.salons} onCreated={p.onCreated} /> : null}<Panel title="All Bookings"><DataTable headers={["Reference", "Salon", "Customer", "Date & Time", "Status", "Deposit", "Source", "Actions"]}>{visible.length ? visible.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <tr key={booking.id} className="border-b"><Td>{bookingReference(booking)}</Td><Td>{salon?.name || "Salon unavailable"}</Td><Td>{booking.guest_name || "Customer"}</Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}</Td><Td><Badge value={booking.status} /></Td><Td>{money(Number(booking.deposit_amount || 0))}</Td><Td>{booking.source || "Website"}</Td><Td><button type="button" onClick={() => setEditing(String(booking.id))} className="rounded-lg border border-magenta px-3 py-2 font-bold text-magenta">Manage</button></Td></tr>; }) : <EmptyTable columns={8} text={normalizedQuery?"No bookings match this reference, UUID, or customer.":"No bookings yet."} />}</DataTable></Panel></>;
 }
 
 function ManualBooking({ salons, onCreated }: { salons: Row[]; onCreated: () => Promise<void> }) {

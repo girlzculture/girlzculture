@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { CalendarClock, X } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
+import { bookingReference } from "@/lib/bookingReference";
 
 type Row = Record<string, unknown> & { id?: string; name?: string };
 
@@ -129,6 +130,11 @@ export default function AdminBookingEditor({
             <p className="mt-1 text-sm text-ink/65">
               {String(salon?.name || "Girlz Culture salon")}
             </p>
+            {booking ? (
+              <p className="mt-1 text-xs font-bold text-magenta">
+                {bookingReference(booking)}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"

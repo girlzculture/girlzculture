@@ -15,6 +15,7 @@ import {
 import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
 import { getPublishedBrandAsset } from "@/lib/brandAssets";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
+import { bookingReference } from "@/lib/bookingReference";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -397,6 +398,7 @@ export async function deliverBookingNotifications(
   const service = String(style?.name || "Braiding service");
   const professional = String(stylist?.name || "Salon owner");
   const customer = String(booking.guest_name || "Customer");
+  const reference = bookingReference(booking);
   const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
   const dashboardUrl = `${root}/salon/dashboard/bookings?booking=${booking.id}`;
   const accountUrl = options.manageUrl || (
@@ -413,7 +415,7 @@ export async function deliverBookingNotifications(
   const stylistSummary=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_confirmed.summary",salonSummary,summaryVariables);
   const customerSummary=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.summary",`${service} at ${salon.name} is confirmed for ${when}. Stylist: ${professional}.`,summaryVariables);
   const salonSubject=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_confirmed",{summary:salonSummary,dashboard_url:dashboardUrl},notification.salonConfirmed,`A new booking is confirmed.\n\n${salonSummary}\n\nOpen this booking: ${dashboardUrl}`).subject;
-  const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_confirmed",{summary:customerSummary,confirmation_code:String(booking.confirmation_code||""),account_url:accountUrl},notification.customerConfirmed,`Your appointment is confirmed.\n\n${customerSummary}\n\nConfirmation code: ${booking.confirmation_code||""}\n\nView your booking: ${accountUrl}`).subject;
+  const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_confirmed",{summary:customerSummary,confirmation_code:reference,account_url:accountUrl},notification.customerConfirmed,`Your appointment is confirmed.\n\n${customerSummary}\n\nBooking reference: ${reference}\n\nView your booking: ${accountUrl}`).subject;
   const communication = await bookingCommunicationInput(
     context,
     notification,
@@ -424,7 +426,7 @@ export async function deliverBookingNotifications(
   const customerEmail={subject:customerSubject,html:renderCustomerBookingConfirmation(communication)};
   const stylistEmail=renderNotificationEmail(notification.templates,notification.translations,stylistLocale,"booking.stylist_confirmed",{summary:stylistSummary,dashboard_url:dashboardUrl},"A Girlz Culture booking was assigned to you",`A booking was assigned to you.\n\n${stylistSummary}\n\nOpen your appointment: ${dashboardUrl}`);
   const salonSms=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_confirmed.sms",`Girlz Culture confirmed booking: ${salonSummary} ${dashboardUrl}`,{summary:salonSummary,dashboard_url:dashboardUrl});
-  const customerSms=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.sms",`Girlz Culture: ${customerSummary} Confirmation ${booking.confirmation_code||""}. ${accountUrl}`,{summary:customerSummary,confirmation_code:String(booking.confirmation_code||""),account_url:accountUrl});
+  const customerSms=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.sms",`Girlz Culture: ${customerSummary} Reference ${reference}. ${accountUrl}`,{summary:customerSummary,confirmation_code:reference,account_url:accountUrl});
   const stylistSms=renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_confirmed.sms",`Girlz Culture assigned booking: ${stylistSummary} ${dashboardUrl}`,{summary:stylistSummary,dashboard_url:dashboardUrl});
   const tasks: DeliveryTask[] = [
     { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), salonEmail.subject, salonEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) },

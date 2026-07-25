@@ -48,6 +48,7 @@ export function bookingTransaction(
     date: booking.payment_verified_at || booking.created_at,
     appointment_date: booking.appointment_datetime,
     booking_id: booking.id,
+    public_reference: booking.public_reference || booking.confirmation_code,
     confirmation_code: booking.confirmation_code,
     customer: booking.guest_name || "Registered customer",
     salon_id: booking.salon_id,
@@ -153,8 +154,8 @@ function csvCell(value: unknown) {
 export function financeCsv(rows: FinanceRow[]) {
   const columns: Array<[string, string]> = [
     ["date", "Date"],
-    ["booking_id", "Booking ID"],
-    ["confirmation_code", "Confirmation"],
+    ["public_reference", "Booking reference"],
+    ["booking_id", "Internal booking UUID"],
     ["customer", "Customer"],
     ["salon", "Salon"],
     ["city", "City"],

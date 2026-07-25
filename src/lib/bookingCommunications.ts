@@ -1,4 +1,5 @@
 type Row = Record<string, unknown>;
+import { bookingReference } from "@/lib/bookingReference";
 
 function escapeHtml(value: unknown) {
   return String(value ?? "").replace(
@@ -86,8 +87,7 @@ export type BookingCommunicationInput = {
 function bookingIdentity(input: BookingCommunicationInput) {
   const { booking } = input;
   return (
-    row("Confirmation code", booking.confirmation_code || "Pending") +
-    row("Booking ID", booking.id) +
+    row("Booking reference", bookingReference(booking)) +
     row("Salon", input.salon.name) +
     row("Address", input.salon.full_address) +
     row("Salon phone", input.salon.phone) +

@@ -65,6 +65,7 @@ import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
+import { bookingReference } from "@/lib/bookingReference";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -3467,10 +3468,7 @@ function Bookings({ c }: { c: Ctx }) {
                   </h2>
                   <p className="mt-1 text-xs text-ink/50">
                     #
-                    {String(selected.confirmation_code || selected.id).slice(
-                      0,
-                      14,
-                    )}
+                    {bookingReference(selected)}
                   </p>
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
@@ -4055,7 +4053,7 @@ function Earnings({ c }: { c: Ctx }) {
                 <td className="py-3">{dateText(b.created_at)}</td>
                 <td>
                   Booking #
-                  {String(b.confirmation_code || b.id || "").slice(0, 8)}
+                  {bookingReference(b)}
                 </td>
                 <td>${Number(b.deposit_amount || 0).toFixed(2)}</td>
                 <td>${Number(b.balance_due || 0).toFixed(2)}</td>

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import { bookingReference } from "@/lib/bookingReference";
 
 type Row = Record<string, unknown>;
 type Proposal = Row & { options?: Row[] };
@@ -194,13 +195,13 @@ export default function GuestBookingManager({ token }: { token: string }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[.18em] text-magenta">
-                Confirmation {String(data.booking.confirmation_code || "")}
+                Booking reference {bookingReference(data.booking)}
               </p>
               <h1 className="mt-2 font-serif text-4xl text-plum">
                 {String(data.style.name || "Salon appointment")}
               </h1>
               <p className="mt-1 text-sm text-ink/60">
-                Booking ID {String(data.booking.id)}
+                Keep this secure Manage Booking link for future changes.
               </p>
             </div>
             <span className="rounded-full bg-blush px-4 py-2 text-xs font-extrabold text-plum">

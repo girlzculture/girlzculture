@@ -269,7 +269,7 @@ async function POSTHandler(request: Request) {
         stripe_processing_fee: 0,
         net_amount_owed_salon: deposit,
         payout_status: "Not required",
-      }).select("id,confirmation_code,status,appointment_datetime").single();
+      }).select("id,public_reference,confirmation_code,status,appointment_datetime").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
       if (intentError) throw intentError;
