@@ -10,11 +10,11 @@ export function classifyOperationalRoute(
   method: string,
 ): MonitoringClassification {
   const providerBacked =
-    /(?:stripe|media|messages|notifications|reminders|concierge|application|support|complaints|password-reset|engine\/ai|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|salon\/bookings|guest\/bookings)/.test(
+    /(?:stripe|media|messages|reminders|concierge|application|support|complaints|password-reset|engine\/(?:ai|notifications)|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|admin\/finance\/product-refund|salon\/bookings|guest\/bookings)/.test(
       route,
     );
   const protectedRoute =
-    /^(?:\/api\/admin(?:\/|$)|\/api\/salon(?:\/|$)|\/api\/customer(?:\/|$)|\/api\/messages(?:\/|$)|\/api\/push(?:\/|$)|\/api\/stripe\/(?:portal|subscription|booking-checkout)|\/api\/bookings(?:\/|$)|\/api\/auth\/(?:destination|mfa\/settings)|\/api\/i18n\/preference)/.test(
+    /^(?:\/api\/admin(?:\/|$)|\/api\/salon(?:\/|$)|\/api\/customer(?:\/|$)|\/api\/messages(?:\/|$)|\/api\/notifications(?:\/|$)|\/api\/push(?:\/|$)|\/api\/stripe\/(?:portal|subscription|booking-checkout)|\/api\/bookings(?:\/|$)|\/api\/auth\/(?:destination|mfa\/settings)|\/api\/i18n\/preference)/.test(
       route,
     );
   const expectedOnly =

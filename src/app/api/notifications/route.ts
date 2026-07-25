@@ -109,5 +109,21 @@ async function POSTHandler(request: Request) {
   }
 }
 
-export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/notifications", "GET"), GETHandler);
-export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/notifications", "POST"), POSTHandler);
+export const GET = withOperationalMonitoring(
+  routeMonitoringProfile("/api/notifications", "GET", {
+    classification: "protected",
+    feature: "dashboard-notification-read",
+    actorRole: "authenticated",
+    safeMessage: "We couldn't load notifications.",
+  }),
+  GETHandler,
+);
+export const POST = withOperationalMonitoring(
+  routeMonitoringProfile("/api/notifications", "POST", {
+    classification: "protected",
+    feature: "dashboard-notification-read-state",
+    actorRole: "authenticated",
+    safeMessage: "We couldn't update notifications.",
+  }),
+  POSTHandler,
+);

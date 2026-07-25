@@ -8,7 +8,8 @@ type StyleRow = {
   name?: string | null;
   category?: string | null;
   category_id?: string | null;
-  service_category?: { name?: string | null; slug?: string | null } | null;
+  service_category_name?: string | null;
+  service_category_slug?: string | null;
   salon_id?: string | null;
   price_display_min?: number | null;
   base_price?: number | null;
@@ -19,11 +20,9 @@ type StyleRow = {
 export const dynamic = "force-dynamic";
 
 export default async function StylesPage() {
-  const { data, error } = await supabase
-    .from("styles")
-    .select("name,category,category_id,salon_id,price_display_min,base_price,photos,length_options,service_category:service_categories(name,slug)")
-    .is("archived_at", null)
-    .order("name");
+  const { data, error } = await supabase.rpc("list_public_style_catalog", {
+    p_limit: 1000,
+  });
 
   if (error) await capturePublicPageFailure(error, "style-catalog-page", "load-published-styles");
 
@@ -31,8 +30,8 @@ export default async function StylesPage() {
   for (const raw of (data || []) as StyleRow[]) {
     const name = raw.name?.trim();
     if (!name) continue;
-    const category = raw.service_category?.name || "Braiding";
-    const categorySlug = raw.service_category?.slug || "braiding";
+    const category = raw.service_category_name || "Braiding";
+    const categorySlug = raw.service_category_slug || "braiding";
     const key = `${categorySlug}:${name.toLocaleLowerCase()}`;
     const price = Number(raw.price_display_min || raw.base_price || 0);
     const existing = grouped.get(key) || {
