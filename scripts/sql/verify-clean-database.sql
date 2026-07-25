@@ -156,6 +156,25 @@ begin
   ) then
     raise exception 'Engine-controlled cancellation grace period is missing';
   end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema='public'
+      and table_name='admin_users'
+      and column_name='time_zone'
+  ) then
+    raise exception 'Admin timezone preference is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from public.engine_settings
+    where setting_key='localization.default_admin_time_zone'
+      and status='Published'
+  ) then
+    raise exception 'Engine default admin timezone is missing';
+  end if;
 end
 $$;
 

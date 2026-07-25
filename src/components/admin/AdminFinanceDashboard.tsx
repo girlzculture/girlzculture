@@ -18,6 +18,7 @@ import {
 } from "@/lib/financeLedgerCore";
 import { getSessionForScope } from "@/lib/supabase";
 import { US_STATES } from "@/lib/usStates";
+import { formatZonedDateTime } from "@/lib/dateTime";
 
 type FinanceData = {
   booking_transactions: FinanceRow[];
@@ -26,6 +27,7 @@ type FinanceData = {
   stripe_events: FinanceRow[];
   salons: FinanceRow[];
   product_orders: FinanceRow[];
+  admin_time_zone: string;
 };
 
 const empty: FinanceData = {
@@ -35,6 +37,7 @@ const empty: FinanceData = {
   stripe_events: [],
   salons: [],
   product_orders: [],
+  admin_time_zone: "America/New_York",
 };
 const tabs = [
   "Booking Deposits",
@@ -63,7 +66,8 @@ function minorMoney(value: unknown, currency: unknown) {
     return `${code} ${(Number(value || 0) / 100).toFixed(2)}`;
   }
 }
-function when(value: unknown) {
+function when(value: unknown, timeZone = "America/New_York") {
+  if (value) return formatZonedDateTime(value, timeZone);
   if (!value) return "—";
   const parsed = new Date(String(value));
   return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString();
@@ -121,6 +125,7 @@ export default function AdminFinanceDashboard() {
           : [],
         salons: Array.isArray(body.salons) ? body.salons : [],
         product_orders: [],
+        admin_time_zone: String(body.admin_time_zone || "America/New_York"),
       });
     } catch (loadError) {
       setError(
@@ -149,7 +154,7 @@ export default function AdminFinanceDashboard() {
     setFilters((current) => ({ ...current, [key]: value }));
 
   function exportCsv() {
-    const blob = new Blob([financeCsv(filtered)], {
+    const blob = new Blob([financeCsv(filtered, data.admin_time_zone)], {
       type: "text/csv;charset=utf-8",
     });
     const href = URL.createObjectURL(blob);
@@ -300,7 +305,11 @@ export default function AdminFinanceDashboard() {
               note="Includes upcoming records so their deposits reconcile in this ledger."
             />
           </div>
-          <BookingLedger rows={filtered} payoutView={tab === "Salon Payouts"} />
+          <BookingLedger
+            rows={filtered}
+            payoutView={tab === "Salon Payouts"}
+            timeZone={data.admin_time_zone}
+          />
         </>
       ) : null}
 
@@ -316,6 +325,7 @@ export default function AdminFinanceDashboard() {
         <SubscriptionLedger
           events={data.billing_events}
           changes={data.subscription_change_requests}
+          timeZone={data.admin_time_zone}
         />
       ) : null}
 
@@ -329,11 +339,15 @@ export default function AdminFinanceDashboard() {
           events={data.billing_events.filter((event) =>
             /refund|credit|dispute/i.test(String(event.event_type || "")),
           )}
+          timeZone={data.admin_time_zone}
         />
       ) : null}
 
       {tab === "Stripe Event Ledger" ? (
-        <StripeEvents rows={data.stripe_events} />
+        <StripeEvents
+          rows={data.stripe_events}
+          timeZone={data.admin_time_zone}
+        />
       ) : null}
     </div>
   );
@@ -342,9 +356,11 @@ export default function AdminFinanceDashboard() {
 function BookingLedger({
   rows,
   payoutView,
+  timeZone,
 }: {
   rows: FinanceRow[];
   payoutView: boolean;
+  timeZone: string;
 }) {
   return (
     <Table
@@ -382,7 +398,7 @@ function BookingLedger({
             className="border-b border-plum/10 align-top"
           >
             <Td>
-              {when(row.date)}
+              {when(row.date, timeZone)}
               <Mode value={row.payment_mode} />
             </Td>
             <Td>
@@ -476,9 +492,11 @@ function BookingLedger({
 function SubscriptionLedger({
   events,
   changes,
+  timeZone,
 }: {
   events: FinanceRow[];
   changes: FinanceRow[];
+  timeZone: string;
 }) {
   const payments = events.filter((event) =>
     /subscription|upgrade|renewal|downgrade/i.test(
@@ -509,7 +527,7 @@ function SubscriptionLedger({
               key={String(event.id)}
               className="border-b border-plum/10 align-top"
             >
-              <Td>{when(event.event_date)}</Td>
+              <Td>{when(event.event_date, timeZone)}</Td>
               <Td>
                 <b>{String(event.salon_name || "Salon unavailable")}</b>
                 <small>
@@ -558,7 +576,7 @@ function SubscriptionLedger({
               key={String(change.id)}
               className="border-b border-plum/10 align-top"
             >
-              <Td>{when(change.requested_at)}</Td>
+              <Td>{when(change.requested_at, timeZone)}</Td>
               <Td>
                 <small>{String(change.salon_id)}</small>
               </Td>
@@ -577,7 +595,7 @@ function SubscriptionLedger({
               </Td>
               <Td>
                 {minorMoney(change.renewal_amount, change.currency)}
-                <small>{when(change.renewal_date)}</small>
+                <small>{when(change.renewal_date, timeZone)}</small>
               </Td>
               <Td>
                 <Status value={change.status} />
@@ -595,9 +613,11 @@ function SubscriptionLedger({
 function RefundLedger({
   bookings,
   events,
+  timeZone,
 }: {
   bookings: FinanceRow[];
   events: FinanceRow[];
+  timeZone: string;
 }) {
   return (
     <div className="space-y-5">
@@ -672,7 +692,7 @@ function RefundLedger({
         {events.length ? (
           events.map((event) => (
             <tr key={String(event.id)} className="border-b border-plum/10">
-              <Td>{when(event.event_date)}</Td>
+              <Td>{when(event.event_date, timeZone)}</Td>
               <Td>{String(event.salon_name || "Salon unavailable")}</Td>
               <Td>{String(event.event_type)}</Td>
               <Td>{minorMoney(event.amount_refunded, event.currency)}</Td>
@@ -693,7 +713,13 @@ function RefundLedger({
   );
 }
 
-function StripeEvents({ rows }: { rows: FinanceRow[] }) {
+function StripeEvents({
+  rows,
+  timeZone,
+}: {
+  rows: FinanceRow[];
+  timeZone: string;
+}) {
   return (
     <div className="space-y-5">
       <Notice>
@@ -716,7 +742,9 @@ function StripeEvents({ rows }: { rows: FinanceRow[] }) {
         {rows.length ? (
           rows.map((row) => (
             <tr key={String(row.id)} className="border-b border-plum/10">
-              <Td>{when(row.provider_created_at || row.processed_at)}</Td>
+              <Td>
+                {when(row.provider_created_at || row.processed_at, timeZone)}
+              </Td>
               <Td>{String(row.event_type)}</Td>
               <Td>
                 <Mode value={row.livemode ? "live" : "test"} />
@@ -725,7 +753,7 @@ function StripeEvents({ rows }: { rows: FinanceRow[] }) {
                 <Status value={row.processing_status} />
               </Td>
               <Td>{String(row.attempt_count || 1)}</Td>
-              <Td>{when(row.last_attempt_at)}</Td>
+              <Td>{when(row.last_attempt_at, timeZone)}</Td>
               <Td>
                 <small>{String(row.error_reference || "—")}</small>
               </Td>

@@ -13,6 +13,10 @@ export function salonTimeZone(value: unknown) {
   return isValidTimeZone(value) ? String(value) : DEFAULT_TIME_ZONE;
 }
 
+export function adminTimeZone(value: unknown) {
+  return isValidTimeZone(value) ? String(value) : DEFAULT_TIME_ZONE;
+}
+
 function partsAt(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -27,26 +31,67 @@ function partsAt(date: Date, timeZone: string) {
   return Object.fromEntries(parts.map((part) => [part.type, part.value]));
 }
 
-export function zonedLocalToUtc(localDateTime: string, requestedTimeZone: unknown) {
+export function zonedLocalToUtc(
+  localDateTime: string,
+  requestedTimeZone: unknown,
+) {
   const timeZone = salonTimeZone(requestedTimeZone);
-  const match = localDateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  const match = localDateTime.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/,
+  );
   if (!match) throw new Error("Choose a valid appointment date and time.");
   const [, year, month, day, hour, minute] = match;
-  const utcWallClock = Date.UTC(+year, +month - 1, +day, +hour, +minute, 0, 0);
+  const utcWallClock = Date.UTC(
+    +year,
+    +month - 1,
+    +day,
+    +hour,
+    +minute,
+    0,
+    0,
+  );
   let candidate = new Date(utcWallClock);
   for (let pass = 0; pass < 2; pass += 1) {
     const parts = partsAt(candidate, timeZone);
-    const represented = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+    const represented = Date.UTC(
+      +parts.year,
+      +parts.month - 1,
+      +parts.day,
+      +parts.hour,
+      +parts.minute,
+      +parts.second,
+    );
     candidate = new Date(candidate.getTime() + (utcWallClock - represented));
   }
-  const check = partsAt(candidate, timeZone);
-  if (`${check.year}-${check.month}-${check.day}T${check.hour}:${check.minute}` !== localDateTime) {
-    throw new Error("That local time does not exist in the salon’s timezone. Choose another time.");
+
+  const matchingCandidates: Date[] = [];
+  for (let minuteOffset = -180; minuteOffset <= 180; minuteOffset += 1) {
+    const possible = new Date(candidate.getTime() + minuteOffset * 60_000);
+    const check = partsAt(possible, timeZone);
+    if (
+      `${check.year}-${check.month}-${check.day}T${check.hour}:${check.minute}` ===
+      localDateTime
+    ) {
+      matchingCandidates.push(possible);
+    }
   }
-  return candidate;
+  if (!matchingCandidates.length) {
+    throw new Error(
+      "That local time does not exist in the salon’s timezone. Choose another time.",
+    );
+  }
+  // An ambiguous fall-back time consistently resolves to its first occurrence.
+  // A nonexistent spring-forward time is rejected above.
+  return matchingCandidates.sort(
+    (left, right) => left.getTime() - right.getTime(),
+  )[0];
 }
 
-export function formatInTimeZone(value: unknown, requestedTimeZone: unknown, options?: Intl.DateTimeFormatOptions) {
+export function formatInTimeZone(
+  value: unknown,
+  requestedTimeZone: unknown,
+  options?: Intl.DateTimeFormatOptions,
+) {
   const date = new Date(String(value || ""));
   if (Number.isNaN(date.getTime())) return "Date not recorded";
   return new Intl.DateTimeFormat("en-US", {
@@ -57,14 +102,55 @@ export function formatInTimeZone(value: unknown, requestedTimeZone: unknown, opt
   }).format(date);
 }
 
-export function dateKeyInTimeZone(value: unknown, requestedTimeZone: unknown) {
+export function formatZonedDateTime(
+  value: unknown,
+  requestedTimeZone: unknown,
+  options: Intl.DateTimeFormatOptions = {},
+) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "Date not recorded";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: salonTimeZone(requestedTimeZone),
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+    ...options,
+  }).format(date);
+}
+
+export function formatZonedDate(
+  value: unknown,
+  requestedTimeZone: unknown,
+  options: Intl.DateTimeFormatOptions = {},
+) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "Date not recorded";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: salonTimeZone(requestedTimeZone),
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    ...options,
+  }).format(date);
+}
+
+export function dateKeyInTimeZone(
+  value: unknown,
+  requestedTimeZone: unknown,
+) {
   const date = new Date(String(value || ""));
   if (Number.isNaN(date.getTime())) return "";
   const parts = partsAt(date, salonTimeZone(requestedTimeZone));
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-export function timeLabelInTimeZone(value: unknown, requestedTimeZone: unknown) {
+export function timeLabelInTimeZone(
+  value: unknown,
+  requestedTimeZone: unknown,
+) {
   const date = new Date(String(value || ""));
   if (Number.isNaN(date.getTime())) return "Time not recorded";
   return new Intl.DateTimeFormat("en-US", {
@@ -80,10 +166,16 @@ export function slotLabel(value: string) {
   return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${marker}`;
 }
 
-export function addMinutesToLocal(date: string, time: string, minutes: number) {
+export function addMinutesToLocal(
+  date: string,
+  time: string,
+  minutes: number,
+) {
   const [year, month, day] = date.split("-").map(Number);
   const [hour, minute] = time.split(":").map(Number);
-  const next = new Date(Date.UTC(year, month - 1, day, hour, minute + minutes));
+  const next = new Date(
+    Date.UTC(year, month - 1, day, hour, minute + minutes),
+  );
   return {
     date: next.toISOString().slice(0, 10),
     time: next.toISOString().slice(11, 16),

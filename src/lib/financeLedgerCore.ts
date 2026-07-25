@@ -164,9 +164,27 @@ function csvCell(value: unknown) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-export function financeCsv(rows: FinanceRow[]) {
+function csvDate(value: unknown, timeZone: string) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+export function financeCsv(
+  rows: FinanceRow[],
+  timeZone = "America/New_York",
+) {
   const columns: Array<[string, string]> = [
-    ["date", "Date"],
+    ["date_local", `Date (${timeZone})`],
+    ["date", "Date (UTC)"],
     ["public_reference", "Booking reference"],
     ["booking_id", "Internal booking UUID"],
     ["customer", "Customer"],
@@ -198,7 +216,15 @@ export function financeCsv(rows: FinanceRow[]) {
   return [
     columns.map(([, label]) => csvCell(label)).join(","),
     ...rows.map((row) =>
-      columns.map(([key]) => csvCell(row[key])).join(","),
+      columns
+        .map(([key]) =>
+          csvCell(
+            key === "date_local"
+              ? csvDate(row.date, timeZone)
+              : row[key],
+          ),
+        )
+        .join(","),
     ),
   ].join("\r\n");
 }

@@ -1,6 +1,10 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
-import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
+import {
+  formatZonedDateTime,
+  salonTimeZone,
+  zonedLocalToUtc,
+} from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { deliverCancellationNotifications, requireAdminPermission, sendEmail, sendSms } from "@/lib/supabaseAdmin";
 import { createCustomerApprovedReschedule } from "@/lib/bookingRescheduleServer";
@@ -24,7 +28,7 @@ async function contextFor(request: Request, id: string) {
 }
 
 async function GETHandler(request: Request, route: { params: Promise<{ id: string }> }) {
-  try { const { id } = await route.params; const { booking, salon, styles, stylists, audit } = await contextFor(request, id); return Response.json({ booking, salon, styles, stylists, audit }); }
+  try { const { id } = await route.params; const { booking, salon, styles, stylists, audit, adminUser } = await contextFor(request, id); return Response.json({ booking, salon, styles, stylists, audit, admin_time_zone: String((adminUser as {time_zone?:string}).time_zone || "America/New_York") }); }
   catch (error) { return errorResponse(error, "Unable to load booking."); }
 }
 
@@ -85,7 +89,10 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     if (!Object.keys(patch).length) throw new Error("No booking changes were submitted.");
     const { data: updated, error } = await ctx.admin.from("bookings").update(patch).eq("id", id).select("*").single(); if (error) throw error;
     await ctx.admin.from("booking_audit_log").insert({ booking_id: id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: auditAction, reason: `Admin intervention: ${reason}`, before_data: ctx.booking, after_data: updated });
-    const when = new Date(updated.appointment_datetime).toLocaleString("en-US", { timeZone: salonTimeZone(ctx.salon.time_zone), dateStyle: "medium", timeStyle: "short" });
+    const when = formatZonedDateTime(
+      updated.appointment_datetime,
+      salonTimeZone(ctx.salon.time_zone),
+    );
     const text = `Girlz Culture updated your booking at ${ctx.salon.name} to ${when}. Reason: ${reason}`;
     const salonText = `Girlz Culture updated ${String(updated.guest_name || "a customer's")} booking to ${when}. Reason: ${reason}`;
     await Promise.all([

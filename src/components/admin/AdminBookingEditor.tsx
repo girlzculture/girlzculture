@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { CalendarClock, X } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { bookingReference } from "@/lib/bookingReference";
+import { formatZonedDateTime } from "@/lib/dateTime";
 
 type Row = Record<string, unknown> & { id?: string; name?: string };
 
@@ -21,6 +22,7 @@ export default function AdminBookingEditor({
   const [styles, setStyles] = useState<Row[]>([]);
   const [stylists, setStylists] = useState<Row[]>([]);
   const [audit, setAudit] = useState<Row[]>([]);
+  const [adminTimeZone, setAdminTimeZone] = useState("America/New_York");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -46,6 +48,9 @@ export default function AdminBookingEditor({
           setStyles(body.styles || []);
           setStylists(body.stylists || []);
           setAudit(body.audit || []);
+          setAdminTimeZone(
+            String(body.admin_time_zone || "America/New_York"),
+          );
         }
       } catch (error) {
         if (active)
@@ -353,7 +358,7 @@ export default function AdminBookingEditor({
                   {String(item.reason || "No reason recorded")}
                 </span>
                 <small className="mt-1 block text-ink/55">
-                  {new Date(String(item.created_at)).toLocaleString()}
+                  {formatZonedDateTime(item.created_at, adminTimeZone)}
                 </small>
               </p>
             ))

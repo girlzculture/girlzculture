@@ -10,7 +10,7 @@ type Row = Record<string, unknown>;
 
 async function GETHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "finance");
+    const { admin, adminUser } = await requireAdminPermission(request, "finance");
     const [
       bookingsResult,
       salonsResult,
@@ -65,6 +65,9 @@ async function GETHandler(request: Request) {
         stripe_events: webhookResult.data || [],
         salons: salonsResult.data || [],
         product_orders: [],
+        admin_time_zone:
+          String((adminUser as { time_zone?: string }).time_zone || "") ||
+          "America/New_York",
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );

@@ -25,6 +25,8 @@ import { US_STATES } from "@/lib/usStates";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
 import DashboardNotificationCenter from "@/components/notifications/DashboardNotificationCenter";
 import { bookingReference } from "@/lib/bookingReference";
+import { formatZonedDate, formatZonedDateTime } from "@/lib/dateTime";
+import AdminTimeZonePreference from "@/components/admin/AdminTimeZonePreference";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
@@ -180,7 +182,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     case "complaints": return <AdminSupportInbox initialTickets={safeData.tickets} mode="complaints" onRead={onTicketRead} />;
     case "subscriptions": return <Subscriptions {...props} />;
     case "engine": return <EngineControlCenter />;
-    default: return <SettingsTeam {...props} />;
+    default: return <><AdminTimeZonePreference /><SettingsTeam {...props} /></>;
   }
 }
 
@@ -362,6 +364,6 @@ function Badge({ value }: { value?: string }) { const label = value || "Pending"
 function DataChart({ title, values, empty, moneyValues = false }: { title: string; values: number[]; empty: string; moneyValues?: boolean }) { const max = Math.max(...values, 0); return <Panel title={title}>{max === 0 ? <EmptyState title="No data yet" body={empty} /> : <><div className="flex h-48 items-end gap-2 border-b border-l border-plum/10 px-4">{values.map((value, index) => <span key={index} title={moneyValues ? money(value) : String(value)} className="w-full rounded-t bg-magenta" style={{ height: `${Math.max(3, (value / max) * 100)}%` }} />)}</div><p className="mt-3 text-center text-xs text-ink/50">Last 14 days · database records only</p></>}</Panel>; }
 function money(value: number) { return value.toLocaleString("en-US", { style: "currency", currency: "USD" }); }
 function minorMoney(value: number, currency: unknown) { try { return (Number(value || 0) / 100).toLocaleString("en-US", { style: "currency", currency: String(currency || "usd").toUpperCase() }); } catch { return `${String(currency || "usd").toUpperCase()} ${(Number(value || 0) / 100).toFixed(2)}`; } }
-function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—"; }
-function dateTime(value?: string, timeZone?: string) { return value ? new Date(value).toLocaleString("en-US", { timeZone: timeZone || "America/New_York", dateStyle: "medium", timeStyle: "short" }) : "—"; }
+function date(value?: string) { return value ? formatZonedDate(value, "America/New_York") : "—"; }
+function dateTime(value?: string, timeZone?: string) { return value ? formatZonedDateTime(value, timeZone || "America/New_York") : "—"; }
 function subtitle(section: AdminSection) { return ({ overview: "Live platform records at a glance.", submissions: "Review salon applications organized by state.", salons: "Manage verification, status, plans, and marketplace profiles.", customers: "View and support Girlz Culture customers.", bookings: "Monitor and create bookings across the marketplace.", quality: "Protect service quality using verified review and complaint data.", reviews: "Moderate published, flagged, and disputed reviews.", finance: "Audit Stripe subscription invoices, plan changes, refunds, credits, and failures by state.", marketing: "Manage placements, promotions, and editorial content.", content: "Edit public pages, labels, images, policies, and blog posts.", support: "Manage customer support requests.", complaints: "Review and respond to customer complaints.", subscriptions: "Review plan tiers and Stripe subscription records.", engine: "Govern platform behavior, defaults, publication, and integration readiness.", settings: "Review platform configuration and authorized admin access." })[section]; }

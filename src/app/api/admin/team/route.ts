@@ -12,7 +12,7 @@ async function audit(admin: Awaited<ReturnType<typeof requireAdmin>>["admin"], a
 async function assertNotProtected(admin: Awaited<ReturnType<typeof requireAdmin>>["admin"], actingUserId: string, target: { user_id?: string; is_super_admin?: boolean; status?: string }) { if (target.user_id === actingUserId) throw new Error("You cannot suspend, revoke, or remove your own admin account."); if (target.is_super_admin && target.status === "Active") { const { count, error } = await admin.from("admin_users").select("id", { count:"exact", head:true }).eq("is_super_admin", true).eq("status", "Active"); if (error) throw error; if ((count || 0) <= 1) throw new Error("The last active Super Admin cannot be suspended, revoked, or removed."); } }
 
 async function GETHandler(request: Request) {
-  try { const { admin, adminUser } = await requireAdminPermission(request, "settings"); const { data, error } = await admin.from("admin_users").select("id,user_id,name,email,phone,role,status,permissions,is_super_admin,invited_at,activated_at").order("email"); if (error) throw error; return Response.json({ users: data || [], can_manage: Boolean((adminUser as { is_super_admin?: boolean }).is_super_admin) }); }
+  try { const { admin, adminUser } = await requireAdminPermission(request, "settings"); const { data, error } = await admin.from("admin_users").select("id,user_id,name,email,phone,role,status,permissions,is_super_admin,invited_at,activated_at,time_zone").order("email"); if (error) throw error; return Response.json({ users: data || [], can_manage: Boolean((adminUser as { is_super_admin?: boolean }).is_super_admin) }); }
   catch (error) { return errorResponse(error, "Unable to load admin users."); }
 }
 
