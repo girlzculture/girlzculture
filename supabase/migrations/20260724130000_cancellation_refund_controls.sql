@@ -126,7 +126,7 @@ using(public.is_admin());
 drop policy if exists booking_refund_operations_salon_read on public.booking_refund_operations;
 create policy booking_refund_operations_salon_read
 on public.booking_refund_operations for select to authenticated
-using(public.can_manage_salon(salon_id));
+using(public.salon_has_permission(salon_id,'earnings'));
 
 revoke all on table public.booking_refund_operations from anon,authenticated;
 grant select on table public.booking_refund_operations to authenticated;

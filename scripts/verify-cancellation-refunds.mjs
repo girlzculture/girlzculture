@@ -51,6 +51,11 @@ for (const required of [
 ]) {
   assert.ok(migration.includes(required), `missing migration contract: ${required}`);
 }
+assert.match(
+  migration,
+  /booking_refund_operations_salon_read[\s\S]*salon_has_permission\(salon_id,'earnings'\)/,
+);
+assert.doesNotMatch(migration, /can_manage_salon/);
 assert.ok(salonRoute.includes("requestBookingDepositRefund"));
 assert.ok(adminRoute.includes('initiatedBy:"platform"'));
 assert.ok(guestRoute.includes("refund_grace_applied"));
