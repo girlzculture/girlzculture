@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @keyframes cms-community-scroll {
@@ -19,12 +19,27 @@
 }
 
 :root {
-  --background: #fbf4ee;
-  --foreground: #1a1220;
+  --gc-page: #fff8f0;
+  --gc-card: #fff8f0;
+  --gc-header: #fff8f0;
+  --gc-footer: #281f16;
+  --gc-heading: #281f16;
+  --gc-body: #281f16;
+  --gc-muted: #6b7a4e;
+  --gc-link: #c65a3a;
+  --gc-accent: #b88a44;
+  --gc-success: #6b7a4e;
+  --gc-warning: #b88a44;
+  --gc-error: #c65a3a;
+  --gc-hover: #a9472f;
+  --gc-focus: #d4af37;
+  --gc-disabled: #e7d7c1;
+  --background: var(--gc-page);
+  --foreground: var(--gc-body);
   --font-inter: "Inter", Arial, Helvetica, sans-serif;
   --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
-  --gc-plum: #5b1a6b;
-  --gc-magenta: #d6186b;
+  --gc-plum: #c65a3a;
+  --gc-magenta: #c65a3a;
 }
 
 @theme inline {
@@ -32,10 +47,10 @@
   --color-foreground: var(--foreground);
   --color-plum: var(--gc-plum);
   --color-magenta: var(--gc-magenta);
-  --color-ink: #1a1220;
-  --color-cream: #fbf4ee;
-  --color-blush: #f3d9e4;
-  --color-amber: #e0a34e;
+  --color-ink: var(--gc-body);
+  --color-cream: var(--gc-page);
+  --color-blush: #f4c9b6;
+  --color-amber: var(--gc-accent);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-fraunces);
 }
@@ -102,12 +117,12 @@ body {
 }
 
 ::selection {
-  background: #f3d9e4;
-  color: #5b1a6b;
+  background: #f4c9b6;
+  color: var(--gc-heading);
 }
 
 :where(a, button, input, textarea, select, summary):focus-visible {
-  outline: 3px solid rgba(91, 26, 107, 0.42);
+  outline: 3px solid var(--gc-focus);
   outline-offset: 3px;
 }
 
@@ -138,6 +153,34 @@ input[type="number"]::-webkit-outer-spin-button {
 
 :where(button:disabled, input:disabled, select:disabled) {
   cursor: not-allowed;
+}
+
+.gc-brand-header {
+  background-color: color-mix(in srgb, var(--gc-header) 95%, transparent);
+}
+
+.gc-brand-footer {
+  background-color: var(--gc-footer);
+}
+
+.gc-brand-card {
+  background-color: var(--gc-card);
+}
+
+.gc-brand-link {
+  color: var(--gc-link);
+}
+
+.gc-brand-muted {
+  color: var(--gc-muted);
+}
+
+.gc-brand-primary-action:hover:not(:disabled) {
+  background-color: var(--gc-hover);
+}
+
+.gc-brand-primary-action:disabled {
+  background-color: var(--gc-disabled);
 }
 
 section {

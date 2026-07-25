@@ -77,7 +77,7 @@ export default function CustomerAccount() {
   const name = String(customer?.name || "Girlz Culture Member");
   const firstName = name.split(" ")[0];
   return <div className="min-h-screen bg-cream pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
-    <header className="flex h-20 items-center justify-between border-b border-plum/10 bg-white/80 px-5 lg:px-10">
+    <header className="gc-brand-header flex h-20 items-center justify-between border-b border-plum/10 px-5 lg:px-10">
       <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
       <nav className="hidden gap-10 text-sm md:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
       <div data-language-selector-host className="flex items-center gap-2 sm:gap-4"><LanguageSelector compact/><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>

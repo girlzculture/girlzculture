@@ -3,7 +3,7 @@ import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { errorResponse } from "@/lib/requestSecurity";
 import { aiProviderConfigured, approvedAiProviders } from "@/lib/aiAutomationServer";
 
-const EXPECTED_MIGRATION = "20260724150000";
+const EXPECTED_MIGRATION = "20260724160000";
 type State = "healthy" | "configuration_required" | "migration_required" | "optional";
 type Status = { key:string;label:string;state:State;detail:string;required:boolean };
 

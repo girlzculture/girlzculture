@@ -1,8 +1,13 @@
 import type { MetadataRoute } from "next";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
+import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const appIcon = (await getPublishedBrandAssets()).app_icon?.published_url;
+  const [assets, theme] = await Promise.all([
+    getPublishedBrandAssets(),
+    getEngineBrandTheme(),
+  ]);
+  const appIcon = assets.app_icon?.published_url;
   return {
     id: "/",
     name: "Girlz Culture — Beauty Booking",
@@ -11,8 +16,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#FBF4EE",
-    theme_color: "#5B1A6B",
+    background_color: theme.page,
+    theme_color: theme.primary,
     orientation: "portrait-primary",
     categories: ["beauty", "lifestyle", "shopping"],
     icons: [

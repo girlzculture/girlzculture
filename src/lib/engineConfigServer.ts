@@ -58,3 +58,103 @@ export async function getEngineList(key:string,fallback:string[],maximum=100){
 export async function getEngineBoolean(key:string,fallback:boolean){
   const config=await getPublishedEngineConfig([key]);const value=config[key];return typeof value==="boolean"?value:fallback;
 }
+
+export type EngineBrandTheme = {
+  primary: string;
+  accent: string;
+  cta: string;
+  page: string;
+  card: string;
+  header: string;
+  footer: string;
+  heading: string;
+  body: string;
+  muted: string;
+  link: string;
+  success: string;
+  warning: string;
+  error: string;
+  hover: string;
+  focus: string;
+  disabled: string;
+  headingFont: string;
+  bodyFont: string;
+};
+
+const BRAND_KEYS = [
+  "branding.primary_color",
+  "branding.accent_color",
+  "branding.cta_color",
+  "branding.page_background",
+  "branding.card_background",
+  "branding.header_background",
+  "branding.footer_background",
+  "branding.heading_color",
+  "branding.body_color",
+  "branding.muted_color",
+  "branding.link_color",
+  "branding.success_color",
+  "branding.warning_color",
+  "branding.error_color",
+  "branding.hover_color",
+  "branding.focus_color",
+  "branding.disabled_color",
+  "branding.heading_font",
+  "branding.body_font",
+] as const;
+
+function publishedColor(
+  config: Record<string, unknown>,
+  key: string,
+  fallback: string,
+) {
+  const value = String(config[key] ?? "");
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
+function publishedFont(
+  config: Record<string, unknown>,
+  key: string,
+  allowed: string[],
+  fallback: string,
+) {
+  const value = String(config[key] ?? "");
+  return allowed.includes(value) ? value : fallback;
+}
+
+export async function getEngineBrandTheme(): Promise<EngineBrandTheme> {
+  const config = await getPublishedEngineConfig([...BRAND_KEYS], {
+    publicOnly: true,
+  });
+  return {
+    primary: publishedColor(config, "branding.primary_color", "#C65A3A"),
+    accent: publishedColor(config, "branding.accent_color", "#B88A44"),
+    cta: publishedColor(config, "branding.cta_color", "#C65A3A"),
+    page: publishedColor(config, "branding.page_background", "#FFF8F0"),
+    card: publishedColor(config, "branding.card_background", "#FFF8F0"),
+    header: publishedColor(config, "branding.header_background", "#FFF8F0"),
+    footer: publishedColor(config, "branding.footer_background", "#281F16"),
+    heading: publishedColor(config, "branding.heading_color", "#281F16"),
+    body: publishedColor(config, "branding.body_color", "#281F16"),
+    muted: publishedColor(config, "branding.muted_color", "#6B7A4E"),
+    link: publishedColor(config, "branding.link_color", "#C65A3A"),
+    success: publishedColor(config, "branding.success_color", "#6B7A4E"),
+    warning: publishedColor(config, "branding.warning_color", "#B88A44"),
+    error: publishedColor(config, "branding.error_color", "#C65A3A"),
+    hover: publishedColor(config, "branding.hover_color", "#A9472F"),
+    focus: publishedColor(config, "branding.focus_color", "#D4AF37"),
+    disabled: publishedColor(config, "branding.disabled_color", "#E7D7C1"),
+    headingFont: publishedFont(
+      config,
+      "branding.heading_font",
+      ["Playfair Display", "Fraunces", "Georgia"],
+      "Playfair Display",
+    ),
+    bodyFont: publishedFont(
+      config,
+      "branding.body_font",
+      ["Montserrat", "Inter", "Arial"],
+      "Montserrat",
+    ),
+  };
+}

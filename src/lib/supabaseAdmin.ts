@@ -268,7 +268,7 @@ function renderNotificationEmail(templates:NotificationTemplateMap,translations:
 }
 
 async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAdmin>,requestedLocales:string[]=[]){
-  const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject","notifications.sender_name","notifications.reply_to_email","notifications.booking_confirmation_intro","notifications.booking_cancellation_intro","notifications.booking_policy_summary","notifications.booking_email_footer","booking.deposit_percentage"];
+  const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject","notifications.sender_name","notifications.reply_to_email","notifications.booking_confirmation_intro","notifications.booking_cancellation_intro","notifications.booking_policy_summary","notifications.booking_email_footer","booking.deposit_percentage","branding.primary_color","branding.cta_color","branding.page_background","branding.card_background","branding.heading_color","branding.body_color","branding.muted_color","branding.heading_font","branding.body_font"];
   const locales=[...new Set(requestedLocales.map(normalizeLocale).filter(locale=>locale!=="en"))];
   const[{data,error},{data:templateRows,error:templateError},{data:translationRows,error:translationError}]=await Promise.all([admin.from("engine_settings").select("setting_key,published_value").eq("status","Published").in("setting_key",keys),admin.from("notification_templates").select("template_key,published_subject,published_body,allowed_variables").eq("status","Published"),locales.length?admin.from("translation_entries").select("translation_key,locale,translated_text").eq("status","Published").in("locale",locales).like("translation_key","notification.%"):Promise.resolve({data:[],error:null})]);
   const warningReferences:string[]=[];
@@ -292,6 +292,8 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const text=(key:string,fallback:string,maxLength=1200)=>{const value=String(values[key]||"").trim();return value&&value.length<=maxLength?value:fallback};
   const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
   const configuredDepositPercentage=Number(values["booking.deposit_percentage"]??10);
+  const color=(key:string,fallback:string)=>{const value=String(values[key]||"");return /^#[0-9a-f]{6}$/i.test(value)?value:fallback};
+  const font=(key:string,allowed:string[],fallback:string)=>{const value=String(values[key]||"");return allowed.includes(value)?value:fallback};
   return{
     channels,templates,translations,warningReferences,
     reminderHours:reminderHours.length?reminderHours:[24,2],
@@ -307,6 +309,17 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
     policy:text("notifications.booking_policy_summary","Use the secure Manage Booking link to cancel or respond to a reschedule. Deposit treatment follows the terms accepted at checkout.",1200),
     footer:text("notifications.booking_email_footer","Only use Girlz Culture links from this message. Contact support if you did not make this booking.",400),
     depositPercentage:Number.isFinite(configuredDepositPercentage)?configuredDepositPercentage:10,
+    emailTheme:{
+      primary:color("branding.primary_color","#C65A3A"),
+      cta:color("branding.cta_color","#C65A3A"),
+      page:color("branding.page_background","#FFF8F0"),
+      card:color("branding.card_background","#FFF8F0"),
+      heading:color("branding.heading_color","#281F16"),
+      body:color("branding.body_color","#281F16"),
+      muted:color("branding.muted_color","#6B7A4E"),
+      headingFont:font("branding.heading_font",["Playfair Display","Fraunces","Georgia"],"Playfair Display"),
+      bodyFont:font("branding.body_font",["Montserrat","Inter","Arial"],"Montserrat"),
+    },
   };
 }
 
@@ -334,6 +347,7 @@ async function bookingCommunicationInput(
     intro,
     footer: notification.footer,
     emailLogoUrl,
+    emailTheme: notification.emailTheme,
     ...urls,
   };
 }

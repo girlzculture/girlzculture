@@ -44,7 +44,7 @@ const defaultMobileMenu:NavigationItem[]=[...defaultHeader.map(item=>({...item,s
 export async function PublicHeader({ active }: { active?: "styles" | "salons" | "how" | "about" | "blog" }) {
   const[headerItems,mobileItems]=await Promise.all([getNavigationItems("header",defaultHeader),getNavigationItems("mobile_menu",defaultMobileMenu)]);
   return (
-    <header data-language-selector-host className="relative z-40 border-b border-plum/[0.08] bg-cream/95 backdrop-blur-xl">
+    <header data-language-selector-host className="gc-brand-header relative z-40 border-b border-plum/[0.08] backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu links={mobileItems}/><Wordmark compact /></div>
 
@@ -65,7 +65,7 @@ export async function PublicHeader({ active }: { active?: "styles" | "salons" | 
           <Link href="/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta md:inline-flex">
             <LocalizedText messageKey="nav.login" fallback="Log in"/>
           </Link>
-          <Link href="/login" className="hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(214,24,107,0.18)] transition hover:-translate-y-0.5 hover:bg-[#bb145d] md:inline-flex">
+          <Link href="/login" className="gc-brand-primary-action hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(214,24,107,0.18)] transition hover:-translate-y-0.5 md:inline-flex">
             <LocalizedText messageKey="nav.signup" fallback="Sign up"/>
           </Link>
         </div>
@@ -173,7 +173,7 @@ export async function PublicFooter() {
     links:footerItems.filter((item) => item.group_key === groupKey),
   }));
   return (
-    <footer className="bg-[#211027] text-white">
+    <footer className="gc-brand-footer text-white">
       <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
         <div>
           {footerLogo?.published_url ? <img src={footerLogo.published_url} alt={footerLogo.published_alt_text || "Girlz Culture"} className="h-10 w-auto max-w-[220px] object-contain object-left"/> : <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>}

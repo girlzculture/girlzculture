@@ -194,6 +194,25 @@ begin
   ) then
     raise exception 'Engine video source-retention policy is missing';
   end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema='public'
+      and table_name='platform_brand_assets'
+      and column_name='draft_reviewed_at'
+  ) then
+    raise exception 'Brand asset review lifecycle is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from public.engine_settings
+    where setting_key='branding.heading_font'
+      and status='Published'
+  ) then
+    raise exception 'Founder-editable brand typography is missing';
+  end if;
 end
 $$;
 
