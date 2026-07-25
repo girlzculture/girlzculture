@@ -112,6 +112,66 @@ process.stdout.write(
   "Generated 1,000 unique booking references across four concurrent database sessions.\n",
 );
 
+const productReferenceWorkers = Array.from({ length: 4 }, (_, worker) =>
+  new Promise((resolve, reject) => {
+    const child = spawn(
+      psql,
+      [
+        "-X",
+        "--set",
+        "ON_ERROR_STOP=1",
+        "--dbname",
+        databaseUrl,
+        "--tuples-only",
+        "--no-align",
+        "--command",
+        "select public.next_product_order_reference() from generate_series(1,250);",
+      ],
+      { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout);
+      else
+        reject(
+          new Error(
+            `Product-reference concurrency worker ${worker + 1} failed: ${stderr.trim()}`,
+          ),
+        );
+    });
+  }),
+);
+const generatedProductReferences = (
+  await Promise.all(productReferenceWorkers)
+)
+  .flatMap((output) => String(output).split(/\r?\n/))
+  .map((value) => value.trim())
+  .filter(Boolean);
+if (
+  generatedProductReferences.length !== 1000 ||
+  new Set(generatedProductReferences).size !==
+    generatedProductReferences.length ||
+  generatedProductReferences.some(
+    (value) => !/^GC-P-[A-Z]+-\d{2}$/.test(value),
+  )
+) {
+  console.error(
+    "Concurrent product-reference generation produced a duplicate, invalid value, or missing result.",
+  );
+  process.exit(1);
+}
+process.stdout.write(
+  "Generated 1,000 unique product references across four concurrent database sessions.\n",
+);
+
 const assertionOutput = runPsql(["--file", assertions], "Post-migration assertions");
 if (assertionOutput) process.stdout.write(`${assertionOutput}\n`);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);

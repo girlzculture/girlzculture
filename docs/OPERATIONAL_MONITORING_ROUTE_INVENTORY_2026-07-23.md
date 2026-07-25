@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -28,15 +28,17 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/admin/engine/navigation` | GET, POST, PATCH | protected | Covered |
 | `/api/admin/engine/notifications` | GET, PATCH | provider-backed | Covered |
 | `/api/admin/engine/search` | GET, PATCH | protected | Covered |
-| `/api/admin/engine/system-status` | GET | protected | Covered |
+| `/api/admin/engine/system-status` | GET, POST | protected | Covered |
 | `/api/admin/engine/translations` | GET, PATCH | protected | Covered |
 | `/api/admin/featured-campaigns` | GET, POST | protected | Covered |
 | `/api/admin/finance` | GET | protected | Covered |
+| `/api/admin/finance/product-refund` | POST | provider-backed | Covered |
 | `/api/admin/identity-conflicts` | GET, PATCH | protected | Covered |
 | `/api/admin/identity-deletion` | GET, POST | protected | Covered |
 | `/api/admin/inbox-counts` | GET | protected | Covered |
 | `/api/admin/marketing` | GET, POST, DELETE | protected | Covered |
 | `/api/admin/media/video-jobs` | GET, POST | provider-backed | Covered |
+| `/api/admin/preferences/time-zone` | GET, PATCH | protected | Covered |
 | `/api/admin/promo-codes` | GET, POST, PATCH | protected | Covered |
 | `/api/admin/records` | GET, POST | protected | Covered |
 | `/api/admin/salons/[id]` | GET, POST | protected | Covered |
@@ -81,7 +83,7 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/messages` | GET, POST | provider-backed | Covered |
 | `/api/monitor/client-provider` | POST | provider-backed | Covered |
 | `/api/newsletter` | POST | expected-only | Covered |
-| `/api/notifications` | GET, POST | provider-backed | Covered |
+| `/api/notifications` | GET, POST | protected | Covered |
 | `/api/promo/validate` | POST | expected-only | Covered |
 | `/api/promotions/salon` | GET | public/read-only | Covered |
 | `/api/push/subscription` | GET, POST, DELETE | provider-backed | Covered |
@@ -89,12 +91,14 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
 | `/api/salon/bookings/[id]/reschedule` | GET, POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/service` | POST | provider-backed | Covered |
 | `/api/salon/bootstrap` | POST | protected | Covered |
 | `/api/salon/discovery-diagnostics` | GET | protected | Covered |
 | `/api/salon/lifecycle` | GET, POST | protected | Covered |
 | `/api/salon/onboarding` | GET, POST | protected | Covered |
 | `/api/salon/open-status` | POST | protected | Covered |
 | `/api/salon/profile` | GET, PATCH, POST | protected | Covered |
+| `/api/salon/product-orders` | GET, POST | protected | Covered |
 | `/api/salon/records` | GET, POST | protected | Covered |
 | `/api/salon/records/save` | POST | protected | Covered |
 | `/api/salon/team` | GET, POST, PATCH, DELETE | protected | Covered |
@@ -103,6 +107,8 @@ Generated: 2026-07-23. This inventory is enforced by `scripts/verify-operational
 | `/api/search/suggestions` | GET | public/read-only | Covered |
 | `/api/stripe/booking-checkout` | POST | provider-backed | Covered |
 | `/api/stripe/booking-status` | GET | provider-backed | Covered |
+| `/api/stripe/commerce-checkout` | POST | provider-backed | Covered |
+| `/api/stripe/commerce-status` | GET | provider-backed | Covered |
 | `/api/stripe/portal` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/change` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/checkout` | POST | provider-backed | Covered |
@@ -141,6 +147,7 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 |---|---|---|---|
 | `src/lib/supabaseAdmin.ts` | service-role database/Auth/Storage transport, Resend, Twilio, booking notification delivery and reminders | provider-backed/protected | Monitored transport catches ignored provider results; delivery failures are sanitized and warning references are returned to the protected route |
 | `src/lib/stripeServer.ts` | Stripe requests and webhook signature verification | provider-backed | Provider bodies/messages are never thrown; status-only failures flow through the protected route wrapper |
+| `src/lib/commerceCheckoutServer.ts` | Stripe Tax, combined checkout reconciliation, order receipts and product-order notifications | provider-backed | Tax/payment provider failures flow through monitored checkout routes; partial receipt/notification failures create sanitized Engine references without exposing provider payloads |
 | `src/lib/beautyConciergeServer.ts` | OpenAI intent extraction, AI usage accounting, discovery and availability enrichment | provider-backed/public | OpenAI and secondary availability failures create Engine events; deterministic fallback responses include the same warning references |
 | `src/lib/aiAutomationServer.ts` | governed AI sandbox and usage accounting | provider-backed/protected | Every database result is checked; unexpected failures flow through `/api/admin/engine/ai` |
 | `src/lib/webPushServer.ts` | Web Push delivery, subscription revocation and reachability | provider-backed | Provider bodies are not retained; non-expiry failures create sanitized Engine events and returned warning references |

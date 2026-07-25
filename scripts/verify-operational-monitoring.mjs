@@ -14,7 +14,7 @@ function walk(directory) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 94, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 100, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -277,6 +277,7 @@ for (const evidence of [
 const providerEntryPoints = [
   ["src/lib/supabaseAdmin.ts", /global:\s*\{\s*fetch:\s*monitoredSupabaseFetch\s*\}/, /noteOperationalFailure/],
   ["src/lib/stripeServer.ts", /STRIPE_PROVIDER_FAILURE/, /provider:\s*"stripe"/],
+  ["src/lib/commerceCheckoutServer.ts", /stripeRequest/, /capturePlatformError/],
   ["src/lib/beautyConciergeServer.ts", /capturePlatformError/, /warningReferences/],
   ["src/lib/aiAutomationServer.ts", /if\s*\([^)]*Error\)\s*throw/, /usageError/],
   ["src/lib/webPushServer.ts", /capturePlatformError/, /warningReferences/],

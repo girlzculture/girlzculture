@@ -54,8 +54,10 @@
     "verify:trending-video-processing": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-trending-video-processing.mjs",
     "verify:promotion-enforcement": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-promotion-enforcement.mjs",
     "verify:brand-appearance": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-brand-appearance.mjs",
+    "verify:product-commerce": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-product-commerce.mjs",
     "verify:dashboard-subdomains": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-dashboard-subdomains.mjs",
     "verify:vanity-urls": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-salon-vanity-urls.mjs",
+    "verify:final-correction": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-final-production-correction.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },
