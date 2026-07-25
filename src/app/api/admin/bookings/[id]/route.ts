@@ -1,10 +1,17 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
-import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
+import {
+  formatZonedDateTime,
+  salonTimeZone,
+  zonedLocalToUtc,
+} from "@/lib/dateTime";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
 import { deliverCancellationNotifications, requireAdminPermission, sendEmail, sendSms } from "@/lib/supabaseAdmin";
-import { stripeRequest } from "@/lib/stripeServer";
 import { createCustomerApprovedReschedule } from "@/lib/bookingRescheduleServer";
+import {
+  requestBookingDepositRefund,
+  safeCancellationReason,
+} from "@/lib/bookingCancellation";
 
 async function contextFor(request: Request, id: string) {
   const context = await requireAdminPermission(request, "bookings");
@@ -21,7 +28,7 @@ async function contextFor(request: Request, id: string) {
 }
 
 async function GETHandler(request: Request, route: { params: Promise<{ id: string }> }) {
-  try { const { id } = await route.params; const { booking, salon, styles, stylists, audit } = await contextFor(request, id); return Response.json({ booking, salon, styles, stylists, audit }); }
+  try { const { id } = await route.params; const { booking, salon, styles, stylists, audit, adminUser } = await contextFor(request, id); return Response.json({ booking, salon, styles, stylists, audit, admin_time_zone: String((adminUser as {time_zone?:string}).time_zone || "America/New_York") }); }
   catch (error) { return errorResponse(error, "Unable to load booking."); }
 }
 
@@ -30,7 +37,26 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     const { id } = await route.params; const ctx = await contextFor(request, id); const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 30); const reason = cleanText(body.reason, 500);
     if (!reason) throw new Error("Add a reason for the audit trail and customer notification.");
-    if (action === "cancel") return await cancelBooking(ctx, reason);
+    if (action === "cancel") return await cancelBooking(ctx, {
+      internalReason: reason,
+      customerReason: safeCancellationReason(body.customer_reason, "admin"),
+      customerMessage: cleanText(body.customer_message, 500),
+    });
+    if (action === "correct_service_state") {
+      const targetStatus=cleanText(body.status,30);
+      if(!["Confirmed","Ready","In Progress","Completed","Cancelled"].includes(targetStatus))throw new Error("Choose a valid corrected service state.");
+      const {data:corrected,error:correctionError}=await ctx.admin.rpc("transition_booking_service",{
+        p_booking_id:ctx.booking.id,
+        p_salon_id:ctx.salon.id,
+        p_actor_user_id:ctx.user.id,
+        p_actor_role:`Platform admin: ${String((ctx.adminUser as {role?:string}).role||"Admin")}`,
+        p_action:"admin_correct",
+        p_reason:reason,
+        p_target_status:targetStatus,
+      });
+      if(correctionError)throw correctionError;
+      return Response.json({booking:corrected});
+    }
     if (action === "propose_reschedule") {
       const result=await createCustomerApprovedReschedule({
         admin:ctx.admin,
@@ -50,7 +76,6 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     if (body.guest_name !== undefined) patch.guest_name = cleanText(body.guest_name, 120);
     if (body.guest_email !== undefined) patch.guest_email = cleanEmail(body.guest_email);
     if (body.guest_phone !== undefined) patch.guest_phone = cleanUsPhone(body.guest_phone, true);
-    if (body.status !== undefined) { const status = cleanText(body.status, 30); if (!["Confirmed","Completed","Requested"].includes(status)) throw new Error("Choose a valid status."); patch.status = status; }
     if (body.stylist_id !== undefined) { const stylistId = cleanText(body.stylist_id, 50) || null; if (stylistId && !ctx.stylists.some((stylist) => stylist.id === stylistId)) throw new Error("Choose a stylist from this salon."); patch.stylist_id = stylistId; }
     let auditAction = "modified";
     if (body.appointment_local) {
@@ -64,7 +89,10 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     if (!Object.keys(patch).length) throw new Error("No booking changes were submitted.");
     const { data: updated, error } = await ctx.admin.from("bookings").update(patch).eq("id", id).select("*").single(); if (error) throw error;
     await ctx.admin.from("booking_audit_log").insert({ booking_id: id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: auditAction, reason: `Admin intervention: ${reason}`, before_data: ctx.booking, after_data: updated });
-    const when = new Date(updated.appointment_datetime).toLocaleString("en-US", { timeZone: salonTimeZone(ctx.salon.time_zone), dateStyle: "medium", timeStyle: "short" });
+    const when = formatZonedDateTime(
+      updated.appointment_datetime,
+      salonTimeZone(ctx.salon.time_zone),
+    );
     const text = `Girlz Culture updated your booking at ${ctx.salon.name} to ${when}. Reason: ${reason}`;
     const salonText = `Girlz Culture updated ${String(updated.guest_name || "a customer's")} booking to ${when}. Reason: ${reason}`;
     await Promise.all([
@@ -80,25 +108,54 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
   } catch (error) { noteOperationalFailure("Admin booking update failed", error); return errorResponse(error, "Unable to update booking."); }
 }
 
-async function cancelBooking(ctx: Awaited<ReturnType<typeof contextFor>>, reason: string) {
+async function cancelBooking(
+  ctx: Awaited<ReturnType<typeof contextFor>>,
+  input: {
+    internalReason: string;
+    customerReason: string;
+    customerMessage: string;
+  },
+) {
   const booking = ctx.booking; if (["cancelled","canceled"].includes(String(booking.status).toLowerCase())) return Response.json({ booking, already_cancelled: true });
-  const deposit = Math.max(0, Number(booking.deposit_amount || 0)); let refundId = ""; let refundStatus = "Not applicable";
-  if (deposit > 0 && /paid|succeeded/i.test(String(booking.deposit_status || ""))) {
-    const paymentId = cleanText(booking.stripe_payment_id, 120); if (!paymentId) throw new Error("Paid booking has no Stripe payment id; cancellation was stopped to protect the customer refund.");
-    const refund = await stripeRequest<{id:string}>("/refunds", { payment_intent: paymentId, amount: Math.round(deposit * 100), "metadata[booking_id]": booking.id, "metadata[cancelled_by]": "platform_admin", "metadata[cancellation_reason]": reason }, { idempotencyKey: `admin-cancel-${booking.id}` });
-    if (!refund.id) throw new Error("Stripe did not confirm the refund. The booking remains active."); refundId = refund.id; refundStatus = "Succeeded";
-  }
-  const patch = { status: "Cancelled", cancellation_initiated_by: "Admin", cancellation_reason: reason, cancelled_at: new Date().toISOString(), refund_status: refundStatus, refund_amount: refundStatus === "Succeeded" ? deposit : 0, stripe_refund_id: refundId || null, deposit_status: refundStatus === "Succeeded" ? "Refunded" : booking.deposit_status };
+  const now=new Date().toISOString();
+  const refund=await requestBookingDepositRefund({
+    admin:ctx.admin,
+    booking,
+    salonId:ctx.salon.id,
+    actorUserId:ctx.user.id,
+    initiatedBy:"platform",
+    internalReason:input.internalReason,
+  });
+  const patch = {
+    status: "Cancelled",
+    cancelled_by:"admin",
+    cancellation_initiated_by: "Admin",
+    cancellation_reason:input.customerReason,
+    cancellation_internal_reason:input.internalReason,
+    cancellation_customer_reason:input.customerReason,
+    cancellation_customer_message:input.customerMessage||null,
+    cancelled_at:now,
+    refund_status:refund.refundStatus,
+    refund_amount:refund.refundAmount,
+    refund_funding_state:refund.fundingState,
+    refund_initiated_by:"platform",
+    refund_requested_at:refund.refundId?now:null,
+    refund_provider_accepted_at:refund.providerAcceptedAt,
+    refund_completed_at:refund.completedAt,
+    stripe_refund_id:refund.refundId||null,
+    stripe_transfer_reversal_id:refund.transferReversalId||null,
+    deposit_status:refund.refundStatus==="Succeeded"?"Refunded":refund.refundStatus==="Pending"?"Refund pending":booking.deposit_status,
+  };
   const { data: cancelled, error } = await ctx.admin.from("bookings").update(patch).eq("id", booking.id).select("*").single(); if (error) throw error;
-  await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "cancelled", reason, before_data: booking, after_data: cancelled });
-  if (refundStatus === "Succeeded") await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "refunded", reason: `Full reservation-deposit refund issued during cancellation: ${reason}`, before_data: booking, after_data: cancelled });
-  const customerMessage = `Your booking at ${ctx.salon.name} was cancelled. Reason: ${reason}. ${refundStatus === "Succeeded" ? `Your $${deposit.toFixed(2)} reservation deposit was refunded in full.` : "No deposit refund was due."}`;
-  const salonMessage = `${String(booking.guest_name || "A customer's")} booking was cancelled by platform support. Reason: ${reason}.`;
+  await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "cancelled", reason:input.internalReason, before_data: booking, after_data: cancelled });
+  if (refund.refundId) await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "refunded", reason: `Stripe refund ${refund.refundStatus.toLowerCase()} after provider acceptance. Internal reason: ${input.internalReason}`, before_data: booking, after_data: cancelled });
+  const customerMessage = `Your booking at ${ctx.salon.name} was cancelled. Reason: ${input.customerReason}.`;
+  const salonMessage = `${String(booking.guest_name || "A customer's")} booking was cancelled by platform support. Internal reason: ${input.internalReason}.`;
   const inApp = [{ user_id: ctx.salon.user_id, salon_id: ctx.salon.id, booking_id: booking.id, title: "Booking cancelled by platform support", body: salonMessage, action_url: `/salon/dashboard/bookings?booking=${booking.id}`, delivery_status: "delivered" }];
   if (booking.customer_id) inApp.push({ user_id: booking.customer_id, salon_id: ctx.salon.id, booking_id: booking.id, title: "Your booking was cancelled", body: customerMessage, action_url: "/account?tab=past", delivery_status: "delivered" });
   await ctx.admin.from("notifications").insert(inApp);
-  const notificationResult=await deliverCancellationNotifications(booking.id, reason);
-  return Response.json({ booking: cancelled, refund_status: refundStatus, warnings:notificationResult.warnings });
+  const notificationResult=await deliverCancellationNotifications(booking.id);
+  return Response.json({ booking: cancelled, refund_status:refund.refundStatus, warnings:notificationResult.warnings });
 }
 export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/bookings/[id]", "GET"), GETHandler);
 export const PATCH = withOperationalMonitoring(routeMonitoringProfile("/api/admin/bookings/[id]", "PATCH"), PATCHHandler);

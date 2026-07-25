@@ -15,6 +15,12 @@ import {
 import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
 import { getPublishedBrandAsset } from "@/lib/brandAssets";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
+import { bookingReference } from "@/lib/bookingReference";
+import {
+  cancellationActorLabel,
+  refundCustomerSummary,
+  safeCancellationReason,
+} from "@/lib/bookingCancellation";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -262,7 +268,7 @@ function renderNotificationEmail(templates:NotificationTemplateMap,translations:
 }
 
 async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAdmin>,requestedLocales:string[]=[]){
-  const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject","notifications.sender_name","notifications.reply_to_email","notifications.booking_confirmation_intro","notifications.booking_cancellation_intro","notifications.booking_policy_summary","notifications.booking_email_footer","booking.deposit_percentage"];
+  const keys=["notifications.channels","notifications.booking_customer_confirmed_subject","notifications.booking_salon_confirmed_subject","notifications.booking_customer_cancelled_subject","notifications.booking_salon_cancelled_subject","notifications.booking_reminder_hours","notifications.booking_reminder_subject","notifications.sender_name","notifications.reply_to_email","notifications.booking_confirmation_intro","notifications.booking_cancellation_intro","notifications.booking_policy_summary","notifications.booking_email_footer","booking.deposit_percentage","branding.primary_color","branding.cta_color","branding.page_background","branding.card_background","branding.heading_color","branding.body_color","branding.muted_color","branding.heading_font","branding.body_font"];
   const locales=[...new Set(requestedLocales.map(normalizeLocale).filter(locale=>locale!=="en"))];
   const[{data,error},{data:templateRows,error:templateError},{data:translationRows,error:translationError}]=await Promise.all([admin.from("engine_settings").select("setting_key,published_value").eq("status","Published").in("setting_key",keys),admin.from("notification_templates").select("template_key,published_subject,published_body,allowed_variables").eq("status","Published"),locales.length?admin.from("translation_entries").select("translation_key,locale,translated_text").eq("status","Published").in("locale",locales).like("translation_key","notification.%"):Promise.resolve({data:[],error:null})]);
   const warningReferences:string[]=[];
@@ -286,6 +292,8 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const text=(key:string,fallback:string,maxLength=1200)=>{const value=String(values[key]||"").trim();return value&&value.length<=maxLength?value:fallback};
   const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
   const configuredDepositPercentage=Number(values["booking.deposit_percentage"]??10);
+  const color=(key:string,fallback:string)=>{const value=String(values[key]||"");return /^#[0-9a-f]{6}$/i.test(value)?value:fallback};
+  const font=(key:string,allowed:string[],fallback:string)=>{const value=String(values[key]||"");return allowed.includes(value)?value:fallback};
   return{
     channels,templates,translations,warningReferences,
     reminderHours:reminderHours.length?reminderHours:[24,2],
@@ -296,11 +304,22 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
     reminderSubject:subject("notifications.booking_reminder_subject","Your Girlz Culture appointment is coming up"),
     senderName:text("notifications.sender_name","Girlz Culture",60),
     replyTo:text("notifications.reply_to_email","support@girlzculture.com",160),
-    confirmationIntro:text("notifications.booking_confirmation_intro","Your appointment is secured. Keep this message for your records.",400),
-    cancellationIntro:text("notifications.booking_cancellation_intro","This booking has been cancelled. The complete record is below.",400),
+    confirmationIntro:text("notifications.booking_confirmation_intro","Thank you for booking with Girlz Culture. Your confirmed appointment details are below.",400),
+    cancellationIntro:text("notifications.booking_cancellation_intro","Your appointment has been cancelled. The details and any refund status are below.",400),
     policy:text("notifications.booking_policy_summary","Use the secure Manage Booking link to cancel or respond to a reschedule. Deposit treatment follows the terms accepted at checkout.",1200),
     footer:text("notifications.booking_email_footer","Only use Girlz Culture links from this message. Contact support if you did not make this booking.",400),
     depositPercentage:Number.isFinite(configuredDepositPercentage)?configuredDepositPercentage:10,
+    emailTheme:{
+      primary:color("branding.primary_color","#C65A3A"),
+      cta:color("branding.cta_color","#C65A3A"),
+      page:color("branding.page_background","#FFF8F0"),
+      card:color("branding.card_background","#FFF8F0"),
+      heading:color("branding.heading_color","#281F16"),
+      body:color("branding.body_color","#281F16"),
+      muted:color("branding.muted_color","#6B7A4E"),
+      headingFont:font("branding.heading_font",["Playfair Display","Fraunces","Georgia"],"Playfair Display"),
+      bodyFont:font("branding.body_font",["Montserrat","Inter","Arial"],"Montserrat"),
+    },
   };
 }
 
@@ -328,6 +347,7 @@ async function bookingCommunicationInput(
     intro,
     footer: notification.footer,
     emailLogoUrl,
+    emailTheme: notification.emailTheme,
     ...urls,
   };
 }
@@ -385,7 +405,7 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
 
 export async function deliverBookingNotifications(
   bookingId: string,
-  options: { manageUrl?: string } = {},
+  options: { manageUrl?: string; skipCustomerEmail?: boolean } = {},
 ) {
   const context = await bookingNotificationContext(bookingId);
   const { admin, booking, salon, style, stylist, stylistContact, customerLocale, salonLocale } = context;
@@ -397,6 +417,7 @@ export async function deliverBookingNotifications(
   const service = String(style?.name || "Braiding service");
   const professional = String(stylist?.name || "Salon owner");
   const customer = String(booking.guest_name || "Customer");
+  const reference = bookingReference(booking);
   const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
   const dashboardUrl = `${root}/salon/dashboard/bookings?booking=${booking.id}`;
   const accountUrl = options.manageUrl || (
@@ -413,7 +434,7 @@ export async function deliverBookingNotifications(
   const stylistSummary=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_confirmed.summary",salonSummary,summaryVariables);
   const customerSummary=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.summary",`${service} at ${salon.name} is confirmed for ${when}. Stylist: ${professional}.`,summaryVariables);
   const salonSubject=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_confirmed",{summary:salonSummary,dashboard_url:dashboardUrl},notification.salonConfirmed,`A new booking is confirmed.\n\n${salonSummary}\n\nOpen this booking: ${dashboardUrl}`).subject;
-  const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_confirmed",{summary:customerSummary,confirmation_code:String(booking.confirmation_code||""),account_url:accountUrl},notification.customerConfirmed,`Your appointment is confirmed.\n\n${customerSummary}\n\nConfirmation code: ${booking.confirmation_code||""}\n\nView your booking: ${accountUrl}`).subject;
+  const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_confirmed",{summary:customerSummary,confirmation_code:reference,account_url:accountUrl},notification.customerConfirmed,`Your appointment is confirmed.\n\n${customerSummary}\n\nBooking reference: ${reference}\n\nView your booking: ${accountUrl}`).subject;
   const communication = await bookingCommunicationInput(
     context,
     notification,
@@ -424,15 +445,15 @@ export async function deliverBookingNotifications(
   const customerEmail={subject:customerSubject,html:renderCustomerBookingConfirmation(communication)};
   const stylistEmail=renderNotificationEmail(notification.templates,notification.translations,stylistLocale,"booking.stylist_confirmed",{summary:stylistSummary,dashboard_url:dashboardUrl},"A Girlz Culture booking was assigned to you",`A booking was assigned to you.\n\n${stylistSummary}\n\nOpen your appointment: ${dashboardUrl}`);
   const salonSms=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_confirmed.sms",`Girlz Culture confirmed booking: ${salonSummary} ${dashboardUrl}`,{summary:salonSummary,dashboard_url:dashboardUrl});
-  const customerSms=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.sms",`Girlz Culture: ${customerSummary} Confirmation ${booking.confirmation_code||""}. ${accountUrl}`,{summary:customerSummary,confirmation_code:String(booking.confirmation_code||""),account_url:accountUrl});
+  const customerSms=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.sms",`Girlz Culture: ${customerSummary} Reference ${reference}. ${accountUrl}`,{summary:customerSummary,confirmation_code:reference,account_url:accountUrl});
   const stylistSms=renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_confirmed.sms",`Girlz Culture assigned booking: ${stylistSummary} ${dashboardUrl}`,{summary:stylistSummary,dashboard_url:dashboardUrl});
   const tasks: DeliveryTask[] = [
     { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), salonEmail.subject, salonEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) },
     { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), salonSms) },
     { recipientType: "salon", channel: "push", destination: String(salon.user_id || ""), run: () => sendPushToUsers([String(salon.user_id || "")], { title: renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_confirmed.push_title","New confirmed booking"), body: salonSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) },
-    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), customerEmail.subject, customerEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), customerSms) },
   ];
+  if (!options.skipCustomerEmail) tasks.push({ recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), customerEmail.subject, customerEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) });
   if (booking.customer_id) tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.push_title","Appointment confirmed"), body: customerSummary, url: "/account?tab=upcoming", tag: `booking-${booking.id}` }) });
   if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, stylistSms) });
@@ -449,25 +470,39 @@ export async function deliverBookingNotifications(
   return { deliveries, delivered, warnings:warningReferences.map(reference=>({message:`A booking notification needs attention. Reference ${reference}.`,request_id:reference})) };
 }
 
-export async function deliverCancellationNotifications(bookingId: string, reason: string) {
+export async function deliverCancellationNotifications(bookingId: string) {
   const context = await bookingNotificationContext(bookingId);
   const { admin,booking, salon, style, stylist, stylistContact,customerLocale,salonLocale } = context;
   const stylistLocale=stylistContact?.locale||salonLocale;
   const notification=await bookingNotificationSettings(admin,[customerLocale,salonLocale,stylistLocale]);
   const when = formatInTimeZone(booking.appointment_datetime, salon.time_zone);
   const service = String(style?.name || "Braiding service");
-  const refundAmount=`$${Number(booking.refund_amount || 0).toFixed(2)}`;
-  const refundMessage = booking.refund_status === "Succeeded"
-    ? renderNotificationText(notification.translations,customerLocale,"notification.booking.refund.succeeded",`Your ${refundAmount} reservation deposit was refunded in full.`,{refund_amount:refundAmount})
-    : renderNotificationText(notification.translations,customerLocale,"notification.booking.refund.none","No deposit refund was due for this booking.");
+  const refundMessage=refundCustomerSummary(
+    booking.refund_status,
+    booking.refund_amount,
+    booking.refund_provider_accepted_at,
+  );
+  const customerReason=safeCancellationReason(
+    booking.cancellation_customer_reason||booking.cancellation_reason,
+    String(booking.cancelled_by||booking.cancellation_initiated_by||"system").toLowerCase() as "customer"|"salon"|"admin"|"system",
+  );
+  const internalReason=String(
+    booking.cancellation_internal_reason||
+      booking.cancellation_detail||
+      customerReason,
+  ).slice(0,500);
+  const customerNote=String(booking.cancellation_customer_message||"").trim().slice(0,500);
   const customer=String(booking.guest_name||"A customer");const stylistClause=stylist?.name?` with ${stylist.name}`:"";
-  const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,reason,refund_message:refundMessage,customer};
-  const message=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_cancelled.summary",`Your ${service} appointment at ${salon.name} for ${when}${stylistClause} was cancelled. Reason: ${reason}. ${refundMessage}`,variables);
-  const businessMessage=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_cancelled.summary",`${customer}'s ${service} appointment for ${when}${stylistClause} was cancelled. Reason: ${reason}.`,variables);
-  const stylistMessage=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_cancelled.summary",businessMessage,variables);
+  const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,reason:customerReason,refund_message:refundMessage,customer};
+  const noteClause=customerNote?` Message: ${customerNote}`:"";
+  const message=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_cancelled.summary",`Your ${service} appointment at ${salon.name} for ${when}${stylistClause} was cancelled. Reason: ${customerReason}.${noteClause} ${refundMessage}`,variables);
+  const businessMessage=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_cancelled.summary",`${customer}'s ${service} appointment for ${when}${stylistClause} was cancelled. Internal reason: ${internalReason}. Customer-facing reason: ${customerReason}.`,variables);
+  const stylistMessage=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_cancelled.summary",`${customer}'s ${service} appointment for ${when}${stylistClause} was cancelled. Reason: ${customerReason}.`,variables);
   const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
   const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
-  const accountUrl=`${root}/account?tab=past`;
+  const accountUrl=booking.customer_id
+    ? `${root}/account?tab=past`
+    : (await issueGuestBookingToken(admin,booking.id,{reason:"Cancellation record",rootUrl:root})).url;
   const customerSubject=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_cancelled",{message,browse_url:`${root}/salons`},notification.customerCancelled,`Your appointment was cancelled.\n\n${message}\n\nWe are sorry for the disruption. Find another available salon: ${root}/salons`).subject;
   const salonSubject=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_cancelled",{message:businessMessage},notification.salonCancelled,`A booking was cancelled.\n\n${businessMessage}`).subject;
   const communication=await bookingCommunicationInput(
@@ -476,20 +511,17 @@ export async function deliverCancellationNotifications(bookingId: string, reason
     {manageUrl:accountUrl,dashboardUrl},
     notification.cancellationIntro,
   );
-  const cancelledBy=String(booking.cancellation_initiated_by||"Girlz Culture support");
-  const refundStatus=booking.refund_status==="Succeeded"
-    ? `${refundAmount} refunded in full`
-    : String(booking.refund_status||"No refund due");
-  const nextAction=booking.refund_status==="Pending"
-    ? "Watch for a separate refund update."
-    : "No further action is required. Contact support if this record looks incorrect.";
+  const cancelledBy=cancellationActorLabel(
+    booking.cancelled_by||booking.cancellation_initiated_by,
+  );
+  const refundStatus=refundMessage;
   const customerEmail={
     subject:customerSubject,
-    html:renderBookingCancellation({...communication,audience:"customer",cancelledBy,reason,refundStatus,nextAction,browseUrl:`${root}/salons`}),
+    html:renderBookingCancellation({...communication,audience:"customer",cancelledBy,reason:customerReason,customerMessage:customerNote,refundStatus,browseUrl:`${root}/salons`,supportUrl:`${root}/contact`}),
   };
   const salonEmail={
     subject:salonSubject,
-    html:renderBookingCancellation({...communication,audience:"salon",cancelledBy,reason,refundStatus,nextAction}),
+    html:renderBookingCancellation({...communication,audience:"salon",cancelledBy,reason:internalReason,customerMessage:customerNote,refundStatus,supportUrl:`${root}/contact`}),
   };
   const stylistEmail=renderNotificationEmail(notification.templates,notification.translations,stylistLocale,"booking.stylist_cancelled",{message:stylistMessage},"An assigned Girlz Culture booking was cancelled",`An assigned booking was cancelled.\n\n${stylistMessage}`);
   const tasks: DeliveryTask[] = [

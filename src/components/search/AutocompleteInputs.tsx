@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { MapPin, Search, X } from "lucide-react";
 import type { CustomerLocation } from "@/lib/location";
 import { reportClientOperationalFailure } from "@/lib/supabase";
+import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 
 let googleMapsPromise: Promise<void> | null = null;
 export function loadGoogleMaps() {
@@ -75,15 +76,14 @@ export function StyleAutocomplete({
   value,
   onChange,
   onLocation,
-  contextQuery = "",
   placeholder = "Search services",
   className = "",
   name = "style",
 }: SharedProps & {
   onLocation?: (location: CustomerLocation) => void;
-  contextQuery?: string;
 }) {
   const router = useRouter();
+  const customerLocation = useCustomerLocation();
   const [groups, setGroups] = useState<SearchGroup[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -139,10 +139,7 @@ export function StyleAutocomplete({
   }, []);
   function choose(item: SearchSuggestion) {
     if (item.kind === "salon" && item.href) {
-      const separator = item.href.includes("?") ? "&" : "?";
-      router.push(
-        `${item.href}${contextQuery ? `${separator}${contextQuery}` : ""}`,
-      );
+      router.push(item.href);
     } else if (
       item.kind === "location" &&
       Number.isFinite(item.lat) &&
@@ -154,11 +151,9 @@ export function StyleAutocomplete({
         lng: Number(item.lng),
         source: "explicit" as const,
       };
+      customerLocation.setLocation(location);
       if (onLocation) onLocation(location);
-      else
-        router.push(
-          `/salons?location=${encodeURIComponent(location.label)}&lat=${location.lat}&lng=${location.lng}`,
-        );
+      else router.push("/salons");
     } else onChange(item.value || item.label);
     setOpen(false);
   }
@@ -183,7 +178,7 @@ export function StyleAutocomplete({
   }
   let itemOffset = 0;
   return (
-    <div ref={root} className={`relative ${className}`}>
+    <div ref={root} className={`relative overflow-visible ${className}`}>
       <span className="flex min-h-11 items-center gap-2">
         <Search size={18} className="shrink-0 text-magenta" />
         <input
@@ -213,7 +208,7 @@ export function StyleAutocomplete({
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-plum/10 bg-white py-1 shadow-2xl"
+          className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-80 overflow-y-auto rounded-xl border border-plum/10 bg-white py-1 shadow-2xl"
         >
           {loading ? (
             <p role="status" className="px-4 py-3 text-xs text-ink/60">
@@ -430,7 +425,7 @@ export function LocationAutocomplete({
     setError("");
   }
   return (
-    <div ref={root} className={`relative ${className}`}>
+    <div ref={root} className={`relative overflow-visible ${className}`}>
       <span className="flex min-h-11 items-center gap-2">
         <MapPin size={18} className="shrink-0 text-magenta" />
         <input
@@ -472,7 +467,7 @@ export function LocationAutocomplete({
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-plum/10 bg-white py-1 shadow-2xl"
+          className="absolute left-0 right-0 top-full z-[100] mt-2 overflow-hidden rounded-xl border border-plum/10 bg-white py-1 shadow-2xl"
         >
           <p className="px-4 pb-1 pt-2 text-[9px] font-bold uppercase tracking-[.12em] text-plum">
             Locations

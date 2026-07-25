@@ -6,6 +6,14 @@ export type EngineCategory = {
   links?: Array<{ label: string; href: string; help: string }>;
 };
 
+export type EngineSection = {
+  id: string;
+  label: string;
+  description: string;
+  categories: string[];
+  links?: Array<{ label: string; href: string; help: string }>;
+};
+
 export const ENGINE_CATEGORIES: EngineCategory[] = [
   { id: "branding_design", label: "Branding & Design", description: "Brand colors, identity presentation, approved layout choices, and visual defaults.", permission: "settings" },
   { id: "navigation_menus", label: "Navigation & Menus", description: "Customer-facing labels, destinations, order, and visibility for approved navigation slots.", permission: "content", links: [{ label: "Edit page and footer content", href: "/admin/content", help: "Manage published labels and footer destinations." }] },
@@ -31,3 +39,27 @@ export const ENGINE_CATEGORIES: EngineCategory[] = [
 ];
 
 export const ENGINE_CATEGORY_IDS = new Set(ENGINE_CATEGORIES.map((category) => category.id));
+
+// Founder-facing information architecture. These workflow sections deliberately
+// group the lower-level categories used by persisted settings, so reorganizing
+// the Engine does not rewrite configuration history or break published records.
+export const ENGINE_SECTIONS: EngineSection[] = [
+  { id: "overview", label: "Overview", description: "Platform readiness, configuration progress, urgent errors, and direct links to the work that needs attention.", categories: [] },
+  { id: "brand_design", label: "Brand & Design", description: "Logos, colors, typography, imagery, upload rules, and approved presentation choices.", categories: ["branding_design", "media_uploads"] },
+  { id: "pages_navigation", label: "Pages & Navigation", description: "Public page structure, homepage composition, navigation labels, destinations, order, and visibility.", categories: ["navigation_menus", "pages_sections", "homepage_composition"], links: [{ label: "Open Content Management", href: "/admin/content", help: "Preview, draft, review, publish, archive, and restore public pages." }] },
+  { id: "content_wording", label: "Content & Wording", description: "Editorial wording, SEO fields, calls to action, trust language, and reusable public copy.", categories: ["pages_sections", "trust_quality"], links: [{ label: "Edit public content", href: "/admin/content", help: "Manage public content without editing application code." }] },
+  { id: "languages", label: "Languages & Translations", description: "Supported languages, fallbacks, translation review, publication, coverage, and rollback.", categories: ["languages_translations"] },
+  { id: "salon_operations", label: "Salon Setup & Operations", description: "Applications, setup completion, approval, activation, discoverability, and offboarding.", categories: ["salon_lifecycle"], links: [{ label: "Manage salons", href: "/admin/salons", help: "Review salon identity, status, ownership, and lifecycle." }] },
+  { id: "services_catalog", label: "Services & Catalog", description: "Service taxonomy, names, aliases, sizes, lengths, materials, add-ons, and inclusions.", categories: ["service_taxonomies"], links: [{ label: "Manage catalog records", href: "/admin/content?workspace=catalog", help: "Edit structured catalog records and review dependencies." }] },
+  { id: "bookings", label: "Bookings & Cancellations", description: "Availability, buffers, booking limits, rescheduling, completion, cancellation, and reminder rules.", categories: ["booking_availability"], links: [{ label: "Review bookings", href: "/admin/bookings", help: "Inspect operational booking records and lifecycle evidence." }] },
+  { id: "payments", label: "Payments, Plans & Refunds", description: "Deposits, subscriptions, plan presentation, refunds, payouts, and payment configuration status.", categories: ["payments_subscriptions"], links: [{ label: "Open Finance", href: "/admin/finance", help: "Reconcile customer payments, refunds, salon liabilities, and provider evidence." }, { label: "Open Subscriptions", href: "/admin/subscriptions", help: "Review plan state and protected billing history." }] },
+  { id: "promotions", label: "Promotions & Campaigns", description: "Promotion availability, limits, targeting, homepage campaigns, featured salons, and trending content.", categories: ["promotions_campaigns", "homepage_composition"], links: [{ label: "Open Marketing", href: "/admin/marketing", help: "Create, schedule, and audit promotions and placements." }] },
+  { id: "locations", label: "Locations & Discovery", description: "Markets, service areas, location search, ranking vocabulary, aliases, and discovery behavior.", categories: ["markets_service_areas", "search_discovery"], links: [{ label: "Preview salon discovery", href: "/salons", help: "Open the customer-facing location and service search." }] },
+  { id: "notifications", label: "Notifications & Communications", description: "Customer-safe templates, subjects, delivery timing, channels, and support communication.", categories: ["notifications_templates"], links: [{ label: "Open support inbox", href: "/admin/support", help: "Read and respond to support conversations." }] },
+  { id: "ai", label: "AI & Automation", description: "Disabled-by-default assistance, budgets, review gates, prompts, provider state, testing, and deterministic fallback.", categories: ["ai_automation"] },
+  { id: "integrations", label: "Integrations", description: "Database, storage, payments, email, SMS, maps, AI, media, push, deployment, and domain connections.", categories: ["integrations_system"] },
+  { id: "system_health", label: "System Health & Errors", description: "Visible integration health, migration state, deduplicated operational failures, impact, and recovery actions.", categories: ["integrations_system"] },
+  { id: "data_management", label: "Data Management", description: "Record lifecycles, test data, protected cleanup, import/export, configuration history, and recovery.", categories: ["test_data_maintenance", "configuration_history"] },
+  { id: "security_access", label: "Security & Access", description: "Roles, permissions, identity health, protected deletion, authentication controls, and audit boundaries.", categories: ["users_roles"], links: [{ label: "Manage admin team", href: "/admin/settings", help: "Add users and grant explicit, limited permissions." }] },
+  { id: "help", label: "Help & Documentation", description: "Searchable founder guidance for every section, field, publication workflow, integration, and error response.", categories: [] },
+];

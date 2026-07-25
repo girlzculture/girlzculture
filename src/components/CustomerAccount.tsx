@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Share2, Star, UserRound } from "lucide-react";
+import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Share2, ShoppingBag, Star, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
@@ -22,9 +22,10 @@ type Row = Record<string, unknown> & {
   time_zone?: string | null;
   hours?: unknown;
 };
-type AccountTab = "overview" | "upcoming" | "past" | "favorites" | "reviews" | "inbox" | "payments" | "settings";
+type AccountTab = "overview" | "upcoming" | "past" | "orders" | "favorites" | "reviews" | "inbox" | "payments" | "settings";
 const tabs: Array<[AccountTab, string, typeof Home]> = [
   ["overview", "Overview", Home], ["upcoming", "Upcoming Bookings", CalendarDays], ["past", "Past Bookings", CalendarDays],
+  ["orders", "Product Orders", ShoppingBag],
   ["favorites", "Favorites", Heart], ["reviews", "Reviews", Star], ["inbox", "Inbox", MessageSquare],
   ["payments", "Payment Methods", CreditCard], ["settings", "Settings", Settings],
 ];
@@ -37,6 +38,7 @@ export default function CustomerAccount() {
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState<Row | null>(null);
   const [bookings, setBookings] = useState<Row[]>([]);
+  const [orders, setOrders] = useState<Row[]>([]);
   const [favorites, setFavorites] = useState<Row[]>([]);
   const [error, setError] = useState("");
 
@@ -47,16 +49,18 @@ export default function CustomerAccount() {
         router.replace("/login?next=/account");
         return;
       }
-      const [profileResult, bookingResult, favoriteResult] = await Promise.all([
+      const [profileResult, bookingResult, favoriteResult, orderResult] = await Promise.all([
         supabase.from("customers").select("*").eq("id", data.user.id).maybeSingle(),
         supabase.from("bookings").select("*,salon:salons(name,slug,address_city,address_state,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
         supabase.from("customer_favorites").select("salon:salons(*)").eq("customer_id", data.user.id).limit(50),
+        supabase.from("product_orders").select("*,salon:salons(name,slug,cover_photo_url),items:product_order_items(product_name,quantity,line_total,image_url)").eq("customer_id", data.user.id).order("created_at", { ascending: false }).limit(100),
       ]);
       if (!active) return;
       if (profileResult.error) setError(profileResult.error.message);
       setCustomer((profileResult.data || { id: data.user.id, name: data.user.user_metadata?.name || data.user.email?.split("@")[0], email: data.user.email, membership_tier: "Member" }) as Row);
       setBookings((bookingResult.data || []) as Row[]);
       setFavorites((favoriteResult.data || []).map((item) => item.salon as unknown as Row).filter(Boolean));
+      setOrders((orderResult.data || []) as Row[]);
       setLoading(false);
     }).catch((loadError) => {
       if (active) {
@@ -77,7 +81,7 @@ export default function CustomerAccount() {
   const name = String(customer?.name || "Girlz Culture Member");
   const firstName = name.split(" ")[0];
   return <div className="min-h-screen bg-cream pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
-    <header className="flex h-20 items-center justify-between border-b border-plum/10 bg-white/80 px-5 lg:px-10">
+    <header className="gc-brand-header flex h-20 items-center justify-between border-b border-plum/10 px-5 lg:px-10">
       <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
       <nav className="hidden gap-10 text-sm md:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
       <div data-language-selector-host className="flex items-center gap-2 sm:gap-4"><LanguageSelector compact/><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
@@ -90,7 +94,7 @@ export default function CustomerAccount() {
       </aside>
       <main className="min-w-0 p-4 sm:p-8 lg:p-10">
         <section className="rounded-[18px] bg-plum p-6 text-white lg:bg-transparent lg:p-0 lg:text-ink"><p className="text-sm lg:hidden">Welcome back,</p><h1 className="font-serif text-3xl font-semibold lg:text-4xl lg:text-plum">{tab === "overview" ? `Welcome back, ${firstName}!` : tabs.find(([id]) => id === tab)?.[1]}</h1><p className="mt-2 text-sm opacity-70">Manage your bookings, favorites, reviews, and account details.</p></section>
-        <div className="mt-7">{tab === "overview" ? <Overview upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet."/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={past} empty="No completed appointments yet." past/> : tab === "favorites" ? <FavoritePanel favorites={favorites}/> : tab === "inbox" ? <BookingInbox scope="customer"/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action="Browse salons" href="/salons"/> : <SettingsPanel customer={customer}/>}</div>
+        <div className="mt-7">{tab === "overview" ? <Overview upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet."/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={past} empty="No completed appointments yet." past/> : tab === "orders" ? <OrderPanel rows={orders}/> : tab === "favorites" ? <FavoritePanel favorites={favorites}/> : tab === "inbox" ? <BookingInbox scope="customer"/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits and product purchases are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action="Browse salons" href="/salons"/> : <SettingsPanel customer={customer}/>}</div>
       </main>
     </div>
     <nav className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-plum/10 bg-white p-2 lg:hidden">{[[Home, "Home", "/"], [Search, "Search", "/salons"], [CalendarDays, "Bookings", "/account?tab=upcoming"], [Share2, "Social", "/social"], [UserRound, "Profile", "/account?tab=inbox"]].map(([Icon, label, href]) => <Link key={label as string} href={href as string} className="flex flex-col items-center gap-1 text-[10px]"><Icon size={21}/>{label as string}</Link>)}</nav>
@@ -103,6 +107,108 @@ function Overview({ upcoming, past, favorites }: { upcoming: Row[]; past: Row[];
 
 function BookingPanel({ title, rows, empty, past = false }: { title: string; rows: Row[]; empty: string; past?: boolean }) {
   return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><h2 className="font-serif text-2xl font-semibold text-plum">{title}</h2><Link href={`/account?tab=${past ? "past" : "upcoming"}`} className="text-sm font-bold text-magenta">View all</Link></div><div className="mt-4 divide-y divide-plum/10">{rows.map((booking) => <article key={booking.id} className="grid grid-cols-[74px_1fr_auto] gap-3 py-4"><SafeImage src={booking.salon?.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(booking.salon?.name || "Salon")} className="h-16 w-[74px] rounded-lg object-cover"/><div><h3 className="font-serif font-semibold">{String(booking.salon?.name || "Girlz Culture Salon")}</h3><p className="mt-1 text-xs text-ink/60">{String(booking.style?.name || "Braiding appointment")}</p><p className="mt-1 text-[11px]">{formatDate(booking.appointment_datetime, booking.salon?.time_zone)}</p></div><div className="text-right"><Status value={booking.status}/>{past && String(booking.status).toLowerCase() === "completed" ? <Link href={`/review/${booking.id}`} className="mt-3 block rounded-lg border border-magenta px-3 py-2 text-[10px] font-bold text-magenta">Leave Review</Link> : <Link href={`/salon/${booking.salon?.slug}`} className="mt-3 block text-[10px] font-bold text-magenta">View salon</Link>}</div></article>)}{!rows.length ? <p className="py-10 text-center text-sm text-ink/50">{empty}</p> : null}</div></section>;
+}
+
+function OrderPanel({ rows }: { rows: Row[] }) {
+  return (
+    <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-plum">
+            Product Orders
+          </h2>
+          <p className="mt-1 text-sm text-ink/55">
+            Pickup, shipping, payment, and tracking details from your salons.
+          </p>
+        </div>
+        <Link href="/salons" className="text-sm font-bold text-magenta">
+          Shop salons
+        </Link>
+      </div>
+      <div className="mt-5 space-y-4">
+        {rows.map((order) => {
+          const salon = (order.salon || {}) as Row;
+          const items = Array.isArray(order.items) ? (order.items as Row[]) : [];
+          return (
+            <article
+              key={String(order.id)}
+              className="rounded-[14px] border border-plum/10 bg-white p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex gap-3">
+                  <SafeImage
+                    src={String(salon.cover_photo_url || "")}
+                    fallbackSrc="/images/salon-warm.jpg"
+                    alt={String(salon.name || "Salon")}
+                    className="h-14 w-14 rounded-lg object-cover"
+                  />
+                  <div>
+                    <h3 className="font-serif font-semibold text-plum">
+                      {String(salon.name || "Girlz Culture Salon")}
+                    </h3>
+                    <p className="mt-1 text-[11px] text-ink/55">
+                      {String(order.public_reference)} ·{" "}
+                      {String(order.fulfillment_method)}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <b>${Number(order.total_amount || 0).toFixed(2)}</b>
+                  <p className="mt-1 text-[10px] font-bold text-magenta">
+                    {String(order.fulfillment_status || "New")}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 divide-y divide-plum/10 rounded-lg bg-blush/20 px-3">
+                {items.map((item, index) => (
+                  <p
+                    key={`${String(item.product_name)}-${index}`}
+                    className="flex justify-between gap-4 py-2 text-xs"
+                  >
+                    <span>
+                      {String(item.quantity)} × {String(item.product_name)}
+                    </span>
+                    <span>${Number(item.line_total || 0).toFixed(2)}</span>
+                  </p>
+                ))}
+              </div>
+              {order.tracking_number ? (
+                <p className="mt-3 text-xs">
+                  {String(order.carrier || "Carrier")} tracking:{" "}
+                  <b>{String(order.tracking_number)}</b>
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-4 text-[11px]">
+                {salon.slug ? (
+                  <Link
+                    href={`/salon/${String(salon.slug)}`}
+                    className="font-bold text-magenta"
+                  >
+                    View salon
+                  </Link>
+                ) : null}
+                {order.stripe_receipt_url ? (
+                  <a
+                    href={String(order.stripe_receipt_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-plum"
+                  >
+                    Payment receipt
+                  </a>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+        {!rows.length ? (
+          <p className="py-10 text-center text-sm text-ink/50">
+            You have no product orders yet.
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
 }
 
 function FavoritePanel({ favorites }: { favorites: Row[] }) {

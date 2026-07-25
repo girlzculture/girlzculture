@@ -30,6 +30,20 @@ export type ConciergeSalonResult = PublicSalonResult & {
   deposit_amount: number | null;
 };
 
+export type ConciergeAiStatus =
+  | "configured"
+  | "not_configured"
+  | "disabled"
+  | "budget_exhausted"
+  | "provider_failure";
+
+export type ConciergeConfiguration = {
+  ai_status: ConciergeAiStatus;
+  provider: string;
+  model: string;
+  deterministic_fallback: true;
+};
+
 const INTENT_KEYS = new Set(["style", "location", "radius_miles", "date", "time_period", "maximum_price", "promotion_only", "minimum_rating", "availability_required", "sort", "needs_clarification", "clarifying_question", "language"]);
 const INTENT_SCHEMA = {
   type: "object",
@@ -116,6 +130,9 @@ export function deterministicConciergeIntent(text: string, language: string): Co
   intent.availability_required = Boolean(intent.date || /available|opening|appointment|book/.test(lower));
   if (/top|best|highest rated|highly rated/.test(lower)) intent.sort = "rating";
   else if (/affordable|cheap|lowest price|budget/.test(lower)) intent.sort = "price_low";
+  if (/\b(?:braid my hair|braiding service|braids near me)\b/.test(lower)) {
+    intent.style = "Braids";
+  }
   return intent;
 }
 
@@ -196,6 +213,9 @@ async function resolveStyleAndLocation(prompt: string, intent: ConciergeIntent, 
       return terms.some((term) => lower.includes(term.toLowerCase()));
     });
     if (match) intent.style = String(match.name);
+    else if (/\b(?:braid|braids|braiding)\b/.test(lower)) {
+      intent.style = "Braids";
+    }
   }
   if (!intent.location) {
     const normalizedPrompt = prompt.toLocaleLowerCase();
@@ -253,8 +273,32 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
   const spentCents = (monthlyUsage || []).reduce((sum, row) => sum + Number(row.estimated_cost_cents || 0), 0);
   const withinLimits = Number(dailyUsage || 0) < Number(feature?.daily_request_limit || 0) && spentCents < Number(feature?.monthly_budget_cents || 0);
   const model = String(feature?.model_key || process.env.OPENAI_CONCIERGE_MODEL || "gpt-5.4-nano");
-  const providerApproved = approvedAiProviders().includes("openai") && approvedAiModels("openai").includes(model) && aiProviderConfigured("openai");
-  const canUseAi = feature?.is_enabled === true && feature.provider_key === "openai" && kill?.published_value === false && withinLimits && providerApproved;
+  const provider = String(feature?.provider_key || "openai");
+  const providerApproved =
+    approvedAiProviders().includes("openai") &&
+    approvedAiModels("openai").includes(model);
+  const providerConfigured = aiProviderConfigured("openai");
+  const canUseAi =
+    feature?.is_enabled === true &&
+    feature.provider_key === "openai" &&
+    kill?.published_value === false &&
+    withinLimits &&
+    providerApproved &&
+    providerConfigured;
+  let aiStatus: ConciergeAiStatus =
+    feature?.is_enabled !== true || kill?.published_value !== false
+      ? "disabled"
+      : provider !== "openai" || !providerApproved || !providerConfigured
+        ? "not_configured"
+        : !withinLimits
+          ? "budget_exhausted"
+          : "configured";
+  const configuration = (): ConciergeConfiguration => ({
+    ai_status: aiStatus,
+    provider,
+    model,
+    deterministic_fallback: true,
+  });
   if (canUseAi) {
     try {
       const parsed = await openAiIntent(input.prompt, input.language, model, Number(feature.timeout_ms || 8_000));
@@ -262,6 +306,7 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
       if (usageWrite.error) throw usageWrite.error;
       intent = parsed.intent; mode = "openai";
     } catch (error) {
+      aiStatus = "provider_failure";
       safeError = error instanceof Error && error.name === "AbortError" ? "TIMEOUT" : "AI_FAILED";
       const fallbackUsage = await admin.from("ai_usage_events").insert({ feature_key: "beauty_concierge", provider_key: "openai", model_key: model, outcome: "fallback", safe_error_code: safeError });
       if (fallbackUsage.error) {
@@ -297,9 +342,9 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     message: `A secondary search service needs attention. Reference ${reference}.`,
     request_id: reference,
   }));
-  if (!intent.style) { const question = conciergeClarification(input.language, "style"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings() }; }
-  if (!resolved.origin || !validCoordinates(resolved.origin)) { const question = conciergeClarification(input.language, "location"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings() }; }
-  if (intent.needs_clarification && intent.clarifying_question) return { mode, intent, clarification: intent.clarifying_question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings() };
+  if (!intent.style) { const question = conciergeClarification(input.language, "style"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings(), configuration: configuration() }; }
+  if (!resolved.origin || !validCoordinates(resolved.origin)) { const question = conciergeClarification(input.language, "location"); return { mode, intent: { ...intent, needs_clarification: true, clarifying_question: question }, clarification: question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings(), configuration: configuration() }; }
+  if (intent.needs_clarification && intent.clarifying_question) return { mode, intent, clarification: intent.clarifying_question, salons: [] as ConciergeSalonResult[], safeError, warnings: warnings(), configuration: configuration() };
 
   const [defaultRadius, resultLimit] = await Promise.all([
     getEngineNumber("ai.concierge.default_radius", 50, 1, 100),
@@ -342,5 +387,5 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     }
     return { ...salon, promotion, next_slot: nextSlot, deposit_amount: salon.starting_price === null ? null : Math.round(Number(salon.starting_price) * 10) / 100 };
   }));
-  return { mode, intent, clarification: null, salons: enriched.filter(Boolean) as ConciergeSalonResult[], safeError, warnings: warnings(), latencyMs: Date.now() - started };
+  return { mode, intent, clarification: null, salons: enriched.filter(Boolean) as ConciergeSalonResult[], safeError, warnings: warnings(), configuration: configuration(), latencyMs: Date.now() - started };
 }

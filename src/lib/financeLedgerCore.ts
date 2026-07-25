@@ -48,6 +48,7 @@ export function bookingTransaction(
     date: booking.payment_verified_at || booking.created_at,
     appointment_date: booking.appointment_datetime,
     booking_id: booking.id,
+    public_reference: booking.public_reference || booking.confirmation_code,
     confirmation_code: booking.confirmation_code,
     customer: booking.guest_name || "Registered customer",
     salon_id: booking.salon_id,
@@ -74,6 +75,19 @@ export function bookingTransaction(
     payment_status: booking.deposit_status || "Not recorded",
     refund_status: booking.refund_status || "Not applicable",
     refund_amount: number(booking.refund_amount),
+    refund_funding_state:
+      booking.refund_funding_state || "Platform-held funds",
+    refund_initiated_by: booking.refund_initiated_by || "",
+    refund_provider_accepted_at: booking.refund_provider_accepted_at || "",
+    refund_completed_at: booking.refund_completed_at || "",
+    cancelled_by:
+      booking.cancelled_by || booking.cancellation_initiated_by || "",
+    cancellation_customer_reason:
+      booking.cancellation_customer_reason || booking.cancellation_reason || "",
+    stripe_refund_id: booking.stripe_refund_id || "",
+    stripe_transfer_id: booking.stripe_transfer_id || "",
+    stripe_transfer_reversal_id:
+      booking.stripe_transfer_reversal_id || "",
     payout_status: booking.payout_status || "Not configured",
     booking_status: booking.status || "Unknown",
     stripe_reference:
@@ -150,11 +164,29 @@ function csvCell(value: unknown) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-export function financeCsv(rows: FinanceRow[]) {
+function csvDate(value: unknown, timeZone: string) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+export function financeCsv(
+  rows: FinanceRow[],
+  timeZone = "America/New_York",
+) {
   const columns: Array<[string, string]> = [
-    ["date", "Date"],
-    ["booking_id", "Booking ID"],
-    ["confirmation_code", "Confirmation"],
+    ["date_local", `Date (${timeZone})`],
+    ["date", "Date (UTC)"],
+    ["public_reference", "Booking reference"],
+    ["booking_id", "Internal booking UUID"],
     ["customer", "Customer"],
     ["salon", "Salon"],
     ["city", "City"],
@@ -171,14 +203,28 @@ export function financeCsv(rows: FinanceRow[]) {
     ["balance_due", "Balance due at salon"],
     ["payment_status", "Payment status"],
     ["refund_status", "Refund status"],
+    ["refund_funding_state", "Refund funding state"],
+    ["refund_initiated_by", "Refund issued by"],
+    ["cancelled_by", "Cancelled by"],
     ["payout_status", "Payout status"],
     ["payment_mode", "Stripe mode"],
     ["stripe_reference", "Stripe reference"],
+    ["stripe_refund_id", "Stripe refund"],
+    ["stripe_transfer_id", "Stripe transfer"],
+    ["stripe_transfer_reversal_id", "Stripe transfer reversal"],
   ];
   return [
     columns.map(([, label]) => csvCell(label)).join(","),
     ...rows.map((row) =>
-      columns.map(([key]) => csvCell(row[key])).join(","),
+      columns
+        .map(([key]) =>
+          csvCell(
+            key === "date_local"
+              ? csvDate(row.date, timeZone)
+              : row[key],
+          ),
+        )
+        .join(","),
     ),
   ].join("\r\n");
 }

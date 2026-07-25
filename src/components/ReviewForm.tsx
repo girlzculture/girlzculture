@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import ImageUpload from "@/components/ImageUpload";
 import { BadgeCheck, Star } from "lucide-react";
+import { bookingReference } from "@/lib/bookingReference";
 
 type BookingRecord = {
   id?: string;
@@ -11,6 +12,8 @@ type BookingRecord = {
   customer_id?: string | null;
   status?: string | null;
   appointment_datetime?: string | null;
+  public_reference?: string | null;
+  confirmation_code?: string | null;
 };
 
 type SalonRecord = {
@@ -128,7 +131,9 @@ export default function ReviewForm({ booking, salon }: { booking: BookingRecord;
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.35em] text-magenta">Write a review</div>
             <h1 className="mt-2 font-serif text-4xl font-semibold text-plum">{salon.name}</h1>
-            <p className="mt-2 text-sm text-ink/70">Booking ID: {booking.id}</p>
+            <p className="mt-2 text-sm text-ink/70">
+              Booking reference: {bookingReference(booking)}
+            </p>
           </div>
           <div className="rounded-full bg-blush/60 px-4 py-2 text-sm font-semibold text-plum">{bookingDate}</div>
         </div>

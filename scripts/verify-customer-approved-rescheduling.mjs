@@ -18,7 +18,10 @@ assert.deepEqual(
     ],
     clean,
   ),
-  ["2026-08-01T10:00", "2026-08-01T13:30"],
+  [
+    { local: "2026-08-01T10:00", stylistId: null },
+    { local: "2026-08-01T13:30", stylistId: null },
+  ],
   "Proposal options must be normalized, validated, and deduplicated.",
 );
 assert.deepEqual(normalizeRescheduleLocalOptions("2026-08-01T10:00", clean), []);

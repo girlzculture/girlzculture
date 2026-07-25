@@ -7,7 +7,7 @@ async function GETHandler(request: Request) {
   const admin=getSupabaseAdmin();
   const {data:intent}=await admin.from("booking_checkout_intents").select("status,booking_id").eq("stripe_checkout_session_id",sessionId).maybeSingle();
   if(!intent)return Response.json({status:"Pending"});
-  const {data:booking}=intent.booking_id?await admin.from("bookings").select("confirmation_code,status,appointment_datetime").eq("id",intent.booking_id).single():{data:null};
+  const {data:booking}=intent.booking_id?await admin.from("bookings").select("public_reference,confirmation_code,status,appointment_datetime").eq("id",intent.booking_id).single():{data:null};
   return Response.json({status:intent.status,booking});
 }
 export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/booking-status", "GET"), GETHandler);

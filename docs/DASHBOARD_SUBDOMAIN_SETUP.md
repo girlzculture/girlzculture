@@ -59,3 +59,24 @@ The subdomains are routing boundaries, not authorization boundaries. Every
 protected request still requires its role-specific token, server-side role
 resolution, RLS/RBAC, and—on the admin surface—a verified company-domain
 identity and MFA. Admin pages are always sent with `noindex`.
+
+## Cross-subdomain session verification
+
+Run these checks in a founder-approved preview before enabling the production
+flag:
+
+1. In a normal browser profile, sign in as a salon owner on the dashboard host
+   and confirm `/salon` loads after refresh.
+2. Open the public host in the same profile and confirm public pages remain
+   public; the salon token must not grant admin access.
+3. In a separate browser profile or private window, sign in as a platform admin
+   on the mothership host, complete MFA, and confirm `/superadmin` loads.
+4. From the salon session, request the mothership host and confirm it returns the
+   safe role-denied/login path rather than admin data.
+5. From the admin session, request the salon host and confirm no salon is inferred
+   unless that identity also has an explicit salon-team relationship.
+6. Sign out on each host and confirm its scoped session is removed without
+   corrupting the other browser profile.
+7. Inspect browser storage and response headers to confirm tokens are not stored
+   in query strings, redirects do not leak credentials, and all three hosts use
+   HTTPS.

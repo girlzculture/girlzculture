@@ -9,6 +9,10 @@ import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
 import { getEngineNumber } from "@/lib/engineConfigServer";
 import { normalizeLocale } from "@/i18n/catalog";
 import { calculateSalonPromotion, type SalonPromotion } from "@/lib/salonPromotions";
+import {
+  completeCommerceCheckout,
+  estimateStripeCommerceTax,
+} from "@/lib/commerceCheckoutServer";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -19,6 +23,7 @@ const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(val
 async function POSTHandler(request: Request) {
   const admin = getSupabaseAdmin();
   let intentId = "";
+  let commerceIntentId = "";
   let salonPromotionRedemptionId = "";
   try {
     enforceRateLimit(request, "booking-checkout", 8, 10 * 60_000);
@@ -31,7 +36,7 @@ async function POSTHandler(request: Request) {
     const styleId = cleanText(body.style_id, 50);
     if (!salonId || !styleId) throw new Error("The salon or style selection is missing. Please return to the salon page and try again.");
 
-    const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,subscription_tier,time_zone").eq("id", salonId).single();
+    const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,subscription_tier,time_zone,stripe_account_id,address_street,address_city,address_state,address_zip").eq("id", salonId).single();
     if (salonError) throw new Error(`Unable to verify the salon: ${salonError.message}`);
     if (!salon || salon.status !== "Active" || salon.is_discoverable !== true || salon.accepting_bookings === false || !["active", "trialing"].includes(String(salon.subscription_status).toLowerCase())) throw new Error("This salon is not currently accepting marketplace bookings.");
     const { data: style, error: styleError } = await admin.from("styles").select("*,service_category:service_categories(slug)").eq("id", styleId).eq("salon_id", salonId).single();
@@ -156,6 +161,12 @@ async function POSTHandler(request: Request) {
       };
     }
     const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
+    const cancellationGraceMinutes = await getEngineNumber(
+      "booking.customer_cancellation_grace_minutes",
+      30,
+      0,
+      1440,
+    );
     const originalDeposit = Math.round(total * depositPercentage) / 100;
     const promoCode = cleanText(body.promo_code, 40);
     const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
@@ -182,6 +193,7 @@ async function POSTHandler(request: Request) {
       subtotal_before_promotion: subtotalBeforeSalonPromotion,
       deposit_amount: deposit,
       deposit_percentage: depositPercentage,
+      cancellation_grace_minutes_snapshot: cancellationGraceMinutes,
       original_deposit_amount: originalDeposit,
       discount_amount: discount,
       promo_code_id: promoPreview?.promo.id || null,
@@ -201,25 +213,210 @@ async function POSTHandler(request: Request) {
       source: "Website",
     };
 
-    const { data: reservationId, error: reservationError } = await admin.rpc("reserve_booking_checkout", {
-      p_salon_id: salonId,
-      p_style_id: styleId,
-      p_stylist_id: stylistId,
-      p_customer_id: customerId,
-      p_guest_email: guestEmail,
-      p_appointment_datetime: appointment.toISOString(),
-      p_duration_hours: durationHours,
-      p_buffer_minutes: bufferMinutes,
-      p_payload: payload,
-      p_total_amount: total,
-      p_deposit_amount: deposit,
-    });
+    const rawProductItems = Array.isArray(body.product_items)
+      ? body.product_items.slice(0, 25)
+      : [];
+    const productItems = rawProductItems
+      .map((item) => {
+        const row =
+          item && typeof item === "object"
+            ? (item as Record<string, unknown>)
+            : {};
+        return {
+          product_id: cleanText(row.product_id, 50),
+          quantity: Math.floor(Number(row.quantity || 0)),
+        };
+      })
+      .filter(
+        (item) =>
+          /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(item.product_id) &&
+          item.quantity > 0 &&
+          item.quantity <= 1000,
+      );
+    if (rawProductItems.length && !productItems.length)
+      throw new Error("The product cart is invalid.");
+    const fulfillmentMethod =
+      body.fulfillment_method === "Shipping" ? "Shipping" : "Pickup";
+    const rawShipping =
+      body.shipping_address &&
+      typeof body.shipping_address === "object" &&
+      !Array.isArray(body.shipping_address)
+        ? (body.shipping_address as Record<string, unknown>)
+        : {};
+    const shippingAddress =
+      fulfillmentMethod === "Shipping"
+        ? {
+            line1: cleanText(rawShipping.line1, 160),
+            line2: cleanText(rawShipping.line2, 160),
+            city: cleanText(rawShipping.city, 100),
+            state: cleanText(rawShipping.state, 2).toUpperCase(),
+            postal_code: cleanText(rawShipping.postal_code, 10),
+            country: "US",
+          }
+        : {};
+    if (
+      productItems.length &&
+      fulfillmentMethod === "Shipping" &&
+      (!shippingAddress.line1 ||
+        !shippingAddress.city ||
+        !/^[A-Z]{2}$/.test(shippingAddress.state) ||
+        !/^\d{5}(?:-\d{4})?$/.test(shippingAddress.postal_code))
+    )
+      throw new Error("Enter a complete US shipping address.");
+    const productPromotionId = cleanText(
+      body.product_promotion_id,
+      50,
+    );
+    if (
+      productPromotionId &&
+      !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(productPromotionId)
+    )
+      throw new Error("The selected product offer is invalid.");
+
+    let reservationId: string | null = null;
+    let reservationError: { message?: string } | null = null;
+    let commerceTotals: Record<string, unknown> | null = null;
+    if (productItems.length) {
+      await admin.rpc("expire_stale_commerce_checkouts");
+      const combined = await admin.rpc("reserve_combined_checkout", {
+        p_salon_id: salonId,
+        p_customer_id: customerId,
+        p_guest_name: guestName,
+        p_guest_email: guestEmail,
+        p_guest_phone: guestPhone,
+        p_fulfillment_method: fulfillmentMethod,
+        p_shipping_address: shippingAddress,
+        p_items: productItems,
+        p_booking: {
+          style_id: styleId,
+          stylist_id: stylistId,
+          appointment_datetime: appointment.toISOString(),
+          duration_hours: durationHours,
+          buffer_minutes: bufferMinutes,
+          payload,
+          total_amount: total,
+          deposit_amount: deposit,
+        },
+        p_product_promotion_id: productPromotionId || null,
+        p_tax_amount: 0,
+        p_idempotency_key:
+          cleanText(body.checkout_idempotency_key, 120) ||
+          crypto.randomUUID(),
+      });
+      reservationError = combined.error;
+      commerceTotals =
+        combined.data && typeof combined.data === "object"
+          ? (combined.data as Record<string, unknown>)
+          : null;
+      commerceIntentId = String(
+        commerceTotals?.commerce_intent_id || "",
+      );
+      reservationId = String(
+        commerceTotals?.booking_intent_id || "",
+      ) || null;
+      if (
+        commerceTotals?.status === "Paid" &&
+        commerceTotals.booking_id &&
+        commerceTotals.order_id
+      ) {
+        const [{ data: existingBooking }, { data: existingOrder }] =
+          await Promise.all([
+            admin
+              .from("bookings")
+              .select(
+                "id,public_reference,confirmation_code,status,appointment_datetime",
+              )
+              .eq("id", String(commerceTotals.booking_id))
+              .single(),
+            admin
+              .from("product_orders")
+              .select(
+                "public_reference,payment_status,fulfillment_status,total_amount,fulfillment_method",
+              )
+              .eq("id", String(commerceTotals.order_id))
+              .single(),
+          ]);
+        return Response.json({
+          booking: existingBooking
+            ? { ...existingBooking, product_order: existingOrder || null }
+            : null,
+          combined: true,
+          alreadyCompleted: true,
+          testMode: true,
+        });
+      }
+    } else {
+      const bookingReservation = await admin.rpc(
+        "reserve_booking_checkout",
+        {
+          p_salon_id: salonId,
+          p_style_id: styleId,
+          p_stylist_id: stylistId,
+          p_customer_id: customerId,
+          p_guest_email: guestEmail,
+          p_appointment_datetime: appointment.toISOString(),
+          p_duration_hours: durationHours,
+          p_buffer_minutes: bufferMinutes,
+          p_payload: payload,
+          p_total_amount: total,
+          p_deposit_amount: deposit,
+        },
+      );
+      reservationId = bookingReservation.data
+        ? String(bookingReservation.data)
+        : null;
+      reservationError = bookingReservation.error;
+    }
     if (reservationError || !reservationId) {
       if (/CONFLICT|exclusion/i.test(reservationError?.message || "")) {
         const next = await nextAvailableSlot({ salonId, styleId, stylistId: requestedStylistId, customerId, guestEmail, afterDate: localDate, afterTime: localTime });
         return Response.json({ error: "That time was just reserved by another customer.", next_available: next }, { status: 409 });
       }
+      if (/PRODUCT_PROMOTION/i.test(reservationError?.message || "")) {
+        return Response.json(
+          {
+            error:
+              "The selected product offer is no longer available for this cart.",
+          },
+          { status: 409 },
+        );
+      }
+      if (/COMMERCE_IDEMPOTENCY_CLOSED/i.test(reservationError?.message || "")) {
+        return Response.json(
+          { error: "That checkout attempt is closed. Please try again." },
+          { status: 409 },
+        );
+      }
       throw reservationError || new Error("The secure booking reservation could not be created.");
+    }
+    if (commerceIntentId && commerceTotals) {
+      const tax = await estimateStripeCommerceTax({
+        taxableAmount: Math.max(
+          0,
+          Number(commerceTotals.product_subtotal || 0) -
+            Number(commerceTotals.product_discount || 0),
+        ),
+        shippingAmount: Number(commerceTotals.shipping_amount || 0),
+        address:
+          fulfillmentMethod === "Shipping"
+            ? shippingAddress
+            : {
+                line1: String(salon.address_street || ""),
+                city: String(salon.address_city || ""),
+                state: String(salon.address_state || ""),
+                postal_code: String(salon.address_zip || ""),
+                country: "US",
+              },
+        reference: commerceIntentId,
+      });
+      const taxUpdate = await admin.rpc("apply_commerce_checkout_tax", {
+        p_commerce_intent_id: commerceIntentId,
+        p_tax_amount: tax.taxAmount,
+        p_stripe_tax_calculation_id: tax.calculationId || null,
+      });
+      if (taxUpdate.error || !taxUpdate.data)
+        throw taxUpdate.error || new Error("COMMERCE_TAX_UPDATE_FAILED");
+      commerceTotals = taxUpdate.data as Record<string, unknown>;
     }
     intentId = String(reservationId);
     if (salonPromotionId) {
@@ -231,7 +428,16 @@ async function POSTHandler(request: Request) {
         p_snapshot: salonPromotionSnapshot,
       });
       if (promotionReservation.error || !promotionReservation.data) {
-        await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
+        if (commerceIntentId)
+          await admin.rpc("release_combined_checkout", {
+            p_commerce_intent_id: commerceIntentId,
+            p_status: "Failed",
+          });
+        else
+          await admin
+            .from("booking_checkout_intents")
+            .update({ status: "Failed" })
+            .eq("id", intentId);
         if (/USAGE_LIMIT|CUSTOMER_LIMIT|NOT_AVAILABLE/i.test(promotionReservation.error?.message || "")) throw new Error("This offer has reached its use limit or is no longer available.");
         throw promotionReservation.error || new Error("This offer could not be reserved.");
       }
@@ -244,6 +450,16 @@ async function POSTHandler(request: Request) {
         promotion_snapshot: salonPromotionSnapshot,
       }).eq("id", intentId).eq("salon_id", salonId);
       if (promotionIntent.error) throw promotionIntent.error;
+      if (commerceIntentId) {
+        const alignedPromotion = await admin
+          .from("salon_promotion_redemptions")
+          .update({
+            expires_at: new Date(Date.now() + 35 * 60_000).toISOString(),
+          })
+          .eq("id", salonPromotionRedemptionId)
+          .eq("status", "pending");
+        if (alignedPromotion.error) throw alignedPromotion.error;
+      }
     }
 
     let promoReservation: Awaited<ReturnType<typeof reservePromoCode>> | null = null;
@@ -252,12 +468,21 @@ async function POSTHandler(request: Request) {
         promoReservation = await reservePromoCode(promoCode, "booking", { userId: customerId, salonId, bookingIntentId: intentId });
         await admin.from("booking_checkout_intents").update({ promo_code_id: promoReservation.promo_code_id }).eq("id", intentId);
       } catch (promoError) {
-        await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
+        if (commerceIntentId)
+          await admin.rpc("release_combined_checkout", {
+            p_commerce_intent_id: commerceIntentId,
+            p_status: "Failed",
+          });
+        else
+          await admin
+            .from("booking_checkout_intents")
+            .update({ status: "Failed" })
+            .eq("id", intentId);
         throw promoError;
       }
     }
 
-    if (deposit === 0) {
+    if (deposit === 0 && !commerceIntentId) {
       const { data: booking, error: bookingError } = await admin.from("bookings").insert({
         ...payload,
         stripe_payment_id: null,
@@ -269,7 +494,7 @@ async function POSTHandler(request: Request) {
         stripe_processing_fee: 0,
         net_amount_owed_salon: deposit,
         payout_status: "Not required",
-      }).select("id,confirmation_code,status,appointment_datetime").single();
+      }).select("id,public_reference,confirmation_code,status,appointment_datetime").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
       if (intentError) throw intentError;
@@ -312,32 +537,142 @@ async function POSTHandler(request: Request) {
       });
     }
 
+    const combinedCharge = commerceIntentId
+      ? Number(commerceTotals?.total_charged || 0)
+      : deposit;
+    const connectedAccount = /^acct_[A-Za-z0-9]+$/.test(
+      String(salon.stripe_account_id || ""),
+    )
+      ? String(salon.stripe_account_id)
+      : "";
+    if (commerceIntentId && combinedCharge <= 0) {
+      const completion = await completeCommerceCheckout(
+        {
+          id: `no_payment_required:${commerceIntentId}`,
+          payment_status: "no_payment_required",
+          livemode: false,
+          metadata: {
+            type: "combined_checkout",
+            commerce_intent_id: commerceIntentId,
+            booking_intent_id: intentId,
+            salon_id: salonId,
+            connected_account_id: connectedAccount,
+          },
+        },
+        request,
+      );
+      if (promoReservation?.redemption_id) {
+        const redemption = await admin.rpc("redeem_promo_code", {
+          p_redemption_id: promoReservation.redemption_id,
+          p_checkout_session_id: `no_payment_required:${commerceIntentId}`,
+        });
+        if (redemption.error) throw redemption.error;
+      }
+      const { data: booking } = completion?.bookingId
+        ? await admin
+            .from("bookings")
+            .select(
+              "id,public_reference,confirmation_code,status,appointment_datetime",
+            )
+            .eq("id", completion.bookingId)
+            .single()
+        : { data: null };
+      const { data: productOrder } = completion?.orderId
+        ? await admin
+            .from("product_orders")
+            .select(
+              "public_reference,payment_status,fulfillment_status,total_amount,fulfillment_method",
+            )
+            .eq("id", completion.orderId)
+            .single()
+        : { data: null };
+      return Response.json({
+        booking: booking
+          ? { ...booking, product_order: productOrder || null }
+          : null,
+        order_id: completion?.orderId,
+        combined: true,
+        noPaymentRequired: true,
+        testMode: true,
+      });
+    }
+
     const session = await stripeRequest<{ id: string; url: string }>("/checkout/sessions", {
       mode: "payment",
+      expires_at: Math.floor(Date.now() / 1000) + 35 * 60,
       "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][unit_amount]": Math.round(originalDeposit * 100),
-      "line_items[0][price_data][product_data][name]": `${salon.name} reservation deposit`,
+      "line_items[0][price_data][unit_amount]": Math.round(
+        (commerceIntentId ? combinedCharge : originalDeposit) * 100,
+      ),
+      "line_items[0][price_data][product_data][name]": commerceIntentId
+        ? `${salon.name} products and appointment deposit`
+        : `${salon.name} reservation deposit`,
       "line_items[0][quantity]": 1,
       customer_email: guestEmail,
-      success_url: `${siteUrl(request)}/salon/${salon.slug}/book?booking_session={CHECKOUT_SESSION_ID}`,
+      success_url: commerceIntentId
+        ? `${siteUrl(request)}/salon/${salon.slug}/book?commerce_session={CHECKOUT_SESSION_ID}`
+        : `${siteUrl(request)}/salon/${salon.slug}/book?booking_session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl(request)}/salon/${salon.slug}/book?payment=cancelled`,
       "metadata[booking_intent_id]": intentId,
-      "metadata[type]": "booking_deposit",
+      "metadata[commerce_intent_id]": commerceIntentId,
+      "metadata[type]": commerceIntentId
+        ? "combined_checkout"
+        : "booking_deposit",
       "metadata[salon_id]": salonId,
+      "metadata[connected_account_id]": connectedAccount,
       "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
       "metadata[promo_code]": promoReservation?.code || "",
       "metadata[salon_promotion_redemption_id]": salonPromotionRedemptionId,
-      "payment_intent_data[description]": `${depositPercentage}% reservation deposit for ${style.name}`,
-      allow_promotion_codes: !promoReservation,
-      ...(promoReservation?.stripe_coupon_id ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id } : {}),
+      "payment_intent_data[description]": commerceIntentId
+        ? `Products and ${depositPercentage}% reservation deposit for ${style.name}`
+        : `${depositPercentage}% reservation deposit for ${style.name}`,
+      allow_promotion_codes: commerceIntentId ? false : !promoReservation,
+      ...(!commerceIntentId && promoReservation?.stripe_coupon_id
+        ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id }
+        : {}),
+      ...(connectedAccount
+        ? {
+            "payment_intent_data[transfer_data][destination]":
+              connectedAccount,
+          }
+        : {}),
     });
     if (!session?.id || !session?.url) throw new Error("Stripe did not return a checkout session. No payment was taken.");
     const { error: sessionError } = await admin.from("booking_checkout_intents").update({ stripe_checkout_session_id: session.id }).eq("id", intentId);
     if (sessionError) throw sessionError;
+    if (commerceIntentId) {
+      const commerceSession = await admin
+        .from("commerce_checkout_intents")
+        .update({ stripe_checkout_session_id: session.id })
+        .eq("id", commerceIntentId)
+        .eq("status", "Pending");
+      if (commerceSession.error) throw commerceSession.error;
+    }
     if (promoReservation?.redemption_id) await admin.from("promo_code_redemptions").update({ stripe_checkout_session_id: session.id }).eq("id", promoReservation.redemption_id);
-    return Response.json({ url: session.url, deposit, originalDeposit, discount, salonPromotionDiscount, total, testMode: true });
+    return Response.json({
+      url: session.url,
+      deposit,
+      originalDeposit,
+      discount,
+      salonPromotionDiscount,
+      total,
+      productTotal: commerceIntentId
+        ? Number(commerceTotals?.product_total || 0)
+        : 0,
+      combined: Boolean(commerceIntentId),
+      testMode: true,
+    });
   } catch (error) {
-    if (intentId) await admin.from("booking_checkout_intents").update({ status: "Failed" }).eq("id", intentId);
+    if (commerceIntentId)
+      await admin.rpc("release_combined_checkout", {
+        p_commerce_intent_id: commerceIntentId,
+        p_status: "Failed",
+      });
+    else if (intentId)
+      await admin
+        .from("booking_checkout_intents")
+        .update({ status: "Failed" })
+        .eq("id", intentId);
     if (salonPromotionRedemptionId) await admin.rpc("cancel_salon_promotion_reservation", { p_redemption_id: salonPromotionRedemptionId });
     noteOperationalFailure("Booking checkout failed", error);
     return errorResponse(error, "Unable to start secure checkout.");

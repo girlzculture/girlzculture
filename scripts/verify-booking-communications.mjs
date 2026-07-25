@@ -44,7 +44,7 @@ const input = {
   directionsUrl: "https://maps.example/directions",
   receiptUrl: "https://pay.stripe.com/receipts/test",
   policy: "Use the secure link for cancellation or rescheduling.",
-  intro: "Your appointment is secured.",
+  intro: "Your confirmed appointment details are below.",
   footer: "Contact support if you did not make this booking.",
 };
 
@@ -56,13 +56,13 @@ const cancellation = renderBookingCancellation({
   cancelledBy: "Salon owner",
   reason: "Stylist unavailable",
   refundStatus: "$27.00 refunded in full",
-  nextAction: "No further action is required.",
+  customerMessage: "We are sorry for the schedule change.",
   browseUrl: "https://girlzculture.com/salons",
+  supportUrl: "https://girlzculture.com/contact",
 });
 
 for (const required of [
   "GC-AB12",
-  "bkg_123",
   "The Braid Lounge",
   "123 Beauty Lane, Atlanta, GA 30303",
   "Knotless Braids",
@@ -86,6 +86,7 @@ for (const required of [
 ]) {
   assert.match(customer, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
+assert.doesNotMatch(customer, /bkg_123/);
 assert.doesNotMatch(salon, /Janel <Smith>/);
 assert.match(salon, /Janel &lt;Smith&gt;/);
 for (const required of [
@@ -98,18 +99,19 @@ for (const required of [
   assert.match(salon, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 for (const required of [
-  "Booking cancellation details",
+  "Appointment cancelled",
   "Original appointment",
   "Salon owner",
   "Stylist unavailable",
   "$27.00 refunded in full",
-  "No further action is required.",
+  "We are sorry for the schedule change.",
   "Find another salon",
+  "Support",
 ]) {
   assert.match(cancellation, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 assert.ok(
-  cancellation.indexOf("Deposit / refund status") <
+  cancellation.indexOf("Refund status") <
     cancellation.indexOf("Find another salon"),
   "The complete cancellation breakdown must precede the browse action.",
 );

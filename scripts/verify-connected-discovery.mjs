@@ -25,9 +25,10 @@ assert.match(nearby, /No salons are nearby yet/);
 assert.doesNotMatch(nearby, /fake|placeholder salon/i);
 
 const cards = read("src/components/public/MarketplaceSalonCard.tsx");
-assert.match(cards, /customerLocation\.location/);
+assert.match(cards, /const profileHref = `\/salon\/\$\{salon\.slug\}`/);
+assert.doesNotMatch(cards, /profileHref[\s\S]{0,120}(?:latitude|longitude|location=)/);
 assert.match(cards, /bookHref/);
-assert.match(cards, /context\.set\("style"/);
+assert.match(cards, /bookingQuery\.set\("style"/);
 
 const booking = read("src/app/salon/[slug]/book/page.tsx");
 assert.match(booking, /Booking unavailable/);

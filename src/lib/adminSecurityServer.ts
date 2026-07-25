@@ -31,7 +31,7 @@ export async function assertAuthorizedAdminUser(admin: SupabaseClient, user: Use
   if (!user.email_confirmed_at) throw new Error(ADMIN_LOGIN_ERROR);
   const { data: record, error } = await admin
     .from("admin_users")
-    .select("id,user_id,email,role,status,permissions,is_super_admin,activated_at")
+    .select("id,user_id,email,role,status,permissions,is_super_admin,activated_at,time_zone")
     .eq("user_id", user.id)
     .in("status", ["Invited", "Active"])
     .limit(1)

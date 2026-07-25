@@ -4,6 +4,7 @@ import {
   withOperationalMonitoring,
 } from "@/lib/operationalMonitoring";
 import { createCustomerApprovedReschedule } from "@/lib/bookingRescheduleServer";
+import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import {
   enforceRateLimit,
   publicErrorResponse,
@@ -39,7 +40,28 @@ async function GETHandler(
 ) {
   try {
     const { id } = await route.params;
-    const { admin, booking } = await contextFor(request, id);
+    const { admin, booking, salon } = await contextFor(request, id);
+    const date = new URL(request.url).searchParams.get("date");
+    if (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new RescheduleInputError("Choose a valid date.");
+      }
+      const availability = await bookingAvailability({
+        salonId: String(booking.salon_id),
+        styleId: String(booking.style_id),
+        customerId: booking.customer_id ? String(booking.customer_id) : null,
+        guestEmail: String(booking.guest_email || ""),
+        date,
+        excludeBookingId: String(booking.id),
+        includeAllStylists: true,
+      });
+      return Response.json({
+        date,
+        time_zone: salon.time_zone,
+        slots: availability.slots,
+        reason: availability.reason,
+      });
+    }
     const { data: proposals, error } = await admin
       .from("booking_reschedule_proposals")
       .select(
@@ -54,7 +76,7 @@ async function GETHandler(
       ? await admin
           .from("booking_reschedule_options")
           .select(
-            "id,proposal_id,appointment_datetime,duration_hours,is_selected",
+            "id,proposal_id,appointment_datetime,duration_hours,stylist_id,is_selected,stylist:stylists(name)",
           )
           .in("proposal_id", ids)
           .order("appointment_datetime")

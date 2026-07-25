@@ -12,9 +12,15 @@ import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
 import { calculateSalonPromotion, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
+import { bookingReference } from "@/lib/bookingReference";
+import {
+  clearProductCart,
+  readProductCart,
+  type ProductCart,
+} from "@/lib/productCart";
 
 type Row = Record<string, any>;
-type Props = { salon: Row; styles: Row[]; stylists: Row[];depositPercentage:number;maximumAdvanceDays:number;clientNotesMaxLength:number };
+type Props = { salon: Row; styles: Row[]; stylists: Row[];depositPercentage:number;maximumAdvanceDays:number;clientNotesMaxLength:number;cancellationGraceMinutes:number };
 type Slot = { value: string; label: string; stylistId: string | null };
 type SuggestedSlot = Slot & { date: string; timeZone?: string };
 type ServiceOption = { value: string; label: string; price_add: number; duration_add_minutes: number };
@@ -45,7 +51,7 @@ function serviceOptionGroups(raw: unknown): ServiceOptionGroup[] {
 const money = (value: number) => `$${value.toFixed(2)}`;
 function localDateOffset(days:number){const date=new Date();date.setDate(date.getDate()+days);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`}
 
-export default function SalonBookingWizard({ salon, styles, stylists,depositPercentage,maximumAdvanceDays,clientNotesMaxLength }: Props) {
+export default function SalonBookingWizard({ salon, styles, stylists,depositPercentage,maximumAdvanceDays,clientNotesMaxLength,cancellationGraceMinutes }: Props) {
   const { locale } = useI18n();
   const closedToday = isSalonClosedToday(salon);
   const searchParams = useSearchParams();
@@ -77,6 +83,10 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityReason, setAvailabilityReason] = useState("");
   const [suggested, setSuggested] = useState<SuggestedSlot | null>(null);
+  const [productCart, setProductCart] = useState<ProductCart | null>(null);
+  const [checkoutIdempotencyKey, setCheckoutIdempotencyKey] = useState(() =>
+    typeof crypto !== "undefined" ? crypto.randomUUID() : String(Date.now()),
+  );
 
   const style = styles.find((row) => row.id === styleId) || styles[0];
   const sizeOptions = options(style?.size_options);
@@ -107,6 +117,12 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     setAddons([]);
     setSelectedOptions({});
   }, [styleId]);
+
+  useEffect(() => {
+    if (searchParams.get("with_products") !== "1") return;
+    const cart = readProductCart();
+    setProductCart(cart?.salonId === String(salon.id) ? cart : null);
+  }, [salon.id, searchParams]);
 
   useEffect(() => {
     if (!requestedPromotion || !salon.id) { setSalonPromotion(null); return; }
@@ -148,16 +164,36 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   }, [date, salon.id, style?.id, stylistId]);
 
   useEffect(() => {
-    const sessionId = searchParams.get("booking_session");
+    const commerceSessionId = searchParams.get("commerce_session");
+    const sessionId =
+      commerceSessionId || searchParams.get("booking_session");
     if (!sessionId) return;
     let cancelled = false;
     setSaving(true);
     setStep(5);
     const poll = async (attempt = 0): Promise<void> => {
-      const response = await fetch(`/api/stripe/booking-status?session_id=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
+      const response = await fetch(
+        `${commerceSessionId ? "/api/stripe/commerce-status" : "/api/stripe/booking-status"}?session_id=${encodeURIComponent(sessionId)}`,
+        { cache: "no-store" },
+      );
       const body = await response.json();
+      if (!response.ok)
+        throw new Error(
+          body.error || "The checkout status is unavailable.",
+        );
       if (cancelled) return;
-      if (body.status === "Paid" && body.booking) { setConfirmed(body.booking); setSaving(false); return; }
+      if (body.status === "Paid" && body.booking) {
+        setConfirmed({
+          ...body.booking,
+          product_order: body.order || null,
+        });
+        if (commerceSessionId) {
+          clearProductCart();
+          setProductCart(null);
+        }
+        setSaving(false);
+        return;
+      }
       if (attempt < 8) { window.setTimeout(() => void poll(attempt + 1), 1200); return; }
       setMessage("Payment was received and your booking is still being finalized. Refresh this page in a moment.");
       setSaving(false);
@@ -219,15 +255,34 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
           guest_phone: guest.phone,
           locale,
           website: "",
+          product_items:
+            productCart?.items.map((item) => ({
+              product_id: item.productId,
+              quantity: item.quantity,
+            })) || [],
+          fulfillment_method:
+            productCart?.fulfillmentMethod || "Pickup",
+          shipping_address: productCart?.shippingAddress || {},
+          product_promotion_id: productCart?.promotionId || null,
+          checkout_idempotency_key: checkoutIdempotencyKey,
         }),
       });
       const body = await response.json();
       if (!response.ok) {
+        setCheckoutIdempotencyKey(
+          typeof crypto !== "undefined"
+            ? crypto.randomUUID()
+            : `${Date.now()}`,
+        );
         if (body.next_available) setSuggested(body.next_available as SuggestedSlot);
         throw new Error(body.error || "Unable to start checkout.");
       }
       if (body?.booking) {
         setConfirmed(body.booking);
+        if (productCart?.items.length) {
+          clearProductCart();
+          setProductCart(null);
+        }
         setStep(5);
         setSaving(false);
         return;
@@ -244,7 +299,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion }} />,
     <StylistPanel key="stylist" stylists={stylists} value={stylistId} setValue={setStylistId} />,
     <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested, fieldErrors, setFieldErrors, minimumBookingDate, maximumBookingDate }} />,
-    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} /><PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
+    <div key="review"><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, cancellationGraceMinutes, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} />{productCart?.items.length ? <CombinedProductSummary cart={productCart} /> : null}<PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];
 
@@ -252,6 +307,65 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
 }
 
 function PanelTitle({ n, title }: { n: number; title: string }) { return <h2 className="mb-4 flex items-center gap-2 font-serif text-lg font-semibold text-plum"><span className="grid h-6 w-6 place-items-center rounded-full bg-plum text-xs text-white">{n}</span>{title}</h2>; }
+function CombinedProductSummary({ cart }: { cart: ProductCart }) {
+  const subtotal = cart.items.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0,
+  );
+  const shippingIncomplete =
+    cart.fulfillmentMethod === "Shipping" &&
+    (!cart.shippingAddress?.line1 ||
+      !cart.shippingAddress?.city ||
+      !cart.shippingAddress?.state ||
+      !cart.shippingAddress?.postal_code);
+  return (
+    <div className="mt-4 rounded-[10px] border border-magenta/20 bg-blush/35 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <b className="text-xs text-plum">Products in this checkout</b>
+        <Link
+          href={`/salon/${cart.salonSlug}/checkout`}
+          className="text-[10px] font-bold text-magenta"
+        >
+          Edit cart
+        </Link>
+      </div>
+      <div className="mt-2 space-y-1">
+        {cart.items.map((item) => (
+          <p
+            key={item.productId}
+            className="flex justify-between gap-3 text-[10px] text-ink/65"
+          >
+            <span>
+              {item.quantity} × {item.name}
+            </span>
+            <span>{money(item.unitPrice * item.quantity)}</span>
+          </p>
+        ))}
+      </div>
+      <p className="mt-2 flex justify-between border-t border-plum/10 pt-2 text-[11px] font-bold">
+        <span>
+          Estimated product subtotal · {cart.fulfillmentMethod || "Pickup"}
+        </span>
+        <span>{money(subtotal)}</span>
+      </p>
+      {cart.promotionId ? (
+        <p className="mt-2 flex justify-between text-[10px] text-magenta">
+          <span>{cart.promotionLabel || "Product offer"}</span>
+          <b>Verified before payment</b>
+        </p>
+      ) : null}
+      {shippingIncomplete ? (
+        <p className="mt-2 text-[10px] font-semibold text-red-700">
+          Add a complete shipping address in your product cart before paying.
+        </p>
+      ) : null}
+      <p className="mt-2 text-[9px] leading-4 text-ink/50">
+        Product inventory, price, promotion, tax, shipping, and the final
+        total are verified with the appointment in one atomic reservation.
+      </p>
+    </div>
+  );
+}
 function StylePanel(props: Row) {
   const uploadedPhoto = props.style?.photos?.[0];
   const groups = props.genericOptionGroups as ServiceOptionGroup[];
@@ -297,7 +411,7 @@ function ReviewPanel(props: Row) {
     <div><input required value={props.guest.name} onChange={(event) => {props.setGuest((current: Row) => ({ ...current, name: event.target.value }));clear("name");}} placeholder="Full Name" className={`w-full rounded-lg border p-2 ${props.fieldErrors.name?"border-red-500":""}`} />{props.fieldErrors.name?<p className="mt-1 text-xs font-semibold text-red-700">{props.fieldErrors.name}</p>:null}</div>
     <div><input required type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={props.guest.email} onChange={(event) => {props.setGuest((current: Row) => ({ ...current, email: event.target.value }));clear("email");}} placeholder="name@example.com" className={`w-full rounded-lg border p-2 ${props.fieldErrors.email?"border-red-500":""}`} />{props.fieldErrors.email?<p className="mt-1 text-xs font-semibold text-red-700">{props.fieldErrors.email}</p>:null}</div>
     <div><input required type="tel" inputMode="tel" pattern={US_PHONE_PATTERN} title="A mobile number is required for instant booking and cancellation alerts" value={props.guest.phone} onChange={(event) => {props.setGuest((current: Row) => ({ ...current, phone: formatUsPhoneInput(event.target.value) }));clear("phone");}} placeholder="+1 (555) 123-4567" className={`w-full rounded-lg border p-2 ${props.fieldErrors.phone?"border-red-500":""}`} />{props.fieldErrors.phone?<p className="mt-1 text-xs font-semibold text-red-700">{props.fieldErrors.phone}</p>:null}<p className="mt-1 text-[9px] text-ink/50">Required for immediate appointment alerts by SMS.</p></div>
-    <div><label className={`flex gap-2 rounded-lg bg-blush/30 p-2 ${props.fieldErrors.consent?"ring-1 ring-red-500":""}`}><input required type="checkbox" checked={props.consent} onChange={(event) => {props.setConsent(event.target.checked);clear("consent");}} /><span>{Number(props.deposit) > 0 ? "I understand the deposit is a non-refundable reservation fee credited toward my total." : "I confirm the appointment details and agree to the booking terms."}</span></label>{props.fieldErrors.consent?<p className="mt-1 text-xs font-semibold text-red-700">{props.fieldErrors.consent}</p>:null}</div>
+    <div><label className={`flex gap-2 rounded-lg bg-blush/30 p-2 ${props.fieldErrors.consent?"ring-1 ring-red-500":""}`}><input required type="checkbox" checked={props.consent} onChange={(event) => {props.setConsent(event.target.checked);clear("consent");}} /><span>{Number(props.deposit) > 0 ? `I understand the reservation deposit is credited toward my total. Eligible customer cancellations within ${Number(props.cancellationGraceMinutes)} minutes of payment may receive a refund; other cancellations follow the published policy and any legally required exceptions.` : "I confirm the appointment details and agree to the booking terms."}</span></label>{props.fieldErrors.consent?<p className="mt-1 text-xs font-semibold text-red-700">{props.fieldErrors.consent}</p>:null}</div>
   </div>;
 }
-function PaymentPanel({ confirmed, deposit, saving, reserve, suggested, applySuggested }: Row) { const requiresPayment=Number(deposit)>0; return confirmed ? <div className="rounded-[12px] bg-blush/30 p-5 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-magenta text-white"><Check size={36} /></span><h3 className="mt-4 font-serif text-2xl text-plum">You’re All Set!</h3><p className="mt-2 text-xs">Your appointment is confirmed.</p><div className="mt-4 rounded-lg bg-white p-3"><small>Confirmation Code</small><b className="block text-lg text-plum">{confirmed.confirmation_code}</b></div><Link href="/account" className="mt-4 block text-xs font-bold text-magenta">Go to My Bookings</Link></div> : <div><p className="text-xs font-semibold">{requiresPayment?"Secure Checkout":"Confirm Your Booking"}</p>{requiresPayment?<div className="my-4 flex gap-2 text-[10px]"><span className="rounded border p-2">VISA</span><span className="rounded border p-2">MC</span><span className="rounded border p-2">AMEX</span></div>:<p className="my-4 rounded-lg bg-green-50 p-3 text-xs text-green-800">No payment is required for this booking. Confirming will reserve your appointment immediately.</p>}<p className="rounded-lg bg-blush/30 p-4 text-center"><small>Deposit Amount</small><b className="block text-2xl text-magenta">{money(Number(deposit))}</b></p>{suggested ? <button onClick={() => applySuggested(suggested)} className="mt-4 w-full rounded-lg border border-magenta py-3 text-xs font-bold text-magenta">Use next available: {suggested.date} at {suggested.label}</button> : null}<button onClick={reserve} disabled={saving} className="mt-4 w-full rounded-lg bg-magenta py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Reserving…" : requiresPayment?`Pay ${money(Number(deposit))} Deposit`:"Confirm Booking — No Deposit"}</button><p className="mt-3 flex items-center justify-center gap-1 text-[9px] text-ink/50"><LockKeyhole size={11} />{requiresPayment?"Your payment is encrypted and secure.":"Your appointment is protected by our booking safeguards."}</p></div>; }
+function PaymentPanel({ confirmed, deposit, saving, reserve, suggested, applySuggested }: Row) { const requiresPayment=Number(deposit)>0; return confirmed ? <div className="rounded-[12px] bg-blush/30 p-5 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-magenta text-white"><Check size={36} /></span><h3 className="mt-4 font-serif text-2xl text-plum">You’re All Set!</h3><p className="mt-2 text-xs">Your appointment{confirmed.product_order ? " and product order are" : " is"} confirmed.</p><div className="mt-4 rounded-lg bg-white p-3"><small>Booking Reference</small><b className="block text-lg text-plum">{bookingReference(confirmed)}</b>{confirmed.product_order?.public_reference ? <><small className="mt-2 block">Product Order</small><b className="block text-base text-magenta">{String(confirmed.product_order.public_reference)}</b></> : null}</div><Link href="/account" className="mt-4 block text-xs font-bold text-magenta">Go to My Bookings</Link></div> : <div><p className="text-xs font-semibold">{requiresPayment?"Secure Checkout":"Confirm Your Booking"}</p>{requiresPayment?<div className="my-4 flex gap-2 text-[10px]"><span className="rounded border p-2">VISA</span><span className="rounded border p-2">MC</span><span className="rounded border p-2">AMEX</span></div>:<p className="my-4 rounded-lg bg-green-50 p-3 text-xs text-green-800">No payment is required for this booking. Confirming will reserve your appointment immediately.</p>}<p className="rounded-lg bg-blush/30 p-4 text-center"><small>Deposit Amount</small><b className="block text-2xl text-magenta">{money(Number(deposit))}</b></p>{suggested ? <button onClick={() => applySuggested(suggested)} className="mt-4 w-full rounded-lg border border-magenta py-3 text-xs font-bold text-magenta">Use next available: {suggested.date} at {suggested.label}</button> : null}<button onClick={reserve} disabled={saving} className="mt-4 w-full rounded-lg bg-magenta py-3 text-xs font-bold text-white disabled:opacity-60">{saving ? "Reserving…" : requiresPayment?`Pay ${money(Number(deposit))} Deposit`:"Confirm Booking — No Deposit"}</button><p className="mt-3 flex items-center justify-center gap-1 text-[9px] text-ink/50"><LockKeyhole size={11} />{requiresPayment?"Your payment is encrypted and secure.":"Your appointment is protected by our booking safeguards."}</p></div>; }

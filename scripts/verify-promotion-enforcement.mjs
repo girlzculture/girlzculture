@@ -96,14 +96,24 @@ const checkout = fs.readFileSync(
   "src/app/api/stripe/booking-checkout/route.ts",
   "utf8",
 );
+const bookingReservationPosition = checkout.search(
+  /admin\.rpc\(\s*"reserve_booking_checkout"/,
+);
+const salonPromotionReservationPosition = checkout.search(
+  /admin\.rpc\(\s*"reserve_salon_promotion"/,
+);
+assert.ok(bookingReservationPosition >= 0, "Booking reservation call is missing.");
+assert.ok(
+  salonPromotionReservationPosition >= 0,
+  "Salon promotion reservation call is missing.",
+);
 assert.ok(
   checkout.indexOf("calculateSalonPromotion(") <
-    checkout.indexOf('admin.rpc("reserve_booking_checkout"'),
+    bookingReservationPosition,
   "Server-authoritative promotion math must run before the booking hold.",
 );
 assert.ok(
-  checkout.indexOf('admin.rpc("reserve_booking_checkout"') <
-    checkout.indexOf('admin.rpc("reserve_salon_promotion"'),
+  bookingReservationPosition < salonPromotionReservationPosition,
   "A promotion use is attached to a real booking intent.",
 );
 for (const control of [

@@ -42,7 +42,7 @@ export default function OwnerDashboardShell({ children, section, salonName, salo
       <RoleLogoutButton scope="salon" className="mt-5 flex w-full items-center gap-3 rounded-[9px] px-3 py-3 text-sm text-white/85 hover:bg-white/10" />
     </aside>
     <div className="min-w-0 lg:col-start-2">
-      <header className="sticky top-0 z-40 flex h-[74px] items-center justify-between border-b border-plum/10 bg-[#fffdfa]/95 px-4 backdrop-blur lg:px-8">
+      <header className="gc-brand-header sticky top-0 z-40 flex h-[74px] items-center justify-between border-b border-plum/10 px-4 backdrop-blur lg:px-8">
         <details className="relative lg:hidden"><summary aria-label="Open owner navigation" className="flex h-11 w-11 cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"><Menu size={24}/></summary><nav className="absolute left-0 top-12 w-72 rounded-[14px] border border-plum/10 bg-white p-2 shadow-2xl">{visibleNav.map(([id,label,Icon])=><Link key={id} href={hrefFor(id)} className={`flex items-center gap-3 rounded-[9px] px-3 py-3 text-sm ${section===id?"bg-blush text-magenta":""}`}><Icon size={18}/>{label}</Link>)}</nav></details>
         <Link href={homeHref} className="font-serif text-[27px] font-bold text-plum lg:block">Girlz<span className="ml-1 text-[9px] uppercase tracking-[0.22em] text-amber">Culture</span></Link>
         <LanguageSelector compact className="ml-auto mr-2 sm:mr-4" />

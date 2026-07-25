@@ -25,7 +25,7 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
   const [style, setStyle] = useState(initialStyle);
   const [locationText, setLocationText] = useState(initialOrigin ? "" : initialLocation);
   const [manualLocation, setManualLocation] = useState<CustomerLocation | null>(initialOrigin ? { ...initialOrigin, label: initialLocation || "Selected location", source: "explicit" } : null);
-  const [editingLocation, setEditingLocation] = useState(Boolean(initialLocation && !initialOrigin));
+  const [, setEditingLocation] = useState(Boolean(initialLocation && !initialOrigin));
   const [view, setView] = useState<"list" | "map">("list");
   const [radius, setRadius] = useState(DEFAULT_NEARBY_RADIUS_MILES);
   const [rating, setRating] = useState(0);
@@ -44,15 +44,9 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
   const requestSequence = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
 
-  const resolvedLocation = manualLocation || (!editingLocation ? customerLocation.location : null);
+  const resolvedLocation = manualLocation || customerLocation.location;
   const displayedLocation = locationText;
   const origin = useMemo(() => resolvedLocation && validCoordinates(resolvedLocation) ? { lat: resolvedLocation.lat, lng: resolvedLocation.lng } : null, [resolvedLocation]);
-  const contextQuery = useMemo(() => {
-    if (!origin) return "";
-    const query = new URLSearchParams({ location: resolvedLocation?.label || displayedLocation, lat: String(origin.lat), lng: String(origin.lng) });
-    if (style) query.set("style", style);
-    return query.toString();
-  }, [displayedLocation, origin, resolvedLocation?.label, style]);
   const priceRange = useMemo(() => ({
     any: [null, null], under_100: [null, 100], under_150: [null, 150], 150_250: [150, 250], over_250: [250, null],
   } as Record<string, [number | null, number | null]>)[price] || [null, null], [price]);
@@ -103,15 +97,12 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
     if (!origin) return;
     const params = new URLSearchParams();
     if (style) params.set("style", style);
-    params.set("location", resolvedLocation?.label || displayedLocation);
-    params.set("lat", String(origin.lat));
-    params.set("lng", String(origin.lng));
     if (radius !== DEFAULT_NEARBY_RADIUS_MILES) params.set("radius", String(radius));
     if (rating) params.set("rating", String(rating));
     if (price !== "any") params.set("price", price);
     if (sort !== "distance") params.set("sort", sort);
     window.history.replaceState(null, "", `/salons?${params}`);
-  }, [displayedLocation, origin, price, radius, rating, resolvedLocation?.label, sort, style]);
+  }, [origin, price, radius, rating, sort, style]);
 
   useEffect(() => {
     if (!availabilityDate) {
@@ -151,7 +142,7 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
   const visibleSalons = availabilityDate ? salons.filter((salon) => availability[salon.id]) : salons;
 
   return <>
-    <form onSubmit={submit} className="relative z-20 rounded-[14px] border border-plum/10 bg-white/95 p-2 shadow-[0_8px_24px_rgba(26,18,32,.08)] md:max-w-[1120px] md:p-3"><div className="grid gap-2 md:grid-cols-[1.2fr_.9fr_auto]"><StyleAutocomplete value={style} onChange={setStyle} onLocation={resolveLocation} contextQuery={contextQuery} placeholder="Describe the service you want" className="rounded-[9px] border border-plum/10 px-3"/><div><LocationAutocomplete name="location_query" value={displayedLocation} onChange={(value)=>{setEditingLocation(true);setLocationText(value);setManualLocation(null);customerLocation.clearLocation();}} onResolved={resolveLocation} placeholder={resolvedLocation?.source === "device" ? "Current location" : resolvedLocation ? "Choose a different location" : "City, neighborhood, or ZIP"} className="rounded-[9px] border border-plum/10 px-3"/><button type="button" onClick={()=>void requestDeviceLocation()} className="mt-1 inline-flex min-h-9 items-center gap-1.5 px-2 text-[11px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-magenta"><LocateFixed size={14}/>Use my location</button>{customerLocation.permissionError?<p role="alert" className="px-2 text-[11px] text-red-700">{customerLocation.permissionError}</p>:null}</div><button className="min-h-11 rounded-[9px] bg-magenta px-8 text-sm font-bold text-white">Search</button></div></form>
+    <form onSubmit={submit} className="relative z-[70] overflow-visible rounded-[14px] border border-plum/10 bg-white/95 p-2 shadow-[0_8px_24px_rgba(26,18,32,.08)] md:max-w-[1120px] md:p-3"><div className="grid gap-2 md:grid-cols-[1.2fr_.9fr_auto] md:items-start"><label className="block min-w-0"><span className="mb-1 block text-[10px] font-bold text-ink">What service are you looking for?</span><StyleAutocomplete value={style} onChange={setStyle} onLocation={resolveLocation} placeholder="Describe the service you want" className="rounded-[9px] border border-plum/10 px-3"/></label><div><span className="mb-1 block text-[10px] font-bold text-ink">Where?</span><LocationAutocomplete name="location_query" value={displayedLocation} onChange={(value)=>{setEditingLocation(true);setLocationText(value);setManualLocation(null);}} onResolved={resolveLocation} placeholder={resolvedLocation?.source === "device" ? "Current location" : resolvedLocation ? "Choose a different location" : "City, neighborhood, or ZIP"} className="rounded-[9px] border border-plum/10 px-3"/><button type="button" onClick={()=>void requestDeviceLocation()} className="mt-1 inline-flex min-h-9 items-center gap-1.5 px-2 text-[11px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-magenta"><LocateFixed size={14}/>Use my location</button>{customerLocation.permissionError?<p role="alert" className="px-2 text-[11px] text-red-700">{customerLocation.permissionError}</p>:null}</div><button className="mt-[18px] min-h-11 rounded-[9px] bg-magenta px-8 text-sm font-bold text-white">Search</button></div></form>
 
     {!origin?<LocationPrompt onUseDevice={requestDeviceLocation}/>:<>
       <div className="mt-3 flex flex-wrap items-center gap-2"><Select label="Distance" value={String(radius)} onChange={(value)=>setRadius(Number(value))} options={[["5","5 miles"],["10","10 miles"],["25","25 miles"],["50","50 miles"],["100","100 miles"]]}/><Select label="Rating" value={String(rating)} onChange={(value)=>setRating(Number(value))} options={[["0","Any rating"],["4","4.0+"],["4.5","4.5+"],["4.8","4.8+"]]}/><Select label="Price" value={price} onChange={setPrice} options={[["any","Any price"],["under_100","Under $100"],["under_150","Under $150"],["150_250","$150–$250"],["over_250","$250+"]]}/><Select label="Sort" value={sort} onChange={setSort} options={[["distance","Nearest"],["rating","Highest rated"],["price_low","Lowest price"],["price_high","Highest price"]]}/><label className="inline-flex min-h-11 items-center gap-2 rounded-[9px] border border-plum/15 bg-white px-3 text-[11px] font-semibold"><CalendarDays size={15}/><span className="sr-only">Availability date</span><input aria-label="Availability date" type="date" value={availabilityDate} min={new Date().toISOString().slice(0,10)} onChange={(event)=>setAvailabilityDate(event.target.value)} className="bg-transparent outline-none"/></label><button type="button" onClick={clearFilters} className="inline-flex min-h-11 items-center gap-1.5 px-2 text-[11px] font-bold text-magenta"><RotateCcw size={14}/>Clear filters</button></div>

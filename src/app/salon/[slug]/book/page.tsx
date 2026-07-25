@@ -112,7 +112,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
   const styles = (stylesResult.data || []) as StyleRecord[];
   const stylists = ((stylistsResult.data || []) as StylistRecord[])
     .filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
-  const [depositPercentage,maximumAdvanceDays,clientNotesMaxLength]=await Promise.all([getEngineNumber("booking.deposit_percentage",10,0,100),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000)]);
+  const [depositPercentage,maximumAdvanceDays,clientNotesMaxLength,cancellationGraceMinutes]=await Promise.all([getEngineNumber("booking.deposit_percentage",10,0,100),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000),getEngineNumber("booking.customer_cancellation_grace_minutes",30,0,1440)]);
 
-  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} depositPercentage={depositPercentage} maximumAdvanceDays={maximumAdvanceDays} clientNotesMaxLength={clientNotesMaxLength}/></Suspense>;
+  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} depositPercentage={depositPercentage} maximumAdvanceDays={maximumAdvanceDays} clientNotesMaxLength={clientNotesMaxLength} cancellationGraceMinutes={cancellationGraceMinutes}/></Suspense>;
 }

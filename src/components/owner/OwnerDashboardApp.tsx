@@ -65,6 +65,8 @@ import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
+import { bookingReference } from "@/lib/bookingReference";
+import SalonProductOrders from "@/components/owner/SalonProductOrders";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -151,15 +153,24 @@ export default function OwnerDashboardApp({
   > | null>(null);
   const [isTeamMember, setIsTeamMember] = useState(false);
   const [cancellationReasons, setCancellationReasons] = useState([
-    "Customer requested",
-    "Fully booked",
-    "Walk-in took the slot",
+    "Customer requested cancellation",
     "Stylist unavailable",
-    "Salon closed",
+    "Salon closure",
     "Scheduling conflict",
+    "Service issue",
     "Payment issue",
     "Other",
   ]);
+  const [customerCancellationReasons, setCustomerCancellationReasons] =
+    useState([
+      "Appointment availability changed",
+      "Stylist is unavailable",
+      "Salon closure or schedule change",
+      "Service cannot be completed as scheduled",
+      "Customer requested cancellation",
+      "Payment could not be completed",
+      "Other scheduling issue",
+    ]);
   const [cancellationThreshold, setCancellationThreshold] = useState(10);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedStylist, setSelectedStylist] = useState<string | null>(null);
@@ -231,12 +242,14 @@ export default function OwnerDashboardApp({
       setBlockouts(records.salon_blockouts || []);
       try {
         const configResponse = await fetch(
-          "/api/config?keys=quality.cancellation_reasons,quality.cancellation_threshold_percent",
+          "/api/config?keys=quality.cancellation_reasons,quality.cancellation_customer_reasons,quality.cancellation_threshold_percent",
           { cache: "no-store" },
         );
         const configBody = await configResponse.json();
         const configuredReasons =
           configBody?.config?.["quality.cancellation_reasons"];
+        const configuredCustomerReasons =
+          configBody?.config?.["quality.cancellation_customer_reasons"];
         const configuredThreshold = Number(
           configBody?.config?.["quality.cancellation_threshold_percent"],
         );
@@ -247,6 +260,14 @@ export default function OwnerDashboardApp({
         )
           setCancellationReasons(
             configuredReasons.map(String).filter(Boolean).slice(0, 40),
+          );
+        if (
+          live &&
+          Array.isArray(configuredCustomerReasons) &&
+          configuredCustomerReasons.length
+        )
+          setCustomerCancellationReasons(
+            configuredCustomerReasons.map(String).filter(Boolean).slice(0, 20),
           );
         if (
           live &&
@@ -650,6 +671,7 @@ export default function OwnerDashboardApp({
     isOwner: !isTeamMember,
     access: teamPermissions,
     cancellationReasons,
+    customerCancellationReasons,
     cancellationThreshold,
     initialBookingId,
     selectedStyle,
@@ -757,6 +779,7 @@ type Ctx = {
   isOwner: boolean;
   access: Record<string, boolean> | null;
   cancellationReasons: string[];
+  customerCancellationReasons: string[];
   cancellationThreshold: number;
   initialBookingId: string;
   selectedStyle: string | null;
@@ -1550,7 +1573,10 @@ function Overview({ c }: { c: Ctx }) {
       100,
   );
   const salonCancellations = c.bookings.filter(
-    (booking) => booking.cancellation_initiated_by === "Salon",
+    (booking) =>
+      String(
+        booking.cancelled_by || booking.cancellation_initiated_by || "",
+      ).toLowerCase() === "salon",
   ).length;
   const cancellationRate = c.bookings.length
     ? (salonCancellations / c.bookings.length) * 100
@@ -2417,18 +2443,62 @@ function TruthfulProducts({ c }: { c: Ctx }) {
   const active =
     c.products.find((product) => product.id === c.selectedProduct) || null;
   const [photo, setPhoto] = useState(String(active?.photo_url || ""));
+  const [images, setImages] = useState<string[]>(
+    Array.isArray(active?.images)
+      ? active.images.map(String)
+      : active?.photo_url
+        ? [String(active.photo_url)]
+        : [],
+  );
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const pickupEnabled = form.get("pickup_enabled") === "on";
+    const shippingEnabled = form.get("shipping_enabled") === "on";
     const saved = await c.saveRecord(
       "salon_products",
       {
         name: form.get("name"),
         description: form.get("description"),
         price: Number(form.get("price")),
+        sale_price:
+          form.get("sale_price") === ""
+            ? null
+            : Number(form.get("sale_price")),
+        sku: form.get("sku"),
         photo_url: photo || null,
+        images,
         is_visible: form.get("visible") === "on",
-        in_person_only: true,
+        in_person_only: !pickupEnabled && !shippingEnabled,
+        inventory_quantity: Number(form.get("inventory_quantity")),
+        low_stock_threshold: Number(form.get("low_stock_threshold")),
+        track_inventory: form.get("track_inventory") === "on",
+        product_status: form.get("product_status"),
+        pickup_enabled: pickupEnabled,
+        pickup_prep_minutes: Number(form.get("pickup_prep_minutes")),
+        shipping_enabled: shippingEnabled,
+        weight_ounces:
+          form.get("weight_ounces") === ""
+            ? null
+            : Number(form.get("weight_ounces")),
+        dimensions: {
+          length:
+            form.get("dimension_length") === ""
+              ? null
+              : Number(form.get("dimension_length")),
+          width:
+            form.get("dimension_width") === ""
+              ? null
+              : Number(form.get("dimension_width")),
+          height:
+            form.get("dimension_height") === ""
+              ? null
+              : Number(form.get("dimension_height")),
+        },
+        shipping_profile: form.get("shipping_profile"),
+        shipping_price: Number(form.get("shipping_price")),
+        tax_category: form.get("tax_category"),
+        max_quantity_per_order: Number(form.get("max_quantity_per_order")),
       },
       active?.id,
     );
@@ -2445,12 +2515,13 @@ function TruthfulProducts({ c }: { c: Ctx }) {
     <>
       <Title
         title="Products"
-        subtitle="Advertise products for in-person purchase at your salon."
+        subtitle="Manage your catalog, stock, pickup, shipping, and online sales."
         action={
           <button
             onClick={() => {
               c.setSelectedProduct(null);
               setPhoto("");
+              setImages([]);
             }}
             className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
           >
@@ -2462,8 +2533,8 @@ function TruthfulProducts({ c }: { c: Ctx }) {
       <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
         <Info size={16} className="shrink-0" aria-hidden="true" />
         <span>
-          These products are advertised for in-person purchase only and appear
-          on your salon’s public page. No online checkout.
+          Published products can be purchased securely for pickup or shipping.
+          Live prices and inventory are rechecked before every payment.
         </span>
       </div>
       <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
@@ -2474,6 +2545,13 @@ function TruthfulProducts({ c }: { c: Ctx }) {
               onClick={() => {
                 c.setSelectedProduct(product.id || null);
                 setPhoto(String(product.photo_url || ""));
+                setImages(
+                  Array.isArray(product.images)
+                    ? product.images.map(String)
+                    : product.photo_url
+                      ? [String(product.photo_url)]
+                      : [],
+                );
               }}
               className="overflow-hidden rounded-[10px] border border-plum/10 bg-white text-left"
             >
@@ -2499,7 +2577,25 @@ function TruthfulProducts({ c }: { c: Ctx }) {
                   {String(product.description || "")}
                 </p>
                 <p className="mt-2 text-sm font-semibold">
-                  ${Number(product.price || 0).toFixed(2)}
+                  {product.sale_price !== null &&
+                  product.sale_price !== undefined ? (
+                    <>
+                      <span className="mr-1 text-[10px] text-ink/40 line-through">
+                        ${Number(product.price || 0).toFixed(2)}
+                      </span>
+                      <span className="text-magenta">
+                        ${Number(product.sale_price || 0).toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    `$${Number(product.price || 0).toFixed(2)}`
+                  )}
+                </p>
+                <p className="mt-1 text-[9px] font-semibold text-ink/50">
+                  {String(product.product_status || "Draft")}
+                  {product.track_inventory
+                    ? ` · ${Number(product.inventory_quantity || 0)} in stock`
+                    : " · stock not tracked"}
                 </p>
               </div>
             </button>
@@ -2517,25 +2613,102 @@ function TruthfulProducts({ c }: { c: Ctx }) {
           >
             <ImageUpload
               bucket="salon-photos"
+              multiple
+              maxFiles={12}
               folder={`salons/${c.salon.id}/products`}
-              label="Product Photo"
-              value={photo}
-              onChange={(value) =>
-                setPhoto(typeof value === "string" ? value : "")
-              }
+              label="Product Photos"
+              value={images}
+              onChange={(value) => {
+                const next = Array.isArray(value)
+                  ? value.map(String)
+                  : value
+                    ? [String(value)]
+                    : [];
+                setImages(next);
+                setPhoto(next[0] || "");
+              }}
             />
-            <Field label="Name" name="name" defaultValue={active?.name} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Name" name="name" defaultValue={active?.name} required />
+              <Field
+                label="SKU"
+                name="sku"
+                defaultValue={active?.sku}
+                placeholder="Optional internal SKU"
+              />
+            </div>
             <TextArea
               label="Description"
               name="description"
               defaultValue={active?.description}
             />
-            <Field
-              label="Price (USD)"
-              name="price"
-              type="number"
-              defaultValue={active?.price ?? ""}
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Regular price (USD)" name="price" type="number" defaultValue={active?.price ?? ""} required />
+              <Field label="Sale price (optional)" name="sale_price" type="number" defaultValue={active?.sale_price ?? ""} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-bold">Status</span>
+                <select
+                  name="product_status"
+                  defaultValue={String(active?.product_status || "Draft")}
+                  className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs"
+                >
+                  <option>Draft</option>
+                  <option>Active</option>
+                  <option>Archived</option>
+                </select>
+              </label>
+              <Field label="Maximum quantity per order" name="max_quantity_per_order" type="number" defaultValue={active?.max_quantity_per_order ?? 10} />
+            </div>
+            <div className="rounded-[12px] border border-plum/10 bg-blush/20 p-4">
+              <h3 className="font-serif text-lg text-plum">Inventory</h3>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="track_inventory" defaultChecked={active?.track_inventory === true} className="accent-magenta" />
+                Track inventory and prevent overselling
+              </label>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Field label="Quantity available" name="inventory_quantity" type="number" defaultValue={active?.inventory_quantity ?? 0} />
+                <Field label="Low-stock alert at" name="low_stock_threshold" type="number" defaultValue={active?.low_stock_threshold ?? 5} />
+              </div>
+            </div>
+            <div className="rounded-[12px] border border-plum/10 bg-white p-4">
+              <h3 className="font-serif text-lg text-plum">Pickup</h3>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="pickup_enabled" defaultChecked={active?.pickup_enabled === true} className="accent-magenta" />
+                Offer pickup at the salon
+              </label>
+              <div className="mt-3">
+                <Field label="Preparation time (minutes)" name="pickup_prep_minutes" type="number" defaultValue={active?.pickup_prep_minutes ?? 60} />
+              </div>
+            </div>
+            <div className="rounded-[12px] border border-plum/10 bg-white p-4">
+              <h3 className="font-serif text-lg text-plum">Shipping</h3>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="shipping_enabled" defaultChecked={active?.shipping_enabled === true} className="accent-magenta" />
+                Offer US shipping
+              </label>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Field label="Shipping price (USD)" name="shipping_price" type="number" defaultValue={active?.shipping_price ?? 0} />
+                <Field label="Weight (ounces)" name="weight_ounces" type="number" defaultValue={active?.weight_ounces ?? ""} />
+                <Field label="Shipping profile" name="shipping_profile" defaultValue={active?.shipping_profile} placeholder="Standard parcel" />
+                <Field label="Package length (in)" name="dimension_length" type="number" defaultValue={(active?.dimensions as Row | undefined)?.length ?? ""} />
+                <Field label="Package width (in)" name="dimension_width" type="number" defaultValue={(active?.dimensions as Row | undefined)?.width ?? ""} />
+                <Field label="Package height (in)" name="dimension_height" type="number" defaultValue={(active?.dimensions as Row | undefined)?.height ?? ""} />
+              </div>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[10px] font-bold">Tax category</span>
+              <select
+                name="tax_category"
+                defaultValue={String(active?.tax_category || "general_tangible_goods")}
+                className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs"
+              >
+                <option value="general_tangible_goods">General tangible goods</option>
+                <option value="hair_care_products">Hair-care products</option>
+                <option value="beauty_accessories">Beauty accessories</option>
+              </select>
+            </label>
             <label className="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -2551,6 +2724,7 @@ function TruthfulProducts({ c }: { c: Ctx }) {
           </form>
         </Panel>
       </div>
+      <SalonProductOrders />
     </>
   );
 }
@@ -3069,11 +3243,22 @@ function Bookings({ c }: { c: Ctx }) {
   const [selectedId, setSelectedId] = useState(c.initialBookingId || "");
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
+  const [customerReason, setCustomerReason] = useState(
+    "Appointment availability changed",
+  );
+  const [customerMessage, setCustomerMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [rescheduleMessage, setRescheduleMessage] = useState("");
-  const [rescheduleOptions, setRescheduleOptions] = useState(["", "", ""]);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleSlots, setRescheduleSlots] = useState<Row[]>([]);
+  const [selectedRescheduleSlots, setSelectedRescheduleSlots] = useState<
+    string[]
+  >([]);
+  const [availabilityMessage, setAvailabilityMessage] = useState("");
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [proposalSummary, setProposalSummary] = useState<Row | null>(null);
+  const [confirmCompletion, setConfirmCompletion] = useState(false);
   const visible = c.bookings.filter(
     (booking) => filter === "All" || String(booking.status) === filter,
   );
@@ -3108,19 +3293,125 @@ function Bookings({ c }: { c: Ctx }) {
       active = false;
     };
   }, [selectedId]);
-  async function startService() {
+  useEffect(() => {
+    let active = true;
+    const timer = window.setTimeout(() => {
+      if (!selectedId || !rescheduleDate) {
+        setRescheduleSlots([]);
+        setSelectedRescheduleSlots([]);
+        setAvailabilityMessage("");
+        return;
+      }
+      setLoadingAvailability(true);
+      setAvailabilityMessage("");
+      getSessionForScope("salon")
+        .then((session) =>
+          session
+            ? fetch(
+                `/api/salon/bookings/${selectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  cache: "no-store",
+                },
+              )
+            : null,
+        )
+        .then(async (response) => {
+          if (!response) throw new Error("Please sign in again.");
+          const body = (await response.json()) as {
+            error?: string;
+            reason?: string;
+            slots?: Row[];
+          };
+          if (!response.ok) {
+            throw new Error(body.error || "Unable to load available times.");
+          }
+          return body;
+        })
+        .then((body) => {
+          if (!active) return;
+          setRescheduleSlots(body.slots || []);
+          setSelectedRescheduleSlots([]);
+          setAvailabilityMessage(
+            body.slots?.length
+              ? ""
+              : body.reason || "No open times remain for this day.",
+          );
+        })
+        .catch((error) => {
+          if (!active) return;
+          setRescheduleSlots([]);
+          setSelectedRescheduleSlots([]);
+          setAvailabilityMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load available times.",
+          );
+        })
+        .finally(() => {
+          if (active) setLoadingAvailability(false);
+        });
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [rescheduleDate, selectedId]);
+  async function serviceAction(
+    action: "check_in" | "start" | "complete",
+  ) {
     if (!selected?.id) return;
-    const startedAt = new Date().toISOString();
-    const data = await c.saveRecord(
-      "bookings",
-      { service_started_at: startedAt, status: "In Progress" },
-      selected.id,
-    );
-    if (!data) return;
-    c.setBookings((rows) =>
-      rows.map((booking) => (booking.id === selected.id ? data : booking)),
-    );
-    c.setNotice("Service start recorded for on-time performance.");
+    setBusy(true);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(
+        `/api/salon/bookings/${selected.id}/service`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            action,
+            confirmed: action === "complete" ? confirmCompletion : undefined,
+          }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        booking?: Row;
+      };
+      if (!response.ok || !body.booking) {
+        throw new Error(
+          body.error || "The service status could not be updated.",
+        );
+      }
+      c.setBookings((rows) =>
+        rows.map((booking) =>
+          booking.id === selected.id ? (body.booking as Row) : booking,
+        ),
+      );
+      setConfirmCompletion(false);
+      c.setNotice(
+        action === "check_in"
+          ? "Customer checked in. The appointment is ready to begin."
+          : action === "start"
+            ? "Service start recorded for on-time performance."
+            : "Service completed. Verified review eligibility is now enabled.",
+      );
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "The service status could not be updated.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   async function cancelBooking() {
     if (!selected?.id || !reason) {
@@ -3143,7 +3434,12 @@ function Bookings({ c }: { c: Ctx }) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ reason, detail }),
+          body: JSON.stringify({
+            internal_reason: reason,
+            internal_detail: detail,
+            customer_reason: customerReason,
+            customer_message: customerMessage,
+          }),
         },
       );
       const body = await response.json();
@@ -3157,10 +3453,14 @@ function Bookings({ c }: { c: Ctx }) {
       c.setNotice(
         body.refund_status === "Succeeded"
           ? "Booking cancelled, customer notified, and deposit refunded in full."
-          : "Booking cancelled and customer notified.",
+          : body.refund_status === "Pending"
+            ? "Booking cancelled and customer notified. Stripe accepted the refund request; completion is pending."
+            : "Booking cancelled and customer notified.",
       );
       setReason("");
       setDetail("");
+      setCustomerReason("Appointment availability changed");
+      setCustomerMessage("");
     } catch (error) {
       c.setNotice(
         error instanceof Error
@@ -3176,7 +3476,10 @@ function Bookings({ c }: { c: Ctx }) {
       c.setNotice("Add a reason for the reschedule proposal.");
       return;
     }
-    const options = rescheduleOptions.filter(Boolean);
+    const options = selectedRescheduleSlots.map((key) => {
+      const [local, stylistId = ""] = key.split("|");
+      return { local, stylistId: stylistId || null };
+    });
     if (!options.length) {
       c.setNotice("Choose at least one proposed appointment time.");
       return;
@@ -3213,7 +3516,9 @@ function Bookings({ c }: { c: Ctx }) {
       setProposalSummary(body.proposal || null);
       setRescheduleReason("");
       setRescheduleMessage("");
-      setRescheduleOptions(["", "", ""]);
+      setRescheduleDate("");
+      setRescheduleSlots([]);
+      setSelectedRescheduleSlots([]);
       c.setNotice(
         body.warnings?.[0]?.message ||
           "Proposal sent. The appointment remains unchanged until the customer accepts.",
@@ -3354,10 +3659,7 @@ function Bookings({ c }: { c: Ctx }) {
                   </h2>
                   <p className="mt-1 text-xs text-ink/50">
                     #
-                    {String(selected.confirmation_code || selected.id).slice(
-                      0,
-                      14,
-                    )}
+                    {bookingReference(selected)}
                   </p>
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
@@ -3395,22 +3697,83 @@ function Bookings({ c }: { c: Ctx }) {
               </div>
               {activeSelected ? (
                 <>
-                  <button
-                    disabled={Boolean(selected.service_started_at)}
-                    onClick={() => void startService()}
-                    className="mt-5 min-h-11 w-full rounded-[8px] border border-plum text-xs font-bold text-plum disabled:border-green-500 disabled:text-green-700"
-                  >
-                    {selected.service_started_at
-                      ? `Service started ${dateText(selected.service_started_at, c.salon.time_zone)}`
-                      : "Start service now"}
-                  </button>
+                  <div className="mt-5 rounded-[10px] border border-plum/10 bg-cream/50 p-3">
+                    <h3 className="font-serif text-lg text-plum">
+                      Service progress
+                    </h3>
+                    <p className="mt-1 text-[10px] leading-4 text-ink/55">
+                      Confirmed → Checked in / Ready → In progress → Completed
+                    </p>
+                    {String(selected.status).toLowerCase() === "confirmed" ? (
+                      <button
+                        disabled={busy}
+                        onClick={() => void serviceAction("check_in")}
+                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        Check in customer
+                      </button>
+                    ) : null}
+                    {String(selected.status).toLowerCase() === "ready" ? (
+                      <button
+                        disabled={busy}
+                        onClick={() => void serviceAction("start")}
+                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        Start service
+                      </button>
+                    ) : null}
+                    {String(selected.status).toLowerCase() ===
+                    "in progress" ? (
+                      <>
+                        <label className="mt-3 flex items-start gap-2 rounded-[8px] bg-white p-3 text-[10px] leading-4">
+                          <input
+                            type="checkbox"
+                            checked={confirmCompletion}
+                            onChange={(event) =>
+                              setConfirmCompletion(event.target.checked)
+                            }
+                            className="mt-0.5 h-4 w-4 accent-magenta"
+                          />
+                          I confirm that this service has been completed. This
+                          records the completion time and enables verified
+                          review eligibility.
+                        </label>
+                        <button
+                          disabled={busy || !confirmCompletion}
+                          onClick={() => void serviceAction("complete")}
+                          className="mt-2 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-50"
+                        >
+                          Complete service
+                        </button>
+                      </>
+                    ) : null}
+                    {selected.checked_in_at ? (
+                      <p className="mt-2 text-[10px] text-ink/55">
+                        Checked in{" "}
+                        {dateText(
+                          selected.checked_in_at,
+                          c.salon.time_zone,
+                        )}
+                      </p>
+                    ) : null}
+                    {selected.service_started_at ? (
+                      <p className="mt-1 text-[10px] text-ink/55">
+                        Service started{" "}
+                        {dateText(
+                          selected.service_started_at,
+                          c.salon.time_zone,
+                        )}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="mt-6 border-t border-plum/10 pt-5">
                     <h3 className="font-serif text-lg text-plum">
                       Propose reschedule
                     </h3>
                     <p className="mt-1 text-[10px] leading-4 text-ink/55">
-                      Offer up to three available times. The current appointment
-                      stays confirmed until the customer accepts one.
+                      Pick a date, then offer a preferred available
+                      time/stylist and up to two alternatives. The current
+                      appointment stays confirmed until the customer accepts.
                     </p>
                     {proposalSummary ? (
                       <div className="mt-3 rounded-[9px] bg-blush/35 p-3 text-xs">
@@ -3440,37 +3803,88 @@ function Bookings({ c }: { c: Ctx }) {
                       rows={2}
                       className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
                     />
-                    <div className="mt-2 grid gap-2">
-                      {rescheduleOptions.map((value, index) => (
-                        <label
-                          key={index}
-                          className="text-[10px] font-bold text-ink/60"
-                        >
-                          {index === 0
-                            ? "Preferred time"
-                            : `Alternative ${index}`}
-                          <input
-                            type="datetime-local"
-                            value={value}
-                            onChange={(event) =>
-                              setRescheduleOptions((current) =>
-                                current.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? event.target.value
-                                    : item,
-                                ),
-                              )
-                            }
-                            className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
-                          />
-                        </label>
-                      ))}
-                    </div>
+                    <label className="mt-3 block text-[10px] font-bold text-ink/60">
+                      Date to search
+                      <input
+                        type="date"
+                        value={rescheduleDate}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(event) =>
+                          setRescheduleDate(event.target.value)
+                        }
+                        className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                      />
+                    </label>
+                    {loadingAvailability ? (
+                      <p className="mt-3 rounded-[8px] bg-cream p-3 text-xs text-ink/60">
+                        Checking live availability…
+                      </p>
+                    ) : null}
+                    {availabilityMessage ? (
+                      <p className="mt-3 rounded-[8px] bg-blush/35 p-3 text-xs text-plum">
+                        {availabilityMessage}
+                      </p>
+                    ) : null}
+                    {rescheduleSlots.length ? (
+                      <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1">
+                        {rescheduleSlots.map((slot) => {
+                          const local = `${rescheduleDate}T${String(slot.value)}`;
+                          const key = `${local}|${String(slot.stylistId || "")}`;
+                          const selectedIndex =
+                            selectedRescheduleSlots.indexOf(key);
+                          return (
+                            <label
+                              key={key}
+                              className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-[8px] border px-3 text-xs ${
+                                selectedIndex >= 0
+                                  ? "border-magenta bg-blush/35"
+                                  : "border-plum/10 bg-white"
+                              }`}
+                            >
+                              <span>
+                                <b>{String(slot.label)}</b>
+                                <span className="ml-2 text-ink/55">
+                                  {String(
+                                    slot.stylistName ||
+                                      "Any available stylist",
+                                  )}
+                                </span>
+                                {selectedIndex >= 0 ? (
+                                  <small className="mt-0.5 block text-magenta">
+                                    {selectedIndex === 0
+                                      ? "Preferred"
+                                      : `Alternative ${selectedIndex}`}
+                                  </small>
+                                ) : null}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={selectedIndex >= 0}
+                                disabled={
+                                  selectedIndex < 0 &&
+                                  selectedRescheduleSlots.length >= 3
+                                }
+                                onChange={(event) =>
+                                  setSelectedRescheduleSlots((current) =>
+                                    event.target.checked
+                                      ? [...current, key].slice(0, 3)
+                                      : current.filter(
+                                          (candidate) => candidate !== key,
+                                        ),
+                                  )
+                                }
+                                className="h-4 w-4 accent-magenta"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     <button
                       disabled={
                         busy ||
                         !rescheduleReason.trim() ||
-                        !rescheduleOptions.some(Boolean)
+                        !selectedRescheduleSlots.length
                       }
                       onClick={() => void proposeReschedule()}
                       className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
@@ -3498,6 +3912,29 @@ function Bookings({ c }: { c: Ctx }) {
                         <option key={item}>{item}</option>
                       ))}
                     </select>
+                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-ink/55">
+                      Customer-safe reason
+                    </p>
+                    <select
+                      value={customerReason}
+                      onChange={(event) =>
+                        setCustomerReason(event.target.value)
+                      }
+                      className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                    >
+                      {c.customerCancellationReasons.map((item) => (
+                        <option key={item}>{item}</option>
+                      ))}
+                    </select>
+                    <textarea
+                      value={customerMessage}
+                      onChange={(event) =>
+                        setCustomerMessage(event.target.value.slice(0, 500))
+                      }
+                      placeholder="Optional customer message"
+                      rows={2}
+                      className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
+                    />
                     {reason === "Other" ? (
                       <textarea
                         value={detail}
@@ -3522,8 +3959,21 @@ function Bookings({ c }: { c: Ctx }) {
                 </>
               ) : selected.cancellation_reason ? (
                 <div className="mt-5 rounded-[9px] bg-blush/30 p-3 text-xs">
-                  <b>Cancellation reason</b>
-                  <p className="mt-1">{String(selected.cancellation_reason)}</p>
+                  <b>Cancelled by</b>
+                  <p className="mt-1 capitalize">
+                    {String(
+                      selected.cancelled_by ||
+                        selected.cancellation_initiated_by ||
+                        "Not recorded",
+                    )}
+                  </p>
+                  <b className="mt-3 block">Customer-safe reason</b>
+                  <p className="mt-1">
+                    {String(
+                      selected.cancellation_customer_reason ||
+                        selected.cancellation_reason,
+                    )}
+                  </p>
                   <p className="mt-1 text-ink/55">
                     Refund: {String(selected.refund_status || "Not recorded")}
                   </p>
@@ -3830,7 +4280,7 @@ function Earnings({ c }: { c: Ctx }) {
                 <td className="py-3">{dateText(b.created_at)}</td>
                 <td>
                   Booking #
-                  {String(b.confirmation_code || b.id || "").slice(0, 8)}
+                  {bookingReference(b)}
                 </td>
                 <td>${Number(b.deposit_amount || 0).toFixed(2)}</td>
                 <td>${Number(b.balance_due || 0).toFixed(2)}</td>

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import { bookingReference } from "@/lib/bookingReference";
 
 type Row = Record<string, unknown>;
 type Proposal = Row & { options?: Row[] };
@@ -101,11 +102,19 @@ export default function GuestBookingManager({ token }: { token: string }) {
         error?: string;
         manage_url?: string;
         status?: string;
+        refund_status?: string;
+        refund_grace_applied?: boolean;
         warnings?: Array<{ message?: string }>;
       };
       if (!response.ok) throw new Error(body.error || "Unable to update booking.");
       if (action === "cancel") {
-        setNotice("Your booking is cancelled. Confirmation has been sent.");
+        setNotice(
+          body.refund_status === "Succeeded"
+            ? "Your booking is cancelled and the deposit refund completed."
+            : body.refund_status === "Pending"
+              ? "Your booking is cancelled. Stripe accepted the refund request; completion is pending."
+              : "Your booking is cancelled. Confirmation has been sent.",
+        );
         setData((current) =>
           current
             ? {
@@ -194,13 +203,13 @@ export default function GuestBookingManager({ token }: { token: string }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[.18em] text-magenta">
-                Confirmation {String(data.booking.confirmation_code || "")}
+                Booking reference {bookingReference(data.booking)}
               </p>
               <h1 className="mt-2 font-serif text-4xl text-plum">
                 {String(data.style.name || "Salon appointment")}
               </h1>
               <p className="mt-1 text-sm text-ink/60">
-                Booking ID {String(data.booking.id)}
+                Keep this secure Manage Booking link for future changes.
               </p>
             </div>
             <span className="rounded-full bg-blush px-4 py-2 text-xs font-extrabold text-plum">
@@ -255,6 +264,12 @@ export default function GuestBookingManager({ token }: { token: string }) {
                   />
                   <span className="text-sm font-bold">
                     {when(option.appointment_datetime, salonTimeZone)}
+                    <small className="mt-1 block font-normal text-ink/55">
+                      {String(
+                        (option.stylist as Row | undefined)?.name ||
+                          "Any available stylist",
+                      )}
+                    </small>
                   </span>
                 </label>
               ))}
@@ -296,12 +311,15 @@ export default function GuestBookingManager({ token }: { token: string }) {
             </p>
             <label className="mt-4 block text-xs font-bold text-ink/75">
               Reason
-              <textarea
+              <select
                 value={cancelReason}
                 onChange={(event) => setCancelReason(event.target.value)}
-                maxLength={160}
-                className="mt-2 min-h-24 w-full rounded-xl border border-plum/15 bg-cream/40 p-3 text-sm outline-none focus:border-magenta"
-              />
+                className="mt-2 min-h-11 w-full rounded-xl border border-plum/15 bg-cream/40 p-3 text-sm outline-none focus:border-magenta"
+              >
+                <option>Customer requested cancellation</option>
+                <option>Appointment availability changed</option>
+                <option>Other scheduling issue</option>
+              </select>
             </label>
             <button
               type="button"

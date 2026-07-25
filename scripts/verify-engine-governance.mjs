@@ -74,11 +74,15 @@ assert.match(salon,/trust\.verified_label/);
 assert.match(application,/catalog\.business_types/);
 assert.match(applicationPage,/catalog\.business_types/);
 for(const key of ["catalog.size_options","catalog.length_options","catalog.material_options","catalog.material_quality_grades","catalog.material_longevity_weeks","catalog.included_items","booking.default_buffer_minutes"])assert.match(structuredCatalog,new RegExp(key.replaceAll(".","\\.")));
-assert.match(ownerDashboard,/quality\.cancellation_reasons,quality\.cancellation_threshold_percent/);
+assert.match(
+  ownerDashboard,
+  /quality\.cancellation_reasons,quality\.cancellation_customer_reasons,quality\.cancellation_threshold_percent/,
+);
 assert.match(supportInbox,/support\.ticket_statuses/);
 assert.match(help,/content\.faq_search_enabled/);
-assert.match(layout,/branding\.primary_color/);
-assert.match(layout,/branding\.cta_color/);
+assert.match(layout,/getEngineBrandTheme/);
+assert.match(engine,/branding\.primary_color/);
+assert.match(engine,/branding\.cta_color/);
 assert.match(media,/media\.public_image_quality/);
 assert.match(reminderMigration,/claim_booking_reminder/);
 assert.match(reminderMigration,/booking_reminder_claims/);

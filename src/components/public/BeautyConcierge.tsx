@@ -7,9 +7,10 @@ import { useCustomerLocation } from "@/components/location/CustomerLocationProvi
 import SafeImage from "@/components/site/SafeImage";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { getSupabaseForScope } from "@/lib/supabase";
-import type { ConciergeIntent, ConciergeSalonResult } from "@/lib/beautyConciergeServer";
+import type { ConciergeAiStatus, ConciergeConfiguration, ConciergeIntent, ConciergeSalonResult } from "@/lib/beautyConciergeServer";
 
-type ResponseBody = { mode?: "openai" | "deterministic"; intent?: ConciergeIntent; clarification?: string | null; salons?: ConciergeSalonResult[]; error?: string; request_id?: string };
+type SearchState = "idle" | "results" | "no_results" | "clarification" | "error";
+type ResponseBody = { mode?: "openai" | "deterministic"; intent?: ConciergeIntent; clarification?: string | null; salons?: ConciergeSalonResult[]; configuration?: ConciergeConfiguration; error?: string; request_id?: string };
 
 export default function BeautyConcierge() {
   const location = useCustomerLocation();
@@ -20,19 +21,23 @@ export default function BeautyConcierge() {
   const [results, setResults] = useState<ConciergeSalonResult[]>([]);
   const [intent, setIntent] = useState<ConciergeIntent | null>(null);
   const [mode, setMode] = useState<"openai" | "deterministic" | null>(null);
+  const [configuration, setConfiguration] = useState<ConciergeConfiguration | null>(null);
+  const [searchState, setSearchState] = useState<SearchState>("idle");
   const [compare, setCompare] = useState<string[]>([]);
   const [saved, setSaved] = useState<string[]>([]);
 
   async function search(event: FormEvent) {
     event.preventDefault(); if (busy) return;
-    setBusy(true); setMessage(""); setCompare([]);
+    setBusy(true); setMessage(""); setCompare([]); setSearchState("idle");
     try {
       const response = await fetch("/api/concierge/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, language: locale, latitude: location.location?.lat, longitude: location.location?.lng, website: "" }) });
       const body = await response.json() as ResponseBody;
       if (!response.ok) throw new Error(body.error || "Beauty search is temporarily unavailable.");
-      setIntent(body.intent || null); setMode(body.mode || null); setResults(Array.isArray(body.salons) ? body.salons : []);
-      setMessage(body.clarification || (!body.salons?.length ? "I couldn't find an eligible nearby match for those details. Try a wider distance or another date." : ""));
-    } catch (error) { setResults([]); setMessage(error instanceof Error ? error.message : "Beauty search is temporarily unavailable."); }
+      const salons = Array.isArray(body.salons) ? body.salons : [];
+      setIntent(body.intent || null); setMode(body.mode || null); setConfiguration(body.configuration || null); setResults(salons);
+      setMessage(body.clarification || (!salons.length ? "I couldn't find an eligible nearby match for those details. Try a wider distance or another date." : ""));
+      setSearchState(body.clarification ? "clarification" : salons.length ? "results" : "no_results");
+    } catch (error) { setResults([]); setConfiguration(null); setMessage(error instanceof Error ? error.message : "Beauty search is temporarily unavailable."); setSearchState("error"); }
     finally { setBusy(false); }
   }
   function toggleCompare(id: string) {
@@ -55,10 +60,25 @@ export default function BeautyConcierge() {
   return <section className="mb-5 rounded-[18px] border border-plum/10 bg-[linear-gradient(120deg,#35123b,#24102c)] p-4 text-white shadow-[0_16px_40px_rgba(26,18,32,.13)] sm:p-6" aria-labelledby="concierge-title">
     <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-magenta"><Sparkles size={20}/></span><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber">AI Beauty Concierge</p><h2 id="concierge-title" className="font-serif text-2xl font-semibold sm:text-3xl">Tell us the look you want</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-white/70">Describe the style, area, date, budget, or rating. Every result comes from current Girlz Culture salon, price, location, and availability data.</p></div></div>{location.location ? <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-[10px]"><MapPin size={12}/>Searching near {location.location.label}</span> : null}</div>
     <form onSubmit={search} className="mt-4 grid gap-2 md:grid-cols-[1fr_auto]"><label><span className="sr-only">Describe your beauty appointment</span><input value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={600} placeholder="Try: Affordable knotless braids near Harlem this Saturday morning" className="min-h-12 w-full rounded-[10px] border border-white/15 bg-white px-4 text-sm text-ink outline-none placeholder:text-ink/45 focus:border-magenta" /></label><button disabled={busy || prompt.trim().length < 3} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-6 text-sm font-bold disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={17}/> : <Bot size={17}/>}Find real matches</button></form>
-    {message ? <p role="status" className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs leading-5">{message}</p> : null}
+    {searchState !== "idle" ? <ConciergeResultHeader state={searchState} configuration={configuration} message={message} count={results.length}/> : null}
     {intent && (intent.style || intent.radius_miles || intent.maximum_price || intent.minimum_rating || intent.date) ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Interpreted search details">{intent.style ? <Chip>{intent.style}</Chip> : null}{intent.radius_miles ? <Chip>Within {intent.radius_miles} mi</Chip> : null}{intent.maximum_price !== null ? <Chip>Up to ${intent.maximum_price}</Chip> : null}{intent.minimum_rating !== null ? <Chip>{intent.minimum_rating}+ stars</Chip> : null}{intent.date ? <Chip>{intent.date} · {intent.time_period}</Chip> : null}{intent.promotion_only ? <Chip>Offers only</Chip> : null}<span className="self-center text-[9px] text-white/45">{mode === "openai" ? "AI interpreted; database verified" : "Standard search fallback"}</span></div> : null}
     {results.length ? <div className="mt-5 -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">{results.map((salon) => <ConciergeCard key={salon.id} salon={salon} selected={compare.includes(salon.id)} saved={saved.includes(salon.id)} toggleCompare={() => toggleCompare(salon.id)} toggleSave={() => void saveSalon(salon.id)}/>)}</div> : null}
     {compared.length >= 2 ? <Comparison salons={compared}/> : null}
+  </section>;
+}
+
+function aiStatusLabel(status: ConciergeAiStatus | undefined) {
+  if (status === "configured") return "AI configured";
+  if (status === "provider_failure") return "AI provider unavailable · standard search used";
+  if (status === "budget_exhausted") return "AI budget reached · standard search used";
+  if (status === "disabled") return "AI disabled · standard search used";
+  return "AI not configured · standard search used";
+}
+
+function ConciergeResultHeader({ state, configuration, message, count }: { state: SearchState; configuration: ConciergeConfiguration | null; message: string; count: number }) {
+  const heading = state === "results" ? "Here are the matches I found." : state === "clarification" ? "One detail will help me search." : state === "error" ? "The search could not be completed." : "No database matches yet.";
+  return <section aria-live="polite" aria-label="Beauty Concierge results" className="mt-4 rounded-[12px] border border-white/15 bg-white p-4 text-ink shadow-lg">
+    <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-serif text-xl font-semibold text-plum">{heading}</h3>{state === "results" ? <p className="mt-1 text-xs text-ink/60">{count} real {count === 1 ? "salon match" : "salon matches"} from current Girlz Culture data.</p> : message ? <p role={state === "error" ? "alert" : "status"} className="mt-1 text-xs leading-5 text-ink/65">{message}</p> : null}</div>{configuration ? <span className={`rounded-full px-3 py-1.5 text-[9px] font-bold ${configuration.ai_status === "configured" ? "bg-green-100 text-green-800" : "bg-amber/15 text-[#795516]"}`}>{aiStatusLabel(configuration.ai_status)}</span> : null}</div>
   </section>;
 }
 

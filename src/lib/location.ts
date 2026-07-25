@@ -8,6 +8,15 @@ export type CustomerLocation = Coordinates & {
 export const EARTH_RADIUS_MILES = 3958.7613;
 export const DEFAULT_NEARBY_RADIUS_MILES = 50;
 export const MAX_DISCOVERY_RADIUS_MILES = 100;
+export const DEFAULT_LOCATION_RETENTION_DAYS = 30;
+export const MAX_LOCATION_RETENTION_DAYS = 365;
+
+export type StoredCustomerLocation = {
+  location: CustomerLocation;
+  savedAt: number;
+  expiresAt: number;
+  version: 2;
+};
 
 export function validCoordinates(value: Partial<Coordinates> | null | undefined): value is Coordinates {
   return Boolean(value)
@@ -41,6 +50,87 @@ export function boundingBox(origin: Coordinates, radiusMiles: number) {
 }
 
 export function normalizeRadius(value: unknown, fallback = DEFAULT_NEARBY_RADIUS_MILES) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return fallback;
+  }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(MAX_DISCOVERY_RADIUS_MILES, Math.max(1, parsed)) : fallback;
+}
+
+export function normalizeLocationRetentionDays(
+  value: unknown,
+  fallback = DEFAULT_LOCATION_RETENTION_DAYS,
+) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? Math.min(MAX_LOCATION_RETENTION_DAYS, Math.max(1, Math.round(parsed)))
+    : fallback;
+}
+
+export function validCustomerLocation(
+  value: CustomerLocation | null | undefined,
+): value is CustomerLocation {
+  return Boolean(
+    value &&
+      validCoordinates(value) &&
+      value.label?.trim() &&
+      ["explicit", "device", "saved", "approximate"].includes(value.source),
+  );
+}
+
+export function createStoredCustomerLocation(
+  location: CustomerLocation,
+  retentionDays = DEFAULT_LOCATION_RETENTION_DAYS,
+  now = Date.now(),
+): StoredCustomerLocation {
+  const safeDays = normalizeLocationRetentionDays(retentionDays);
+  return {
+    location,
+    savedAt: now,
+    expiresAt: now + safeDays * 24 * 60 * 60 * 1_000,
+    version: 2,
+  };
+}
+
+export function parseStoredCustomerLocation(
+  serialized: string | null,
+  options: {
+    now?: number;
+    legacyRetentionDays?: number;
+  } = {},
+): StoredCustomerLocation | null {
+  if (!serialized) return null;
+  const now = options.now ?? Date.now();
+  try {
+    const parsed = JSON.parse(serialized) as
+      | StoredCustomerLocation
+      | CustomerLocation
+      | null;
+    if (!parsed) return null;
+
+    if ("location" in parsed) {
+      if (
+        parsed.version !== 2 ||
+        !validCustomerLocation(parsed.location) ||
+        !Number.isFinite(parsed.savedAt) ||
+        !Number.isFinite(parsed.expiresAt) ||
+        parsed.expiresAt <= now
+      ) {
+        return null;
+      }
+      return parsed;
+    }
+
+    if (!validCustomerLocation(parsed)) return null;
+    return createStoredCustomerLocation(
+      parsed,
+      options.legacyRetentionDays,
+      now,
+    );
+  } catch {
+    return null;
+  }
 }

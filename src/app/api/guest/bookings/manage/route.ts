@@ -18,6 +18,11 @@ import {
   sendSms,
 } from "@/lib/supabaseAdmin";
 import { capturePlatformError } from "@/lib/platformErrors";
+import { getEngineNumber } from "@/lib/engineConfigServer";
+import {
+  requestBookingDepositRefund,
+  safeCancellationReason,
+} from "@/lib/bookingCancellation";
 
 class GuestBookingError extends Error {
   constructor(message: string, public status = 400) {
@@ -63,7 +68,7 @@ async function loadManagedBooking(
   const { data: booking, error } = await admin
     .from("bookings")
     .select(
-      "id,confirmation_code,status,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancellation_reason,cancellation_initiated_by",
+      "id,public_reference,confirmation_code,status,created_at,payment_verified_at,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,refund_funding_state,stripe_payment_id,stripe_transfer_id,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancelled_by,cancellation_reason,cancellation_customer_reason,cancellation_customer_message,cancellation_initiated_by",
     )
     .eq("id", bookingId)
     .single();
@@ -102,7 +107,9 @@ async function loadManagedBooking(
   const optionResult = proposalIds.length
     ? await admin
         .from("booking_reschedule_options")
-        .select("id,proposal_id,appointment_datetime,duration_hours,is_selected")
+        .select(
+          "id,proposal_id,appointment_datetime,duration_hours,stylist_id,is_selected,stylist:stylists(name)",
+        )
         .in("proposal_id", proposalIds)
         .order("appointment_datetime")
     : { data: [], error: null };
@@ -183,17 +190,72 @@ async function POSTHandler(request: Request) {
           `Online cancellation closes ${cutoffHours} hours before the appointment. Contact the salon or support for help.`,
         );
       }
-      const reason =
-        cleanText(body.reason, 160) || "Customer requested cancellation";
+      const reason = safeCancellationReason(body.reason, "customer");
+      const customerMessage = cleanText(body.message, 500);
+      const graceMinutes = await getEngineNumber(
+        "booking.customer_cancellation_grace_minutes",
+        30,
+        0,
+        1440,
+      );
+      const paidAt = new Date(
+        String(
+          current.booking.payment_verified_at ||
+            current.booking.created_at ||
+            "",
+        ),
+      ).getTime();
+      const withinGrace =
+        graceMinutes > 0 &&
+        Number.isFinite(paidAt) &&
+        Date.now() <= paidAt + graceMinutes * 60_000;
+      const refund = withinGrace
+        ? await requestBookingDepositRefund({
+            admin,
+            booking: current.booking,
+            salonId: String(current.booking.salon_id),
+            actorUserId: null,
+            initiatedBy: "customer",
+            internalReason: "Customer cancellation within configured grace period",
+          })
+        : {
+            refundStatus: "Not applicable",
+            refundAmount: 0,
+            fundingState: String(
+              current.booking.refund_funding_state || "Platform-held funds",
+            ),
+            refundId: "",
+            transferReversalId: "",
+            providerAcceptedAt: null,
+            completedAt: null,
+          };
+      const cancelledAt = new Date().toISOString();
       const { data: cancelled, error: cancelError } = await admin
         .from("bookings")
         .update({
           status: "Cancelled",
+          cancelled_by: "customer",
           cancellation_initiated_by: "Customer",
           cancellation_reason: reason,
-          cancelled_at: new Date().toISOString(),
-          refund_status: "Not applicable",
-          refund_amount: 0,
+          cancellation_internal_reason: "Customer self-service cancellation",
+          cancellation_customer_reason: reason,
+          cancellation_customer_message: customerMessage || null,
+          cancelled_at: cancelledAt,
+          refund_status: refund.refundStatus,
+          refund_amount: refund.refundAmount,
+          refund_funding_state: refund.fundingState,
+          refund_initiated_by: refund.refundId ? "customer" : null,
+          refund_requested_at: refund.refundId ? cancelledAt : null,
+          refund_provider_accepted_at: refund.providerAcceptedAt,
+          refund_completed_at: refund.completedAt,
+          stripe_refund_id: refund.refundId || null,
+          stripe_transfer_reversal_id: refund.transferReversalId || null,
+          deposit_status:
+            refund.refundStatus === "Succeeded"
+              ? "Refunded"
+              : refund.refundStatus === "Pending"
+                ? "Refund pending"
+                : current.booking.deposit_status,
         })
         .eq("id", access.bookingId)
         .eq("status", current.booking.status)
@@ -218,8 +280,11 @@ async function POSTHandler(request: Request) {
           after_data: {
             ...current.booking,
             status: "Cancelled",
+            cancelled_by: "customer",
             cancellation_initiated_by: "Customer",
             cancellation_reason: reason,
+            cancellation_customer_reason: reason,
+            refund_status: refund.refundStatus,
           },
         });
       if (bookingAuditError) throw bookingAuditError;
@@ -230,13 +295,12 @@ async function POSTHandler(request: Request) {
         action: "cancelled",
         outcome: "completed",
       });
-      const notification = await deliverCancellationNotifications(
-        access.bookingId,
-        reason,
-      );
+      const notification = await deliverCancellationNotifications(access.bookingId);
       return Response.json({
         ok: true,
         status: "Cancelled",
+        refund_status: refund.refundStatus,
+        refund_grace_applied: withinGrace,
         warnings: notification.warnings,
       });
     }
@@ -351,7 +415,9 @@ async function POSTHandler(request: Request) {
         );
       } else {
         const declineText = `The customer declined the proposed times for booking ${String(
-          current.booking.confirmation_code || access.bookingId,
+          current.booking.public_reference ||
+            current.booking.confirmation_code ||
+            access.bookingId,
         )}. The original appointment remains unchanged.`;
         const deliveries = await Promise.allSettled([
           sendEmail(

@@ -6,7 +6,7 @@ import CustomerLocationProvider from "@/components/location/CustomerLocationProv
 import LocaleProvider from "@/components/i18n/LocaleProvider";
 import { cookies } from "next/headers";
 import { localeDirection, normalizeLocale } from "@/i18n/catalog";
-import { getEngineColor } from "@/lib/engineConfigServer";
+import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
 import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBridge";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
@@ -69,17 +69,36 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = normalizeLocale((await cookies()).get("gc_locale")?.value);
-  const [primaryColor, ctaColor] = await Promise.all([
-    getEngineColor("branding.primary_color", "#5B1A6B"),
-    getEngineColor("branding.cta_color", "#D6186B"),
-  ]);
+  const brand = await getEngineBrandTheme();
+  const headingFont = `"${brand.headingFont}", Georgia, "Times New Roman", serif`;
+  const bodyFont = `"${brand.bodyFont}", Arial, Helvetica, sans-serif`;
   return (
     <html
       lang={locale}
       dir={localeDirection(locale)}
       className="h-full antialiased"
       style={
-        { "--gc-plum": primaryColor, "--gc-magenta": ctaColor } as CSSProperties
+        {
+          "--gc-plum": brand.primary,
+          "--gc-magenta": brand.cta,
+          "--gc-accent": brand.accent,
+          "--gc-page": brand.page,
+          "--gc-card": brand.card,
+          "--gc-header": brand.header,
+          "--gc-footer": brand.footer,
+          "--gc-heading": brand.heading,
+          "--gc-body": brand.body,
+          "--gc-muted": brand.muted,
+          "--gc-link": brand.link,
+          "--gc-success": brand.success,
+          "--gc-warning": brand.warning,
+          "--gc-error": brand.error,
+          "--gc-hover": brand.hover,
+          "--gc-focus": brand.focus,
+          "--gc-disabled": brand.disabled,
+          "--font-fraunces": headingFont,
+          "--font-inter": bodyFont,
+        } as CSSProperties
       }
     >
       <body className="min-h-full flex flex-col">

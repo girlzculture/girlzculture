@@ -25,6 +25,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "60 min",
     "impact": "standard"
   },
+  "source.ba9c7ee72e30": {
+    "source": "A short, helpful message without internal details.",
+    "impact": "standard"
+  },
   "source.4d04eece64a7": {
     "source": "Account connected",
     "impact": "standard"
@@ -93,6 +97,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Add Stylist",
     "impact": "standard"
   },
+  "source.526c6c08e518": {
+    "source": "Adjusted Total",
+    "impact": "standard"
+  },
   "source.bb25b8516d74": {
     "source": "Admin access",
     "impact": "standard"
@@ -111,6 +119,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.eeaa13a51a89": {
     "source": "Admin response",
+    "impact": "standard"
+  },
+  "source.3f5e1dad429b": {
+    "source": "Admin timezone",
     "impact": "standard"
   },
   "source.e20c4bf694c2": {
@@ -173,6 +185,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Already have an account?",
     "impact": "standard"
   },
+  "source.f978200b1120": {
+    "source": "Alt text",
+    "impact": "standard"
+  },
   "source.90346db04697": {
     "source": "Amounts are stored from Stripe invoices, refunds, and credit notes. State and market are snapshots from the salon record when each event was received.",
     "impact": "booking"
@@ -183,6 +199,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.65de73c5706f": {
     "source": "Any visibility",
+    "impact": "standard"
+  },
+  "source.4c6ef4f5592c": {
+    "source": "Appears in:",
     "impact": "standard"
   },
   "source.0d9ba174ebf2": {
@@ -205,6 +225,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Approve the due-diligence application, reject it with a reason, then activate the salon when it is ready for subscription setup.",
     "impact": "booking"
   },
+  "source.a12cf250e41a": {
+    "source": "Approved slug",
+    "impact": "standard"
+  },
   "source.448f7fcd78b0": {
     "source": "Array.from(root?.querySelectorAll",
     "impact": "standard"
@@ -215,6 +239,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.317cf96bbf4d": {
     "source": "Assigned admin",
+    "impact": "standard"
+  },
+  "source.5714d2e05481": {
+    "source": "Audit history",
     "impact": "standard"
   },
   "source.e01eacc119b7": {
@@ -239,6 +267,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.9cdbf376d050": {
     "source": "Available Times",
+    "impact": "standard"
+  },
+  "source.511593991976": {
+    "source": "Beauty accessories",
     "impact": "standard"
   },
   "source.1eab45fedb40": {
@@ -293,6 +325,14 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Booking Messages",
     "impact": "booking"
   },
+  "source.9086c078dadb": {
+    "source": "Booking reference",
+    "impact": "booking"
+  },
+  "source.2d9e9b86120c": {
+    "source": "Booking Reference",
+    "impact": "booking"
+  },
   "source.7c9053b51ba7": {
     "source": "Booking unavailable",
     "impact": "booking"
@@ -309,8 +349,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Bookings Overview",
     "impact": "booking"
   },
+  "source.71e869afdc92": {
+    "source": "Brand & Appearance",
+    "impact": "standard"
+  },
+  "source.fdd17b14598f": {
+    "source": "Brand placements",
+    "impact": "standard"
+  },
   "source.e4956c8eb1e2": {
     "source": "Brief explanation",
+    "impact": "standard"
+  },
+  "source.f55f13919b5d": {
+    "source": "Browse products",
     "impact": "standard"
   },
   "source.c4b2dd23db02": {
@@ -337,6 +389,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Business Information",
     "impact": "standard"
   },
+  "source.16c2c52a5770": {
+    "source": "Buy Now",
+    "impact": "standard"
+  },
   "source.b7ba36c7a167": {
     "source": "c.cancellationThreshold ? (",
     "impact": "booking"
@@ -349,10 +405,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Cancel booking",
     "impact": "booking"
   },
-  "source.35b7999ad273": {
-    "source": "Cancel Booking & Process Refund",
-    "impact": "booking"
-  },
   "source.4f8b84ac75e8": {
     "source": "Cancel upload",
     "impact": "booking"
@@ -361,12 +413,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Cancellation Monitoring",
     "impact": "booking"
   },
-  "source.e212c93cd5e6": {
-    "source": "Cancellation reason",
-    "impact": "booking"
-  },
   "source.70cd2ee25017": {
     "source": "Cancellation scheduled",
+    "impact": "booking"
+  },
+  "source.dc63e775cd0c": {
+    "source": "Cancelled by",
     "impact": "booking"
   },
   "source.7e900370a009": {
@@ -437,6 +489,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Choose color",
     "impact": "standard"
   },
+  "source.7f563d74216a": {
+    "source": "Choose Draft, Active, or Archived status.",
+    "impact": "standard"
+  },
   "source.ba85878b59c8": {
     "source": "Choose from the platform catalog, then set your price.",
     "impact": "booking"
@@ -481,6 +537,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Compare plans",
     "impact": "standard"
   },
+  "source.83831d48bb62": {
+    "source": "Complete service",
+    "impact": "standard"
+  },
   "source.824bdcf6878f": {
     "source": "Complex records stay in purpose-built editors so validation, relationship previews, and protected history remain clear.",
     "impact": "standard"
@@ -493,17 +553,17 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Confirm password",
     "impact": "security"
   },
-  "source.4e9e48fdd225": {
-    "source": "Confirmation code",
-    "impact": "standard"
-  },
-  "source.2c0f9b9317e6": {
-    "source": "Confirmation Code",
+  "source.05af99905b7c": {
+    "source": "Confirmed → Checked in / Ready → In progress → Completed",
     "impact": "standard"
   },
   "source.4999d673201c": {
     "source": "Confirmed invoice, renewal, plan-change, refund, and credit events received through the signed Stripe webhook.",
     "impact": "booking"
+  },
+  "source.d4ec65ae3ccd": {
+    "source": "Contact details",
+    "impact": "standard"
   },
   "source.2b658ffd9420": {
     "source": "Contact support",
@@ -533,8 +593,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Current language",
     "impact": "standard"
   },
-  "source.1bf6e6464d46": {
-    "source": "Current offers",
+  "source.9987eee49225": {
+    "source": "Current Offers",
     "impact": "standard"
   },
   "source.ec5cfba8f01b": {
@@ -565,12 +625,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Customer navigation",
     "impact": "standard"
   },
+  "source.beddc873459b": {
+    "source": "Customer-safe reason",
+    "impact": "standard"
+  },
   "source.726ab6b6c805": {
     "source": "Daily request limit must be between 0 and 10,000.",
     "impact": "standard"
   },
   "source.9e3b0491299c": {
     "source": "Decline proposal",
+    "impact": "standard"
+  },
+  "source.6c02abf3beed": {
+    "source": "Decrease quantity",
     "impact": "standard"
   },
   "source.0336b2bf650e": {
@@ -601,12 +669,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Descriptive offer",
     "impact": "standard"
   },
+  "source.f59c5fe7f5fa": {
+    "source": "Desktop · tablet · mobile",
+    "impact": "standard"
+  },
   "source.60b334c71dab": {
     "source": "Directions available",
     "impact": "standard"
   },
   "source.5f1293a21937": {
     "source": "Display order",
+    "impact": "standard"
+  },
+  "source.2425c3a177b1": {
+    "source": "Display timezone",
     "impact": "standard"
   },
   "source.89f24f888e28": {
@@ -617,8 +693,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Draft preview:",
     "impact": "standard"
   },
-  "source.6c0bed6e704d": {
-    "source": "Drag and drop, or choose a file.",
+  "source.f9d53b3060c0": {
+    "source": "Draft uploaded. Review every preview, then publish when ready.",
+    "impact": "standard"
+  },
+  "source.b9c9696f484c": {
+    "source": "Drag and drop, or choose a file. Browser-incompatible tracks are prepared automatically when the media provider is configured.",
     "impact": "standard"
   },
   "source.973e7486db4f": {
@@ -637,6 +717,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Earnings Trend",
     "impact": "standard"
   },
+  "source.083b4f443328": {
+    "source": "Edit cart",
+    "impact": "standard"
+  },
   "source.99da1f9e92df": {
     "source": "Edit titles, visibility, and order without a code change.",
     "impact": "standard"
@@ -651,6 +735,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.11d4ef334a15": {
     "source": "Eligible targets",
+    "impact": "standard"
+  },
+  "source.a4152ef144da": {
+    "source": "Eligible:",
     "impact": "standard"
   },
   "source.c94d3175a656": {
@@ -789,6 +877,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "For Stylists",
     "impact": "standard"
   },
+  "source.b734aae77430": {
+    "source": "Forbidden: only the salon owner can request a public URL.",
+    "impact": "standard"
+  },
   "source.26e06aaa8c99": {
     "source": "Forbidden: this admin role does not have access to this section.",
     "impact": "standard"
@@ -801,9 +893,21 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Forbidden: this salon role does not have access to this section.",
     "impact": "standard"
   },
+  "source.f03df1e8c8a2": {
+    "source": "Forbidden: use the authorized account portal.",
+    "impact": "standard"
+  },
   "source.4c29f7f03358": {
     "source": "Forgot password?",
     "impact": "security"
+  },
+  "source.444601ad1b9e": {
+    "source": "Founder handbook",
+    "impact": "standard"
+  },
+  "source.ac009d16e419": {
+    "source": "Founder workflow",
+    "impact": "standard"
   },
   "source.a005b4058495": {
     "source": "Full details",
@@ -829,8 +933,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Girlz Culture",
     "impact": "standard"
   },
+  "source.f53e01f91662": {
+    "source": "girlzculture.com/",
+    "impact": "standard"
+  },
+  "source.a605b6556ae6": {
+    "source": "Google Business",
+    "impact": "standard"
+  },
   "source.eba58f3cc16e": {
     "source": "Grace period",
+    "impact": "standard"
+  },
+  "source.8ecf4a8e86b3": {
+    "source": "Hair-care products",
     "impact": "standard"
   },
   "source.59269e099c20": {
@@ -857,8 +973,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Horizontal carousel",
     "impact": "standard"
   },
+  "source.12b3b6f37363": {
+    "source": "Horizontal position",
+    "impact": "standard"
+  },
   "source.d996154734ed": {
     "source": "How can we help?",
+    "impact": "standard"
+  },
+  "source.fd8f7039b84e": {
+    "source": "How should we get it to you?",
     "impact": "standard"
   },
   "source.d7e190542d79": {
@@ -877,9 +1001,25 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Import preview",
     "impact": "standard"
   },
+  "source.f61eadaf153a": {
+    "source": "In Progress",
+    "impact": "standard"
+  },
+  "source.062e79bd33f1": {
+    "source": "Increase quantity",
+    "impact": "standard"
+  },
   "source.232d9866b8cb": {
     "source": "Integrations & System Status",
     "impact": "standard"
+  },
+  "source.fad8b0edb478": {
+    "source": "Internal evidence",
+    "impact": "standard"
+  },
+  "source.33ff84fa3d5d": {
+    "source": "Inventory, live prices, fulfillment eligibility, promotions, tax, shipping, and the final total are verified by the server before payment.",
+    "impact": "booking"
   },
   "source.aa3a4dd907c8": {
     "source": "Join Now",
@@ -907,6 +1047,18 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.bf0e99f413fd": {
     "source": "Last 14 days · database records only",
+    "impact": "standard"
+  },
+  "source.ada1b7255975": {
+    "source": "Last checked",
+    "impact": "standard"
+  },
+  "source.d9958cb15055": {
+    "source": "Last success",
+    "impact": "standard"
+  },
+  "source.db2f6bb37f5f": {
+    "source": "Latest request:",
     "impact": "standard"
   },
   "source.6b16d2ab1c78": {
@@ -1005,6 +1157,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Loading your beauty journey…",
     "impact": "standard"
   },
+  "source.4c09258017fd": {
+    "source": "Loading your cart…",
+    "impact": "standard"
+  },
   "source.e7385126e285": {
     "source": "Loading your salon workspace…",
     "impact": "standard"
@@ -1040,6 +1196,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.c27ea1b8d2f9": {
     "source": "Manage your bookings, favorites, reviews, and account details.",
     "impact": "booking"
+  },
+  "source.7f8dda6bffa6": {
+    "source": "Manage your catalog, stock, pickup, shipping, and online sales.",
+    "impact": "standard"
   },
   "source.54d5b9adfc82": {
     "source": "Manage your signature styles, pricing, options, and inclusions.",
@@ -1080,6 +1240,18 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.8b784d18c936": {
     "source": "Moderation required",
     "impact": "safety"
+  },
+  "source.22a0d89359bb": {
+    "source": "Money owed",
+    "impact": "standard"
+  },
+  "source.bb9cec8effd5": {
+    "source": "Money received",
+    "impact": "standard"
+  },
+  "source.0fd7f0482b40": {
+    "source": "Money returned",
+    "impact": "standard"
   },
   "source.226026526d1d": {
     "source": "Monthly budget must be between $0 and $100,000.",
@@ -1249,6 +1421,14 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Offers only",
     "impact": "standard"
   },
+  "source.f7690f067211": {
+    "source": "One-salon cart",
+    "impact": "standard"
+  },
+  "source.3656436c1b25": {
+    "source": "Online Orders",
+    "impact": "standard"
+  },
   "source.a970c9a90f3c": {
     "source": "Only records explicitly registered in a named batch can be touched. Names, email domains, dates, and empty fields are never used to guess. Paid and audited history is retained or anonymized.",
     "impact": "standard"
@@ -1280,6 +1460,18 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.f1e123dd150d": {
     "source": "Order must be between 0 and 100,000.",
     "impact": "standard"
+  },
+  "source.bc071ffbe93c": {
+    "source": "Order reference",
+    "impact": "standard"
+  },
+  "source.db14f4987e96": {
+    "source": "Order summary",
+    "impact": "standard"
+  },
+  "source.e7491672e0c0": {
+    "source": "Original price",
+    "impact": "booking"
   },
   "source.96ef71934710": {
     "source": "Our Products",
@@ -1321,6 +1513,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Payment methods",
     "impact": "booking"
   },
+  "source.4403e9973060": {
+    "source": "Payment receipt",
+    "impact": "booking"
+  },
   "source.0704b50f2057": {
     "source": "Payout Account",
     "impact": "standard"
@@ -1337,8 +1533,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Percentage off",
     "impact": "standard"
   },
+  "source.1120490a6369": {
+    "source": "Pick a date, then offer a preferred available time/stylist and up to two alternatives. The current appointment stays confirmed until the customer accepts.",
+    "impact": "booking"
+  },
+  "source.4cd2a06f025b": {
+    "source": "Pickup, shipping, payment, and tracking details from your salons.",
+    "impact": "booking"
+  },
+  "source.8f2bd70b53b9": {
+    "source": "Plain-language guidance for Engine sections, controls, publishing, integrations, recovery, and monitored errors.",
+    "impact": "standard"
+  },
   "source.4907c3f80be7": {
     "source": "Plain-text message",
+    "impact": "standard"
+  },
+  "source.046f911cf01e": {
+    "source": "Platform accounting",
     "impact": "standard"
   },
   "source.7c39b5a1b695": {
@@ -1385,12 +1597,28 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Price summary",
     "impact": "booking"
   },
+  "source.299114423ea0": {
+    "source": "Primary action",
+    "impact": "standard"
+  },
   "source.63af45e3593d": {
     "source": "Private documents",
     "impact": "standard"
   },
   "source.75674afc93a7": {
     "source": "Private PDF, JPG, or PNG · up to 10 MB each",
+    "impact": "standard"
+  },
+  "source.45c1dda1e379": {
+    "source": "Product inventory, price, promotion, tax, shipping, and the final total are verified with the appointment in one atomic reservation.",
+    "impact": "booking"
+  },
+  "source.2c2af5c7d89b": {
+    "source": "Product Order",
+    "impact": "standard"
+  },
+  "source.8ff5a4b60f5a": {
+    "source": "Product Orders",
     "impact": "standard"
   },
   "source.e328e4c2a95e": {
@@ -1421,16 +1649,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Propose reschedule",
     "impact": "standard"
   },
+  "source.f9031ae76c04": {
+    "source": "Public Link & Social Profiles",
+    "impact": "standard"
+  },
   "source.9e54993aed01": {
     "source": "Public page",
     "impact": "standard"
   },
-  "source.64fefb5acd58": {
-    "source": "Publish change",
+  "source.ca3a767e4981": {
+    "source": "Public URL & social profiles",
     "impact": "standard"
   },
   "source.7022bbbd27b2": {
     "source": "Publish status",
+    "impact": "standard"
+  },
+  "source.e811da76c4fc": {
+    "source": "Published history",
     "impact": "standard"
   },
   "source.22d678d12784": {
@@ -1505,6 +1741,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Reference, route, or action",
     "impact": "standard"
   },
+  "source.45683caedeea": {
+    "source": "Reference, salon, customer, service",
+    "impact": "standard"
+  },
   "source.9cf53df4cc60": {
     "source": "Refresh checklist",
     "impact": "standard"
@@ -1527,6 +1767,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.4d0255e85ede": {
     "source": "request failed",
+    "impact": "standard"
+  },
+  "source.0bb6adcc63eb": {
+    "source": "Requested:",
+    "impact": "standard"
+  },
+  "source.956043788db3": {
+    "source": "Required workflow:",
     "impact": "standard"
   },
   "source.5c4bc97ee5d0": {
@@ -1577,8 +1825,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Safe action",
     "impact": "standard"
   },
-  "source.448e957dba03": {
-    "source": "Safe health summaries only. Credentials, connection strings, provider responses, raw SQL, and secret values are never displayed here.",
+  "source.9332b77083a4": {
+    "source": "Safe health summaries and connection tests only. Credentials, connection strings, provider responses, raw SQL, tokens, and secret values are never returned to the browser.",
     "impact": "standard"
   },
   "source.b31aef39deb6": {
@@ -1611,6 +1859,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.d48d6a88eafb": {
     "source": "Salon photos",
+    "impact": "standard"
+  },
+  "source.2940531782be": {
+    "source": "Salon pickup",
     "impact": "standard"
   },
   "source.63d294ecd3b6": {
@@ -1647,6 +1899,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.4f25637a5b7e": {
     "source": "Save draft",
+    "impact": "standard"
+  },
+  "source.cc1316dd1928": {
+    "source": "Save Draft",
+    "impact": "standard"
+  },
+  "source.5b29de4eed07": {
+    "source": "Save Draft → check desktop, tablet, and mobile previews → Review → Publish. Changing the crop or alt text clears the prior review.",
     "impact": "standard"
   },
   "source.3f1909e2983e": {
@@ -1689,6 +1949,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Save the service details first, then upload its images.",
     "impact": "standard"
   },
+  "source.d15a73772c8b": {
+    "source": "Save timezone",
+    "impact": "standard"
+  },
   "source.0a228a597fb4": {
     "source": "Saved promotions",
     "impact": "standard"
@@ -1713,12 +1977,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Search keys, source, or translation",
     "impact": "standard"
   },
+  "source.1f121436db81": {
+    "source": "Search reference, UUID, or customer",
+    "impact": "standard"
+  },
   "source.5ae6c089d01d": {
     "source": "Search salons",
     "impact": "standard"
   },
   "source.f65c33c9e4ab": {
     "source": "Search Salons",
+    "impact": "standard"
+  },
+  "source.f95aed36e528": {
+    "source": "Search sections, publishing, integrations, or errors",
     "impact": "standard"
   },
   "source.e40daa9c6721": {
@@ -1735,6 +2007,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.dd3d55235136": {
     "source": "Section permissions",
+    "impact": "standard"
+  },
+  "source.60ab023b8a3e": {
+    "source": "Secure · Verified Salon · Test Mode",
     "impact": "standard"
   },
   "source.939120cda962": {
@@ -1769,8 +2045,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Service Image",
     "impact": "standard"
   },
-  "source.bd66e4f9372e": {
-    "source": "Share salon",
+  "source.3b488812a6f9": {
+    "source": "Service progress",
+    "impact": "standard"
+  },
+  "source.c7f64392534c": {
+    "source": "Service state",
+    "impact": "standard"
+  },
+  "source.12abb2344c17": {
+    "source": "Setup instructions",
     "impact": "standard"
   },
   "source.63bb10c08f11": {
@@ -1779,6 +2063,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.9585cf1ab941": {
     "source": "Share your salon’s work with nearby clients.",
+    "impact": "standard"
+  },
+  "source.093c3f5d1305": {
+    "source": "Shop salons",
     "impact": "standard"
   },
   "source.396c2137a0b5": {
@@ -1817,6 +2105,14 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Social channels",
     "impact": "standard"
   },
+  "source.01e23234329c": {
+    "source": "Standard parcel",
+    "impact": "standard"
+  },
+  "source.41b25279c02f": {
+    "source": "Start service",
+    "impact": "standard"
+  },
   "source.b291fb0a20b7": {
     "source": "Starting price",
     "impact": "booking"
@@ -1845,6 +2141,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Store Hours",
     "impact": "standard"
   },
+  "source.de105f615dd5": {
+    "source": "Stripe test mode · encrypted checkout",
+    "impact": "standard"
+  },
   "source.fd2f033ebd4e": {
     "source": "Styles & Pricing",
     "impact": "standard"
@@ -1863,6 +2163,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.e487e0752b1c": {
     "source": "Super Admin only. This removes the canonical Auth account, revokes access, preserves required history by anonymizing or detaching personal data, and releases the normalized email only after Auth deletion succeeds.",
+    "impact": "standard"
+  },
+  "source.82f60e52901e": {
+    "source": "Tax category",
     "impact": "standard"
   },
   "source.4be37be90bfc": {
@@ -1901,6 +2205,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "The link may have changed, or this salon may not be published yet. Browse available salons to keep looking.",
     "impact": "standard"
   },
+  "source.4c3ccf15653d": {
+    "source": "The original is inspected after upload. Incompatible video or audio tracks are converted to H.264/AAC MP4 and a poster frame is generated by the configured secure media processor. If processing fails, the original is retained temporarily for retry.",
+    "impact": "standard"
+  },
   "source.1756d7b8e5b7": {
     "source": "The record now carries an explicit, durable test-data marker.",
     "impact": "standard"
@@ -1909,8 +2217,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "The salon you requested is not available yet, or the link may need a refresh.",
     "impact": "standard"
   },
-  "source.281943d8192f": {
-    "source": "These products are advertised for in-person purchase only and appear on your salon’s public page. No online checkout.",
+  "source.c45f30146a38": {
+    "source": "These previews use the live Engine colors and fonts. Edit their individual controls above, then publish to update all surfaces.",
     "impact": "standard"
   },
   "source.dcd8fb471d15": {
@@ -1933,6 +2241,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "This is a sanitized processing ledger. It contains event IDs and statuses, never provider payloads, card data, tokens, or secrets.",
     "impact": "standard"
   },
+  "source.066ca8e2f1a4": {
+    "source": "This product is currently available to view, but the salon has not enabled online pickup or shipping.",
+    "impact": "standard"
+  },
   "source.fef059380e2b": {
     "source": "This record has booking history and must be archived, not deleted.",
     "impact": "booking"
@@ -1949,10 +2261,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "to confirm",
     "impact": "standard"
   },
-  "source.a2a7c604797b": {
-    "source": "Total Price",
-    "impact": "booking"
-  },
   "source.8c3345f3d766": {
     "source": "Total Reviews",
     "impact": "standard"
@@ -1963,6 +2271,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.4ed32a0e08a9": {
     "source": "Transaction History",
+    "impact": "standard"
+  },
+  "source.a1a871ce540f": {
+    "source": "Transaction ledger",
     "impact": "standard"
   },
   "source.0b85f9e56e97": {
@@ -2009,6 +2321,18 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Upcoming Bookings",
     "impact": "booking"
   },
+  "source.bdf08d13a6aa": {
+    "source": "Upload an MP4, WebM, MOV, M4V, or Matroska video.",
+    "impact": "standard"
+  },
+  "source.fb443d12cdb7": {
+    "source": "Upload draft",
+    "impact": "standard"
+  },
+  "source.ea70595ebca8": {
+    "source": "Upload platform identity assets, position each draft, preview responsive placements, record review, publish without a code deploy, and restore prior versions.",
+    "impact": "security"
+  },
   "source.705e0f84982e": {
     "source": "Upload, trim where your browser supports it, choose a poster frame, preview, moderate, and schedule local placement.",
     "impact": "standard"
@@ -2021,12 +2345,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Uploading documents…",
     "impact": "standard"
   },
-  "source.a66ad13dba0c": {
-    "source": "Use “Propose to customer” for approval. “Save Changes” is an audited platform intervention and changes the booking immediately.",
-    "impact": "booking"
+  "source.5bba0a4f84f6": {
+    "source": "URL history",
+    "impact": "standard"
+  },
+  "source.51f5a8a8bb55": {
+    "source": "US shipping",
+    "impact": "standard"
   },
   "source.a3a446cc6c34": {
     "source": "Use # for a large heading, ## or ### for smaller headings, - for bullets, and [label](/page) for a link. HTML is not accepted.",
+    "impact": "standard"
+  },
+  "source.3b4bf8784902": {
+    "source": "Use 3–72 letters, numbers, or single hyphens.",
+    "impact": "standard"
+  },
+  "source.d4e2a7ceec17": {
+    "source": "Use a real PNG, WebP, JPEG, safe SVG, or ICO image.",
     "impact": "standard"
   },
   "source.281b6d6e732c": {
@@ -2061,6 +2397,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Version history",
     "impact": "standard"
   },
+  "source.f2a31e6a0420": {
+    "source": "Vertical position",
+    "impact": "standard"
+  },
   "source.af1a0ec85f64": {
     "source": "Video URL",
     "impact": "standard"
@@ -2091,6 +2431,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.82dd83fdd3d3": {
     "source": "We could not estimate your area. Choose a city, neighborhood, or ZIP in Find Salons.",
+    "impact": "standard"
+  },
+  "source.9edd22f5d77d": {
+    "source": "We couldn't confirm the order yet. Refresh in a moment.",
     "impact": "standard"
   },
   "source.2dad0a7efa21": {

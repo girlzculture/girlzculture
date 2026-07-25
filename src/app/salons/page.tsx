@@ -11,8 +11,11 @@ function stringValue(value: string | string[] | undefined) { return typeof value
 
 export default async function SalonsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
-  const origin = { lat: Number(stringValue(query.lat)), lng: Number(stringValue(query.lng)) };
-  const validOrigin = validCoordinates(origin) ? origin : null;
+  const latitude = stringValue(query.lat).trim();
+  const longitude = stringValue(query.lng).trim();
+  const origin = { lat: Number(latitude), lng: Number(longitude) };
+  const validOrigin =
+    latitude && longitude && validCoordinates(origin) ? origin : null;
   const style = stringValue(query.style);
   const location = stringValue(query.location);
   const radius = normalizeRadius(stringValue(query.radius));

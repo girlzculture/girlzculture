@@ -97,7 +97,7 @@ export default function GuestBookingRecovery() {
       {!challengeId ? (
         <form onSubmit={requestCode} className="mt-7 grid gap-4">
           <label className="text-xs font-bold">
-            Confirmation code
+            Booking reference
             <input
               required
               name="confirmation_code"

@@ -16,11 +16,7 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
   const [error, setError] = useState("");
   const carousel = useRef<HTMLDivElement>(null);
   const location = locationState.location;
-  const viewAllHref = useMemo(() => {
-    if (!location) return "/salons";
-    const query = new URLSearchParams({ location: location.label, lat: String(location.lat), lng: String(location.lng), radius: String(locationState.radiusMiles) });
-    return `/salons?${query}`;
-  }, [location, locationState.radiusMiles]);
+  const viewAllHref = useMemo(() => "/salons", []);
 
   async function load(signal?: AbortSignal) {
     if (!location || !validCoordinates(location)) { setSalons([]); setTotal(0); return; }

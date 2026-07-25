@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -21,7 +21,7 @@ import MediaRulesSettings from "@/components/admin/MediaRulesSettings";
 import TranslationManager from "@/components/admin/TranslationManager";
 import RecordLifecycleManager from "@/components/admin/RecordLifecycleManager";
 import TestDataManager from "@/components/admin/TestDataManager";
-import { ENGINE_CATEGORIES } from "@/lib/engineManifest";
+import { ENGINE_SECTIONS } from "@/lib/engineManifest";
 import AiAutomationManager from "@/components/admin/AiAutomationManager";
 import SystemStatusManager from "@/components/admin/SystemStatusManager";
 import ErrorMonitoringManager from "@/components/admin/ErrorMonitoringManager";
@@ -102,6 +102,25 @@ function friendlyValue(value: unknown) {
   return String(value ?? "Not set");
 }
 
+function previewDestination(setting: Setting) {
+  if (setting.category === "branding_design") return "/";
+  if (
+    ["pages_sections", "navigation_menus", "homepage_composition"].includes(
+      setting.category,
+    )
+  )
+    return "/";
+  if (
+    ["search_discovery", "markets_service_areas", "service_taxonomies"].includes(
+      setting.category,
+    )
+  )
+    return "/salons";
+  if (setting.category === "payments_subscriptions") return "/pricing";
+  if (setting.category === "languages_translations") return "/";
+  return "";
+}
+
 export default function EngineControlCenter() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [history, setHistory] = useState<Version[]>([]);
@@ -109,7 +128,7 @@ export default function EngineControlCenter() {
     EnvironmentStatus[]
   >([]);
   const [environment, setEnvironment] = useState("development");
-  const [category, setCategory] = useState("branding_design");
+  const [category, setCategory] = useState("overview");
   const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [editor, setEditor] = useState("");
@@ -151,7 +170,10 @@ export default function EngineControlCenter() {
       const id =
         preferred ||
         selectedId ||
-        rows.find((row: Setting) => row.category === category)?.id ||
+        rows.find((row: Setting) =>
+          ENGINE_SECTIONS.find((section) => section.id === category)
+            ?.categories.includes(row.category),
+        )?.id ||
         rows[0]?.id ||
         "";
       setSelectedId(id);
@@ -172,18 +194,19 @@ export default function EngineControlCenter() {
     return () => window.clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = settings.find((row) => row.id === selectedId) || null;
-  const selectedCategory = ENGINE_CATEGORIES.find(
+  const selectedCategory = ENGINE_SECTIONS.find(
     (item) => item.id === category,
   );
+  const activeCategories = selectedCategory?.categories || [];
   const showsRecordLifecycle = [
-    "pages_sections",
-    "service_taxonomies",
-    "salon_lifecycle",
-    "markets_service_areas",
-    "promotions_campaigns",
-    "customer_support",
-    "users_roles",
-    "configuration_history",
+    "pages_navigation",
+    "content_wording",
+    "services_catalog",
+    "salon_operations",
+    "promotions",
+    "locations",
+    "data_management",
+    "security_access",
   ].includes(category);
   const hasUnsavedChanges = Boolean(
     selected && !selected.is_secret_status && editor !== editorText(selected),
@@ -197,18 +220,14 @@ export default function EngineControlCenter() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasUnsavedChanges]);
-  const visible = useMemo(
-    () =>
-      settings.filter(
-        (row) =>
-          row.setting_key !== "languages.supported" &&
-          (query
-            ? `${row.display_name} ${row.description} ${row.help_text} ${row.category}`
-                .toLowerCase()
-                .includes(query.toLowerCase())
-            : row.category === category),
-      ),
-    [settings, category, query],
+  const visible = settings.filter(
+    (row) =>
+      row.setting_key !== "languages.supported" &&
+      (query
+        ? `${row.display_name} ${row.description} ${row.help_text} ${row.category}`
+            .toLowerCase()
+            .includes(query.toLowerCase())
+        : activeCategories.includes(row.category)),
   );
   const versions = history
     .filter((row) => row.setting_id === selectedId)
@@ -221,7 +240,10 @@ export default function EngineControlCenter() {
   }
   function choose(row: Setting) {
     if (row.id !== selectedId && !canLeaveDraft()) return;
-    setCategory(row.category);
+    const section = ENGINE_SECTIONS.find((item) =>
+      item.categories.includes(row.category),
+    );
+    if (section) setCategory(section.id);
     setSelectedId(row.id);
     setEditor(editorText(row));
     setReason("");
@@ -231,7 +253,10 @@ export default function EngineControlCenter() {
   function chooseCategory(next: string) {
     if (next === category || !canLeaveDraft()) return;
     setCategory(next);
-    const row = settings.find((item) => item.category === next);
+    const section = ENGINE_SECTIONS.find((item) => item.id === next);
+    const row = settings.find((item) =>
+      section?.categories.includes(item.category),
+    );
     if (row) {
       setSelectedId(row.id);
       setEditor(editorText(row));
@@ -560,7 +585,7 @@ export default function EngineControlCenter() {
             aria-label="Engine areas"
             className="mt-3 max-h-[680px] space-y-1 overflow-y-auto"
           >
-            {ENGINE_CATEGORIES.map((item) => (
+            {ENGINE_SECTIONS.map((item) => (
               <button
                 type="button"
                 key={item.id}
@@ -569,7 +594,11 @@ export default function EngineControlCenter() {
               >
                 <span>{item.label}</span>
                 <span className="rounded-full bg-white px-2 py-0.5 text-[9px]">
-                  {settings.filter((row) => row.category === item.id).length}
+                  {
+                    settings.filter((row) =>
+                      item.categories.includes(row.category),
+                    ).length
+                  }
                 </span>
               </button>
             ))}
@@ -616,10 +645,15 @@ export default function EngineControlCenter() {
                   >
                     <span className="flex items-center justify-between gap-2">
                       <b className="text-sm text-plum">{row.display_name}</b>
-                      <span
-                        className={`rounded-full px-2 py-1 text-[8px] font-bold ${highImpact.has(row.impact_level) ? "bg-amber/20 text-[#7b4a00]" : "bg-cream text-ink/55"}`}
-                      >
-                        {row.impact_level}
+                      <span className="flex flex-wrap justify-end gap-1">
+                        <span className="rounded-full bg-blush px-2 py-1 text-[8px] font-bold text-plum">
+                          {row.status || "Draft"}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-1 text-[8px] font-bold ${highImpact.has(row.impact_level) ? "bg-amber/20 text-[#7b4a00]" : "bg-cream text-ink/55"}`}
+                        >
+                          {row.impact_level}
+                        </span>
                       </span>
                     </span>
                     <span className="mt-2 block text-[10px] leading-4 text-ink/55">
@@ -640,7 +674,7 @@ export default function EngineControlCenter() {
               </div>
             )}
           </div>
-          {selected && selected.category === category ? (
+          {selected && activeCategories.includes(selected.category) ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -652,6 +686,7 @@ export default function EngineControlCenter() {
                   </p>
                 </div>
                 <span className="rounded-full bg-blush px-3 py-1 text-[9px] font-bold text-plum">
+                  {selected.status || "Draft"} ·{" "}
                   {selected.value_type.replaceAll("_", " ")}
                 </span>
               </div>
@@ -722,10 +757,43 @@ export default function EngineControlCenter() {
                     <button
                       type="button"
                       disabled={busy}
+                      onClick={() => {
+                        const destination = previewDestination(selected);
+                        if (destination) {
+                          window.open(destination, "_blank", "noopener");
+                          setMessage(
+                            "Preview opened in a new tab. Draft-only values remain private until published.",
+                          );
+                        } else {
+                          setMessage(
+                            `Draft preview: ${friendlyValue(requestValue(selected))}. Review the affected surfaces below before publication.`,
+                          );
+                        }
+                      }}
+                      className="min-h-11 rounded-lg border border-plum/15 px-5 text-xs font-bold text-plum"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
                       onClick={() => void change("save_draft")}
                       className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta"
                     >
-                      Save draft
+                      Save Draft
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || (impactHigh && reason.trim().length < 8)}
+                      onClick={() => {
+                        setConfirmed(true);
+                        setMessage(
+                          `Review ready: ${selected.display_name} affects ${selected.affected_surfaces?.join(", ") || "the listed platform behavior"}. Publish only after checking the preview and change reason.`,
+                        );
+                      }}
+                      className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta disabled:opacity-45"
+                    >
+                      Review
                     </button>
                     <button
                       type="button"
@@ -739,7 +807,7 @@ export default function EngineControlCenter() {
                       onClick={() => void change("publish")}
                       className="min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-45"
                     >
-                      Publish change
+                      Publish
                     </button>
                   </div>
                 </>
@@ -754,18 +822,26 @@ export default function EngineControlCenter() {
               ) : null}
             </section>
           ) : null}
-          {category === "salon_lifecycle" ? <SalonLifecycleSettings /> : null}
-          {category === "branding_design" ? <BrandAppearanceManager /> : null}
-          {category === "search_discovery" ? <SearchLanguageSettings /> : null}
-          {category === "media_uploads" ? <MediaRulesSettings /> : null}
-          {category === "languages_translations" ? (
+          {category === "overview" ? (
+            <EngineOverview
+              settings={settings}
+              environmentStatus={environmentStatus}
+              onNavigate={chooseCategory}
+            />
+          ) : null}
+          {category === "salon_operations" ? <SalonLifecycleSettings /> : null}
+          {category === "brand_design" ? <><BrandAppearanceManager /><MediaRulesSettings /></> : null}
+          {category === "locations" ? <SearchLanguageSettings /> : null}
+          {category === "languages" ? (
             <TranslationManager />
           ) : null}
-          {category === "navigation_menus" ? <NavigationMenuManager /> : null}
-          {category === "notifications_templates" ? <NotificationTemplateManager /> : null}
-          {category === "ai_automation" ? <AiAutomationManager /> : null}
-          {category === "integrations_system" ? <><SystemStatusManager /><ErrorMonitoringManager /></> : null}
-          {category === "test_data_maintenance" ? <TestDataManager /> : null}
+          {category === "pages_navigation" ? <NavigationMenuManager /> : null}
+          {category === "notifications" ? <NotificationTemplateManager /> : null}
+          {category === "ai" ? <AiAutomationManager /> : null}
+          {category === "integrations" ? <SystemStatusManager /> : null}
+          {category === "system_health" ? <><ErrorMonitoringManager /><SystemStatusManager /></> : null}
+          {category === "data_management" ? <TestDataManager /> : null}
+          {category === "help" ? <FounderHandbook /> : null}
           {selectedCategory?.links?.length ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
               <h3 className="font-serif text-xl text-plum">
@@ -791,10 +867,10 @@ export default function EngineControlCenter() {
               </div>
             </section>
           ) : null}
-          {showsRecordLifecycle || category === "test_data_maintenance" ? (
+          {showsRecordLifecycle ? (
             <RecordLifecycleManager />
           ) : null}
-          {category === "configuration_history" ? (
+          {category === "data_management" ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
               <div className="flex items-center gap-2">
                 <History className="text-magenta" />
@@ -835,7 +911,7 @@ export default function EngineControlCenter() {
           ) : null}
           {selected &&
           versions.length &&
-          category !== "configuration_history" ? (
+          category !== "data_management" ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
               <div className="flex items-center gap-2">
                 <Clock3 className="text-magenta" />
@@ -916,6 +992,289 @@ export default function EngineControlCenter() {
         </main>
       </div>
     </div>
+  );
+}
+
+function EngineOverview({
+  settings,
+  environmentStatus,
+  onNavigate,
+}: {
+  settings: Setting[];
+  environmentStatus: EnvironmentStatus[];
+  onNavigate: (section: string) => void;
+}) {
+  const [urgentEvents, setUrgentEvents] = useState<
+    Array<{
+      id: string;
+      severity: string;
+      occurrence_count?: number;
+      presentation?: { title?: string };
+      user_safe_message?: string;
+    }>
+  >([]);
+  const [errorStatus, setErrorStatus] = useState("Checking monitored errors…");
+
+  useEffect(() => {
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        const session = await getSessionForScope("admin");
+        if (!session) throw new Error("Admin session expired.");
+        const response = await fetch("/api/admin/engine/errors?status=Open", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: "no-store",
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error("Unable to check monitored errors.");
+        if (!active) return;
+        const events = Array.isArray(body.events) ? body.events : [];
+        setUrgentEvents(
+          events.filter((event: { severity?: unknown }) =>
+            ["critical", "high"].includes(String(event.severity).toLowerCase()),
+          ),
+        );
+        setErrorStatus("Current deduplicated operational events");
+      } catch {
+        if (active)
+          setErrorStatus(
+            "Error status could not be checked. Open System Health & Errors.",
+          );
+      }
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  const draftCount = settings.filter((setting) =>
+    /draft/i.test(setting.status),
+  ).length;
+  const unpublishedCount = settings.filter(
+    (setting) => setting.version > setting.published_version,
+  ).length;
+  const missingIntegrations = environmentStatus.filter(
+    (status) => !status.configured,
+  ).length;
+  const urgentOccurrences = urgentEvents.reduce(
+    (total, event) => total + Number(event.occurrence_count || 1),
+    0,
+  );
+
+  return (
+    <div className="space-y-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: "Working drafts",
+            value: draftCount,
+            help: "Saved changes that are not live.",
+            section: "content_wording",
+          },
+          {
+            label: "Awaiting publication",
+            value: unpublishedCount,
+            help: "Settings whose working version is newer than the published version.",
+            section: "data_management",
+          },
+          {
+            label: "Configuration needed",
+            value: missingIntegrations,
+            help: "Deployment integrations without a configured status.",
+            section: "integrations",
+          },
+          {
+            label: "Urgent error occurrences",
+            value: urgentOccurrences,
+            help: errorStatus,
+            section: "system_health",
+          },
+        ].map((card) => (
+          <button
+            type="button"
+            key={card.label}
+            onClick={() => onNavigate(card.section)}
+            className={`rounded-[15px] border p-5 text-left transition hover:border-magenta ${
+              card.section === "system_health" && card.value
+                ? "border-red-300 bg-red-50"
+                : "border-plum/10 bg-white"
+            }`}
+          >
+            <p className="text-[9px] font-bold uppercase tracking-[.12em] text-ink/45">
+              {card.label}
+            </p>
+            <p className="mt-2 font-serif text-3xl text-plum">{card.value}</p>
+            <p className="mt-2 text-[10px] leading-4 text-ink/55">
+              {card.help}
+            </p>
+          </button>
+        ))}
+      </section>
+
+      <section
+        className={`rounded-[15px] border p-5 ${
+          urgentEvents.length
+            ? "border-red-300 bg-red-50"
+            : "border-plum/10 bg-white"
+        }`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle
+                size={20}
+                className={
+                  urgentEvents.length ? "text-red-700" : "text-green-700"
+                }
+              />
+              <h3 className="font-serif text-xl text-plum">
+                Critical and high errors
+              </h3>
+            </div>
+            <p className="mt-1 text-xs text-ink/55">{errorStatus}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate("system_health")}
+            className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white"
+          >
+            Open Error Monitoring
+          </button>
+        </div>
+        {urgentEvents.length ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {urgentEvents.slice(0, 4).map((event) => (
+              <article
+                key={event.id}
+                className="rounded-xl border border-red-200 bg-white p-3"
+              >
+                <span className="rounded-full bg-red-100 px-2 py-1 text-[8px] font-bold uppercase text-red-800">
+                  {event.severity}
+                </span>
+                <p className="mt-2 text-xs font-bold text-plum">
+                  {event.presentation?.title ||
+                    event.user_safe_message ||
+                    "Platform operation needs attention"}
+                </p>
+                <p className="mt-1 text-[9px] text-ink/50">
+                  {event.occurrence_count || 1} grouped occurrence
+                  {Number(event.occurrence_count || 1) === 1 ? "" : "s"}
+                </p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 rounded-xl bg-cream p-4 text-xs text-ink/60">
+            No open critical or high operational event was returned.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-[15px] border border-plum/10 bg-white p-5">
+        <h3 className="font-serif text-xl text-plum">Founder workflow</h3>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {[
+            ["1. Preview", "Review the affected public or dashboard surface."],
+            ["2. Save Draft", "Keep work private while wording and impact are reviewed."],
+            ["3. Review", "Confirm affected surfaces, validation, and high-impact warnings."],
+            ["4. Publish", "Make the reviewed version active and record the actor and reason."],
+            ["5. Restore", "Return to a known-good published version without deleting history."],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-xl bg-cream p-4">
+              <b className="text-xs text-plum">{title}</b>
+              <p className="mt-1 text-[10px] leading-4 text-ink/55">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FounderHandbook() {
+  const [handbookQuery, setHandbookQuery] = useState("");
+  const workflowEntries = [
+    {
+      title: "Preview, Save Draft, Review, Publish, and Restore",
+      body: "Preview checks the affected surface without making a change live. Save Draft stores private working values. Review the impact, validation, affected surfaces, and change reason. Publish activates the reviewed version and records who did it. Restore republishes a known-good historical version without deleting audit history.",
+    },
+    {
+      title: "Understanding fields and status",
+      body: "Editable controls are clearly separated from read-only provider or database facts. Each setting explains what it changes, where it appears, its working version, published version, validation limits, impact level, and Draft or Published state. Secret-status controls never reveal the secret value.",
+    },
+    {
+      title: "Connecting an integration",
+      body: "Open Integrations, read the required environment-variable names and setup instructions, configure values only in the approved deployment provider, then use Test Connection. Never paste a token, password, private key, card detail, or full provider payload into an Engine field or support ticket.",
+    },
+    {
+      title: "Responding to an operational error",
+      body: "Open System Health & Errors from the visible Overview alert. Use the matching reference ID, affected feature, route or action, salon context, occurrence count, impact, and recommended action. Assign the event, record sanitized notes, verify the fix, then resolve it. Repeated root causes stay grouped while counts and timestamps advance.",
+    },
+    {
+      title: "Configuration recovery",
+      body: "Use ordinary Restore for a reviewed historical version. Emergency last-known-good recovery is Super Admin only, requires the exact confirmation phrase and reason, advances the revision, invalidates configuration caches, and preserves every prior version.",
+    },
+    {
+      title: "Imports, exports, and protected data",
+      body: "Exports contain published non-secret configuration. Imports are validated previews and create drafts only. Financial history, authentication secrets, provider credentials, production records, and audit evidence cannot be overwritten through configuration import.",
+    },
+  ];
+  const entries = [
+    ...ENGINE_SECTIONS.map((section) => ({
+      title: section.label,
+      body: `${section.description} Open this section from the Engine index. Controls explain their affected surfaces and publication impact; connected record workspaces are linked when a structured editor is safer than a generic field.`,
+    })),
+    ...workflowEntries,
+  ];
+  const normalized = handbookQuery.trim().toLowerCase();
+  const visibleEntries = entries.filter(
+    (entry) =>
+      !normalized ||
+      `${entry.title} ${entry.body}`.toLowerCase().includes(normalized),
+  );
+  return (
+    <section
+      id="founder-handbook"
+      className="rounded-[15px] border border-plum/10 bg-white p-5"
+    >
+      <h3 className="font-serif text-2xl text-plum">Founder handbook</h3>
+      <p className="mt-1 max-w-3xl text-xs leading-5 text-ink/55">
+        Plain-language guidance for Engine sections, controls, publishing,
+        integrations, recovery, and monitored errors.
+      </p>
+      <label className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-plum/15 px-3">
+        <Search size={15} className="text-magenta" />
+        <span className="sr-only">Search founder handbook</span>
+        <input
+          type="search"
+          value={handbookQuery}
+          onChange={(event) => setHandbookQuery(event.target.value)}
+          placeholder="Search sections, publishing, integrations, or errors"
+          className="min-w-0 flex-1 text-xs outline-none"
+        />
+      </label>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {visibleEntries.map((entry) => (
+          <details
+            key={entry.title}
+            className="rounded-xl border border-plum/10 p-4 open:bg-cream/40"
+          >
+            <summary className="cursor-pointer text-xs font-bold text-plum">
+              {entry.title}
+            </summary>
+            <p className="mt-3 text-[11px] leading-5 text-ink/65">
+              {entry.body}
+            </p>
+          </details>
+        ))}
+      </div>
+      {!visibleEntries.length ? (
+        <p className="mt-4 rounded-xl border border-dashed p-8 text-center text-xs text-ink/50">
+          No handbook topic matches that search.
+        </p>
+      ) : null}
+    </section>
   );
 }
 

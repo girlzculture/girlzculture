@@ -12,11 +12,17 @@ const publicChrome=read("src/components/site/PublicChrome.tsx");
 const notificationApi=read("src/app/api/admin/engine/notifications/route.ts");
 const notificationManager=read("src/components/admin/NotificationTemplateManager.tsx");
 const notificationRuntime=read("src/lib/supabaseAdmin.ts");
-const categories=[...manifest.matchAll(/\{ id: "([a-z_]+)", label:/g)].map(match=>match[1]);
+const categorySource=manifest.split("export const ENGINE_SECTIONS")[0];
+const sectionSource=manifest.split("export const ENGINE_SECTIONS")[1]||"";
+const categories=[...categorySource.matchAll(/\{ id: "([a-z_]+)", label:/g)].map(match=>match[1]);
+const sections=[...sectionSource.matchAll(/\{ id: "([a-z_]+)", label: "([^"]+)"/g)].map(match=>({id:match[1],label:match[2]}));
 const required=["branding_design","navigation_menus","pages_sections","homepage_composition","service_taxonomies","salon_lifecycle","booking_availability","payments_subscriptions","search_discovery","markets_service_areas","media_uploads","languages_translations","notifications_templates","trust_quality","promotions_campaigns","customer_support","users_roles","ai_automation","test_data_maintenance","integrations_system","configuration_history"];
 const failures=[];
 if(categories.length!==21)failures.push(`Expected 21 Engine categories; found ${categories.length}`);
 for(const id of required)if(!categories.includes(id))failures.push(`Missing Engine category ${id}`);
+const founderSections=["Overview","Brand & Design","Pages & Navigation","Content & Wording","Languages & Translations","Salon Setup & Operations","Services & Catalog","Bookings & Cancellations","Payments, Plans & Refunds","Promotions & Campaigns","Locations & Discovery","Notifications & Communications","AI & Automation","Integrations","System Health & Errors","Data Management","Security & Access","Help & Documentation"];
+if(sections.length!==18)failures.push(`Expected 18 founder-facing Engine sections; found ${sections.length}`);
+for(const label of founderSections)if(!sections.some(section=>section.label===label))failures.push(`Missing founder-facing Engine section ${label}`);
 const localeSeedBlock=migration.split("insert into public.supported_locales")[1]?.split("on conflict(locale)")[0]||"";
 const localeCount=[...localeSeedBlock.matchAll(/^\('(?:[a-z]{2,3}|[a-z]{2,3}-[A-Z]{2})','/gm)].length;
 if(localeCount<37)failures.push(`Expected at least 37 seeded locales; found ${localeCount}`);
@@ -31,4 +37,4 @@ for(const token of ["PLACEHOLDER","save_draft","publish","rollback","admin_secur
 for(const token of ["Notification templates","Draft preview","Version history","Publish"])if(!notificationManager.includes(token))failures.push(`Notification manager missing ${token}`);
 for(const token of ["renderNotificationEmail","booking.customer_confirmed","booking.customer_cancelled","booking.customer_reminder"])if(!notificationRuntime.includes(token))failures.push(`Notification runtime missing ${token}`);
 if(failures.length){console.error(failures.join("\n"));process.exit(1)}
-console.log(`Engine expansion verified: ${categories.length} categories, ${localeCount} seeded locales, governed AI and migration workflow present.`);
+console.log(`Engine expansion verified: ${categories.length} persisted configuration categories grouped into ${sections.length} founder-facing sections, ${localeCount} seeded locales, governed AI and migration workflow present.`);

@@ -24,6 +24,9 @@ async function POSTHandler(request: Request) {
     enforceRateLimit(request, "guest-booking-recovery-request", 5, 15 * 60_000);
     const body = (await request.json()) as Record<string, unknown>;
     const confirmationCode = cleanText(body.confirmation_code, 60).toUpperCase();
+    const safeReference = /^[A-Z0-9-]{4,60}$/.test(confirmationCode)
+      ? confirmationCode
+      : "";
     let email = "";
     let phone = "";
     try {
@@ -33,11 +36,13 @@ async function POSTHandler(request: Request) {
       // The generic response prevents booking/email/phone enumeration.
     }
     const admin = getSupabaseAdmin();
-    const { data: booking, error } = confirmationCode
+    const { data: booking, error } = safeReference
       ? await admin
           .from("bookings")
           .select("id,guest_email,guest_phone")
-          .eq("confirmation_code", confirmationCode)
+          .or(
+            `public_reference.eq.${safeReference},confirmation_code.eq.${safeReference}`,
+          )
           .maybeSingle()
       : { data: null, error: null };
     if (error) throw error;

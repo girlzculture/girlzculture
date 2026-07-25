@@ -19,6 +19,7 @@ import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome"
 import SafeImage from "@/components/site/SafeImage";
 import SalonProfileActions from "@/components/site/SalonProfileActions";
 import SalonPhotoGallery from "@/components/public/SalonPhotoGallery";
+import SalonDistance from "@/components/public/SalonDistance";
 import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
@@ -205,7 +206,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const { slug } = await params;
   const incomingQuery = await searchParams;
   const bookingContext = new URLSearchParams();
-  for (const key of ["location", "lat", "lng", "style"] as const) {
+  for (const key of ["style"] as const) {
     const value = incomingQuery[key];
     if (typeof value === "string" && value.length <= 160) bookingContext.set(key, value);
   }
@@ -313,7 +314,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
             <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? verifiedLabel : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
-            <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span></div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span><SalonDistance latitude={salon.latitude} longitude={salon.longitude}/></div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span><span className="text-ink/55">({reviewCount} reviews)</span></> : <span className="rounded-full bg-blush px-2.5 py-1 font-bold text-plum">New</span>}</div>
 
             {trustLabels.length ? <div className="mt-4 grid grid-cols-3 gap-2">
@@ -346,17 +347,16 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </section>
 
         {promotionCards.length ? (
-          <section aria-labelledby="current-offers" className="mb-4 rounded-[15px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(243,217,228,.72),rgba(255,255,255,.78))] p-4 sm:p-5">
-            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Tag size={15}/>Current offers</p>
-            <h2 id="current-offers" className="mt-2 font-serif text-2xl font-semibold text-plum">Offers for specific services and products</h2>
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <section aria-labelledby="current-offers" className="mb-4 rounded-[13px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(243,217,228,.62),rgba(255,255,255,.78))] p-3 sm:p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="current-offers" className="flex items-center gap-2 font-serif text-lg font-semibold text-plum"><Tag size={15} className="text-magenta"/>Current Offers</h2><p className="text-[10px] text-ink/55">Eligible services and products only</p></div>
+            <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] lg:grid lg:grid-cols-3 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
               {promotionCards.map(({ promotion, eligibleStyles, eligibleProducts, href }) => (
-                <article key={promotion.id} className="rounded-[12px] border border-plum/10 bg-white/75 p-4">
-                  <h3 className="font-serif text-xl font-semibold text-plum">{promotion.public_headline || promotion.title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-ink/65">{promotion.description || promotionLabel(promotion)}</p>
+                <article key={promotion.id} className="min-w-[82vw] max-w-[360px] snap-start rounded-[11px] border border-plum/10 bg-white/80 p-3 sm:min-w-[310px] lg:min-w-0 lg:max-w-none">
+                  <h3 className="font-serif text-base font-semibold text-plum">{promotion.public_headline || promotion.title}</h3>
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-ink/65">{promotion.description || promotionLabel(promotion)}</p>
                   <p className="mt-2 text-[10px] font-bold text-magenta">{promotionLabel(promotion)}{(promotion.restrictions as Record<string,unknown> | null)?.terms ? ` · ${String((promotion.restrictions as Record<string,unknown>).terms)}` : ""}</p>
-                  <p className="mt-3 text-[10px] leading-5 text-ink/60"><b>Eligible:</b> {[...eligibleStyles.map((item) => item.name), ...eligibleProducts.map((item) => item.name)].filter(Boolean).join(", ")}</p>
-                  <Link href={href} className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>
+                  <p className="mt-2 line-clamp-1 text-[10px] leading-5 text-ink/60"><b>Eligible:</b> {[...eligibleStyles.map((item) => item.name), ...eligibleProducts.map((item) => item.name)].filter(Boolean).join(", ")}</p>
+                  <Link href={href} className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-magenta px-3 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>
                 </article>
               ))}
             </div>

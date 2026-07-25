@@ -3,10 +3,13 @@ import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import {
+  inspectBrandAssetBinary,
   normalizeBrandFocalPoint,
   stripBrandAssetVersion,
   versionBrandAssetUrl,
 } from "@/lib/brandAssetCore";
+
+export const runtime = "nodejs";
 
 type BrandAsset = {
   asset_key: string;
@@ -23,6 +26,8 @@ type BrandAsset = {
   draft_focal_y?: number | null;
   draft_width_px?: number | null;
   draft_height_px?: number | null;
+  draft_reviewed_at?: string | null;
+  draft_reviewed_by?: string | null;
   published_url?: string | null;
   published_storage_path?: string | null;
   published_alt_text?: string | null;
@@ -111,34 +116,76 @@ async function POSTHandler(request: Request) {
     const asset = result.data;
     if (file.size > Number(asset.max_bytes || 0))
       rejectRequest(`This image exceeds the ${Math.ceil(asset.max_bytes / 1_048_576)} MB limit.`);
-    if (!asset.allowed_mime_types.includes(file.type))
-      rejectRequest(`Use one of these file types: ${asset.allowed_mime_types.join(", ")}.`);
+    let inspected;
+    try {
+      inspected = inspectBrandAssetBinary(await file.arrayBuffer());
+    } catch (validationError) {
+      rejectRequest(
+        validationError instanceof Error
+          ? validationError.message
+          : "Choose a valid brand image.",
+      );
+    }
+    if (!asset.allowed_mime_types.includes(inspected.mimeType))
+      rejectRequest(
+        `This placement accepts: ${asset.allowed_mime_types.join(", ")}.`,
+      );
 
-    const source = Buffer.from(await file.arrayBuffer());
-    if (
-      file.type === "image/svg+xml" &&
-      /<(?:script|foreignObject)|\bon\w+\s*=|javascript:|https?:\/\//i.test(
-        source.toString("utf8"),
-      )
-    ) rejectRequest("This SVG contains unsupported active or external content.");
+    // This is a deliberate ordinary-memory copy. The File implementation used
+    // by some runtimes can expose SharedArrayBuffer-backed bytes, which
+    // Supabase Storage rejects.
+    const source = Buffer.from(inspected.bytes);
     const sharp = (await import("sharp")).default;
-    const image = sharp(source, { limitInputPixels: 40_000_000 }).rotate();
-    const metadata = await image.metadata();
-    const width = Number(metadata.width || 0);
-    const height = Number(metadata.height || 0);
+    const image =
+      inspected.mimeType === "image/x-icon"
+        ? null
+        : sharp(source, { limitInputPixels: 40_000_000 }).rotate();
+    const metadata = image ? await image.metadata() : null;
+    const width = Number(inspected.width || metadata?.width || 0);
+    const height = Number(inspected.height || metadata?.height || 0);
     if (!width || !height) rejectRequest("The uploaded file is not a readable image.");
     if (width < asset.min_width_px || height < asset.min_height_px)
       rejectRequest(`Use an image at least ${asset.min_width_px} × ${asset.min_height_px} pixels.`);
     const social = assetKey === "social_share_image";
-    const transformed = social
-      ? await image.resize({ width: 2400, height: 1260, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88, mozjpeg: true }).toBuffer()
-      : await image.resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true }).png({ compressionLevel: 9 }).toBuffer();
+    const preserveOriginal =
+      inspected.mimeType === "image/svg+xml" ||
+      inspected.mimeType === "image/x-icon";
+    const transformed = preserveOriginal
+      ? source
+      : social
+        ? await image!
+            .resize({
+              width: 2400,
+              height: 1260,
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .jpeg({ quality: 88, mozjpeg: true })
+            .toBuffer()
+        : await image!
+            .resize({
+              width: 2400,
+              height: 2400,
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .png({ compressionLevel: 9 })
+            .toBuffer();
     if (transformed.byteLength > asset.max_bytes)
       rejectRequest("The optimized image is still too large. Use a simpler or smaller image.");
-    const extension = social ? "jpg" : "png";
-    const contentType = social ? "image/jpeg" : "image/png";
+    const extension = preserveOriginal
+      ? inspected.extension
+      : social
+        ? "jpg"
+        : "png";
+    const contentType = preserveOriginal
+      ? inspected.mimeType
+      : social
+        ? "image/jpeg"
+        : "image/png";
     const path = `assets/${assetKey}/${crypto.randomUUID()}.${extension}`;
-    const uploaded = await admin.storage.from("platform-brand-assets").upload(path, transformed, {
+    const storageBytes = Buffer.from(Uint8Array.from(transformed));
+    const uploaded = await admin.storage.from("platform-brand-assets").upload(path, storageBytes, {
       cacheControl: "31536000",
       contentType,
       upsert: false,
@@ -156,6 +203,8 @@ async function POSTHandler(request: Request) {
         draft_focal_y: focal(form.get("focal_y") ?? 50),
         draft_width_px: width,
         draft_height_px: height,
+        draft_reviewed_at: null,
+        draft_reviewed_by: null,
         updated_by: context.user.id,
         updated_at: new Date().toISOString(),
       })
@@ -166,7 +215,8 @@ async function POSTHandler(request: Request) {
     await recordAudit(admin, context.user.id, "brand_asset_draft_uploaded", assetKey, {
       width,
       height,
-      bytes: transformed.byteLength,
+      bytes: storageBytes.byteLength,
+      mime_type: contentType,
     });
     return Response.json({ asset: draft.data, uploaded: true });
   } catch (error) {
@@ -209,6 +259,8 @@ async function PATCHHandler(request: Request) {
           draft_alt_text: cleanText(body.alt_text, 180) || "Girlz Culture",
           draft_focal_x: focal(body.focal_x),
           draft_focal_y: focal(body.focal_y),
+          draft_reviewed_at: null,
+          draft_reviewed_by: null,
           updated_by: context.user.id,
           updated_at: new Date().toISOString(),
         })
@@ -218,6 +270,33 @@ async function PATCHHandler(request: Request) {
       if (update.error) throw update.error;
       await recordAudit(admin, context.user.id, "brand_asset_position_saved", assetKey);
       return Response.json({ asset: update.data });
+    }
+
+    if (action === "review") {
+      if (!current.data.draft_url || !current.data.draft_storage_path)
+        rejectRequest("Upload a draft image before reviewing it.");
+      const update = await admin
+        .from("platform_brand_assets")
+        .update({
+          draft_alt_text: cleanText(body.alt_text, 180) || "Girlz Culture",
+          draft_focal_x: focal(body.focal_x),
+          draft_focal_y: focal(body.focal_y),
+          draft_reviewed_at: new Date().toISOString(),
+          draft_reviewed_by: context.user.id,
+          updated_by: context.user.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("asset_key", assetKey)
+        .select("*")
+        .single();
+      if (update.error) throw update.error;
+      await recordAudit(
+        admin,
+        context.user.id,
+        "brand_asset_draft_reviewed",
+        assetKey,
+      );
+      return Response.json({ asset: update.data, reviewed: true });
     }
 
     let source = current.data;
@@ -246,10 +325,14 @@ async function PATCHHandler(request: Request) {
       };
       sourceVersion = targetVersion;
     } else if (action !== "publish") {
-      rejectRequest("Choose publish, restore, or save position.");
+      rejectRequest("Choose review, publish, restore, or save position.");
     }
     if (!source.draft_url || !source.draft_storage_path)
       rejectRequest("Upload a draft image before publishing.");
+    if (action === "publish" && !source.draft_reviewed_at)
+      rejectRequest(
+        "Review this draft on every device preview before publishing.",
+      );
     const nextVersion = Number(current.data.published_version || 0) + 1;
     const cacheVersion = Date.now();
     const publishedUrl = versionBrandAssetUrl(String(source.draft_url), cacheVersion);

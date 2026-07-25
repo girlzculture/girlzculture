@@ -9,6 +9,7 @@ import { normalizePlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } 
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
 import { isValidUsZip, US_STATES } from "@/lib/usStates";
+import { normalizeNumericDraft } from "@/lib/numericInput";
 const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", address_line2:"", city:"", state:"NY", zip_code:"", business_type:"Braiding Studio", years_in_operation:"", stylist_count:"", website_url:"", instagram_url:"", business_license_number:"", cosmetology_license_number:"", referral_source:"" };
 
 export default function SalonApplication({businessTypes}:{businessTypes:string[]}) {
@@ -101,5 +102,5 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
 }
 
 function Input({label,value,onChange,required=true,type="text",pattern,title,placeholder,min,max}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;type?:string;pattern?:string;title?:string;placeholder?:string;min?:number;max?:number}) {
-  return <label className="block"><span className="mb-2 block text-xs font-bold">{label}{required?" *":""}</span><input required={required} type={type} pattern={pattern} title={title} placeholder={placeholder} min={min} max={max} inputMode={type==="tel"?"tel":type==="number"?"numeric":undefined} value={value} onChange={(event)=>onChange(type==="number"?event.target.value.replace(/\D/g,""):event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"/></label>;
+  return <label className="block"><span className="mb-2 block text-xs font-bold">{label}{required?" *":""}</span><input required={required} type={type} pattern={pattern} title={title} placeholder={placeholder} min={min} max={max} inputMode={type==="tel"?"tel":type==="number"?"numeric":undefined} value={value} onChange={(event)=>onChange(type==="number"?normalizeNumericDraft(event.target.value,{integer:true}):event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"/></label>;
 }
