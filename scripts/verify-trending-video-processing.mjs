@@ -73,6 +73,16 @@ for (const control of [
   /media\.video_failed_source_retention_hours/,
 ])
   assert.match(lifecycleMigration, control);
+assert.equal(
+  (lifecycleMigration.match(/'Published','standard'/g) || []).length,
+  2,
+  "Both video-retention settings must use an impact level accepted by the canonical Engine constraint.",
+);
+assert.doesNotMatch(
+  lifecycleMigration,
+  /'Published','operational'/,
+  "Operational is not a valid Engine impact level.",
+);
 
 const server = fs.readFileSync("src/lib/videoProcessingServer.ts", "utf8");
 for (const control of [

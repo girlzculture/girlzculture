@@ -52,6 +52,16 @@ const preferenceRoute = read(
 assert.match(migration, /admin_users[\s\S]*time_zone/);
 assert.match(migration, /validate_time_zone_preference/);
 assert.match(migration, /localization\.default_admin_time_zone/);
+assert.match(
+  migration,
+  /localization\.default_admin_time_zone[\s\S]*'Published',\s*'standard'/,
+  "The timezone setting must use an impact level accepted by the canonical Engine constraint.",
+);
+assert.doesNotMatch(
+  migration,
+  /'operational'/,
+  "Operational is not a valid Engine impact level.",
+);
 assert.match(financeRoute, /admin_time_zone/);
 assert.match(financeUi, /formatZonedDateTime/);
 assert.match(financeUi, /financeCsv\(filtered, data\.admin_time_zone\)/);
@@ -62,4 +72,3 @@ assert.match(preferenceRoute, /isValidTimeZone/);
 console.log(
   "Timezone verification passed: UTC storage conversion, salon rendering, admin preferences, timezone-labelled finance exports, and deterministic DST transition behavior are covered.",
 );
-

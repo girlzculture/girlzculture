@@ -37,7 +37,7 @@ values(
   '"America/New_York"',
   '"America/New_York"',
   'Published',
-  'operational',
+  'standard',
   '{"format":"iana_timezone","maxLength":80}',
   'Use a valid IANA timezone such as America/New_York. Stored timestamps remain UTC.',
   'Affects future admin display and exports; it does not rewrite stored timestamps.',
