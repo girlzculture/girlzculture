@@ -20,7 +20,14 @@ const CONFIG: Record<string, SaveConfig> = {
   salon_products: {
     permission: "products",
     label: "product",
-    fields: new Set(["name", "description", "price", "photo_url", "is_visible", "in_person_only", "archived_at"]),
+    fields: new Set([
+      "name", "description", "price", "sale_price", "photo_url", "images",
+      "is_visible", "in_person_only", "archived_at", "sku",
+      "inventory_quantity", "low_stock_threshold", "track_inventory",
+      "product_status", "pickup_enabled", "pickup_prep_minutes",
+      "shipping_enabled", "weight_ounces", "dimensions", "shipping_profile",
+      "shipping_price", "tax_category", "max_quantity_per_order",
+    ]),
   },
   salon_promotions: {
     permission: "promotions",
@@ -70,6 +77,28 @@ function sanitize(table: string, values: Record<string, unknown>, isInsert: bool
     if (!patch.name) throw new Error("Enter the product name.");
     patch.description = cleanText(patch.description, 1_000);
     patch.price = finiteNumber(patch.price, "Product price", 0, 100_000);
+    if ("sale_price" in patch) patch.sale_price = finiteNumber(patch.sale_price, "Sale price", 0, Number(patch.price || 100_000), true);
+    if ("sku" in patch) patch.sku = cleanText(patch.sku, 80) || null;
+    if ("inventory_quantity" in patch) patch.inventory_quantity = Math.floor(Number(finiteNumber(patch.inventory_quantity, "Inventory quantity", 0, 1_000_000)));
+    if ("low_stock_threshold" in patch) patch.low_stock_threshold = Math.floor(Number(finiteNumber(patch.low_stock_threshold, "Low-stock threshold", 0, 1_000_000)));
+    if ("pickup_prep_minutes" in patch) patch.pickup_prep_minutes = Math.floor(Number(finiteNumber(patch.pickup_prep_minutes, "Pickup preparation time", 0, 43_200)));
+    if ("shipping_price" in patch) patch.shipping_price = finiteNumber(patch.shipping_price, "Shipping price", 0, 100_000);
+    if ("weight_ounces" in patch) patch.weight_ounces = finiteNumber(patch.weight_ounces, "Weight", 0.01, 100_000, true);
+    if ("max_quantity_per_order" in patch) patch.max_quantity_per_order = Math.floor(Number(finiteNumber(patch.max_quantity_per_order, "Maximum quantity", 1, 1_000)));
+    if ("product_status" in patch && !new Set(["Draft", "Active", "Archived"]).has(String(patch.product_status))) throw new Error("Choose Draft, Active, or Archived status.");
+    if ("tax_category" in patch) patch.tax_category = cleanText(patch.tax_category, 80) || "general_tangible_goods";
+    if ("shipping_profile" in patch) patch.shipping_profile = cleanText(patch.shipping_profile, 120) || null;
+    if ("dimensions" in patch) {
+      const dimensions = patch.dimensions && typeof patch.dimensions === "object" && !Array.isArray(patch.dimensions) ? patch.dimensions as Record<string, unknown> : {};
+      patch.dimensions = {
+        length: finiteNumber(dimensions.length, "Package length", 0.01, 1_000, true),
+        width: finiteNumber(dimensions.width, "Package width", 0.01, 1_000, true),
+        height: finiteNumber(dimensions.height, "Package height", 0.01, 1_000, true),
+        unit: "in",
+      };
+    }
+    if ("images" in patch) patch.images = Array.isArray(patch.images) ? patch.images.map((value) => cleanText(value, 2_000)).filter(Boolean).slice(0, 12) : [];
+    if (patch.product_status === "Active" && patch.is_visible !== false && patch.pickup_enabled !== true && patch.shipping_enabled !== true) throw new Error("Enable pickup or shipping before publishing this product for online purchase.");
   } else if (table === "salon_promotions") {
     if ("title" in patch || isInsert) { patch.title = cleanText(patch.title, 160); if (!patch.title) throw new Error("Enter a promotion title."); }
     if ("public_headline" in patch || isInsert) { patch.public_headline = cleanText(patch.public_headline, 160); if (!patch.public_headline) patch.public_headline = patch.title; }

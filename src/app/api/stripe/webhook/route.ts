@@ -4,6 +4,8 @@ import { normalizePlan, planFromStripePriceId, planRank, type SubscriptionPlan }
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripeGet, verifyStripeEvent } from "@/lib/stripeServer";
 import { normalizeUsState } from "@/lib/usStates";
+import { completeCommerceCheckout } from "@/lib/commerceCheckoutServer";
+import { productRefundSummary } from "@/lib/productCommerceCore";
 
 type StripeLine = {
   amount?: number;
@@ -185,7 +187,7 @@ async function billingContext(object: StripeObject) {
 }
 
 async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
-  if (object.metadata?.booking_id) return;
+  if (object.metadata?.booking_id || object.metadata?.product_order_id) return;
   const supported = [
     "invoice.paid", "invoice.payment_failed", "subscription_schedule.updated",
     "customer.subscription.updated", "customer.subscription.deleted", "refund.created", "refund.updated", "credit_note.created",
@@ -396,6 +398,121 @@ async function syncBookingRefund(event: StripeEvent, object: StripeObject) {
   if(operationResult.error)throw operationResult.error;
 }
 
+async function syncProductOrderRefund(
+  event: StripeEvent,
+  object: StripeObject,
+) {
+  if (!["refund.created", "refund.updated"].includes(event.type) || !object.id)
+    return;
+  const orderId = String(object.metadata?.product_order_id || "").trim();
+  const productRefundId = String(
+    object.metadata?.product_refund_id || "",
+  ).trim();
+  if (!orderId && !productRefundId) return;
+
+  const admin = getSupabaseAdmin();
+  let refundQuery = admin
+    .from("product_order_refunds")
+    .select("*");
+  refundQuery = productRefundId
+    ? refundQuery.eq("id", productRefundId)
+    : refundQuery.eq("stripe_refund_id", object.id);
+  const { data: refundRecord, error: refundError } =
+    await refundQuery.maybeSingle();
+  if (refundError) throw refundError;
+  if (!refundRecord) return;
+
+  const providerStatus = String(object.status || "pending").toLowerCase();
+  const normalizedStatus =
+    providerStatus === "succeeded"
+      ? "Succeeded"
+      : providerStatus === "failed" || providerStatus === "canceled"
+        ? "Failed"
+        : "Pending";
+  const eventAt = new Date(
+    (event.created || object.created || Math.floor(Date.now() / 1000)) * 1000,
+  ).toISOString();
+  const normalizedAmount = Math.max(
+    0,
+    Number(object.amount || Math.round(Number(refundRecord.amount || 0) * 100)) /
+      100,
+  );
+  const refundUpdate = await admin
+    .from("product_order_refunds")
+    .update({
+      stripe_refund_id: object.id,
+      stripe_refund_status: providerStatus,
+      status: normalizedStatus,
+      amount: Number(normalizedAmount.toFixed(2)),
+      completed_at: normalizedStatus === "Succeeded" ? eventAt : null,
+      updated_at: eventAt,
+    })
+    .eq("id", refundRecord.id);
+  if (refundUpdate.error) throw refundUpdate.error;
+
+  const resolvedOrderId = orderId || String(refundRecord.order_id || "");
+  const [{ data: order, error: orderError }, successfulRefunds] =
+    await Promise.all([
+      admin
+        .from("product_orders")
+        .select(
+          "id,salon_id,total_amount,stripe_processing_fee,net_amount_owed_salon",
+        )
+        .eq("id", resolvedOrderId)
+        .single(),
+      admin
+        .from("product_order_refunds")
+        .select("amount")
+        .eq("order_id", resolvedOrderId)
+        .eq("status", "Succeeded"),
+    ]);
+  if (orderError) throw orderError;
+  if (successfulRefunds.error) throw successfulRefunds.error;
+  const refunded = (successfulRefunds.data || []).reduce(
+    (sum, row) => sum + Number(row.amount || 0),
+    0,
+  );
+  const total = Number(order.total_amount || 0);
+  const refundSummary = productRefundSummary(
+    total,
+    refunded,
+    Number(order.stripe_processing_fee || 0),
+  );
+  const orderChanges: Record<string, unknown> = {
+    payment_status: refundSummary.paymentStatus,
+    net_amount_owed_salon: refundSummary.netAmountOwedSalon,
+    updated_at: eventAt,
+  };
+  if (normalizedStatus === "Succeeded") {
+    orderChanges.payout_status = refundSummary.payoutStatus;
+  }
+  const orderUpdate = await admin
+    .from("product_orders")
+    .update(orderChanges)
+    .eq("id", resolvedOrderId);
+  if (orderUpdate.error) throw orderUpdate.error;
+
+  const eventInsert = await admin.from("product_order_events").insert({
+    order_id: resolvedOrderId,
+    salon_id: order.salon_id,
+    event_type:
+      normalizedStatus === "Succeeded"
+        ? "refund_completed"
+        : normalizedStatus === "Failed"
+          ? "refund_failed"
+          : "refund_pending",
+    actor_role: "stripe",
+    metadata: {
+      stripe_event_id: event.id,
+      stripe_refund_id: object.id,
+      refund_id: refundRecord.id,
+      amount: normalizedAmount,
+      provider_status: providerStatus,
+    },
+  });
+  if (eventInsert.error) throw eventInsert.error;
+}
+
 async function completeBookingCheckout(session: StripeObject, request: Request) {
   if (session.metadata?.type !== "booking_deposit" || !["paid", "no_payment_required"].includes(String(session.payment_status))) return;
   const admin = getSupabaseAdmin();
@@ -496,6 +613,49 @@ async function trackPromoRedemption(session: StripeObject) {
   await admin.rpc("record_stripe_promo_redemption", { p_promo_code_id: promo.id, p_purpose: purpose, p_user_id: userId, p_salon_id: session.metadata?.salon_id || null, p_checkout_session_id: session.id });
 }
 
+async function releaseExpiredCheckout(
+  eventType: string,
+  session: StripeObject,
+) {
+  if (eventType !== "checkout.session.expired") return;
+  const admin = getSupabaseAdmin();
+  const commerceIntentId = String(
+    session.metadata?.commerce_intent_id || "",
+  ).trim();
+  if (commerceIntentId) {
+    const released = await admin.rpc("release_combined_checkout", {
+      p_commerce_intent_id: commerceIntentId,
+      p_status: "Expired",
+    });
+    if (released.error) throw released.error;
+    return;
+  }
+  const bookingIntentId = String(
+    session.metadata?.booking_intent_id || "",
+  ).trim();
+  if (!bookingIntentId) return;
+  const intentUpdate = await admin
+    .from("booking_checkout_intents")
+    .update({ status: "Expired" })
+    .eq("id", bookingIntentId)
+    .eq("status", "Pending");
+  if (intentUpdate.error) throw intentUpdate.error;
+  const [salonPromotion, promoCode] = await Promise.all([
+    admin
+      .from("salon_promotion_redemptions")
+      .update({ status: "expired" })
+      .eq("booking_intent_id", bookingIntentId)
+      .eq("status", "pending"),
+    admin
+      .from("promo_code_redemptions")
+      .update({ status: "expired" })
+      .eq("booking_intent_id", bookingIntentId)
+      .eq("status", "pending"),
+  ]);
+  if (salonPromotion.error) throw salonPromotion.error;
+  if (promoCode.error) throw promoCode.error;
+}
+
 async function POSTHandler(request: Request) {
   const rawBody = await request.text();
   let event: StripeEvent;
@@ -519,10 +679,16 @@ async function POSTHandler(request: Request) {
   try {
     const object = eventObject;
     await syncBookingRefund(event,object);
+    await syncProductOrderRefund(event, object);
     await recordBillingEvent(event, object);
+    await releaseExpiredCheckout(event.type, object);
     if (event.type === "checkout.session.completed") {
       await trackPromoRedemption(object);
       await completeBookingCheckout(object, request);
+      await completeCommerceCheckout(
+        object as Parameters<typeof completeCommerceCheckout>[0],
+        request,
+      );
       if (object.mode === "subscription" && object.subscription) {
         const subscription = await stripeGet<StripeObject>(`/subscriptions/${stripeId(object.subscription)}`);
         await syncSubscription(subscription);

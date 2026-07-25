@@ -66,6 +66,7 @@ import BookingInbox from "@/components/BookingInbox";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
+import SalonProductOrders from "@/components/owner/SalonProductOrders";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -2442,18 +2443,62 @@ function TruthfulProducts({ c }: { c: Ctx }) {
   const active =
     c.products.find((product) => product.id === c.selectedProduct) || null;
   const [photo, setPhoto] = useState(String(active?.photo_url || ""));
+  const [images, setImages] = useState<string[]>(
+    Array.isArray(active?.images)
+      ? active.images.map(String)
+      : active?.photo_url
+        ? [String(active.photo_url)]
+        : [],
+  );
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const pickupEnabled = form.get("pickup_enabled") === "on";
+    const shippingEnabled = form.get("shipping_enabled") === "on";
     const saved = await c.saveRecord(
       "salon_products",
       {
         name: form.get("name"),
         description: form.get("description"),
         price: Number(form.get("price")),
+        sale_price:
+          form.get("sale_price") === ""
+            ? null
+            : Number(form.get("sale_price")),
+        sku: form.get("sku"),
         photo_url: photo || null,
+        images,
         is_visible: form.get("visible") === "on",
-        in_person_only: true,
+        in_person_only: !pickupEnabled && !shippingEnabled,
+        inventory_quantity: Number(form.get("inventory_quantity")),
+        low_stock_threshold: Number(form.get("low_stock_threshold")),
+        track_inventory: form.get("track_inventory") === "on",
+        product_status: form.get("product_status"),
+        pickup_enabled: pickupEnabled,
+        pickup_prep_minutes: Number(form.get("pickup_prep_minutes")),
+        shipping_enabled: shippingEnabled,
+        weight_ounces:
+          form.get("weight_ounces") === ""
+            ? null
+            : Number(form.get("weight_ounces")),
+        dimensions: {
+          length:
+            form.get("dimension_length") === ""
+              ? null
+              : Number(form.get("dimension_length")),
+          width:
+            form.get("dimension_width") === ""
+              ? null
+              : Number(form.get("dimension_width")),
+          height:
+            form.get("dimension_height") === ""
+              ? null
+              : Number(form.get("dimension_height")),
+        },
+        shipping_profile: form.get("shipping_profile"),
+        shipping_price: Number(form.get("shipping_price")),
+        tax_category: form.get("tax_category"),
+        max_quantity_per_order: Number(form.get("max_quantity_per_order")),
       },
       active?.id,
     );
@@ -2470,12 +2515,13 @@ function TruthfulProducts({ c }: { c: Ctx }) {
     <>
       <Title
         title="Products"
-        subtitle="Advertise products for in-person purchase at your salon."
+        subtitle="Manage your catalog, stock, pickup, shipping, and online sales."
         action={
           <button
             onClick={() => {
               c.setSelectedProduct(null);
               setPhoto("");
+              setImages([]);
             }}
             className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
           >
@@ -2487,8 +2533,8 @@ function TruthfulProducts({ c }: { c: Ctx }) {
       <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
         <Info size={16} className="shrink-0" aria-hidden="true" />
         <span>
-          These products are advertised for in-person purchase only and appear
-          on your salon’s public page. No online checkout.
+          Published products can be purchased securely for pickup or shipping.
+          Live prices and inventory are rechecked before every payment.
         </span>
       </div>
       <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
@@ -2499,6 +2545,13 @@ function TruthfulProducts({ c }: { c: Ctx }) {
               onClick={() => {
                 c.setSelectedProduct(product.id || null);
                 setPhoto(String(product.photo_url || ""));
+                setImages(
+                  Array.isArray(product.images)
+                    ? product.images.map(String)
+                    : product.photo_url
+                      ? [String(product.photo_url)]
+                      : [],
+                );
               }}
               className="overflow-hidden rounded-[10px] border border-plum/10 bg-white text-left"
             >
@@ -2524,7 +2577,25 @@ function TruthfulProducts({ c }: { c: Ctx }) {
                   {String(product.description || "")}
                 </p>
                 <p className="mt-2 text-sm font-semibold">
-                  ${Number(product.price || 0).toFixed(2)}
+                  {product.sale_price !== null &&
+                  product.sale_price !== undefined ? (
+                    <>
+                      <span className="mr-1 text-[10px] text-ink/40 line-through">
+                        ${Number(product.price || 0).toFixed(2)}
+                      </span>
+                      <span className="text-magenta">
+                        ${Number(product.sale_price || 0).toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    `$${Number(product.price || 0).toFixed(2)}`
+                  )}
+                </p>
+                <p className="mt-1 text-[9px] font-semibold text-ink/50">
+                  {String(product.product_status || "Draft")}
+                  {product.track_inventory
+                    ? ` · ${Number(product.inventory_quantity || 0)} in stock`
+                    : " · stock not tracked"}
                 </p>
               </div>
             </button>
@@ -2542,25 +2613,102 @@ function TruthfulProducts({ c }: { c: Ctx }) {
           >
             <ImageUpload
               bucket="salon-photos"
+              multiple
+              maxFiles={12}
               folder={`salons/${c.salon.id}/products`}
-              label="Product Photo"
-              value={photo}
-              onChange={(value) =>
-                setPhoto(typeof value === "string" ? value : "")
-              }
+              label="Product Photos"
+              value={images}
+              onChange={(value) => {
+                const next = Array.isArray(value)
+                  ? value.map(String)
+                  : value
+                    ? [String(value)]
+                    : [];
+                setImages(next);
+                setPhoto(next[0] || "");
+              }}
             />
-            <Field label="Name" name="name" defaultValue={active?.name} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Name" name="name" defaultValue={active?.name} required />
+              <Field
+                label="SKU"
+                name="sku"
+                defaultValue={active?.sku}
+                placeholder="Optional internal SKU"
+              />
+            </div>
             <TextArea
               label="Description"
               name="description"
               defaultValue={active?.description}
             />
-            <Field
-              label="Price (USD)"
-              name="price"
-              type="number"
-              defaultValue={active?.price ?? ""}
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Regular price (USD)" name="price" type="number" defaultValue={active?.price ?? ""} required />
+              <Field label="Sale price (optional)" name="sale_price" type="number" defaultValue={active?.sale_price ?? ""} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-bold">Status</span>
+                <select
+                  name="product_status"
+                  defaultValue={String(active?.product_status || "Draft")}
+                  className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs"
+                >
+                  <option>Draft</option>
+                  <option>Active</option>
+                  <option>Archived</option>
+                </select>
+              </label>
+              <Field label="Maximum quantity per order" name="max_quantity_per_order" type="number" defaultValue={active?.max_quantity_per_order ?? 10} />
+            </div>
+            <div className="rounded-[12px] border border-plum/10 bg-blush/20 p-4">
+              <h3 className="font-serif text-lg text-plum">Inventory</h3>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="track_inventory" defaultChecked={active?.track_inventory === true} className="accent-magenta" />
+                Track inventory and prevent overselling
+              </label>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Field label="Quantity available" name="inventory_quantity" type="number" defaultValue={active?.inventory_quantity ?? 0} />
+                <Field label="Low-stock alert at" name="low_stock_threshold" type="number" defaultValue={active?.low_stock_threshold ?? 5} />
+              </div>
+            </div>
+            <div className="rounded-[12px] border border-plum/10 bg-white p-4">
+              <h3 className="font-serif text-lg text-plum">Pickup</h3>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="pickup_enabled" defaultChecked={active?.pickup_enabled === true} className="accent-magenta" />
+                Offer pickup at the salon
+              </label>
+              <div className="mt-3">
+                <Field label="Preparation time (minutes)" name="pickup_prep_minutes" type="number" defaultValue={active?.pickup_prep_minutes ?? 60} />
+              </div>
+            </div>
+            <div className="rounded-[12px] border border-plum/10 bg-white p-4">
+              <h3 className="font-serif text-lg text-plum">Shipping</h3>
+              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="shipping_enabled" defaultChecked={active?.shipping_enabled === true} className="accent-magenta" />
+                Offer US shipping
+              </label>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Field label="Shipping price (USD)" name="shipping_price" type="number" defaultValue={active?.shipping_price ?? 0} />
+                <Field label="Weight (ounces)" name="weight_ounces" type="number" defaultValue={active?.weight_ounces ?? ""} />
+                <Field label="Shipping profile" name="shipping_profile" defaultValue={active?.shipping_profile} placeholder="Standard parcel" />
+                <Field label="Package length (in)" name="dimension_length" type="number" defaultValue={(active?.dimensions as Row | undefined)?.length ?? ""} />
+                <Field label="Package width (in)" name="dimension_width" type="number" defaultValue={(active?.dimensions as Row | undefined)?.width ?? ""} />
+                <Field label="Package height (in)" name="dimension_height" type="number" defaultValue={(active?.dimensions as Row | undefined)?.height ?? ""} />
+              </div>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[10px] font-bold">Tax category</span>
+              <select
+                name="tax_category"
+                defaultValue={String(active?.tax_category || "general_tangible_goods")}
+                className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs"
+              >
+                <option value="general_tangible_goods">General tangible goods</option>
+                <option value="hair_care_products">Hair-care products</option>
+                <option value="beauty_accessories">Beauty accessories</option>
+              </select>
+            </label>
             <label className="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -2576,6 +2724,7 @@ function TruthfulProducts({ c }: { c: Ctx }) {
           </form>
         </Panel>
       </div>
+      <SalonProductOrders />
     </>
   );
 }
@@ -3145,64 +3294,69 @@ function Bookings({ c }: { c: Ctx }) {
     };
   }, [selectedId]);
   useEffect(() => {
-    if (!selectedId || !rescheduleDate) {
-      setRescheduleSlots([]);
-      setSelectedRescheduleSlots([]);
-      setAvailabilityMessage("");
-      return;
-    }
     let active = true;
-    setLoadingAvailability(true);
-    setAvailabilityMessage("");
-    getSessionForScope("salon")
-      .then((session) =>
-        session
-          ? fetch(
-              `/api/salon/bookings/${selectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
-              {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-                cache: "no-store",
-              },
-            )
-          : null,
-      )
-      .then(async (response) => {
-        if (!response) throw new Error("Please sign in again.");
-        const body = (await response.json()) as {
-          error?: string;
-          reason?: string;
-          slots?: Row[];
-        };
-        if (!response.ok) {
-          throw new Error(body.error || "Unable to load available times.");
-        }
-        return body;
-      })
-      .then((body) => {
-        if (!active) return;
-        setRescheduleSlots(body.slots || []);
-        setSelectedRescheduleSlots([]);
-        setAvailabilityMessage(
-          body.slots?.length
-            ? ""
-            : body.reason || "No open times remain for this day.",
-        );
-      })
-      .catch((error) => {
-        if (!active) return;
+    const timer = window.setTimeout(() => {
+      if (!selectedId || !rescheduleDate) {
         setRescheduleSlots([]);
         setSelectedRescheduleSlots([]);
-        setAvailabilityMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load available times.",
-        );
-      })
-      .finally(() => {
-        if (active) setLoadingAvailability(false);
-      });
+        setAvailabilityMessage("");
+        return;
+      }
+      setLoadingAvailability(true);
+      setAvailabilityMessage("");
+      getSessionForScope("salon")
+        .then((session) =>
+          session
+            ? fetch(
+                `/api/salon/bookings/${selectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  cache: "no-store",
+                },
+              )
+            : null,
+        )
+        .then(async (response) => {
+          if (!response) throw new Error("Please sign in again.");
+          const body = (await response.json()) as {
+            error?: string;
+            reason?: string;
+            slots?: Row[];
+          };
+          if (!response.ok) {
+            throw new Error(body.error || "Unable to load available times.");
+          }
+          return body;
+        })
+        .then((body) => {
+          if (!active) return;
+          setRescheduleSlots(body.slots || []);
+          setSelectedRescheduleSlots([]);
+          setAvailabilityMessage(
+            body.slots?.length
+              ? ""
+              : body.reason || "No open times remain for this day.",
+          );
+        })
+        .catch((error) => {
+          if (!active) return;
+          setRescheduleSlots([]);
+          setSelectedRescheduleSlots([]);
+          setAvailabilityMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load available times.",
+          );
+        })
+        .finally(() => {
+          if (active) setLoadingAvailability(false);
+        });
+    }, 0);
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [rescheduleDate, selectedId]);
   async function serviceAction(

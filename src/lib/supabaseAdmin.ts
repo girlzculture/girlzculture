@@ -405,7 +405,7 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
 
 export async function deliverBookingNotifications(
   bookingId: string,
-  options: { manageUrl?: string } = {},
+  options: { manageUrl?: string; skipCustomerEmail?: boolean } = {},
 ) {
   const context = await bookingNotificationContext(bookingId);
   const { admin, booking, salon, style, stylist, stylistContact, customerLocale, salonLocale } = context;
@@ -451,9 +451,9 @@ export async function deliverBookingNotifications(
     { recipientType: "salon", channel: "email", destination: String(salon.email || ""), run: () => sendEmail(String(salon.email || ""), salonEmail.subject, salonEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) },
     { recipientType: "salon", channel: "sms", destination: String(salon.phone || ""), run: () => sendSms(String(salon.phone || ""), salonSms) },
     { recipientType: "salon", channel: "push", destination: String(salon.user_id || ""), run: () => sendPushToUsers([String(salon.user_id || "")], { title: renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_confirmed.push_title","New confirmed booking"), body: salonSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) },
-    { recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), customerEmail.subject, customerEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) },
     { recipientType: "customer", channel: "sms", destination: String(booking.guest_phone || ""), run: () => sendSms(String(booking.guest_phone || ""), customerSms) },
   ];
+  if (!options.skipCustomerEmail) tasks.push({ recipientType: "customer", channel: "email", destination: String(booking.guest_email || ""), run: () => sendEmail(String(booking.guest_email || ""), customerEmail.subject, customerEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) });
   if (booking.customer_id) tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_confirmed.push_title","Appointment confirmed"), body: customerSummary, url: "/account?tab=upcoming", tag: `booking-${booking.id}` }) });
   if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, stylistSms) });
