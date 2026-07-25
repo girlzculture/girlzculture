@@ -29,6 +29,20 @@ function storedPosterPath(url: unknown) {
   try { return decodeURIComponent(url.slice(index + marker.length).split("?")[0]); } catch { return ""; }
 }
 
+function sourceVideoMime(file: File) {
+  if (file.type) return file.type;
+  if (/\.mov$/i.test(file.name)) return "video/quicktime";
+  if (/\.m4v$/i.test(file.name)) return "video/x-m4v";
+  if (/\.mkv$/i.test(file.name)) return "video/x-matroska";
+  if (/\.webm$/i.test(file.name)) return "video/webm";
+  return "video/mp4";
+}
+
+function sourceVideoExtension(file: File) {
+  const match = file.name.toLowerCase().match(/\.(mp4|webm|mov|m4v|mkv)$/);
+  return match?.[1] || "mp4";
+}
+
 export default function AdminTrendingCampaigns() {
   const [campaigns, setCampaigns] = useState<Row[]>([]);
   const [query, setQuery] = useState("");
@@ -50,6 +64,7 @@ export default function AdminTrendingCampaigns() {
   const [progress, setProgress] = useState(0);
   const previewRef = useRef<HTMLVideoElement>(null);
   const uploadController = useRef<AbortController | null>(null);
+  const [activeJobId, setActiveJobId] = useState("");
   const [windowDefaults] = useState(() => ({ start: localInput(new Date(Date.now() + 3600000).toISOString()), end: localInput(new Date(Date.now() + 8 * 86400000).toISOString()) }));
   const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : "", [file]);
   const posterPreviewUrl = useMemo(() => posterFile ? URL.createObjectURL(posterFile) : "", [posterFile]);
@@ -113,7 +128,14 @@ export default function AdminTrendingCampaigns() {
     } catch (error) {
       const ordinaryVideo =
         next.size <= 100 * 1024 * 1024 &&
-        (/\.mp4$/i.test(next.name) || next.type === "video/mp4");
+        (/\.(mp4|webm|mov|m4v|mkv)$/i.test(next.name) ||
+          [
+            "video/mp4",
+            "video/webm",
+            "video/quicktime",
+            "video/x-m4v",
+            "video/x-matroska",
+          ].includes(next.type));
       if (!ordinaryVideo) {
         setFile(null);
         const message =
@@ -136,9 +158,9 @@ export default function AdminTrendingCampaigns() {
   function dropVideo(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
     if (busy) return;
-    const next = Array.from(event.dataTransfer.files).find((candidate) => candidate.type.startsWith("video/") || /\.(mp4|webm)$/i.test(candidate.name));
+    const next = Array.from(event.dataTransfer.files).find((candidate) => candidate.type.startsWith("video/") || /\.(mp4|webm|mov|m4v|mkv)$/i.test(candidate.name));
     if (!next) {
-      setNotice("Drop an MP4 or WebM video file.");
+      setNotice("Drop an MP4, WebM, MOV, M4V, or MKV video file.");
       return;
     }
     void selectVideo(next);
@@ -167,6 +189,26 @@ export default function AdminTrendingCampaigns() {
     if (previewRef.current) previewRef.current.currentTime = bounded;
   }
 
+  async function cancelActiveUpload() {
+    const jobId = activeJobId;
+    uploadController.current?.abort();
+    if (!jobId) return;
+    try {
+      await fetch("/api/admin/media/video-jobs", {
+        method: "POST",
+        headers: await headers(true),
+        body: JSON.stringify({ action: "cancel", id: jobId }),
+      });
+      setNotice(
+        "Video processing cancelled. The original is retained temporarily for safe cleanup.",
+      );
+    } catch {
+      setNotice(
+        "The browser stopped waiting. Check the processing job before retrying.",
+      );
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -186,6 +228,7 @@ export default function AdminTrendingCampaigns() {
     setNotice("Validating and optimizing video…");
     let uploadedPath = "";
     let uploadedPosterPath = "";
+    let processingJobId = "";
     try {
       let video = {
         video_url: editing?.video_url,
@@ -201,7 +244,7 @@ export default function AdminTrendingCampaigns() {
         if (needsServerPipeline) {
           setProgress(18);
           setNotice("Uploading the original MP4 for secure inspection…");
-          uploadedPath = `incoming/${session.user.id}/${Date.now()}-${crypto.randomUUID()}.mp4`;
+          uploadedPath = `incoming/${session.user.id}/${Date.now()}-${crypto.randomUUID()}.${sourceVideoExtension(file)}`;
           await uploadTrendingFile(uploadedPath, file, {
             accessToken: session.access_token,
             signal: controller.signal,
@@ -209,18 +252,60 @@ export default function AdminTrendingCampaigns() {
           });
           setProgress(62);
           setNotice("Inspecting codecs and preparing a browser-safe MP4…");
-          const processingResponse = await fetch("/api/admin/media/video-jobs", {
+          const creationResponse = await fetch("/api/admin/media/video-jobs", {
             method: "POST",
             headers: await headers(true),
             body: JSON.stringify({
               action: "create",
               salon_id: salonId,
               source_path: uploadedPath,
-              mime_type: file.type || "video/mp4",
+              mime_type: sourceVideoMime(file),
               file_size_bytes: file.size,
             }),
             signal: controller.signal,
           });
+          const creationBody = await creationResponse.json();
+          if (!creationResponse.ok)
+            throw new Error(
+              creationBody.error || "We couldn't queue this video.",
+            );
+          processingJobId = String(creationBody.job?.id || "");
+          if (!processingJobId)
+            throw new Error("The video processing job was not created.");
+          setActiveJobId(processingJobId);
+          const poller = window.setInterval(() => {
+            void (async () => {
+              const response = await fetch(
+                `/api/admin/media/video-jobs?id=${encodeURIComponent(processingJobId)}`,
+                { headers: await headers(), cache: "no-store" },
+              );
+              const body = await response.json();
+              const current = body.jobs?.[0];
+              if (response.ok && current) {
+                setProgress(
+                  62 + Math.round(Number(current.progress_percent || 0) * 0.2),
+                );
+                setNotice(
+                  current.status === "Transcoding"
+                    ? "Converting video for reliable browser playback…"
+                    : current.status === "Inspecting"
+                      ? "Inspecting video and audio tracks…"
+                      : `Video processing: ${current.status}.`,
+                );
+              }
+            })().catch(() => undefined);
+          }, 1500);
+          const processingResponse = await fetch(
+            "/api/admin/media/video-jobs",
+            {
+              method: "POST",
+              headers: await headers(true),
+              body: JSON.stringify({
+                action: "process",
+                id: processingJobId,
+              }),
+            },
+          ).finally(() => window.clearInterval(poller));
           const processingBody = await processingResponse.json();
           if (!processingResponse.ok)
             throw new Error(
@@ -259,6 +344,7 @@ export default function AdminTrendingCampaigns() {
       setNotice("Saving the governed campaign record…");
       const payload = {
         action: "save", id: editing?.id || null, salon_id: salonId, ...video,
+        video_processing_job_id: processingJobId || editing?.video_processing_job_id || null,
         description: form.get("description"), status: form.get("status"), starts_at: form.get("starts_at"), ends_at: form.get("ends_at"), timezone: form.get("timezone"),
         radius_miles: form.get("radius"), priority: form.get("priority"), rotation_weight: form.get("weight"), internal_note: form.get("note"),
         entitlement_source: form.get("entitlement_source"), entitlement_reference: form.get("entitlement_reference"), entitlement_amount_minor: form.get("amount") ? Math.round(Number(form.get("amount")) * 100) : null,
@@ -279,7 +365,10 @@ export default function AdminTrendingCampaigns() {
       setProgress(100);
       setNotice("Trending campaign saved. New or replaced videos require moderation approval.");
     } catch (error) {
-      const paths = [uploadedPath, uploadedPosterPath].filter(Boolean);
+      const paths = [
+        processingJobId ? "" : uploadedPath,
+        uploadedPosterPath,
+      ].filter(Boolean);
       if (paths.length) await adminSupabase.storage.from("trending-videos").remove(paths);
       setProgress(0);
       const wasCancelled = error instanceof DOMException && error.name === "AbortError";
@@ -287,6 +376,7 @@ export default function AdminTrendingCampaigns() {
       setNotice(wasCancelled ? "Upload cancelled. The selected file was not saved." : error instanceof Error ? error.message : "Unable to save campaign.");
     } finally {
       uploadController.current = null;
+      setActiveJobId("");
       setUploading(false);
       setBusy(false);
     }
@@ -329,10 +419,10 @@ export default function AdminTrendingCampaigns() {
       <div className="flex items-center gap-3"><Film className="text-magenta" /><div><h2 className="font-serif text-2xl text-plum">Trending Picks campaigns</h2><p className="text-xs text-ink/55">Upload, trim where your browser supports it, choose a poster frame, preview, moderate, and schedule local placement.</p></div></div>
       <form onSubmit={submit} className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="relative sm:col-span-2"><Label text="Eligible salon"><div className="relative"><Search className="absolute left-3 top-3.5 text-ink/40" size={15} /><input disabled={Boolean(editing)} value={editing?.salon?.name || query} onChange={(event) => { setQuery(event.target.value); setSelectedSalon(null); }} className="min-h-11 w-full rounded-lg border border-plum/15 pl-9 text-xs" placeholder="Search salons" /></div></Label>{salons.length && !selectedSalon ? <div className="absolute z-20 mt-1 w-full rounded-lg border bg-white p-1 shadow-xl">{salons.map((salon) => <button type="button" key={salon.id} onClick={() => { setSelectedSalon(salon); setQuery(salon.name); setSalons([]); }} className="block w-full rounded p-3 text-left text-xs hover:bg-blush"><b>{salon.name}</b> · {salon.address_city}, {salon.address_state}</button>)}</div> : null}</div>
-        <label onDragOver={(event) => event.preventDefault()} onDrop={dropVideo} className="block rounded-lg border border-dashed border-magenta/40 bg-blush/20 p-3 text-[10px] font-bold transition-colors hover:bg-blush/40 focus-within:ring-2 focus-within:ring-magenta"><span>{editing ? "Replacement video (optional; resets moderation)" : "Video (MP4/WebM, final clip ≤30 sec)"}</span><span className="mt-1 block font-normal text-ink/55">Drag and drop, or choose a file.</span><input type="file" accept="video/mp4,video/webm,.mp4,.webm" required={!editing} onChange={(event) => void selectVideo(event.target.files?.[0] || null)} className="mt-2 min-h-11 w-full rounded-lg border bg-white p-2 text-xs" /></label>
+        <label onDragOver={(event) => event.preventDefault()} onDrop={dropVideo} className="block rounded-lg border border-dashed border-magenta/40 bg-blush/20 p-3 text-[10px] font-bold transition-colors hover:bg-blush/40 focus-within:ring-2 focus-within:ring-magenta"><span>{editing ? "Replacement video (optional; resets moderation)" : "Video (MP4/WebM/MOV/M4V/MKV, final clip ≤30 sec)"}</span><span className="mt-1 block font-normal text-ink/55">Drag and drop, or choose a file. Browser-incompatible tracks are prepared automatically when the media provider is configured.</span><input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-matroska,.mp4,.webm,.mov,.m4v,.mkv" required={!editing} onChange={(event) => void selectVideo(event.target.files?.[0] || null)} className="mt-2 min-h-11 w-full rounded-lg border bg-white p-2 text-xs" /></label>
         <Field name="description" label="Description" defaultValue={editing?.description} />
         {mediaError?<p role="alert" className="rounded-lg bg-red-50 p-3 text-[10px] leading-4 text-red-700 sm:col-span-2 xl:col-span-4">{mediaError}</p>:null}
-        {file && needsServerPipeline ? <div className="rounded-xl border border-amber/30 bg-amber/10 p-4 text-xs text-plum sm:col-span-2 xl:col-span-4"><b>Automatic browser-safe conversion</b><p className="mt-1 text-ink/65">The original MP4 will be inspected after upload. Incompatible video or audio tracks are converted to H.264/AAC MP4 and a poster frame is generated by the configured secure media processor.</p></div> : null}
+        {file && needsServerPipeline ? <div className="rounded-xl border border-amber/30 bg-amber/10 p-4 text-xs text-plum sm:col-span-2 xl:col-span-4"><b>Automatic browser-safe conversion</b><p className="mt-1 text-ink/65">The original is inspected after upload. Incompatible video or audio tracks are converted to H.264/AAC MP4 and a poster frame is generated by the configured secure media processor. If processing fails, the original is retained temporarily for retry.</p></div> : null}
         {file && previewUrl && !needsServerPipeline ? <div className="space-y-3 rounded-xl border border-plum/10 bg-cream p-3 sm:col-span-2 xl:col-span-4">
           <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
             <video ref={previewRef} src={previewUrl} controls playsInline preload="metadata" poster={activePoster || undefined} className="aspect-video w-full rounded-lg bg-ink object-contain" />
@@ -357,7 +447,7 @@ export default function AdminTrendingCampaigns() {
         <Field name="amount" label="Amount USD" type="number" min="0" step="0.01" />
         <Field name="note" label="Internal note" defaultValue={editing?.internal_note} />
         {editing ? <Field name="reason" label="Change reason" required /> : null}
-        <div className="flex items-end gap-2 xl:col-span-2"><button disabled={busy} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Upload size={14} />{busy ? "Saving…" : retryReady ? "Retry upload" : editing ? "Save audited changes" : "Upload draft campaign"}</button>{uploading ? <button type="button" onClick={() => uploadController.current?.abort()} className="min-h-11 rounded-lg border border-red-300 px-4 text-xs font-bold text-red-700">Cancel upload</button> : editing ? <button type="button" onClick={() => { setEditing(null); resetMedia(); }} className="min-h-11 rounded-lg border px-4 text-xs font-bold">Cancel</button> : null}</div>
+        <div className="flex items-end gap-2 xl:col-span-2"><button disabled={busy} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Upload size={14} />{busy ? "Saving…" : retryReady ? "Retry upload" : editing ? "Save audited changes" : "Upload draft campaign"}</button>{uploading ? <button type="button" onClick={() => void cancelActiveUpload()} className="min-h-11 rounded-lg border border-red-300 px-4 text-xs font-bold text-red-700">Cancel upload</button> : editing ? <button type="button" onClick={() => { setEditing(null); resetMedia(); }} className="min-h-11 rounded-lg border px-4 text-xs font-bold">Cancel</button> : null}</div>
       </form>
     </section>
     <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">{campaigns.map((campaign) => <article key={campaign.id} className="overflow-hidden rounded-[15px] border border-plum/10 bg-white"><video src={campaign.video_url} controls playsInline preload="metadata" poster={campaign.thumbnail_url || undefined} className="aspect-video w-full bg-ink object-cover" /><div className="p-4"><div className="flex flex-wrap items-center gap-2"><h3 className="font-serif text-lg text-plum">{campaign.salon?.name}</h3><Badge value={campaign.status} /><Badge value={campaign.moderation_status} /></div><p className="mt-2 line-clamp-2 text-xs text-ink/65">{campaign.description}</p><p className="mt-2 text-[10px] text-ink/50">{campaign.radius_miles} mi · priority {campaign.priority} · {new Date(campaign.starts_at).toLocaleString()} → {new Date(campaign.ends_at).toLocaleString()}</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => { setEditing(campaign); resetMedia(); }} className="min-h-10 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta">Edit</button>{campaign.moderation_status !== "Approved" ? <button disabled={busy} onClick={() => void moderate(campaign, "Approved")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-green-700 px-3 text-[10px] font-bold text-white"><CheckCircle2 size={13} />Approve</button> : null}{campaign.moderation_status !== "Rejected" ? <button disabled={busy} onClick={() => void moderate(campaign, "Rejected")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-300 px-3 text-[10px] font-bold text-red-700"><XCircle size={13} />Reject</button> : null}{campaign.status === "Active" ? <button onClick={() => void status(campaign, "Paused")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-[10px] font-bold"><Pause size={13} />Pause</button> : campaign.status === "Paused" ? <button onClick={() => void status(campaign, "Active")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-plum px-3 text-[10px] font-bold text-white"><Play size={13} />Resume</button> : null}{campaign.status !== "Expired" ? <button disabled={busy} onClick={() => void status(campaign, "Expired")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-plum/20 px-3 text-[10px] font-bold text-plum"><Archive size={13} />Archive</button> : null}</div>{campaign.audit?.length ? <details className="mt-3 text-[10px]"><summary className="font-bold text-magenta">Audit history ({campaign.audit.length})</summary>{[...campaign.audit].sort((a: Row, b: Row) => String(b.created_at).localeCompare(String(a.created_at))).map((entry: Row) => <p key={entry.id} className="mt-2 border-l-2 border-magenta pl-2"><b>{entry.action}</b> · {entry.reason || "Initial creation"}</p>)}</details> : null}</div></article>)}{!campaigns.length ? <p className="rounded-[15px] bg-white p-10 text-center text-xs text-ink/55 md:col-span-2 2xl:col-span-3">No Trending Picks campaigns yet.</p> : null}</section>

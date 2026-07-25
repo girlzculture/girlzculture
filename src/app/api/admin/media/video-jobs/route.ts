@@ -32,18 +32,25 @@ async function POSTHandler(request: Request) {
     userId = auth.user.id;
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 20) || "create";
+    if (!["create", "process", "retry", "cancel"].includes(action)) {
+      throw new Error("Choose a valid video-processing action.");
+    }
     if (action === "cancel") {
       jobId = cleanText(body.id, 80);
       const { data, error } = await admin.from("video_processing_jobs").update({
         status: "Cancelled",
         cancellation_requested_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        source_cleanup_after: new Date(
+          Date.now() + 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        source_cleanup_status: "Scheduled",
       }).eq("id", jobId).in("status", ["Uploaded", "Inspecting", "Transcoding", "Failed"]).select().single();
       if (error) throw error;
       return Response.json({ job: data });
     }
     let job: Record<string, unknown>;
-    if (action === "retry") {
+    if (["retry", "process"].includes(action)) {
       jobId = cleanText(body.id, 80);
       const { data, error } = await admin.from("video_processing_jobs")
         .select("*").eq("id", jobId).in("status", ["Failed", "Uploaded"]).single();
@@ -56,8 +63,14 @@ async function POSTHandler(request: Request) {
       const size = Number(body.file_size_bytes);
       if (!sourcePath.startsWith(`incoming/${userId}/`) || !salonId)
         throw new Error("Choose a valid uploaded video.");
-      if (!["video/mp4", "video/webm"].includes(mime))
-        throw new Error("Upload an MP4 or WebM video.");
+      if (![
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+        "video/x-m4v",
+        "video/x-matroska",
+      ].includes(mime))
+        throw new Error("Upload an MP4, WebM, MOV, M4V, or Matroska video.");
       const { data: profile, error: profileError } = await admin
         .from("media_video_profiles").select("*").eq("profile_key", "trending").single();
       if (profileError || !profile) throw profileError || new Error("Video limits are unavailable.");
@@ -71,10 +84,13 @@ async function POSTHandler(request: Request) {
         source_path: sourcePath,
         source_mime_type: mime,
         source_size_bytes: size,
+        source_cleanup_after: new Date(
+          Date.now() + 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        source_cleanup_status: "Scheduled",
       }).select().single();
       if (error) throw error;
-      job = data;
-      jobId = String(data.id);
+      return Response.json({ job: data }, { status: 202 });
     }
     const { data: profile, error: profileError } = await admin
       .from("media_video_profiles").select("*").eq("profile_key", "trending").single();
@@ -82,6 +98,15 @@ async function POSTHandler(request: Request) {
     const ready = await processVideoJob(admin, job, profile);
     return Response.json({ job: ready });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "VIDEO_PROCESSING_CANCELLED"
+    ) {
+      return Response.json(
+        { error: "Video processing was cancelled.", cancelled: true },
+        { status: 409 },
+      );
+    }
     if (admin && jobId) {
       const reference = await capturePlatformError({
         request,
@@ -102,6 +127,11 @@ async function POSTHandler(request: Request) {
         safe_error_code: "VIDEO_PROCESSING_FAILED",
         error_reference: reference,
         updated_at: new Date().toISOString(),
+        source_cleanup_after: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        source_cleanup_status: "Scheduled",
+        original_preserved: true,
       }).eq("id", jobId);
       return Response.json({
         error: `We couldn't prepare this video. Retry it or contact support with reference ${reference}.`,
@@ -125,4 +155,3 @@ export const POST = withOperationalMonitoring(
   },
   POSTHandler,
 );
-

@@ -2,33 +2,79 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Row = Record<string, unknown>;
 
-export function inspectMp4Bytes(bytes: Uint8Array) {
+export type VideoInspection = {
+  container: "mp4" | "quicktime" | "webm" | "matroska" | "unknown";
+  videoCodec: "h264" | "hevc" | "vp8" | "vp9" | "av1" | "unknown";
+  audioCodec: "aac" | "opus" | "vorbis" | "dolby" | "none" | "unknown";
+  browserSafe: boolean;
+};
+
+export function inspectVideoBytes(
+  bytes: Uint8Array,
+  requestedMime = "",
+): VideoInspection {
   const text = new TextDecoder("latin1").decode(bytes);
-  const isMp4 = text.slice(4, 12).includes("ftyp");
+  const isIsoMedia = text.slice(4, 16).includes("ftyp");
+  const webmSignature =
+    bytes.length >= 4 &&
+    bytes[0] === 0x1a &&
+    bytes[1] === 0x45 &&
+    bytes[2] === 0xdf &&
+    bytes[3] === 0xa3;
+  const quickTime =
+    /video\/quicktime|video\/x-m4v/i.test(requestedMime) ||
+    /qt  |M4V /.test(text.slice(4, 40));
+  const matroska =
+    webmSignature &&
+    (/matroska/i.test(text) || /video\/x-matroska/i.test(requestedMime));
+  const container = matroska
+    ? "matroska"
+    : webmSignature
+      ? "webm"
+      : isIsoMedia && quickTime
+        ? "quicktime"
+        : isIsoMedia
+          ? "mp4"
+          : "unknown";
   const videoCodec = /avc1|avc3/.test(text)
     ? "h264"
     : /hvc1|hev1/.test(text)
       ? "hevc"
-      : /vp09/.test(text)
-        ? "vp9"
-        : "unknown";
-  const hasAudio = /soun|mp4a|ac-3|ec-3/.test(text);
+      : /V_VP8|vp08/.test(text)
+        ? "vp8"
+        : /V_VP9|vp09/.test(text)
+          ? "vp9"
+          : /V_AV1|av01/.test(text)
+            ? "av1"
+            : "unknown";
+  const hasAudio = /soun|mp4a|ac-3|ec-3|A_OPUS|A_VORBIS/i.test(text);
   const audioCodec = /mp4a/.test(text)
     ? "aac"
-    : /ac-3|ec-3/.test(text)
-      ? "dolby"
-      : hasAudio
-        ? "unknown"
-        : "none";
+    : /A_OPUS|opus/i.test(text)
+      ? "opus"
+      : /A_VORBIS|vorbis/i.test(text)
+        ? "vorbis"
+        : /ac-3|ec-3/.test(text)
+          ? "dolby"
+          : hasAudio
+            ? "unknown"
+            : "none";
   return {
-    container: isMp4 ? "mp4" : "unknown",
+    container,
     videoCodec,
     audioCodec,
     browserSafe:
-      isMp4 &&
-      videoCodec === "h264" &&
-      (audioCodec === "aac" || audioCodec === "none"),
+      (container === "mp4" &&
+        videoCodec === "h264" &&
+        (audioCodec === "aac" || audioCodec === "none")) ||
+      (container === "webm" &&
+        ["vp8", "vp9"].includes(videoCodec) &&
+        ["opus", "vorbis", "none"].includes(audioCodec)),
   };
+}
+
+export function inspectMp4Bytes(bytes: Uint8Array) {
+  return inspectVideoBytes(bytes, "video/mp4");
 }
 
 function safeHttpsUrl(value: unknown) {
@@ -40,41 +86,78 @@ function safeHttpsUrl(value: unknown) {
   }
 }
 
+function governedOutputPath(value: unknown) {
+  const path = String(value || "");
+  return /^processed\/[a-zA-Z0-9/_-]+\.(mp4|webm)$/.test(path) ? path : null;
+}
+
+async function assertJobActive(admin: SupabaseClient, id: string) {
+  const { data, error } = await admin
+    .from("video_processing_jobs")
+    .select("status")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  if (data.status === "Cancelled") throw new Error("VIDEO_PROCESSING_CANCELLED");
+}
+
 export async function processVideoJob(
   admin: SupabaseClient,
   job: Row,
   profile: Row,
 ) {
   const id = String(job.id);
-  await admin.from("video_processing_jobs").update({
-    status: "Inspecting",
-    progress_percent: 10,
-    attempt_count: Number(job.attempt_count || 0) + 1,
-    started_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    safe_error_code: null,
-    error_reference: null,
-  }).eq("id", id);
+  await admin
+    .from("video_processing_jobs")
+    .update({
+      status: "Inspecting",
+      progress_percent: 10,
+      attempt_count: Number(job.attempt_count || 0) + 1,
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      safe_error_code: null,
+      error_reference: null,
+      source_cleanup_status: "Retained",
+      source_cleanup_after: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    })
+    .eq("id", id)
+    .neq("status", "Cancelled");
+  await assertJobActive(admin, id);
   const { data: signed, error: signedError } = await admin.storage
     .from(String(job.source_bucket))
     .createSignedUrl(String(job.source_path), 600);
-  if (signedError || !signed?.signedUrl) throw signedError || new Error("VIDEO_SOURCE_UNAVAILABLE");
+  if (signedError || !signed?.signedUrl) {
+    throw signedError || new Error("VIDEO_SOURCE_UNAVAILABLE");
+  }
   const inspectionResponse = await fetch(signed.signedUrl, {
     headers: { Range: "bytes=0-2097151" },
   });
-  if (!inspectionResponse.ok) throw new Error("VIDEO_SOURCE_INSPECTION_FAILED");
-  const inspected = inspectMp4Bytes(
+  if (!inspectionResponse.ok) {
+    throw new Error("VIDEO_SOURCE_INSPECTION_FAILED");
+  }
+  const inspected = inspectVideoBytes(
     new Uint8Array(await inspectionResponse.arrayBuffer()),
+    String(job.source_mime_type),
   );
-  await admin.from("video_processing_jobs").update({
-    detected_container: inspected.container,
-    detected_video_codec: inspected.videoCodec,
-    detected_audio_codec: inspected.audioCodec,
-    progress_percent: 25,
-    updated_at: new Date().toISOString(),
-  }).eq("id", id);
+  await admin
+    .from("video_processing_jobs")
+    .update({
+      detected_container: inspected.container,
+      detected_video_codec: inspected.videoCodec,
+      detected_audio_codec: inspected.audioCodec,
+      progress_percent: 25,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .neq("status", "Cancelled");
+  await assertJobActive(admin, id);
 
-  if (inspected.browserSafe && Number(job.source_size_bytes) <= 25 * 1024 * 1024) {
+  if (
+    inspected.browserSafe &&
+    Number(job.source_size_bytes) <= 25 * 1024 * 1024
+  ) {
     const { data } = admin.storage
       .from(String(job.source_bucket))
       .getPublicUrl(String(job.source_path));
@@ -83,21 +166,27 @@ export async function processVideoJob(
       output_path: job.source_path,
       output_url: data.publicUrl,
       output_size_bytes: job.source_size_bytes,
-      duration_seconds: 30,
-      detected_container: "mp4",
-      detected_video_codec: "h264",
+      detected_container: inspected.container,
+      detected_video_codec: inspected.videoCodec,
       detected_audio_codec: inspected.audioCodec,
+      source_cleanup_after: null,
+      source_cleanup_status: "Retained",
     });
   }
 
   const endpoint = safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT);
   const token = process.env.MEDIA_TRANSCODE_TOKEN;
   if (!endpoint || !token) throw new Error("VIDEO_TRANSCODER_NOT_CONFIGURED");
-  await admin.from("video_processing_jobs").update({
-    status: "Transcoding",
-    progress_percent: 35,
-    updated_at: new Date().toISOString(),
-  }).eq("id", id);
+  await admin
+    .from("video_processing_jobs")
+    .update({
+      status: "Transcoding",
+      progress_percent: 35,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .neq("status", "Cancelled");
+  await assertJobActive(admin, id);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 110_000);
   try {
@@ -110,7 +199,10 @@ export async function processVideoJob(
       },
       body: JSON.stringify({
         job_id: id,
-        input: { signed_url: signed.signedUrl, mime_type: job.source_mime_type },
+        input: {
+          signed_url: signed.signedUrl,
+          mime_type: job.source_mime_type,
+        },
         output: {
           container: "mp4",
           video_codec: "h264",
@@ -124,7 +216,7 @@ export async function processVideoJob(
       }),
     });
     if (!response.ok) throw new Error("VIDEO_TRANSCODER_REQUEST_FAILED");
-    const payload = await response.json() as Row;
+    const payload = (await response.json()) as Row;
     const outputUrl = safeHttpsUrl(payload.output_url);
     const posterUrl = safeHttpsUrl(payload.poster_url);
     const outputSize = Number(payload.output_size_bytes || 0);
@@ -138,10 +230,15 @@ export async function processVideoJob(
       !Number.isFinite(duration) ||
       duration <= 0 ||
       duration > Number(profile.max_duration_seconds)
-    )
+    ) {
       throw new Error("VIDEO_TRANSCODER_INVALID_OUTPUT");
-    const ready = await complete(admin, id, {
-      output_path: `processed/${id}.mp4`,
+    }
+    await assertJobActive(admin, id);
+    return await complete(admin, id, {
+      output_bucket: governedOutputPath(payload.output_path)
+        ? job.source_bucket
+        : null,
+      output_path: governedOutputPath(payload.output_path),
       output_url: outputUrl,
       poster_url: posterUrl,
       output_size_bytes: outputSize,
@@ -152,11 +249,12 @@ export async function processVideoJob(
       detected_video_codec: "h264",
       detected_audio_codec: "aac",
       provider_job_id: String(payload.provider_job_id || "") || null,
+      source_cleanup_after: new Date(
+        Date.now() + 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      source_cleanup_status: "Scheduled",
+      original_preserved: true,
     });
-    await admin.storage
-      .from(String(job.source_bucket))
-      .remove([String(job.source_path)]);
-    return ready;
   } finally {
     clearTimeout(timer);
   }
@@ -167,13 +265,20 @@ async function complete(
   id: string,
   output: Record<string, unknown>,
 ) {
-  const { data, error } = await admin.from("video_processing_jobs").update({
-    ...output,
-    status: "Ready",
-    progress_percent: 100,
-    completed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq("id", id).select().single();
+  const { data, error } = await admin
+    .from("video_processing_jobs")
+    .update({
+      ...output,
+      status: "Ready",
+      progress_percent: 100,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .neq("status", "Cancelled")
+    .select()
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("VIDEO_PROCESSING_CANCELLED");
   return data;
 }

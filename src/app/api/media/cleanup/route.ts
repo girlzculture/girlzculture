@@ -36,7 +36,49 @@ async function POSTHandler(request: Request) {
       if (archived.error) throw archived.error;
       cleaned += 1;
     }
-    return Response.json({ cleaned, remaining_batch_possible: (data || []).length === 100 });
+    const { data: videoJobs, error: videoError } = await admin
+      .from("video_processing_jobs")
+      .select("id,source_bucket,source_path,status")
+      .eq("source_cleanup_status", "Scheduled")
+      .lt("source_cleanup_after", new Date().toISOString())
+      .order("source_cleanup_after")
+      .limit(100);
+    if (videoError) throw videoError;
+    let videoSourcesCleaned = 0;
+    for (const job of videoJobs || []) {
+      if (!String(job.source_path).startsWith("incoming/")) continue;
+      const removal = await admin.storage
+        .from(job.source_bucket)
+        .remove([job.source_path]);
+      if (removal.error) {
+        await admin
+          .from("video_processing_jobs")
+          .update({
+            source_cleanup_status: "Failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", job.id);
+        throw removal.error;
+      }
+      const archived = await admin
+        .from("video_processing_jobs")
+        .update({
+          source_cleanup_status: "Removed",
+          source_cleaned_at: new Date().toISOString(),
+          original_preserved: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", job.id)
+        .eq("source_cleanup_status", "Scheduled");
+      if (archived.error) throw archived.error;
+      videoSourcesCleaned += 1;
+    }
+    return Response.json({
+      staged_images_cleaned: cleaned,
+      video_sources_cleaned: videoSourcesCleaned,
+      remaining_batch_possible:
+        (data || []).length === 100 || (videoJobs || []).length === 100,
+    });
   } catch (error) {
     return monitoredRouteFailure({ request, admin, error, feature: "media", action: "cleanup_staged_media", actorRole: "system", safeMessage: "Staged media cleanup could not finish." });
   }

@@ -175,6 +175,25 @@ begin
   ) then
     raise exception 'Engine default admin timezone is missing';
   end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema='public'
+      and table_name='video_processing_jobs'
+      and column_name='source_cleanup_status'
+  ) then
+    raise exception 'Video processing cleanup lifecycle is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from public.engine_settings
+    where setting_key='media.video_failed_source_retention_hours'
+      and status='Published'
+  ) then
+    raise exception 'Engine video source-retention policy is missing';
+  end if;
 end
 $$;
 

@@ -3,7 +3,7 @@ import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { errorResponse } from "@/lib/requestSecurity";
 import { aiProviderConfigured, approvedAiProviders } from "@/lib/aiAutomationServer";
 
-const EXPECTED_MIGRATION = "20260721100000";
+const EXPECTED_MIGRATION = "20260724150000";
 type State = "healthy" | "configuration_required" | "migration_required" | "optional";
 type Status = { key:string;label:string;state:State;detail:string;required:boolean };
 
@@ -27,6 +27,10 @@ async function GETHandler(request: Request) {
     statuses.push({ key:"sms",label:"Transactional SMS",state:smsConfigured?"healthy":"optional",detail:smsConfigured?"The server-side SMS provider is configured.":"SMS is optional; email and in-app notification paths remain available.",required:false });
     const pushConfigured=Boolean(process.env.VAPID_PRIVATE_KEY&&process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
     statuses.push({ key:"push",label:"Web push",state:pushConfigured?"healthy":"optional",detail:pushConfigured?"Private and public web-push keys are configured.":"Web push is optional and currently unavailable.",required:false });
+    const transcoderConfigured=Boolean(process.env.MEDIA_TRANSCODE_ENDPOINT&&process.env.MEDIA_TRANSCODE_TOKEN);
+    statuses.push({ key:"transcoder",label:"Video transcoder",state:transcoderConfigured?"healthy":"configuration_required",detail:transcoderConfigured?"The HTTPS transcoding endpoint and server token are configured.":"Add MEDIA_TRANSCODE_ENDPOINT and MEDIA_TRANSCODE_TOKEN to process MOV, HEVC, Dolby, and other browser-incompatible video.",required:true });
+    const cleanupConfigured=Boolean(process.env.CRON_SECRET&&(process.env.NETLIFY||process.env.URL));
+    statuses.push({ key:"media_cleanup",label:"Scheduled media cleanup",state:cleanupConfigured?"healthy":"configuration_required",detail:cleanupConfigured?"The protected daily cleanup schedule can call the application cleanup route.":"Add CRON_SECRET in Netlify and keep the media-cleanup scheduled function enabled.",required:true });
     const { count:localeCount,error:localeError }=await admin.from("supported_locales").select("locale",{count:"exact",head:true}).eq("is_enabled",true);
     statuses.push({ key:"translation",label:"Language registry",state:localeError?"migration_required":"healthy",detail:localeError?"The dynamic language registry could not be read.":`${localeCount||0} language(s) are enabled; English remains the fallback.`,required:true });
     const configuredProviders=approvedAiProviders().filter(provider=>provider!=="test"&&aiProviderConfigured(provider));

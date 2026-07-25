@@ -135,6 +135,12 @@ async function POSTHandler(request: Request) {
       change_reason: reason,
     });
     if (error) throw error;
+    const processingJobId=cleanText(body.video_processing_job_id,60);
+    if(processingJobId){
+      if(!UUID.test(processingJobId))rejectRequest("Video processing reference is invalid.");
+      const linked=await admin.from("trending_video_campaigns").update({video_processing_job_id:processingJobId}).eq("id",data).eq("salon_id",salonId);
+      if(linked.error)throw linked.error;
+    }
     return Response.json({ campaign_id: data });
   } catch (error) {
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "marketing", action: "save_trending_campaign", actorRole: "admin", safeMessage: "We couldn't save this Trending Picks campaign." });
