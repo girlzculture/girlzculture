@@ -1,5 +1,13 @@
 type Row = Record<string, unknown>;
-import { bookingReference } from "@/lib/bookingReference";
+
+function bookingReference(row: Row) {
+  return String(
+    row.public_reference ||
+      row.confirmation_code ||
+      row.id ||
+      "Reference pending",
+  );
+}
 
 function escapeHtml(value: unknown) {
   return String(value ?? "").replace(
@@ -218,9 +226,10 @@ export function renderBookingCancellation(
     audience: "customer" | "salon";
     cancelledBy: string;
     reason: string;
+    customerMessage?: string;
     refundStatus: string;
-    nextAction: string;
     browseUrl?: string;
+    supportUrl?: string;
   },
 ) {
   const customerRows =
@@ -230,14 +239,16 @@ export function renderBookingCancellation(
   const cancellationRows =
     row("Cancelled by", input.cancelledBy) +
     row("Reason", input.reason) +
-    row("Deposit / refund status", input.refundStatus) +
-    row("Next action", input.nextAction);
+    (input.customerMessage
+      ? row("Message from the salon", input.customerMessage)
+      : "") +
+    row("Refund status", input.refundStatus);
   const actions =
     input.audience === "customer"
-      ? `<div style="margin-top:18px">${button("Manage booking", input.manageUrl || "")}${button("Find another salon", input.browseUrl || "", true)}</div>`
-      : `<div style="margin-top:18px">${button("Open booking history", input.dashboardUrl || "")}</div>`;
+      ? `<div style="margin-top:18px">${button("Manage booking", input.manageUrl || "")}${button("Find another salon", input.browseUrl || "", true)}${button("Support", input.supportUrl || "", true)}</div>`
+      : `<div style="margin-top:18px">${button("Open booking history", input.dashboardUrl || "")}${button("Support", input.supportUrl || "", true)}</div>`;
   return shell(
-    "Booking cancellation details",
+    "Appointment cancelled",
     input.intro,
     card("Booking reference", bookingIdentity(input)) +
       card("Original appointment", appointmentDetails(input)) +

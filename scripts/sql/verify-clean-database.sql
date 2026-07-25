@@ -136,6 +136,26 @@ begin
   ) then
     raise exception 'Unique booking public reference index is missing';
   end if;
+
+  if to_regclass('public.booking_refund_operations') is null then
+    raise exception 'Booking refund operation audit table is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid='public.bookings'::regclass
+      and conname='bookings_refund_funding_state_check'
+  ) then
+    raise exception 'Booking refund funding-state constraint is missing';
+  end if;
+
+  if not exists (
+    select 1 from public.engine_settings
+    where setting_key='booking.customer_cancellation_grace_minutes'
+      and status='Published'
+  ) then
+    raise exception 'Engine-controlled cancellation grace period is missing';
+  end if;
 end
 $$;
 

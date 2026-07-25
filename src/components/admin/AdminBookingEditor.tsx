@@ -84,6 +84,8 @@ export default function AdminBookingEditor({
           appointment_local: form.get("appointment_local"),
           status: form.get("status"),
           reason: form.get("reason"),
+          customer_reason: form.get("customer_reason"),
+          customer_message: form.get("customer_message"),
           message: form.get("reschedule_message"),
           options: [
             form.get("appointment_local"),
@@ -96,7 +98,9 @@ export default function AdminBookingEditor({
       if (!response.ok) throw new Error(body.error);
       setMessage(
         action === "cancel"
-          ? "Booking cancelled, slot released, and refund/notifications processed."
+          ? body.refund_status === "Pending"
+            ? "Booking cancelled and notifications sent. Stripe accepted the refund request; completion is pending."
+            : "Booking cancelled, slot released, and the verified refund status was recorded."
           : action === "propose_reschedule"
             ? "Proposal sent. The booking will change only if the customer accepts."
             : action === "correct_service_state"
@@ -253,13 +257,43 @@ export default function AdminBookingEditor({
               />
             </label>
             <label className="block text-sm font-semibold">
-              Required reason / internal audit note
+              Required internal reason / audit note
               <textarea
                 name="reason"
                 required
                 rows={3}
                 className="mt-2 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal"
                 placeholder="Explain why this booking is changing."
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              Customer-safe cancellation reason
+              <select
+                name="customer_reason"
+                defaultValue="Appointment availability changed"
+                className="mt-2 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal"
+              >
+                <option>Appointment availability changed</option>
+                <option>Stylist is unavailable</option>
+                <option>Salon closure or schedule change</option>
+                <option>Service cannot be completed as scheduled</option>
+                <option>Customer requested cancellation</option>
+                <option>Payment could not be completed</option>
+                <option>Other scheduling issue</option>
+              </select>
+              <small className="mt-1 block font-normal text-ink/55">
+                This reason may be shown to the customer. Internal notes above
+                remain restricted to authorized staff.
+              </small>
+            </label>
+            <label className="block text-sm font-semibold">
+              Optional customer message
+              <textarea
+                name="customer_message"
+                rows={2}
+                maxLength={500}
+                className="mt-2 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal"
+                placeholder="A short, helpful message without internal details."
               />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">

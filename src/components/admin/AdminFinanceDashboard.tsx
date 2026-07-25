@@ -609,6 +609,8 @@ function RefundLedger({
           "Deposit",
           "Refund",
           "Status",
+          "Cancelled / issued by",
+          "Funding",
           "Stripe reference",
         ]}
       >
@@ -633,12 +635,27 @@ function RefundLedger({
                 <Status value={row.refund_status} />
               </Td>
               <Td>
+                <b className="capitalize">
+                  {String(row.cancelled_by || "Not recorded")}
+                </b>
+                <small className="capitalize">
+                  Refund: {String(row.refund_initiated_by || "Not issued")}
+                </small>
+              </Td>
+              <Td>
+                <Status value={row.refund_funding_state} />
+              </Td>
+              <Td>
                 <small>{String(row.stripe_reference || "—")}</small>
+                <small>{String(row.stripe_refund_id || "")}</small>
+                <small>
+                  {String(row.stripe_transfer_reversal_id || "")}
+                </small>
               </Td>
             </tr>
           ))
         ) : (
-          <EmptyRow columns={7} text="No booking refunds match the filters." />
+          <EmptyRow columns={9} text="No booking refunds match the filters." />
         )}
       </Table>
       <Table

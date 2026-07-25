@@ -185,9 +185,10 @@ async function billingContext(object: StripeObject) {
 }
 
 async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
+  if (object.metadata?.booking_id) return;
   const supported = [
     "invoice.paid", "invoice.payment_failed", "subscription_schedule.updated",
-    "customer.subscription.updated", "customer.subscription.deleted", "refund.created", "credit_note.created",
+    "customer.subscription.updated", "customer.subscription.deleted", "refund.created", "refund.updated", "credit_note.created",
   ];
   if (!supported.includes(event.type)) return;
   const context = await billingContext(object);
@@ -259,7 +260,7 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
     effectiveAt = eventDate;
     cancellationDate = eventDate;
     paymentStatus = "ended";
-  } else if (event.type === "refund.created") {
+  } else if (event.type === "refund.created" || event.type === "refund.updated") {
     eventType = "Refund";
     amountRefunded = Number(object.amount || 0);
   } else if (event.type === "credit_note.created") {
@@ -333,6 +334,66 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
     }).eq("stripe_subscription_id", context.subscriptionId);
     if (stateError) throw stateError;
   }
+}
+
+async function syncBookingRefund(event: StripeEvent, object: StripeObject) {
+  if (!["refund.created", "refund.updated"].includes(event.type)) return;
+  const bookingId=String(object.metadata?.booking_id||"").trim();
+  if(!bookingId||!object.id)return;
+  const admin=getSupabaseAdmin();
+  const providerStatus=String(object.status||"pending").toLowerCase();
+  const refundStatus=providerStatus==="succeeded"
+    ?"Succeeded"
+    :providerStatus==="failed"||providerStatus==="canceled"
+      ?"Failed"
+      :"Pending";
+  const now=new Date((event.created||object.created||Math.floor(Date.now()/1000))*1000).toISOString();
+  const amount=Math.max(0,Number(object.amount||0)/100);
+  const {data:booking,error:bookingError}=await admin
+    .from("bookings")
+    .select("id,deposit_amount,stripe_transfer_id,stripe_transfer_reversal_id")
+    .eq("id",bookingId)
+    .maybeSingle();
+  if(bookingError)throw bookingError;
+  if(!booking)return;
+  const fundingState=refundStatus==="Succeeded"
+    ?amount+0.0001<Number(booking.deposit_amount||0)
+      ?"Partially refunded"
+      :"Refunded"
+    :refundStatus==="Failed"
+      ?booking.stripe_transfer_id&&!booking.stripe_transfer_reversal_id
+        ?"Transferred to salon"
+        :"Failed"
+      :"Platform-held funds";
+  const normalizedRefundStatus=
+    refundStatus==="Succeeded"&&amount+0.0001<Number(booking.deposit_amount||0)
+      ?"Partially refunded"
+      :refundStatus;
+  const update=await admin.from("bookings").update({
+    stripe_refund_id:object.id,
+    refund_status:normalizedRefundStatus,
+    refund_amount:amount,
+    refund_funding_state:fundingState,
+    refund_provider_accepted_at:now,
+    refund_completed_at:refundStatus==="Succeeded"?now:null,
+    deposit_status:refundStatus==="Succeeded"?"Refunded":refundStatus==="Pending"?"Refund pending":"Refund failed",
+  }).eq("id",bookingId);
+  if(update.error)throw update.error;
+  const operationId=String(object.metadata?.refund_operation_id||"");
+  let operationQuery=admin.from("booking_refund_operations").update({
+    stripe_refund_id:object.id,
+    provider_status:providerStatus,
+    operation_status:refundStatus,
+    provider_accepted_at:now,
+    completed_at:refundStatus==="Succeeded"?now:null,
+    safe_failure_code:refundStatus==="Failed"?"PROVIDER_REFUND_FAILED":null,
+    updated_at:now,
+  });
+  operationQuery=operationId
+    ?operationQuery.eq("id",operationId)
+    :operationQuery.eq("booking_id",bookingId);
+  const operationResult=await operationQuery;
+  if(operationResult.error)throw operationResult.error;
 }
 
 async function completeBookingCheckout(session: StripeObject, request: Request) {
@@ -457,6 +518,7 @@ async function POSTHandler(request: Request) {
   if (!shouldProcess) return Response.json({ received: true, duplicate: true });
   try {
     const object = eventObject;
+    await syncBookingRefund(event,object);
     await recordBillingEvent(event, object);
     if (event.type === "checkout.session.completed") {
       await trackPromoRedemption(object);

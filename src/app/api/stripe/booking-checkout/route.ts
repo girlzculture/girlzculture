@@ -156,6 +156,12 @@ async function POSTHandler(request: Request) {
       };
     }
     const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
+    const cancellationGraceMinutes = await getEngineNumber(
+      "booking.customer_cancellation_grace_minutes",
+      30,
+      0,
+      1440,
+    );
     const originalDeposit = Math.round(total * depositPercentage) / 100;
     const promoCode = cleanText(body.promo_code, 40);
     const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
@@ -182,6 +188,7 @@ async function POSTHandler(request: Request) {
       subtotal_before_promotion: subtotalBeforeSalonPromotion,
       deposit_amount: deposit,
       deposit_percentage: depositPercentage,
+      cancellation_grace_minutes_snapshot: cancellationGraceMinutes,
       original_deposit_amount: originalDeposit,
       discount_amount: discount,
       promo_code_id: promoPreview?.promo.id || null,

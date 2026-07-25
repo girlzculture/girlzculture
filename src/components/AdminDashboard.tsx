@@ -255,7 +255,7 @@ function Quality(p: any) {
   const effectiveThreshold=threshold===""?storedThreshold:threshold;
   const metrics=p.salons.map((salon:Row)=>{
     const bookings=p.bookings.filter((booking:Row)=>booking.salon_id===salon.id);
-    const salonCancellations=bookings.filter((booking:Row)=>booking.cancellation_initiated_by==="Salon").length;
+    const salonCancellations=bookings.filter((booking:Row)=>String(booking.cancelled_by||booking.cancellation_initiated_by||"").toLowerCase()==="salon").length;
     const cancellationRate=bookings.length?salonCancellations/bookings.length*100:0;
     const measured=bookings.filter((booking:Row)=>booking.service_started_at);
     const onTime=measured.filter((booking:Row)=>new Date(booking.service_started_at).getTime()<=new Date(booking.appointment_datetime).getTime()+15*60_000).length;

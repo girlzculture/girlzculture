@@ -102,11 +102,19 @@ export default function GuestBookingManager({ token }: { token: string }) {
         error?: string;
         manage_url?: string;
         status?: string;
+        refund_status?: string;
+        refund_grace_applied?: boolean;
         warnings?: Array<{ message?: string }>;
       };
       if (!response.ok) throw new Error(body.error || "Unable to update booking.");
       if (action === "cancel") {
-        setNotice("Your booking is cancelled. Confirmation has been sent.");
+        setNotice(
+          body.refund_status === "Succeeded"
+            ? "Your booking is cancelled and the deposit refund completed."
+            : body.refund_status === "Pending"
+              ? "Your booking is cancelled. Stripe accepted the refund request; completion is pending."
+              : "Your booking is cancelled. Confirmation has been sent.",
+        );
         setData((current) =>
           current
             ? {
@@ -303,12 +311,15 @@ export default function GuestBookingManager({ token }: { token: string }) {
             </p>
             <label className="mt-4 block text-xs font-bold text-ink/75">
               Reason
-              <textarea
+              <select
                 value={cancelReason}
                 onChange={(event) => setCancelReason(event.target.value)}
-                maxLength={160}
-                className="mt-2 min-h-24 w-full rounded-xl border border-plum/15 bg-cream/40 p-3 text-sm outline-none focus:border-magenta"
-              />
+                className="mt-2 min-h-11 w-full rounded-xl border border-plum/15 bg-cream/40 p-3 text-sm outline-none focus:border-magenta"
+              >
+                <option>Customer requested cancellation</option>
+                <option>Appointment availability changed</option>
+                <option>Other scheduling issue</option>
+              </select>
             </label>
             <button
               type="button"

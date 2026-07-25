@@ -152,15 +152,24 @@ export default function OwnerDashboardApp({
   > | null>(null);
   const [isTeamMember, setIsTeamMember] = useState(false);
   const [cancellationReasons, setCancellationReasons] = useState([
-    "Customer requested",
-    "Fully booked",
-    "Walk-in took the slot",
+    "Customer requested cancellation",
     "Stylist unavailable",
-    "Salon closed",
+    "Salon closure",
     "Scheduling conflict",
+    "Service issue",
     "Payment issue",
     "Other",
   ]);
+  const [customerCancellationReasons, setCustomerCancellationReasons] =
+    useState([
+      "Appointment availability changed",
+      "Stylist is unavailable",
+      "Salon closure or schedule change",
+      "Service cannot be completed as scheduled",
+      "Customer requested cancellation",
+      "Payment could not be completed",
+      "Other scheduling issue",
+    ]);
   const [cancellationThreshold, setCancellationThreshold] = useState(10);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedStylist, setSelectedStylist] = useState<string | null>(null);
@@ -232,12 +241,14 @@ export default function OwnerDashboardApp({
       setBlockouts(records.salon_blockouts || []);
       try {
         const configResponse = await fetch(
-          "/api/config?keys=quality.cancellation_reasons,quality.cancellation_threshold_percent",
+          "/api/config?keys=quality.cancellation_reasons,quality.cancellation_customer_reasons,quality.cancellation_threshold_percent",
           { cache: "no-store" },
         );
         const configBody = await configResponse.json();
         const configuredReasons =
           configBody?.config?.["quality.cancellation_reasons"];
+        const configuredCustomerReasons =
+          configBody?.config?.["quality.cancellation_customer_reasons"];
         const configuredThreshold = Number(
           configBody?.config?.["quality.cancellation_threshold_percent"],
         );
@@ -248,6 +259,14 @@ export default function OwnerDashboardApp({
         )
           setCancellationReasons(
             configuredReasons.map(String).filter(Boolean).slice(0, 40),
+          );
+        if (
+          live &&
+          Array.isArray(configuredCustomerReasons) &&
+          configuredCustomerReasons.length
+        )
+          setCustomerCancellationReasons(
+            configuredCustomerReasons.map(String).filter(Boolean).slice(0, 20),
           );
         if (
           live &&
@@ -651,6 +670,7 @@ export default function OwnerDashboardApp({
     isOwner: !isTeamMember,
     access: teamPermissions,
     cancellationReasons,
+    customerCancellationReasons,
     cancellationThreshold,
     initialBookingId,
     selectedStyle,
@@ -758,6 +778,7 @@ type Ctx = {
   isOwner: boolean;
   access: Record<string, boolean> | null;
   cancellationReasons: string[];
+  customerCancellationReasons: string[];
   cancellationThreshold: number;
   initialBookingId: string;
   selectedStyle: string | null;
@@ -1551,7 +1572,10 @@ function Overview({ c }: { c: Ctx }) {
       100,
   );
   const salonCancellations = c.bookings.filter(
-    (booking) => booking.cancellation_initiated_by === "Salon",
+    (booking) =>
+      String(
+        booking.cancelled_by || booking.cancellation_initiated_by || "",
+      ).toLowerCase() === "salon",
   ).length;
   const cancellationRate = c.bookings.length
     ? (salonCancellations / c.bookings.length) * 100
@@ -3070,6 +3094,10 @@ function Bookings({ c }: { c: Ctx }) {
   const [selectedId, setSelectedId] = useState(c.initialBookingId || "");
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
+  const [customerReason, setCustomerReason] = useState(
+    "Appointment availability changed",
+  );
+  const [customerMessage, setCustomerMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [rescheduleMessage, setRescheduleMessage] = useState("");
@@ -3252,7 +3280,12 @@ function Bookings({ c }: { c: Ctx }) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ reason, detail }),
+          body: JSON.stringify({
+            internal_reason: reason,
+            internal_detail: detail,
+            customer_reason: customerReason,
+            customer_message: customerMessage,
+          }),
         },
       );
       const body = await response.json();
@@ -3266,10 +3299,14 @@ function Bookings({ c }: { c: Ctx }) {
       c.setNotice(
         body.refund_status === "Succeeded"
           ? "Booking cancelled, customer notified, and deposit refunded in full."
-          : "Booking cancelled and customer notified.",
+          : body.refund_status === "Pending"
+            ? "Booking cancelled and customer notified. Stripe accepted the refund request; completion is pending."
+            : "Booking cancelled and customer notified.",
       );
       setReason("");
       setDetail("");
+      setCustomerReason("Appointment availability changed");
+      setCustomerMessage("");
     } catch (error) {
       c.setNotice(
         error instanceof Error
@@ -3721,6 +3758,29 @@ function Bookings({ c }: { c: Ctx }) {
                         <option key={item}>{item}</option>
                       ))}
                     </select>
+                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-ink/55">
+                      Customer-safe reason
+                    </p>
+                    <select
+                      value={customerReason}
+                      onChange={(event) =>
+                        setCustomerReason(event.target.value)
+                      }
+                      className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                    >
+                      {c.customerCancellationReasons.map((item) => (
+                        <option key={item}>{item}</option>
+                      ))}
+                    </select>
+                    <textarea
+                      value={customerMessage}
+                      onChange={(event) =>
+                        setCustomerMessage(event.target.value.slice(0, 500))
+                      }
+                      placeholder="Optional customer message"
+                      rows={2}
+                      className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
+                    />
                     {reason === "Other" ? (
                       <textarea
                         value={detail}
@@ -3745,8 +3805,21 @@ function Bookings({ c }: { c: Ctx }) {
                 </>
               ) : selected.cancellation_reason ? (
                 <div className="mt-5 rounded-[9px] bg-blush/30 p-3 text-xs">
-                  <b>Cancellation reason</b>
-                  <p className="mt-1">{String(selected.cancellation_reason)}</p>
+                  <b>Cancelled by</b>
+                  <p className="mt-1 capitalize">
+                    {String(
+                      selected.cancelled_by ||
+                        selected.cancellation_initiated_by ||
+                        "Not recorded",
+                    )}
+                  </p>
+                  <b className="mt-3 block">Customer-safe reason</b>
+                  <p className="mt-1">
+                    {String(
+                      selected.cancellation_customer_reason ||
+                        selected.cancellation_reason,
+                    )}
+                  </p>
                   <p className="mt-1 text-ink/55">
                     Refund: {String(selected.refund_status || "Not recorded")}
                   </p>
