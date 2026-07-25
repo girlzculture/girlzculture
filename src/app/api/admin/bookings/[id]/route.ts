@@ -31,6 +31,21 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     const action = cleanText(body.action, 30); const reason = cleanText(body.reason, 500);
     if (!reason) throw new Error("Add a reason for the audit trail and customer notification.");
     if (action === "cancel") return await cancelBooking(ctx, reason);
+    if (action === "correct_service_state") {
+      const targetStatus=cleanText(body.status,30);
+      if(!["Confirmed","Ready","In Progress","Completed","Cancelled"].includes(targetStatus))throw new Error("Choose a valid corrected service state.");
+      const {data:corrected,error:correctionError}=await ctx.admin.rpc("transition_booking_service",{
+        p_booking_id:ctx.booking.id,
+        p_salon_id:ctx.salon.id,
+        p_actor_user_id:ctx.user.id,
+        p_actor_role:`Platform admin: ${String((ctx.adminUser as {role?:string}).role||"Admin")}`,
+        p_action:"admin_correct",
+        p_reason:reason,
+        p_target_status:targetStatus,
+      });
+      if(correctionError)throw correctionError;
+      return Response.json({booking:corrected});
+    }
     if (action === "propose_reschedule") {
       const result=await createCustomerApprovedReschedule({
         admin:ctx.admin,
@@ -50,7 +65,6 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     if (body.guest_name !== undefined) patch.guest_name = cleanText(body.guest_name, 120);
     if (body.guest_email !== undefined) patch.guest_email = cleanEmail(body.guest_email);
     if (body.guest_phone !== undefined) patch.guest_phone = cleanUsPhone(body.guest_phone, true);
-    if (body.status !== undefined) { const status = cleanText(body.status, 30); if (!["Confirmed","Completed","Requested"].includes(status)) throw new Error("Choose a valid status."); patch.status = status; }
     if (body.stylist_id !== undefined) { const stylistId = cleanText(body.stylist_id, 50) || null; if (stylistId && !ctx.stylists.some((stylist) => stylist.id === stylistId)) throw new Error("Choose a stylist from this salon."); patch.stylist_id = stylistId; }
     let auditAction = "modified";
     if (body.appointment_local) {

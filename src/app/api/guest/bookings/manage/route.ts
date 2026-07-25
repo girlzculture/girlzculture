@@ -102,7 +102,9 @@ async function loadManagedBooking(
   const optionResult = proposalIds.length
     ? await admin
         .from("booking_reschedule_options")
-        .select("id,proposal_id,appointment_datetime,duration_hours,is_selected")
+        .select(
+          "id,proposal_id,appointment_datetime,duration_hours,stylist_id,is_selected,stylist:stylists(name)",
+        )
         .in("proposal_id", proposalIds)
         .order("appointment_datetime")
     : { data: [], error: null };

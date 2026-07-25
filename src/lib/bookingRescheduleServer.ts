@@ -96,27 +96,31 @@ export async function createCustomerApprovedReschedule(input: {
   const verifiedOptions: Array<{
     appointment_datetime: string;
     duration_hours: number;
+    stylist_id: string | null;
+    stylist_name: string;
   }> = [];
-  for (const local of localOptions) {
+  for (const option of localOptions) {
+    const local = option.local;
     const [date, time] = local.split("T");
-    let availability = availabilityByDate.get(date);
+    const availabilityKey = `${date}:${option.stylistId || "any"}`;
+    let availability = availabilityByDate.get(availabilityKey);
     if (!availability) {
       availability = await bookingAvailability({
         salonId: String(booking.salon_id),
         styleId: String(booking.style_id),
-        stylistId: booking.stylist_id ? String(booking.stylist_id) : null,
+        stylistId: option.stylistId,
         customerId: booking.customer_id ? String(booking.customer_id) : null,
         guestEmail: String(booking.guest_email || ""),
         date,
         excludeBookingId: String(booking.id),
+        includeAllStylists: true,
       });
-      availabilityByDate.set(date, availability);
+      availabilityByDate.set(availabilityKey, availability);
     }
     const slot = availability.slots.find(
       (candidate) =>
         candidate.value === time &&
-        (!booking.stylist_id ||
-          candidate.stylistId === String(booking.stylist_id)),
+        (!option.stylistId || candidate.stylistId === option.stylistId),
     );
     if (!slot) {
       throw new Error(
@@ -133,6 +137,8 @@ export async function createCustomerApprovedReschedule(input: {
         0.25,
         Number(availability.durationMinutes || 60) / 60,
       ),
+      stylist_id: slot.stylistId,
+      stylist_name: slot.stylistName,
     });
   }
   const expiryConfigured = Number(
@@ -182,7 +188,7 @@ export async function createCustomerApprovedReschedule(input: {
       (option) =>
         `<li style="margin:8px 0">${escapeHtml(
           displayWhen(option.appointment_datetime, timeZone),
-        )}</li>`,
+        )} · ${escapeHtml(option.stylist_name)}</li>`,
     )
     .join("");
   const currentTime = displayWhen(

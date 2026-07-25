@@ -5,13 +5,22 @@ export function normalizeRescheduleLocalOptions(
   clean: (value: unknown, maxLength: number) => string,
 ) {
   if (!Array.isArray(values)) return [];
-  return [
-    ...new Set(
-      values
-        .map((value) => clean(value, 20))
-        .filter((value) => LOCAL_APPOINTMENT_PATTERN.test(value)),
-    ),
-  ];
+  const seen = new Set<string>();
+  const options: Array<{ local: string; stylistId: string | null }> = [];
+  for (const value of values) {
+    const row: Record<string, unknown> =
+      value && typeof value === "object"
+        ? (value as Record<string, unknown>)
+        : { local: value };
+    const local = clean(row.local, 20);
+    const stylistId = clean(row.stylistId ?? row.stylist_id, 60) || null;
+    if (!LOCAL_APPOINTMENT_PATTERN.test(local)) continue;
+    const key = `${local}:${stylistId || "salon"}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    options.push({ local, stylistId });
+  }
+  return options;
 }
 
 export function previewRescheduleResponse<T extends { appointment_datetime: string }>(

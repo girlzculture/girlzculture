@@ -255,6 +255,12 @@ export default function GuestBookingManager({ token }: { token: string }) {
                   />
                   <span className="text-sm font-bold">
                     {when(option.appointment_datetime, salonTimeZone)}
+                    <small className="mt-1 block font-normal text-ink/55">
+                      {String(
+                        (option.stylist as Row | undefined)?.name ||
+                          "Any available stylist",
+                      )}
+                    </small>
                   </span>
                 </label>
               ))}

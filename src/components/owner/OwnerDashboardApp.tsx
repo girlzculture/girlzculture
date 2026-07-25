@@ -3072,8 +3072,15 @@ function Bookings({ c }: { c: Ctx }) {
   const [busy, setBusy] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [rescheduleMessage, setRescheduleMessage] = useState("");
-  const [rescheduleOptions, setRescheduleOptions] = useState(["", "", ""]);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleSlots, setRescheduleSlots] = useState<Row[]>([]);
+  const [selectedRescheduleSlots, setSelectedRescheduleSlots] = useState<
+    string[]
+  >([]);
+  const [availabilityMessage, setAvailabilityMessage] = useState("");
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [proposalSummary, setProposalSummary] = useState<Row | null>(null);
+  const [confirmCompletion, setConfirmCompletion] = useState(false);
   const visible = c.bookings.filter(
     (booking) => filter === "All" || String(booking.status) === filter,
   );
@@ -3108,19 +3115,120 @@ function Bookings({ c }: { c: Ctx }) {
       active = false;
     };
   }, [selectedId]);
-  async function startService() {
+  useEffect(() => {
+    if (!selectedId || !rescheduleDate) {
+      setRescheduleSlots([]);
+      setSelectedRescheduleSlots([]);
+      setAvailabilityMessage("");
+      return;
+    }
+    let active = true;
+    setLoadingAvailability(true);
+    setAvailabilityMessage("");
+    getSessionForScope("salon")
+      .then((session) =>
+        session
+          ? fetch(
+              `/api/salon/bookings/${selectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
+              {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+                cache: "no-store",
+              },
+            )
+          : null,
+      )
+      .then(async (response) => {
+        if (!response) throw new Error("Please sign in again.");
+        const body = (await response.json()) as {
+          error?: string;
+          reason?: string;
+          slots?: Row[];
+        };
+        if (!response.ok) {
+          throw new Error(body.error || "Unable to load available times.");
+        }
+        return body;
+      })
+      .then((body) => {
+        if (!active) return;
+        setRescheduleSlots(body.slots || []);
+        setSelectedRescheduleSlots([]);
+        setAvailabilityMessage(
+          body.slots?.length
+            ? ""
+            : body.reason || "No open times remain for this day.",
+        );
+      })
+      .catch((error) => {
+        if (!active) return;
+        setRescheduleSlots([]);
+        setSelectedRescheduleSlots([]);
+        setAvailabilityMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load available times.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoadingAvailability(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [rescheduleDate, selectedId]);
+  async function serviceAction(
+    action: "check_in" | "start" | "complete",
+  ) {
     if (!selected?.id) return;
-    const startedAt = new Date().toISOString();
-    const data = await c.saveRecord(
-      "bookings",
-      { service_started_at: startedAt, status: "In Progress" },
-      selected.id,
-    );
-    if (!data) return;
-    c.setBookings((rows) =>
-      rows.map((booking) => (booking.id === selected.id ? data : booking)),
-    );
-    c.setNotice("Service start recorded for on-time performance.");
+    setBusy(true);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch(
+        `/api/salon/bookings/${selected.id}/service`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            action,
+            confirmed: action === "complete" ? confirmCompletion : undefined,
+          }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        booking?: Row;
+      };
+      if (!response.ok || !body.booking) {
+        throw new Error(
+          body.error || "The service status could not be updated.",
+        );
+      }
+      c.setBookings((rows) =>
+        rows.map((booking) =>
+          booking.id === selected.id ? (body.booking as Row) : booking,
+        ),
+      );
+      setConfirmCompletion(false);
+      c.setNotice(
+        action === "check_in"
+          ? "Customer checked in. The appointment is ready to begin."
+          : action === "start"
+            ? "Service start recorded for on-time performance."
+            : "Service completed. Verified review eligibility is now enabled.",
+      );
+    } catch (error) {
+      c.setNotice(
+        error instanceof Error
+          ? error.message
+          : "The service status could not be updated.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   async function cancelBooking() {
     if (!selected?.id || !reason) {
@@ -3176,7 +3284,10 @@ function Bookings({ c }: { c: Ctx }) {
       c.setNotice("Add a reason for the reschedule proposal.");
       return;
     }
-    const options = rescheduleOptions.filter(Boolean);
+    const options = selectedRescheduleSlots.map((key) => {
+      const [local, stylistId = ""] = key.split("|");
+      return { local, stylistId: stylistId || null };
+    });
     if (!options.length) {
       c.setNotice("Choose at least one proposed appointment time.");
       return;
@@ -3213,7 +3324,9 @@ function Bookings({ c }: { c: Ctx }) {
       setProposalSummary(body.proposal || null);
       setRescheduleReason("");
       setRescheduleMessage("");
-      setRescheduleOptions(["", "", ""]);
+      setRescheduleDate("");
+      setRescheduleSlots([]);
+      setSelectedRescheduleSlots([]);
       c.setNotice(
         body.warnings?.[0]?.message ||
           "Proposal sent. The appointment remains unchanged until the customer accepts.",
@@ -3395,22 +3508,83 @@ function Bookings({ c }: { c: Ctx }) {
               </div>
               {activeSelected ? (
                 <>
-                  <button
-                    disabled={Boolean(selected.service_started_at)}
-                    onClick={() => void startService()}
-                    className="mt-5 min-h-11 w-full rounded-[8px] border border-plum text-xs font-bold text-plum disabled:border-green-500 disabled:text-green-700"
-                  >
-                    {selected.service_started_at
-                      ? `Service started ${dateText(selected.service_started_at, c.salon.time_zone)}`
-                      : "Start service now"}
-                  </button>
+                  <div className="mt-5 rounded-[10px] border border-plum/10 bg-cream/50 p-3">
+                    <h3 className="font-serif text-lg text-plum">
+                      Service progress
+                    </h3>
+                    <p className="mt-1 text-[10px] leading-4 text-ink/55">
+                      Confirmed → Checked in / Ready → In progress → Completed
+                    </p>
+                    {String(selected.status).toLowerCase() === "confirmed" ? (
+                      <button
+                        disabled={busy}
+                        onClick={() => void serviceAction("check_in")}
+                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        Check in customer
+                      </button>
+                    ) : null}
+                    {String(selected.status).toLowerCase() === "ready" ? (
+                      <button
+                        disabled={busy}
+                        onClick={() => void serviceAction("start")}
+                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        Start service
+                      </button>
+                    ) : null}
+                    {String(selected.status).toLowerCase() ===
+                    "in progress" ? (
+                      <>
+                        <label className="mt-3 flex items-start gap-2 rounded-[8px] bg-white p-3 text-[10px] leading-4">
+                          <input
+                            type="checkbox"
+                            checked={confirmCompletion}
+                            onChange={(event) =>
+                              setConfirmCompletion(event.target.checked)
+                            }
+                            className="mt-0.5 h-4 w-4 accent-magenta"
+                          />
+                          I confirm that this service has been completed. This
+                          records the completion time and enables verified
+                          review eligibility.
+                        </label>
+                        <button
+                          disabled={busy || !confirmCompletion}
+                          onClick={() => void serviceAction("complete")}
+                          className="mt-2 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-50"
+                        >
+                          Complete service
+                        </button>
+                      </>
+                    ) : null}
+                    {selected.checked_in_at ? (
+                      <p className="mt-2 text-[10px] text-ink/55">
+                        Checked in{" "}
+                        {dateText(
+                          selected.checked_in_at,
+                          c.salon.time_zone,
+                        )}
+                      </p>
+                    ) : null}
+                    {selected.service_started_at ? (
+                      <p className="mt-1 text-[10px] text-ink/55">
+                        Service started{" "}
+                        {dateText(
+                          selected.service_started_at,
+                          c.salon.time_zone,
+                        )}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="mt-6 border-t border-plum/10 pt-5">
                     <h3 className="font-serif text-lg text-plum">
                       Propose reschedule
                     </h3>
                     <p className="mt-1 text-[10px] leading-4 text-ink/55">
-                      Offer up to three available times. The current appointment
-                      stays confirmed until the customer accepts one.
+                      Pick a date, then offer a preferred available
+                      time/stylist and up to two alternatives. The current
+                      appointment stays confirmed until the customer accepts.
                     </p>
                     {proposalSummary ? (
                       <div className="mt-3 rounded-[9px] bg-blush/35 p-3 text-xs">
@@ -3440,37 +3614,88 @@ function Bookings({ c }: { c: Ctx }) {
                       rows={2}
                       className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
                     />
-                    <div className="mt-2 grid gap-2">
-                      {rescheduleOptions.map((value, index) => (
-                        <label
-                          key={index}
-                          className="text-[10px] font-bold text-ink/60"
-                        >
-                          {index === 0
-                            ? "Preferred time"
-                            : `Alternative ${index}`}
-                          <input
-                            type="datetime-local"
-                            value={value}
-                            onChange={(event) =>
-                              setRescheduleOptions((current) =>
-                                current.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? event.target.value
-                                    : item,
-                                ),
-                              )
-                            }
-                            className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
-                          />
-                        </label>
-                      ))}
-                    </div>
+                    <label className="mt-3 block text-[10px] font-bold text-ink/60">
+                      Date to search
+                      <input
+                        type="date"
+                        value={rescheduleDate}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(event) =>
+                          setRescheduleDate(event.target.value)
+                        }
+                        className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
+                      />
+                    </label>
+                    {loadingAvailability ? (
+                      <p className="mt-3 rounded-[8px] bg-cream p-3 text-xs text-ink/60">
+                        Checking live availability…
+                      </p>
+                    ) : null}
+                    {availabilityMessage ? (
+                      <p className="mt-3 rounded-[8px] bg-blush/35 p-3 text-xs text-plum">
+                        {availabilityMessage}
+                      </p>
+                    ) : null}
+                    {rescheduleSlots.length ? (
+                      <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1">
+                        {rescheduleSlots.map((slot) => {
+                          const local = `${rescheduleDate}T${String(slot.value)}`;
+                          const key = `${local}|${String(slot.stylistId || "")}`;
+                          const selectedIndex =
+                            selectedRescheduleSlots.indexOf(key);
+                          return (
+                            <label
+                              key={key}
+                              className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-[8px] border px-3 text-xs ${
+                                selectedIndex >= 0
+                                  ? "border-magenta bg-blush/35"
+                                  : "border-plum/10 bg-white"
+                              }`}
+                            >
+                              <span>
+                                <b>{String(slot.label)}</b>
+                                <span className="ml-2 text-ink/55">
+                                  {String(
+                                    slot.stylistName ||
+                                      "Any available stylist",
+                                  )}
+                                </span>
+                                {selectedIndex >= 0 ? (
+                                  <small className="mt-0.5 block text-magenta">
+                                    {selectedIndex === 0
+                                      ? "Preferred"
+                                      : `Alternative ${selectedIndex}`}
+                                  </small>
+                                ) : null}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={selectedIndex >= 0}
+                                disabled={
+                                  selectedIndex < 0 &&
+                                  selectedRescheduleSlots.length >= 3
+                                }
+                                onChange={(event) =>
+                                  setSelectedRescheduleSlots((current) =>
+                                    event.target.checked
+                                      ? [...current, key].slice(0, 3)
+                                      : current.filter(
+                                          (candidate) => candidate !== key,
+                                        ),
+                                  )
+                                }
+                                className="h-4 w-4 accent-magenta"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     <button
                       disabled={
                         busy ||
                         !rescheduleReason.trim() ||
-                        !rescheduleOptions.some(Boolean)
+                        !selectedRescheduleSlots.length
                       }
                       onClick={() => void proposeReschedule()}
                       className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"

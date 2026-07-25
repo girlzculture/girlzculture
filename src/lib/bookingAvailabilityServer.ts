@@ -49,12 +49,12 @@ function overlaps(start: number, end: number, otherStart: unknown, otherEnd: unk
   return Number.isFinite(left) && Number.isFinite(right) && start < right && end > left;
 }
 
-export async function bookingAvailability(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; date: string; excludeBookingId?: string | null }) {
+export async function bookingAvailability(input: { salonId: string; styleId: string; stylistId?: string | null; customerId?: string | null; guestEmail?: string | null; date: string; excludeBookingId?: string | null; includeAllStylists?: boolean }) {
   const admin = getSupabaseAdmin();
   const [{ data: salon }, { data: style }, { data: stylists }] = await Promise.all([
     admin.from("salons").select("id,status,is_discoverable,subscription_status,accepting_bookings,time_zone,hours,booking_settings,is_closed_override,closed_override_date").eq("id", input.salonId).single(),
     admin.from("styles").select("id,salon_id,duration_min_hours,buffer_minutes").eq("id", input.styleId).eq("salon_id", input.salonId).single(),
-    admin.from("stylists").select("id,availability,is_active").eq("salon_id", input.salonId).eq("is_active", true),
+    admin.from("stylists").select("id,name,availability,is_active").eq("salon_id", input.salonId).eq("is_active", true),
   ]);
   if (!salon || !style) throw new Error("Salon or style not found.");
   if (salon.status !== "Active" || salon.is_discoverable !== true || salon.accepting_bookings === false || !["active", "trialing"].includes(String(salon.subscription_status || "").toLowerCase())) return { slots: [], timeZone: salonTimeZone(salon.time_zone), reason: "This salon is not accepting marketplace bookings right now." };
@@ -90,7 +90,7 @@ export async function bookingAvailability(input: { salonId: string; styleId: str
   const slotStep = Math.max(15, Number((salon.booking_settings as Row | null)?.slot_minutes || 30));
   const openMinute = minutes(salonHours.open) ?? 0;
   const closeMinute = minutes(salonHours.close) ?? 0;
-  const slots: Array<{ value: string; label: string; stylistId: string | null }> = [];
+  const slots: Array<{ value: string; label: string; stylistId: string | null; stylistName: string }> = [];
 
   for (let cursor = openMinute; cursor + durationMinutes + bufferMinutes <= closeMinute; cursor += slotStep) {
     const value = hhmm(cursor);
@@ -98,7 +98,7 @@ export async function bookingAvailability(input: { salonId: string; styleId: str
     const end = start + (durationMinutes + bufferMinutes) * 60_000;
     if (start <= Date.now() + 30 * 60_000) continue;
     if (customerBusy.some((row) => overlaps(start, end, row.appointment_datetime, row.blocked_until))) continue;
-    const availableResource = resources.find((resource) => {
+    const availableResources = resources.filter((resource) => {
       const resourceId = resource.id ? String(resource.id) : null;
       const stylistHours = resourceId ? hoursRange((resource.availability as Row | null)?.[day]) : null;
       if (resourceId && !stylistHours) return false;
@@ -113,7 +113,17 @@ export async function bookingAvailability(input: { salonId: string; styleId: str
       const blocked = (blockouts || []).some((row) => (!row.stylist_id || row.stylist_id === resourceId) && overlaps(start, end, row.starts_at, row.ends_at));
       return !busyBooking && !busyIntent && !blocked;
     });
-    if (availableResource) slots.push({ value, label: slotLabel(value), stylistId: availableResource.id ? String(availableResource.id) : null });
+    const selectedResources = input.includeAllStylists
+      ? availableResources
+      : availableResources.slice(0, 1);
+    for (const availableResource of selectedResources) {
+      slots.push({
+        value,
+        label: slotLabel(value),
+        stylistId: availableResource.id ? String(availableResource.id) : null,
+        stylistName: String(availableResource.name || "Any available stylist"),
+      });
+    }
   }
   return { slots, timeZone, durationMinutes, bufferMinutes, reason: slots.length ? "" : "No open times remain for this day." };
 }
