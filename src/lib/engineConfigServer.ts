@@ -3,8 +3,9 @@ import { capturePlatformError } from "@/lib/platformErrors";
 import { hasOperationalContext } from "@/lib/operationalTelemetryContext";
 
 export async function getPublishedEngineConfig(keys?: string[], options: { publicOnly?: boolean } = {}) {
-  const admin = getSupabaseAdmin();
+  let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
+    admin = getSupabaseAdmin();
     let query = admin.from("engine_settings").select("setting_key,published_value,published_version").eq("status", "Published");
     if (keys?.length) query = query.in("setting_key", keys);
     if (options.publicOnly) query = query.eq("is_public", true);

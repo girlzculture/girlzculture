@@ -2,6 +2,10 @@ import type { MetadataRoute } from "next";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 
+// Brand assets and colors are governed in Engine. Resolve them per request so
+// publishing a new approved asset does not require a site rebuild.
+export const dynamic = "force-dynamic";
+
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const [assets, theme] = await Promise.all([
     getPublishedBrandAssets(),

@@ -147,6 +147,13 @@ assert.match(layout, /favicon/);
 const manifest = read("src/app/manifest.ts");
 assert.match(manifest, /app_icon/);
 assert.match(manifest, /getEngineBrandTheme/);
+assert.match(manifest, /dynamic = "force-dynamic"/);
+const engineConfig = read("src/lib/engineConfigServer.ts");
+assert.match(
+  engineConfig,
+  /try\s*\{\s*admin = getSupabaseAdmin\(\)/,
+  "Missing server credentials must be caught so public brand defaults remain available.",
+);
 const chrome = read("src/components/site/PublicChrome.tsx");
 assert.match(chrome, /primary_header_logo/);
 assert.match(chrome, /light_logo/);
