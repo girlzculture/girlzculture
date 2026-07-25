@@ -10,8 +10,13 @@ import {
 } from "react";
 import type { CustomerLocation } from "@/lib/location";
 import {
+  createStoredCustomerLocation,
+  DEFAULT_LOCATION_RETENTION_DAYS,
   DEFAULT_NEARBY_RADIUS_MILES,
+  normalizeLocationRetentionDays,
   normalizeRadius,
+  parseStoredCustomerLocation,
+  validCustomerLocation,
   validCoordinates,
 } from "@/lib/location";
 
@@ -19,32 +24,49 @@ type LocationContextValue = {
   location: CustomerLocation | null;
   ready: boolean;
   radiusMiles: number;
+  retentionDays: number;
   permissionError: string;
   setLocation: (location: CustomerLocation) => void;
   clearLocation: () => void;
   useDeviceLocation: () => Promise<void>;
 };
 
-const STORAGE_KEY = "girlz-culture-customer-location-v1";
+export const CUSTOMER_LOCATION_STORAGE_KEY =
+  "girlz-culture-customer-location-v1";
 const CustomerLocationContext = createContext<LocationContextValue | null>(null);
 
-function readStoredLocation() {
+function storedLocationValue() {
   try {
-    return JSON.parse(
-      localStorage.getItem(STORAGE_KEY) ||
-        sessionStorage.getItem(STORAGE_KEY) ||
-        "null",
-    ) as CustomerLocation | null;
+    return (
+      localStorage.getItem(CUSTOMER_LOCATION_STORAGE_KEY) ||
+      sessionStorage.getItem(CUSTOMER_LOCATION_STORAGE_KEY)
+    );
   } catch {
     return null;
   }
 }
 
-function persistLocation(location: CustomerLocation) {
-  const serialized = JSON.stringify(location);
+function readStoredLocation(retentionDays = DEFAULT_LOCATION_RETENTION_DAYS) {
+  const stored = parseStoredCustomerLocation(storedLocationValue(), {
+    legacyRetentionDays: retentionDays,
+  });
+  if (!stored) {
+    removeStoredLocation();
+    return null;
+  }
+  return stored;
+}
+
+function persistLocation(
+  location: CustomerLocation,
+  retentionDays = DEFAULT_LOCATION_RETENTION_DAYS,
+) {
+  const serialized = JSON.stringify(
+    createStoredCustomerLocation(location, retentionDays),
+  );
   try {
-    localStorage.setItem(STORAGE_KEY, serialized);
-    sessionStorage.setItem(STORAGE_KEY, serialized);
+    localStorage.setItem(CUSTOMER_LOCATION_STORAGE_KEY, serialized);
+    sessionStorage.setItem(CUSTOMER_LOCATION_STORAGE_KEY, serialized);
   } catch {
     // Storage can be unavailable in hardened browsers.
   }
@@ -52,22 +74,11 @@ function persistLocation(location: CustomerLocation) {
 
 function removeStoredLocation() {
   try {
-    localStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CUSTOMER_LOCATION_STORAGE_KEY);
+    sessionStorage.removeItem(CUSTOMER_LOCATION_STORAGE_KEY);
   } catch {
     // Keep in-memory location usable without storage.
   }
-}
-
-function validStoredLocation(
-  value: CustomerLocation | null,
-): value is CustomerLocation {
-  return Boolean(
-    value &&
-      validCoordinates(value) &&
-      value.label?.trim() &&
-      ["explicit", "device", "saved", "approximate"].includes(value.source),
-  );
 }
 
 function locationFromUrl() {
@@ -110,16 +121,19 @@ export default function CustomerLocationProvider({ children }: { children: React
   const [radiusMiles, setRadiusMiles] = useState(
     DEFAULT_NEARBY_RADIUS_MILES,
   );
+  const [retentionDays, setRetentionDays] = useState(
+    DEFAULT_LOCATION_RETENTION_DAYS,
+  );
   const [permissionError, setPermissionError] = useState("");
 
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
 
-    async function bootstrapLocation() {
+    async function loadLocationConfig() {
       try {
         const configResponse = await fetch(
-          "/api/config?keys=search.default_radius_miles",
+          "/api/config?keys=search.default_radius_miles,search.location_retention_days",
           { cache: "no-store", signal: controller.signal },
         );
         if (configResponse.ok) {
@@ -133,24 +147,31 @@ export default function CustomerLocationProvider({ children }: { children: React
                 DEFAULT_NEARBY_RADIUS_MILES,
               ),
             );
+            setRetentionDays(
+              normalizeLocationRetentionDays(
+                body.config?.["search.location_retention_days"],
+              ),
+            );
           }
         }
       } catch {
         // Discovery retains the safe launch radius when config is unavailable.
       }
+    }
 
+    async function bootstrapLocation() {
       const explicit = locationFromUrl();
       if (explicit) {
         if (active) setLocationState(explicit);
-        persistLocation(explicit);
+        persistLocation(explicit, retentionDays);
         if (active) setReady(true);
         return;
       }
 
-      const stored = readStoredLocation();
-      if (validStoredLocation(stored)) {
+      const stored = readStoredLocation(retentionDays);
+      if (stored) {
         if (active) {
-          setLocationState(stored);
+          setLocationState(stored.location);
           setReady(true);
         }
         return;
@@ -164,7 +185,7 @@ export default function CustomerLocationProvider({ children }: { children: React
           if (permission.state === "granted") {
             const precise = await devicePosition();
             if (active) setLocationState(precise);
-            persistLocation(precise);
+            persistLocation(precise, retentionDays);
             if (active) setReady(true);
             return;
           }
@@ -183,9 +204,9 @@ export default function CustomerLocationProvider({ children }: { children: React
           location?: CustomerLocation | null;
         };
         const approximate = body.location || null;
-        if (response.ok && validStoredLocation(approximate)) {
+        if (response.ok && validCustomerLocation(approximate)) {
           if (active) setLocationState(approximate);
-          persistLocation(approximate);
+          persistLocation(approximate, retentionDays);
         }
       } catch {
         // A location is helpful, not required. Main search controls remain the
@@ -195,21 +216,22 @@ export default function CustomerLocationProvider({ children }: { children: React
       }
     }
 
+    void loadLocationConfig();
     const timer = window.setTimeout(() => void bootstrapLocation(), 0);
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY) return;
-      const next = readStoredLocation();
-      if (active) setLocationState(validStoredLocation(next) ? next : null);
+      if (event.key !== CUSTOMER_LOCATION_STORAGE_KEY) return;
+      const next = readStoredLocation(retentionDays);
+      if (active) setLocationState(next?.location || null);
     };
     const syncNavigationLocation = () => {
       const explicit = locationFromUrl();
       if (explicit) {
         setLocationState(explicit);
-        persistLocation(explicit);
+        persistLocation(explicit, retentionDays);
         return;
       }
-      const stored = readStoredLocation();
-      setLocationState(validStoredLocation(stored) ? stored : null);
+      const stored = readStoredLocation(retentionDays);
+      setLocationState(stored?.location || null);
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("popstate", syncNavigationLocation);
@@ -222,15 +244,15 @@ export default function CustomerLocationProvider({ children }: { children: React
       window.removeEventListener("popstate", syncNavigationLocation);
       window.removeEventListener("pageshow", syncNavigationLocation);
     };
-  }, []);
+  }, [retentionDays]);
 
   const setLocation = useCallback((next: CustomerLocation) => {
     if (!validCoordinates(next) || !next.label.trim()) return;
     const safe = { ...next, label: next.label.trim().slice(0, 160) };
     setLocationState(safe);
     setPermissionError("");
-    persistLocation(safe);
-  }, []);
+    persistLocation(safe, retentionDays);
+  }, [retentionDays]);
 
   const clearLocation = useCallback(() => {
     setLocationState(null);
@@ -265,6 +287,7 @@ export default function CustomerLocationProvider({ children }: { children: React
       location,
       ready,
       radiusMiles,
+      retentionDays,
       permissionError,
       setLocation,
       clearLocation,
@@ -275,6 +298,7 @@ export default function CustomerLocationProvider({ children }: { children: React
       location,
       permissionError,
       radiusMiles,
+      retentionDays,
       ready,
       setLocation,
       useDeviceLocation,

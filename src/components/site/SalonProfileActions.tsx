@@ -24,6 +24,16 @@ type Props = {
   googleBusinessUrl?: string | null;
 };
 
+function safeSocialUrl(value?: string | null) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function SalonProfileActions({
   salonId,
   salonName,
@@ -36,6 +46,9 @@ export default function SalonProfileActions({
   const [favorite, setFavorite] = useState(false);
   const [shared, setShared] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const instagram = safeSocialUrl(instagramUrl);
+  const tiktok = safeSocialUrl(tiktokUrl);
+  const google = safeSocialUrl(googleBusinessUrl);
 
   const publicPath = salonPublicPath(salonSlug, vanitySlug);
   const publicUrl = () => `${window.location.origin}${publicPath}`;
@@ -68,7 +81,8 @@ export default function SalonProfileActions({
   const actionClass = "inline-flex h-11 w-12 items-center justify-center rounded-[10px] border border-plum/10 bg-white text-magenta shadow-sm transition hover:border-magenta/30 hover:bg-blush/25";
 
   return (
-    <div className="relative flex gap-2">
+    <div className="relative">
+      <div className="flex gap-2">
       <button
         type="button"
         onClick={() => void shareSalon()}
@@ -135,33 +149,33 @@ export default function SalonProfileActions({
             {shared ? <Check size={15} /> : <Link2 size={15} />}
             {shared ? "Link copied" : "Copy salon link"}
           </button>
-          {[instagramUrl, tiktokUrl, googleBusinessUrl].some(Boolean) ? (
+          {[instagram, tiktok, google].some(Boolean) ? (
             <div className="mt-3 flex flex-wrap justify-center gap-3 border-t border-plum/10 pt-3 text-[11px] font-semibold text-plum">
-              {instagramUrl ? (
+              {instagram ? (
                 <a
-                  href={instagramUrl}
+                  href={instagram}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1"
                 >
                   <Camera size={14} /> Instagram
                 </a>
               ) : null}
-              {tiktokUrl ? (
+              {tiktok ? (
                 <a
-                  href={tiktokUrl}
+                  href={tiktok}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1"
                 >
                   <ExternalLink size={14} /> TikTok
                 </a>
               ) : null}
-              {googleBusinessUrl ? (
+              {google ? (
                 <a
-                  href={googleBusinessUrl}
+                  href={google}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1"
                 >
                   <ExternalLink size={14} /> Google
@@ -170,6 +184,14 @@ export default function SalonProfileActions({
             </div>
           ) : null}
         </section>
+      ) : null}
+      </div>
+      {[instagram, tiktok, google].some(Boolean) ? (
+        <nav aria-label={`${salonName} social links`} className="mt-2 flex flex-wrap justify-end gap-2 text-[10px] font-semibold text-plum">
+          {instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center gap-1 rounded-full border border-plum/10 bg-white px-2.5 hover:border-magenta/30"><Camera size={13}/>Instagram</a> : null}
+          {tiktok ? <a href={tiktok} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center gap-1 rounded-full border border-plum/10 bg-white px-2.5 hover:border-magenta/30"><ExternalLink size={13}/>TikTok</a> : null}
+          {google ? <a href={google} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center gap-1 rounded-full border border-plum/10 bg-white px-2.5 hover:border-magenta/30"><ExternalLink size={13}/>Google</a> : null}
+        </nav>
       ) : null}
     </div>
   );

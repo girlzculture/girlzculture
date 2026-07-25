@@ -39,6 +39,7 @@
     "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
     "verify:owner-realtime": "node scripts/verify-owner-session-realtime.mjs",
     "verify:auto-location": "node scripts/verify-automatic-location.mjs",
+    "verify:location-persistence": "node scripts/verify-location-persistence.mjs",
     "verify:booking-comms": "node scripts/verify-booking-communications.mjs",
     "verify:guest-bookings": "node scripts/verify-secure-guest-bookings.mjs",
     "verify:rescheduling": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-customer-approved-rescheduling.mjs",

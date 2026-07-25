@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { CalendarDays, Heart, MapPin, ShieldCheck, Star } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
-import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 
 type Props = {
@@ -14,21 +13,14 @@ type Props = {
 };
 
 export default function MarketplaceSalonCard({ salon, variant = "grid", selected = false, onFocus }: Props) {
-  const customerLocation = useCustomerLocation();
   const verified = String(salon.verification_status || "").toLowerCase().startsWith("verified");
   const area = [salon.borough || salon.address_city, salon.address_state].filter(Boolean).join(", ");
   const isList = variant === "list";
   const isCompact = variant === "compact";
-  const context = new URLSearchParams();
-  if (customerLocation.location) {
-    context.set("location", customerLocation.location.label);
-    context.set("lat", String(customerLocation.location.lat));
-    context.set("lng", String(customerLocation.location.lng));
-  }
-  if (salon.services[0]?.id) context.set("style", salon.services[0].id);
-  const contextSuffix = context.size ? `?${context}` : "";
-  const profileHref = `/salon/${salon.slug}${contextSuffix}`;
-  const bookHref = `/salon/${salon.slug}/book${contextSuffix}`;
+  const bookingQuery = new URLSearchParams();
+  if (salon.services[0]?.id) bookingQuery.set("style", salon.services[0].id);
+  const profileHref = `/salon/${salon.slug}`;
+  const bookHref = `/salon/${salon.slug}/book${bookingQuery.size ? `?${bookingQuery}` : ""}`;
 
   return (
     <article id={`salon-result-${salon.id}`} onMouseEnter={() => onFocus?.(salon.id)} onFocus={() => onFocus?.(salon.id)} className={`relative overflow-hidden rounded-[14px] border bg-white shadow-[0_5px_20px_rgba(26,18,32,.06)] transition ${selected ? "border-magenta ring-2 ring-magenta/20" : "border-plum/10"} ${isList ? "grid min-w-0 grid-cols-[118px_1fr] sm:grid-cols-[220px_1fr]" : isCompact ? "w-[78vw] max-w-[330px] shrink-0 snap-start sm:w-[310px] lg:w-[320px]" : "min-w-[76vw] snap-start sm:min-w-0"}`}>
