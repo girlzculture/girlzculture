@@ -8,6 +8,7 @@ import { adminSupabase, getSessionForScope } from "@/lib/supabase";
 import { createVideoPoster, getVideoDuration, optimizeTrendingVideo, uploadTrendingFile } from "@/lib/videoUploadClient";
 
 type Row = Record<string, any>;
+type NumericValue = number | "";
 
 async function headers(json = false) {
   const session = await getSessionForScope("admin");
@@ -38,8 +39,8 @@ export default function AdminTrendingCampaigns() {
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [sourceDuration, setSourceDuration] = useState(0);
   const [needsServerPipeline, setNeedsServerPipeline] = useState(false);
-  const [trimStart, setTrimStart] = useState(0);
-  const [trimEnd, setTrimEnd] = useState(0);
+  const [trimStart, setTrimStart] = useState<NumericValue>(0);
+  const [trimEnd, setTrimEnd] = useState<NumericValue>(0);
   const [posterTime, setPosterTime] = useState(0);
   const [notice, setNotice] = useState("");
   const [mediaError, setMediaError] = useState("");
@@ -159,7 +160,9 @@ export default function AdminTrendingCampaigns() {
   }
 
   function updatePosterTime(value: number) {
-    const bounded = Math.max(trimStart, Math.min(trimEnd || sourceDuration, value));
+    const start = Number(trimStart || 0);
+    const end = Number(trimEnd || sourceDuration);
+    const bounded = Math.max(start, Math.min(end, value));
     setPosterTime(bounded);
     if (previewRef.current) previewRef.current.currentTime = bounded;
   }
@@ -171,7 +174,7 @@ export default function AdminTrendingCampaigns() {
     const salonId = editing?.salon_id || selectedSalon?.id;
     if (!salonId) { setNotice("Search for and select an eligible salon."); return; }
     if (!editing && !file) { setNotice("Choose a video to upload."); return; }
-    if (file && !needsServerPipeline && (trimEnd - trimStart <= 0 || trimEnd - trimStart > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
+    if (file && !needsServerPipeline && (trimStart === "" || trimEnd === "" || Number(trimEnd) - Number(trimStart) <= 0 || Number(trimEnd) - Number(trimStart) > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
     const requestedStatus=String(form.get("status")||"Draft");
     if (["Scheduled","Active"].includes(requestedStatus) && (!String(form.get("entitlement_source")||"") || !String(form.get("entitlement_reference")||"").trim())) { setNotice("Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign."); return; }
     setBusy(true);
@@ -236,7 +239,7 @@ export default function AdminTrendingCampaigns() {
             mime_type: "video/mp4",
           };
         } else {
-          const optimized = await optimizeTrendingVideo(file, { startSeconds: trimStart, endSeconds: trimEnd, signal: controller.signal });
+          const optimized = await optimizeTrendingVideo(file, { startSeconds: Number(trimStart), endSeconds: Number(trimEnd), signal: controller.signal });
           if (controller.signal.aborted) throw new DOMException("Upload cancelled.", "AbortError");
           setProgress(24);
           setNotice("Uploading optimized video…");
@@ -335,8 +338,8 @@ export default function AdminTrendingCampaigns() {
             <video ref={previewRef} src={previewUrl} controls playsInline preload="metadata" poster={activePoster || undefined} className="aspect-video w-full rounded-lg bg-ink object-contain" />
             <div className="space-y-3">
               <div><b className="text-xs text-plum">Trim and placement preview</b><p className="mt-1 text-[10px] leading-4 text-ink/55">Source {sourceDuration.toFixed(1)} sec. Final clips must be 30 seconds or less. Trimming uses the browser’s safe MediaRecorder support and will explain when the browser cannot perform it.</p></div>
-              <div className="grid grid-cols-2 gap-2"><Field name="trim_start_preview" label="Trim start (sec)" type="number" min="0" max={String(Math.max(0, sourceDuration - 0.1))} step="0.1" value={trimStart} onValue={(value) => { setTrimStart(value); if (posterTime < value) updatePosterTime(value); }} /><Field name="trim_end_preview" label="Trim end (sec)" type="number" min="0.1" max={String(sourceDuration)} step="0.1" value={trimEnd} onValue={(value) => { setTrimEnd(value); if (posterTime > value) updatePosterTime(value); }} /></div>
-              <Label text={`Poster frame (${posterTime.toFixed(1)} sec)`}><input aria-label="Poster frame time" type="range" min={trimStart} max={Math.max(trimStart + 0.05, trimEnd || sourceDuration)} step="0.1" value={posterTime} onChange={(event) => updatePosterTime(Number(event.target.value))} className="w-full accent-magenta" /></Label>
+              <div className="grid grid-cols-2 gap-2"><Field name="trim_start_preview" label="Trim start (sec)" type="number" min="0" max={String(Math.max(0, sourceDuration - 0.1))} step="0.1" value={trimStart} onValue={(value) => { setTrimStart(value); if (value !== "" && posterTime < value) updatePosterTime(value); }} /><Field name="trim_end_preview" label="Trim end (sec)" type="number" min="0.1" max={String(sourceDuration)} step="0.1" value={trimEnd} onValue={(value) => { setTrimEnd(value); if (value !== "" && posterTime > value) updatePosterTime(value); }} /></div>
+              <Label text={`Poster frame (${posterTime.toFixed(1)} sec)`}><input aria-label="Poster frame time" type="range" min={Number(trimStart || 0)} max={Math.max(Number(trimStart || 0) + 0.05, Number(trimEnd || sourceDuration))} step="0.1" value={posterTime} onChange={(event) => updatePosterTime(Number(event.target.value))} className="w-full accent-magenta" /></Label>
               <button type="button" disabled={busy} onClick={() => void capturePoster()} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-magenta font-bold text-magenta"><ImageIcon size={15} />Choose current frame</button>
               {activePoster ? <div><p className="mb-1 text-[10px] font-bold text-plum">Selected public poster</p><Image unoptimized width={640} height={360} src={activePoster} alt="Selected campaign poster preview" className="aspect-video w-full rounded-lg border border-plum/10 object-cover" /></div> : <p className="rounded-lg bg-blush/50 p-3 text-[10px] text-ink/60">Choose a frame or the selected frame will be generated automatically when you save.</p>}
             </div>
@@ -363,8 +366,9 @@ export default function AdminTrendingCampaigns() {
 
 function Label({ text, children }: { text: string; children: React.ReactNode }) { return <label className="block text-[10px] font-bold">{text}<span className="mt-1 block">{children}</span></label>; }
 
-function Field({ name, label, type = "text", defaultValue, placeholder, required = false, min, max, step, value, onValue }: { name: string; label: string; type?: string; defaultValue?: string | number; placeholder?: string; required?: boolean; min?: string; max?: string; step?: string; value?: number; onValue?: (value: number) => void }) {
-  return <Label text={label}><input key={onValue ? undefined : `${name}-${defaultValue}`} name={name} type={type} required={required} defaultValue={onValue ? undefined : defaultValue} value={onValue ? value : undefined} onChange={onValue ? (event) => onValue(Number(event.target.value)) : undefined} placeholder={placeholder} min={min} max={max} step={step} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" /></Label>;
+function Field({ name, label, type = "text", defaultValue, placeholder, required = false, min, max, step, value, onValue }: { name: string; label: string; type?: string; defaultValue?: string | number; placeholder?: string; required?: boolean; min?: string; max?: string; step?: string; value?: NumericValue; onValue?: (value: NumericValue) => void }) {
+  const numeric = type === "number";
+  return <Label text={label}><input key={onValue ? undefined : `${name}-${defaultValue}`} name={name} type={type} inputMode={numeric ? (step === "1" ? "numeric" : "decimal") : undefined} required={required} defaultValue={onValue ? undefined : defaultValue} value={onValue ? value : undefined} onChange={onValue ? (event) => onValue(event.target.value === "" ? "" : Number(event.target.value)) : undefined} onKeyDown={numeric ? (event) => { if (/[eE+]/.test(event.key) || (event.key === "-" && Number(min ?? 0) >= 0)) event.preventDefault(); } : undefined} placeholder={placeholder} min={min} max={max} step={step} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" /></Label>;
 }
 
 function Select({ name, label, defaultValue, options }: { name: string; label: string; defaultValue: string; options: string[] }) { return <Label text={label}><select key={`${name}-${defaultValue}`} name={name} defaultValue={defaultValue} className="min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal">{options.map((option) => <option value={option} key={option}>{option || "Attach later"}</option>)}</select></Label>; }
