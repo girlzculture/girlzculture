@@ -15,10 +15,11 @@ inventory, and static migration-order verification pass.
 This does **not** mean the release is deployed or production-verified:
 
 - The two newest migrations have not been applied to preview or production.
-- A real empty-database migration run is not verified on this workstation because
-  no disposable `CLEAN_DATABASE_URL`, local PostgreSQL, Docker, or Supabase CLI is
-  available. The harness intentionally fails rather than silently substituting a
-  source-string check.
+- GitHub Actions run `30171460239` supplied a fresh PostgreSQL 17 database and
+  successfully executed all 95 migrations, post-migration schema/function/RLS/
+  grant assertions, and concurrent booking/product reference checks. This
+  workstation still has no local disposable `CLEAN_DATABASE_URL`; the verified
+  CI run is the clean-database evidence.
 - Stripe Tax, Stripe Connect, Google Maps, OpenAI, email, SMS, video transcoding,
   cleanup, push, Netlify aliases, DNS, and TLS require founder-controlled preview
   configuration and real provider tests.
@@ -37,7 +38,7 @@ This does **not** mean the release is deployed or production-verified:
 | P3 Numeric inputs | Complete | Pending physical keyboard/device acceptance | Immediate numeric coercion prevented an editable blank state. Shared parsing preserves blank/decimal editing and validates bounded values on blur/save; audited controls no longer expose browser spinners. | `59fcb75`; `src/lib/numericInput.ts`; `scripts/verify-numeric-inputs.mjs` |
 | P4 Localization | Complete engine/coverage inventory | Pending human review and provider-backed machine drafts for non-English locales | Translation was fragmented and public coverage could be overstated. The source registry now inventories 638 messages, resolution falls back truthfully, Engine exposes state/coverage, and draft/review/publish/restore workflows preserve original text. | `1631725`, `5ff0811`; `src/i18n/generated-source-messages.ts`; `src/components/admin/TranslationManager.tsx`; `scripts/verify-localization-completion.mjs` |
 | P5 Rescheduling/service lifecycle | Complete | Pending preview email/SMS and two-party browser journey | Rescheduling did not model proposal acceptance atomically and service work stopped at Start. Proposal alternatives, customer accept/decline, slot revalidation, audited atomic move, communications, and Confirmed → Ready → In progress → Completed are implemented. | `95c739d`; `src/lib/bookingRescheduleServer.ts`; `src/app/api/salon/bookings/[id]/service/route.ts`; `20260724110000_booking_reschedule_and_service_lifecycle.sql` |
-| P6 Booking references | Complete | Pending clean-database concurrency run | UUIDs were exposed as the primary human identifier. A sequence-backed base-26 reference allocator, safe backfill, unique index, search, and public display use `GC-A-01` style references while UUID authorization remains unchanged. | `2df2a14`; `src/lib/bookingReference.ts`; `20260724120000_booking_public_references.sql` |
+| P6 Booking references | Complete | Empty-database concurrency verified; pending populated-preview search/visual acceptance | UUIDs were exposed as the primary human identifier. A sequence-backed base-26 reference allocator, safe backfill, unique index, search, and public display use `GC-A-01` style references while UUID authorization remains unchanged. | `2df2a14`; `src/lib/bookingReference.ts`; `20260724120000_booking_public_references.sql` |
 | P7 Cancellations/refunds/comms | Complete | Pending Stripe test-mode transfer/reversal matrix | One reason field mixed internal and public text, actor origin was unclear, and refund states lacked Connect reconciliation. Separate reason/message/origin fields, Engine grace rules, performance attribution, compact communications, and Stripe refund/transfer evidence are implemented. | `7c171b9`; `src/lib/bookingCancellationCore.ts`; `src/lib/financeLedgerCore.ts`; `20260724130000_cancellation_refund_controls.sql` |
 | P8 Timezone | Complete | Pending visual acceptance around a live DST transition | UTC timestamps were rendered without the viewer/salon timezone. Storage remains UTC; salon events use salon timezone and admin views/exports use an MFA-protected preference defaulting to `America/New_York`. | `4a35f7c`; `src/lib/dateTime.ts`; `src/components/admin/AdminTimeZonePreference.tsx`; `20260724140000_timezone_preferences.sql` |
 | P9 Video/media cleanup | Complete provider-neutral lifecycle | Blocked until transcoder and cleanup credentials exist in preview | Uploads had no governed compatibility/transcode or orphan cleanup path. Inspection, direct-use formats, transcoding job lifecycle, posters, progress, retry/cancel, retained originals, and scheduled cleanup are wired. | `46a98a5`; `src/lib/videoProcessingServer.ts`; `docs/MEDIA_PROCESSING_SETUP.md`; `20260724150000_video_processing_lifecycle.sql` |
@@ -64,8 +65,10 @@ Run the branch migrations in chronological order in a disposable preview first:
 
 Supabase should execute the complete repository chain in timestamp order. Do not
 mark migrations as applied manually. `npm run verify:migrations` confirms 95
-unique ordered filenames, but `npm run verify:database-clean` is the release gate
-that must execute them against an actually empty database.
+unique ordered filenames. GitHub Actions run `30171460239` satisfied the
+`npm run verify:database-clean` release gate against a genuinely empty
+PostgreSQL 17 database; applying the pending migrations to the isolated Supabase
+preview remains a separate founder-controlled acceptance step.
 
 ### Impact of the two newest migrations
 
@@ -169,6 +172,10 @@ Passed on 2026-07-25:
   warnings remain in governed branding/public-shell preview components.
 - `npm run build` — production build succeeds.
 - `npm run verify:migrations` — 95 unique, ordered migrations.
+- `npm run verify:database-clean` in GitHub Actions run `30171460239` — all 95
+  migrations executed on fresh PostgreSQL 17, followed by schema, function, RLS,
+  policy, grant, marketplace-visibility, integration-health, and concurrent
+  booking/product reference assertions.
 - Discovery: location, automatic location, persistence, search, organic
   discovery, connected discovery, homepage depth, public tiers, hardening.
 - Identity/security: canonical identity, admin security, identity deletion,
@@ -188,46 +195,43 @@ Passed on 2026-07-25:
 - `npm run verify:final-correction`
 - `git diff --check`
 
-Not passed because a required external target is absent:
-
-```text
-npm run verify:database-clean
-CLEAN_DATABASE_URL must point to a disposable, empty PostgreSQL database.
-```
-
-This is an environment blocker, not an assertion failure. A disposable empty
-database must execute all 95 migrations before merge.
+The same workflow then passed TypeScript, lint, and a production build with
+placeholder public Supabase values and no service-role credential. The dynamic
+Engine-backed PWA manifest now falls back safely during build and resolves
+published branding at request time. No production migration job ran; that job
+was correctly skipped for the pull request.
 
 ## Founder-controlled preview acceptance order
 
-1. Create or identify a disposable empty Supabase preview database.
-2. Set `CLEAN_DATABASE_URL` locally/CI for that disposable database and run
-   `npm run verify:database-clean`. Never point this variable at production.
-3. Deploy this branch to a private Netlify preview with indexing disabled.
-4. Apply all pending migrations in the order above to preview only.
-5. Configure test-mode provider values. Keep Stripe Tax and dashboard subdomains
+1. Keep the verified GitHub clean-database run as the immutable empty-state
+   baseline. If independently repeating it, use a disposable preview database
+   only; never point `CLEAN_DATABASE_URL` at production.
+2. Open the private Netlify preview with indexing disabled.
+3. Apply all pending migrations in the order above to the isolated Supabase
+   preview only.
+4. Configure test-mode provider values. Keep Stripe Tax and dashboard subdomains
    disabled until their prerequisites are complete.
-6. Run the six-role matrix in separate sessions: guest, customer, salon owner,
+5. Run the six-role matrix in separate sessions: guest, customer, salon owner,
    salon team member, limited admin, super admin.
-7. Run the location journey through homepage → salons → styles → concierge →
+6. Run the location journey through homepage → salons → styles → concierge →
    salon profile → booking; refresh each surface and confirm the same active
    coordinates/label. Deny Maps once and confirm list results remain.
-8. Complete a product-only pickup order, product-only shipping order, and a
+7. Complete a product-only pickup order, product-only shipping order, and a
    combined product plus appointment checkout. Attempt two concurrent last-item
    purchases and two concurrent bookings. Confirm exactly one succeeds in each
    conflict case and failed/expired checkout releases both holds.
-9. Verify tax/shipping/discount/deposit/balance math against Stripe test evidence.
-10. Verify the customer confirmation, account order, salon order queue, Admin
+8. Verify tax/shipping/discount/deposit/balance math against Stripe test evidence.
+9. Verify the customer confirmation, account order, salon order queue, Admin
     Finance details/CSV, fulfillment transitions, and one allowed product refund.
-11. Run proposal → customer acceptance → salon confirmation → service completion,
+10. Run proposal → customer acceptance → salon confirmation → service completion,
     then verify review eligibility and all communication channels.
-12. Test cancellation before and after a simulated Connect transfer; reconcile
+11. Test cancellation before and after a simulated Connect transfer; reconcile
     refund/reversal evidence and customer-safe copy.
-13. Upload real logo formats and real video fixtures; publish/restore branding and
+12. Upload real logo formats and real video fixtures; publish/restore branding and
     retry/cancel/cleanup media.
-14. Review every Engine section with the founder handbook and run each configured
+13. Review every Engine section with the founder handbook and run each configured
     integration's Test Connection action.
-15. Only after preview acceptance, configure Netlify aliases, GoDaddy CNAMEs, TLS,
+14. Only after preview acceptance, configure Netlify aliases, GoDaddy CNAMEs, TLS,
     and cross-subdomain session checks. Enabling production remains a separate
     founder-approved release.
 
