@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -21,13 +21,14 @@ import MediaRulesSettings from "@/components/admin/MediaRulesSettings";
 import TranslationManager from "@/components/admin/TranslationManager";
 import RecordLifecycleManager from "@/components/admin/RecordLifecycleManager";
 import TestDataManager from "@/components/admin/TestDataManager";
-import { ENGINE_SECTIONS } from "@/lib/engineManifest";
+import { ENGINE_CATEGORIES, ENGINE_SECTIONS } from "@/lib/engineManifest";
 import AiAutomationManager from "@/components/admin/AiAutomationManager";
 import SystemStatusManager from "@/components/admin/SystemStatusManager";
 import ErrorMonitoringManager from "@/components/admin/ErrorMonitoringManager";
 import NavigationMenuManager from "@/components/admin/NavigationMenuManager";
 import NotificationTemplateManager from "@/components/admin/NotificationTemplateManager";
 import BrandAppearanceManager from "@/components/admin/BrandAppearanceManager";
+import NumericInput from "@/components/forms/NumericInput";
 
 type Setting = {
   id: string;
@@ -74,6 +75,28 @@ type ImportPreview = {
   errors: string[];
   changed: number;
 };
+type EngineSearchResult =
+  | {
+      key: string;
+      kind: "setting";
+      label: string;
+      detail: string;
+      setting: Setting;
+    }
+  | {
+      key: string;
+      kind: "section";
+      label: string;
+      detail: string;
+      sectionId: string;
+    }
+  | {
+      key: string;
+      kind: "route";
+      label: string;
+      detail: string;
+      href: string;
+    };
 const highImpact = new Set([
   "booking",
   "billing",
@@ -131,6 +154,8 @@ export default function EngineControlCenter() {
   const [category, setCategory] = useState("overview");
   const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
   const [editor, setEditor] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -146,6 +171,7 @@ export default function EngineControlCenter() {
   );
   const [importConfirmation, setImportConfirmation] = useState("");
   const [emergencyConfirmation, setEmergencyConfirmation] = useState("");
+  const searchRoot = useRef<HTMLDivElement>(null);
   async function headers() {
     const session = await getSessionForScope("admin");
     if (!session) throw new Error("Your admin session expired.");
@@ -198,6 +224,93 @@ export default function EngineControlCenter() {
     (item) => item.id === category,
   );
   const activeCategories = selectedCategory?.categories || [];
+  const searchResults = useMemo<EngineSearchResult[]>(() => {
+    const normalized = query.trim().toLowerCase();
+    if (normalized.length < 2) return [];
+    const settingResults: EngineSearchResult[] = settings
+      .filter((row) =>
+        [
+          row.display_name,
+          row.description,
+          row.help_text,
+          row.setting_key,
+          row.category,
+          ...(row.affected_surfaces || []),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized),
+      )
+      .slice(0, 8)
+      .map((setting) => ({
+        key: `setting:${setting.id}`,
+        kind: "setting" as const,
+        label: setting.display_name,
+        detail: `${setting.setting_key} · ${setting.category.replaceAll("_", " ")}`,
+        setting,
+      }));
+    const sectionResults: EngineSearchResult[] = ENGINE_SECTIONS.filter(
+      (section) =>
+        `${section.label} ${section.description} ${section.categories.join(" ")}`
+          .toLowerCase()
+          .includes(normalized),
+    )
+      .slice(0, 5)
+      .map((section) => ({
+        key: `section:${section.id}`,
+        kind: "section" as const,
+        label: section.label,
+        detail: section.description,
+        sectionId: section.id,
+      }));
+    const linkedRoutes = [
+      ...ENGINE_SECTIONS.flatMap((section) => section.links || []),
+      ...ENGINE_CATEGORIES.flatMap((item) => item.links || []),
+      {
+        label: "Founder handbook",
+        href: "#founder-handbook",
+        help: "Search publishing, integrations, recovery, security, and operational-error guidance.",
+      },
+      {
+        label: "System status and provider health",
+        href: "#system-status",
+        help: "Inspect connected-provider configuration and operational readiness.",
+      },
+      {
+        label: "Operational errors",
+        href: "#operational-errors",
+        help: "Inspect deduplicated protected Engine events and their reference IDs.",
+      },
+    ];
+    const routeResults: EngineSearchResult[] = linkedRoutes
+      .filter((item) =>
+        `${item.label} ${item.help} ${item.href}`
+          .toLowerCase()
+          .includes(normalized),
+      )
+      .filter(
+        (item, index, array) =>
+          array.findIndex((candidate) => candidate.href === item.href) === index,
+      )
+      .slice(0, 5)
+      .map((item) => ({
+        key: `route:${item.href}`,
+        kind: "route" as const,
+        label: item.label,
+        detail: item.help,
+        href: item.href,
+      }));
+    return [...settingResults, ...sectionResults, ...routeResults].slice(0, 15);
+  }, [query, settings]);
+  useEffect(() => {
+    function closeSearch(event: PointerEvent) {
+      if (!searchRoot.current?.contains(event.target as Node)) {
+        setSearchOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", closeSearch);
+    return () => document.removeEventListener("pointerdown", closeSearch);
+  }, []);
   const showsRecordLifecycle = [
     "pages_navigation",
     "content_wording",
@@ -267,6 +380,38 @@ export default function EngineControlCenter() {
     setReason("");
     setConfirmed(false);
     setMessage("");
+  }
+  function chooseSearchResult(result: EngineSearchResult) {
+    if (result.kind === "setting") {
+      choose(result.setting);
+      setQuery("");
+      setSearchOpen(false);
+      window.requestAnimationFrame(() =>
+        document
+          .getElementById("engine-selected-control")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+      return;
+    }
+    if (result.kind === "section") {
+      chooseCategory(result.sectionId);
+      setQuery("");
+      setSearchOpen(false);
+      return;
+    }
+    if (result.href.startsWith("#")) {
+      if (result.href === "#founder-handbook") chooseCategory("help");
+      if (result.href === "#system-status") chooseCategory("system_health");
+      setQuery("");
+      setSearchOpen(false);
+      window.requestAnimationFrame(() =>
+        document
+          .querySelector(result.href)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+      return;
+    }
+    window.location.assign(result.href);
   }
   function requestValue(setting: Setting) {
     if (setting.value_type === "boolean") return editor === "true";
@@ -444,7 +589,7 @@ export default function EngineControlCenter() {
   const impactHigh = selected ? highImpact.has(selected.impact_level) : false;
   return (
     <div className="space-y-5">
-      <section className="rounded-[18px] border border-plum/10 bg-[linear-gradient(125deg,#25102d,#5b1a6b)] p-5 text-white shadow-[0_18px_55px_rgba(26,18,32,.12)] sm:p-7">
+      <section className="rounded-[18px] border border-teal/20 bg-[linear-gradient(125deg,#0D1114,#0083A6)] p-5 text-white shadow-[0_18px_55px_rgba(13,17,20,.12)] sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex gap-3">
             <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/10">
@@ -572,15 +717,108 @@ export default function EngineControlCenter() {
       ) : null}
       <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="rounded-[15px] border border-plum/10 bg-white p-3">
-          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-plum/15 px-3">
-            <Search size={15} />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search all Engine controls"
-              className="min-w-0 flex-1 text-xs outline-none"
-            />
-          </label>
+          <div ref={searchRoot} className="relative">
+            <label className="flex min-h-11 items-center gap-2 rounded-lg border border-plum/15 px-3 focus-within:border-teal">
+              <Search size={15} />
+              <input
+                type="search"
+                role="combobox"
+                aria-label="Search all Engine controls"
+                aria-autocomplete="list"
+                aria-expanded={searchOpen && searchResults.length > 0}
+                aria-controls="engine-control-search-results"
+                aria-activedescendant={
+                  searchOpen && searchResults[activeSearchIndex]
+                    ? `engine-search-result-${activeSearchIndex}`
+                    : undefined
+                }
+                value={query}
+                onFocus={() => setSearchOpen(true)}
+                onChange={(event) => {
+                  setActiveSearchIndex(0);
+                  setQuery(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setSearchOpen(false);
+                    return;
+                  }
+                  if (event.key === "ArrowDown" && searchResults.length) {
+                    event.preventDefault();
+                    setSearchOpen(true);
+                    setActiveSearchIndex((index) =>
+                      Math.min(searchResults.length - 1, index + 1),
+                    );
+                    return;
+                  }
+                  if (event.key === "ArrowUp" && searchResults.length) {
+                    event.preventDefault();
+                    setSearchOpen(true);
+                    setActiveSearchIndex((index) => Math.max(0, index - 1));
+                    return;
+                  }
+                  if (event.key === "Enter" && searchResults.length) {
+                    event.preventDefault();
+                    chooseSearchResult(
+                      searchResults[
+                        searchOpen
+                          ? Math.min(
+                              activeSearchIndex,
+                              searchResults.length - 1,
+                            )
+                          : 0
+                      ],
+                    );
+                  }
+                }}
+                placeholder="Search all Engine controls"
+                className="min-w-0 flex-1 text-xs outline-none"
+              />
+            </label>
+            {searchOpen && query.trim().length >= 2 ? (
+              <div
+                id="engine-control-search-results"
+                role="listbox"
+                className="absolute inset-x-0 top-full z-40 mt-2 max-h-[420px] overflow-y-auto rounded-xl border border-charcoal/10 bg-white p-1 shadow-[0_18px_45px_rgba(13,17,20,.18)]"
+              >
+                {searchResults.length ? (
+                  searchResults.map((result, index) => (
+                    <button
+                      id={`engine-search-result-${index}`}
+                      key={result.key}
+                      type="button"
+                      role="option"
+                      aria-selected={index === activeSearchIndex}
+                      onMouseEnter={() => setActiveSearchIndex(index)}
+                      onClick={() => chooseSearchResult(result)}
+                      className={`block min-h-12 w-full rounded-lg px-3 py-2 text-left ${
+                        index === activeSearchIndex
+                          ? "bg-subtle"
+                          : "hover:bg-subtle/70"
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <b className="text-xs text-charcoal">{result.label}</b>
+                        <span className="rounded-full bg-mist px-2 py-0.5 text-[9px] font-bold uppercase text-charcoal/65">
+                          {result.kind}
+                        </span>
+                      </span>
+                      <span className="mt-1 block line-clamp-2 text-[10px] leading-4 text-charcoal/55">
+                        {result.detail}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-xs text-charcoal/55">
+                    No Engine control, section, integration, or handbook entry
+                    matches this search.
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
           <nav
             aria-label="Engine areas"
             className="mt-3 max-h-[680px] space-y-1 overflow-y-auto"
@@ -675,7 +913,7 @@ export default function EngineControlCenter() {
             )}
           </div>
           {selected && activeCategories.includes(selected.category) ? (
-            <section className="rounded-[15px] border border-plum/10 bg-white p-5">
+            <section id="engine-selected-control" className="scroll-mt-24 rounded-[15px] border border-plum/10 bg-white p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 className="font-serif text-2xl text-plum">
@@ -839,7 +1077,16 @@ export default function EngineControlCenter() {
           {category === "notifications" ? <NotificationTemplateManager /> : null}
           {category === "ai" ? <AiAutomationManager /> : null}
           {category === "integrations" ? <SystemStatusManager /> : null}
-          {category === "system_health" ? <><ErrorMonitoringManager /><SystemStatusManager /></> : null}
+          {category === "system_health" ? (
+            <>
+              <div id="operational-errors" className="scroll-mt-24">
+                <ErrorMonitoringManager />
+              </div>
+              <div id="system-status" className="scroll-mt-24">
+                <SystemStatusManager />
+              </div>
+            </>
+          ) : null}
           {category === "data_management" ? <TestDataManager /> : null}
           {category === "help" ? <FounderHandbook /> : null}
           {selectedCategory?.links?.length ? (
@@ -1305,7 +1552,7 @@ function TypedEditor({
         <input
           aria-label="Choose color"
           type="color"
-          value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#5B1A6B"}
+          value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#0083A6"}
           onChange={(event) => onChange(event.target.value)}
           className="h-11 w-16 rounded-lg border p-1"
         />
@@ -1328,21 +1575,14 @@ function TypedEditor({
           : setting.value_type === "currency"
             ? " (USD)"
             : ""}
-        <input
-          type="number"
-          inputMode="decimal"
+        <NumericInput
+          integer={setting.validation?.integer === true}
+          allowNegative={Number(min ?? 0) < 0}
+          decimalPlaces={setting.validation?.integer ? 0 : 2}
           min={min}
           max={max}
-          step={setting.validation?.integer ? 1 : 0.01}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (
-              /[eE+]/.test(event.key) ||
-              (event.key === "-" && Number(min ?? 0) >= 0)
-            )
-              event.preventDefault();
-          }}
+          onValueChange={onChange}
           className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal"
         />
       </label>

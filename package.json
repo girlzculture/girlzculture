@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:browser": "playwright test",
     "verify:billing": "node scripts/verify-subscription-finance.mjs",
     "verify:production-foundation": "node scripts/verify-service-worker-csp.mjs",
     "verify:location": "node scripts/verify-location-foundation.mjs",
@@ -25,6 +26,7 @@
     "verify:media": "node scripts/verify-unified-media.mjs",
     "verify:i18n": "node scripts/verify-localization-engine.mjs",
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
+    "verify:design-system": "node scripts/verify-launch-design-system.mjs",
     "verify:engine": "node scripts/verify-platform-engine.mjs",
     "verify:concierge": "node scripts/verify-ai-beauty-concierge.mjs",
     "verify:monitoring": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-operational-monitoring.mjs",
@@ -71,6 +73,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -82,6 +85,8 @@
     "typescript": "^5"
   },
   "overrides": {
+    "brace-expansion": "^5.0.8",
+    "minimatch": "^10.2.5",
     "postcss": "^8.5.10",
     "sharp": "^0.35.3"
   }

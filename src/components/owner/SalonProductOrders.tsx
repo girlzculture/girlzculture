@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PackageCheck, RefreshCw, Truck } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Row = Record<string, unknown>;
 
@@ -12,6 +13,10 @@ const nextActions: Record<string, string[]> = {
   "Ready for Pickup": ["Delivered"],
   Shipped: ["Delivered"],
 };
+const reservationActions: Record<string, string[]> = {
+  Reserved: ["Ready for pickup", "Canceled", "Not collected"],
+  "Ready for pickup": ["Collected", "Canceled", "Not collected"],
+};
 
 export default function SalonProductOrders() {
   const [orders, setOrders] = useState<Row[]>([]);
@@ -19,23 +24,32 @@ export default function SalonProductOrders() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
 
-  const request = useCallback(async (method = "GET", body?: Record<string, unknown>) => {
-    const session = await getSessionForScope("salon");
-    if (!session) throw new Error("Your salon session has expired.");
-    const response = await fetch("/api/salon/product-orders", {
-      method,
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-      cache: "no-store",
-    });
-    const result = await response.json();
-    if (!response.ok)
-      throw new Error(result.error || "Unable to manage product orders.");
-    return result;
-  }, []);
+  const request = useCallback(
+    async (method = "GET", body?: Record<string, unknown>) => {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Your salon session has expired.");
+      const response = await fetch("/api/salon/product-orders", {
+        method,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        cache: "no-store",
+      });
+      const result = await readApiResponse(
+        response,
+        "Unable to manage pickup reservations.",
+      );
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Unable to manage pickup reservations.",
+        );
+      }
+      return result;
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +72,14 @@ export default function SalonProductOrders() {
   }, [load]);
 
   async function advance(order: Row, status: string) {
+    if (
+      ["Canceled", "Not collected"].includes(status) &&
+      !window.confirm(
+        `${status} this reservation? Inventory will be released.`,
+      )
+    ) {
+      return;
+    }
     setBusy(`${order.id}:${status}`);
     setMessage("");
     try {
@@ -67,7 +89,9 @@ export default function SalonProductOrders() {
         carrier = window.prompt("Shipping carrier (for example, USPS)") || "";
         tracking = window.prompt("Tracking number") || "";
         if (!carrier || !tracking) {
-          setMessage("Carrier and tracking number are required to mark shipped.");
+          setMessage(
+            "Carrier and tracking number are required to mark shipped.",
+          );
           return;
         }
       }
@@ -80,10 +104,17 @@ export default function SalonProductOrders() {
       });
       setOrders((current) =>
         current.map((entry) =>
-          entry.id === order.id ? result.order : entry,
+          entry.id === order.id ? (result.order as Row) : entry,
         ),
       );
-      setMessage(`Order ${String(order.public_reference)} is now ${status}.`);
+      const warnings = Array.isArray(result.warnings)
+        ? (result.warnings as Row[])
+        : [];
+      setMessage(
+        warnings[0]?.message
+          ? String(warnings[0].message)
+          : `Reservation ${String(order.public_reference)} is now ${status}.`,
+      );
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to update order.",
@@ -94,53 +125,68 @@ export default function SalonProductOrders() {
   }
 
   return (
-    <section className="mt-6 rounded-[14px] border border-plum/10 bg-white/75 p-5">
+    <section className="mt-6 rounded-2xl border border-mist bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-serif text-2xl text-plum">Online Orders</h2>
-          <p className="mt-1 text-xs text-ink/55">
-            Prepare pickup orders and record carrier tracking for shipments.
+          <h2 className="text-2xl font-semibold text-charcoal">
+            Pickup Reservations
+          </h2>
+          <p className="mt-1 text-xs text-charcoal/60">
+            Prepare reserved products, notify customers, and record collection.
           </p>
         </div>
         <button
           type="button"
           onClick={() => void load()}
-          className="inline-flex items-center gap-2 rounded-lg border border-plum/15 px-4 py-2 text-xs font-bold text-plum"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-mist px-4 text-xs font-bold text-charcoal"
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           Refresh
         </button>
       </div>
       {message ? (
-        <p className="mt-4 rounded-lg bg-blush/35 p-3 text-xs text-plum">
+        <p
+          role="status"
+          className="mt-4 rounded-xl bg-light-gray p-3 text-xs text-charcoal"
+        >
           {message}
         </p>
       ) : null}
       <div className="mt-4 space-y-3">
         {orders.map((order) => {
-          const items = Array.isArray(order.items) ? (order.items as Row[]) : [];
-          const actions =
-            nextActions[String(order.fulfillment_status || "")] || [];
+          const items = Array.isArray(order.items)
+            ? (order.items as Row[])
+            : [];
+          const isReservation = Boolean(order.reservation_status);
+          const displayStatus = String(
+            order.reservation_status || order.fulfillment_status || "",
+          );
+          const actions = isReservation
+            ? reservationActions[displayStatus] || []
+            : nextActions[String(order.fulfillment_status || "")] || [];
           return (
             <article
               key={String(order.id)}
-              className="rounded-xl border border-plum/10 bg-white p-4"
+              className="rounded-xl border border-mist bg-white p-4"
             >
               <div className="flex flex-wrap justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     {order.fulfillment_method === "Shipping" ? (
-                      <Truck size={16} className="text-magenta" />
+                      <Truck size={16} className="text-teal" />
                     ) : (
-                      <PackageCheck size={16} className="text-magenta" />
+                      <PackageCheck size={16} className="text-teal" />
                     )}
-                    <b className="text-sm text-plum">
+                    <b className="text-sm text-charcoal">
                       {String(order.public_reference)}
                     </b>
                   </div>
-                  <p className="mt-1 text-[11px] text-ink/60">
+                  <p className="mt-1 text-[11px] text-charcoal/60">
                     {String(order.guest_name)} ·{" "}
-                    {String(order.fulfillment_method)} ·{" "}
+                    {isReservation
+                      ? "Pickup reservation"
+                      : String(order.fulfillment_method)}{" "}
+                    ·{" "}
                     {items
                       .map(
                         (item) =>
@@ -150,16 +196,38 @@ export default function SalonProductOrders() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <b className="block text-sm">
+                  <b className="block text-sm text-charcoal">
                     ${Number(order.total_amount || 0).toFixed(2)}
                   </b>
-                  <span className="text-[10px] font-bold text-magenta">
-                    {String(order.fulfillment_status)}
+                  <span className="text-[10px] font-bold text-teal">
+                    {displayStatus}
                   </span>
                 </div>
               </div>
+              {isReservation ? (
+                <div className="mt-3 grid gap-2 rounded-lg bg-light-gray p-3 text-[11px] text-charcoal sm:grid-cols-3">
+                  <p>
+                    Deposit{" "}
+                    <b>${Number(order.deposit_amount || 0).toFixed(2)}</b>
+                  </p>
+                  <p>
+                    Balance at pickup{" "}
+                    <b>
+                      ${Number(order.remaining_balance || 0).toFixed(2)}
+                    </b>
+                  </p>
+                  <p>
+                    Pickup by{" "}
+                    <b>
+                      {new Date(
+                        String(order.pickup_deadline),
+                      ).toLocaleString()}
+                    </b>
+                  </p>
+                </div>
+              ) : null}
               {order.tracking_number ? (
-                <p className="mt-3 rounded-lg bg-blush/30 p-2 text-[11px]">
+                <p className="mt-3 rounded-lg bg-light-gray p-2 text-[11px]">
                   {String(order.carrier)} tracking:{" "}
                   <b>{String(order.tracking_number)}</b>
                 </p>
@@ -180,7 +248,11 @@ export default function SalonProductOrders() {
                         key={status}
                         disabled={Boolean(busy)}
                         onClick={() => void advance(order, status)}
-                        className="rounded-lg bg-magenta px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50"
+                        className={`rounded-lg px-3 py-2 text-[10px] font-bold disabled:opacity-50 ${
+                          status === "Canceled"
+                            ? "border border-coral text-coral"
+                            : "bg-teal text-white"
+                        }`}
                       >
                         {busy === `${order.id}:${status}`
                           ? "Saving…"
@@ -193,8 +265,8 @@ export default function SalonProductOrders() {
           );
         })}
         {!loading && !orders.length ? (
-          <p className="py-8 text-center text-sm text-ink/50">
-            No online product orders yet.
+          <p className="py-8 text-center text-sm text-charcoal/50">
+            No pickup reservations yet.
           </p>
         ) : null}
       </div>

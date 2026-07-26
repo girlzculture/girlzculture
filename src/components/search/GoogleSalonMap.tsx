@@ -15,8 +15,8 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
   useEffect(() => {
     for (const [salonId, button] of markerButtons.current) {
       const selected = salonId === selectedSalonId;
-      button.style.background = selected ? "#5B1A6B" : "#fff";
-      button.style.color = selected ? "#fff" : "#5B1A6B";
+      button.style.background = selected ? "#0083A6" : "#fff";
+      button.style.color = selected ? "#fff" : "#0D1114";
       button.style.transform = selected ? "scale(1.08)" : "scale(1)";
       button.setAttribute("aria-pressed", String(selected));
     }
@@ -47,7 +47,7 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
           button.setAttribute("aria-label", `Show ${salon.name} in the result list`);
           const price = salon.starting_price ?? salon.startingPrice;
           button.textContent = price == null ? salon.name : `$${price}`;
-          button.style.cssText = "display:inline-flex;align-items:center;min-height:34px;padding:5px 10px;border-radius:999px;background:#fff;color:#5B1A6B;font:700 12px Inter,sans-serif;box-shadow:0 5px 18px rgba(26,18,32,.25);border:2px solid #D6186B;cursor:pointer;transition:transform .15s ease";
+          button.style.cssText = "display:inline-flex;align-items:center;min-height:34px;padding:5px 10px;border-radius:999px;background:#fff;color:#0D1114;font:700 12px Inter,sans-serif;box-shadow:0 5px 18px rgba(13,17,20,.2);border:2px solid #0083A6;cursor:pointer;transition:transform .15s ease";
           button.addEventListener("click", () => { onSelect?.(salon.id); document.getElementById(`salon-result-${salon.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); });
           buttons.set(salon.id, button);
           return new markerLibrary.AdvancedMarkerElement({ map: mapped.length > 10 ? null : map, position, content: button, title: salon.name });

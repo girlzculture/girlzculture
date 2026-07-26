@@ -16,6 +16,7 @@ import {
   MATERIAL_QUALITY_OPTIONS,
   SIZE_OPTIONS,
 } from "@/lib/salonPresets";
+import NumericInput from "@/components/forms/NumericInput";
 
 type Row = Record<string, any> & { id?: string; name?: string };
 type MasterStyle = Record<string, any> & { id: string; name: string; category?: string; category_id?: string; service_group_id?: string; service_category?: { id?: string; name?: string; slug?: string } | null; service_group?: { id?: string; name?: string; category_id?: string } | null };
@@ -48,7 +49,7 @@ function normalizedOptions(raw: unknown): OptionRow[] {
 }
 
 function MoneyInput({ value, onChange, label = "Price" }: { value: NumericValue; onChange: (value: NumericValue) => void; label?: string }) {
-  return <label className="text-[10px] font-bold">{label}<span className="mt-1 flex min-h-10 items-center rounded-[7px] border border-plum/15 bg-white px-3"><span className="mr-1 text-ink/45">$</span><input type="number" inputMode="decimal" min="0" max="10000" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={(event)=>{if(/[eE+]/.test(event.key))event.preventDefault()}} className="min-w-0 flex-1 appearance-none outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /></span></label>;
+  return <label className="text-[10px] font-bold">{label}<span className="mt-1 flex min-h-10 items-center rounded-[7px] border border-plum/15 bg-white px-3"><span className="mr-1 text-ink/45">$</span><NumericInput min={0} max={10000} decimalPlaces={2} value={value} onValueChange={onChange} className="min-w-0 flex-1 outline-none" /></span></label>;
 }
 
 function OptionEditor({ title, options, rows, setRows, allowOther = false }: { title: string; options: readonly string[]; rows: OptionRow[]; setRows: React.Dispatch<React.SetStateAction<OptionRow[]>>; allowOther?: boolean }) {
@@ -262,4 +263,4 @@ function EditorTitle({ title, subtitle, action }: { title: string; subtitle: str
 function EditorPanel({ children }: { children: React.ReactNode }) { return <section className="min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5">{children}</section>; }
 function Empty({ text }: { text: string }) { return <p className="rounded-[8px] border border-dashed border-plum/15 p-4 text-center text-[10px] text-ink/50">{text}</p>; }
 function SelectField({ label, value, onChange, options, placeholder, required = true }: { label: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }>; placeholder?: string; required?: boolean }) { return <label className="text-[10px] font-bold">{label}<select value={value} required={required} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-2 font-normal">{placeholder ? <option value="">{placeholder}</option> : null}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
-function NumberField({ label, value, onChange, step, max=10000 }: { label: string; value: NumericValue; onChange: (value: NumericValue) => void; step: string; max?: number }) { return <label className="text-[10px] font-bold">{label}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={(event)=>{if(/[eE+]/.test(event.key))event.preventDefault()}} className="mt-1 min-h-10 w-full appearance-none rounded-[7px] border border-plum/15 px-3 font-normal [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /></label>; }
+function NumberField({ label, value, onChange, step, max=10000 }: { label: string; value: NumericValue; onChange: (value: NumericValue) => void; step: string; max?: number }) { const decimals = step.includes(".") ? step.split(".")[1].length : 0; return <label className="text-[10px] font-bold">{label}<NumericInput integer={decimals === 0} decimalPlaces={decimals} min={0} max={max} value={value} onValueChange={onChange} className="mt-1 min-h-10 w-full rounded-[7px] border border-plum/15 px-3 font-normal" /></label>; }

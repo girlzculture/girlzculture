@@ -9,8 +9,12 @@ import {
   aiProviderConfigured,
   approvedAiProviders,
 } from "@/lib/aiAutomationServer";
+import {
+  testVideoTranscoderConnection,
+  videoTranscoderConfigured,
+} from "@/lib/videoProcessingServer";
 
-const EXPECTED_MIGRATION = "20260724180000";
+const EXPECTED_MIGRATION = "20260725107000";
 type State = "healthy" | "degraded" | "not_configured";
 type HealthRow = {
   integration_key: string;
@@ -260,16 +264,17 @@ function providerSpecs(
       {
         key: "transcoder",
         label: "Video transcoder",
-        configured: configured(
-          "MEDIA_TRANSCODE_ENDPOINT",
-          "MEDIA_TRANSCODE_TOKEN",
-        ),
+        configured: videoTranscoderConfigured(),
         detail:
-          "The transcoder creates browser-safe media renditions without exposing source URLs or tokens.",
+          "Cloudinary creates H.264/AAC MP4 derivatives and poster images for ordinary phone and browser uploads. A private custom endpoint remains a supported fallback.",
         required: true,
-        envNames: ["MEDIA_TRANSCODE_ENDPOINT", "MEDIA_TRANSCODE_TOKEN"],
+        envNames: [
+          "CLOUDINARY_CLOUD_NAME",
+          "CLOUDINARY_API_KEY",
+          "CLOUDINARY_API_SECRET",
+        ],
         setup:
-          "Configure the private HTTPS worker endpoint and server token using docs/MEDIA_PROCESSING_SETUP.md.",
+          "Create a Cloudinary account, configure the three server-only environment variables, then use Test Connection. Never expose the API secret to the browser.",
         canTest: true,
       },
       history.get("transcoder"),
@@ -510,15 +515,7 @@ async function testIntegration(
     return;
   }
   if (key === "transcoder") {
-    const endpoint = process.env.MEDIA_TRANSCODE_ENDPOINT;
-    const token = process.env.MEDIA_TRANSCODE_TOKEN;
-    if (!endpoint || !token) throw new Error("NOT_CONFIGURED");
-    const response = await safeFetch(endpoint, {
-      method: "HEAD",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok && response.status !== 405)
-      throw new Error("PROVIDER_CONNECTION_FAILED");
+    await testVideoTranscoderConnection();
     return;
   }
   if (key === "domains") {

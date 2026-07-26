@@ -16,14 +16,17 @@ import {
   PublicHeader,
   TrustStrip,
 } from "@/components/site/PublicChrome";
+import MobileLocationOnboarding from "@/components/location/MobileLocationOnboarding";
+import FeaturedProductPlacement from "@/components/public/FeaturedProductPlacement";
 
-type HomeSectionKey = "salons_near_you" | "featured_salons" | "trending_now" | "trending_picks";
+type HomeSectionKey = "salons_near_you" | "featured_salons" | "featured_products" | "trending_now" | "trending_picks";
 type HomeSection = { section_key: HomeSectionKey; title: string; description: string | null; is_visible: boolean; sort_order: number };
 const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { section_key: "salons_near_you", title: "Salons Near You", description: null, is_visible: true, sort_order: 1 },
   { section_key: "featured_salons", title: "Featured Salons", description: null, is_visible: true, sort_order: 2 },
   { section_key: "trending_now", title: "Trending Now", description: null, is_visible: false, sort_order: 3 },
-  { section_key: "trending_picks", title: "Trending Picks This Week", description: null, is_visible: true, sort_order: 4 },
+  { section_key: "featured_products", title: "Featured Products", description: "Reserve salon favorites for local pickup.", is_visible: true, sort_order: 4 },
+  { section_key: "trending_picks", title: "Trending Picks This Week", description: null, is_visible: true, sort_order: 5 },
 ];
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -33,19 +36,20 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const { data: sectionData, error: sectionError } = await supabase.from("homepage_sections").select("*").order("sort_order");
   if (sectionError) await capturePublicPageFailure(sectionError, "homepage", "load-section-controls");
   const sectionOverrides = new Map(((sectionData || []) as HomeSection[]).map((section) => [section.section_key, section]));
-  const subtitleKeys: Record<HomeSectionKey, string> = { salons_near_you: "salons_near_you_subheading", featured_salons: "featured_salons_subheading", trending_now: "trending_now_subheading", trending_picks: "trending_picks_subheading" };
+  const subtitleKeys: Record<HomeSectionKey, string> = { salons_near_you: "salons_near_you_subheading", featured_salons: "featured_salons_subheading", featured_products: "featured_products_subheading", trending_now: "trending_now_subheading", trending_picks: "trending_picks_subheading" };
   const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {
     const override = sectionOverrides.get(section.section_key);
     return { ...(override || section), description: homeContent.labels?.[subtitleKeys[section.section_key]] || null };
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const socialProofLabels = [homeContent.labels?.social_proof_heading, homeContent.labels?.social_proof_subheading, homeContent.labels?.social_proof_note].filter(Boolean) as string[];
-  const [nearbyCardCount,featuredCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
+  const [nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.featured_product_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
 
   return (
     <main data-homepage-variant={depthPreview ? "depth" : "standard"} className={`min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0 ${depthPreview ? "gc-home-depth" : ""}`}>
       <PublicHeader />
+      <MobileLocationOnboarding />
 
-      <section className="gc-home-hero relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(243,217,228,0.64),transparent_31%),linear-gradient(105deg,#fbf4ee_0%,#fffaf6_55%,#f7e6df_100%)]">
+      <section className="gc-home-hero relative overflow-hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_86%_30%,rgba(230,234,237,0.7),transparent_31%),linear-gradient(105deg,#ffffff_0%,#f5f7f8_55%,#e6eaed_100%)]">
         <div className="relative mx-auto grid w-full max-w-[1760px] grid-cols-1 px-4 sm:px-6 lg:min-h-[326px] lg:grid-cols-[54%_46%] lg:px-10 xl:px-12 2xl:px-16">
           <div className="relative z-20 flex flex-col justify-center pb-5 pt-6 lg:pb-2 lg:pt-4">
             <h1 className="max-w-[245px] font-serif text-[40px] font-semibold leading-[0.91] tracking-[-0.055em] text-[#2d1237] sm:text-[51px] lg:max-w-[610px] lg:text-[58px]">
@@ -82,7 +86,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       </section>
 
       <div className="gc-home-content mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} trendingCardCount={trendingCardCount}/>)}
+        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} productCardCount={productCardCount} trendingCardCount={trendingCardCount}/>)}
 
         <PublicContentSections sections={homeContent.sections} variant="homepage" />
 
@@ -117,9 +121,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   );
 }
 
-function HomepageRow({ section,nearbyCardCount,featuredCardCount,trendingCardCount }: { section: HomeSection;nearbyCardCount:number;featuredCardCount:number;trendingCardCount:number }) {
+function HomepageRow({ section,nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount }: { section: HomeSection;nearbyCardCount:number;featuredCardCount:number;productCardCount:number;trendingCardCount:number }) {
   if (section.section_key === "salons_near_you") return <NearbySalonPlacement title={section.title} description={section.description} maxCards={nearbyCardCount}/>;
   if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description} maxCards={featuredCardCount}/>;
+  if (section.section_key === "featured_products") return <FeaturedProductPlacement title={section.title} description={section.description} maxCards={productCardCount}/>;
   if (section.section_key === "trending_picks" || section.section_key === "trending_now") return <TrendingVideoPlacement title={section.title} description={section.description} maxCards={trendingCardCount}/>;
   return null;
 }

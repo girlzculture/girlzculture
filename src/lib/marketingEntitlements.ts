@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { rejectRequest } from "@/lib/platformErrors";
 import { stripeGet } from "@/lib/stripeServer";
 
-type Placement = "Featured Salon" | "Trending Video";
+type Placement = "Featured Salon" | "Trending Video" | "Featured Product";
 type StripeEvidence = {
   id?: string;
   status?: string;
@@ -33,7 +33,12 @@ export async function verifyMarketingEntitlement(args: {
     return { amountMinor: Number(credit.amount_minor || 0), currency: String(credit.currency || "usd") };
   }
 
-  const expectedKind = placement === "Featured Salon" ? "featured_salon" : "trending_video";
+  const expectedKind =
+    placement === "Featured Salon"
+      ? "featured_salon"
+      : placement === "Trending Video"
+        ? "trending_video"
+        : "featured_product";
   let evidence: StripeEvidence;
   if (source === "stripe_payment") {
     if (!/^pi_[A-Za-z0-9]+$/.test(reference)) rejectRequest("Enter a Stripe PaymentIntent reference beginning with pi_.");

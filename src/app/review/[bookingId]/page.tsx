@@ -1,55 +1,27 @@
-import { notFound } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import ReviewForm from "@/components/ReviewForm";
+import { resolveBookingReviewLink } from "@/lib/reviewAccessServer";
 
-type BookingRecord = {
-  id?: string;
-  status?: string | null;
-  salon_id?: string | null;
-  customer_id?: string | null;
-  appointment_datetime?: string | null;
-};
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type SalonRecord = {
-  id?: string;
-  name?: string | null;
-};
-
-export default async function ReviewPage({ params }: { params: Promise<{ bookingId: string }> }) {
-  const { bookingId } = await params;
-
-  const { data: bookingData, error: bookingError } = await supabase
-    .from("bookings")
-    .select("*, salon_id")
-    .eq("id", bookingId)
-    .maybeSingle<BookingRecord>();
-
-  if (bookingError) {
-    throw bookingError;
-  }
-
-  if (!bookingData) {
-    notFound();
-  }
-
-  const { data: salonData, error: salonError } = await supabase
-    .from("salons")
-    .select("id, name")
-    .eq("id", bookingData.salon_id)
-    .maybeSingle<SalonRecord>();
-
-  if (salonError) {
-    throw salonError;
-  }
-
-  if (!salonData) {
-    notFound();
-  }
-
+export default async function ReviewPage({
+  params,
+}: {
+  params: Promise<{ bookingId: string }>;
+}) {
+  const { bookingId: token } = await params;
+  const resolution = await resolveBookingReviewLink(token);
   return (
-    <main className="min-h-screen bg-cream px-4 py-8 text-ink sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-[1000px]">
-        <ReviewForm booking={bookingData} salon={salonData} />
+        <ReviewForm
+          token={token}
+          state={resolution.state}
+          message={"message" in resolution ? resolution.message : undefined}
+          booking={"booking" in resolution ? resolution.booking : undefined}
+          salon={"salon" in resolution ? resolution.salon : undefined}
+          existing={"review" in resolution ? resolution.review : undefined}
+        />
       </div>
     </main>
   );

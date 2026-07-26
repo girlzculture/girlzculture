@@ -10,6 +10,7 @@ import {
 } from "@/lib/requestSecurity";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { requireSalonPermission, sendEmail } from "@/lib/supabaseAdmin";
+import { issueBookingReviewLink } from "@/lib/reviewAccessServer";
 
 class ServiceActionError extends Error {
   constructor(
@@ -93,6 +94,33 @@ async function POSTHandler(
           booking.confirmation_code ||
           booking.id,
       );
+      let reviewUrl = "";
+      try {
+        const root = (
+          process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+        ).replace(/\/$/, "");
+        reviewUrl = (await issueBookingReviewLink(booking.id, root)).url;
+      } catch (reviewLinkError) {
+        const warningReference = await capturePlatformError({
+          request,
+          admin: context.admin,
+          error: reviewLinkError,
+          feature: "verified-reviews",
+          action: "issue_completed_booking_review_link",
+          actorRole: context.isOwner ? "salon_owner" : "salon_team",
+          actorId: context.user.id,
+          salonId: String(context.salon.id),
+          recordType: "booking",
+          recordId: String(booking.id),
+          provider: "supabase",
+          safeMessage:
+            "The service was completed, but its review invitation needs attention.",
+        });
+        warnings.push({
+          message: `Service completed; the review invitation needs attention. Reference ${warningReference}.`,
+          request_id: warningReference,
+        });
+      }
       if (booking.customer_id) {
         const { error: notificationError } = await context.admin
           .from("notifications")
@@ -106,7 +134,7 @@ async function POSTHandler(
             dedupe_key: `service-completed:${booking.id}`,
             title: "Your appointment is complete",
             body: `Booking ${reference} is complete. You can now leave a verified review.`,
-            action_url: "/account/reviews",
+            action_url: reviewUrl || "/account/reviews",
             delivery_status: "delivered",
           });
         if (notificationError) {
@@ -136,7 +164,7 @@ async function POSTHandler(
           await sendEmail(
             String(booking.guest_email),
             "Your Girlz Culture appointment is complete",
-            `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#1A1220"><h1 style="font-family:Georgia,serif;color:#5B1A6B">Appointment complete</h1><p>Thank you for visiting ${String(context.salon.name || "your salon")}.</p><p>Booking <strong>${reference}</strong> is now complete. If you have a Girlz Culture account, you can leave a verified review from your bookings.</p></div>`,
+            `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#0D1114;background:#F5F7F8;border-radius:16px"><h1 style="font-family:Fraunces,Georgia,serif;color:#0D1114">Appointment complete</h1><p>Thank you for visiting ${String(context.salon.name || "your salon")}.</p><p>Booking <strong>${reference}</strong> is now complete.</p>${reviewUrl ? `<p><a href="${reviewUrl}" style="display:inline-block;background:#0083A6;color:#FFFFFF;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Leave your verified review</a></p><p style="color:#52616A;font-size:13px">This secure link expires in 30 days and can be used once. You do not need an account.</p>` : ""}</div>`,
             "bookings",
           );
         } catch (emailError) {

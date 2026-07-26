@@ -86,6 +86,11 @@ assert.doesNotMatch(
 
 const server = fs.readFileSync("src/lib/videoProcessingServer.ts", "utf8");
 for (const control of [
+  /CLOUDINARY_CLOUD_NAME/,
+  /CLOUDINARY_API_KEY/,
+  /CLOUDINARY_API_SECRET/,
+  /api\.cloudinary\.com/,
+  /vc_h264,ac_aac,f_mp4/,
   /MEDIA_TRANSCODE_ENDPOINT/,
   /MEDIA_TRANSCODE_TOKEN/,
   /video_codec:\s*"h264"/,
@@ -118,7 +123,10 @@ const systemStatus = fs.readFileSync(
   "src/app/api/admin/engine/system-status/route.ts",
   "utf8",
 );
-assert.match(systemStatus, /MEDIA_TRANSCODE_ENDPOINT/);
+assert.match(systemStatus, /CLOUDINARY_CLOUD_NAME/);
+assert.match(systemStatus, /CLOUDINARY_API_KEY/);
+assert.match(systemStatus, /CLOUDINARY_API_SECRET/);
+assert.match(systemStatus, /videoTranscoderConfigured/);
 assert.match(systemStatus, /CRON_SECRET/);
 const placement = fs.readFileSync(
   "src/components/public/TrendingVideoPlacement.tsx",

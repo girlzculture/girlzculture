@@ -43,7 +43,7 @@ export function refundCustomerSummary(
   const money = `$${Math.max(0, Number(amount || 0)).toFixed(2)}`;
   switch (String(status || "")) {
     case "Succeeded":
-      return `${money} was refunded.`;
+      return `Your ${money} refund has been issued and should become available within five business days, depending on your bank.`;
     case "Partially refunded":
       return `${money} was partially refunded.`;
     case "Pending":

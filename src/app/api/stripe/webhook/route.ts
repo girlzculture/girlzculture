@@ -5,6 +5,7 @@ import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdm
 import { stripeGet, verifyStripeEvent } from "@/lib/stripeServer";
 import { normalizeUsState } from "@/lib/usStates";
 import { completeCommerceCheckout } from "@/lib/commerceCheckoutServer";
+import { completePickupReservation } from "@/lib/pickupReservationsServer";
 import { productRefundSummary } from "@/lib/productCommerceCore";
 
 type StripeLine = {
@@ -28,6 +29,7 @@ type StripeObject = Record<string, unknown> & {
   latest_charge?: string | {
     id?: string;
     receipt_url?: string | null;
+    transfer?: string | { id?: string };
     balance_transaction?:
       | string
       | { amount?: number; fee?: number; net?: number; currency?: string };
@@ -49,6 +51,8 @@ type StripeObject = Record<string, unknown> & {
   currency?: string;
   billing_reason?: string;
   failure_message?: string;
+  reversed?: boolean;
+  amount_reversed?: number;
   last_finalization_error?: { message?: string };
   parent?: { subscription_details?: { subscription?: string | { id?: string }; metadata?: Record<string, string> } };
   items?: { data?: Array<{ price?: { id?: string }; current_period_start?: number; current_period_end?: number }> };
@@ -351,12 +355,21 @@ async function syncBookingRefund(event: StripeEvent, object: StripeObject) {
       :"Pending";
   const now=new Date((event.created||object.created||Math.floor(Date.now()/1000))*1000).toISOString();
   const amount=Math.max(0,Number(object.amount||0)/100);
-  const {data:booking,error:bookingError}=await admin
+  const [{data:booking,error:bookingError},{data:recovery,error:recoveryError}]=await Promise.all([
+    admin
     .from("bookings")
     .select("id,deposit_amount,stripe_transfer_id,stripe_transfer_reversal_id")
     .eq("id",bookingId)
-    .maybeSingle();
+    .maybeSingle(),
+    admin
+      .from("salon_recovery_balances")
+      .select("id,status")
+      .eq("booking_id",bookingId)
+      .eq("status","Recoverable from future payout")
+      .maybeSingle(),
+  ]);
   if(bookingError)throw bookingError;
+  if(recoveryError)throw recoveryError;
   if(!booking)return;
   const fundingState=refundStatus==="Succeeded"
     ?amount+0.0001<Number(booking.deposit_amount||0)
@@ -371,6 +384,25 @@ async function syncBookingRefund(event: StripeEvent, object: StripeObject) {
     refundStatus==="Succeeded"&&amount+0.0001<Number(booking.deposit_amount||0)
       ?"Partially refunded"
       :refundStatus;
+  const fullRefund=amount+0.0001>=Number(booking.deposit_amount||0);
+  const transferStatus=booking.stripe_transfer_reversal_id
+    ?"Transfer reversed"
+    :recovery
+      ?"Recoverable from future payout"
+      :booking.stripe_transfer_id
+        ?"Transferred to salon"
+        :"Not transferred";
+  const payoutStatus=refundStatus==="Pending"
+    ?"Refund pending"
+    :refundStatus==="Failed"
+      ?"Failed/requires attention"
+      :fullRefund
+        ?recovery
+          ?"Recoverable from future payout"
+          :booking.stripe_transfer_reversal_id
+            ?"Transfer reversed"
+            :"Refunded"
+        :"Awaiting payout";
   const update=await admin.from("bookings").update({
     stripe_refund_id:object.id,
     refund_status:normalizedRefundStatus,
@@ -379,6 +411,12 @@ async function syncBookingRefund(event: StripeEvent, object: StripeObject) {
     refund_provider_accepted_at:now,
     refund_completed_at:refundStatus==="Succeeded"?now:null,
     deposit_status:refundStatus==="Succeeded"?"Refunded":refundStatus==="Pending"?"Refund pending":"Refund failed",
+    financial_status:refundStatus==="Succeeded"
+      ?fullRefund?"Refunded":"Partially refunded"
+      :refundStatus==="Pending"?"Refund pending":"Failed/requires attention",
+    transfer_status:transferStatus,
+    payout_status:payoutStatus,
+    ...(refundStatus==="Pending"||fullRefund?{net_amount_owed_salon:0}:{}),
   }).eq("id",bookingId);
   if(update.error)throw update.error;
   const operationId=String(object.metadata?.refund_operation_id||"");
@@ -396,6 +434,37 @@ async function syncBookingRefund(event: StripeEvent, object: StripeObject) {
     :operationQuery.eq("booking_id",bookingId);
   const operationResult=await operationQuery;
   if(operationResult.error)throw operationResult.error;
+}
+
+async function syncBookingTransferReversal(
+  event: StripeEvent,
+  object: StripeObject,
+) {
+  if (event.type !== "transfer.reversed" || !object.id) return;
+  const admin = getSupabaseAdmin();
+  const { data: booking, error } = await admin
+    .from("bookings")
+    .select("id,deposit_amount,refund_status")
+    .eq("stripe_transfer_id", object.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!booking) return;
+  const fullReversal =
+    object.reversed === true ||
+    Number(object.amount_reversed || 0) >=
+      Math.round(Number(booking.deposit_amount || 0) * 100);
+  const { error: updateError } = await admin
+    .from("bookings")
+    .update({
+      transfer_status: fullReversal ? "Transfer reversed" : "Transfer reversal pending",
+      payout_status:
+        String(booking.refund_status || "") === "Succeeded"
+          ? "Transfer reversed"
+          : "Refund pending",
+      net_amount_owed_salon: 0,
+    })
+    .eq("id", booking.id);
+  if (updateError) throw updateError;
 }
 
 async function syncProductOrderRefund(
@@ -456,7 +525,7 @@ async function syncProductOrderRefund(
       admin
         .from("product_orders")
         .select(
-          "id,salon_id,total_amount,stripe_processing_fee,net_amount_owed_salon",
+          "id,salon_id,total_amount,stripe_processing_fee,net_amount_owed_salon,reservation_status,deposit_amount",
         )
         .eq("id", resolvedOrderId)
         .single(),
@@ -478,13 +547,45 @@ async function syncProductOrderRefund(
     refunded,
     Number(order.stripe_processing_fee || 0),
   );
-  const orderChanges: Record<string, unknown> = {
-    payment_status: refundSummary.paymentStatus,
-    net_amount_owed_salon: refundSummary.netAmountOwedSalon,
-    updated_at: eventAt,
-  };
-  if (normalizedStatus === "Succeeded") {
-    orderChanges.payout_status = refundSummary.payoutStatus;
+  const orderChanges: Record<string, unknown> = { updated_at: eventAt };
+  if (order.reservation_status) {
+    const deposit = Math.max(0, Number(order.deposit_amount || 0));
+    const depositRefunded = refunded + 0.0001 >= deposit;
+    orderChanges.payment_status =
+      normalizedStatus === "Succeeded" && depositRefunded
+        ? "Refunded"
+        : normalizedStatus === "Pending"
+          ? "Refund pending"
+          : normalizedStatus === "Failed"
+            ? "Refund failed"
+            : "Partially Refunded";
+    orderChanges.payout_status =
+      normalizedStatus === "Succeeded" && depositRefunded
+        ? "Refunded"
+        : normalizedStatus === "Pending"
+          ? "Refund pending"
+          : normalizedStatus === "Failed"
+            ? "Refund failed"
+            : "Partially Refunded";
+    orderChanges.net_amount_owed_salon = 0;
+    orderChanges.refund_status =
+      normalizedStatus === "Succeeded" && depositRefunded
+        ? "Refunded"
+        : normalizedStatus === "Failed"
+          ? "Failed"
+          : "Refund pending";
+    orderChanges.refund_amount = Number(refunded.toFixed(2));
+    if (normalizedStatus === "Succeeded" && depositRefunded) {
+      orderChanges.reservation_status = "Refunded";
+      orderChanges.fulfillment_status = "Refunded";
+    }
+  } else {
+    orderChanges.payment_status = refundSummary.paymentStatus;
+    orderChanges.net_amount_owed_salon =
+      refundSummary.netAmountOwedSalon;
+    if (normalizedStatus === "Succeeded") {
+      orderChanges.payout_status = refundSummary.payoutStatus;
+    }
   }
   const orderUpdate = await admin
     .from("product_orders")
@@ -523,6 +624,7 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
   const paymentIntentId = stripeId(session.payment_intent);
   let chargeId = "";
   let receiptUrl = "";
+  let transferId = "";
   let paymentMethodLabel = "No payment required";
   let processingFee = 0;
   let chargeNet = 0;
@@ -536,6 +638,7 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
         ? paymentIntent.latest_charge
         : null;
     chargeId = stripeId(paymentIntent.latest_charge) || "";
+    transferId = stripeId(charge?.transfer) || "";
     receiptUrl = String(charge?.receipt_url || "");
     const method = charge?.payment_method_details;
     const balanceTransaction =
@@ -558,6 +661,7 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
     stripe_payment_id: paymentIntentId || session.id,
     stripe_checkout_session_id: session.id || null,
     stripe_charge_id: chargeId || null,
+    stripe_transfer_id: transferId || null,
     stripe_receipt_url: receiptUrl || null,
     payment_method_label: paymentMethodLabel,
     payment_mode: session.livemode ? "live" : "test",
@@ -567,7 +671,8 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
     net_amount_owed_salon:
       chargeNet ||
       Math.max(0, Number(intent.deposit_amount || 0) - processingFee),
-    payout_status: "Awaiting payout",
+    transfer_status: transferId ? "Transferred to salon" : "Not transferred",
+    payout_status: transferId ? "Destination payment submitted" : "Awaiting payout",
     deposit_status: "Paid",
   };
   const { data: booking, error } = await admin.from("bookings").insert(payload).select("id").single();
@@ -679,6 +784,7 @@ async function POSTHandler(request: Request) {
   try {
     const object = eventObject;
     await syncBookingRefund(event,object);
+    await syncBookingTransferReversal(event, object);
     await syncProductOrderRefund(event, object);
     await recordBillingEvent(event, object);
     await releaseExpiredCheckout(event.type, object);
@@ -687,6 +793,10 @@ async function POSTHandler(request: Request) {
       await completeBookingCheckout(object, request);
       await completeCommerceCheckout(
         object as Parameters<typeof completeCommerceCheckout>[0],
+        request,
+      );
+      await completePickupReservation(
+        object as Parameters<typeof completePickupReservation>[0],
         request,
       );
       if (object.mode === "subscription" && object.subscription) {

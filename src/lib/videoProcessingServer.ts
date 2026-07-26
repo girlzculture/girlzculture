@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 
 type Row = Record<string, unknown>;
 
@@ -91,6 +92,151 @@ function governedOutputPath(value: unknown) {
   return /^processed\/[a-zA-Z0-9/_-]+\.(mp4|webm)$/.test(path) ? path : null;
 }
 
+function cloudinaryConfig() {
+  const cloudName = String(process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+  const apiKey = String(process.env.CLOUDINARY_API_KEY || "").trim();
+  const apiSecret = String(process.env.CLOUDINARY_API_SECRET || "").trim();
+  return cloudName && apiKey && apiSecret
+    ? { cloudName, apiKey, apiSecret }
+    : null;
+}
+
+export function videoTranscoderConfigured() {
+  return Boolean(
+    cloudinaryConfig() ||
+      (safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT) &&
+        process.env.MEDIA_TRANSCODE_TOKEN),
+  );
+}
+
+function cloudinarySignature(
+  params: Record<string, string | number | boolean>,
+  secret: string,
+) {
+  const payload = Object.entries(params)
+    .filter(([, value]) => value !== "" && value !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join("&");
+  return createHash("sha1").update(`${payload}${secret}`).digest("hex");
+}
+
+async function transcodeWithCloudinary(input: {
+  signedUrl: string;
+  jobId: string;
+  maxDuration: number;
+  maxWidth: number;
+  maxHeight: number;
+  signal: AbortSignal;
+}) {
+  const config = cloudinaryConfig();
+  if (!config) return null;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const publicId = `girlz-culture/trending/${input.jobId}`;
+  const eager = [
+    `c_limit,h_${input.maxHeight},w_${input.maxWidth},q_auto:good,vc_h264,ac_aac,f_mp4`,
+    `c_limit,h_${input.maxHeight},w_${input.maxWidth},q_auto:good,so_0,f_jpg`,
+  ].join("|");
+  const signedParams = {
+    eager,
+    eager_async: "false",
+    invalidate: "true",
+    overwrite: "true",
+    public_id: publicId,
+    timestamp,
+  };
+  const form = new URLSearchParams({
+    ...Object.fromEntries(
+      Object.entries(signedParams).map(([key, value]) => [
+        key,
+        String(value),
+      ]),
+    ),
+    api_key: config.apiKey,
+    file: input.signedUrl,
+    signature: cloudinarySignature(signedParams, config.apiSecret),
+  });
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/video/upload`,
+    {
+      method: "POST",
+      body: form,
+      signal: input.signal,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    },
+  );
+  if (!response.ok) throw new Error("VIDEO_TRANSCODER_REQUEST_FAILED");
+  const payload = (await response.json()) as Row & {
+    eager?: Array<Row>;
+  };
+  const duration = Number(payload.duration || 0);
+  if (
+    !Number.isFinite(duration) ||
+    duration <= 0 ||
+    duration > input.maxDuration
+  ) {
+    throw new Error("VIDEO_TRANSCODER_DURATION_INVALID");
+  }
+  const derivatives = Array.isArray(payload.eager) ? payload.eager : [];
+  const video = derivatives.find(
+    (item) =>
+      String(item.format || "").toLowerCase() === "mp4" &&
+      safeHttpsUrl(item.secure_url),
+  );
+  const poster = derivatives.find(
+    (item) =>
+      ["jpg", "jpeg"].includes(String(item.format || "").toLowerCase()) &&
+      safeHttpsUrl(item.secure_url),
+  );
+  const outputSize = Number(video?.bytes || 0);
+  if (
+    !video ||
+    !poster ||
+    !Number.isFinite(outputSize) ||
+    outputSize < 1 ||
+    outputSize > 25 * 1024 * 1024
+  ) {
+    throw new Error("VIDEO_TRANSCODER_INVALID_OUTPUT");
+  }
+  return {
+    output_url: safeHttpsUrl(video.secure_url),
+    poster_url: safeHttpsUrl(poster.secure_url),
+    output_size_bytes: outputSize,
+    duration_seconds: duration,
+    width_px: Number(video.width || payload.width || 0) || null,
+    height_px: Number(video.height || payload.height || 0) || null,
+    provider_job_id: `cloudinary:${String(payload.public_id || publicId)}`,
+  };
+}
+
+export async function testVideoTranscoderConnection() {
+  const cloudinary = cloudinaryConfig();
+  if (cloudinary) {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudinary.cloudName)}/resources/video?max_results=1`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(
+            `${cloudinary.apiKey}:${cloudinary.apiSecret}`,
+          ).toString("base64")}`,
+        },
+      },
+    );
+    if (!response.ok) throw new Error("PROVIDER_CONNECTION_FAILED");
+    return;
+  }
+  const endpoint = safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT);
+  const token = process.env.MEDIA_TRANSCODE_TOKEN;
+  if (!endpoint || !token) throw new Error("NOT_CONFIGURED");
+  const response = await fetch(endpoint, {
+    method: "HEAD",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok && response.status !== 405) {
+    throw new Error("PROVIDER_CONNECTION_FAILED");
+  }
+}
+
 async function assertJobActive(admin: SupabaseClient, id: string) {
   const { data, error } = await admin
     .from("video_processing_jobs")
@@ -176,7 +322,8 @@ export async function processVideoJob(
 
   const endpoint = safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT);
   const token = process.env.MEDIA_TRANSCODE_TOKEN;
-  if (!endpoint || !token) throw new Error("VIDEO_TRANSCODER_NOT_CONFIGURED");
+  if (!videoTranscoderConfigured())
+    throw new Error("VIDEO_TRANSCODER_NOT_CONFIGURED");
   await admin
     .from("video_processing_jobs")
     .update({
@@ -190,6 +337,32 @@ export async function processVideoJob(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 110_000);
   try {
+    const cloudinary = await transcodeWithCloudinary({
+      signedUrl: signed.signedUrl,
+      jobId: id,
+      maxDuration: Number(profile.max_duration_seconds),
+      maxWidth: Number(profile.max_width_px),
+      maxHeight: Number(profile.max_height_px),
+      signal: controller.signal,
+    });
+    if (cloudinary) {
+      await assertJobActive(admin, id);
+      return await complete(admin, id, {
+        output_bucket: null,
+        output_path: null,
+        ...cloudinary,
+        detected_container: "mp4",
+        detected_video_codec: "h264",
+        detected_audio_codec: "aac",
+        source_cleanup_after: new Date(
+          Date.now() + 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        source_cleanup_status: "Scheduled",
+        original_preserved: true,
+      });
+    }
+    if (!endpoint || !token)
+      throw new Error("VIDEO_TRANSCODER_NOT_CONFIGURED");
     const response = await fetch(endpoint, {
       method: "POST",
       signal: controller.signal,

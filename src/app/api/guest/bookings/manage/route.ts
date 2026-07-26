@@ -226,6 +226,10 @@ async function POSTHandler(request: Request) {
             ),
             refundId: "",
             transferReversalId: "",
+            transferStatus: "Not transferred",
+            payoutStatus: "Customer canceled",
+            netAmountOwedSalon: 0,
+            recoveryBalanceId: "",
             providerAcceptedAt: null,
             completedAt: null,
           };
@@ -244,12 +248,21 @@ async function POSTHandler(request: Request) {
           refund_status: refund.refundStatus,
           refund_amount: refund.refundAmount,
           refund_funding_state: refund.fundingState,
+          refund_eligibility_status: withinGrace
+            ? "Eligible within cancellation grace period"
+            : "Not eligible - cancellation grace period expired",
+          refund_policy_outcome: withinGrace
+            ? "Full deposit refund requested"
+            : "Deposit retained under the accepted cancellation policy",
           refund_initiated_by: refund.refundId ? "customer" : null,
           refund_requested_at: refund.refundId ? cancelledAt : null,
           refund_provider_accepted_at: refund.providerAcceptedAt,
           refund_completed_at: refund.completedAt,
           stripe_refund_id: refund.refundId || null,
           stripe_transfer_reversal_id: refund.transferReversalId || null,
+          transfer_status: refund.transferStatus,
+          payout_status: refund.payoutStatus,
+          net_amount_owed_salon: refund.netAmountOwedSalon,
           deposit_status:
             refund.refundStatus === "Succeeded"
               ? "Refunded"
@@ -284,7 +297,13 @@ async function POSTHandler(request: Request) {
             cancellation_initiated_by: "Customer",
             cancellation_reason: reason,
             cancellation_customer_reason: reason,
-            refund_status: refund.refundStatus,
+          refund_status: refund.refundStatus,
+          refund_eligibility_status: withinGrace
+            ? "Eligible within cancellation grace period"
+            : "Not eligible - cancellation grace period expired",
+          refund_policy_outcome: withinGrace
+            ? "Full deposit refund requested"
+            : "Deposit retained under the accepted cancellation policy",
           },
         });
       if (bookingAuditError) throw bookingAuditError;

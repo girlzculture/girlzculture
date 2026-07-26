@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Box, Package, Store, Truck } from "lucide-react";
+import { ArrowLeft, Box, Package, Store } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
@@ -54,29 +54,18 @@ export default async function ProductDetailPage({ params, searchParams }: { para
             <h1 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.035em] text-plum sm:text-5xl">{product.name || "Salon product"}</h1>
             {offer ? <div className="mt-4"><span className="inline-flex rounded-full bg-amber/20 px-3 py-1 text-[10px] font-bold text-[#805000]">{promotionLabel(offer.promotion)}</span><p className="mt-2 text-sm text-ink/45 line-through">${catalogPrice.toFixed(2)}</p><p className="text-2xl font-bold text-magenta">${offer.price.total.toFixed(2)}</p><p className="mt-2 text-[11px] text-plum">{offer.promotion.public_headline || offer.promotion.title}</p></div> : product.sale_price !== null && product.sale_price !== undefined ? <div className="mt-4 flex items-end gap-3"><p className="text-sm text-ink/45 line-through">${Number(product.price || 0).toFixed(2)}</p><p className="text-2xl font-bold text-magenta">${catalogPrice.toFixed(2)}</p></div> : <p className="mt-4 text-2xl font-bold text-ink">${catalogPrice.toFixed(2)}</p>}
             {product.description ? <p className="mt-6 text-[14px] leading-7 text-ink/70">{product.description}</p> : null}
-            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <div className="mt-7 grid gap-3">
               {product.pickup_enabled ? <div className="rounded-[13px] border border-amber/30 bg-[#fff7e9] p-4"><p className="flex items-start gap-3 text-[12px] font-semibold text-ink"><Store size={19} className="shrink-0 text-amber" />Pickup from {salon.name || "the salon"}</p><p className="ml-8 mt-1 text-[11px] text-ink/55">{Number(product.pickup_prep_minutes || 0) > 0 ? `Usually ready in about ${Number(product.pickup_prep_minutes)} minutes` : "Pickup timing is confirmed by the salon"}{location ? ` · ${location}` : ""}</p></div> : null}
-              {product.shipping_enabled ? <div className="rounded-[13px] border border-plum/15 bg-blush/30 p-4"><p className="flex items-start gap-3 text-[12px] font-semibold text-ink"><Truck size={19} className="shrink-0 text-magenta" />US shipping available</p><p className="ml-8 mt-1 text-[11px] text-ink/55">{Number(product.shipping_price || 0) > 0 ? `$${Number(product.shipping_price).toFixed(2)} shipping` : "Free shipping"}</p></div> : null}
             </div>
             <ProductPurchaseActions
-              salonId={salon.id}
               salonSlug={String(salon.slug || slug)}
-              salonName={String(salon.name || "Salon")}
               productId={product.id}
-              productName={String(product.name || "Salon product")}
-              imageUrl={image}
-              unitPrice={catalogPrice}
               promotionId={offer?.promotion.id || null}
-              promotionLabel={
-                offer ? promotionLabel(offer.promotion) : null
-              }
-              estimatedUnitPrice={offer?.price.total ?? null}
               maxQuantity={Number(product.max_quantity_per_order || 10)}
               availableQuantity={product.track_inventory ? Number(product.inventory_quantity || 0) : null}
               pickupEnabled={product.pickup_enabled === true}
-              shippingEnabled={product.shipping_enabled === true}
             />
-            <Link href={`/salon/${slug}/book?with_products=1`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-plum/15 px-7 text-[12px] font-bold text-plum hover:border-magenta hover:text-magenta"><Box size={16} />Add an appointment to this order</Link>
+            <Link href={`/salon/${slug}/book`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-mist px-7 text-[12px] font-bold text-charcoal hover:border-teal hover:text-teal"><Box size={16} />Book an appointment separately</Link>
           </div>
         </section>
       </div>

@@ -10,17 +10,18 @@ export function classifyOperationalRoute(
   method: string,
 ): MonitoringClassification {
   const providerBacked =
-    /(?:stripe|media|messages|reminders|concierge|application|support|complaints|password-reset|engine\/(?:ai|notifications)|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|admin\/finance\/product-refund|salon\/bookings|guest\/bookings)/.test(
+    /(?:stripe|media|messages|reminders|concierge|application|support|complaints|password-reset|engine\/(?:ai|notifications)|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|admin\/finance\/product-refund|admin\/homepage-products|salon\/bookings|guest\/bookings|\/api\/pickup(?:\/|$))/.test(
       route,
     );
   const protectedRoute =
-    /^(?:\/api\/admin(?:\/|$)|\/api\/salon(?:\/|$)|\/api\/customer(?:\/|$)|\/api\/messages(?:\/|$)|\/api\/notifications(?:\/|$)|\/api\/push(?:\/|$)|\/api\/stripe\/(?:portal|subscription|booking-checkout)|\/api\/bookings(?:\/|$)|\/api\/auth\/(?:destination|mfa\/settings)|\/api\/i18n\/preference)/.test(
+    /^(?:\/api\/admin(?:\/|$)|\/api\/salon(?:\/|$)|\/api\/customer(?:\/|$)|\/api\/messages(?:\/|$)|\/api\/notifications(?:\/|$)|\/api\/push(?:\/|$)|\/api\/stripe\/(?:portal|subscription|booking-checkout)|\/api\/bookings(?:\/|$)|\/api\/commerce\/pickup-cleanup|\/api\/auth\/(?:destination|mfa\/settings)|\/api\/i18n\/preference)/.test(
       route,
     );
   const expectedOnly =
     /\/api\/auth\/(?:login|password-reset|signup)|\/api\/(?:newsletter|support|promo\/validate)/.test(
       route,
     );
+  if (/^\/api\/reviews(?:\/|$)/.test(route)) return "public-read-only";
   if (providerBacked) return "provider-backed";
   if (protectedRoute) return "protected";
   if (expectedOnly) return "expected-only";

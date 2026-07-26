@@ -121,10 +121,10 @@ begin
     raise exception 'Required non-null bookings.public_reference is missing';
   end if;
 
-  if public.booking_public_reference_from_number(1)<>'GC-A-01'
-    or public.booking_public_reference_from_number(99)<>'GC-A-99'
-    or public.booking_public_reference_from_number(100)<>'GC-B-01'
-    or public.booking_public_reference_from_number(2575)<>'GC-AA-01'
+  if public.booking_public_reference_from_number(1)<>'GCA01'
+    or public.booking_public_reference_from_number(99)<>'GCA99'
+    or public.booking_public_reference_from_number(100)<>'GCB01'
+    or public.booking_public_reference_from_number(2575)<>'GCAA01'
   then
     raise exception 'Booking public reference sequence mapping is incorrect';
   end if;
@@ -343,11 +343,152 @@ begin
     raise exception 'Authorized public style projection or salon privacy is incorrect';
   end if;
 
+  foreach relation_name in array array[
+    'booking_review_links',
+    'review_moderation_events',
+    'salon_recovery_balances',
+    'booking_financial_events',
+    'homepage_product_placements',
+    'homepage_product_placement_audit'
+  ]
+  loop
+    if to_regclass('public.' || relation_name) is null then
+      raise exception 'Final acceptance table public.% is missing', relation_name;
+    end if;
+    if not exists (
+      select 1
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname=relation_name
+        and relation.relrowsecurity
+    ) then
+      raise exception 'RLS is not enabled on final acceptance table public.%', relation_name;
+    end if;
+    if not exists (
+      select 1 from pg_policies
+      where schemaname='public' and tablename=relation_name
+    ) then
+      raise exception 'Final acceptance table public.% has no RLS policy', relation_name;
+    end if;
+  end loop;
+
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public'
+      and tablename='reviews'
+      and indexname='reviews_one_per_booking_idx'
+  ) then
+    raise exception 'Exactly-one-review-per-booking constraint is missing';
+  end if;
+
+  if to_regprocedure(
+      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
+    ) is null
+    or has_function_privilege(
+      'anon',
+      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Verified guest-review function or grants are unsafe';
+  end if;
+
+  if has_table_privilege('anon','public.booking_review_links','SELECT')
+    or has_table_privilege('authenticated','public.booking_review_links','SELECT')
+  then
+    raise exception 'Browser roles can read hashed guest-review links';
+  end if;
+
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public'
+      and indexname='bookings_active_stylist_datetime_idx'
+  )
+    or not exists (
+      select 1 from pg_indexes
+      where schemaname='public'
+        and indexname='booking_checkout_intents_pending_stylist_datetime_idx'
+    )
+  then
+    raise exception 'Availability performance indexes are missing';
+  end if;
+
+  if to_regprocedure(
+      'public.reserve_product_pickup_checkout(uuid,uuid,text,text,text,jsonb,uuid,numeric,numeric,integer,text,text)'
+    ) is null
+    or to_regprocedure(
+      'public.complete_product_pickup_reservation(uuid,jsonb)'
+    ) is null
+    or to_regprocedure(
+      'public.advance_product_pickup_reservation(uuid,text,uuid,text,text)'
+    ) is null
+    or to_regprocedure(
+      'public.cancel_product_pickup_reservation(uuid,text,text,text,text,numeric)'
+    ) is null
+    or to_regprocedure(
+      'public.expire_product_pickup_reservations()'
+    ) is null
+    or to_regprocedure(
+      'public.admin_save_homepage_product_placement(uuid,uuid,uuid,text,integer,timestamp with time zone,timestamp with time zone,text,uuid,text)'
+    ) is null
+  then
+    raise exception 'Pickup reservation or homepage-product functions are incomplete';
+  end if;
+
+  if has_function_privilege(
+      'anon',
+      'public.reserve_product_pickup_checkout(uuid,uuid,text,text,text,jsonb,uuid,numeric,numeric,integer,text,text)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.reserve_product_pickup_checkout(uuid,uuid,text,text,text,jsonb,uuid,numeric,numeric,integer,text,text)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.reserve_product_pickup_checkout(uuid,uuid,text,text,text,jsonb,uuid,numeric,numeric,integer,text,text)',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Pickup reservation function grants are unsafe';
+  end if;
+
+  if not exists (
+    select 1 from public.engine_settings
+    where setting_key='commerce.pickup_deposit_percent'
+      and published_value='10'::jsonb
+  )
+    or not exists (
+      select 1 from public.engine_settings
+      where setting_key='commerce.pickup_deposit_minimum'
+        and published_value='5'::jsonb
+    )
+    or not exists (
+      select 1 from public.engine_settings
+      where setting_key='homepage.featured_product_card_count'
+        and status='Published'
+    )
+  then
+    raise exception 'Pickup or Featured Product Engine controls are missing';
+  end if;
+
   if not exists (
     select 1
     from public.engine_settings
     where setting_key='integrations.expected_migration'
-      and published_value='"20260724180000"'::jsonb
+      and published_value='"20260725107000"'::jsonb
   ) then
     raise exception 'Engine expected migration does not match the repository head';
   end if;

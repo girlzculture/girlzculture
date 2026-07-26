@@ -30,7 +30,7 @@ export default function SafeCampaignVideo({ src, poster, label, className = "" }
   return (
     <div ref={containerRef} className={`relative bg-ink ${className}`}>
       {failed ? (
-        <div role="img" aria-label={`${label} video unavailable`} className="grid h-full min-h-44 place-items-center bg-[linear-gradient(145deg,#251029,#5b1a6b)] p-5 text-center text-white">
+        <div role="img" aria-label={`${label} video unavailable`} className="grid h-full min-h-44 place-items-center bg-[linear-gradient(145deg,#006b88,#0083a6)] p-5 text-center text-white">
           <span><Film className="mx-auto mb-2" aria-hidden="true" /><span className="block text-xs font-semibold">Video preview unavailable</span></span>
         </div>
       ) : (

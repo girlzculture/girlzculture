@@ -101,7 +101,7 @@ const generatedReferences = (await Promise.all(referenceWorkers))
 if (
   generatedReferences.length !== 1000 ||
   new Set(generatedReferences).size !== generatedReferences.length ||
-  generatedReferences.some((value) => !/^GC-[A-Z]+-\d{2}$/.test(value))
+  generatedReferences.some((value) => !/^GC[A-Z]+\d{2}$/.test(value))
 ) {
   console.error(
     "Concurrent booking-reference generation produced a duplicate, invalid value, or missing result.",

@@ -7,6 +7,7 @@ import BaseImageUpload from "@/components/ImageUpload";
 import HeroImageFraming from "@/components/admin/HeroImageFraming";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
+import NumericInput from "@/components/forms/NumericInput";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
@@ -15,7 +16,7 @@ const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about
 const legalSlugs = ["terms", "privacy", "cookie-notice", "deposit-refund-policy", "salon-partner-agreement", "photo-content-consent", "message-monitoring-disclosure", "do-not-sell-or-share", "accessibility", "community-guidelines"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 const labelSlots: Record<string, Array<[string, string]>> = {
-  home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"], ["salons_near_you_subheading", "Salons Near You subheading"], ["featured_salons_subheading", "Featured Salons subheading"], ["trending_now_subheading", "Trending Now subheading"], ["trending_picks_subheading", "Trending Picks subheading"]],
+  home: [["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"], ["salons_near_you_subheading", "Salons Near You subheading"], ["featured_salons_subheading", "Featured Salons subheading"], ["featured_products_subheading", "Featured Products subheading"], ["trending_now_subheading", "Trending Now subheading"], ["trending_picks_subheading", "Trending Picks subheading"]],
   "salon-profile": [["trust_label_1", "Salon trust label 1"], ["trust_label_2", "Salon trust label 2"], ["trust_label_3", "Salon trust label 3"]],
   partner: [["stat_label_1", "Partner photo label 1"], ["stat_label_2", "Partner photo label 2"], ["stat_label_3", "Partner photo label 3"]],
 };
@@ -506,7 +507,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
     <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
       <div className="grid flex-1 gap-3 sm:grid-cols-2">
         <label className="text-xs font-bold">Layout<select value={type} onChange={(event) => update({ ...section, type: event.target.value, cards: ["card_grid", "carousel", "community_carousel"].includes(event.target.value) ? cards : [] })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="text">Text</option><option value="card_grid">Card grid</option><option value="carousel">Horizontal carousel</option><option value="community_carousel">Auto-scrolling community carousel</option><option value="banner">Banner</option></select></label>
-        {["card_grid", "carousel", "community_carousel"].includes(type) ? <label className="text-xs font-bold">Number of cards<input type="number" inputMode="numeric" min="1" max={maximum} value={cardCountDraft} onChange={(event) => setCardCountDraft(event.target.value)} onBlur={commitCardCount} onKeyDown={(event)=>{if(/[eE+\-.]/.test(event.key))event.preventDefault();if(event.key==="Enter"){event.preventDefault();commitCardCount();}}} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
+        {["card_grid", "carousel", "community_carousel"].includes(type) ? <label className="text-xs font-bold">Number of cards<NumericInput integer min={1} max={maximum} value={cardCountDraft} onValueChange={setCardCountDraft} onBlur={commitCardCount} onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();commitCardCount();}}} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
       </div>
       <div className="flex gap-1"><button type="button" aria-label={`Move section ${index+1} earlier`} onClick={()=>move(-1)} disabled={index===0} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label={`Move section ${index+1} later`} onClick={()=>move(1)} disabled={index===sectionCount-1} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div><label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
       <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button>

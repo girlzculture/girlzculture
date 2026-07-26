@@ -51,6 +51,11 @@ export function bookingTransaction(
     public_reference: booking.public_reference || booking.confirmation_code,
     confirmation_code: booking.confirmation_code,
     customer: booking.guest_name || "Registered customer",
+    transaction_type:
+      booking.financial_status ||
+      (String(booking.status || "").toLowerCase() === "completed"
+        ? "Deposit received"
+        : "Booking deposit"),
     salon_id: booking.salon_id,
     salon: salon?.name || "Salon unavailable",
     city: salon?.address_city || "",
@@ -77,6 +82,8 @@ export function bookingTransaction(
     refund_amount: number(booking.refund_amount),
     refund_funding_state:
       booking.refund_funding_state || "Platform-held funds",
+    refund_eligibility_status: booking.refund_eligibility_status || "",
+    refund_policy_outcome: booking.refund_policy_outcome || "",
     refund_initiated_by: booking.refund_initiated_by || "",
     refund_provider_accepted_at: booking.refund_provider_accepted_at || "",
     refund_completed_at: booking.refund_completed_at || "",
@@ -88,7 +95,9 @@ export function bookingTransaction(
     stripe_transfer_id: booking.stripe_transfer_id || "",
     stripe_transfer_reversal_id:
       booking.stripe_transfer_reversal_id || "",
+    transfer_status: booking.transfer_status || "Not transferred",
     payout_status: booking.payout_status || "Not configured",
+    financial_status: booking.financial_status || "Not recorded",
     booking_status: booking.status || "Unknown",
     stripe_reference:
       booking.stripe_charge_id ||
@@ -188,6 +197,7 @@ export function financeCsv(
     ["public_reference", "Booking reference"],
     ["booking_id", "Internal booking UUID"],
     ["customer", "Customer"],
+    ["transaction_type", "Transaction type"],
     ["salon", "Salon"],
     ["city", "City"],
     ["state", "State"],
@@ -204,9 +214,13 @@ export function financeCsv(
     ["payment_status", "Payment status"],
     ["refund_status", "Refund status"],
     ["refund_funding_state", "Refund funding state"],
+    ["refund_eligibility_status", "Refund eligibility"],
+    ["refund_policy_outcome", "Refund policy outcome"],
     ["refund_initiated_by", "Refund issued by"],
     ["cancelled_by", "Cancelled by"],
     ["payout_status", "Payout status"],
+    ["transfer_status", "Transfer / reversal"],
+    ["financial_status", "Financial status"],
     ["payment_mode", "Stripe mode"],
     ["stripe_reference", "Stripe reference"],
     ["stripe_refund_id", "Stripe refund"],

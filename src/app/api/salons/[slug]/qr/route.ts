@@ -34,7 +34,7 @@ async function GETHandler(
       type: "svg",
       errorCorrectionLevel: "H",
       margin: 2,
-      color: { dark: "#5B1A6B", light: "#FBF4EE" },
+      color: { dark: "#0D1114", light: "#FFFFFF" },
     });
     return new Response(svg, {
       headers: {

@@ -18,6 +18,7 @@ import {
   readProductCart,
   type ProductCart,
 } from "@/lib/productCart";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Row = Record<string, any>;
 type Props = { salon: Row; styles: Row[]; stylists: Row[];depositPercentage:number;maximumAdvanceDays:number;clientNotesMaxLength:number;cancellationGraceMinutes:number };
@@ -128,7 +129,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     if (!requestedPromotion || !salon.id) { setSalonPromotion(null); return; }
     let current = true;
     fetch(`/api/promotions/salon?id=${encodeURIComponent(requestedPromotion)}&salon_id=${encodeURIComponent(String(salon.id))}`, { cache: "no-store" })
-      .then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error || "This salon offer is unavailable."); if (current) { setSalonPromotion(body.promotion as SalonPromotion); setSalonPromotionMessage(""); } })
+      .then(async (response) => { const body = await readApiResponse(response, "This salon offer is unavailable."); if (!response.ok) throw new Error(body.error || "This salon offer is unavailable."); if (current) { setSalonPromotion(body.promotion as SalonPromotion); setSalonPromotionMessage(""); } })
       .catch((error) => { if (current) { setSalonPromotion(null); setSalonPromotionMessage(error instanceof Error ? error.message : "This salon offer is unavailable."); } });
     return () => { current = false; };
   }, [requestedPromotion, salon.id]);
@@ -149,13 +150,13 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     if (stylistId !== "any") params.set("stylist_id", stylistId);
     fetch(`/api/booking-availability?${params}`, { cache: "no-store" })
       .then(async (response) => {
-        const body = await response.json();
+        const body = await readApiResponse(response, "Unable to load availability.");
         if (!response.ok) throw new Error(body.error || "Unable to load availability.");
         if (!current) return;
         const nextSlots = (body.slots || []) as Slot[];
         setSlots(nextSlots);
-        setAvailabilityReason(body.reason || "");
-        setSuggested(body.next || null);
+        setAvailabilityReason(typeof body.reason === "string" ? body.reason : "");
+        setSuggested(body.next ? body.next as SuggestedSlot : null);
         setTime((previous) => nextSlots.some((slot) => slot.value === previous) ? previous : nextSlots[0]?.value || "");
       })
       .catch((error) => { if (current) { setSlots([]); setAvailabilityReason(error instanceof Error ? error.message : "Unable to load availability."); } })
@@ -176,7 +177,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
         `${commerceSessionId ? "/api/stripe/commerce-status" : "/api/stripe/booking-status"}?session_id=${encodeURIComponent(sessionId)}`,
         { cache: "no-store" },
       );
-      const body = await response.json();
+      const body = await readApiResponse(response, "The checkout status is unavailable.");
       if (!response.ok)
         throw new Error(
           body.error || "The checkout status is unavailable.",
@@ -215,9 +216,10 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     if (!promoCode.trim()) { setPromoMessage("Enter a promo code."); return; }
     try {
       const response = await fetch("/api/promo/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: promoCode, purpose: "booking", amount: originalDeposit }) });
-      const body = await response.json();
+      const body = await readApiResponse(response, "Unable to apply promo code.");
       if (!response.ok) throw new Error(body.error || "Unable to apply promo code.");
-      setPromoCode(body.code); setPromoDiscount(Number(body.discount || 0)); setPromoMessage(`${body.code} applied: ${money(Number(body.discount || 0))} off your deposit.`);
+      const appliedCode = typeof body.code === "string" ? body.code : promoCode.trim().toUpperCase();
+      setPromoCode(appliedCode); setPromoDiscount(Number(body.discount || 0)); setPromoMessage(`${appliedCode} applied: ${money(Number(body.discount || 0))} off your deposit.`);
     } catch (error) { setPromoMessage(error instanceof Error ? error.message : "Unable to apply promo code."); }
   }
 
@@ -267,7 +269,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
           checkout_idempotency_key: checkoutIdempotencyKey,
         }),
       });
-      const body = await response.json();
+      const body = await readApiResponse(response, "Unable to start checkout.");
       if (!response.ok) {
         setCheckoutIdempotencyKey(
           typeof crypto !== "undefined"
@@ -288,7 +290,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
         return;
       }
       if (!body?.url) throw new Error("Stripe did not return a checkout page. No payment was taken.");
-      window.location.assign(body.url);
+      window.location.assign(String(body.url));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to start checkout.");
       setSaving(false);
