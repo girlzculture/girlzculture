@@ -416,6 +416,24 @@ create trigger homepage_product_audit_immutable
 before update or delete on public.homepage_product_placement_audit
 for each row execute function public.prevent_homepage_product_audit_mutation();
 
+-- Keep the homepage section key contract explicit while extending it for the
+-- product placement workspace introduced by this migration. The original
+-- constraint only allowed the four salon/video sections, so inserting the new
+-- canonical section would fail on both a clean database and an existing one.
+alter table public.homepage_sections
+  drop constraint if exists homepage_sections_section_key_check;
+alter table public.homepage_sections
+  add constraint homepage_sections_section_key_check
+  check (
+    section_key in (
+      'salons_near_you',
+      'featured_salons',
+      'trending_now',
+      'trending_picks',
+      'featured_products'
+    )
+  );
+
 insert into public.homepage_sections(
   section_key,title,description,is_visible,sort_order,updated_at
 ) values (
