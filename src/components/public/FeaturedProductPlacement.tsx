@@ -156,7 +156,7 @@ export default async function FeaturedProductPlacement({
             return (
               <article
                 key={String(placement.id)}
-                className="w-[245px] shrink-0 snap-start overflow-hidden rounded-[16px] border border-plum/10 bg-white shadow-[0_8px_24px_rgba(26,18,32,.07)] sm:w-[270px]"
+                className="w-[245px] shrink-0 snap-start overflow-hidden rounded-[16px] border border-plum/10 bg-white shadow-[0_8px_24px_rgba(13,17,20,.07)] sm:w-[270px]"
               >
                 <Link href={href} className="block">
                   <div className="relative aspect-[4/3] overflow-hidden bg-blush/30">

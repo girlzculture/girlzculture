@@ -24,6 +24,38 @@ const requiredTokens = [
   ["--gc-mist-gray", "#e6eaed"],
   ["--gc-white", "#ffffff"],
 ];
+// Non-brand literals are deliberately narrow and must be tied to a semantic
+// status/readability role. Uploaded user media is binary and is not scanned.
+const allowedHex = new Map([
+  ["#0d1114", "charcoal"],
+  ["#0083a6", "teal"],
+  ["#ff6868", "coral"],
+  ["#f5f7f8", "light gray"],
+  ["#e6eaed", "mist gray"],
+  ["#ffffff", "white"],
+  ["#fff", "white shorthand"],
+  ["#006b88", "accessible teal hover"],
+  ["#52616a", "muted copy"],
+  ["#667681", "form placeholder"],
+  ["#147d64", "success"],
+  ["#c83f4a", "error/destructive"],
+  ["#e0a34e", "recognizable star rating"],
+  ["#795516", "accessible warning text"],
+  ["#7a4b00", "accessible warning text"],
+  ["#7b4a00", "accessible warning text"],
+  ["#805000", "accessible warning text"],
+  ["#8b5500", "accessible warning text"],
+  ["#8b5b12", "accessible warning text"],
+  ["#9b5a00", "accessible warning text"],
+]);
+const allowedRgb = new Map([
+  ["0,131,166", "teal shadow"],
+  ["13,17,20", "charcoal shadow"],
+  ["224,163,78", "star-rating halo"],
+  ["230,234,237", "mist overlay"],
+  ["245,247,248", "light-gray overlay"],
+  ["255,255,255", "white overlay"],
+]);
 
 function filesAt(root) {
   const entries = fs.readdirSync(root, { withFileTypes: true });
@@ -42,11 +74,22 @@ for (const file of roots.flatMap(filesAt)) {
   for (const [value, label] of forbidden) {
     if (source.includes(value)) violations.push(`${file}: ${label} ${value}`);
   }
+  for (const match of source.matchAll(/(?<!&)#[0-9a-f]{3,8}\b/g)) {
+    if (!allowedHex.has(match[0])) {
+      violations.push(`${file}: unapproved hexadecimal color ${match[0]}`);
+    }
+  }
+  for (const match of source.matchAll(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g)) {
+    const channels = `${match[1]},${match[2]},${match[3]}`;
+    if (!allowedRgb.has(channels)) {
+      violations.push(`${file}: unapproved RGB color rgb(${channels})`);
+    }
+  }
 }
 assert.deepEqual(
   violations,
   [],
-  `Forbidden launch colors remain:\n${violations.join("\n")}`,
+  `Forbidden or unapproved launch colors remain:\n${violations.join("\n")}`,
 );
 
 const globals = fs.readFileSync("src/app/globals.css", "utf8").toLowerCase();
@@ -72,7 +115,23 @@ assert.match(
   /--color-plum:\s*var\(--gc-plum\)/,
   "The legacy utility name must resolve through its semantic alias.",
 );
+const runtimeLayout = fs.readFileSync("src/app/layout.tsx", "utf8");
+assert.match(
+  runtimeLayout,
+  /"--gc-plum":\s*brand\.heading/,
+  "The runtime compatibility alias must resolve to the semantic heading role.",
+);
+assert.match(
+  runtimeLayout,
+  /"--gc-teal":\s*brand\.primary/,
+  "The runtime primary role must resolve through the teal semantic token.",
+);
+assert.doesNotMatch(
+  runtimeLayout,
+  /"--gc-plum":\s*brand\.primary/,
+  "Runtime branding must not restore a legacy primary/heading coupling.",
+);
 
 console.log(
-  `Launch design-system audit passed (${roots.flatMap(filesAt).length} source assets; one documented star-gold exception).`,
+  `Launch design-system audit passed (${roots.flatMap(filesAt).length} source assets; ${allowedHex.size} documented color literals and ${allowedRgb.size} documented RGB roles).`,
 );

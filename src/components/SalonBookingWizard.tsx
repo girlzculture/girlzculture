@@ -390,7 +390,7 @@ function StylistPanel({ stylists, value, setValue }: { stylists: Row[]; value: s
     const specialties = Array.isArray(stylist.specialties) ? stylist.specialties.filter(Boolean) : [];
     const experience = Number(stylist.years_experience || 0);
     const rating = Number(stylist.rating || 0);
-    return <button type="button" key={stylist.id} onClick={() => setValue(stylist.id)} className={`flex w-full items-start gap-3 rounded-[12px] border p-3.5 text-left transition ${value === stylist.id ? "border-magenta bg-blush/35 shadow-[0_7px_18px_rgba(214,24,107,0.08)]" : "border-plum/10 bg-white hover:border-magenta/30"}`}>
+    return <button type="button" key={stylist.id} onClick={() => setValue(stylist.id)} className={`flex w-full items-start gap-3 rounded-[12px] border p-3.5 text-left transition ${value === stylist.id ? "border-magenta bg-blush/35 shadow-[0_7px_18px_rgba(0,131,166,0.08)]" : "border-plum/10 bg-white hover:border-magenta/30"}`}>
       <span className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-blush/55 text-plum/55">{isAny ? <UsersRound size={28} strokeWidth={1.5} /> : stylist.avatar_url ? <SafeImage src={stylist.avatar_url} fallbackSrc={stylist.avatar_url} alt={stylist.name || "Stylist"} className="h-full w-full object-cover" /> : <UserRound size={28} strokeWidth={1.5} />}</span>
       <span className="min-w-0 flex-1 py-0.5">
         <span className="flex items-start justify-between gap-2"><b className="block text-[14px] leading-tight text-ink">{stylist.name}</b>{rating > 0 ? <span className="inline-flex items-center gap-1 text-[10px] font-bold"><Star size={11} className="fill-amber text-amber" />{rating.toFixed(1)}</span> : null}</span>

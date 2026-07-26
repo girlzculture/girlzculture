@@ -22,7 +22,7 @@ function ContentCardView({ card, homepage = false }: { card: ContentCard; homepa
       {card.body ? <p className={homepage ? "mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60" : "mt-2 whitespace-pre-wrap text-sm leading-6 text-ink/65"}>{card.body}</p> : null}
     </div> : null}
   </>;
-  const classes = `block h-full overflow-hidden border border-plum/10 bg-white shadow-[0_8px_28px_rgba(26,18,32,.06)] ${homepage ? "rounded-[14px]" : "rounded-[16px]"}`;
+  const classes = `block h-full overflow-hidden border border-plum/10 bg-white shadow-[0_8px_28px_rgba(13,17,20,.06)] ${homepage ? "rounded-[14px]" : "rounded-[16px]"}`;
   return card.href ? <Link href={card.href} className={classes}>{content}</Link> : <article className={classes}>{content}</article>;
 }
 

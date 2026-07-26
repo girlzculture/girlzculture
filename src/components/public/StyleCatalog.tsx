@@ -42,7 +42,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
 
   return (
     <>
-      <div className="rounded-[14px] border border-plum/10 bg-white/85 p-3 shadow-[0_10px_32px_rgba(26,18,32,0.08)]">
+      <div className="rounded-[14px] border border-plum/10 bg-white/85 p-3 shadow-[0_10px_32px_rgba(13,17,20,0.08)]">
         <div className="md:grid md:grid-cols-[1.5fr_repeat(4,0.55fr)_0.75fr_auto] md:gap-2">
           <label className="flex min-h-12 items-center gap-3 rounded-[10px] border border-plum/10 px-4">
             <Search size={19} className="text-plum" />
@@ -67,7 +67,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {filtered.map((item) => (
-          <Link key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(26,18,32,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(26,18,32,0.12)]">
+          <Link key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(13,17,20,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(13,17,20,0.12)]">
             {item.image ? <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
               <SafeImage src={item.image} fallbackSrc={item.image} alt={`${item.name} hairstyle`} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
             </div> : null}

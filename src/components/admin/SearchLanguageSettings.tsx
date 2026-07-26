@@ -81,7 +81,7 @@ export default function SearchLanguageSettings() {
     finally { setSaving(false); }
   }
 
-  return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(26,18,32,.03)]">
+  return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(13,17,20,.03)]">
     <div><h2 className="font-serif text-xl font-semibold text-plum">Search, keywords & synonyms</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-ink/60">Teach deterministic search how customers describe real services. A rule improves matching only when an active salon actually offers its target.</p></div>
     {!settings ? <div className="mt-5 flex items-center gap-2 text-xs text-ink/60"><RefreshCw size={15} className="animate-spin"/>Loading search controls...</div> : <>
       <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_120px_auto]">

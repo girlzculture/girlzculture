@@ -307,7 +307,7 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
 
   if (confirmed?.order) {
     return (
-      <section className="mx-auto max-w-2xl rounded-[20px] border border-plum/10 bg-white/85 p-7 text-center shadow-[0_18px_50px_rgba(26,18,32,0.07)] sm:p-12">
+      <section className="mx-auto max-w-2xl rounded-[20px] border border-plum/10 bg-white/85 p-7 text-center shadow-[0_18px_50px_rgba(13,17,20,0.07)] sm:p-12">
         <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-magenta text-white">
           <Check size={38} />
         </span>
@@ -537,7 +537,7 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
         </section>
       </div>
 
-      <aside className="h-fit rounded-[18px] border border-plum/10 bg-white/90 p-5 shadow-[0_18px_50px_rgba(26,18,32,0.06)] sm:p-7 lg:sticky lg:top-6">
+      <aside className="h-fit rounded-[18px] border border-plum/10 bg-white/90 p-5 shadow-[0_18px_50px_rgba(13,17,20,0.06)] sm:p-7 lg:sticky lg:top-6">
         <h2 className="font-serif text-2xl text-plum">Order summary</h2>
         <div className="mt-5 space-y-3 text-sm">
           <Line label="Products" value={money(subtotal)} />

@@ -1210,7 +1210,7 @@ function SalonDetail({
                   · {salon.geocode_status || "pending"}
                 </p>
                 {salon.geocode_failure_reason ? (
-                  <p className="mt-2 rounded-lg bg-[#fff8e8] p-3 text-xs text-amber-900">
+                  <p className="mt-2 rounded-lg bg-coral/10 p-3 text-xs text-[#795516]">
                     Internal review note: {salon.geocode_failure_reason}
                   </p>
                 ) : null}

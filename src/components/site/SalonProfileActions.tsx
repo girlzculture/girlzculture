@@ -116,7 +116,7 @@ export default function SalonProfileActions({
         <Heart size={20} fill={favorite ? "currentColor" : "none"} />
       </button>
       {showShare && vanitySlug ? (
-        <section className="absolute right-0 top-14 z-30 w-[min(82vw,280px)] rounded-[14px] border border-plum/10 bg-white p-4 shadow-[0_18px_50px_rgba(26,18,32,.18)]">
+        <section className="absolute right-0 top-14 z-30 w-[min(82vw,280px)] rounded-[14px] border border-plum/10 bg-white p-4 shadow-[0_18px_50px_rgba(13,17,20,.18)]">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-serif text-lg text-plum">Share this salon</p>

@@ -60,7 +60,7 @@ export default async function StylesPage() {
     <PublicHeader active="styles" />
     <section className="relative overflow-hidden border-b border-plum/10 bg-[radial-gradient(circle_at_75%_25%,rgba(224,163,78,0.16),transparent_34%)]">
       <div className="mx-auto w-full max-w-[1760px] px-4 pb-6 pt-8 sm:px-8 lg:px-12 lg:pt-12 2xl:px-16">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9c431d]">Explore. Compare. Book with confidence.</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-magenta">Explore. Compare. Book with confidence.</p>
         <h1 className="mt-2 font-serif text-[42px] font-semibold leading-[0.95] tracking-[-0.045em] text-ink sm:text-[58px]">Browse by Style<span className="text-magenta">.</span></h1>
         <p className="mt-2 text-lg text-ink/80">Find your next look.</p>
         <div className="mt-5"><StyleCatalog items={items} /></div>

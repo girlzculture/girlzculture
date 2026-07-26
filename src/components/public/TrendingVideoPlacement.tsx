@@ -127,7 +127,7 @@ export default function TrendingVideoPlacement({
         <>
           <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} aria-label={viewAll ? undefined : "Trending Picks carousel"} className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}>
             {videos.map((video) => (
-              <article key={video.campaign_id} className="w-[54vw] max-w-[250px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_5px_18px_rgba(26,18,32,.07)] sm:w-auto sm:max-w-none">
+              <article key={video.campaign_id} className="w-[54vw] max-w-[250px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_5px_18px_rgba(13,17,20,.07)] sm:w-auto sm:max-w-none">
                 <SafeCampaignVideo src={video.video_url} poster={video.thumbnail_url} label={`${video.salon_name} Trending Pick`} className="aspect-video w-full" />
                 <div className="p-3">
                   <Link href={`/salon/${video.salon_slug}`} className="font-serif text-base font-semibold text-plum">{video.salon_name}</Link>
@@ -140,7 +140,7 @@ export default function TrendingVideoPlacement({
           {viewAll && videos.length < total ? <button type="button" disabled={more} onClick={() => void load(videos.length, true)} className="mt-5 min-h-12 w-full rounded-lg border border-magenta bg-white text-sm font-bold text-magenta disabled:opacity-60">{more ? "Loading…" : "Load more Trending Picks"}</button> : null}
         </>
       ) : (
-        <Link href="/partner" className="flex min-h-36 items-center gap-4 rounded-[15px] border border-plum/10 bg-[linear-gradient(120deg,#fff,#f7dce6)] p-6">
+        <Link href="/partner" className="flex min-h-36 items-center gap-4 rounded-[15px] border border-plum/10 bg-[linear-gradient(120deg,#fff,#F5F7F8)] p-6">
           <span className="grid h-12 w-12 place-items-center rounded-full bg-plum text-white"><Video aria-hidden="true" /></span>
           <span><b className="font-serif text-xl text-plum">Share your salon’s work with nearby clients.</b><span className="mt-1 block text-xs text-ink/60">Learn about approved Trending Picks placements.</span></span>
         </Link>

@@ -43,7 +43,7 @@ export default async function About() {
   return (
     <main className="min-h-screen bg-cream text-ink">
       <PublicHeader active="about" />
-      <section className="relative overflow-hidden bg-[#321035] text-white">
+      <section className="relative overflow-hidden bg-charcoal text-white">
         <div className="absolute inset-0 opacity-35">
           <SafeImage src={page.background_image_url} fallbackSrc="/images/salon-dark.jpg" alt="" className="h-full w-full object-cover" />
         </div>

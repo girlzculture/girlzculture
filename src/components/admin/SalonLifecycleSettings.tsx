@@ -69,7 +69,7 @@ export default function SalonLifecycleSettings() {
     }
   }
 
-  return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(26,18,32,.03)]">
+  return <section className="rounded-[14px] border border-plum/10 bg-white/75 p-5 shadow-[0_8px_26px_rgba(13,17,20,.03)]">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h2 className="font-serif text-xl font-semibold text-plum">Salon lifecycle engine</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-ink/60">These are the actual gates used to calculate setup progress and public eligibility. Saving recalculates every salon.</p></div>
       <span className="rounded-full bg-blush px-3 py-1 text-[10px] font-bold text-plum">Version {config?.version || "—"}</span>

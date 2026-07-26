@@ -45,7 +45,7 @@ export default function SalonStylists({ stylists, salonSlug }: { stylists: Styli
           <Link
             key={stylist.id || stylist.name}
             href={`/salon/${salonSlug}/stylist/${stylist.id}`}
-            className="group w-[82vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[15px] border border-plum/10 bg-white shadow-[0_8px_24px_rgba(26,18,32,0.06)] transition hover:-translate-y-0.5 hover:border-magenta/30 hover:shadow-[0_14px_34px_rgba(26,18,32,0.10)] lg:w-full lg:max-w-none"
+            className="group w-[82vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[15px] border border-plum/10 bg-white shadow-[0_8px_24px_rgba(13,17,20,0.06)] transition hover:-translate-y-0.5 hover:border-magenta/30 hover:shadow-[0_14px_34px_rgba(13,17,20,0.10)] lg:w-full lg:max-w-none"
           >
             <div className="grid grid-cols-[116px_1fr] gap-4 p-4">
               <div className="relative h-[138px] overflow-hidden rounded-[12px] bg-blush/60">

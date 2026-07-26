@@ -8,7 +8,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <main className="grid min-h-[70vh] place-items-center bg-cream px-4 py-16 text-center text-ink">
-      <section className="w-full max-w-xl rounded-[22px] border border-plum/10 bg-white p-8 shadow-[0_16px_50px_rgba(26,18,32,.08)]">
+      <section className="w-full max-w-xl rounded-[22px] border border-plum/10 bg-white p-8 shadow-[0_16px_50px_rgba(13,17,20,.08)]">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-blush text-magenta"><AlertTriangle aria-hidden="true" /></span>
         <p className="mt-5 text-xs font-bold uppercase tracking-[.14em] text-magenta">Something went wrong</p>
         <h1 className="mt-2 font-serif text-4xl text-plum">This page needs another moment.</h1>

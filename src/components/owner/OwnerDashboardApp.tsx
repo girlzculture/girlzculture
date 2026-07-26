@@ -570,7 +570,7 @@ export default function OwnerDashboardApp({
   if (["new", "pending"].includes(lifecycleStatus))
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream p-5">
-        <div className="max-w-xl rounded-[22px] border border-plum/10 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]">
+        <div className="max-w-xl rounded-[22px] border border-plum/10 bg-white p-9 text-center shadow-[0_20px_60px_rgba(13,17,20,.08)]">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-plum">
             <Clock3 />
           </div>
@@ -594,7 +594,7 @@ export default function OwnerDashboardApp({
   if (lifecycleStatus === "offboarded")
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream p-5">
-        <div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]">
+        <div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(13,17,20,.08)]">
           <LockKeyhole className="mx-auto text-magenta" size={42} />
           <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
             Salon access is restricted
@@ -1511,7 +1511,7 @@ function Panel({
 }) {
   return (
     <section
-      className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5 ${className}`}
+      className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(13,17,20,.035)] sm:p-5 ${className}`}
     >
       {children}
     </section>
@@ -1855,7 +1855,7 @@ function MyPage({ c }: { c: Ctx }) {
       {addressWarning ? (
         <div
           role="alert"
-          className="mb-4 rounded-[12px] border border-amber/50 bg-[#fff8e8] p-4 text-sm text-ink"
+          className="mb-4 rounded-[12px] border border-amber/50 bg-coral/10 p-4 text-sm text-ink"
         >
           <b className="font-serif text-lg text-plum">Address needs review</b>
           <p className="mt-1 leading-6">
