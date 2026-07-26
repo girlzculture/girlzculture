@@ -1,11 +1,15 @@
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import {
+  noteOperationalFailure,
   routeMonitoringProfile,
   withOperationalMonitoring,
 } from "@/lib/operationalMonitoring";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
-import { processVideoJob } from "@/lib/videoProcessingServer";
+import {
+  processVideoJob,
+  reconcileCloudinaryVideoJob,
+} from "@/lib/videoProcessingServer";
 import {
   classifyVideoTranscoderError,
 } from "@/lib/videoTranscoderCore";
@@ -19,15 +23,31 @@ export const dynamic = "force-dynamic";
 async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "marketing");
-    const id = cleanText(new URL(request.url).searchParams.get("id"), 80);
+    const search = new URL(request.url).searchParams;
+    const id = cleanText(search.get("id"), 80);
     let query = admin.from("video_processing_jobs").select("*")
       .order("created_at", { ascending: false }).limit(100);
     if (id) query = query.eq("id", id);
     const { data, error } = await query;
     if (error) throw error;
+    let jobs = data || [];
+    if (
+      id &&
+      search.get("recover") === "1" &&
+      jobs[0]?.status === "Transcoding"
+    ) {
+      try {
+        jobs = [await reconcileCloudinaryVideoJob(admin, jobs[0])];
+      } catch (providerError) {
+        noteOperationalFailure(
+          "Cloudinary video-job reconciliation failed",
+          providerError,
+        );
+      }
+    }
     return Response.json(
       {
-        jobs: data || [],
+        jobs,
         transcoder: videoTranscoderRuntimeDiagnostic(),
       },
       { headers: { "Cache-Control": "private, no-store" } },

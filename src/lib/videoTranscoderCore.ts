@@ -70,13 +70,52 @@ function present(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function safeHttpsUrl(value: unknown) {
+export function safeVideoProviderUrl(value: unknown) {
   try {
     const url = new URL(String(value || ""));
     return url.protocol === "https:" ? url.toString() : "";
   } catch {
     return "";
   }
+}
+
+export function cloudinaryCompletedVideoResult(
+  payload: Record<string, unknown> & {
+    derived?: Array<Record<string, unknown>>;
+  },
+) {
+  const derivatives = Array.isArray(payload.derived) ? payload.derived : [];
+  const video = derivatives.find(
+    (item) =>
+      String(item.format || "").toLowerCase() === "mp4" &&
+      safeVideoProviderUrl(item.secure_url),
+  );
+  const poster = derivatives.find(
+    (item) =>
+      ["jpg", "jpeg"].includes(String(item.format || "").toLowerCase()) &&
+      safeVideoProviderUrl(item.secure_url),
+  );
+  const outputSize = Number(video?.bytes || 0);
+  const duration = Number(payload.duration || 0);
+  if (
+    !video ||
+    !poster ||
+    !Number.isFinite(outputSize) ||
+    outputSize < 1 ||
+    outputSize > 25 * 1024 * 1024 ||
+    !Number.isFinite(duration) ||
+    duration <= 0
+  ) {
+    return null;
+  }
+  return {
+    output_url: safeVideoProviderUrl(video.secure_url),
+    poster_url: safeVideoProviderUrl(poster.secure_url),
+    output_size_bytes: outputSize,
+    duration_seconds: duration,
+    width_px: Number(video.width || payload.width || 0) || null,
+    height_px: Number(video.height || payload.height || 0) || null,
+  };
 }
 
 export function loadVideoTranscoderRuntime(
@@ -96,7 +135,7 @@ export function loadVideoTranscoderRuntime(
     .filter((variable) => !variable.present)
     .map((variable) => variable.name);
   const cloudinaryConfigured = missingVariables.length === 0;
-  const customEndpoint = safeHttpsUrl(
+  const customEndpoint = safeVideoProviderUrl(
     readEnvironment("MEDIA_TRANSCODE_ENDPOINT"),
   );
   const customToken = String(

@@ -202,7 +202,11 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
           const safeMessage = authFailure
             ? "Your session could not be verified."
             : profile.safeMessage || "This operation could not be completed.";
-          return safeFailure(safeMessage, reference, status);
+          return safeFailure(safeMessage, reference, status, {
+            code: authFailure ? "AUTHENTICATION_SESSION_FAILURE" : undefined,
+            recordType: affectedRecord?.type || null,
+            recordId: affectedRecord?.id || null,
+          });
         }
 
         if (response.status < 400 && failures.length) {
@@ -297,6 +301,13 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
             : profile.safeMessage || "This operation could not be completed.",
           reference,
           isUnauthorized ? 401 : 500,
+          {
+            code: isUnauthorized
+              ? "AUTHENTICATION_SESSION_FAILURE"
+              : undefined,
+            recordType: affectedRecord?.type || null,
+            recordId: affectedRecord?.id || null,
+          },
         );
       }
     });

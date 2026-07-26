@@ -4,18 +4,18 @@
 import { DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Archive, CheckCircle2, Film, ImageIcon, Pause, Play, Search, Upload, XCircle } from "lucide-react";
-import { adminSupabase, getSessionForScope } from "@/lib/supabase";
+import { adminSupabase, getValidSessionForScope } from "@/lib/supabase";
 import { createVideoPoster, getVideoDuration, optimizeTrendingVideo, uploadTrendingFile } from "@/lib/videoUploadClient";
 import NumericInput from "@/components/forms/NumericInput";
+import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
+import { scopedApiErrorMessage } from "@/lib/scopedApiCore";
+import {
+  pollVideoJobUntilReady,
+  type VideoProcessingJob,
+} from "@/lib/videoJobPollingCore";
 
 type Row = Record<string, any>;
 type NumericValue = number | "";
-
-async function headers(json = false) {
-  const session = await getSessionForScope("admin");
-  if (!session) throw new Error("Your admin session has expired.");
-  return { Authorization: `Bearer ${session.access_token}`, ...(json ? { "Content-Type": "application/json" } : {}) };
-}
 
 function localInput(value: string) {
   const date = new Date(value);
@@ -75,9 +75,10 @@ export default function AdminTrendingCampaigns() {
   useEffect(() => () => uploadController.current?.abort(), []);
 
   async function load() {
-    const response = await fetch("/api/admin/trending-campaigns", { headers: await headers(), cache: "no-store" });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || "Unable to load campaigns.");
+    const api = await createAuthenticatedApiClient("admin");
+    const body = await api.request<{ campaigns: Row[] }>(
+      "/api/admin/trending-campaigns",
+    );
     setCampaigns(Array.isArray(body.campaigns) ? body.campaigns : []);
   }
 
@@ -93,9 +94,12 @@ export default function AdminTrendingCampaigns() {
     }
     const controller = new AbortController();
     const timer = window.setTimeout(() => void (async () => {
-      const response = await fetch(`/api/admin/trending-campaigns?mode=salons&q=${encodeURIComponent(query)}`, { headers: await headers(), signal: controller.signal });
-      const body = await response.json();
-      if (response.ok) setSalons(Array.isArray(body.salons) ? body.salons : []);
+      const api = await createAuthenticatedApiClient("admin");
+      const body = await api.request<{ salons: Row[] }>(
+        `/api/admin/trending-campaigns?mode=salons&q=${encodeURIComponent(query)}`,
+        { signal: controller.signal },
+      );
+      setSalons(Array.isArray(body.salons) ? body.salons : []);
     })().catch(()=>undefined), 220);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [editing, query]);
@@ -195,9 +199,10 @@ export default function AdminTrendingCampaigns() {
     uploadController.current?.abort();
     if (!jobId) return;
     try {
-      await fetch("/api/admin/media/video-jobs", {
+      const api = await createAuthenticatedApiClient("admin");
+      await api.request("/api/admin/media/video-jobs", {
         method: "POST",
-        headers: await headers(true),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel", id: jobId }),
       });
       setNotice(
@@ -231,6 +236,7 @@ export default function AdminTrendingCampaigns() {
     let uploadedPosterPath = "";
     let processingJobId = "";
     try {
+      const api = await createAuthenticatedApiClient("admin");
       let video = {
         video_url: editing?.video_url,
         storage_path: editing?.storage_path,
@@ -240,8 +246,13 @@ export default function AdminTrendingCampaigns() {
         mime_type: editing?.mime_type,
       };
       if (file) {
-        const session = await getSessionForScope("admin");
+        const session = await getValidSessionForScope("admin");
         if (!session) throw new Error("Your admin session has expired. Sign in and try again.");
+        if (session.user.id !== api.actingUserId) {
+          throw new Error(
+            "The signed-in admin account changed during this upload. Start again.",
+          );
+        }
         if (needsServerPipeline) {
           setProgress(18);
           setNotice("Uploading the original MP4 for secure inspection…");
@@ -253,9 +264,11 @@ export default function AdminTrendingCampaigns() {
           });
           setProgress(62);
           setNotice("Inspecting codecs and preparing a browser-safe MP4…");
-          const creationResponse = await fetch("/api/admin/media/video-jobs", {
+          const creationBody = await api.request<{
+            job?: VideoProcessingJob;
+          }>("/api/admin/media/video-jobs", {
             method: "POST",
-            headers: await headers(true),
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "create",
               salon_id: salonId,
@@ -265,24 +278,24 @@ export default function AdminTrendingCampaigns() {
             }),
             signal: controller.signal,
           });
-          const creationBody = await creationResponse.json();
-          if (!creationResponse.ok)
-            throw new Error(
-              creationBody.error || "We couldn't queue this video.",
-            );
           processingJobId = String(creationBody.job?.id || "");
           if (!processingJobId)
             throw new Error("The video processing job was not created.");
           setActiveJobId(processingJobId);
+          let polledReadyJob: VideoProcessingJob | null = null;
           const poller = window.setInterval(() => {
             void (async () => {
-              const response = await fetch(
+              const body = await api.request<{
+                jobs?: VideoProcessingJob[];
+              }>(
                 `/api/admin/media/video-jobs?id=${encodeURIComponent(processingJobId)}`,
-                { headers: await headers(), cache: "no-store" },
+                { signal: controller.signal },
               );
-              const body = await response.json();
               const current = body.jobs?.[0];
-              if (response.ok && current) {
+              if (current) {
+                if (current.status === "Ready" && current.output_url) {
+                  polledReadyJob = current;
+                }
                 setProgress(
                   62 + Math.round(Number(current.progress_percent || 0) * 0.2),
                 );
@@ -296,23 +309,42 @@ export default function AdminTrendingCampaigns() {
               }
             })().catch(() => undefined);
           }, 1500);
-          const processingResponse = await fetch(
-            "/api/admin/media/video-jobs",
-            {
+          let processingBody: { job?: VideoProcessingJob };
+          try {
+            processingBody = await api.request<{
+              job?: VideoProcessingJob;
+            }>("/api/admin/media/video-jobs", {
               method: "POST",
-              headers: await headers(true),
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: "process",
                 id: processingJobId,
               }),
-            },
-          ).finally(() => window.clearInterval(poller));
-          const processingBody = await processingResponse.json();
-          if (!processingResponse.ok)
-            throw new Error(
-              processingBody.error ||
-                "We couldn't prepare this video for browser playback.",
-            );
+              signal: controller.signal,
+            });
+          } catch (processingError) {
+            const recoveredJob =
+              polledReadyJob ||
+              (await pollVideoJobUntilReady({
+                jobId: processingJobId,
+                signal: controller.signal,
+                maxAttempts: 6,
+                getJob: async () => {
+                  const body = await api.request<{
+                    jobs?: VideoProcessingJob[];
+                  }>(
+                    `/api/admin/media/video-jobs?id=${encodeURIComponent(processingJobId)}&recover=1`,
+                    { signal: controller.signal },
+                  );
+                  return Array.isArray(body.jobs) ? body.jobs[0] || null : null;
+                },
+                stopError: (current) =>
+                  current.status === "Uploaded" ? processingError : null,
+              }));
+            processingBody = { job: recoveredJob };
+          } finally {
+            window.clearInterval(poller);
+          }
           const job = processingBody.job;
           if (job?.status !== "Ready" || !job.output_url)
             throw new Error("Video preparation did not finish. Retry the upload.");
@@ -351,9 +383,11 @@ export default function AdminTrendingCampaigns() {
         entitlement_source: form.get("entitlement_source"), entitlement_reference: form.get("entitlement_reference"), entitlement_amount_minor: form.get("amount") ? Math.round(Number(form.get("amount")) * 100) : null,
         reason: form.get("reason"),
       };
-      const response = await fetch("/api/admin/trending-campaigns", { method: "POST", headers: await headers(true), body: JSON.stringify(payload) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to save campaign.");
+      await api.request("/api/admin/trending-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       if (file && editing?.storage_path && editing.storage_path !== uploadedPath) await adminSupabase.storage.from("trending-videos").remove([editing.storage_path]);
       const oldPoster = storedPosterPath(editing?.thumbnail_url);
       if (file && oldPoster && oldPoster.startsWith(`campaigns/${salonId}/posters/`) && oldPoster !== uploadedPosterPath) await adminSupabase.storage.from("trending-videos").remove([oldPoster]);
@@ -374,7 +408,15 @@ export default function AdminTrendingCampaigns() {
       setProgress(0);
       const wasCancelled = error instanceof DOMException && error.name === "AbortError";
       setRetryReady(!wasCancelled);
-      setNotice(wasCancelled ? "Upload cancelled. The selected file was not saved." : error instanceof Error ? error.message : "Unable to save campaign.");
+      setNotice(
+        wasCancelled
+          ? "Upload cancelled. The selected file was not saved."
+          : scopedApiErrorMessage(
+              error,
+              "Unable to save campaign.",
+              processingJobId || null,
+            ),
+      );
     } finally {
       uploadController.current = null;
       setActiveJobId("");
@@ -388,12 +430,20 @@ export default function AdminTrendingCampaigns() {
     if (reason.length < 5) { setNotice("Enter a moderation reason of at least 5 characters."); return; }
     setBusy(true);
     try {
-      const response = await fetch("/api/admin/trending-campaigns", { method: "POST", headers: await headers(true), body: JSON.stringify({ action: "moderate", id: campaign.id, decision, reason }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to moderate video.");
+      const api = await createAuthenticatedApiClient("admin");
+      await api.request("/api/admin/trending-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "moderate",
+          id: campaign.id,
+          decision,
+          reason,
+        }),
+      });
       await load();
       setNotice(`Video ${decision.toLowerCase()} and audit recorded.`);
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to moderate video."); }
+    } catch (error) { setNotice(scopedApiErrorMessage(error, "Unable to moderate video.", campaign.id)); }
     finally { setBusy(false); }
   }
 
@@ -403,12 +453,15 @@ export default function AdminTrendingCampaigns() {
     const payload = { action: "save", id: campaign.id, salon_id: campaign.salon_id, video_url: campaign.video_url, storage_path: campaign.storage_path, thumbnail_url: campaign.thumbnail_url, description: campaign.description, duration_seconds: campaign.duration_seconds, file_size_bytes: campaign.file_size_bytes, mime_type: campaign.mime_type, status: next, starts_at: campaign.starts_at, ends_at: campaign.ends_at, timezone: campaign.timezone, radius_miles: campaign.radius_miles, priority: campaign.priority, rotation_weight: campaign.rotation_weight, internal_note: campaign.internal_note, reason };
     setBusy(true);
     try {
-      const response = await fetch("/api/admin/trending-campaigns", { method: "POST", headers: await headers(true), body: JSON.stringify(payload) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to change status.");
+      const api = await createAuthenticatedApiClient("admin");
+      await api.request("/api/admin/trending-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       await load();
       setNotice(`Campaign ${next.toLowerCase()}.`);
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to change status."); }
+    } catch (error) { setNotice(scopedApiErrorMessage(error, "Unable to change status.", campaign.id)); }
     finally { setBusy(false); }
   }
 

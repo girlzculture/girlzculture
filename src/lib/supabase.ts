@@ -174,6 +174,10 @@ export const salonSupabase = createBrowserClient(AUTH_STORAGE_KEYS.salon);
 export const adminSupabase = createBrowserClient(AUTH_STORAGE_KEYS.admin);
 
 export type AuthScope = keyof typeof AUTH_STORAGE_KEYS;
+const scopedRefreshes: Partial<
+  Record<AuthScope, Promise<Session | null>>
+> = {};
+
 export function getSupabaseForScope(scope: AuthScope = "customer"): SupabaseClient {
   if (scope === "admin") return adminSupabase;
   if (scope === "salon") return salonSupabase;
@@ -202,4 +206,36 @@ export async function getSessionForScope(scope: AuthScope): Promise<Session | nu
     // Never expose session/provider details in a browser log.
     return null;
   }
+}
+
+export async function refreshSessionForScope(
+  scope: AuthScope,
+): Promise<Session | null> {
+  if (scopedRefreshes[scope]) return scopedRefreshes[scope] || null;
+  const refresh = (async () => {
+    const scopedClient = getSupabaseForScope(scope);
+    const { data, error } = await scopedClient.auth.refreshSession();
+    if (error || !data.session) return null;
+    return data.session;
+  })().finally(() => {
+    delete scopedRefreshes[scope];
+  });
+  scopedRefreshes[scope] = refresh;
+  return refresh;
+}
+
+export async function getValidSessionForScope(
+  scope: AuthScope,
+  minimumValiditySeconds = 60,
+): Promise<Session | null> {
+  const session = await getSessionForScope(scope);
+  if (!session) return null;
+  const expiresAt = Number(session.expires_at || 0);
+  if (
+    expiresAt > 0 &&
+    expiresAt * 1_000 <= Date.now() + minimumValiditySeconds * 1_000
+  ) {
+    return refreshSessionForScope(scope);
+  }
+  return session;
 }
