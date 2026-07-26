@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, MapPin, RotateCcw, Video } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import SafeCampaignVideo from "@/components/public/SafeCampaignVideo";
 import { validCoordinates } from "@/lib/location";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Trending = {
   campaign_id: string;
@@ -68,8 +69,11 @@ export default function TrendingVideoPlacement({
         seed: rotationSeed(),
       });
       const response = await fetch(`/api/discovery/trending?${params}`, { cache: "no-store", signal });
-      const body = await response.json();
-      if (!response.ok) throw new Error("request failed");
+      const body = await readApiResponse(
+        response,
+        "Trending Picks could not be loaded.",
+      );
+      if (!response.ok) throw new Error(body.error || "request failed");
       const next = Array.isArray(body.videos) ? body.videos : [];
       setVideos((current) => append
         ? [...current, ...next.filter((row: Trending) => !current.some((item) => item.campaign_id === row.campaign_id))]

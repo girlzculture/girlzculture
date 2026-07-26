@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import {
+  cloudinaryCompletedVideoResult,
   classifyVideoProviderStatus,
   classifyVideoTranscoderError,
   missingVideoTranscoderConfiguration,
@@ -240,6 +241,9 @@ export async function processVideoJob(
     .update({
       status: "Transcoding",
       progress_percent: 35,
+      provider_job_id: runtime.cloudinary
+        ? `cloudinary:girlz-culture/trending/${id}`
+        : job.provider_job_id || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -380,4 +384,67 @@ async function complete(
   if (error) throw error;
   if (!data) throw new Error("VIDEO_PROCESSING_CANCELLED");
   return data;
+}
+
+export async function reconcileCloudinaryVideoJob(
+  admin: SupabaseClient,
+  job: Row,
+) {
+  if (String(job.status) !== "Transcoding") return job;
+  const runtime = loadVideoTranscoderRuntimeConfig();
+  if (!runtime.cloudinary) return job;
+  const id = String(job.id || "");
+  if (!id) return job;
+  const expectedProviderId = `cloudinary:girlz-culture/trending/${id}`;
+  const providerId = String(job.provider_job_id || expectedProviderId);
+  if (!providerId.startsWith("cloudinary:")) return job;
+  const publicId = providerId.slice("cloudinary:".length);
+  const credentials = Buffer.from(
+    `${runtime.cloudinary.apiKey}:${runtime.cloudinary.apiSecret}`,
+  ).toString("base64");
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(runtime.cloudinary.cloudName)}/resources/video/upload/${encodeURIComponent(publicId)}`,
+      {
+        headers: { Authorization: `Basic ${credentials}` },
+        cache: "no-store",
+      },
+    );
+  } catch (error) {
+    throw providerNetworkFailure(error);
+  }
+  // A resource can briefly return 404 between upload acceptance and asset
+  // visibility. Keep polling the existing job without changing its status.
+  if (response.status === 404) return job;
+  if (!response.ok)
+    throw classifyVideoProviderStatus(response.status, "connection");
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new VideoTranscoderError({
+      code: "VIDEO_TRANSCODING_FAILED",
+      state: "transcoding_failure",
+      status: 502,
+      safeMessage: "Cloudinary returned an invalid asset response.",
+    });
+  }
+  const payload = (await response.json()) as Row & {
+    derived?: Row[];
+  };
+  const completed = cloudinaryCompletedVideoResult(payload);
+  if (!completed) return job;
+  return complete(admin, id, {
+    output_bucket: null,
+    output_path: null,
+    ...completed,
+    provider_job_id: providerId,
+    detected_container: "mp4",
+    detected_video_codec: "h264",
+    detected_audio_codec: "aac",
+    source_cleanup_after: new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    ).toISOString(),
+    source_cleanup_status: "Scheduled",
+    original_preserved: true,
+  });
 }

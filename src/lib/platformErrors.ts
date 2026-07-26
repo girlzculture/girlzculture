@@ -108,8 +108,22 @@ export async function capturePlatformError(context: ErrorContext) {
   console.error("Platform operation failed", logRecord);
   if (context.admin) {
     try {
-      const { error } = await context.admin.rpc("capture_platform_error", { p_event: logRecord });
+      const { data: eventId, error } = await context.admin.rpc(
+        "capture_platform_error",
+        { p_event: logRecord },
+      );
       if (error && error.code !== "PGRST202") console.error("Platform error persistence failed", { reference, code: error.code, message: safeText(error.message, 500) });
+      if (!error && /^[0-9a-f-]{36}$/i.test(String(eventId || ""))) {
+        const { data: event } = await context.admin
+          .from("platform_error_events")
+          .select("reference")
+          .eq("id", eventId)
+          .maybeSingle();
+        const canonicalReference = String(event?.reference || "");
+        if (/^[0-9a-f-]{36}$/i.test(canonicalReference)) {
+          return canonicalReference;
+        }
+      }
     } catch (persistenceError) {
       console.error("Platform error persistence unavailable", { reference, message: safeText(persistenceError, 500) });
     }
@@ -117,9 +131,24 @@ export async function capturePlatformError(context: ErrorContext) {
   return reference;
 }
 
-export function safeFailure(message: string, reference: string, status = 500) {
+export function safeFailure(
+  message: string,
+  reference: string,
+  status = 500,
+  details: {
+    code?: string;
+    recordType?: string | null;
+    recordId?: string | null;
+  } = {},
+) {
   return Response.json(
-    { error: `${message} Please try again or contact support with reference ${reference}.`, request_id: reference },
+    {
+      error: `${message} Please try again or contact support with reference ${reference}.`,
+      request_id: reference,
+      ...(details.code ? { code: details.code } : {}),
+      ...(details.recordType ? { record_type: details.recordType } : {}),
+      ...(details.recordId ? { record_id: details.recordId } : {}),
+    },
     { status, headers: { "Cache-Control": "private, no-store", "X-Request-ID": reference } },
   );
 }
