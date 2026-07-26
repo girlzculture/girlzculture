@@ -79,7 +79,10 @@ export default async function RootLayout({
       className="h-full antialiased"
       style={
         {
-          "--gc-plum": brand.primary,
+          "--gc-charcoal": brand.heading,
+          "--gc-teal": brand.primary,
+          "--gc-coral": brand.warning,
+          "--gc-plum": brand.heading,
           "--gc-magenta": brand.cta,
           "--gc-accent": brand.accent,
           "--gc-page": brand.page,

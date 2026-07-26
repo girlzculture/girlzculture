@@ -19,37 +19,57 @@
 }
 
 :root {
-  --gc-page: #fff8f0;
-  --gc-card: #fff8f0;
-  --gc-header: #fff8f0;
-  --gc-footer: #281f16;
-  --gc-heading: #281f16;
-  --gc-body: #281f16;
-  --gc-muted: #6b7a4e;
-  --gc-link: #c65a3a;
-  --gc-accent: #b88a44;
-  --gc-success: #6b7a4e;
-  --gc-warning: #b88a44;
-  --gc-error: #c65a3a;
-  --gc-hover: #a9472f;
-  --gc-focus: #d4af37;
-  --gc-disabled: #e7d7c1;
+  /* Girlz Culture launch system. Components consume these semantic roles.
+     The legacy Tailwind aliases below are temporary compatibility aliases,
+     never independent brand colors. */
+  --gc-charcoal: #0d1114;
+  --gc-teal: #0083a6;
+  --gc-coral: #ff6868;
+  --gc-light-gray: #f5f7f8;
+  --gc-mist-gray: #e6eaed;
+  --gc-white: #ffffff;
+  --gc-star: #e0a34e;
+  --gc-page: var(--gc-white);
+  --gc-card: var(--gc-white);
+  --gc-header: var(--gc-white);
+  --gc-footer: var(--gc-teal);
+  --gc-heading: var(--gc-charcoal);
+  --gc-body: var(--gc-charcoal);
+  --gc-muted: #52616a;
+  --gc-link: var(--gc-teal);
+  --gc-accent: var(--gc-star);
+  --gc-success: #147d64;
+  --gc-warning: var(--gc-coral);
+  --gc-error: #c83f4a;
+  --gc-hover: #006b88;
+  --gc-focus: var(--gc-teal);
+  --gc-disabled: var(--gc-mist-gray);
   --background: var(--gc-page);
   --foreground: var(--gc-body);
   --font-inter: "Inter", Arial, Helvetica, sans-serif;
   --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
-  --gc-plum: #c65a3a;
-  --gc-magenta: #c65a3a;
+  --gc-plum: var(--gc-charcoal);
+  --gc-magenta: var(--gc-teal);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--gc-teal);
+  --color-primary-hover: var(--gc-hover);
+  --color-danger: var(--gc-coral);
+  --color-surface: var(--gc-white);
+  --color-subtle: var(--gc-light-gray);
+  --color-border: var(--gc-mist-gray);
+  --color-charcoal: var(--gc-charcoal);
+  --color-teal: var(--gc-teal);
+  --color-coral: var(--gc-coral);
+  --color-mist: var(--gc-mist-gray);
   --color-plum: var(--gc-plum);
   --color-magenta: var(--gc-magenta);
   --color-ink: var(--gc-body);
   --color-cream: var(--gc-page);
-  --color-blush: #f4c9b6;
+  --color-blush: var(--gc-light-gray);
   --color-amber: var(--gc-accent);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-fraunces);
@@ -92,7 +112,7 @@ body {
 }
 
 :where([class~="text-ink/20"], [class~="text-ink/25"], [class~="text-ink/35"], [class~="text-ink/40"], [class~="text-ink/45"], [class~="text-ink/50"], [class~="text-ink/55"]) {
-  color: #625868 !important;
+  color: #52616a !important;
 }
 
 :where(input, select, textarea) {
@@ -102,7 +122,7 @@ body {
 }
 
 :where(input, textarea)::placeholder {
-  color: #716676;
+  color: #667681;
   opacity: 1;
 }
 
@@ -117,7 +137,7 @@ body {
 }
 
 ::selection {
-  background: #f4c9b6;
+  background: color-mix(in srgb, var(--gc-teal) 22%, white);
   color: var(--gc-heading);
 }
 
@@ -205,14 +225,14 @@ section {
 .gc-home-depth {
   perspective: 1600px;
   background:
-    radial-gradient(circle at 8% 28%, rgba(224, 163, 78, 0.10), transparent 25rem),
-    radial-gradient(circle at 91% 49%, rgba(91, 26, 107, 0.09), transparent 30rem),
+    radial-gradient(circle at 8% 28%, rgba(0, 131, 166, 0.08), transparent 25rem),
+    radial-gradient(circle at 91% 49%, rgba(230, 234, 237, 0.7), transparent 30rem),
     var(--background);
 }
 
 .gc-home-depth .gc-home-hero {
   isolation: isolate;
-  box-shadow: 0 28px 70px rgba(44, 18, 55, 0.12);
+  box-shadow: 0 28px 70px rgba(13, 17, 20, 0.12);
 }
 
 .gc-home-depth .gc-home-hero::after {
@@ -236,8 +256,8 @@ section {
 .gc-home-depth .gc-home-content article,
 .gc-home-depth .gc-home-content > section > div.rounded-\[15px\],
 .gc-home-depth .gc-home-content > section > div.rounded-\[16px\] {
-  border-color: rgba(91, 26, 107, 0.13);
-  box-shadow: 0 16px 34px rgba(44, 18, 55, 0.11), 0 2px 4px rgba(44, 18, 55, 0.05);
+  border-color: rgba(0, 131, 166, 0.16);
+  box-shadow: 0 16px 34px rgba(13, 17, 20, 0.1), 0 2px 4px rgba(13, 17, 20, 0.05);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -247,7 +267,7 @@ section {
 
   .gc-home-depth .gc-home-content article:hover {
     transform: translateY(-4px) rotateX(0.7deg) rotateY(-0.7deg);
-    box-shadow: 0 22px 48px rgba(44, 18, 55, 0.16), 0 4px 10px rgba(44, 18, 55, 0.06);
+    box-shadow: 0 22px 48px rgba(13, 17, 20, 0.15), 0 4px 10px rgba(13, 17, 20, 0.06);
   }
 }
 

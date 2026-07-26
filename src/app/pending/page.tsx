@@ -4,7 +4,7 @@ import SalonPendingGate from "@/components/auth/SalonPendingGate";
 
 export default function PendingPage() {
   return <main className="grid min-h-screen place-items-center bg-cream p-5 text-ink">
-    <section className="w-full max-w-xl rounded-[22px] border border-plum/10 bg-white p-8 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)] sm:p-10">
+    <section className="w-full max-w-xl rounded-[22px] border border-plum/10 bg-white p-8 text-center shadow-[0_20px_60px_rgba(13,17,20,.08)] sm:p-10">
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-plum"><Clock3 size={30}/></span>
       <p className="mt-5 text-xs font-bold uppercase tracking-[.16em] text-magenta">Salon application</p>
       <h1 className="mt-2 font-serif text-4xl font-semibold text-plum">Your application is under review</h1>

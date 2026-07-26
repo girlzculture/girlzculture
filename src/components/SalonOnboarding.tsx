@@ -81,7 +81,7 @@ export default function SalonOnboarding() {
   if (!state) return <div className="rounded-xl bg-red-50 p-5 text-sm text-red-700">{message || "Unable to load salon onboarding."}</div>;
 
   return <div>
-    <section className={`rounded-[18px] p-5 text-white sm:p-7 ${state.discoverable ? "bg-emerald-700" : "bg-[linear-gradient(135deg,#2f1038,#5b1a6b)]"}`}>
+    <section className={`rounded-[18px] p-5 text-white sm:p-7 ${state.discoverable ? "bg-emerald-700" : "bg-[linear-gradient(135deg,#006b88,#0083a6)]"}`}>
       <div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-white/70">Marketplace setup</p><h1 className="mt-2 font-serif text-3xl font-semibold sm:text-4xl">{state.discoverable ? "Your salon is discoverable" : "Complete your public listing"}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">{state.discoverable ? "Clients can find your salon on the homepage and in search results." : "Complete every required gate below. Progress only reaches 100% when each live marketplace requirement passes."}</p></div><b className="font-serif text-4xl">{state.progress}%</b></div>
       <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-magenta transition-all" style={{ width: `${state.progress}%` }}/></div>
       {!state.eligibility.active_status || !state.eligibility.active_subscription ? <p className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-5">You can prepare the checklist now. Going live also requires an Active salon status and an active subscription.</p> : null}

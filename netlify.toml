@@ -14,3 +14,6 @@
 
 [functions."media-cleanup"]
   schedule = "15 4 * * *"
+
+[functions."pickup-reservation-cleanup"]
+  schedule = "*/15 * * * *"

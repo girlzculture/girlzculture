@@ -44,7 +44,7 @@ const defaultMobileMenu:NavigationItem[]=[...defaultHeader.map(item=>({...item,s
 export async function PublicHeader({ active }: { active?: "styles" | "salons" | "how" | "about" | "blog" }) {
   const[headerItems,mobileItems]=await Promise.all([getNavigationItems("header",defaultHeader),getNavigationItems("mobile_menu",defaultMobileMenu)]);
   return (
-    <header data-language-selector-host className="gc-brand-header relative z-40 border-b border-plum/[0.08] backdrop-blur-xl">
+    <header role="banner" data-language-selector-host className="gc-brand-header relative z-40 border-b border-plum/[0.08] backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu links={mobileItems}/><Wordmark compact /></div>
 
@@ -65,7 +65,7 @@ export async function PublicHeader({ active }: { active?: "styles" | "salons" | 
           <Link href="/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta md:inline-flex">
             <LocalizedText messageKey="nav.login" fallback="Log in"/>
           </Link>
-          <Link href="/login" className="gc-brand-primary-action hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(214,24,107,0.18)] transition hover:-translate-y-0.5 md:inline-flex">
+          <Link href="/login" className="gc-brand-primary-action hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 md:inline-flex">
             <LocalizedText messageKey="nav.signup" fallback="Sign up"/>
           </Link>
         </div>
@@ -81,7 +81,7 @@ export async function CustomerBottomNav({ active = "home" }: { active?: ActiveTa
   return (
     <nav
       aria-label="Customer navigation"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-[#fffdfa]/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(26,18,32,0.08)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
     >
       <div className="mx-auto grid max-w-md grid-cols-5">
         {items.map((item) => {
@@ -124,7 +124,7 @@ const trustItems = [
 
 export function TrustStrip() {
   return (
-    <section aria-label="Why clients trust Girlz Culture" className="hidden bg-[linear-gradient(110deg,#24102b_0%,#35123b_50%,#211027_100%)] text-white md:block">
+    <section aria-label="Why clients trust Girlz Culture" className="hidden bg-teal text-white md:block">
       <div className="mx-auto grid w-full max-w-[1760px] gap-0 px-5 py-5 sm:grid-cols-3 sm:px-8 lg:px-12 2xl:px-16">
         {trustItems.map((item, index) => {
           const Icon = item.icon;

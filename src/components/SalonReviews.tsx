@@ -88,7 +88,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
   const showNext = () => setActiveIndex((current) => localReviews.length ? (current + 1) % localReviews.length : 0);
 
   return (
-    <section id="reviews" className="rounded-[15px] border border-plum/10 bg-white/75 p-4 shadow-[0_5px_18px_rgba(26,18,32,0.05)] sm:p-5">
+    <section id="reviews" className="rounded-[15px] border border-plum/10 bg-white/75 p-4 shadow-[0_5px_18px_rgba(13,17,20,0.05)] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="font-serif text-[24px] font-semibold text-ink">Reviews</h2>

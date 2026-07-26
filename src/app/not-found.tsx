@@ -7,7 +7,7 @@ export default function NotFound() {
     <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0">
       <PublicHeader />
       <section className="mx-auto grid min-h-[70vh] w-full max-w-3xl place-items-center px-4 py-16 text-center sm:px-6">
-        <div className="w-full rounded-[24px] border border-plum/10 bg-white p-8 shadow-[0_18px_55px_rgba(26,18,32,.08)] sm:p-12">
+        <div className="w-full rounded-[24px] border border-plum/10 bg-white p-8 shadow-[0_18px_55px_rgba(13,17,20,.08)] sm:p-12">
           <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-blush/60 text-magenta"><Sparkles aria-hidden="true" size={26} /></span>
           <p className="mt-5 text-xs font-bold uppercase tracking-[.16em] text-magenta">Page not found</p>
           <h1 className="mt-3 font-serif text-4xl leading-tight text-plum sm:text-5xl">This page is not available.</h1>

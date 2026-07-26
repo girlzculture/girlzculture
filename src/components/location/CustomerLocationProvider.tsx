@@ -28,7 +28,7 @@ type LocationContextValue = {
   permissionError: string;
   setLocation: (location: CustomerLocation) => void;
   clearLocation: () => void;
-  useDeviceLocation: () => Promise<void>;
+  useDeviceLocation: () => Promise<boolean>;
 };
 
 export const CUSTOMER_LOCATION_STORAGE_KEY =
@@ -266,10 +266,11 @@ export default function CustomerLocationProvider({ children }: { children: React
       setPermissionError(
         "Location is unavailable in this browser. Enter a city or ZIP instead.",
       );
-      return;
+      return false;
     }
     try {
       setLocation(await devicePosition());
+      return true;
     } catch (error) {
       const positionError = error as GeolocationPositionError;
       const message =
@@ -279,6 +280,7 @@ export default function CustomerLocationProvider({ children }: { children: React
             ? "Location took too long. Enter a city or ZIP instead."
             : "We could not determine your location. Enter a city or ZIP instead.";
       setPermissionError(message);
+      return false;
     }
   }, [setLocation]);
 

@@ -11,13 +11,13 @@ export type EmailBrandTheme = {
   bodyFont: string;
 };
 const DEFAULT_EMAIL_THEME: EmailBrandTheme = {
-  primary: "#C65A3A",
-  cta: "#C65A3A",
-  page: "#FFF8F0",
-  card: "#FFF8F0",
-  heading: "#281F16",
-  body: "#281F16",
-  muted: "#6B7A4E",
+  primary: "#0083A6",
+  cta: "#0083A6",
+  page: "#FFFFFF",
+  card: "#FFFFFF",
+  heading: "#0D1114",
+  body: "#0D1114",
+  muted: "#52616A",
   headingFont: "Playfair Display",
   bodyFont: "Montserrat",
 };

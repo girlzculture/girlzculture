@@ -108,6 +108,9 @@ async function POSTHandler(request: Request) {
       );
     }
     if (admin && jobId) {
+      const notConfigured =
+        error instanceof Error &&
+        error.message === "VIDEO_TRANSCODER_NOT_CONFIGURED";
       const reference = await capturePlatformError({
         request,
         admin,
@@ -118,13 +121,17 @@ async function POSTHandler(request: Request) {
         actorId: userId,
         recordType: "video_processing_job",
         recordId: jobId,
-        provider: "media-transcoder",
-        safeMessage: "The video could not be prepared for browser playback.",
+        provider: "cloudinary",
+        safeMessage: notConfigured
+          ? "The secure video-processing provider is not configured."
+          : "The video could not be prepared for browser playback.",
       });
       await admin.from("video_processing_jobs").update({
         status: "Failed",
         progress_percent: 0,
-        safe_error_code: "VIDEO_PROCESSING_FAILED",
+        safe_error_code: notConfigured
+          ? "VIDEO_TRANSCODER_NOT_CONFIGURED"
+          : "VIDEO_PROCESSING_FAILED",
         error_reference: reference,
         updated_at: new Date().toISOString(),
         source_cleanup_after: new Date(
@@ -134,9 +141,11 @@ async function POSTHandler(request: Request) {
         original_preserved: true,
       }).eq("id", jobId);
       return Response.json({
-        error: `We couldn't prepare this video. Retry it or contact support with reference ${reference}.`,
+        error: notConfigured
+          ? `Video processing is not configured for this environment. Contact the platform owner with reference ${reference}.`
+          : `We couldn't prepare this video. Retry it or contact support with reference ${reference}.`,
         request_id: reference,
-      }, { status: 502 });
+      }, { status: notConfigured ? 503 : 502 });
     }
     return errorResponse(error, "Unable to start video processing.");
   }

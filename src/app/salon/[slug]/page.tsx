@@ -312,8 +312,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
-            <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-[#f7e7df] px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? verifiedLabel : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
-            <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-[#2d1237] sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
+            <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-blush px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? verifiedLabel : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
+            <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-charcoal sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span><SalonDistance latitude={salon.latitude} longitude={salon.longitude}/></div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span><span className="text-ink/55">({reviewCount} reviews)</span></> : <span className="rounded-full bg-blush px-2.5 py-1 font-bold text-plum">New</span>}</div>
 
@@ -322,7 +322,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
                 const Icon = trustIcons[index] || ShieldCheck;
                 return (
                   <div key={label} className="flex min-h-[58px] items-center gap-2 rounded-[11px] border border-plum/10 bg-white/65 px-2.5 py-2">
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f9ece5] text-amber"><Icon size={16} /></span>
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blush text-amber"><Icon size={16} /></span>
                     <span className="min-w-0 text-[9px] font-semibold leading-tight text-ink">{label}</span>
                   </div>
                 );
@@ -332,7 +332,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             {salon.description?.trim() ? <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description}</p> : null}
 
             <div className="mt-4 flex items-center gap-2">
-              <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(214,24,107,0.18)] transition hover:bg-[#bb145d]">Book Appointment</Link>
+              <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link>
               <SalonProfileActions
                 salonId={salon.id}
                 salonName={salon.name || "Salon"}
@@ -347,7 +347,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </section>
 
         {promotionCards.length ? (
-          <section aria-labelledby="current-offers" className="mb-4 rounded-[13px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(243,217,228,.62),rgba(255,255,255,.78))] p-3 sm:p-4">
+          <section aria-labelledby="current-offers" className="mb-4 rounded-[13px] border border-magenta/20 bg-[linear-gradient(105deg,rgba(245,247,248,.62),rgba(255,255,255,.78))] p-3 sm:p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="current-offers" className="flex items-center gap-2 font-serif text-lg font-semibold text-plum"><Tag size={15} className="text-magenta"/>Current Offers</h2><p className="text-[10px] text-ink/55">Eligible services and products only</p></div>
             <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] lg:grid lg:grid-cols-3 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
               {promotionCards.map(({ promotion, eligibleStyles, eligibleProducts, href }) => (
@@ -384,7 +384,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             <div className="mt-5 -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
               {products.map((product, index) => {
                 const offer = bestPromotionForContext(promotions, { salonId: salon.id, productId: product.id || null, basePrice: Number(product.price || 0), selectedAddons: [], subtotal: Number(product.price || 0) });
-                return <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}${offer ? `?promotion=${encodeURIComponent(String(offer.promotion.id || ""))}` : ""}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(26,18,32,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
+                return <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}${offer ? `?promotion=${encodeURIComponent(String(offer.promotion.id || ""))}` : ""}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(13,17,20,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
                   <div className="relative aspect-square w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}{offer ? <span className="absolute bottom-2 left-2 rounded-full bg-amber px-2 py-1 text-[9px] font-bold text-ink">{promotionLabel(offer.promotion)}</span> : null}</div>
                   <div className="p-4"><div className="flex items-start justify-between gap-3"><h3 className="font-serif text-[19px] font-semibold leading-tight text-ink">{product.name}</h3><p className="shrink-0 text-right text-[13px] font-bold">{offer ? <><span className="block text-[10px] text-ink/40 line-through">${Number(product.price || 0).toFixed(2)}</span><span className="text-magenta">${offer.price.total.toFixed(2)}</span></> : `$${Number(product.price || 0).toFixed(2)}`}</p></div><p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/55">{product.description || "Available at the salon."}</p><p className="mt-3 text-[11px] font-bold text-magenta">{offer ? "View product offer" : "View product details"}</p></div>
                 </Link>;

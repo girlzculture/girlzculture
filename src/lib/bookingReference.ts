@@ -19,8 +19,13 @@ export function bookingReference(
 export function bookingSearchTerms(value: unknown) {
   const term = String(value || "").trim();
   if (!term) return { publicReference: "", uuid: "" };
-  return /^GC-[A-Z]+-\d{2}$/i.test(term)
-    ? { publicReference: term.toUpperCase(), uuid: "" }
+  const compactReference = /^GC[A-Z]+\d{2}$/i.test(term)
+    ? term.toUpperCase()
+    : /^GC-[A-Z]+-\d{2}$/i.test(term)
+      ? term.replaceAll("-", "").toUpperCase()
+      : "";
+  return compactReference
+    ? { publicReference: compactReference, uuid: "" }
     : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(term)
       ? { publicReference: "", uuid: term.toLowerCase() }
       : { publicReference: term.toUpperCase(), uuid: term };
@@ -38,5 +43,5 @@ export function bookingPublicReferenceFromNumber(value: number) {
     cursor = Math.floor(cursor / 26);
   }
   const suffix = ((value - 1) % 99) + 1;
-  return `GC-${letters}-${String(suffix).padStart(2, "0")}`;
+  return `GC${letters}${String(suffix).padStart(2, "0")}`;
 }

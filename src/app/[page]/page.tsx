@@ -83,7 +83,7 @@ export default async function InfoPage({
   if (!page) notFound();
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader />
-    <section className="bg-[radial-gradient(circle_at_80%_15%,rgba(224,163,78,.2),transparent_28%),linear-gradient(130deg,#25102d,#5b1a6b)] px-5 py-20 text-center text-white">
+    <section className="bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,.18),transparent_28%),linear-gradient(130deg,#006b88,#0083a6)] px-5 py-20 text-center text-white">
       {page.eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber">{page.eyebrow}</p> : null}
       <h1 className="mt-3 font-serif text-5xl sm:text-6xl">{page.hero_title || page.title}</h1>
       {page.hero_subtitle ? <p className="mx-auto mt-5 max-w-2xl leading-7 text-white/70">{page.hero_subtitle}</p> : null}

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Archive, CheckCircle2, Film, ImageIcon, Pause, Play, Search, Upload, XCircle } from "lucide-react";
 import { adminSupabase, getSessionForScope } from "@/lib/supabase";
 import { createVideoPoster, getVideoDuration, optimizeTrendingVideo, uploadTrendingFile } from "@/lib/videoUploadClient";
+import NumericInput from "@/components/forms/NumericInput";
 
 type Row = Record<string, any>;
 type NumericValue = number | "";
@@ -458,7 +459,8 @@ function Label({ text, children }: { text: string; children: React.ReactNode }) 
 
 function Field({ name, label, type = "text", defaultValue, placeholder, required = false, min, max, step, value, onValue }: { name: string; label: string; type?: string; defaultValue?: string | number; placeholder?: string; required?: boolean; min?: string; max?: string; step?: string; value?: NumericValue; onValue?: (value: NumericValue) => void }) {
   const numeric = type === "number";
-  return <Label text={label}><input key={onValue ? undefined : `${name}-${defaultValue}`} name={name} type={type} inputMode={numeric ? (step === "1" ? "numeric" : "decimal") : undefined} required={required} defaultValue={onValue ? undefined : defaultValue} value={onValue ? value : undefined} onChange={onValue ? (event) => onValue(event.target.value === "" ? "" : Number(event.target.value)) : undefined} onKeyDown={numeric ? (event) => { if (/[eE+]/.test(event.key) || (event.key === "-" && Number(min ?? 0) >= 0)) event.preventDefault(); } : undefined} placeholder={placeholder} min={min} max={max} step={step} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" /></Label>;
+  const decimals = String(step || "1").includes(".") ? String(step).split(".")[1].length : 0;
+  return <Label text={label}>{numeric ? <NumericInput key={onValue ? undefined : `${name}-${defaultValue}`} name={name} integer={decimals === 0} decimalPlaces={decimals} required={required} defaultValue={onValue ? undefined : defaultValue} value={onValue ? value : undefined} onValueChange={onValue ? (draft) => onValue(draft === "" ? "" : Number(draft)) : undefined} placeholder={placeholder} min={min == null ? undefined : Number(min)} max={max == null ? undefined : Number(max)} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" /> : <input key={`${name}-${defaultValue}`} name={name} type={type} required={required} defaultValue={defaultValue} placeholder={placeholder} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" />}</Label>;
 }
 
 function Select({ name, label, defaultValue, options }: { name: string; label: string; defaultValue: string; options: string[] }) { return <Label text={label}><select key={`${name}-${defaultValue}`} name={name} defaultValue={defaultValue} className="min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal">{options.map((option) => <option value={option} key={option}>{option || "Attach later"}</option>)}</select></Label>; }

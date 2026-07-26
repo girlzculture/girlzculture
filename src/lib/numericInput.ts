@@ -36,7 +36,7 @@ export function normalizeNumericDraft(
   const negative = allowNegative && raw.startsWith("-");
   raw = raw.replace(/-/g, "");
   if (integer) {
-    const digits = raw.replace(/\D/g, "");
+    const digits = raw.split(".")[0].replace(/\D/g, "");
     return `${negative && digits ? "-" : ""}${digits}`;
   }
 

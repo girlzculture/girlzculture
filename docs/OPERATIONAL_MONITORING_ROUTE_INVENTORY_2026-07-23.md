@@ -33,6 +33,7 @@ Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/featured-campaigns` | GET, POST | protected | Covered |
 | `/api/admin/finance` | GET | protected | Covered |
 | `/api/admin/finance/product-refund` | POST | provider-backed | Covered |
+| `/api/admin/homepage-products` | GET, POST | provider-backed | Covered |
 | `/api/admin/identity-conflicts` | GET, PATCH | protected | Covered |
 | `/api/admin/identity-deletion` | GET, POST | protected | Covered |
 | `/api/admin/inbox-counts` | GET | protected | Covered |
@@ -65,6 +66,7 @@ Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-m
 | `/api/bookings/reminders` | POST | provider-backed | Covered |
 | `/api/complaints` | GET, POST | provider-backed | Covered |
 | `/api/concierge/search` | POST | provider-backed | Covered |
+| `/api/commerce/pickup-cleanup` | POST | protected | Covered |
 | `/api/config` | GET | public/read-only | Covered |
 | `/api/customer/favorites` | POST, DELETE | protected | Covered |
 | `/api/discovery/availability` | POST | expected-only | Covered |
@@ -84,9 +86,11 @@ Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-m
 | `/api/monitor/client-provider` | POST | provider-backed | Covered |
 | `/api/newsletter` | POST | expected-only | Covered |
 | `/api/notifications` | GET, POST | protected | Covered |
+| `/api/pickup/[token]` | GET, POST | provider-backed | Covered |
 | `/api/promo/validate` | POST | expected-only | Covered |
 | `/api/promotions/salon` | GET | public/read-only | Covered |
 | `/api/push/subscription` | GET, POST, DELETE | provider-backed | Covered |
+| `/api/reviews/[token]` | GET, POST | public/read-only | Covered |
 | `/api/salon/application` | POST | provider-backed | Covered |
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
@@ -109,6 +113,7 @@ Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-m
 | `/api/stripe/booking-status` | GET | provider-backed | Covered |
 | `/api/stripe/commerce-checkout` | POST | provider-backed | Covered |
 | `/api/stripe/commerce-status` | GET | provider-backed | Covered |
+| `/api/stripe/pickup-reservation` | POST | provider-backed | Covered |
 | `/api/stripe/portal` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/change` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/checkout` | POST | provider-backed | Covered |
@@ -122,6 +127,7 @@ Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-m
 |---|---|---|
 | `booking-reminders.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
 | `media-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
+| `pickup-reservation-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
 
 ## Server actions
 

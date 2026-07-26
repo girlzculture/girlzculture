@@ -141,7 +141,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId, salonSlug
             </button>
 
             {isOpen ? (
-              <div className="bg-[linear-gradient(105deg,rgba(243,217,228,0.55),rgba(251,244,238,0.65))] px-4 py-4 sm:px-5">
+              <div className="bg-[linear-gradient(105deg,rgba(245,247,248,0.55),rgba(255,255,255,0.65))] px-4 py-4 sm:px-5">
                 <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5 xl:grid-cols-[0.78fr_0.72fr_1.45fr_0.95fr]">
                   <div className="min-w-0">
                     <h4 className="text-[11px] font-bold text-plum">Length</h4>

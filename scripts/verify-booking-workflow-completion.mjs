@@ -48,7 +48,11 @@ assert.equal(
 );
 
 assert.match(availability, /includeAllStylists/);
-assert.match(availability, /availableResources/);
+assert.match(availability, /const available = resources\.filter/);
+assert.match(
+  availability,
+  /input\.includeAllStylists \? available : available\.slice\(0, 1\)/,
+);
 assert.match(rescheduleRoute, /bookingAvailability/);
 assert.match(rescheduleRoute, /includeAllStylists:\s*true/);
 assert.match(owner, /Date to search/);

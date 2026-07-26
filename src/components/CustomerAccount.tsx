@@ -87,7 +87,7 @@ export default function CustomerAccount() {
       <div data-language-selector-host className="flex items-center gap-2 sm:gap-4"><LanguageSelector compact/><Bell /><MessageSquare /><span className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
     </header>
     <div className="mx-auto grid max-w-[1720px] lg:grid-cols-[270px_1fr]">
-      <aside className="hidden min-h-[calc(100vh-80px)] bg-[linear-gradient(150deg,#4b0b58,#22092b)] p-6 text-white lg:flex lg:flex-col">
+      <aside className="hidden min-h-[calc(100vh-80px)] bg-charcoal p-6 text-white lg:flex lg:flex-col">
         <div className="flex items-center gap-4"><SafeImage src={customer?.avatar_url as string} fallbackSrc="/images/braids-knotless.jpg" alt={name} className="h-20 w-20 rounded-full object-cover"/><div><h2 className="font-serif text-xl">{name}</h2><p className="mt-1 flex items-center gap-1.5 text-sm text-amber"><Crown size={15} aria-hidden="true" />{String(customer?.membership_tier || "Member")}</p></div></div>
         <nav className="mt-7 space-y-2">{tabs.map(([id, label, Icon]) => <Link key={id} href={`/account?tab=${id}`} className={`flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm ${tab === id ? "bg-magenta/55" : "hover:bg-white/10"}`}><Icon size={20}/>{label}</Link>)}</nav>
         <RoleLogoutButton scope="customer" className="mt-auto flex items-center gap-3 rounded-[10px] px-4 py-3 hover:bg-white/10" />

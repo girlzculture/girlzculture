@@ -13,7 +13,7 @@ export default function Submitted() {
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader />
     <div className="mx-auto max-w-[1450px] px-4 py-10 text-center sm:px-8">
-      <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-magenta text-white shadow-[0_14px_40px_rgba(214,24,107,.25)]"><Check size={54} strokeWidth={3}/></div>
+      <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-magenta text-white shadow-[0_14px_40px_rgba(0,131,166,.25)]"><Check size={54} strokeWidth={3}/></div>
       <h1 className="mt-6 font-serif text-5xl font-semibold text-plum">Application submitted!</h1>
       <p className="mt-3 text-xl">Thank you for joining Girlz Culture.</p>
       <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-ink/75">Our team will review your application. Approval opens subscription and setup; the salon becomes public only when every configured marketplace requirement passes.</p>

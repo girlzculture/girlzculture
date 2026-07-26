@@ -52,12 +52,17 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
       refund_status: refund.refundStatus,
       refund_amount: refund.refundAmount,
       refund_funding_state: refund.fundingState,
+      refund_eligibility_status: "Eligible - salon cancelled",
+      refund_policy_outcome: "Full deposit refund requested",
       refund_initiated_by: "salon",
       refund_requested_at: refund.refundId ? cancelledAt.toISOString() : null,
       refund_provider_accepted_at: refund.providerAcceptedAt,
       refund_completed_at: refund.completedAt,
       stripe_refund_id: refund.refundId || null,
       stripe_transfer_reversal_id: refund.transferReversalId || null,
+      transfer_status: refund.transferStatus,
+      payout_status: refund.payoutStatus,
+      net_amount_owed_salon: refund.netAmountOwedSalon,
       deposit_status: refund.refundStatus === "Succeeded" ? "Refunded" : refund.refundStatus === "Pending" ? "Refund pending" : booking.deposit_status,
     };
     const { data: cancelled, error: updateError } = await admin.from("bookings").update(patch).eq("id", booking.id).eq("salon_id", salon.id).select("*").single();

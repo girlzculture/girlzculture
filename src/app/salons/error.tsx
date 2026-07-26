@@ -7,7 +7,7 @@ export default function SalonDiscoveryError({ error, reset }: { error: Error & {
   void error;
 
   return (
-    <section role="alert" className="mx-auto my-12 w-[calc(100%-2rem)] max-w-2xl rounded-[20px] border border-plum/10 bg-white p-8 text-center shadow-[0_14px_45px_rgba(26,18,32,.07)]">
+    <section role="alert" className="mx-auto my-12 w-[calc(100%-2rem)] max-w-2xl rounded-[20px] border border-plum/10 bg-white p-8 text-center shadow-[0_14px_45px_rgba(13,17,20,.07)]">
       <SearchX className="mx-auto text-magenta" size={38} aria-hidden="true" />
       <h1 className="mt-4 font-serif text-3xl text-plum">Nearby salons could not be loaded.</h1>
       <p className="mt-2 text-sm leading-6 text-ink/65">Try the search again. You can also browse styles while this section reconnects.</p>

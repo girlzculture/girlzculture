@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { Archive, Eye, Pause, Pencil, Play, Plus, Tag } from "lucide-react";
+import NumericInput from "@/components/forms/NumericInput";
 
 type Row = Record<string, unknown> & { id?: string };
 type Props = {
@@ -99,16 +100,16 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
         <Label text="Internal title"><input required name="title" defaultValue={String(editing?.title || "")} placeholder="Summer knotless special" className={inputClass}/></Label>
         <Label text="Public headline"><input required name="public_headline" defaultValue={String(editing?.public_headline || editing?.title || "")} placeholder="Save on your next style" className={inputClass}/></Label>
         <Label text="Offer type"><select name="promotion_type" defaultValue={String(editing?.promotion_type || "percentage")} className={inputClass}><option value="percentage">Percentage discount</option><option value="fixed">Fixed discount</option><option value="free_addon">Free eligible add-on</option><option value="free_service">Free eligible service</option><option value="descriptive">Descriptive offer</option></select></Label>
-        <Label text="Discount value"><input name="discount_value" type="number" inputMode="decimal" min="0" max="10000" step="0.01" defaultValue={String(editing?.discount_value ?? "")} placeholder="20" className={`${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}/></Label>
+        <Label text="Discount value"><NumericInput name="discount_value" min={0} max={10000} decimalPlaces={2} defaultValue={String(editing?.discount_value ?? "")} placeholder="20" className={inputClass}/></Label>
         <Label text="Customer-facing discount label"><input name="discount_label" defaultValue={String(editing?.discount_label || "")} placeholder="20% off" className={inputClass}/></Label>
         <Label text="Status"><select name="status" defaultValue={String(editing?.status || "Draft")} className={inputClass}><option>Draft</option><option>Active</option><option>Paused</option></select></Label>
         <Label text="Starts"><input name="starts_at" type="datetime-local" defaultValue={localDateTime(editing?.starts_at)} className={inputClass}/></Label>
         <Label text="Ends"><input name="ends_at" type="datetime-local" defaultValue={localDateTime(editing?.ends_at)} className={inputClass}/></Label>
         <Label text="Time zone"><input name="timezone" defaultValue={String(editing?.timezone || timeZone)} className={inputClass}/></Label>
         <Label text="Applies to"><select value={scope} onChange={(event) => { setScope(event.target.value); setSelectedTargets([]); }} className={inputClass}><option value="salon">Entire salon</option><option value="services">Selected services</option><option value="service_groups">Selected service groups</option><option value="master_styles">Selected styles</option><option value="products">Selected products</option><option value="addons">Selected add-ons</option></select></Label>
-        <Label text="Minimum booking subtotal"><input name="minimum_subtotal" type="number" min="0" step="0.01" defaultValue={String((editing?.restrictions as Row | undefined)?.minimum_subtotal ?? "")} className={`${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}/></Label>
-        <Label text="Total use limit (0 = unlimited)"><input name="usage_limit" type="number" min="0" step="1" defaultValue={String((editing?.restrictions as Row | undefined)?.usage_limit ?? 0)} className={inputClass}/></Label>
-        <Label text="Uses per customer (0 = unlimited)"><input name="per_customer_limit" type="number" min="0" step="1" defaultValue={String((editing?.restrictions as Row | undefined)?.per_customer_limit ?? 0)} className={inputClass}/></Label>
+        <Label text="Minimum booking subtotal"><NumericInput name="minimum_subtotal" min={0} max={10000} decimalPlaces={2} defaultValue={String((editing?.restrictions as Row | undefined)?.minimum_subtotal ?? "")} className={inputClass}/></Label>
+        <Label text="Total use limit (0 = unlimited)"><NumericInput name="usage_limit" integer min={0} max={1000000} defaultValue={String((editing?.restrictions as Row | undefined)?.usage_limit ?? 0)} className={inputClass}/></Label>
+        <Label text="Uses per customer (0 = unlimited)"><NumericInput name="per_customer_limit" integer min={0} max={1000000} defaultValue={String((editing?.restrictions as Row | undefined)?.per_customer_limit ?? 0)} className={inputClass}/></Label>
         <Label text="Public terms"><input name="terms" defaultValue={String((editing?.restrictions as Row | undefined)?.terms || "")} placeholder="One offer per appointment" className={inputClass}/></Label>
         <label className="md:col-span-2 xl:col-span-4"><span className="text-[10px] font-bold">Description</span><textarea name="description" rows={3} defaultValue={String(editing?.description || "")} className={`${inputClass} py-3`}/></label>
         {targets.length ? <fieldset className="rounded-lg border border-plum/10 p-3 md:col-span-2 xl:col-span-4"><legend className="px-2 text-[10px] font-bold">Eligible targets</legend><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{targets.map((target) => <label key={target.id} className="flex items-center gap-2 rounded-lg bg-cream p-3 text-xs"><input type="checkbox" checked={selectedTargets.includes(target.id)} onChange={() => setTarget(target.id)} className="accent-magenta"/>{target.label}</label>)}</div></fieldset> : null}

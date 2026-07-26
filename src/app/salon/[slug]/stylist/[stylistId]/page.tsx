@@ -41,7 +41,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
       <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         <Link href={`/salon/${slug}`} className="inline-flex items-center gap-2 text-[12px] font-semibold text-plum hover:text-magenta"><ArrowLeft size={16} />Back to {salon.name || "salon"}</Link>
 
-        <section className="mt-5 overflow-hidden rounded-[20px] border border-plum/10 bg-white/75 shadow-[0_18px_50px_rgba(26,18,32,0.07)]">
+        <section className="mt-5 overflow-hidden rounded-[20px] border border-plum/10 bg-white/75 shadow-[0_18px_50px_rgba(13,17,20,0.07)]">
           <div className="grid lg:grid-cols-[0.72fr_1.28fr]">
             <div className="relative min-h-[360px] bg-blush/55 sm:min-h-[480px]">
               {stylist.avatar_url ? <SafeImage src={stylist.avatar_url} fallbackSrc={stylist.avatar_url} alt={stylist.name || "Stylist"} priority className="absolute inset-0 h-full w-full object-cover" /> : <span className="absolute inset-0 grid place-items-center text-plum/35"><UserRound size={104} strokeWidth={1.1} aria-hidden="true" /></span>}
@@ -56,7 +56,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
               </div>
               {stylist.bio ? <p className="mt-6 max-w-2xl text-[14px] leading-7 text-ink/75">{stylist.bio}</p> : <p className="mt-6 text-[13px] text-ink/55">This stylist has not added a full description yet.</p>}
               {specialties.length ? <div className="mt-6"><h2 className="flex items-center gap-2 text-[12px] font-bold text-plum"><Scissors size={16} />Specialties</h2><div className="mt-3 flex flex-wrap gap-2">{specialties.map((specialty) => <span key={specialty} className="rounded-full border border-plum/10 bg-white px-3 py-2 text-[11px] text-ink/70">{specialty}</span>)}</div></div> : null}
-              <Link href={`/salon/${slug}/book?stylist=${stylist.id}`} className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(214,24,107,0.2)] hover:bg-[#bb145d]"><CalendarDays size={17} />Book with {stylist.name || "this stylist"}</Link>
+              <Link href={`/salon/${slug}/book?stylist=${stylist.id}`} className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(0,131,166,0.2)] hover:bg-primary-hover"><CalendarDays size={17} />Book with {stylist.name || "this stylist"}</Link>
             </div>
           </div>
         </section>

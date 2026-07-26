@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ImageIcon, Monitor, RotateCcw, Save, Smartphone, Tablet, Upload } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Asset = {
   asset_key: string;
@@ -60,7 +61,7 @@ export default function BrandAppearanceManager() {
       headers: await authHeaders(),
       cache: "no-store",
     });
-    const body = await response.json();
+    const body = await readApiResponse(response, "Unable to load brand assets.");
     if (!response.ok) throw new Error(body.error || "Unable to load brand assets.");
     const rows = Array.isArray(body.assets) ? body.assets as Asset[] : [];
     setAssets(rows);
@@ -91,8 +92,12 @@ export default function BrandAppearanceManager() {
 
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // React's currentTarget is intentionally only valid during the event
+    // callback. Capture the real form before any await so production builds
+    // never dereference a cleared synthetic-event currentTarget.
+    const form = event.currentTarget;
     if (!selected) return;
-    const file = new FormData(event.currentTarget).get("file");
+    const file = new FormData(form).get("file");
     if (!(file instanceof File) || !file.size) {
       setMessage("Choose an image before uploading.");
       return;
@@ -111,10 +116,10 @@ export default function BrandAppearanceManager() {
         headers: await authHeaders(),
         body: data,
       });
-      const body = await response.json();
+      const body = await readApiResponse(response, "Unable to upload this image.");
       if (!response.ok) throw new Error(body.error || "Unable to upload this image.");
       setMessage("Draft uploaded. Review every preview, then publish when ready.");
-      event.currentTarget.reset();
+      form.reset();
       await load(selected.asset_key);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to upload this image.");
@@ -143,7 +148,7 @@ export default function BrandAppearanceManager() {
           target_version: targetVersion,
         }),
       });
-      const body = await response.json();
+      const body = await readApiResponse(response, "Unable to update this image.");
       if (!response.ok) throw new Error(body.error || "Unable to update this image.");
       setMessage(
         kind === "publish"
@@ -201,7 +206,7 @@ export default function BrandAppearanceManager() {
 }
 
 function Preview({ icon, label, width, height, url, alt, x, y }: { icon: React.ReactNode; label: string; width: string; height: number; url: string; alt: string; x: number; y: number }) {
-  return <div className="rounded-xl border border-plum/10 p-3"><p className="flex items-center gap-2 text-[10px] font-bold text-plum">{icon}{label}</p><div style={{ width, height }} className="mx-auto mt-3 overflow-hidden rounded-lg bg-[linear-gradient(135deg,#fbf4ee,#f3d9e4)]">{url ? <img src={url} alt={alt} className="h-full w-full object-contain" style={{ objectPosition: `${x}% ${y}%` }}/> : <span className="grid h-full place-items-center text-[10px] text-ink/40">Upload a draft</span>}</div></div>;
+  return <div className="rounded-xl border border-plum/10 p-3"><p className="flex items-center gap-2 text-[10px] font-bold text-plum">{icon}{label}</p><div style={{ width, height }} className="mx-auto mt-3 overflow-hidden rounded-lg bg-[linear-gradient(135deg,#FFFFFF,#F5F7F8)]">{url ? <img src={url} alt={alt} className="h-full w-full object-contain" style={{ objectPosition: `${x}% ${y}%` }}/> : <span className="grid h-full place-items-center text-[10px] text-ink/40">Upload a draft</span>}</div></div>;
 }
 
 function ThemeSurfacePreviews() {

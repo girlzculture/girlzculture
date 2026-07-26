@@ -34,7 +34,7 @@ assert.equal(normalizeNumericDraft("12.50"), "12.50", "decimals must remain edit
 assert.equal(normalizeNumericDraft("$1,234.50"), "1234.50", "pasted currency must normalize");
 assert.equal(normalizeNumericDraft("84abc"), "84", "replacement text keeps digits");
 assert.equal(normalizeNumericDraft("2.71828", { maximumDecimalPlaces: 3 }), "2.718");
-assert.equal(normalizeNumericDraft("15.9", { integer: true }), "159");
+assert.equal(normalizeNumericDraft("15.9", { integer: true }), "15");
 assert.equal(parseNumericDraft("", { label: "Optional", required: false }), null);
 assert.equal(
   parseNumericDraft("24.36", { label: "Price", minimum: 0, maximum: 10000 }),
@@ -56,13 +56,13 @@ for (const file of numericComponentFiles) {
   );
   const diagnostics = parsed.parseDiagnostics || [];
   assert.equal(diagnostics.length, 0, `${file} must parse as TSX`);
-  assert.match(source, /type=.number/, `${file} no longer contains an inventoried numeric control`);
+  assert.match(source, /(?:type=.number|NumericInput)/, `${file} no longer contains an inventoried numeric control`);
 }
 
 const checks = [
   ["number spinners disabled", /input\[type="number"\][\s\S]*appearance:\s*textfield[\s\S]*::-webkit-inner-spin-button/.test(globals)],
   ["new service prices start blank", /useState<NumericValue>\(""\)/.test(structured)],
-  ["clearing a controlled number stays blank", /onChange=\{\(event\) => onChange\(event\.target\.value\)\}/.test(structured)],
+  ["clearing a controlled number stays blank", /onValueChange=\{onChange\}/.test(structured)],
   ["new option prices start blank", /price_add: ""/.test(structured)],
   ["new material prices start blank", /price: ""/.test(structured)],
   ["legacy service fields no longer default to zero", !/defaultValue=\{active\?\.(?:duration_min_hours|duration_max_hours|base_price|years_experience|price)\|\|0\}/.test(legacyOwner)],
@@ -70,8 +70,8 @@ const checks = [
   ["ZIP remains text", /label="ZIP Code"[\s\S]{0,180}value=\{form\.zip_code\}/.test(application)],
   ["server rejects non-finite application counts", /Number\.isFinite\(yearsInOperation\)[\s\S]*Number\.isFinite\(stylistCount\)/.test(applicationApi)],
   ["database pricing and duration bounds", /styles_price_bounds_check[\s\S]*styles_duration_bounds_check[\s\S]*styles_validate_numeric_bounds/.test(bounds)],
-  ["shared draft normalization is used by a controlled form", /normalizeNumericDraft/.test(application)],
-  ["video trim permits a temporary blank", /event\.target\.value === "" \? "" : Number\(event\.target\.value\)/.test(read("src/components/admin/AdminTrendingCampaigns.tsx"))],
+  ["shared numeric input is used by a controlled form", /NumericInput/.test(application)],
+  ["video trim permits a temporary blank", /draft === "" \? "" : Number\(draft\)/.test(read("src/components/admin/AdminTrendingCampaigns.tsx"))],
   ["all numeric component files inventoried", numericComponentFiles.length === 16],
 ];
 

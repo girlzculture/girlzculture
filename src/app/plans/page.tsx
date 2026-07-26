@@ -16,7 +16,7 @@ export default function PlansPage() {
         {PLAN_ORDER.map((name) => {
           const plan = SUBSCRIPTION_PLANS[name];
           const popular = name === "Growth";
-          return <article key={name} className={`relative rounded-[20px] border bg-white/80 p-7 shadow-[0_18px_55px_rgba(26,18,32,.06)] ${popular ? "border-magenta ring-2 ring-magenta/10" : "border-plum/10"}`}>
+          return <article key={name} className={`relative rounded-[20px] border bg-white/80 p-7 shadow-[0_18px_55px_rgba(13,17,20,.06)] ${popular ? "border-magenta ring-2 ring-magenta/10" : "border-plum/10"}`}>
             {popular ? <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-magenta px-4 py-1.5 text-[10px] font-bold uppercase tracking-[.1em] text-white">Most Popular</span> : null}
             <span className="grid h-12 w-12 place-items-center rounded-full bg-blush text-plum">{name === "Premium" ? <Crown /> : <BadgeCheck />}</span>
             <h2 className="mt-5 font-serif text-3xl font-semibold text-plum">{name}</h2>

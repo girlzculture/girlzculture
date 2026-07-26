@@ -22,7 +22,7 @@ function ContentCardView({ card, homepage = false }: { card: ContentCard; homepa
       {card.body ? <p className={homepage ? "mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60" : "mt-2 whitespace-pre-wrap text-sm leading-6 text-ink/65"}>{card.body}</p> : null}
     </div> : null}
   </>;
-  const classes = `block h-full overflow-hidden border border-plum/10 bg-white shadow-[0_8px_28px_rgba(26,18,32,.06)] ${homepage ? "rounded-[14px]" : "rounded-[16px]"}`;
+  const classes = `block h-full overflow-hidden border border-plum/10 bg-white shadow-[0_8px_28px_rgba(13,17,20,.06)] ${homepage ? "rounded-[14px]" : "rounded-[16px]"}`;
   return card.href ? <Link href={card.href} className={classes}>{content}</Link> : <article className={classes}>{content}</article>;
 }
 
@@ -32,7 +32,7 @@ export default function PublicContentSections({ sections, className = "", varian
   return <div className={className}>{visible.map((section, index) => {
     const type = section.type || "text";
     const cards = Array.isArray(section.cards) ? section.cards.slice(0, type === "community_carousel" ? 20 : 12) : [];
-    if (type === "banner") return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1660px] px-4 sm:px-8"><div className="rounded-[18px] bg-[linear-gradient(120deg,#311138,#5b1a6b)] px-6 py-8 text-white sm:px-10"><h2 className="font-serif text-3xl">{section.title}</h2>{section.body ? <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white/75">{section.body}</p> : null}{section.cta_href && section.cta_label ? <Link href={section.cta_href} className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 text-xs font-bold">{section.cta_label}</Link> : null}</div></section>;
+    if (type === "banner") return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1660px] px-4 sm:px-8"><div className="rounded-[18px] bg-[linear-gradient(120deg,#006b88,#0083a6)] px-6 py-8 text-white sm:px-10"><h2 className="font-serif text-3xl">{section.title}</h2>{section.body ? <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white/80">{section.body}</p> : null}{section.cta_href && section.cta_label ? <Link href={section.cta_href} className="mt-5 inline-flex rounded-lg bg-white px-5 py-3 text-xs font-bold text-teal">{section.cta_label}</Link> : null}</div></section>;
     if (type === "text") return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1200px] px-4 sm:px-8"><article className="rounded-[18px] border border-plum/10 bg-white p-6 sm:p-8">{section.title ? <h2 className="font-serif text-3xl text-plum">{section.title}</h2> : null}{section.body ? <RichTextBody value={section.body} className={section.title ? "mt-4" : ""} /> : null}</article></section>;
     if (variant === "homepage") return <section key={section.id || index} className="pb-4 pt-3 sm:pb-6">
       {section.title ? <h2 className="font-serif text-[22px] font-semibold leading-none tracking-[-0.025em] text-ink sm:text-[25px]">{section.title}</h2> : null}

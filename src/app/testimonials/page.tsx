@@ -19,7 +19,7 @@ export default async function TestimonialsPage() {
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader />
     <section className="relative overflow-hidden bg-plum px-5 py-16 text-center text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(214,24,107,.35),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(224,163,78,.22),transparent_28%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(0,131,166,.35),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(224,163,78,.22),transparent_28%)]" />
       <div className="relative">
         <p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber">{page.eyebrow || "Customer stories"}</p>
         <h1 className="mx-auto mt-3 max-w-4xl font-serif text-5xl leading-[.95] sm:text-6xl">{page.hero_title || page.title}</h1>
@@ -28,7 +28,7 @@ export default async function TestimonialsPage() {
     </section>
     <PublicContentSections sections={customSections} />
     <section className="mx-auto grid w-full max-w-[1320px] gap-5 px-5 py-12 sm:px-8 md:grid-cols-2 lg:grid-cols-3 lg:py-16">
-      {testimonials.map((testimonial, index) => <article key={`${testimonial.title}-${index}`} className="flex min-h-[280px] flex-col rounded-3xl border border-plum/10 bg-white p-6 shadow-[0_14px_45px_rgba(26,18,32,.06)]">
+      {testimonials.map((testimonial, index) => <article key={`${testimonial.title}-${index}`} className="flex min-h-[280px] flex-col rounded-3xl border border-plum/10 bg-white p-6 shadow-[0_14px_45px_rgba(13,17,20,.06)]">
         <Quote className="text-magenta" size={30} />
         <blockquote className="mt-4 flex-1 font-serif text-2xl leading-9 text-plum">“{testimonial.body}”</blockquote>
         <p className="mt-6 border-t border-plum/10 pt-4 text-sm font-bold text-ink">{testimonial.title}</p>

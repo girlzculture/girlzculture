@@ -7,6 +7,7 @@ const rules = read("src/lib/imageUpload.ts");
 const migration = read("supabase/migrations/20260720150000_unified_media_engine.sql");
 const application = read("src/components/SalonApplication.tsx");
 const review = read("src/components/ReviewForm.tsx");
+const reviewRoute = read("src/app/api/reviews/[token]/route.ts");
 
 const checks = [
   [upload.includes("Drag and drop or choose a file") && upload.includes("Save all crops"), "unified upload editor"],
@@ -17,7 +18,13 @@ const checks = [
   [rules.includes("logo:") && rules.includes("cover:") && rules.includes("avatar:") && rules.includes("product:") && rules.includes("review:"), "asset-specific profiles"],
   [migration.includes("create table if not exists public.media_upload_profiles") && migration.includes("attach_registered_media") && upload.includes("crop_metadata"), "media migration and atomic attachment"],
   [!application.includes('bucket="application-media"') && application.includes("Photos are added after approval"), "duplicate application media removed"],
-  [review.includes('folder={`reviews/${booking.id || ""}`}'), "booking-owned review path"],
+  [
+    review.includes("/api/reviews/${encodeURIComponent(token)}") &&
+      reviewRoute.includes("reviewTokenHash(token)") &&
+      reviewRoute.includes('admin.rpc("submit_verified_guest_review"') &&
+      !reviewRoute.includes("body.booking_id"),
+    "signed booking-owned guest review path",
+  ],
 ];
 for (const [passed, name] of checks) if (!passed) throw new Error(`Unified media verification failed: ${name}`);
 console.log("Verified reusable crop/resize previews, server validation, ownership-aware storage, media registry attachment, and post-approval application media setup.");

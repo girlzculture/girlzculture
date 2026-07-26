@@ -26,6 +26,7 @@ import { getSessionForScope, reportClientOperationalFailure, salonSupabase as su
 import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
 import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
+import NumericInput from "@/components/forms/NumericInput";
 import OwnerDashboardShell, {
   DashboardSection,
 } from "@/components/owner/OwnerDashboardShell";
@@ -67,6 +68,11 @@ import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
 import SalonProductOrders from "@/components/owner/SalonProductOrders";
+import {
+  bookingTransaction,
+  financeCsv,
+  summarizeBookingTransactions,
+} from "@/lib/financeLedgerCore";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -564,7 +570,7 @@ export default function OwnerDashboardApp({
   if (["new", "pending"].includes(lifecycleStatus))
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream p-5">
-        <div className="max-w-xl rounded-[22px] border border-plum/10 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]">
+        <div className="max-w-xl rounded-[22px] border border-plum/10 bg-white p-9 text-center shadow-[0_20px_60px_rgba(13,17,20,.08)]">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-plum">
             <Clock3 />
           </div>
@@ -588,7 +594,7 @@ export default function OwnerDashboardApp({
   if (lifecycleStatus === "offboarded")
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream p-5">
-        <div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(26,18,32,.08)]">
+        <div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(13,17,20,.08)]">
           <LockKeyhole className="mx-auto text-magenta" size={42} />
           <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
             Salon access is restricted
@@ -1505,7 +1511,7 @@ function Panel({
 }) {
   return (
     <section
-      className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(26,18,32,.035)] sm:p-5 ${className}`}
+      className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(13,17,20,.035)] sm:p-5 ${className}`}
     >
       {children}
     </section>
@@ -1849,7 +1855,7 @@ function MyPage({ c }: { c: Ctx }) {
       {addressWarning ? (
         <div
           role="alert"
-          className="mb-4 rounded-[12px] border border-amber/50 bg-[#fff8e8] p-4 text-sm text-ink"
+          className="mb-4 rounded-[12px] border border-amber/50 bg-coral/10 p-4 text-sm text-ink"
         >
           <b className="font-serif text-lg text-plum">Address needs review</b>
           <p className="mt-1 leading-6">
@@ -4145,36 +4151,59 @@ function Reviews({ c }: { c: Ctx }) {
 }
 
 function Earnings({ c }: { c: Ctx }) {
-  const completed = c.bookings.filter((b) =>
-    ["complete", "completed"].includes(String(b.status || "").toLowerCase()),
-  );
-  const paidDeposits = c.bookings.filter((b) =>
-    ["paid", "succeeded", "complete", "completed"].includes(
-      String(b.deposit_status || "").toLowerCase(),
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const timeZone = String(c.salon.time_zone || "America/New_York");
+  const styles = new Map(c.styles.map((row) => [String(row.id), row]));
+  const stylists = new Map(c.stylists.map((row) => [String(row.id), row]));
+  const transactions = c.bookings.map((booking) =>
+    bookingTransaction(
+      booking,
+      c.salon,
+      styles.get(String(booking.style_id)),
+      stylists.get(String(booking.stylist_id)),
     ),
   );
-  const total = completed.reduce(
-    (s, b) => s + Number(b.estimated_total || 0),
-    0,
-  );
-  const deposits = paidDeposits.reduce(
-    (s, b) => s + Number(b.deposit_amount || 0),
-    0,
-  );
-  const pending = c.bookings
-    .filter((b) => String(b.payout_status || "").toLowerCase() === "pending")
-    .reduce((s, b) => s + Number(b.deposit_amount || 0), 0);
-  const now = new Date();
-  const thisMonth = completed
-    .filter((b) => {
-      const d = new Date(String(b.appointment_datetime || b.created_at || ""));
-      return (
-        !Number.isNaN(d.getTime()) &&
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear()
-      );
-    })
-    .reduce((s, b) => s + Number(b.estimated_total || 0), 0);
+  const visible = transactions.filter((row) => {
+    const needle = query.trim().toLowerCase();
+    const matchesQuery =
+      !needle ||
+      [
+        row.public_reference,
+        row.customer,
+        row.service,
+        row.transaction_type,
+      ].some((value) => String(value || "").toLowerCase().includes(needle));
+    return (
+      matchesQuery &&
+      (status === "all" ||
+        String(row.financial_status || row.payout_status) === status)
+    );
+  });
+  const summary = summarizeBookingTransactions(visible);
+  const statuses = [
+    ...new Set(
+      transactions
+        .map((row) => String(row.financial_status || row.payout_status || ""))
+        .filter(Boolean),
+    ),
+  ].sort();
+  const money = (value: unknown) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(Number(value || 0));
+  function exportLedger() {
+    const blob = new Blob([financeCsv(visible, timeZone)], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `girlz-culture-salon-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
   return (
     <>
       <Title
@@ -4183,23 +4212,23 @@ function Earnings({ c }: { c: Ctx }) {
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
-          label="Paid Deposits"
-          value={`$${deposits.toLocaleString()}`}
+          label="Deposits received"
+          value={money(summary.deposits)}
           icon={CircleDollarSign}
         />
         <Metric
-          label="Completed Booking Value"
-          value={`$${total.toLocaleString()}`}
+          label="Refunds"
+          value={money(summary.refunds)}
           icon={CircleDollarSign}
         />
         <Metric
-          label="Pending Payouts"
-          value={`$${pending.toLocaleString()}`}
+          label="Net owed to salon"
+          value={money(summary.netOwed)}
           icon={Clock3}
         />
         <Metric
-          label="Completed This Month"
-          value={`$${thisMonth.toLocaleString()}`}
+          label="Remaining client balance"
+          value={money(summary.balanceDue)}
           icon={CalendarDays}
         />
       </div>
@@ -4229,7 +4258,7 @@ function Earnings({ c }: { c: Ctx }) {
                     "Stripe Connect requires the platform’s live Stripe credentials before onboarding can begin.",
                   )
                 }
-                className="mt-5 min-h-11 w-full rounded-[8px] bg-[linear-gradient(90deg,#5b1a6b,#d6186b)] text-xs font-bold text-white"
+                className="mt-5 min-h-11 w-full rounded-[8px] bg-[linear-gradient(90deg,#006b88,#0083a6)] text-xs font-bold text-white"
               >
                 Connect with Stripe
               </button>
@@ -4249,24 +4278,38 @@ function Earnings({ c }: { c: Ctx }) {
         </Panel>
         <Panel>
           <h2 className="font-serif text-xl text-plum">Earnings Trend</h2>
-          <p className="mt-3 font-serif text-3xl">${total.toLocaleString()}</p>
+          <p className="mt-3 font-serif text-3xl">{money(summary.completedBookingValue)}</p>
           <div className="mt-8">
             <MiniLine />
           </div>
         </Panel>
       </div>
-      <Panel className="mt-4 overflow-x-auto">
-        <h2 className="font-serif text-xl text-plum">Transaction History</h2>
-        <table className="mt-3 w-full min-w-[700px] text-left text-xs">
+      <Panel className="mt-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div><h2 className="font-serif text-xl text-plum">Transaction ledger</h2><p className="mt-1 text-xs text-ink/55">Authoritative booking, refund, transfer, and payout evidence. Totals above follow these filters.</p></div>
+          <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_180px_auto]">
+            <input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search customer or reference" className="min-h-11 rounded-lg border border-plum/15 px-3 text-xs"/>
+            <select value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{statuses.map((value)=><option key={value}>{value}</option>)}</select>
+            <button type="button" onClick={exportLedger} className="min-h-11 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Export CSV</button>
+          </div>
+        </div>
+        <div className="mt-4 space-y-3 md:hidden">
+          {visible.map((row)=><details key={String(row.booking_id)} className="rounded-xl border border-plum/10 bg-white p-4"><summary className="cursor-pointer list-none"><span className="flex items-start justify-between gap-3"><span><b>{String(row.public_reference||"Booking")}</b><small className="mt-1 block text-ink/55">{String(row.customer)} · {dateText(row.date,timeZone)}</small></span><Status value={String(row.financial_status||row.payout_status)}/></span></summary><LedgerEvidence row={row} money={money}/></details>)}
+          {!visible.length?<Empty text="No transactions match these filters."/>:null}
+        </div>
+        <div className="mt-4 hidden overflow-x-auto md:block"><table className="w-full min-w-[1180px] text-left text-xs">
           <thead>
             <tr>
               {[
-                "Date",
-                "Booking",
-                "Deposit Amount",
-                "Balance",
-                "Payment / Payout Status",
-                "Payout Date",
+                "Local date / reference",
+                "Customer / type",
+                "Original / discount",
+                "Deposit / balance",
+                "Fees",
+                "Refund",
+                "Transfer / payout",
+                "Net owed",
+                "Evidence",
               ].map((h) => (
                 <th className="border-b border-plum/10 py-3" key={h}>
                   {h}
@@ -4275,37 +4318,46 @@ function Earnings({ c }: { c: Ctx }) {
             </tr>
           </thead>
           <tbody>
-            {c.bookings.map((b, i) => (
-              <tr key={b.id || i} className="border-b border-plum/10">
-                <td className="py-3">{dateText(b.created_at)}</td>
-                <td>
-                  Booking #
-                  {bookingReference(b)}
-                </td>
-                <td>${Number(b.deposit_amount || 0).toFixed(2)}</td>
-                <td>${Number(b.balance_due || 0).toFixed(2)}</td>
-                <td>
-                  <Status
-                    value={String(
-                      b.payout_status || b.deposit_status || "Not recorded",
-                    )}
-                  />
-                </td>
-                <td>{dateText(b.payout_date)}</td>
+            {visible.map((row) => (
+              <tr key={String(row.booking_id)} className="border-b border-plum/10 align-top">
+                <td className="py-3 pr-3">{dateText(row.date,timeZone)}<b className="mt-1 block">{String(row.public_reference)}</b></td>
+                <td className="pr-3">{String(row.customer)}<span className="mt-1 block text-ink/50">{String(row.transaction_type)}</span></td>
+                <td className="pr-3">{money(row.original_service_value)}<span className="mt-1 block text-ink/50">− {money(row.discount)}</span></td>
+                <td className="pr-3">{money(row.deposit_collected)}<span className="mt-1 block text-ink/50">Balance {money(row.balance_due)}</span></td>
+                <td className="pr-3">Stripe {money(row.stripe_processing_fee)}<span className="mt-1 block text-ink/50">Platform {money(row.platform_fee)}</span></td>
+                <td className="pr-3">{money(row.refund_amount)}<span className="mt-1 block"><Status value={String(row.refund_status)}/></span></td>
+                <td className="pr-3"><Status value={String(row.transfer_status)}/><span className="mt-1 block"><Status value={String(row.payout_status)}/></span></td>
+                <td className="pr-3 font-bold">{money(row.net_amount_owed_salon)}</td>
+                <td><details><summary className="cursor-pointer font-bold text-magenta">View</summary><LedgerEvidence row={row} money={money}/></details></td>
               </tr>
             ))}
-            {!c.bookings.length ? (
+            {!visible.length ? (
               <tr>
-                <td colSpan={6}>
-                  <Empty text="Transactions will appear after real bookings and payments." />
+                <td colSpan={9}>
+                  <Empty text="No transactions match these filters." />
                 </td>
               </tr>
             ) : null}
           </tbody>
-        </table>
+        </table></div>
       </Panel>
     </>
   );
+}
+
+function LedgerEvidence({row,money}:{row:Record<string,unknown>;money:(value:unknown)=>string}){
+  const evidence=[
+    ["Payment",row.payment_status],
+    ["Financial",row.financial_status],
+    ["Cancellation actor",row.cancelled_by||"Not cancelled"],
+    ["Customer-safe reason",row.cancellation_customer_reason||"—"],
+    ["Refund eligibility",row.refund_eligibility_status||"—"],
+    ["Policy outcome",row.refund_policy_outcome||"—"],
+    ["Refund",`${money(row.refund_amount)} · ${String(row.refund_status||"Not applicable")}`],
+    ["Transfer",row.transfer_status],
+    ["Payout",row.payout_status],
+  ];
+  return <dl className="mt-3 grid gap-2 text-[11px] sm:grid-cols-2">{evidence.map(([label,value])=><div key={String(label)}><dt className="font-bold text-ink/45">{String(label)}</dt><dd className="mt-0.5 break-words">{String(value||"—")}</dd></div>)}</dl>;
 }
 
 // Retained temporarily for compatibility with saved dashboard tab references.
@@ -4685,7 +4737,17 @@ function Field({
         {label}
         {required ? <span className="text-magenta"> *</span> : null}
       </span>
-      <input
+      {numeric ? <NumericInput
+        name={name}
+        integer={/(?:quantity|threshold|minutes|years|duration)/i.test(name)}
+        decimalPlaces={2}
+        required={required}
+        min={0}
+        max={10000}
+        defaultValue={String(defaultValue ?? "")}
+        placeholder={placeholder}
+        className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta"
+      /> : <input
         name={name}
         type={inputType}
         inputMode={
@@ -4700,22 +4762,12 @@ function Field({
               : undefined
         }
         required={required}
-        min={numeric ? 0 : undefined}
-        max={numeric ? 10000 : undefined}
         defaultValue={String(defaultValue ?? "")}
         placeholder={
           placeholder || (inputType === "tel" ? "+1 (555) 123-4567" : undefined)
         }
-        step={numeric ? "0.01" : undefined}
-        onKeyDown={
-          numeric
-            ? (event) => {
-                if (/[eE+-]/.test(event.key)) event.preventDefault();
-              }
-            : undefined
-        }
         className="min-h-10 w-full rounded-[7px] border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta"
-      />
+      />}
     </label>
   );
 }
