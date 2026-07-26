@@ -194,7 +194,7 @@ or configure one.
   `docs/FINAL_LAUNCH_ACCEPTANCE_MIGRATIONS_2026-07-25.md`, this report.
 
 The draft PR Files tab is the canonical line-by-line inventory for the complete
-148-file diff from `origin/main`.
+149-file GitHub diff from `origin/main`.
 
 ## Migration order and impact
 
