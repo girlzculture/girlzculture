@@ -1,82 +1,18 @@
+import "server-only";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
+import {
+  classifyVideoProviderStatus,
+  classifyVideoTranscoderError,
+  missingVideoTranscoderConfiguration,
+  providerNetworkFailure,
+  VideoTranscoderError,
+} from "@/lib/videoTranscoderCore";
+import { inspectVideoBytes } from "@/lib/videoInspection";
+import { loadVideoTranscoderRuntimeConfig } from "@/lib/videoTranscoderServer";
 
 type Row = Record<string, unknown>;
-
-export type VideoInspection = {
-  container: "mp4" | "quicktime" | "webm" | "matroska" | "unknown";
-  videoCodec: "h264" | "hevc" | "vp8" | "vp9" | "av1" | "unknown";
-  audioCodec: "aac" | "opus" | "vorbis" | "dolby" | "none" | "unknown";
-  browserSafe: boolean;
-};
-
-export function inspectVideoBytes(
-  bytes: Uint8Array,
-  requestedMime = "",
-): VideoInspection {
-  const text = new TextDecoder("latin1").decode(bytes);
-  const isIsoMedia = text.slice(4, 16).includes("ftyp");
-  const webmSignature =
-    bytes.length >= 4 &&
-    bytes[0] === 0x1a &&
-    bytes[1] === 0x45 &&
-    bytes[2] === 0xdf &&
-    bytes[3] === 0xa3;
-  const quickTime =
-    /video\/quicktime|video\/x-m4v/i.test(requestedMime) ||
-    /qt  |M4V /.test(text.slice(4, 40));
-  const matroska =
-    webmSignature &&
-    (/matroska/i.test(text) || /video\/x-matroska/i.test(requestedMime));
-  const container = matroska
-    ? "matroska"
-    : webmSignature
-      ? "webm"
-      : isIsoMedia && quickTime
-        ? "quicktime"
-        : isIsoMedia
-          ? "mp4"
-          : "unknown";
-  const videoCodec = /avc1|avc3/.test(text)
-    ? "h264"
-    : /hvc1|hev1/.test(text)
-      ? "hevc"
-      : /V_VP8|vp08/.test(text)
-        ? "vp8"
-        : /V_VP9|vp09/.test(text)
-          ? "vp9"
-          : /V_AV1|av01/.test(text)
-            ? "av1"
-            : "unknown";
-  const hasAudio = /soun|mp4a|ac-3|ec-3|A_OPUS|A_VORBIS/i.test(text);
-  const audioCodec = /mp4a/.test(text)
-    ? "aac"
-    : /A_OPUS|opus/i.test(text)
-      ? "opus"
-      : /A_VORBIS|vorbis/i.test(text)
-        ? "vorbis"
-        : /ac-3|ec-3/.test(text)
-          ? "dolby"
-          : hasAudio
-            ? "unknown"
-            : "none";
-  return {
-    container,
-    videoCodec,
-    audioCodec,
-    browserSafe:
-      (container === "mp4" &&
-        videoCodec === "h264" &&
-        (audioCodec === "aac" || audioCodec === "none")) ||
-      (container === "webm" &&
-        ["vp8", "vp9"].includes(videoCodec) &&
-        ["opus", "vorbis", "none"].includes(audioCodec)),
-  };
-}
-
-export function inspectMp4Bytes(bytes: Uint8Array) {
-  return inspectVideoBytes(bytes, "video/mp4");
-}
 
 function safeHttpsUrl(value: unknown) {
   try {
@@ -92,23 +28,6 @@ function governedOutputPath(value: unknown) {
   return /^processed\/[a-zA-Z0-9/_-]+\.(mp4|webm)$/.test(path) ? path : null;
 }
 
-function cloudinaryConfig() {
-  const cloudName = String(process.env.CLOUDINARY_CLOUD_NAME || "").trim();
-  const apiKey = String(process.env.CLOUDINARY_API_KEY || "").trim();
-  const apiSecret = String(process.env.CLOUDINARY_API_SECRET || "").trim();
-  return cloudName && apiKey && apiSecret
-    ? { cloudName, apiKey, apiSecret }
-    : null;
-}
-
-export function videoTranscoderConfigured() {
-  return Boolean(
-    cloudinaryConfig() ||
-      (safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT) &&
-        process.env.MEDIA_TRANSCODE_TOKEN),
-  );
-}
-
 function cloudinarySignature(
   params: Record<string, string | number | boolean>,
   secret: string,
@@ -122,6 +41,11 @@ function cloudinarySignature(
 }
 
 async function transcodeWithCloudinary(input: {
+  config: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+  };
   signedUrl: string;
   jobId: string;
   maxDuration: number;
@@ -129,8 +53,7 @@ async function transcodeWithCloudinary(input: {
   maxHeight: number;
   signal: AbortSignal;
 }) {
-  const config = cloudinaryConfig();
-  if (!config) return null;
+  const config = input.config;
   const timestamp = Math.floor(Date.now() / 1000);
   const publicId = `girlz-culture/trending/${input.jobId}`;
   const eager = [
@@ -156,16 +79,23 @@ async function transcodeWithCloudinary(input: {
     file: input.signedUrl,
     signature: cloudinarySignature(signedParams, config.apiSecret),
   });
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/video/upload`,
-    {
-      method: "POST",
-      body: form,
-      signal: input.signal,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    },
-  );
-  if (!response.ok) throw new Error("VIDEO_TRANSCODER_REQUEST_FAILED");
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/video/upload`,
+      {
+        method: "POST",
+        body: form,
+        signal: input.signal,
+        cache: "no-store",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      },
+    );
+  } catch (error) {
+    throw providerNetworkFailure(error);
+  }
+  if (!response.ok)
+    throw classifyVideoProviderStatus(response.status, "transcode");
   const payload = (await response.json()) as Row & {
     eager?: Array<Row>;
   };
@@ -175,7 +105,12 @@ async function transcodeWithCloudinary(input: {
     duration <= 0 ||
     duration > input.maxDuration
   ) {
-    throw new Error("VIDEO_TRANSCODER_DURATION_INVALID");
+    throw new VideoTranscoderError({
+      code: "VIDEO_TRANSCODING_FAILED",
+      state: "transcoding_failure",
+      status: 502,
+      safeMessage: "Cloudinary returned an invalid video duration.",
+    });
   }
   const derivatives = Array.isArray(payload.eager) ? payload.eager : [];
   const video = derivatives.find(
@@ -196,7 +131,12 @@ async function transcodeWithCloudinary(input: {
     outputSize < 1 ||
     outputSize > 25 * 1024 * 1024
   ) {
-    throw new Error("VIDEO_TRANSCODER_INVALID_OUTPUT");
+    throw new VideoTranscoderError({
+      code: "VIDEO_TRANSCODING_FAILED",
+      state: "transcoding_failure",
+      status: 502,
+      safeMessage: "Cloudinary did not return a valid video and poster.",
+    });
   }
   return {
     output_url: safeHttpsUrl(video.secure_url),
@@ -207,34 +147,6 @@ async function transcodeWithCloudinary(input: {
     height_px: Number(video.height || payload.height || 0) || null,
     provider_job_id: `cloudinary:${String(payload.public_id || publicId)}`,
   };
-}
-
-export async function testVideoTranscoderConnection() {
-  const cloudinary = cloudinaryConfig();
-  if (cloudinary) {
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudinary.cloudName)}/resources/video?max_results=1`,
-      {
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${cloudinary.apiKey}:${cloudinary.apiSecret}`,
-          ).toString("base64")}`,
-        },
-      },
-    );
-    if (!response.ok) throw new Error("PROVIDER_CONNECTION_FAILED");
-    return;
-  }
-  const endpoint = safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT);
-  const token = process.env.MEDIA_TRANSCODE_TOKEN;
-  if (!endpoint || !token) throw new Error("NOT_CONFIGURED");
-  const response = await fetch(endpoint, {
-    method: "HEAD",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok && response.status !== 405) {
-    throw new Error("PROVIDER_CONNECTION_FAILED");
-  }
 }
 
 async function assertJobActive(admin: SupabaseClient, id: string) {
@@ -320,10 +232,9 @@ export async function processVideoJob(
     });
   }
 
-  const endpoint = safeHttpsUrl(process.env.MEDIA_TRANSCODE_ENDPOINT);
-  const token = process.env.MEDIA_TRANSCODE_TOKEN;
-  if (!videoTranscoderConfigured())
-    throw new Error("VIDEO_TRANSCODER_NOT_CONFIGURED");
+  const runtime = loadVideoTranscoderRuntimeConfig();
+  if (!runtime.diagnostic.configured)
+    throw missingVideoTranscoderConfiguration();
   await admin
     .from("video_processing_jobs")
     .update({
@@ -337,15 +248,16 @@ export async function processVideoJob(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 110_000);
   try {
-    const cloudinary = await transcodeWithCloudinary({
-      signedUrl: signed.signedUrl,
-      jobId: id,
-      maxDuration: Number(profile.max_duration_seconds),
-      maxWidth: Number(profile.max_width_px),
-      maxHeight: Number(profile.max_height_px),
-      signal: controller.signal,
-    });
-    if (cloudinary) {
+    if (runtime.cloudinary) {
+      const cloudinary = await transcodeWithCloudinary({
+        config: runtime.cloudinary,
+        signedUrl: signed.signedUrl,
+        jobId: id,
+        maxDuration: Number(profile.max_duration_seconds),
+        maxWidth: Number(profile.max_width_px),
+        maxHeight: Number(profile.max_height_px),
+        signal: controller.signal,
+      });
       await assertJobActive(admin, id);
       return await complete(admin, id, {
         output_bucket: null,
@@ -361,34 +273,40 @@ export async function processVideoJob(
         original_preserved: true,
       });
     }
-    if (!endpoint || !token)
-      throw new Error("VIDEO_TRANSCODER_NOT_CONFIGURED");
-    const response = await fetch(endpoint, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        job_id: id,
-        input: {
-          signed_url: signed.signedUrl,
-          mime_type: job.source_mime_type,
+    if (!runtime.custom) throw missingVideoTranscoderConfiguration();
+    let response: Response;
+    try {
+      response = await fetch(runtime.custom.endpoint, {
+        method: "POST",
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${runtime.custom.token}`,
+          "Content-Type": "application/json",
         },
-        output: {
-          container: "mp4",
-          video_codec: "h264",
-          audio_codec: "aac",
-          max_duration_seconds: Number(profile.max_duration_seconds),
-          max_width_px: Number(profile.max_width_px),
-          max_height_px: Number(profile.max_height_px),
-          max_output_bytes: 25 * 1024 * 1024,
-          poster: { format: "jpeg" },
-        },
-      }),
-    });
-    if (!response.ok) throw new Error("VIDEO_TRANSCODER_REQUEST_FAILED");
+        body: JSON.stringify({
+          job_id: id,
+          input: {
+            signed_url: signed.signedUrl,
+            mime_type: job.source_mime_type,
+          },
+          output: {
+            container: "mp4",
+            video_codec: "h264",
+            audio_codec: "aac",
+            max_duration_seconds: Number(profile.max_duration_seconds),
+            max_width_px: Number(profile.max_width_px),
+            max_height_px: Number(profile.max_height_px),
+            max_output_bytes: 25 * 1024 * 1024,
+            poster: { format: "jpeg" },
+          },
+        }),
+      });
+    } catch (error) {
+      throw providerNetworkFailure(error);
+    }
+    if (!response.ok)
+      throw classifyVideoProviderStatus(response.status, "transcode");
     const payload = (await response.json()) as Row;
     const outputUrl = safeHttpsUrl(payload.output_url);
     const posterUrl = safeHttpsUrl(payload.poster_url);
@@ -404,7 +322,13 @@ export async function processVideoJob(
       duration <= 0 ||
       duration > Number(profile.max_duration_seconds)
     ) {
-      throw new Error("VIDEO_TRANSCODER_INVALID_OUTPUT");
+      throw new VideoTranscoderError({
+        code: "VIDEO_TRANSCODING_FAILED",
+        state: "transcoding_failure",
+        status: 502,
+        safeMessage:
+          "The video provider did not return a valid video and poster.",
+      });
     }
     await assertJobActive(admin, id);
     return await complete(admin, id, {
@@ -428,6 +352,8 @@ export async function processVideoJob(
       source_cleanup_status: "Scheduled",
       original_preserved: true,
     });
+  } catch (error) {
+    throw classifyVideoTranscoderError(error);
   } finally {
     clearTimeout(timer);
   }
