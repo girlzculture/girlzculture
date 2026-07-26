@@ -6,6 +6,15 @@ import {
 import { capturePlatformError } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { processVideoJob } from "@/lib/videoProcessingServer";
+import {
+  classifyVideoTranscoderError,
+} from "@/lib/videoTranscoderCore";
+import {
+  videoTranscoderRuntimeDiagnostic,
+} from "@/lib/videoTranscoderServer";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 async function GETHandler(request: Request) {
   try {
@@ -16,7 +25,13 @@ async function GETHandler(request: Request) {
     if (id) query = query.eq("id", id);
     const { data, error } = await query;
     if (error) throw error;
-    return Response.json({ jobs: data || [] });
+    return Response.json(
+      {
+        jobs: data || [],
+        transcoder: videoTranscoderRuntimeDiagnostic(),
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     return errorResponse(error, "Unable to load video processing jobs.");
   }
@@ -108,9 +123,33 @@ async function POSTHandler(request: Request) {
       );
     }
     if (admin && jobId) {
-      const notConfigured =
-        error instanceof Error &&
-        error.message === "VIDEO_TRANSCODER_NOT_CONFIGURED";
+      const failure = classifyVideoTranscoderError(error);
+      const diagnostic = videoTranscoderRuntimeDiagnostic();
+      if (failure.state === "unsupported_input_media") {
+        await admin.from("video_processing_jobs").update({
+          status: "Failed",
+          progress_percent: 0,
+          safe_error_code: failure.code,
+          error_reference: null,
+          updated_at: new Date().toISOString(),
+          source_cleanup_after: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          source_cleanup_status: "Scheduled",
+          original_preserved: true,
+        }).eq("id", jobId);
+        return Response.json(
+          {
+            error: failure.safeMessage,
+            code: failure.code,
+            state: failure.state,
+          },
+          {
+            status: failure.status,
+            headers: { "Cache-Control": "private, no-store" },
+          },
+        );
+      }
       const reference = await capturePlatformError({
         request,
         admin,
@@ -121,17 +160,22 @@ async function POSTHandler(request: Request) {
         actorId: userId,
         recordType: "video_processing_job",
         recordId: jobId,
-        provider: "cloudinary",
-        safeMessage: notConfigured
-          ? "The secure video-processing provider is not configured."
-          : "The video could not be prepared for browser playback.",
+        provider:
+          diagnostic.provider === "custom"
+            ? "media-transcoder"
+            : "cloudinary",
+        safeMessage: failure.safeMessage,
+        metadata: {
+          provider_state: failure.state,
+          variable_presence: diagnostic.variables,
+          missing_variable_names: diagnostic.missingVariables,
+          runtime: diagnostic.runtime,
+        },
       });
       await admin.from("video_processing_jobs").update({
         status: "Failed",
         progress_percent: 0,
-        safe_error_code: notConfigured
-          ? "VIDEO_TRANSCODER_NOT_CONFIGURED"
-          : "VIDEO_PROCESSING_FAILED",
+        safe_error_code: failure.code,
         error_reference: reference,
         updated_at: new Date().toISOString(),
         source_cleanup_after: new Date(
@@ -140,12 +184,24 @@ async function POSTHandler(request: Request) {
         source_cleanup_status: "Scheduled",
         original_preserved: true,
       }).eq("id", jobId);
-      return Response.json({
-        error: notConfigured
-          ? `Video processing is not configured for this environment. Contact the platform owner with reference ${reference}.`
-          : `We couldn't prepare this video. Retry it or contact support with reference ${reference}.`,
-        request_id: reference,
-      }, { status: notConfigured ? 503 : 502 });
+      return Response.json(
+        {
+          error: `${failure.safeMessage} Contact the platform owner with reference ${reference}.`,
+          code: failure.code,
+          state: failure.state,
+          request_id: reference,
+          ...(failure.state === "missing_deployment_configuration"
+            ? { transcoder: diagnostic }
+            : {}),
+        },
+        {
+          status: failure.status,
+          headers: {
+            "Cache-Control": "private, no-store",
+            "X-Request-ID": reference,
+          },
+        },
+      );
     }
     return errorResponse(error, "Unable to start video processing.");
   }

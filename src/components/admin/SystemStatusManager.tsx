@@ -23,6 +23,15 @@ type Status = {
   lastSuccess?: string | null;
   safeError?: string | null;
   canTest: boolean;
+  diagnostic?: {
+    provider: "cloudinary" | "custom" | "none";
+    configured: boolean;
+    cloudinaryConfigured: boolean;
+    customFallbackConfigured: boolean;
+    runtime: "nodejs";
+    variables: Array<{ name: string; present: boolean }>;
+    missingVariables: string[];
+  };
 };
 
 const presentation = {
@@ -63,9 +72,9 @@ export default function SystemStatusManager() {
     return { Authorization: `Bearer ${session.access_token}` };
   }
 
-  async function load() {
+  async function load(options: { preserveMessage?: boolean } = {}) {
     setLoading(true);
-    setMessage("");
+    if (!options.preserveMessage) setMessage("");
     try {
       const response = await fetch("/api/admin/engine/system-status", {
         headers: await authHeader(),
@@ -109,9 +118,11 @@ export default function SystemStatusManager() {
       setMessage(
         body.result?.state === "healthy"
           ? `${status.label} confirmed a healthy connection.`
-          : `${status.label} needs attention. Review its safe status and setup instructions.`,
+          : `${status.label} needs attention. Review its safe status and setup instructions.${
+              body.request_id ? ` Reference ${body.request_id}.` : ""
+            }`,
       );
-      await load();
+      await load({ preserveMessage: true });
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -215,6 +226,39 @@ export default function SystemStatusManager() {
                   </dd>
                 </div>
               </dl>
+              {status.diagnostic ? (
+                <div className="mt-3 rounded-lg border border-plum/10 bg-cream/35 p-3">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-plum">
+                    Netlify function variable presence
+                  </p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    {status.diagnostic.variables.map((variable) => (
+                      <div
+                        key={variable.name}
+                        className="rounded-md bg-white px-2 py-2 text-[8px]"
+                      >
+                        <code className="break-all text-ink/65">
+                          {variable.name}
+                        </code>
+                        <span
+                          className={`mt-1 block font-bold ${
+                            variable.present
+                              ? "text-green-700"
+                              : "text-red-700"
+                          }`}
+                        >
+                          {variable.present ? "Present" : "Missing"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[9px] leading-4 text-ink/50">
+                    Presence only from the request-time Node function. No
+                    credential values are returned, logged, hashed, or
+                    partially displayed.
+                  </p>
+                </div>
+              ) : null}
               {status.safeError ? (
                 <p className="mt-3 rounded-lg bg-amber/10 p-3 text-[10px] text-[#7b4a00]">
                   {status.safeError}

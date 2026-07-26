@@ -10,9 +10,18 @@ import {
   approvedAiProviders,
 } from "@/lib/aiAutomationServer";
 import {
+  CLOUDINARY_RUNTIME_VARIABLE_NAMES,
+  classifyVideoTranscoderError,
+  type VideoTranscoderDiagnostic,
+} from "@/lib/videoTranscoderCore";
+import {
   testVideoTranscoderConnection,
-  videoTranscoderConfigured,
-} from "@/lib/videoProcessingServer";
+  videoTranscoderRuntimeDiagnostic,
+} from "@/lib/videoTranscoderServer";
+import { capturePlatformError } from "@/lib/platformErrors";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const EXPECTED_MIGRATION = "20260725107000";
 type State = "healthy" | "degraded" | "not_configured";
@@ -35,6 +44,7 @@ type Status = {
   lastSuccess?: string | null;
   safeError?: string | null;
   canTest: boolean;
+  diagnostic?: VideoTranscoderDiagnostic;
 };
 
 function environmentName() {
@@ -83,6 +93,7 @@ function status(
         ? new Date().toISOString()
         : previous?.last_success_at || null,
     safeError: previous?.safe_error || null,
+    diagnostic: input.diagnostic,
   };
 }
 
@@ -98,6 +109,7 @@ function providerSpecs(
   const aiConfigured = approvedAiProviders().some(
     (provider) => provider !== "test" && aiProviderConfigured(provider),
   );
+  const transcoderDiagnostic = videoTranscoderRuntimeDiagnostic();
   const siteUrl = String(process.env.NEXT_PUBLIC_SITE_URL || "");
   return [
     status(
@@ -264,18 +276,15 @@ function providerSpecs(
       {
         key: "transcoder",
         label: "Video transcoder",
-        configured: videoTranscoderConfigured(),
+        configured: transcoderDiagnostic.configured,
         detail:
           "Cloudinary creates H.264/AAC MP4 derivatives and poster images for ordinary phone and browser uploads. A private custom endpoint remains a supported fallback.",
         required: true,
-        envNames: [
-          "CLOUDINARY_CLOUD_NAME",
-          "CLOUDINARY_API_KEY",
-          "CLOUDINARY_API_SECRET",
-        ],
+        envNames: [...CLOUDINARY_RUNTIME_VARIABLE_NAMES],
         setup:
           "Create a Cloudinary account, configure the three server-only environment variables, then use Test Connection. Never expose the API secret to the browser.",
         canTest: true,
+        diagnostic: transcoderDiagnostic,
       },
       history.get("transcoder"),
     ),
@@ -592,17 +601,58 @@ async function POSTHandler(request: Request) {
   const now = new Date().toISOString();
   let state: State = "healthy";
   let safeError: string | null = null;
+  let reference: string | null = null;
+  const transcoderDiagnostic =
+    key === "transcoder" ? videoTranscoderRuntimeDiagnostic() : null;
   try {
     await testIntegration(key, context.admin);
   } catch (error) {
-    const code = error instanceof Error ? error.message : "";
-    state = code === "NOT_CONFIGURED" ? "not_configured" : "degraded";
-    safeError =
-      state === "not_configured"
-        ? "Required deployment configuration is missing."
-        : "The provider did not confirm a healthy connection.";
-    if (state === "degraded")
-      noteOperationalFailure(`Engine ${key} connection test failed`, error);
+    if (key === "transcoder") {
+      const failure = classifyVideoTranscoderError(error);
+      state =
+        failure.state === "missing_deployment_configuration"
+          ? "not_configured"
+          : "degraded";
+      safeError =
+        failure.state === "missing_deployment_configuration"
+          ? `Missing deployment configuration: ${
+              transcoderDiagnostic?.missingVariables.join(", ") ||
+              "required Cloudinary variables"
+            }.`
+          : failure.safeMessage;
+      if (failure.state !== "missing_deployment_configuration") {
+        reference = await capturePlatformError({
+          request,
+          admin: context.admin,
+          error: failure,
+          feature: "engine-system-health",
+          action: "test-video-transcoder-connection",
+          actorRole: "admin",
+          actorId: context.user.id,
+          provider:
+            transcoderDiagnostic?.provider === "custom"
+              ? "media-transcoder"
+              : "cloudinary",
+          safeMessage: failure.safeMessage,
+          metadata: {
+            provider_state: failure.state,
+            variable_presence: transcoderDiagnostic?.variables || [],
+            missing_variable_names:
+              transcoderDiagnostic?.missingVariables || [],
+            runtime: transcoderDiagnostic?.runtime || "nodejs",
+          },
+        });
+      }
+    } else {
+      const code = error instanceof Error ? error.message : "";
+      state = code === "NOT_CONFIGURED" ? "not_configured" : "degraded";
+      safeError =
+        state === "not_configured"
+          ? "Required deployment configuration is missing."
+          : "The provider did not confirm a healthy connection.";
+      if (state === "degraded")
+        noteOperationalFailure(`Engine ${key} connection test failed`, error);
+    }
   }
   const { data, error } = await context.admin
     .from("integration_health_checks")
@@ -624,7 +674,21 @@ async function POSTHandler(request: Request) {
     )
     .single();
   if (error) throw error;
-  return Response.json({ result: data });
+  return Response.json(
+    {
+      result: data,
+      ...(transcoderDiagnostic
+        ? { diagnostic: transcoderDiagnostic }
+        : {}),
+      ...(reference ? { request_id: reference } : {}),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store",
+        ...(reference ? { "X-Request-ID": reference } : {}),
+      },
+    },
+  );
 }
 
 export const GET = withOperationalMonitoring(

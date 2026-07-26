@@ -3,7 +3,7 @@ import fs from "node:fs";
 import {
   inspectMp4Bytes,
   inspectVideoBytes,
-} from "../src/lib/videoProcessingServer.ts";
+} from "../src/lib/videoInspection.ts";
 
 function fixture(markers) {
   return new TextEncoder().encode(`0000ftypisom${markers.padEnd(512, ".")}`);
@@ -86,13 +86,9 @@ assert.doesNotMatch(
 
 const server = fs.readFileSync("src/lib/videoProcessingServer.ts", "utf8");
 for (const control of [
-  /CLOUDINARY_CLOUD_NAME/,
-  /CLOUDINARY_API_KEY/,
-  /CLOUDINARY_API_SECRET/,
   /api\.cloudinary\.com/,
   /vc_h264,ac_aac,f_mp4/,
-  /MEDIA_TRANSCODE_ENDPOINT/,
-  /MEDIA_TRANSCODE_TOKEN/,
+  /loadVideoTranscoderRuntimeConfig/,
   /video_codec:\s*"h264"/,
   /audio_codec:\s*"aac"/,
   /max_output_bytes/,
@@ -102,6 +98,22 @@ for (const control of [
   /source_cleanup_status:\s*"Scheduled"/,
 ])
   assert.match(server, control);
+const transcoderRuntime = fs.readFileSync(
+  "src/lib/videoTranscoderServer.ts",
+  "utf8",
+);
+for (const control of [
+  /CLOUDINARY_CLOUD_NAME/,
+  /CLOUDINARY_API_KEY/,
+  /CLOUDINARY_API_SECRET/,
+  /MEDIA_TRANSCODE_ENDPOINT/,
+  /MEDIA_TRANSCODE_TOKEN/,
+])
+  assert.match(
+    fs.readFileSync("src/lib/videoTranscoderCore.ts", "utf8"),
+    control,
+  );
+assert.match(transcoderRuntime, /testVideoTranscoderConnection/);
 
 const manager = fs.readFileSync(
   "src/components/admin/AdminTrendingCampaigns.tsx",
@@ -123,10 +135,8 @@ const systemStatus = fs.readFileSync(
   "src/app/api/admin/engine/system-status/route.ts",
   "utf8",
 );
-assert.match(systemStatus, /CLOUDINARY_CLOUD_NAME/);
-assert.match(systemStatus, /CLOUDINARY_API_KEY/);
-assert.match(systemStatus, /CLOUDINARY_API_SECRET/);
-assert.match(systemStatus, /videoTranscoderConfigured/);
+assert.match(systemStatus, /videoTranscoderRuntimeDiagnostic/);
+assert.match(systemStatus, /testVideoTranscoderConnection/);
 assert.match(systemStatus, /CRON_SECRET/);
 const placement = fs.readFileSync(
   "src/components/public/TrendingVideoPlacement.tsx",
