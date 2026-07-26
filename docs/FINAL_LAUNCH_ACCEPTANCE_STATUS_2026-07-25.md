@@ -104,9 +104,10 @@ P0 file inventory:
   `src/components/site/SalonProfileActions.tsx`,
   `src/components/site/SearchComposer.tsx`.
 
-Route-by-route Preview screenshots are `Blocked`: no reachable Netlify Deploy
-Preview exists for PR 23 and the browser session is not authenticated to create
-or configure one.
+Route-by-route Preview screenshots are `Blocked`: Netlify published
+`https://deploy-preview-23--girlzculture.netlify.app`, but both the in-app
+browser and a direct 20-second HTTP request timed out. The browser session is
+not authenticated to inspect or change Netlify configuration.
 
 ## P1-P16 changed-file inventory
 
@@ -317,8 +318,9 @@ remain `Blocked`:
 1. In Supabase, associate
    `codex/final-launch-acceptance-corrections` with a data-less Preview branch
    for PR 23 and allow the connected integration to execute the migrations.
-2. In Netlify, enable Deploy Previews for PR 23 and provide the resulting URL.
-   Do not deploy this branch to production.
+2. In Netlify, inspect the PR 23 Deploy Preview and access controls because the
+   published target currently times out. Keep the target as a Deploy Preview;
+   do not deploy this branch to production.
 3. Add Preview-only Supabase/Stripe/Resend/Cloudinary/OpenAI/Maps variables
    described in `.env.example`; never place server secrets in `NEXT_PUBLIC_*`.
 4. Create or provide Preview-only identities for guest, customer, salon owner,
