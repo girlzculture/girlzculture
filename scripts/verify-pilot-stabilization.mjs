@@ -8,6 +8,7 @@ import {
   ScopedApiError,
 } from "../src/lib/scopedApiCore.ts";
 import { secureLoginRequest } from "../src/lib/secureLoginClient.ts";
+import { classifyExpectedSecureLoginFailure } from "../src/lib/secureLoginCore.ts";
 import { isPromotionCardActive } from "../src/lib/homePromotionCore.ts";
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
@@ -148,6 +149,30 @@ await assert.rejects(
       throw new TypeError("provider details must not escape");
     }),
   /couldn't reach the secure sign-in service/i,
+);
+assert.deepEqual(
+  classifyExpectedSecureLoginFailure(
+    new Error("Email or password is incorrect."),
+  ),
+  { status: 401, message: "Email or password is incorrect." },
+);
+assert.deepEqual(
+  classifyExpectedSecureLoginFailure(
+    new Error("This is not a salon-owner account."),
+  ),
+  { status: 403, message: "This is not a salon-owner account." },
+);
+assert.deepEqual(
+  classifyExpectedSecureLoginFailure(
+    new Error("Enter the six-digit verification code."),
+  ),
+  { status: 400, message: "Enter the six-digit verification code." },
+);
+assert.equal(
+  classifyExpectedSecureLoginFailure(
+    new Error("connection to the authentication database failed"),
+  ),
+  null,
 );
 
 // Homepage promotion scheduling is deterministic. Draft, archived, future and

@@ -1,6 +1,7 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
-import { cleanText, enforceRateLimit, errorResponse, rejectBot } from "@/lib/requestSecurity";
+import { cleanText, enforceRateLimit, rejectBot } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, createMfaChallenge, LoginLockedError, MfaCooldownError, recordLoginAttempt, requiresMfa, sessionPayload, signInAndVerifyRole, type LoginScope } from "@/lib/secureLoginServer";
+import { classifyExpectedSecureLoginFailure } from "@/lib/secureLoginCore";
 import { ADMIN_LOGIN_ERROR, assertCompanyAdminEmail } from "@/lib/adminSecurityServer";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
@@ -31,11 +32,18 @@ async function POSTHandler(request: Request) {
   } catch (error) {
     if (error instanceof LoginLockedError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
     if (error instanceof MfaCooldownError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
+    const expected = classifyExpectedSecureLoginFailure(error);
+    if (expected) {
+      return Response.json(
+        { error: requestedRole === "admin" ? ADMIN_LOGIN_ERROR : expected.message },
+        { status: expected.status, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
     noteOperationalFailure("Secure login start failed", error);
-    if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
-    const response = errorResponse(error, "Unable to sign in.");
-    response.headers.set("Cache-Control", "private, no-store");
-    return response;
+    return Response.json(
+      { error: "The secure sign-in service is temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
   }
 }
 export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/login/start", "POST"), POSTHandler);

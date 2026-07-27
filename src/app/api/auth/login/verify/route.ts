@@ -1,6 +1,7 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
-import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
+import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
 import { assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayload, signInAndVerifyRole, verifyMfaChallenge, type LoginScope } from "@/lib/secureLoginServer";
+import { classifyExpectedSecureLoginFailure } from "@/lib/secureLoginCore";
 import { ADMIN_LOGIN_ERROR } from "@/lib/adminSecurityServer";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
@@ -41,11 +42,26 @@ async function POSTHandler(request: Request) {
     return Response.json({ session: sessionPayload(auth.session) });
   } catch (error) {
     if (error instanceof LoginLockedError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
+    const expected = classifyExpectedSecureLoginFailure(error);
+    if (expected) {
+      const verificationMessage =
+        expected.message.startsWith("Verification") ||
+        expected.message.startsWith("This verification");
+      return Response.json(
+        {
+          error:
+            requestedRole === "admin" && !verificationMessage
+              ? ADMIN_LOGIN_ERROR
+              : expected.message,
+        },
+        { status: expected.status, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
     noteOperationalFailure("Secure login verification failed", error);
-    if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
-    const response = errorResponse(error, "Unable to verify sign-in.");
-    response.headers.set("Cache-Control", "private, no-store");
-    return response;
+    return Response.json(
+      { error: "The secure sign-in service is temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
   }
 }
 export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/login/verify", "POST"), POSTHandler);
