@@ -21,7 +21,13 @@ export function normalizeRequestHost(value: string | null | undefined) {
 
 export function hostRoutingConfig(): HostRoutingConfig {
   return {
-    enabled: process.env.DASHBOARD_SUBDOMAINS_ENABLED === "true",
+    // Dashboard subdomains are intentionally deferred for the founding-salon
+    // pilot. Requiring a second explicit readiness switch prevents a stale
+    // deployment variable from redirecting login/API traffic to aliases whose
+    // DNS or TLS is not ready yet.
+    enabled:
+      process.env.DASHBOARD_SUBDOMAINS_ENABLED === "true" &&
+      process.env.DASHBOARD_SUBDOMAINS_PILOT_READY === "true",
     publicHost: normalizeRequestHost(
       process.env.NEXT_PUBLIC_SITE_HOST || "girlzculture.com",
     ),

@@ -16,7 +16,7 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run dev -- -H 127.0.0.1 -p 3104",
-    url: `${baseURL}/internal/acceptance/numeric`,
+    url: baseURL,
     env: {
       ...process.env,
       NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true",
@@ -30,6 +30,22 @@ export default defineConfig({
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "iphone", use: { ...devices["iPhone 14"] } },
     { name: "android", use: { ...devices["Pixel 7"] } },
+    {
+      name: "narrow-phone",
+      use: {
+        viewport: { width: 320, height: 568 },
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
+      name: "phone-landscape",
+      use: {
+        viewport: { width: 844, height: 390 },
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
     {
       name: "tablet",
       use: { viewport: { width: 820, height: 1180 }, hasTouch: true },

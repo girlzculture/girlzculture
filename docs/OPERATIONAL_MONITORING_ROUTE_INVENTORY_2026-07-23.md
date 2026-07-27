@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-07-26. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -42,6 +42,7 @@ Updated: 2026-07-25. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/preferences/time-zone` | GET, PATCH | protected | Covered |
 | `/api/admin/promo-codes` | GET, POST, PATCH | protected | Covered |
 | `/api/admin/records` | GET, POST | protected | Covered |
+| `/api/admin/reviews/[id]/moderate` | POST | protected | Covered |
 | `/api/admin/salons/[id]` | GET, POST | protected | Covered |
 | `/api/admin/salons/reconcile` | GET, POST | protected | Covered |
 | `/api/admin/salons` | GET | protected | Covered |

@@ -4,6 +4,7 @@ const CORE = ["/offline", "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-ic
 const PRIVATE_PATHS = [
   "/account",
   "/admin",
+  "/superadmin",
   "/api",
   "/complaint",
   "/forgot-password",

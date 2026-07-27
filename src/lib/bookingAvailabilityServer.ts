@@ -166,6 +166,7 @@ async function loadAvailabilityData(
       .from("salon_blockouts")
       .select("id,stylist_id,starts_at,ends_at")
       .eq("salon_id", input.salonId)
+      .is("released_at", null)
       .lt("starts_at", rangeEnd.toISOString())
       .gt("ends_at", rangeStart.toISOString()),
     input.customerId

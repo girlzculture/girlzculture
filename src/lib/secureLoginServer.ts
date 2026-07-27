@@ -145,10 +145,23 @@ export async function createMfaChallenge(user: User, role: LoginScope, request: 
   return { challengeId: id, channel, destination };
 }
 
-export async function verifyMfaChallenge(challengeId: string, code: string, role: LoginScope, email: string, request: Request) {
+export async function verifyMfaChallenge(
+  challengeId: string,
+  code: string,
+  role: LoginScope,
+  email: string,
+  request: Request,
+  expectedUserId?: string,
+) {
   const admin = getSupabaseAdmin();
   const { data: challenge, error } = await admin.from("auth_mfa_challenges").select("*").eq("id", challengeId).single();
-  if (error || !challenge || challenge.role_scope !== role || challenge.email_normalized !== email) throw new Error("Verification request is invalid.");
+  if (
+    error ||
+    !challenge ||
+    challenge.role_scope !== role ||
+    challenge.email_normalized !== email ||
+    (expectedUserId && challenge.user_id !== expectedUserId)
+  ) throw new Error("Verification request is invalid.");
   if (challenge.request_fingerprint && challenge.request_fingerprint !== requestFingerprint(request)) {
     if (role === "admin") await recordAdminSecurityEvent("mfa_challenge_device_mismatch", challenge.user_id, "Denied");
     throw new Error("Verification request is invalid.");

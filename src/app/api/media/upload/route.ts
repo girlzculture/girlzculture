@@ -14,6 +14,7 @@ function safeFolder(value: string) { return value.split("/").map((part) => part.
 function safeName(value: string) { return value.toLowerCase().replace(/\.[^.]+$/, "").replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").slice(0, 80) || "image"; }
 function imageDimensions(buffer: Buffer, mime: string) {
   if (mime === "image/png" && buffer.length >= 24 && buffer.subarray(1, 4).toString() === "PNG") return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+  if (mime === "image/gif" && buffer.length >= 10 && ["GIF87a", "GIF89a"].includes(buffer.subarray(0, 6).toString())) return { width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
   if (mime === "image/jpeg" && buffer.length > 4 && buffer[0] === 0xff && buffer[1] === 0xd8) {
     let offset = 2;
     while (offset + 9 < buffer.length) {
@@ -35,7 +36,7 @@ async function GETHandler(request: Request) {
       getSupabaseAdmin().from("media_upload_profiles").select("*").eq("profile_key", kind).eq("is_active", true).maybeSingle(),
       getEngineNumber("media.public_image_quality",88,60,100),
     ]);
-    return Response.json({ profile: data ? { key: kind, label: data.display_name, aspectWidth: data.aspect_width, aspectHeight: data.aspect_height, minWidth: data.min_width_px, minHeight: data.min_height_px, outputWidth: data.output_width_px, maxBytes: data.max_bytes, safeArea: data.safe_area_enabled, quality } : { ...fallback, quality } });
+    return Response.json({ profile: data ? { key: kind, label: data.display_name, aspectWidth: data.aspect_width, aspectHeight: data.aspect_height, minWidth: data.min_width_px, minHeight: data.min_height_px, outputWidth: data.output_width_px, maxBytes: data.max_bytes, safeArea: data.safe_area_enabled, acceptedMimeTypes: data.accepted_mime_types, quality } : { ...fallback, quality } });
   } catch (error) {
     noteOperationalFailure("Media upload profile lookup failed", error);
     return Response.json({ profile: fallback });
@@ -84,7 +85,8 @@ async function POSTHandler(request: Request) {
     if (!(file instanceof File) || !file.size) throw new Error("Choose an image to upload.");
     if (!BUCKETS.has(bucket)) throw new Error("This upload destination is not supported.");
     const fallbackProfile = IMAGE_UPLOAD_PROFILES[kind]; if (!fallbackProfile) throw new Error("This image placement is not supported.");
-    if (!["image/jpeg", "image/png"].includes(file.type)) throw new Error("Upload a JPG or PNG image.");
+    const acceptedTypes = fallbackProfile.acceptedMimeTypes || ["image/jpeg", "image/png"];
+    if (!acceptedTypes.includes(file.type) || (file.type === "image/gif" && (bucket !== "content-media" || kind !== "content"))) throw new Error(kind === "content" ? "Upload a JPG, PNG, or animated GIF." : "Upload a JPG or PNG image.");
     const context = await authorize(request, bucket, folder);
     monitoringAdmin = context.admin;
     const { data: configured } = await context.admin.from("media_upload_profiles").select("*").eq("profile_key", kind).eq("is_active", true).maybeSingle();
@@ -98,11 +100,11 @@ async function POSTHandler(request: Request) {
     try {
       for (const [device, candidate] of [["desktop", file], ["tablet", tabletFile], ["mobile", mobileFile]] as const) {
         if (!(candidate instanceof File) || !candidate.size) continue;
-        if (!["image/jpeg", "image/png"].includes(candidate.type)) throw new Error(`${device} rendition must be a JPG or PNG image.`);
+        if (!acceptedTypes.includes(candidate.type)) throw new Error(`${device} rendition uses an unsupported image format.`);
         const candidateBuffer = Buffer.from(await candidate.arrayBuffer());
         const candidateDimensions = imageDimensions(candidateBuffer, candidate.type);
         if (candidate.size > profile.maxBytes) throw new Error(`${device} rendition is larger than the configured upload limit.`);
-        const extension = candidate.type === "image/png" ? "png" : "jpg";
+        const extension = candidate.type === "image/png" ? "png" : candidate.type === "image/gif" ? "gif" : "jpg";
         const path = `${folder ? `${folder}/` : ""}${Date.now()}-${randomUUID()}-${device}-${safeName(candidate.name)}.${extension}`;
         const { error: uploadError } = await context.admin.storage.from(bucket).upload(path, candidateBuffer, { contentType: candidate.type, cacheControl: "31536000", upsert: false });
         if (uploadError) throw uploadError;
@@ -121,7 +123,7 @@ async function POSTHandler(request: Request) {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed.";
-    if (/Choose an image|not supported|JPG|PNG|must be|larger|damaged|folder does not belong/i.test(message)) return Response.json({ error: message, requestId: correlationId }, { status: 400 });
+    if (/Choose an image|not supported|JPG|PNG|GIF|must be|larger|damaged|folder does not belong/i.test(message)) return Response.json({ error: message, requestId: correlationId }, { status: 400 });
     return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "media", action: "upload_responsive_image", actorRole: "authenticated", safeMessage: "We couldn't upload this image. Please try again." });
   }
 }

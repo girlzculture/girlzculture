@@ -56,11 +56,18 @@ async function POSTHandler(
     if (ratings.some((value) => !Number.isInteger(value) || value < 1 || value > 5))
       return Response.json({ error: "Choose a rating from 1 to 5 for every category." }, { status: 400 });
     const writtenReview = cleanText(body.written_review, 3000);
+    const displayName = cleanText(body.display_name, 60);
+    if (!displayName)
+      return Response.json(
+        { error: "Enter the first name or display name you want shown publicly." },
+        { status: 400 },
+      );
     if (writtenReview.length < 10)
       return Response.json({ error: "Write at least 10 characters about your experience." }, { status: 400 });
     const admin = getSupabaseAdmin();
     const { data, error } = await admin.rpc("submit_verified_guest_review", {
       p_token_hash: reviewTokenHash(token),
+      p_display_name: displayName,
       p_rating_overall: ratings[0],
       p_rating_price_accuracy: ratings[1],
       p_rating_punctuality: ratings[2],

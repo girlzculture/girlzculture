@@ -134,6 +134,14 @@ async function syncSubscription(object: StripeObject) {
     featured_weight: active ? (planRank(plan) === 3 ? 100 : planRank(plan) === 2 ? 40 : 0) : 0,
   }).eq("id", salonId);
   if (salonError) throw salonError;
+  const reconciliation = await admin.rpc("reconcile_salon_publication", {
+    p_salon_id: salonId,
+    p_actor_id: null,
+    p_reason: active
+      ? "Stripe confirmed an active salon subscription"
+      : "Stripe reported an inactive salon subscription",
+  });
+  if (reconciliation.error) throw reconciliation.error;
 }
 
 async function syncScheduleState(object: StripeObject, eventType: string) {

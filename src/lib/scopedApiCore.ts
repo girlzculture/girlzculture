@@ -105,11 +105,19 @@ export async function createScopedJsonApiClient(input: {
   getSession: SessionLoader;
   refreshSession: SessionLoader;
   fetcher?: RequestFetcher;
+  scopeLabel?: string;
 }) {
+  const scopeLabel = input.scopeLabel || "account";
+  const requestedWith =
+    scopeLabel === "salon"
+      ? "GirlzCultureSalon"
+      : scopeLabel === "customer"
+        ? "GirlzCultureCustomer"
+        : "GirlzCultureAdmin";
   const initial = await input.getSession();
   if (!initial) {
     throw new ScopedApiError({
-      message: "Your admin session has expired. Sign in and try again.",
+      message: `Your ${scopeLabel} session has expired. Sign in and try again.`,
       status: 401,
       code: "AUTHENTICATION_SESSION_FAILURE",
     });
@@ -126,8 +134,8 @@ export async function createScopedJsonApiClient(input: {
       throw new ScopedApiError({
         message:
           candidate && candidate.user.id !== actingUserId
-            ? "The signed-in admin account changed during this operation. Start again."
-            : "Your admin session has expired. Sign in and try again.",
+            ? `The signed-in ${scopeLabel} account changed during this operation. Start again.`
+            : `Your ${scopeLabel} session has expired. Sign in and try again.`,
         status: 401,
         code: "AUTHENTICATION_SESSION_FAILURE",
       });
@@ -146,7 +154,7 @@ export async function createScopedJsonApiClient(input: {
       const headers = new Headers(init.headers);
       headers.set("Authorization", `Bearer ${session.access_token}`);
       headers.set("Accept", "application/json");
-      headers.set("X-Requested-With", "GirlzCultureAdmin");
+      headers.set("X-Requested-With", requestedWith);
       const response = await fetcher(target, {
         ...init,
         headers,

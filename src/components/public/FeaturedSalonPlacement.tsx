@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, MapPin, Megaphone, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Megaphone, RotateCcw } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
 import { validCoordinates } from "@/lib/location";
@@ -137,12 +137,6 @@ export default function FeaturedSalonPlacement({
           </div>
           {description ? (
             <p className="mt-1 text-xs text-ink/60">{description}</p>
-          ) : null}
-          {location ? (
-            <p className="mt-1 flex items-center gap-1 text-[10px] text-ink/55">
-              <MapPin size={12} />
-              Near {location.label}
-            </p>
           ) : null}
         </div>
         {!viewAll && salons.length ? (

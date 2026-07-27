@@ -48,24 +48,24 @@ export async function PublicHeader({ active }: { active?: "styles" | "salons" | 
       <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         <div className="flex min-w-0 items-center gap-1"><MobilePublicMenu links={mobileItems}/><Wordmark compact /></div>
 
-        <nav aria-label="Main navigation" className="hidden items-center gap-8 text-[13px] font-semibold text-ink md:flex lg:gap-10">
+        <nav aria-label="Main navigation" className="hidden items-center gap-8 text-[13px] font-semibold text-ink xl:flex xl:gap-10">
           {headerItems.map(item=><Link key={item.item_key} href={item.href} className={`inline-flex items-center gap-2 border-b-2 py-5 transition-colors hover:text-magenta ${active===item.item_key?"border-magenta text-magenta":"border-transparent"}`}><LocalizedText messageKey={item.translation_key||`navigation.${item.item_key}`} fallback={item.label}/>{item.show_new_badge?<span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white"><LocalizedText messageKey="nav.new" fallback="New"/></span>:null}</Link>)}
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-3">
-          <div className="hidden md:block"><LanguageSelector compact /></div>
+          <div className="hidden xl:block"><LanguageSelector compact /></div>
           <HeaderStyleSearch/>
           <Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
-            className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta md:inline-flex"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta xl:inline-flex"
           >
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
           </Link>
-          <Link href="/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta md:inline-flex">
+          <Link href="/login" className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta xl:inline-flex">
             <LocalizedText messageKey="nav.login" fallback="Log in"/>
           </Link>
-          <Link href="/login" className="gc-brand-primary-action hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 md:inline-flex">
+          <Link href="/login" className="gc-brand-primary-action hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 xl:inline-flex">
             <LocalizedText messageKey="nav.signup" fallback="Sign up"/>
           </Link>
         </div>

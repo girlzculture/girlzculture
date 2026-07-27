@@ -19,32 +19,38 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
     const plan = normalizePlan(application.selected_plan);
     const reviewedAt = new Date().toISOString();
     let status = "Approved";
+    let changed = true;
 
     if (decision === "approve") {
-      const patch: Record<string, unknown> = {
-        status: "Approved",
-        subscription_tier: plan,
-        rejection_reason: null,
-        approved_at: reviewedAt,
-      };
-      if (application.logo_url) patch.logo_url = application.logo_url;
-      const { error: salonError } = await admin.from("salons").update(patch).eq("id", application.salon_id);
-      if (salonError) throw salonError;
-      const reconciliation = await admin.rpc("reconcile_salon_publication", {
-        p_salon_id: application.salon_id,
+      const approval = await admin.rpc("approve_salon_application", {
+        p_application_id: application.id,
         p_actor_id: user.id,
-        p_reason: "Salon application approved",
       });
-      if (reconciliation.error) throw reconciliation.error;
+      if (approval.error) throw approval.error;
+      changed = approval.data?.changed !== false;
     } else if (decision === "activate") {
-      const activation = await admin.rpc("admin_change_salon_status", {
-        acting_admin_id: user.id,
-        target_salon_id: application.salon_id,
-        requested_status: "Active",
-        internal_reason: "All configured marketplace requirements verified",
+      const diagnostic = await admin.rpc("salon_publication_diagnostic", {
+        p_salon_id: application.salon_id,
       });
-      if (activation.error) throw activation.error;
-      status = "Active";
+      if (diagnostic.error) throw diagnostic.error;
+      const checks =
+        diagnostic.data?.checks && typeof diagnostic.data.checks === "object"
+          ? diagnostic.data.checks as Record<string, { required?: boolean; passed?: boolean; label?: string }>
+          : {};
+      const missing = Object.values(checks)
+        .filter((check) => check.required === true && check.passed !== true)
+        .map((check) => check.label || "Marketplace requirement");
+      return Response.json(
+        {
+          error: missing.length
+            ? `The application is approved, but the salon is not public yet. Complete: ${missing.join(", ")}.`
+            : "Every marketplace requirement is complete. Publication is automatic; use the lifecycle panel to recheck if the salon is not yet visible.",
+          code: "MARKETPLACE_ACTIVATION_IS_AUTOMATIC",
+          lifecycle: diagnostic.data,
+          missing,
+        },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } },
+      );
     } else {
       const offboard = await admin.rpc("admin_change_salon_status", {
         acting_admin_id: user.id,
@@ -56,13 +62,15 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
       status = "Rejected";
     }
 
-    const { error: applicationError } = await admin.from("salon_applications").update({
-      status,
-      rejection_reason: decision === "reject" ? safeReason : null,
-      reviewed_by: user.id,
-      reviewed_at: reviewedAt,
-    }).eq("id", id);
-    if (applicationError) throw applicationError;
+    if (decision !== "approve") {
+      const { error: applicationError } = await admin.from("salon_applications").update({
+        status,
+        rejection_reason: decision === "reject" ? safeReason : null,
+        reviewed_by: user.id,
+        reviewed_at: reviewedAt,
+      }).eq("id", id);
+      if (applicationError) throw applicationError;
+    }
 
     const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const subject = decision === "activate"
@@ -75,8 +83,14 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
       : decision === "approve"
         ? `<h1>You’re approved</h1><p>Log in to activate your ${plan} subscription and complete the marketplace setup checklist. Your salon will remain private until every required gate passes.</p><p><a href="${base}/salon/login">Continue setup</a></p>`
         : `<h1>Application update</h1><p>We’re unable to approve your salon at this time.</p><p><strong>Reason:</strong> ${safeReason}</p>`;
-    await sendEmail(application.business_email, subject, html, "account");
-    return Response.json({ ok: true, status, plan });
+    if (changed) {
+      try {
+        await sendEmail(application.business_email, subject, html, "account");
+      } catch (emailError) {
+        noteOperationalFailure("Application decision email failed", emailError);
+      }
+    }
+    return Response.json({ ok: true, status, plan, changed, idempotent: !changed });
   } catch (error) {
     noteOperationalFailure("Application decision failed", error);
     return errorResponse(error, "Request failed");

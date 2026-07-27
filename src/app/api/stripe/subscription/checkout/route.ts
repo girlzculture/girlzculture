@@ -4,13 +4,33 @@ import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurit
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { siteUrl, stripeGet, stripeRequest } from "@/lib/stripeServer";
 import { previewPromoCode, reservePromoCode } from "@/lib/promoCodes";
+import {
+  salonCanStartSubscriptionCheckout,
+  subscriptionCheckoutBlockMessage,
+} from "@/lib/salonLifecycleCore";
 
 async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "subscription-checkout", 8, 10 * 60_000);
     const { admin, user, salon, isOwner } = await requireSalonOwner(request);
     if (!isOwner) throw new Error("Only the salon owner can manage the salon subscription.");
-    if (salon.status !== "Active") throw new Error("Your salon must be activated by Girlz Culture before subscribing.");
+    const { data: application, error: applicationError } = await admin
+      .from("salon_applications")
+      .select("status")
+      .eq("salon_id", salon.id)
+      .order("submitted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (applicationError) throw applicationError;
+    if (!salonCanStartSubscriptionCheckout(salon, application?.status)) {
+      return Response.json(
+        {
+          error: subscriptionCheckoutBlockMessage(salon, application?.status),
+          code: "SUBSCRIPTION_REQUIRES_APPROVAL",
+        },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
     const body = await request.json() as Record<string, unknown>;
     const plan = normalizePlan(cleanText(body.plan, 20));
     const promoCode = cleanText(body.promo_code, 40);

@@ -12,12 +12,12 @@ async function GETHandler(request: Request) {
       ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
       ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
       ["billing_events", "event_date", false], ["identity_conflict_queue", "email_normalized", false],
-      ["subscription_change_requests", "requested_at", false],
+      ["subscription_change_requests", "requested_at", false], ["review_dispute_events", "created_at", true],
     ] as const;
     const needed: Record<string, string[]> = {
       overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: [],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
-      reviews: ["reviews", "salons"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
+      reviews: ["reviews", "salons", "bookings", "review_dispute_events"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
       content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
     };
     const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));

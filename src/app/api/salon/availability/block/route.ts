@@ -14,11 +14,6 @@ async function POSTHandler(request: Request) {
     if (!modes.has(mode)) throw new Error("Choose a valid availability override.");
     const stylistId = mode.startsWith("stylist_") ? cleanText(body.stylist_id, 50) : "";
     if (mode.startsWith("stylist_") && !stylistId) throw new Error("Choose a stylist.");
-    if (stylistId) {
-      const { data: stylist } = await admin.from("stylists").select("id").eq("id", stylistId).eq("salon_id", salon.id).maybeSingle();
-      if (!stylist) throw new Error("That stylist does not belong to this salon.");
-    }
-
     const now = new Date();
     const timeZone = salonTimeZone(salon.time_zone);
     const localDate = dateKeyInTimeZone(now, timeZone);
@@ -38,16 +33,19 @@ async function POSTHandler(request: Request) {
     }
 
     const reason = cleanText(body.reason, 180) || "Walk-in availability override";
-    const { data, error } = await admin.from("salon_blockouts").insert({
-      salon_id: salon.id,
-      stylist_id: stylistId || null,
-      starts_at: now.toISOString(),
-      ends_at: endsAt.toISOString(),
-      reason,
-      all_day: allDay,
-      block_type: mode,
-      created_by_user_id: user.id,
-    }).select("*").single();
+    const { data, error } = await admin.rpc(
+      "create_salon_availability_override",
+      {
+        p_salon_id: salon.id,
+        p_stylist_id: stylistId || null,
+        p_starts_at: now.toISOString(),
+        p_ends_at: endsAt.toISOString(),
+        p_reason: reason,
+        p_all_day: allDay,
+        p_block_type: mode,
+        p_actor_id: user.id,
+      },
+    );
     if (error) throw error;
     return Response.json({ ok: true, blockout: data, time_zone: timeZone });
   } catch (error) {
@@ -59,12 +57,20 @@ async function POSTHandler(request: Request) {
 async function DELETEHandler(request: Request) {
   try {
     enforceRateLimit(request, "salon-availability-unblock", 40, 10 * 60_000);
-    const { admin, salon } = await requireSalonPermission(request, "availability");
+    const { admin, salon, user } = await requireSalonPermission(request, "availability");
     const id = cleanText(new URL(request.url).searchParams.get("id"), 50);
     if (!id) throw new Error("Blockout id is required.");
-    const { error } = await admin.from("salon_blockouts").delete().eq("id", id).eq("salon_id", salon.id);
+    const { data, error } = await admin.rpc(
+      "release_salon_availability_override",
+      {
+        p_salon_id: salon.id,
+        p_blockout_id: id,
+        p_actor_id: user.id,
+        p_reason: "Bookings resumed by salon",
+      },
+    );
     if (error) throw error;
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, blockout: data });
   } catch (error) {
     noteOperationalFailure("Salon availability unblock failed", error);
     return errorResponse(error, "Unable to restore availability.");
