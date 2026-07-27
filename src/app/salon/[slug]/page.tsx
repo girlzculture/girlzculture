@@ -102,6 +102,7 @@ type StyleMaterialRecord = {
 
 type ReviewRecord = {
   id?: string;
+  display_name?: string | null;
   rating_overall?: number | null;
   rating_price_accuracy?: number | null;
   rating_punctuality?: number | null;
@@ -112,7 +113,6 @@ type ReviewRecord = {
   result_photos?: string[] | null;
   salon_reply?: string | null;
   created_at?: string | null;
-  customer?: { name?: string | null } | null;
 };
 
 type ProductRecord = {
@@ -226,10 +226,10 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   if (slug.startsWith("pending-") || salon.status !== "Active" || salon.is_discoverable !== true) notFound();
 
   const now = new Date().toISOString();
-  const [stylesResult, stylistsResult, reviewsWithCustomerResult, productsResult, promotionsResult] = await Promise.all([
+  const [stylesResult, stylistsResult, reviewsResult, productsResult, promotionsResult] = await Promise.all([
     supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
     supabase.from("stylists").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
-    supabase.from("reviews").select("*, customer:customers(name)").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false }),
+    supabase.from("reviews").select("*").eq("salon_id", salon.id).eq("moderation_status", "Published").is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
     supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order("created_at",{ascending:false}),
   ]);
@@ -265,11 +265,9 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     return { promotion, eligibleStyles, eligibleProducts, href };
   }).filter((entry) => entry.eligibleStyles.length || entry.eligibleProducts.length);
 
-  let reviews = (reviewsWithCustomerResult.data || []) as ReviewRecord[];
-  if (reviewsWithCustomerResult.error) {
-    const { data: reviewsData } = await supabase.from("reviews").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: false });
-    reviews = (reviewsData || []) as ReviewRecord[];
-  }
+  const reviews = reviewsResult.error
+    ? []
+    : (reviewsResult.data || []) as ReviewRecord[];
 
   const styleIds = styles.map((style) => style.id).filter((id): id is string => Boolean(id));
   const styleMaterialsByStyleId: Record<string, StyleMaterialRecord[]> = {};

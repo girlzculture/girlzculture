@@ -28,16 +28,18 @@ import { bookingReference } from "@/lib/bookingReference";
 import { formatZonedDate, formatZonedDateTime } from "@/lib/dateTime";
 import AdminTimeZonePreference from "@/components/admin/AdminTimeZonePreference";
 import NumericInput from "@/components/forms/NumericInput";
+import { readApiResponse } from "@/lib/apiResponseClient";
+import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
   subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[]; settings: Row[]; billingEvents: Row[];
-  identityConflicts: Row[]; changeRequests: Row[];
+  identityConflicts: Row[]; changeRequests: Row[]; reviewEvents: Row[];
 };
 
-const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [], identityConflicts: [], changeRequests: [] };
+const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [], identityConflicts: [], changeRequests: [], reviewEvents: [] };
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
@@ -84,7 +86,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
       bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
       subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
-      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests),
+      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events),
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
@@ -155,7 +157,7 @@ function AdminShell({ section, children, access, inboxCounts }: { section: Admin
     const notificationCount=id==="bookings"?notificationCounts.bookings:id==="finance"?notificationCounts.payments:id==="support"?notificationCounts.support:id==="submissions"?notificationCounts.lifecycle:id==="engine"||id==="overview"?notificationCounts.errors:0;
     return Number(notificationCount||0)+(id==="support"?inboxCounts.support:id==="complaints"?inboxCounts.complaints:0);
   };
-  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-charcoal p-4 text-white lg:block"><Link href={homeHref} className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{Math.min(navCount(id),99)}</span> : null}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:justify-end"><details className="lg:hidden"><summary className="list-none"><Menu /></summary><nav className="absolute left-4 z-50 mt-3 w-72 rounded-xl bg-white p-2 shadow-2xl">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm"><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold text-white">{Math.min(navCount(id),99)}</span> : null}</Link>)}</nav></details><b className="font-serif text-xl text-plum lg:hidden">Girlz Culture</b><div className="flex items-center gap-2"><DashboardNotificationCenter scope="admin" onCounts={handleNotificationCounts}/><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div></header>{children}</main><nav className="gc-brand-header fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`relative flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label}{navCount(id)?<span className="absolute right-1 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[8px] text-white">{Math.min(navCount(id),99)}</span>:null}</Link>)}</nav></div>;
+  return <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]"><aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] overflow-y-auto bg-charcoal p-4 text-white lg:block"><Link href={homeHref} className="block px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link><nav className="mt-3 space-y-1">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "text-white/80 hover:bg-white/10"}`}><Icon size={17} />{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{Math.min(navCount(id),99)}</span> : null}</Link>)}</nav><div className="absolute bottom-5 left-4 right-4 space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br /><span className="text-white/60">Contact support</span></Link><RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm text-white/85 hover:bg-white/10" /></div></aside><main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8"><header className="mb-5 flex items-center justify-between lg:justify-end"><DashboardMobileMenu ariaLabel="platform admin navigation" items={visibleNavigation.map(([id,label,Icon])=>({id,label,icon:Icon,href:id==="overview"?"/admin":`/admin/${id}`,active:section===id,count:navCount(id)}))}/><b className="font-serif text-xl text-plum lg:hidden">Girlz Culture</b><div className="flex items-center gap-2"><DashboardNotificationCenter scope="admin" onCounts={handleNotificationCounts}/><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div></header>{children}</main><nav className="gc-brand-header fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`relative flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19} />{label}{navCount(id)?<span className="absolute right-1 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[8px] text-white">{Math.min(navCount(id),99)}</span>:null}</Link>)}</nav></div>;
 }
 
 function AdminSectionView({ section, data, selected, setSelected, decide, update, onCreated, onTicketRead }: { section: AdminSection; data: DataState; selected: Row | null; setSelected: (row: Row) => void; decide: (id: string, decision: "approve" | "reject" | "activate") => void; update: (table: string, id: string, changes: Row) => Promise<void>; onCreated: () => Promise<void>; onTicketRead: (mode: "support" | "complaints") => void }) {
@@ -165,7 +167,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     salons: rows(data?.salons), applications: rows(data?.applications), customers: rows(data?.customers),
     bookings: rows(data?.bookings), reviews: rows(data?.reviews), tickets: rows(data?.tickets),
     subscriptions: rows(data?.subscriptions), complaints: rows(data?.complaints), admins: rows(data?.admins),
-    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents), identityConflicts: rows(data?.identityConflicts), changeRequests: rows(data?.changeRequests),
+    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents), identityConflicts: rows(data?.identityConflicts), changeRequests: rows(data?.changeRequests), reviewEvents: rows(data?.reviewEvents),
   };
   const props = { ...safeData, selected, setSelected, decide, update, onCreated };
   switch (section) {
@@ -280,7 +282,104 @@ function Quality(p: any) {
 }
 
 function Reviews(p: any) {
-  return <Panel title="Reviews & Moderation"><DataTable headers={["Reviewer", "Salon", "Rating", "Review", "Date", "Status", "Actions"]}>{p.reviews.length ? p.reviews.map((review: Row) => <tr key={review.id} className={`border-b ${review.dispute_status && review.dispute_status !== "None" ? "bg-red-50" : ""}`}><Td>{review.customer_name || "Customer"}</Td><Td>{p.salons.find((salon: Row) => salon.id === review.salon_id)?.name || "Salon unavailable"}</Td><Td>{Number(review.rating_overall || 0).toFixed(1)}</Td><Td>{review.written_review || "No written review"}</Td><Td>{date(review.created_at)}</Td><Td><Badge value={review.dispute_status || "Published"} /></Td><Td><select value={review.dispute_status || "Published"} onChange={(event) => p.update("reviews", review.id, { dispute_status: event.target.value })} className="rounded border p-1"><option>Published</option><option>Removed</option><option>Resolved</option></select></Td></tr>) : <EmptyTable columns={7} text="No reviews yet." />}</DataTable></Panel>;
+  const [activeReview, setActiveReview] = useState<string | null>(null);
+  const [action, setAction] = useState<"hidden" | "restored" | "resolved">("resolved");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  async function moderate(reviewId: string) {
+    if (reason.trim().length < 10) {
+      setFeedback("Enter a moderation reason of at least 10 characters.");
+      return;
+    }
+    setSaving(true);
+    setFeedback("");
+    try {
+      const session = await getSessionForScope("admin");
+      if (!session) throw new Error("Your admin session has expired.");
+      const response = await fetch(`/api/admin/reviews/${encodeURIComponent(reviewId)}/moderate`, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        redirect: "manual",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action, reason: reason.trim() }),
+      });
+      const body = await readApiResponse(
+        response,
+        "The review moderation action could not be completed.",
+      );
+      if (!response.ok) throw new Error(body.error || "The review moderation action could not be completed.");
+      await p.onCreated();
+      setActiveReview(null);
+      setReason("");
+      setFeedback("Moderation saved with an audit record.");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "The review moderation action could not be completed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Panel title="Reviews & Moderation">
+      {feedback ? <p role="status" className="mb-4 rounded-lg bg-blush/50 p-3 text-xs text-plum">{feedback}</p> : null}
+      <div className="space-y-4">
+        {p.reviews.length ? p.reviews.map((review: Row) => {
+          const salon = p.salons.find((item: Row) => item.id === review.salon_id);
+          const booking = p.bookings.find((item: Row) => item.id === review.booking_id);
+          const events = p.reviewEvents.filter((item: Row) => item.review_id === review.id);
+          const disputed = review.dispute_status === "Disputed" || review.moderation_status === "Under review";
+          return (
+            <article key={review.id} className={`rounded-xl border p-4 ${disputed ? "border-red-200 bg-red-50/60" : "border-plum/10 bg-white"}`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <b>{review.display_name || "Verified Client"}</b>
+                    <span className="rounded-full bg-plum px-2 py-0.5 text-[9px] font-bold text-white">Verified booking</span>
+                    <Badge value={review.moderation_status || "Published"} />
+                    {review.dispute_status && review.dispute_status !== "None" ? <Badge value={review.dispute_status} /> : null}
+                  </div>
+                  <p className="mt-1 text-xs text-ink/60">{salon?.name || "Salon unavailable"} · {date(review.created_at)}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 font-bold text-amber"><Star size={15} fill="currentColor" />{Number(review.rating_overall || 0).toFixed(1)}</span>
+              </div>
+              <p className="mt-3 text-sm leading-6">{review.written_review || "No written review"}</p>
+              <div className="mt-4 grid gap-3 rounded-lg bg-cream p-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                <div><b>Booking evidence</b><p className="mt-1 text-ink/60">{booking ? bookingReference(booking) : "Booking unavailable"}</p></div>
+                <div><b>Appointment</b><p className="mt-1 text-ink/60">{booking ? dateTime(booking.appointment_datetime, salon?.time_zone) : "Unavailable"}</p></div>
+                <div><b>Booking status</b><p className="mt-1 text-ink/60">{booking?.status || "Unavailable"}</p></div>
+                <div><b>Deposit</b><p className="mt-1 text-ink/60">{booking ? `${money(Number(booking.deposit_amount || 0))} · ${booking.deposit_status || "Unknown"}` : "Unavailable"}</p></div>
+              </div>
+              {review.dispute_reason ? <div className="mt-3 rounded-lg border border-red-200 bg-white p-3 text-xs"><b>Salon dispute reason</b><p className="mt-1 leading-5 text-ink/70">{review.dispute_reason}</p></div> : null}
+              {events.length ? (
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer font-bold text-plum">Audit history ({events.length})</summary>
+                  <div className="mt-2 space-y-2">{events.map((event: Row) => <p key={event.id} className="border-l-2 border-magenta pl-3"><b>{String(event.action || "").replace(/^./, (value: string) => value.toUpperCase())}</b> · {event.reason}<span className="block text-ink/50">{dateTime(event.created_at)}</span></p>)}</div>
+                </details>
+              ) : null}
+              <div className="mt-4">
+                {activeReview === review.id ? (
+                  <form onSubmit={(event) => { event.preventDefault(); void moderate(String(review.id)); }} className="rounded-lg border border-magenta/20 bg-blush/30 p-3">
+                    <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+                      <label className="text-xs font-bold">Action<select value={action} onChange={(event) => setAction(event.target.value as typeof action)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal"><option value="resolved">Resolve and publish</option><option value="hidden">Hide under policy</option><option value="restored">Restore to public</option></select></label>
+                      <label className="text-xs font-bold">Published moderation reason<textarea required minLength={10} maxLength={1000} rows={2} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal" placeholder="Explain the policy and evidence used for this decision." /></label>
+                    </div>
+                    <div className="mt-3 flex gap-2"><button disabled={saving} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-50">{saving ? "Saving…" : "Save audited decision"}</button><button type="button" onClick={() => { setActiveReview(null); setReason(""); }} className="min-h-10 rounded-lg border border-plum/15 px-4 text-xs">Cancel</button></div>
+                  </form>
+                ) : <button type="button" onClick={() => { setActiveReview(String(review.id)); setAction(disputed ? "resolved" : "hidden"); setReason(""); }} className="min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Review evidence & moderate</button>}
+              </div>
+            </article>
+          );
+        }) : <EmptyState title="No reviews yet" body="Completed-booking reviews will appear here for moderation." />}
+      </div>
+    </Panel>
+  );
 }
 
 // Retained temporarily for rollback comparison until the launch Finance

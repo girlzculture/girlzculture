@@ -15,7 +15,7 @@ function validSlug(value: unknown) {
   return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 
-const safeSectionTypes = new Set(["text", "card_grid", "carousel", "banner", "community_carousel"]);
+const safeSectionTypes = new Set(["text", "card_grid", "carousel", "banner", "community_carousel", "promo_rail"]);
 const safeCardTypes = new Set(["image", "video", "link", "salon"]);
 const text = (value: unknown, maximum: number) => String(value || "").trim().slice(0, maximum);
 function safeUrl(value: unknown) {
@@ -23,17 +23,25 @@ function safeUrl(value: unknown) {
   if (!url || url.startsWith("/")) return url;
   try { const parsed = new URL(url); return parsed.protocol === "https:" ? parsed.toString() : ""; } catch { return ""; }
 }
+function safeDate(value: unknown) {
+  const date = text(value, 40);
+  if (!date) return "";
+  const timestamp = Date.parse(date);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : "";
+}
 function sanitizeSections(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 30).map((raw) => {
     const section = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
     const type = safeSectionTypes.has(String(section.type)) ? String(section.type) : "text";
-    const maximum = type === "community_carousel" ? 20 : 12;
+    const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 8 : 12;
     const cards = Array.isArray(section.cards) ? section.cards.slice(0, maximum).map((rawCard) => {
       const card = rawCard && typeof rawCard === "object" ? rawCard as Record<string, unknown> : {};
-      const contentType = safeCardTypes.has(String(card.content_type)) ? String(card.content_type) : "image";
+      const requestedContentType = safeCardTypes.has(String(card.content_type)) ? String(card.content_type) : "image";
+      const contentType = type === "promo_rail" && requestedContentType === "video" ? "image" : requestedContentType;
       const salonId = contentType === "salon" && /^[0-9a-f-]{36}$/i.test(text(card.salon_id, 50)) ? text(card.salon_id, 50) : "";
-      return { id: text(card.id, 80), content_type: contentType, salon_id: salonId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href) };
+      const status = ["Draft", "Active", "Archived"].includes(String(card.status)) ? String(card.status) : "Active";
+      return { id: text(card.id, 80), content_type: contentType, salon_id: salonId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at) };
     }) : [];
     return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), cards };
   });

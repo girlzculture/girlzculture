@@ -6,6 +6,8 @@ import {
   BadgeCheck,
   CalendarDays,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   Clock3,
   Crown,
@@ -21,8 +23,10 @@ import {
   Star,
   UserPlus,
   UsersRound,
+  X,
 } from "lucide-react";
-import { getSessionForScope, reportClientOperationalFailure, salonSupabase as supabase } from "@/lib/supabase";
+import { getSessionForScope, reportClientOperationalFailure, reportClientOperationalRecovery, salonSupabase as supabase } from "@/lib/supabase";
+import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
 import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
 import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
@@ -68,6 +72,7 @@ import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
 import SalonProductOrders from "@/components/owner/SalonProductOrders";
+import MobileRecordEditor from "@/components/owner/MobileRecordEditor";
 import {
   bookingTransaction,
   financeCsv,
@@ -185,7 +190,7 @@ export default function OwnerDashboardApp({
   useEffect(() => {
     let live = true;
     let removeRealtime: (() => Promise<void>) | null = null;
-    let currentAccessToken = "";
+    let hadRealtimeFailure = false;
 
     async function loadDashboard() {
       const session = await getSessionForScope("salon");
@@ -198,27 +203,19 @@ export default function OwnerDashboardApp({
         setLoading(false);
         return;
       }
-      currentAccessToken = session.access_token;
-      const workspaceResponse = await fetch("/api/salon/workspace", {
-        headers: { Authorization: `Bearer ${currentAccessToken}` },
-        cache: "no-store",
-      });
-      const workspace = (await workspaceResponse.json()) as {
+      const api = await createAuthenticatedApiClient("salon");
+      const workspace = await api.request<{
         salon?: Salon;
         records?: Record<string, Row[]>;
         permissions?: Record<string, boolean> | null;
         isTeamMember?: boolean;
         error?: string;
-      };
+      }>("/api/salon/workspace");
       const s = workspace.salon || null;
-      const sErr = workspaceResponse.ok
-        ? null
-        : new Error(workspace.error || "Unable to load the salon workspace.");
       if (!live) return;
-      if (sErr || !s) {
+      if (!s) {
         setError(
-          sErr?.message ||
-            "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.",
+          "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.",
         );
         setLoading(false);
         return;
@@ -303,42 +300,44 @@ export default function OwnerDashboardApp({
           if (!live) return;
           if (state === "connected") {
             setRealtimeNotice("");
+            if (hadRealtimeFailure) {
+              hadRealtimeFailure = false;
+              void getSessionForScope("salon").then((current) =>
+                current
+                  ? reportClientOperationalRecovery({
+                      operation: "realtime:owner-dashboard",
+                      provider: "supabase-realtime",
+                      authorization: `Bearer ${current.access_token}`,
+                    })
+                  : undefined,
+              );
+            }
             return;
           }
           if (state === "degraded") {
+            hadRealtimeFailure = true;
             setRealtimeNotice(
               "Live updates are reconnecting. Your dashboard remains available and refreshes automatically in the meantime.",
             );
-            void reportClientOperationalFailure({
-                status: 503,
-                code: `REALTIME_${status || "DISCONNECTED"}`,
-                operation: "realtime:owner-dashboard",
-                provider: "supabase-realtime",
-                authorization: currentAccessToken
-                  ? `Bearer ${currentAccessToken}`
-                  : "",
-            });
+            void getSessionForScope("salon").then((current) =>
+              reportClientOperationalFailure({
+                  status: 503,
+                  code: `REALTIME_${status || "DISCONNECTED"}`,
+                  operation: "realtime:owner-dashboard",
+                  provider: "supabase-realtime",
+                  authorization: current
+                    ? `Bearer ${current.access_token}`
+                    : "",
+              }),
+            );
           }
         },
         onFallbackRefresh: async () => {
-          if (!live || !currentAccessToken) return;
+          if (!live) return;
           try {
-            const response = await fetch("/api/salon/workspace", {
-              headers: { Authorization: `Bearer ${currentAccessToken}` },
-              cache: "no-store",
-            });
-            if (response.status === 401 || response.status === 403) {
-              if (live) {
-                setError(
-                  "Your salon session has expired. Sign in again to continue.",
-                );
-              }
-              return;
-            }
-            if (!response.ok) return;
-            const refreshed = (await response.json()) as {
+            const refreshed = await api.request<{
               records?: Record<string, Row[]>;
-            };
+            }>("/api/salon/workspace");
             if (!live) return;
             const refreshedRecords = refreshed.records || {};
             setBookings(refreshedRecords.bookings || []);
@@ -691,6 +690,7 @@ export default function OwnerDashboardApp({
     setProducts,
     setPromotions,
     setBookings,
+    setReviews,
     setBlockouts,
     updateSalon: updateSalonServer,
     saveRecord: saveRecordServer,
@@ -799,6 +799,7 @@ type Ctx = {
   setProducts: React.Dispatch<React.SetStateAction<Row[]>>;
   setPromotions: React.Dispatch<React.SetStateAction<Row[]>>;
   setBookings: React.Dispatch<React.SetStateAction<Row[]>>;
+  setReviews: React.Dispatch<React.SetStateAction<Row[]>>;
   setBlockouts: React.Dispatch<React.SetStateAction<Row[]>>;
   updateSalon: (patch: Record<string, unknown>) => Promise<void>;
   saveRecord: (
@@ -2454,8 +2455,9 @@ function TruthfulProducts({ c }: { c: Ctx }) {
       ? active.images.map(String)
       : active?.photo_url
         ? [String(active.photo_url)]
-        : [],
+      : [],
   );
+  const [mobileEditorOpen, setMobileEditorOpen] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -2528,6 +2530,7 @@ function TruthfulProducts({ c }: { c: Ctx }) {
               c.setSelectedProduct(null);
               setPhoto("");
               setImages([]);
+              setMobileEditorOpen(true);
             }}
             className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
           >
@@ -2558,6 +2561,7 @@ function TruthfulProducts({ c }: { c: Ctx }) {
                       ? [String(product.photo_url)]
                       : [],
                 );
+                setMobileEditorOpen(true);
               }}
               className="overflow-hidden rounded-[10px] border border-plum/10 bg-white text-left"
             >
@@ -2610,6 +2614,11 @@ function TruthfulProducts({ c }: { c: Ctx }) {
             <Empty text="Add products sold at your salon." />
           ) : null}
         </div>
+        <MobileRecordEditor
+          open={mobileEditorOpen}
+          title={active ? `Edit ${active.name || "product"}` : "Add product"}
+          onClose={() => setMobileEditorOpen(false)}
+        >
         <Panel>
           <h2 className="font-serif text-xl text-plum">Add / Edit Product</h2>
           <form
@@ -2727,8 +2736,26 @@ function TruthfulProducts({ c }: { c: Ctx }) {
             <button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
               Save Product
             </button>
+            {active?.id ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await c.removeRecord(
+                    "salon_products",
+                    active.id!,
+                    c.setProducts,
+                  );
+                  c.setSelectedProduct(null);
+                  setMobileEditorOpen(false);
+                }}
+                className="min-h-11 w-full rounded-[8px] border border-red-200 text-xs font-bold text-red-700"
+              >
+                Archive product
+              </button>
+            ) : null}
           </form>
         </Panel>
+        </MobileRecordEditor>
       </div>
       <SalonProductOrders />
     </>
@@ -2739,7 +2766,9 @@ function Availability({ c }: { c: Ctx }) {
   const hours = c.salon.hours || {};
   const settings = c.salon.booking_settings || {};
   const timeZone = c.salon.time_zone || "America/New_York";
-  const week = salonWeek(timeZone);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [calendarBooking, setCalendarBooking] = useState<Row | null>(null);
+  const week = salonWeek(timeZone, weekOffset);
   const activeBookings = c.bookings.filter(
     (booking) =>
       !["cancelled", "declined", "refunded"].includes(
@@ -2754,8 +2783,17 @@ function Availability({ c }: { c: Ctx }) {
     c.stylists.find((stylist) => stylist.id === stylistId) || null;
   const activeBlockouts = c.blockouts.filter(
     (blockout) =>
+      !blockout.released_at &&
       new Date(String(blockout.ends_at || 0)).getTime() > renderedAt,
   );
+  useEffect(() => {
+    if (!calendarBooking) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCalendarBooking(null);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [calendarBooking]);
 
   async function saveHours(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -2814,6 +2852,19 @@ function Availability({ c }: { c: Ctx }) {
     c.setNotice(`${activeStylist.name || "Stylist"} availability saved.`);
   }
   async function block(mode: string, targetStylistId?: string) {
+    const scope = targetStylistId
+      ? `${activeStylist?.name || "this stylist"}`
+      : "the whole salon";
+    const expiration = mode.endsWith("_today")
+      ? "the end of today"
+      : mode === "stylist_three_hours"
+        ? "three hours from now"
+        : until;
+    if (
+      !window.confirm(
+        `Block new bookings for ${scope} until ${expiration}? Existing appointments will not be cancelled.`,
+      )
+    ) return;
     setBusy(`${mode}:${targetStylistId || "salon"}`);
     try {
       const session = await getSessionForScope("salon");
@@ -2833,7 +2884,10 @@ function Availability({ c }: { c: Ctx }) {
       const body = await response.json();
       if (!response.ok)
         throw new Error(body.error || "Unable to block availability.");
-      c.setBlockouts((rows) => [body.blockout as Row, ...rows]);
+      c.setBlockouts((rows) => [
+        body.blockout as Row,
+        ...rows.filter((row) => row.id !== body.blockout?.id),
+      ]);
       c.setNotice(
         "Availability blocked immediately. Customers can no longer book that window.",
       );
@@ -2862,8 +2916,14 @@ function Availability({ c }: { c: Ctx }) {
       const body = await response.json();
       if (!response.ok)
         throw new Error(body.error || "Unable to restore availability.");
-      c.setBlockouts((rows) => rows.filter((row) => row.id !== id));
-      c.setNotice("Availability restored.");
+      c.setBlockouts((rows) =>
+        rows.map((row) =>
+          row.id === id
+            ? { ...row, released_at: body.blockout?.released_at || new Date().toISOString() }
+            : row,
+        ),
+      );
+      c.setNotice("Bookings resumed immediately. Public availability now uses the normal schedule.");
     } catch (error) {
       c.setNotice(
         error instanceof Error
@@ -2919,8 +2979,25 @@ function Availability({ c }: { c: Ctx }) {
         </div>
       </Panel>
       <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-        <Panel className="overflow-x-auto">
-          <div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-xl text-plum">Appointment calendar</h2>
+              <p className="mt-1 text-[10px] text-ink/55">{weekRangeLabel(week)} · {timeZone.replaceAll("_", " ")}</p>
+            </div>
+            <div className="flex items-center overflow-hidden rounded-[9px] border border-plum/15 bg-white">
+              <button type="button" aria-label="Previous week" onClick={() => setWeekOffset((value) => value - 1)} className="grid min-h-11 min-w-11 place-items-center border-r border-plum/10 text-plum"><ChevronLeft size={17}/></button>
+              <button type="button" onClick={() => setWeekOffset(0)} disabled={weekOffset === 0} className="min-h-11 px-4 text-xs font-bold text-magenta disabled:text-ink/35">Today</button>
+              <button type="button" aria-label="Next week" onClick={() => setWeekOffset((value) => value + 1)} className="grid min-h-11 min-w-11 place-items-center border-l border-plum/10 text-plum"><ChevronRight size={17}/></button>
+            </div>
+          </div>
+          <div className="space-y-2 md:hidden">
+            {week.map((date) => {
+              const dayBookings = activeBookings.filter((booking) => dateKeyInTimeZone(String(booking.appointment_datetime || ""), timeZone) === date.key).sort((a, b) => String(a.appointment_datetime).localeCompare(String(b.appointment_datetime)));
+              return <section key={date.key} className="rounded-[10px] border border-plum/10 bg-white p-3"><header className="flex items-center justify-between"><b className="text-xs uppercase tracking-wide text-plum">{date.label}</b><span className="font-serif text-base">{date.day}</span></header><div className="mt-2 space-y-2">{dayBookings.map((booking, index) => <CalendarBookingButton key={String(booking.id || index)} booking={booking} c={c} timeZone={timeZone} onOpen={setCalendarBooking}/>)}{!dayBookings.length?<p className="py-2 text-center text-[10px] text-ink/40">No appointments</p>:null}</div></section>;
+            })}
+          </div>
+          <div className="hidden min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10 md:grid">
             {week.map((date) => (
               <section
                 key={date.key}
@@ -2948,22 +3025,7 @@ function Availability({ c }: { c: Ctx }) {
                         String(b.appointment_datetime),
                       ),
                     )
-                    .map((booking, index) => (
-                      <article
-                        key={booking.id || index}
-                        className="rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-[9px] leading-4"
-                      >
-                        <b className="block text-plum">
-                          {bookingTime(booking.appointment_datetime, timeZone)}
-                        </b>
-                        <span className="font-semibold">
-                          {styleName(c, booking.style_id)}
-                        </span>
-                        <span className="block text-ink/60">
-                          {stylistName(c, booking.stylist_id)}
-                        </span>
-                      </article>
-                    ))}
+                    .map((booking, index) => <CalendarBookingButton key={String(booking.id || index)} booking={booking} c={c} timeZone={timeZone} onOpen={setCalendarBooking}/>)}
                   {!activeBookings.some(
                     (booking) =>
                       dateKeyInTimeZone(
@@ -3206,7 +3268,10 @@ function Availability({ c }: { c: Ctx }) {
           )}
         </Panel>
         <Panel>
-          <h2 className="font-serif text-xl text-plum">Active Blocks</h2>
+          <h2 className="font-serif text-xl text-plum">Current override</h2>
+          <p className="mt-1 text-xs text-ink/55">
+            Release an override at any time to reopen availability immediately.
+          </p>
           <div className="mt-3 space-y-2">
             {activeBlockouts.map((blockout) => (
               <div
@@ -3229,7 +3294,7 @@ function Availability({ c }: { c: Ctx }) {
                     onClick={() => void unblock(String(blockout.id))}
                     className="font-bold text-magenta"
                   >
-                    Release
+                    {blockout.stylist_id ? "Resume stylist" : "Reopen today"}
                   </button>
                 </div>
               </div>
@@ -3240,8 +3305,13 @@ function Availability({ c }: { c: Ctx }) {
           </div>
         </Panel>
       </div>
+      {calendarBooking ? <div className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/55 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarBooking(null); }}><section role="dialog" aria-modal="true" aria-labelledby="calendar-booking-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[16px] bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><h2 id="calendar-booking-title" className="font-serif text-2xl text-plum">Appointment details</h2><p className="mt-1 text-[10px] text-ink/50">#{bookingReference(calendarBooking)}</p></div><button type="button" autoFocus aria-label="Close appointment details" onClick={() => setCalendarBooking(null)} className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/10 text-plum"><X size={18}/></button></div><div className="mt-5 space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Customer</b>{String(calendarBooking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Appointment</b>{dateText(calendarBooking.appointment_datetime, timeZone)}<br/>{styleName(c, calendarBooking.style_id)} · {stylistName(c, calendarBooking.stylist_id)}</p><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Status</b><Status value={String(calendarBooking.status || "Confirmed")}/></p><div className="grid grid-cols-2 gap-3 rounded-[10px] bg-cream p-3 text-xs"><p>Deposit paid<b className="mt-1 block text-green-700">${Number(calendarBooking.deposit_amount || 0).toFixed(2)}</b></p><p>Balance due<b className="mt-1 block text-magenta">${Number(calendarBooking.balance_due || 0).toFixed(2)}</b></p></div><Link href={`/salon/dashboard/bookings?booking=${encodeURIComponent(String(calendarBooking.id || ""))}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-[9px] bg-magenta text-xs font-bold text-white">Open booking</Link></div></section></div> : null}
     </>
   );
+}
+
+function CalendarBookingButton({ booking, c, timeZone, onOpen }: { booking: Row; c: Ctx; timeZone: string; onOpen: (booking: Row) => void }) {
+  return <button type="button" onClick={() => onOpen(booking)} className="w-full rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-left text-[9px] leading-4 transition hover:border-magenta focus-visible:outline-2 focus-visible:outline-magenta"><b className="block text-plum">{bookingTime(booking.appointment_datetime, timeZone)}</b><span className="font-semibold">{styleName(c, booking.style_id)}</span><span className="block text-ink/60">{stylistName(c, booking.stylist_id)}</span></button>;
 }
 
 function Bookings({ c }: { c: Ctx }) {
@@ -3996,6 +4066,9 @@ function Bookings({ c }: { c: Ctx }) {
 }
 
 function Reviews({ c }: { c: Ctx }) {
+  const [disputeId, setDisputeId] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeSaving, setDisputeSaving] = useState(false);
   const count = c.reviews.length;
   const rating = count
     ? c.reviews.reduce(
@@ -4088,17 +4161,86 @@ function Reviews({ c }: { c: Ctx }) {
                     Reply
                   </button>
                   <button
-                    onClick={async () => {
-                      if (review.id)
-                        await supabase.rpc("dispute_review", {
-                          target_review_id: review.id,
-                        });
-                      c.setNotice("Review sent for moderation.");
+                    onClick={() => {
+                      setDisputeId(String(review.id || ""));
+                      setDisputeReason("");
                     }}
                   >
                     Flag / Dispute
                   </button>
                 </div>
+                {disputeId === review.id ? (
+                  <form
+                    className="mt-4 rounded-xl border border-magenta/20 bg-blush/30 p-4"
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      const reason = disputeReason.trim();
+                      if (reason.length < 10) {
+                        c.setNotice("Enter a dispute reason of at least 10 characters.");
+                        return;
+                      }
+                      setDisputeSaving(true);
+                      const { data, error } = await supabase.rpc("dispute_review", {
+                        target_review_id: review.id,
+                        dispute_reason: reason,
+                      });
+                      setDisputeSaving(false);
+                      if (error || !data) {
+                        c.setNotice(
+                          "The review could not be sent for moderation. Confirm this account has Reviews permission and try again.",
+                        );
+                        return;
+                      }
+                      c.setReviews((current) =>
+                        current.map((item) =>
+                          item.id === review.id
+                            ? {
+                                ...item,
+                                dispute_status: "Disputed",
+                                dispute_reason: reason,
+                              }
+                            : item,
+                        ),
+                      );
+                      setDisputeId(null);
+                      setDisputeReason("");
+                      c.setNotice("Review dispute saved with its reason and audit record.");
+                    }}
+                  >
+                    <label className="block text-xs font-bold text-plum">
+                      Why should the platform review this feedback?
+                      <textarea
+                        autoFocus
+                        required
+                        minLength={10}
+                        maxLength={1000}
+                        rows={3}
+                        value={disputeReason}
+                        onChange={(event) => setDisputeReason(event.target.value)}
+                        className="mt-2 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal text-ink outline-none focus:border-magenta"
+                        placeholder="Describe the policy concern or booking evidence the admin should review."
+                      />
+                    </label>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        disabled={disputeSaving}
+                        className="min-h-10 rounded-lg bg-magenta px-4 font-bold text-white disabled:opacity-50"
+                      >
+                        {disputeSaving ? "Submitting…" : "Submit dispute"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDisputeId(null);
+                          setDisputeReason("");
+                        }}
+                        className="min-h-10 rounded-lg border border-plum/15 px-4 text-plum"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
               </Panel>
             ))}
             {!c.reviews.length ? (
@@ -4836,11 +4978,12 @@ function Empty({ text }: { text: string }) {
     </div>
   );
 }
-function salonWeek(timeZone: string) {
+function salonWeek(timeZone: string, offsetWeeks = 0) {
   const today = dateKeyInTimeZone(new Date(), timeZone);
   const cursor = new Date(`${today}T12:00:00Z`);
   const daysFromMonday = (cursor.getUTCDay() + 6) % 7;
   cursor.setUTCDate(cursor.getUTCDate() - daysFromMonday);
+  cursor.setUTCDate(cursor.getUTCDate() + offsetWeeks * 7);
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(cursor);
     date.setUTCDate(cursor.getUTCDate() + index);
@@ -4857,6 +5000,12 @@ function salonWeek(timeZone: string) {
       }),
     };
   });
+}
+function weekRangeLabel(week: Array<{ key: string; label: string; day: string }>) {
+  if (!week.length) return "";
+  const start = new Date(`${week[0].key}T12:00:00Z`);
+  const end = new Date(`${week[week.length - 1].key}T12:00:00Z`);
+  return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
 }
 function bookingTime(value: unknown, timeZone: string) {
   if (!value) return "Time not set";

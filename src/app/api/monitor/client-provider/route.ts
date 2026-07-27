@@ -30,7 +30,15 @@ async function POSTHandler(request: Request) {
     const operationInput = cleanText(body.operation, 120);
     const pageInput = cleanText(body.page, 160);
     const providerInput = cleanText(body.provider, 40).toLowerCase();
-    if (!Number.isInteger(status) || status < 400 || status > 599) {
+    const recovery =
+      status === 200 &&
+      codeInput === "REALTIME_RECOVERED" &&
+      operationInput === "realtime:owner-dashboard" &&
+      providerInput === "supabase-realtime";
+    if (
+      !recovery &&
+      (!Number.isInteger(status) || status < 400 || status > 599)
+    ) {
       return Response.json({ error: "Choose a valid provider status." }, { status: 400 });
     }
     const code = SAFE_PROVIDER_CODES.test(codeInput)
@@ -63,6 +71,60 @@ async function POSTHandler(request: Request) {
         }
       }
     }
+    if (recovery) {
+      if (!actorId || !["salon_owner", "salon_team"].includes(actorRole)) {
+        return Response.json(
+          { error: "A verified salon session is required." },
+          { status: 401, headers: { "Cache-Control": "private, no-store" } },
+        );
+      }
+      const release =
+        process.env.COMMIT_REF ||
+        process.env.NEXT_PUBLIC_COMMIT_REF ||
+        process.env.DEPLOY_ID ||
+        "local";
+      const environment =
+        process.env.CONTEXT || process.env.NODE_ENV || "unknown";
+      const { data: openEvents, error: lookupError } = await admin
+        .from("platform_error_events")
+        .select("id")
+        .eq("feature", "client-provider")
+        .eq("action", operationInput)
+        .eq("environment", environment)
+        .eq("release", release)
+        .in("status", ["Open", "Investigating"])
+        .contains("metadata", {
+          acting_account_id: actorId,
+          provider: "supabase-realtime",
+        })
+        .limit(20);
+      if (lookupError) throw lookupError;
+      const ids = (openEvents || []).map((event) => event.id);
+      if (ids.length) {
+        const resolvedAt = new Date().toISOString();
+        const { error: resolutionError } = await admin
+          .from("platform_error_events")
+          .update({
+            status: "Resolved",
+            resolved_at: resolvedAt,
+            updated_at: resolvedAt,
+          })
+          .in("id", ids);
+        if (resolutionError) throw resolutionError;
+      }
+      return Response.json(
+        { recovered: true, resolved: ids.length },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+    let salonId: string | null = null;
+    if (actorId && actorRole === "salon_owner") {
+      const owner = await admin.from("salons").select("id").eq("user_id", actorId).maybeSingle();
+      if (!owner.error) salonId = String(owner.data?.id || "") || null;
+    } else if (actorId && actorRole === "salon_team") {
+      const membership = await admin.from("salon_team_members").select("salon_id").eq("user_id", actorId).in("status", ["Invited", "Active"]).maybeSingle();
+      if (!membership.error) salonId = String(membership.data?.salon_id || "") || null;
+    }
     const reference = await capturePlatformError({
       request,
       admin,
@@ -74,6 +136,7 @@ async function POSTHandler(request: Request) {
       action: operation,
       actorRole,
       actorId,
+      salonId,
       provider,
       safeMessage: "This operation could not be completed.",
       severity: status === 401 ? "low" : "high",

@@ -4,6 +4,9 @@ import { assertLoginNotLocked, createMfaChallenge, LoginLockedError, MfaCooldown
 import { ADMIN_LOGIN_ERROR, assertCompanyAdminEmail } from "@/lib/adminSecurityServer";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 async function POSTHandler(request: Request) {
   let requestedRole = "";
   try {
@@ -29,8 +32,10 @@ async function POSTHandler(request: Request) {
     if (error instanceof LoginLockedError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
     if (error instanceof MfaCooldownError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
     noteOperationalFailure("Secure login start failed", error);
-    if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400 });
-    return errorResponse(error, "Unable to sign in.");
+    if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
+    const response = errorResponse(error, "Unable to sign in.");
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   }
 }
 export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/login/start", "POST"), POSTHandler);

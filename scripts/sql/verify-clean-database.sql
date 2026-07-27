@@ -346,6 +346,8 @@ begin
   foreach relation_name in array array[
     'booking_review_links',
     'review_moderation_events',
+    'review_dispute_events',
+    'salon_availability_override_audit',
     'salon_recovery_balances',
     'booking_financial_events',
     'homepage_product_placements',
@@ -383,25 +385,102 @@ begin
   end if;
 
   if to_regprocedure(
-      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
+      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
     ) is null
     or has_function_privilege(
       'anon',
-      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
       'EXECUTE'
     )
     or has_function_privilege(
       'authenticated',
-      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
       'EXECUTE'
     )
     or not has_function_privilege(
       'service_role',
-      'public.submit_verified_guest_review(text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
       'EXECUTE'
     )
   then
     raise exception 'Verified guest-review function or grants are unsafe';
+  end if;
+
+  if to_regprocedure('public.dispute_review(uuid,text)') is null
+    or not has_function_privilege(
+      'authenticated',
+      'public.dispute_review(uuid,text)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'anon',
+      'public.dispute_review(uuid,text)',
+      'EXECUTE'
+    )
+    or to_regprocedure(
+      'public.admin_moderate_review(uuid,text,text,uuid)'
+    ) is null
+    or has_function_privilege(
+      'authenticated',
+      'public.admin_moderate_review(uuid,text,text,uuid)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.admin_moderate_review(uuid,text,text,uuid)',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Review dispute or moderation function grants are unsafe';
+  end if;
+
+  if to_regprocedure(
+      'public.approve_salon_application(uuid,uuid)'
+    ) is null
+    or has_function_privilege(
+      'authenticated',
+      'public.approve_salon_application(uuid,uuid)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.approve_salon_application(uuid,uuid)',
+      'EXECUTE'
+    )
+    or to_regprocedure(
+      'public.create_salon_availability_override(uuid,uuid,timestamp with time zone,timestamp with time zone,text,boolean,text,uuid)'
+    ) is null
+    or to_regprocedure(
+      'public.release_salon_availability_override(uuid,uuid,uuid,text)'
+    ) is null
+  then
+    raise exception 'Pilot lifecycle or availability RPC grants are unsafe';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema='public'
+      and table_name='salon_blockouts'
+      and column_name='released_at'
+  )
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='reviews'
+        and column_name='display_name'
+    )
+    or has_table_privilege(
+      'authenticated',
+      'public.review_dispute_events',
+      'INSERT'
+    )
+    or has_table_privilege(
+      'authenticated',
+      'public.salon_availability_override_audit',
+      'UPDATE'
+    )
+  then
+    raise exception 'Pilot review or availability audit protections are incomplete';
   end if;
 
   if has_table_privilege('anon','public.booking_review_links','SELECT')
@@ -488,9 +567,20 @@ begin
     select 1
     from public.engine_settings
     where setting_key='integrations.expected_migration'
-      and published_value='"20260725107000"'::jsonb
+      and published_value='"20260726200000"'::jsonb
   ) then
     raise exception 'Engine expected migration does not match the repository head';
+  end if;
+
+  if not exists (
+    select 1
+    from public.content_pages page,
+      lateral jsonb_array_elements(page.sections) section
+    where page.slug = 'home'
+      and section->>'type' = 'promo_rail'
+      and jsonb_array_length(coalesce(section->'cards', '[]'::jsonb)) = 8
+  ) then
+    raise exception 'Homepage promotion rail is missing or does not contain eight cards';
   end if;
 end
 $$;

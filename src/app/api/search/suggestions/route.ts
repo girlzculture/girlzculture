@@ -9,6 +9,7 @@ import {
   searchTokens,
   type SearchLanguageRule,
 } from "@/lib/searchLanguage";
+import { isSalonClosedToday } from "@/lib/salonOpenStatus";
 
 type SalonRow = {
   id: string;
@@ -19,6 +20,10 @@ type SalonRow = {
   borough: string | null;
   latitude: number | null;
   longitude: number | null;
+  accepting_bookings: boolean | null;
+  is_closed_override: boolean | null;
+  closed_override_date: string | null;
+  time_zone: string | null;
 };
 
 type Suggestion = {
@@ -49,7 +54,7 @@ async function GETHandler(request: Request) {
     const [settingsResult, rulesResult, salonsResult, catalogResult, categoriesResult, offeringsResult, marketsResult] = await Promise.all([
       admin.from("search_engine_settings").select("stop_words,fuzzy_distance,zero_result_logging_enabled").eq("id", true).maybeSingle(),
       admin.from("search_language_rules").select("target_type,target_id,canonical_term,aliases,keywords,common_phrases,misspellings,ranking_boost,is_active").eq("is_active", true).limit(2_000),
-      admin.from("salons").select("id,name,slug,address_city,address_state,borough,latitude,longitude").eq("status", "Active").eq("is_discoverable", true).in("subscription_status", ["active", "trialing"]).eq("geocode_status", "success").eq("address_needs_review", false).limit(500),
+      admin.from("salons").select("id,name,slug,address_city,address_state,borough,latitude,longitude,accepting_bookings,is_closed_override,closed_override_date,time_zone").eq("status", "Active").eq("is_discoverable", true).in("subscription_status", ["active", "trialing"]).eq("geocode_status", "success").eq("address_needs_review", false).limit(500),
       admin.from("master_styles").select("id,name,category_id,service_group_id,sort_order").eq("is_active", true).order("sort_order").limit(2_000),
       admin.from("service_categories").select("id,name,slug,sort_order").eq("is_active", true).order("sort_order").limit(500),
       admin.from("styles").select("salon_id,master_style_id,name").is("archived_at",null).limit(5_000),
@@ -70,7 +75,11 @@ async function GETHandler(request: Request) {
       ranking_boost: Number(row.ranking_boost || 0),
     })) as SearchLanguageRule[];
     const ruleMap = new Map(rules.map((rule) => [`${rule.target_type}:${rule.target_id}`, rule]));
-    const salons = (salonsResult.data || []) as SalonRow[];
+    // This route uses the service role so it must apply the same pause/full-day
+    // eligibility used by the public discovery RPC instead of relying on RLS.
+    const salons = ((salonsResult.data || []) as SalonRow[]).filter(
+      (salon) => salon.accepting_bookings !== false && !isSalonClosedToday(salon),
+    );
     const visibleSalonIds = new Set(salons.map((salon) => salon.id));
     const offerings = (offeringsResult.data || []).filter((style) => visibleSalonIds.has(String(style.salon_id)));
     const offeredMasterIds = new Set(offerings.map((style) => String(style.master_style_id || "")).filter(Boolean));

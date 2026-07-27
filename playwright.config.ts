@@ -16,7 +16,7 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run dev -- -H 127.0.0.1 -p 3104",
-    url: `${baseURL}/internal/acceptance/numeric`,
+    url: baseURL,
     env: {
       ...process.env,
       NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true",

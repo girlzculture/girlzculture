@@ -208,6 +208,37 @@ export async function getSessionForScope(scope: AuthScope): Promise<Session | nu
   }
 }
 
+export async function reportClientOperationalRecovery(values: {
+  operation: string;
+  provider?: "supabase-realtime";
+  authorization: string;
+}) {
+  if (!values.authorization) return { resolved: 0 };
+  try {
+    const response = await fetch("/api/monitor/client-provider", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: values.authorization,
+      },
+      body: JSON.stringify({
+        status: 200,
+        code: "REALTIME_RECOVERED",
+        operation: values.operation,
+        provider: values.provider || "supabase-realtime",
+        page: typeof window === "undefined" ? "" : window.location.pathname,
+      }),
+      cache: "no-store",
+    });
+    if (!response.ok) return { resolved: 0 };
+    const body = await response.json() as { resolved?: number };
+    return { resolved: Math.max(0, Number(body.resolved || 0)) };
+  } catch {
+    // Recovery reporting must never affect the recovered dashboard.
+    return { resolved: 0 };
+  }
+}
+
 export async function refreshSessionForScope(
   scope: AuthScope,
 ): Promise<Session | null> {

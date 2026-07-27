@@ -8,6 +8,7 @@ import SafeImage from "@/components/site/SafeImage";
 
 type ReviewRecord = {
   id?: string;
+  display_name?: string | null;
   rating_overall?: number | null;
   rating_price_accuracy?: number | null;
   rating_punctuality?: number | null;
@@ -17,7 +18,6 @@ type ReviewRecord = {
   result_photos?: string[] | null;
   salon_reply?: string | null;
   created_at?: string | null;
-  customer?: { name?: string | null } | null;
 };
 
 type Props = {
@@ -114,7 +114,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blush text-plum/60"><UserRound size={20} aria-hidden="true" /></span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div><span className="rounded-full bg-plum px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.08em] text-white">Verified</span><h3 data-no-translate="true" className="mt-1.5 text-[11px] font-semibold">{activeReview.customer?.name || "Verified Client"}</h3></div>
+                  <div><span className="rounded-full bg-plum px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.08em] text-white">Verified</span><h3 data-no-translate="true" className="mt-1.5 text-[11px] font-semibold">{activeReview.display_name || "Verified Client"}</h3></div>
                   <time className="text-[9px] text-ink/45">{activeReview.created_at ? new Date(activeReview.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent"}</time>
                 </div>
                 <div className="mt-1 flex gap-0.5">{renderStars(activeReview.rating_overall ?? salonRating)}</div>

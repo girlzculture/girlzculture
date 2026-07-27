@@ -4,6 +4,9 @@ import { assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayl
 import { ADMIN_LOGIN_ERROR } from "@/lib/adminSecurityServer";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 async function POSTHandler(request: Request) {
   let requestedRole = "";
   try {
@@ -16,15 +19,33 @@ async function POSTHandler(request: Request) {
     const { email } = await assertLoginNotLocked(request, role, body.email);
     const code = cleanText(body.code, 6);
     if (!/^\d{6}$/.test(code)) throw new Error("Enter the six-digit verification code.");
-    await verifyMfaChallenge(cleanText(body.challenge_id, 50), code, role, email, request);
-    const auth = await signInAndVerifyRole(email, cleanText(body.password, 200), role);
+    // Re-verify the account before consuming the one-time challenge. A
+    // deployment/provider interruption must not burn a valid code and leave
+    // the user unable to retry.
+    let auth;
+    try {
+      auth = await signInAndVerifyRole(email, cleanText(body.password, 200), role);
+    } catch (error) {
+      await recordLoginAttempt(request, role, email, false);
+      throw error;
+    }
+    await verifyMfaChallenge(
+      cleanText(body.challenge_id, 50),
+      code,
+      role,
+      email,
+      request,
+      auth.user.id,
+    );
     await recordLoginAttempt(request, role, email, true);
     return Response.json({ session: sessionPayload(auth.session) });
   } catch (error) {
     if (error instanceof LoginLockedError) return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
     noteOperationalFailure("Secure login verification failed", error);
-    if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400 });
-    return errorResponse(error, "Unable to verify sign-in.");
+    if (requestedRole === "admin") return Response.json({ error: ADMIN_LOGIN_ERROR }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
+    const response = errorResponse(error, "Unable to verify sign-in.");
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   }
 }
 export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/auth/login/verify", "POST"), POSTHandler);

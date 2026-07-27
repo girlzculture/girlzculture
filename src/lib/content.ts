@@ -12,10 +12,15 @@ export type ContentCard = {
   body?: string;
   media_url?: string;
   href?: string;
+  cta_label?: string;
+  alt_text?: string;
+  status?: "Draft" | "Active" | "Archived";
+  starts_at?: string;
+  ends_at?: string;
 };
 export type ContentSection = {
   id?: string;
-  type?: "text" | "card_grid" | "carousel" | "banner" | "community_carousel";
+  type?: "text" | "card_grid" | "carousel" | "banner" | "community_carousel" | "promo_rail";
   title?: string;
   body?: string;
   image_url?: string;

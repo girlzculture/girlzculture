@@ -63,12 +63,17 @@ export default function ReviewForm({
   const [quality, setQuality] = useState(5);
   const [cleanliness, setCleanliness] = useState(5);
   const [wouldReturn, setWouldReturn] = useState(true);
+  const [displayName, setDisplayName] = useState("");
   const [comments, setComments] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const canSubmit = useMemo(
-    () => state === "eligible" && comments.trim().length >= 10 && !saving,
-    [comments, saving, state],
+    () =>
+      state === "eligible" &&
+      displayName.trim().length >= 1 &&
+      comments.trim().length >= 10 &&
+      !saving,
+    [comments, displayName, saving, state],
   );
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -81,6 +86,7 @@ export default function ReviewForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          display_name: displayName.trim(),
           rating_overall: overallRating,
           rating_price_accuracy: priceAccuracy,
           rating_punctuality: punctuality,
@@ -162,6 +168,22 @@ export default function ReviewForm({
         </p>
       </header>
       <form onSubmit={submit} className="rounded-3xl border border-mist bg-subtle p-6">
+        <label className="mb-4 block rounded-2xl border border-mist bg-white p-5">
+          <span className="font-semibold text-charcoal">Public first name or display name</span>
+          <input
+            required
+            minLength={1}
+            maxLength={60}
+            autoComplete="given-name"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            placeholder="For example, Janel"
+            className="mt-3 min-h-11 w-full rounded-xl border border-mist bg-white px-4 outline-none focus:border-teal"
+          />
+          <span className="mt-1 block text-xs text-ink/55">
+            This is the only name shown publicly. Your booking identity and contact details stay private.
+          </span>
+        </label>
         <div className="grid gap-4 md:grid-cols-2">
           <Rating label="Overall experience" value={overallRating} onChange={setOverallRating} />
           <Rating label="Price accuracy" value={priceAccuracy} onChange={setPriceAccuracy} />
