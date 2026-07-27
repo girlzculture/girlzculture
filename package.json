@@ -63,6 +63,7 @@
     "verify:vanity-urls": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-salon-vanity-urls.mjs",
     "verify:final-correction": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-final-production-correction.mjs",
     "verify:pilot-stabilization": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-pilot-stabilization.mjs",
+    "verify:mobile-homepage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-mobile-homepage-correction.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

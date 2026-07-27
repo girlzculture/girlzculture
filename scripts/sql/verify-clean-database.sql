@@ -567,7 +567,7 @@ begin
     select 1
     from public.engine_settings
     where setting_key='integrations.expected_migration'
-      and published_value='"20260726200000"'::jsonb
+      and published_value='"20260727210000"'::jsonb
   ) then
     raise exception 'Engine expected migration does not match the repository head';
   end if;
@@ -581,6 +581,40 @@ begin
       and jsonb_array_length(coalesce(section->'cards', '[]'::jsonb)) = 8
   ) then
     raise exception 'Homepage promotion rail is missing or does not contain eight cards';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_indexes
+    where schemaname='public'
+      and indexname='homepage_sections_unique_position'
+  )
+    or (select count(*) from public.homepage_sections) <>
+       (select count(distinct sort_order) from public.homepage_sections)
+    or not exists (
+      select 1
+      from public.homepage_sections
+      where section_key='promo_rail' and sort_order between 1 and 4
+    )
+  then
+    raise exception 'Authoritative homepage section ordering is incomplete';
+  end if;
+
+  if not has_function_privilege(
+    'anon',
+    'public.resolve_homepage_promotion_target(text,uuid)',
+    'EXECUTE'
+  ) then
+    raise exception 'Public homepage promotion target resolver is unavailable';
+  end if;
+
+  if not exists (
+    select 1
+    from public.media_upload_profiles
+    where profile_key='content'
+      and 'image/gif'=any(accepted_mime_types)
+  ) then
+    raise exception 'Editorial animated GIF support is not configured';
   end if;
 end
 $$;

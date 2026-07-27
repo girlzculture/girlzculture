@@ -18,15 +18,17 @@ import {
 import MobileLocationOnboarding from "@/components/location/MobileLocationOnboarding";
 import FeaturedProductPlacement from "@/components/public/FeaturedProductPlacement";
 import HomepagePromoRail from "@/components/public/HomepagePromoRail";
+import { resolvePublishedHomepagePromotions } from "@/lib/homepagePromotionServer";
 
-type HomeSectionKey = "salons_near_you" | "featured_salons" | "featured_products" | "trending_now" | "trending_picks";
+type HomeSectionKey = "promo_rail" | "salons_near_you" | "featured_salons" | "featured_products" | "trending_now" | "trending_picks";
 type HomeSection = { section_key: HomeSectionKey; title: string; description: string | null; is_visible: boolean; sort_order: number };
 const DEFAULT_HOME_SECTIONS: HomeSection[] = [
-  { section_key: "salons_near_you", title: "Salons Near You", description: null, is_visible: true, sort_order: 1 },
-  { section_key: "featured_salons", title: "Featured Salons", description: null, is_visible: true, sort_order: 2 },
-  { section_key: "trending_now", title: "Trending Now", description: null, is_visible: false, sort_order: 3 },
-  { section_key: "featured_products", title: "Featured Products", description: "Reserve salon favorites for local pickup.", is_visible: true, sort_order: 4 },
-  { section_key: "trending_picks", title: "Trending Picks This Week", description: null, is_visible: true, sort_order: 5 },
+  { section_key: "promo_rail", title: "Featured", description: null, is_visible: true, sort_order: 1 },
+  { section_key: "salons_near_you", title: "Salons Near You", description: null, is_visible: true, sort_order: 2 },
+  { section_key: "featured_salons", title: "Featured Salons", description: null, is_visible: true, sort_order: 3 },
+  { section_key: "trending_picks", title: "Trending Picks This Week", description: null, is_visible: true, sort_order: 4 },
+  { section_key: "featured_products", title: "Featured Products", description: "Reserve salon favorites for local pickup.", is_visible: true, sort_order: 5 },
+  { section_key: "trending_now", title: "Trending Now", description: null, is_visible: false, sort_order: 6 },
 ];
 const DEFAULT_PROMOTION_CARDS: ContentCard[] = [
   { id: "pilot-nearby", content_type: "image", title: "Find trusted salons nearby", body: "See verified braiding salons serving Harlem and the Bronx.", media_url: "/images/salon-warm.jpg", href: "/salons", cta_label: "Find a salon", alt_text: "Warm, modern braiding salon interior", status: "Active" },
@@ -46,14 +48,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const { data: sectionData, error: sectionError } = await supabase.from("homepage_sections").select("*").order("sort_order");
   if (sectionError) await capturePublicPageFailure(sectionError, "homepage", "load-section-controls");
   const sectionOverrides = new Map(((sectionData || []) as HomeSection[]).map((section) => [section.section_key, section]));
-  const subtitleKeys: Record<HomeSectionKey, string> = { salons_near_you: "salons_near_you_subheading", featured_salons: "featured_salons_subheading", featured_products: "featured_products_subheading", trending_now: "trending_now_subheading", trending_picks: "trending_picks_subheading" };
   const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {
     const override = sectionOverrides.get(section.section_key);
-    return { ...(override || section), description: homeContent.labels?.[subtitleKeys[section.section_key]] || null };
+    const merged = override || section;
+    return {
+      ...merged,
+      description: ["salons_near_you", "featured_salons", "trending_picks"].includes(section.section_key)
+        ? null
+        : merged.description,
+    };
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const promoSection = homeContent.sections?.find((section) => section.type === "promo_rail" && section.is_visible !== false);
-  const promotionCards = promoSection?.cards?.length ? promoSection.cards : DEFAULT_PROMOTION_CARDS;
+  const configuredPromotionCards = promoSection?.cards?.length ? promoSection.cards : DEFAULT_PROMOTION_CARDS;
+  const promotionCards = await resolvePublishedHomepagePromotions(configuredPromotionCards);
   const contentSections = homeContent.sections?.filter((section) => section.type !== "promo_rail") || [];
+  const desktopIntroVisible = homeContent.labels?.home_intro_visible !== "false";
   const [nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.featured_product_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
 
   return (
@@ -61,24 +70,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       <PublicHeader />
       <MobileLocationOnboarding />
 
-      <section className="border-b border-plum/[0.08] bg-[radial-gradient(circle_at_85%_10%,rgba(230,234,237,.72),transparent_28%),linear-gradient(180deg,#fff,#f5f7f8)] pt-6 sm:pt-8">
-        <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-          <div className="grid items-end gap-5 lg:grid-cols-[.75fr_1.25fr]">
+      {desktopIntroVisible ? <section data-home-intro className="hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_85%_10%,rgba(230,234,237,.72),transparent_28%),linear-gradient(180deg,#fff,#f5f7f8)] py-5 lg:block">
+        <div className="mx-auto w-full max-w-[1760px] px-10 xl:px-12 2xl:px-16">
+          <div className="grid items-end gap-6 lg:grid-cols-[.72fr_1.28fr]">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[.16em] text-magenta">Real salons · real prices · real availability</p>
-              <h1 className="mt-2 max-w-2xl font-serif text-[38px] font-semibold leading-[.94] tracking-[-.045em] text-charcoal sm:text-[48px]">{homeContent.hero_title}</h1>
-              {homeContent.hero_subtitle ? <p className="mt-3 max-w-xl text-sm leading-6 text-ink/70">{homeContent.hero_subtitle}</p> : null}
+              <h1 className="mt-2 max-w-2xl font-serif text-[42px] font-semibold leading-[.94] tracking-[-.045em] text-charcoal">{homeContent.hero_title}</h1>
+              {homeContent.hero_subtitle ? <p className="mt-2 max-w-xl text-xs leading-5 text-ink/70">{homeContent.hero_subtitle}</p> : null}
             </div>
-            <div className="hidden md:block"><SearchComposer /></div>
+            <SearchComposer />
           </div>
         </div>
-        <div className="mt-5">
-          <HomepagePromoRail cards={promotionCards} now={new Date().toISOString()} />
-        </div>
-      </section>
+      </section> : null}
 
       <div className="gc-home-content mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} productCardCount={productCardCount} trendingCardCount={trendingCardCount}/>)}
+        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} promotionCards={promotionCards} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} productCardCount={productCardCount} trendingCardCount={trendingCardCount}/>)}
 
         <PublicContentSections sections={contentSections} variant="homepage" />
 
@@ -113,7 +119,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   );
 }
 
-function HomepageRow({ section,nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount }: { section: HomeSection;nearbyCardCount:number;featuredCardCount:number;productCardCount:number;trendingCardCount:number }) {
+function HomepageRow({ section,promotionCards,nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount }: { section: HomeSection;promotionCards:ContentCard[];nearbyCardCount:number;featuredCardCount:number;productCardCount:number;trendingCardCount:number }) {
+  if (section.section_key === "promo_rail") return <HomepagePromoRail cards={promotionCards} now={new Date().toISOString()} />;
   if (section.section_key === "salons_near_you") return <NearbySalonPlacement title={section.title} description={section.description} maxCards={nearbyCardCount}/>;
   if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description} maxCards={featuredCardCount}/>;
   if (section.section_key === "featured_products") return <FeaturedProductPlacement title={section.title} description={section.description} maxCards={productCardCount}/>;

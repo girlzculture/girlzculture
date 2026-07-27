@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, MapPin, RotateCcw, Video } from "lucide-react";
+import { ArrowLeft, ArrowRight, RotateCcw, Video } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import SafeCampaignVideo from "@/components/public/SafeCampaignVideo";
 import { validCoordinates } from "@/lib/location";
@@ -111,7 +111,6 @@ export default function TrendingVideoPlacement({
             <span className="text-[10px] font-normal text-ink/55">Sponsored</span>
           </div>
           {description ? <p className="mt-1 text-xs text-ink/60">{description}</p> : null}
-          {location ? <p className="mt-1 flex items-center gap-1 text-[10px] text-ink/55"><MapPin size={12} aria-hidden="true" />Near {location.label}</p> : null}
         </div>
         {!viewAll && videos.length ? <div className="flex items-center gap-2"><button type="button" aria-label="Previous Trending Picks" onClick={()=>scroll(-1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowLeft size={16}/></button><button type="button" aria-label="Next Trending Picks" onClick={()=>scroll(1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowRight size={16}/></button><Link href="/trending" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div> : null}
       </div>

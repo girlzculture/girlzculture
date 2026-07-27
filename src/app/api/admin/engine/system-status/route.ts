@@ -23,7 +23,7 @@ import { capturePlatformError } from "@/lib/platformErrors";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const EXPECTED_MIGRATION = "20260726200000";
+const EXPECTED_MIGRATION = "20260727210000";
 type State = "healthy" | "degraded" | "not_configured";
 type HealthRow = {
   integration_key: string;

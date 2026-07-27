@@ -7,7 +7,9 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 export type ContentCard = {
   id?: string;
   content_type?: "image" | "video" | "link" | "salon";
+  association_type?: "salon" | "campaign";
   salon_id?: string;
+  campaign_id?: string;
   title?: string;
   body?: string;
   media_url?: string;

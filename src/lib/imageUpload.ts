@@ -11,6 +11,7 @@ export type ImageUploadProfile = {
   maxBytes: number;
   safeArea?: boolean;
   quality?: number;
+  acceptedMimeTypes?: string[];
 };
 
 export const IMAGE_UPLOAD_PROFILES: Record<ImagePresetKey, ImageUploadProfile> = {
@@ -21,18 +22,19 @@ export const IMAGE_UPLOAD_PROFILES: Record<ImagePresetKey, ImageUploadProfile> =
   service: { key: "service", label: "Service card", aspectWidth: 4, aspectHeight: 3, minWidth: 800, minHeight: 600, outputWidth: 1600, maxBytes: 4 * 1024 * 1024 },
   product: { key: "product", label: "Product card", aspectWidth: 1, aspectHeight: 1, minWidth: 700, minHeight: 700, outputWidth: 1200, maxBytes: 4 * 1024 * 1024 },
   review: { key: "review", label: "Review result", aspectWidth: 4, aspectHeight: 3, minWidth: 600, minHeight: 450, outputWidth: 1400, maxBytes: 4 * 1024 * 1024 },
-  content: { key: "content", label: "Editorial image", aspectWidth: 16, aspectHeight: 9, minWidth: 1200, minHeight: 675, outputWidth: 1920, maxBytes: 4 * 1024 * 1024, safeArea: true },
+  content: { key: "content", label: "Editorial image", aspectWidth: 16, aspectHeight: 9, minWidth: 1200, minHeight: 675, outputWidth: 1920, maxBytes: 8 * 1024 * 1024, safeArea: true, acceptedMimeTypes: ["image/jpeg", "image/png", "image/gif"] },
 };
 
 export const MAX_IMAGE_UPLOAD_BYTES = 12 * 1024 * 1024;
 export const DEFAULT_MAX_IMAGE_WIDTH = 1920;
 
 export function isSupportedImageType(file: File) {
-  return file.type === "image/jpeg" || file.type === "image/png";
+  return ["image/jpeg", "image/png", "image/gif"].includes(file.type);
 }
 
 export function getImageUploadError(file: File, profile: ImageUploadProfile = IMAGE_UPLOAD_PROFILES.gallery) {
-  if (!isSupportedImageType(file)) return "Upload a JPG or PNG image.";
+  const accepted = profile.acceptedMimeTypes || ["image/jpeg", "image/png"];
+  if (!isSupportedImageType(file) || !accepted.includes(file.type)) return profile.key === "content" ? "Upload a JPG, PNG, or animated GIF." : "Upload a JPG or PNG image.";
   if (file.size > MAX_IMAGE_UPLOAD_BYTES) return "This original image is larger than 12 MB. Choose a smaller JPG or PNG.";
   if (!file.size) return "This image is empty or damaged. Choose another file.";
   if (profile.maxBytes < 1) return "This media profile is not configured correctly. Contact support.";
@@ -77,7 +79,7 @@ export function profileForRendition(profile: ImageUploadProfile, device: ImageRe
 }
 
 export async function optimizeImageFile(file: File, profileOrWidth: ImageUploadProfile | number = IMAGE_UPLOAD_PROFILES.gallery, transform: ImageTransform = {}) {
-  if (typeof window === "undefined" || !isSupportedImageType(file)) return file;
+  if (typeof window === "undefined" || !isSupportedImageType(file) || file.type === "image/gif") return file;
   const profile = typeof profileOrWidth === "number"
     ? { ...IMAGE_UPLOAD_PROFILES.gallery, outputWidth: profileOrWidth }
     : profileOrWidth;
