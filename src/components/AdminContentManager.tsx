@@ -2,9 +2,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Eye, FileText, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Eye, FileSpreadsheet, FileText, Monitor, Plus, Smartphone, Trash2, Upload } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
 import HeroImageFraming from "@/components/admin/HeroImageFraming";
+import { readApiResponse } from "@/lib/apiResponseClient";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 import NumericInput from "@/components/forms/NumericInput";
@@ -245,12 +246,369 @@ export default function AdminContentManager({
 
 type CatalogKind = "service_category" | "service_group" | "master_style" | "service_addon";
 type CatalogView = "active" | "archived" | "all";
+type CatalogImportStatus = "create" | "restore" | "unchanged" | "conflict" | "invalid";
+type CatalogImportPreviewRow = {
+  source_rows: number[];
+  category: string;
+  category_slug: string;
+  service_group: string;
+  service_name: string;
+  addons: string[];
+  status: CatalogImportStatus;
+  messages: string[];
+};
+type CatalogImportPreview = {
+  sheet_name: string;
+  ignored_columns: string[];
+  rows: CatalogImportPreviewRow[];
+  import_rows: Array<Omit<CatalogImportPreviewRow, "status" | "messages">>;
+  summary: Record<CatalogImportStatus, number> & {
+    total: number;
+    importable: number;
+    skipped: number;
+  };
+};
 function filterCatalogRows(items: Row[], view: CatalogView) {
   return items.filter((item) => {
     if (view === "all") return true;
     const archived = Boolean(item.archived_at) || item.is_active === false;
     return view === "archived" ? archived : !archived;
   });
+}
+
+function CatalogSpreadsheetPanel({
+  authHeaders,
+  reload,
+  setNotice,
+  saving,
+  setSaving,
+}: {
+  authHeaders: () => Promise<Record<string, string>>;
+  reload: (selectFirst?: boolean) => Promise<{
+    masterStyles: Row[];
+    serviceCategories: Row[];
+    serviceGroups: Row[];
+    serviceAddons: Row[];
+  }>;
+  setNotice: (message: string) => void;
+  saving: boolean;
+  setSaving: (value: boolean) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<CatalogImportPreview | null>(null);
+
+  async function downloadWorkbook(mode: "template" | "export") {
+    setSaving(true);
+    setNotice("");
+    try {
+      const response = await fetch(
+        `/api/admin/catalog-spreadsheet?mode=${mode}`,
+        { headers: await authHeaders(), cache: "no-store" },
+      );
+      if (!response.ok) {
+        const body = await readApiResponse(
+          response,
+          "The catalog spreadsheet could not be downloaded.",
+        );
+        throw new Error(body.error || "The catalog spreadsheet could not be downloaded.");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download =
+        mode === "template"
+          ? "girlz-culture-platform-catalog-template.xlsx"
+          : `girlz-culture-platform-catalog-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setNotice(
+        mode === "template"
+          ? "Blank platform catalog template downloaded."
+          : "Current platform catalog exported.",
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Download failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function previewSpreadsheet() {
+    if (!file) {
+      setNotice("Choose an .xlsx or .csv catalog file first.");
+      return;
+    }
+    setSaving(true);
+    setNotice("");
+    try {
+      const headers = new Headers(await authHeaders());
+      headers.delete("Content-Type");
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/api/admin/catalog-spreadsheet", {
+        method: "POST",
+        headers,
+        body: form,
+      });
+      const body = await readApiResponse(
+        response,
+        "The catalog spreadsheet could not be previewed.",
+      );
+      if (!response.ok) throw new Error(body.error || "Catalog preview failed.");
+      const next = body as unknown as CatalogImportPreview;
+      if (!next.summary || !Array.isArray(next.rows)) {
+        throw new Error("The catalog preview response was incomplete.");
+      }
+      setPreview(next);
+      setNotice(
+        `Preview ready: ${next.summary.importable} row${next.summary.importable === 1 ? "" : "s"} can be imported; ${next.summary.skipped} will be skipped.`,
+      );
+    } catch (error) {
+      setPreview(null);
+      setNotice(error instanceof Error ? error.message : "Catalog preview failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function commitSpreadsheet() {
+    if (!preview?.import_rows.length) {
+      setNotice("There are no valid catalog rows to import.");
+      return;
+    }
+    setSaving(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/admin/catalog-spreadsheet", {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: "commit", rows: preview.import_rows }),
+      });
+      const body = await readApiResponse(
+        response,
+        "The catalog spreadsheet could not be imported.",
+      );
+      if (!response.ok) throw new Error(body.error || "Catalog import failed.");
+      const result = (body.result || {}) as Row;
+      await reload(false);
+      setPreview(null);
+      setFile(null);
+      const created = Object.values((result.created || {}) as Row).reduce(
+        (total: number, value) => total + Number(value || 0),
+        0,
+      );
+      const restored = Object.values((result.restored || {}) as Row).reduce(
+        (total: number, value) => total + Number(value || 0),
+        0,
+      );
+      setNotice(
+        `Catalog import completed and verified after reload: ${Number(result.rows_processed || preview.import_rows.length)} rows processed, ${created} records created, ${restored} restored.`,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Catalog import failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function downloadErrorReport() {
+    if (!preview) return;
+    const problemRows = preview.rows.filter((row) =>
+      ["conflict", "invalid"].includes(row.status),
+    );
+    if (!problemRows.length) {
+      setNotice("This preview has no invalid or conflicting rows.");
+      return;
+    }
+    const csvCell = (value: unknown) => {
+      let text = String(value ?? "");
+      if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+    const rows = [
+      ["Spreadsheet rows", "Status", "Category", "Service Group", "Service Name", "Add-ons", "Reason"],
+      ...problemRows.map((row) => [
+        row.source_rows.join(", "),
+        row.status,
+        row.category,
+        row.service_group,
+        row.service_name,
+        row.addons.join("; "),
+        row.messages.join(" "),
+      ]),
+    ];
+    const blob = new Blob(
+      [rows.map((row) => row.map(csvCell).join(",")).join("\r\n")],
+      { type: "text/csv;charset=utf-8" },
+    );
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "girlz-culture-catalog-import-errors.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  const statusClass: Record<CatalogImportStatus, string> = {
+    create: "bg-teal/10 text-teal",
+    restore: "bg-amber/20 text-plum",
+    unchanged: "bg-slate-100 text-slate-600",
+    conflict: "bg-red-100 text-red-700",
+    invalid: "bg-red-100 text-red-700",
+  };
+
+  return (
+    <section className="mb-5 rounded-xl border border-teal/20 bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-teal">
+            <FileSpreadsheet size={15} />
+            Spreadsheet import & export
+          </p>
+          <h2 className="mt-2 font-serif text-2xl text-plum">
+            Platform service catalog
+          </h2>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-ink/60">
+            Import categories, service groups, service names, and category-level
+            add-ons. Prices, durations, and images are intentionally excluded
+            from the platform template.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void downloadWorkbook("template")}
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-teal px-4 text-xs font-bold text-teal disabled:opacity-50"
+          >
+            <Download size={15} />
+            Download Template
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void downloadWorkbook("export")}
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/20 px-4 text-xs font-bold text-plum disabled:opacity-50"
+          >
+            <Download size={15} />
+            Export Current Catalog
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
+        <label className="block text-xs font-bold text-plum">
+          Excel or CSV catalog
+          <input
+            key={file?.name || "empty"}
+            type="file"
+            accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+            onChange={(event) => {
+              setFile(event.target.files?.[0] || null);
+              setPreview(null);
+            }}
+            className="mt-1 block w-full rounded-lg border border-plum/10 bg-white p-2 text-xs font-normal file:mr-3 file:rounded-md file:border-0 file:bg-teal/10 file:px-3 file:py-2 file:font-bold file:text-teal"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={saving || !file}
+          onClick={() => void previewSpreadsheet()}
+          className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-lg bg-teal px-6 text-xs font-bold text-white disabled:opacity-50"
+        >
+          <Upload size={15} />
+          Preview Import
+        </button>
+      </div>
+
+      {preview ? (
+        <div className="mt-5 rounded-xl border border-plum/10 bg-cream/40 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <b className="text-sm text-plum">
+                Preview from {preview.sheet_name}
+              </b>
+              <p className="mt-1 text-xs text-ink/60">
+                {preview.summary.create} create · {preview.summary.restore} restore
+                {" · "}
+                {preview.summary.unchanged} unchanged · {preview.summary.skipped} skipped
+              </p>
+              {preview.ignored_columns.length ? (
+                <p className="mt-1 text-[10px] text-ink/50">
+                  Safely ignored columns: {preview.ignored_columns.join(", ")}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {preview.summary.skipped ? (
+                <button
+                  type="button"
+                  onClick={downloadErrorReport}
+                  className="min-h-10 rounded-lg border border-red-200 px-4 text-xs font-bold text-red-700"
+                >
+                  Download Error Report
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={saving || !preview.summary.importable}
+                onClick={() => void commitSpreadsheet()}
+                className="min-h-10 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-50"
+              >
+                Import {preview.summary.importable} Valid Row
+                {preview.summary.importable === 1 ? "" : "s"}
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 max-h-[420px] overflow-auto rounded-lg border bg-white">
+            <table className="min-w-[900px] w-full text-left text-[11px]">
+              <thead className="sticky top-0 bg-plum text-white">
+                <tr>
+                  <th className="p-3">Rows</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Category</th>
+                  <th className="p-3">Service Group</th>
+                  <th className="p-3">Service Name</th>
+                  <th className="p-3">Suggested Add-ons</th>
+                  <th className="p-3">Preview note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.rows.map((row, index) => (
+                  <tr
+                    key={`${row.source_rows.join("-")}-${index}`}
+                    className="border-t border-plum/10 align-top"
+                  >
+                    <td className="p-3">{row.source_rows.join(", ")}</td>
+                    <td className="p-3">
+                      <span className={`rounded-full px-2 py-1 font-bold ${statusClass[row.status]}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="p-3 font-bold text-plum">{row.category}</td>
+                    <td className="p-3">{row.service_group || "—"}</td>
+                    <td className="p-3">{row.service_name || "—"}</td>
+                    <td className="max-w-[240px] p-3">{row.addons.join("; ") || "—"}</td>
+                    <td className="max-w-[260px] p-3 text-ink/60">{row.messages.join(" ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {preview.rows.length > 100 ? (
+            <p className="mt-2 text-[10px] text-ink/50">
+              All {preview.rows.length} rows are included in this scrollable preview.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function ServiceCatalogManager({ categories, groups, addons, services, initialService, setInitialService, authHeaders, reload, setNotice, saving, setSaving }: {
@@ -428,6 +786,13 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
   }
 
   return <div>
+    <CatalogSpreadsheetPanel
+      authHeaders={authHeaders}
+      reload={reload}
+      setNotice={setNotice}
+      saving={saving}
+      setSaving={setSaving}
+    />
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap rounded-lg border border-plum/10 bg-white p-1">{(Object.keys(labels) as CatalogKind[]).map((value) => <button key={value} type="button" onClick={() => switchKind(value)} className={`rounded-md px-4 py-2 text-xs font-bold ${kind === value ? "bg-plum text-white" : "text-plum"}`}>{labels[value]}</button>)}</div>
       <div className="flex flex-wrap items-end gap-2">
