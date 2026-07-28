@@ -264,7 +264,11 @@ async function PUTHandler(request: Request) {
 
     if (type === "post") {
       const { data: before } = payload.id ? await admin.from("blog_posts").select("*").eq("id", payload.id).maybeSingle() : { data: null };
-      const record = { ...pick(payload, postFields), updated_at: new Date().toISOString() };
+      const record = {
+        ...pick(payload, postFields),
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
       const { data, error } = await admin.from("blog_posts").upsert(record, { onConflict: payload.id ? "id" : "slug" }).select().single();
       if (error) throw error;
       await auditContentChange(admin, user.id, "blog_post", data.id, data.title, before, data);

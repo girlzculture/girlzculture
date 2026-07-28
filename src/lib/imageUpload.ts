@@ -27,6 +27,9 @@ export const IMAGE_UPLOAD_PROFILES: Record<ImagePresetKey, ImageUploadProfile> =
 
 export const MAX_IMAGE_UPLOAD_BYTES = 12 * 1024 * 1024;
 export const DEFAULT_MAX_IMAGE_WIDTH = 1920;
+export const MIN_SOURCE_EDGE_PX = 320;
+export const MIN_SOURCE_PIXELS = 160_000;
+export const MAX_SOURCE_PIXELS = 40_000_000;
 
 export function isSupportedImageType(file: File) {
   return ["image/jpeg", "image/png", "image/gif"].includes(file.type);
@@ -64,6 +67,30 @@ export async function inspectImageFile(file: File) {
   } finally { URL.revokeObjectURL(objectUrl); }
 }
 
+/**
+ * Source quality is intentionally placement-independent. A single safe image
+ * can be cropped for a cover, card, square logo, or portrait without asking
+ * the salon owner to manufacture separate source files.
+ */
+export function getSourceImageQualityError(dimensions: {
+  width: number;
+  height: number;
+}) {
+  const width = Math.floor(Number(dimensions.width || 0));
+  const height = Math.floor(Number(dimensions.height || 0));
+  if (!width || !height) return "This image could not be read.";
+  if (
+    Math.min(width, height) < MIN_SOURCE_EDGE_PX ||
+    width * height < MIN_SOURCE_PIXELS
+  ) {
+    return `This image is ${width} × ${height}px and is too small to crop clearly. Choose an image at least ${MIN_SOURCE_EDGE_PX}px on its shortest side.`;
+  }
+  if (width * height > MAX_SOURCE_PIXELS) {
+    return "This image contains too many pixels to process safely. Choose a smaller original.";
+  }
+  return null;
+}
+
 export type ImageTransform = { zoom?: number; positionX?: number; positionY?: number; rotation?: 0 | 90 | 180 | 270 };
 export type ImageRenditionDevice = "desktop" | "tablet" | "mobile";
 export type ResponsiveImageTransforms = Record<ImageRenditionDevice, ImageTransform>;
@@ -74,6 +101,12 @@ export function profileForRendition(profile: ImageUploadProfile, device: ImageRe
   }
   if ((profile.key === "cover" || profile.key === "content") && device === "mobile") {
     return { ...profile, aspectWidth: 9, aspectHeight: 16, outputWidth: Math.min(profile.outputWidth, 1080) };
+  }
+  if (device === "tablet") {
+    return { ...profile, outputWidth: Math.min(profile.outputWidth, 1200) };
+  }
+  if (device === "mobile") {
+    return { ...profile, outputWidth: Math.min(profile.outputWidth, 720) };
   }
   return { ...profile };
 }
@@ -91,9 +124,6 @@ export async function optimizeImageFile(file: File, profileOrWidth: ImageUploadP
       element.onerror = () => reject(new Error("This image is damaged or cannot be read."));
       element.src = objectUrl;
     });
-    if (image.naturalWidth < profile.minWidth || image.naturalHeight < profile.minHeight) {
-      throw new Error(`This image is ${image.naturalWidth} × ${image.naturalHeight}px. ${profile.label} images must be at least ${profile.minWidth} × ${profile.minHeight}px.`);
-    }
     const rotation = transform.rotation || 0;
     const rotatedWidth = rotation % 180 ? image.naturalHeight : image.naturalWidth;
     const rotatedHeight = rotation % 180 ? image.naturalWidth : image.naturalHeight;
@@ -109,8 +139,10 @@ export async function optimizeImageFile(file: File, profileOrWidth: ImageUploadP
     canvas.height = outputHeight;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("This browser cannot prepare images for upload.");
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, outputWidth, outputHeight);
+    if (file.type !== "image/png") {
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+    }
     context.translate(outputWidth / 2 - offsetX, outputHeight / 2 - offsetY);
     context.rotate(rotation * Math.PI / 180);
     const sourceDrawWidth = image.naturalWidth * coverScale;

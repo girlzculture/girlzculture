@@ -677,6 +677,89 @@ begin
       select 1
       from information_schema.columns
       where table_schema='public'
+        and table_name='blog_posts'
+        and column_name='updated_by'
+    )
+    or to_regprocedure('public.attach_registered_media()') is null
+    or position(
+      'media.salon_id = v_salon_id'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'media.owner_user_id = v_owner_id'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'saving_administrator.permissions ->> v_admin_permission'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'coalesce(saving_administrator.status, ''Active'') = ''Active'''
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'media.bucket_id = ''content-media'''
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'media.salon_id is null'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'asset_owner_administrator.permissions'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'asset_owner_administrator.status'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      ') = media.owner_user_id'
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'saving_administrator.permissions ->> ''settings'''
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or position(
+      'asset_owner_administrator.permissions ->> ''settings'''
+      in pg_get_functiondef(
+        'public.attach_registered_media()'::regprocedure
+      )
+    ) = 0
+    or has_function_privilege(
+      'authenticated',
+      'public.attach_registered_media()',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Automatic media attachment is not owner- and administrator-scoped';
+  end if;
+
+  if not exists (
+      select 1
+      from information_schema.columns
+      where table_schema='public'
         and table_name='stylists'
         and column_name='slug'
         and is_nullable='NO'

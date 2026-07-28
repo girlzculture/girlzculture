@@ -4,12 +4,11 @@ import {
   withOperationalMonitoring,
 } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
-import { getEngineNumber } from "@/lib/engineConfigServer";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   authenticateMediaRequest,
   authorizeMediaUpload,
-  loadMediaProfile,
+  loadConfiguredMediaProfile,
   mediaRequestId,
   removePreparedMediaObjects,
   syncMediaAttachment,
@@ -30,19 +29,16 @@ async function GETHandler(request: Request) {
   ) as ImagePresetKey | null;
   if (!kind) {
     return Response.json(
-      { error: "Unknown media placement." },
+      { error: "This media placement is unknown." },
       { status: 400 },
     );
   }
   try {
     const admin = getSupabaseAdmin();
-    const [profile, quality] = await Promise.all([
-      loadMediaProfile(admin, kind),
-      getEngineNumber("media.public_image_quality", 88, 60, 100),
-    ]);
+    const profile = await loadConfiguredMediaProfile(admin, kind);
     return Response.json(
-      { profile: { ...profile, quality } },
-      { headers: { "Cache-Control": "public, max-age=300" } },
+      { profile },
+      { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
     noteOperationalFailure("Media upload profile lookup failed", error);
@@ -57,7 +53,7 @@ async function POSTHandler() {
   return Response.json(
     {
       error:
-        "Binary uploads are no longer accepted by this route. Refresh the page and try again.",
+        "This binary upload route is no longer available. Refresh the page and try again.",
     },
     {
       status: 410,
@@ -80,7 +76,7 @@ async function PATCHHandler(request: Request) {
       body = (await request.json()) as typeof body;
     } catch {
       return Response.json(
-        { error: "Send a valid JSON media request.", request_id: requestId },
+        { error: "Send a valid JSON media request." },
         {
           status: 400,
           headers: { "Cache-Control": "private, no-store" },
@@ -110,7 +106,7 @@ async function PATCHHandler(request: Request) {
     const expected = expectedMediaRequestFailure(error);
     if (expected) {
       return Response.json(
-        { error: expected.message, request_id: requestId },
+        { error: expected.message },
         {
           status: expected.status,
           headers: { "Cache-Control": "private, no-store" },
@@ -144,7 +140,7 @@ async function DELETEHandler(request: Request) {
       body = (await request.json()) as typeof body;
     } catch {
       return Response.json(
-        { error: "Send a valid JSON media request.", request_id: requestId },
+        { error: "Send a valid JSON media request." },
         {
           status: 400,
           headers: { "Cache-Control": "private, no-store" },
@@ -276,7 +272,7 @@ async function DELETEHandler(request: Request) {
     const expected = expectedMediaRequestFailure(error);
     if (expected) {
       return Response.json(
-        { error: expected.message, request_id: requestId },
+        { error: expected.message },
         {
           status: expected.status,
           headers: { "Cache-Control": "private, no-store" },

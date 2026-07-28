@@ -5,7 +5,8 @@ export type ExpectedMediaRequestFailure = {
 
 /**
  * Only classifies application-authored, user-safe failures. Provider,
- * database, RLS, and other unexpected messages deliberately return null so
+ * database, RLS, prepared-session integrity, server derivative, persisted
+ * format-mismatch, and other unexpected messages deliberately return null so
  * the route records a sanitized Engine incident instead of reflecting raw
  * infrastructure details to the browser.
  */
@@ -43,7 +44,7 @@ export function expectedMediaRequestFailure(
     return { status: 409, message };
   }
   if (
-    /^(This upload destination is not supported\.|This image placement is not supported\.|The (source|desktop|tablet|mobile) image (was not prepared|details are invalid)\.|Upload a supported JPG, PNG, or animated GIF\.|The original image must be 12 MB or smaller\.|.+ images must be at least \d+ .+ \d+px\.|Animated GIF uploads preserve one responsive source\.|The animated GIF must be \d+ MB or smaller for public delivery\.|Responsive image renditions must be JPG or PNG\.|The (desktop|tablet|mobile) image must be \d+ MB or smaller\.|The (desktop|tablet|mobile) crop must be \d+ .+ \d+px\.|The media attachment is invalid\.|The (salon|service|stylist|product) media attachment is invalid\.|This media attachment is not supported\.|Save this service before uploading its images\.|The upload reference is invalid\.|The prepared upload is invalid\.|The prepared upload is incomplete\.|The (source|desktop|tablet|mobile) upload (type|size|dimensions) does not match its preparation\.|This file is damaged or its image format does not match its extension\.|The public image rendition is unavailable\.|Only already attached media can be reordered or removed\.)$/i.test(
+    /^(This upload destination is not supported\.|This image placement is not supported\.|The source image (was not prepared|details are invalid)\.|Upload a supported JPG, PNG, or animated GIF\.|Only one original image may be uploaded\.|The original image must be 12 MB or smaller\.|This image is \d+ .+ \d+px and is too small to crop clearly\. Choose an image at least \d+px on its shortest side\.|This image contains too many pixels to process safely\. Choose a smaller original\.|This image is empty or damaged\.|This image could not be optimized safely\. Choose a less detailed original and try again\.|The media attachment is invalid\.|The (salon|service|stylist|product) media attachment is invalid\.|This media attachment is not supported\.|Save this service before uploading its images\.|The upload reference is invalid\.|Only already attached media can be reordered or removed\.)$/i.test(
       message,
     )
   ) {

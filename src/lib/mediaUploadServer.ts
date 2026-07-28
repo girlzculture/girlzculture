@@ -8,10 +8,21 @@ import {
 import {
   IMAGE_UPLOAD_PROFILES,
   MAX_IMAGE_UPLOAD_BYTES,
-  profileForRendition,
+  getSourceImageQualityError,
   type ImagePresetKey,
+  type ImageRenditionDevice,
   type ImageUploadProfile,
 } from "@/lib/imageUpload";
+import {
+  createCanonicalMediaRendition,
+  inspectCanonicalMediaSource,
+} from "@/lib/mediaImageProcessor";
+import { getEngineNumber } from "@/lib/engineConfigServer";
+import { sanitizeResponsiveTransforms } from "@/lib/mediaImageProcessingCore";
+import {
+  preparedMediaRenditionDimensions,
+  type PreparedMediaProfileSnapshot,
+} from "@/lib/mediaUploadProfileSnapshotCore";
 import {
   MEDIA_RENDITION_SLOTS,
   MEDIA_SOURCE_BUCKET,
@@ -76,6 +87,16 @@ function extensionFor(mimeType: string) {
   return "jpg";
 }
 
+function renditionPathMatchesMimeType(path: string, mimeType: string) {
+  const extension = path.split(/[?#]/, 1)[0].split(".").pop()?.toLowerCase();
+  if (extension === "img") return true;
+  if (mimeType === "image/png") return extension === "png";
+  if (mimeType === "image/jpeg") {
+    return extension === "jpg" || extension === "jpeg";
+  }
+  return false;
+}
+
 export function imageDimensions(buffer: Buffer, mime: string) {
   if (
     mime === "image/png" &&
@@ -131,33 +152,41 @@ export function imageDimensions(buffer: Buffer, mime: string) {
   );
 }
 
-export async function loadMediaProfile(
+export async function loadConfiguredMediaProfile(
   admin: ReturnType<typeof getSupabaseAdmin>,
   kind: ImagePresetKey,
 ) {
   const fallback = IMAGE_UPLOAD_PROFILES[kind];
   if (!fallback) throw new Error("This image placement is not supported.");
-  const { data, error } = await admin
-    .from("media_upload_profiles")
-    .select("*")
-    .eq("profile_key", kind)
-    .eq("is_active", true)
-    .maybeSingle();
+  const [{ data, error }, quality] = await Promise.all([
+    admin
+      .from("media_upload_profiles")
+      .select("*")
+      .eq("profile_key", kind)
+      .eq("is_active", true)
+      .maybeSingle(),
+    getEngineNumber("media.public_image_quality", 88, 60, 100),
+  ]);
   if (error) throw error;
-  if (!data) return fallback;
+  const placement = data
+    ? {
+        ...fallback,
+        label: String(data.display_name || fallback.label),
+        aspectWidth: Number(data.aspect_width || fallback.aspectWidth),
+        aspectHeight: Number(data.aspect_height || fallback.aspectHeight),
+        minWidth: Number(data.min_width_px || fallback.minWidth),
+        minHeight: Number(data.min_height_px || fallback.minHeight),
+        outputWidth: Number(data.output_width_px || fallback.outputWidth),
+        maxBytes: Number(data.max_bytes || fallback.maxBytes),
+        safeArea: data.safe_area_enabled === true,
+        acceptedMimeTypes: Array.isArray(data.accepted_mime_types)
+          ? data.accepted_mime_types.map(String)
+          : fallback.acceptedMimeTypes,
+      }
+    : fallback;
   return {
-    ...fallback,
-    label: String(data.display_name || fallback.label),
-    aspectWidth: Number(data.aspect_width || fallback.aspectWidth),
-    aspectHeight: Number(data.aspect_height || fallback.aspectHeight),
-    minWidth: Number(data.min_width_px || fallback.minWidth),
-    minHeight: Number(data.min_height_px || fallback.minHeight),
-    outputWidth: Number(data.output_width_px || fallback.outputWidth),
-    maxBytes: Number(data.max_bytes || fallback.maxBytes),
-    safeArea: data.safe_area_enabled === true,
-    acceptedMimeTypes: Array.isArray(data.accepted_mime_types)
-      ? data.accepted_mime_types.map(String)
-      : fallback.acceptedMimeTypes,
+    ...placement,
+    quality,
   } satisfies ImageUploadProfile;
 }
 
@@ -291,51 +320,22 @@ function validateDescriptor(
   value: MediaFileDescriptor,
   slot: MediaUploadSlot,
   profile: ImageUploadProfile,
-  sourceMimeType: string,
 ) {
   const accepted = profile.acceptedMimeTypes || ["image/jpeg", "image/png"];
   if (!accepted.includes(value.mime_type)) {
     throw new Error("Upload a supported JPG, PNG, or animated GIF.");
   }
-  if (slot === "source") {
-    if (value.file_size_bytes > MAX_IMAGE_UPLOAD_BYTES) {
-      throw new Error("The original image must be 12 MB or smaller.");
-    }
-    if (value.width < profile.minWidth || value.height < profile.minHeight) {
-      throw new Error(
-        `${profile.label} images must be at least ${profile.minWidth} × ${profile.minHeight}px.`,
-      );
-    }
-    return;
+  if (slot !== "source") {
+    throw new Error("Only one original image may be uploaded.");
   }
-  if (sourceMimeType === "image/gif") {
-    if (slot !== "desktop" || value.mime_type !== "image/gif") {
-      throw new Error("Animated GIF uploads preserve one responsive source.");
-    }
-    if (value.file_size_bytes > profile.maxBytes) {
-      throw new Error(
-        `The animated GIF must be ${Math.round(profile.maxBytes / 1024 / 1024)} MB or smaller for public delivery.`,
-      );
-    }
-    return;
+  if (value.file_size_bytes > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new Error("The original image must be 12 MB or smaller.");
   }
-  if (!["image/jpeg", "image/png"].includes(value.mime_type)) {
-    throw new Error("Responsive image renditions must be JPG or PNG.");
-  }
-  if (value.file_size_bytes > profile.maxBytes) {
-    throw new Error(
-      `The ${slot} image must be ${Math.round(profile.maxBytes / 1024 / 1024)} MB or smaller.`,
-    );
-  }
-  const target = profileForRendition(profile, slot);
-  const expectedHeight = Math.round(
-    (target.outputWidth * target.aspectHeight) / target.aspectWidth,
-  );
-  if (value.width !== target.outputWidth || value.height !== expectedHeight) {
-    throw new Error(
-      `The ${slot} crop must be ${target.outputWidth} × ${expectedHeight}px.`,
-    );
-  }
+  const qualityError = getSourceImageQualityError({
+    width: value.width,
+    height: value.height,
+  });
+  if (qualityError) throw new Error(qualityError);
 }
 
 export async function validateMediaAttachment(
@@ -420,20 +420,24 @@ export async function prepareMediaUpload(
     throw new Error("This upload destination is not supported.");
   }
   const context = await authorizeMediaUpload(request, bucket, folder);
-  const profile = await loadMediaProfile(context.admin, kind);
+  const profile = await loadConfiguredMediaProfile(context.admin, kind);
+  const profileSnapshot: PreparedMediaProfileSnapshot = {
+    key: profile.key,
+    aspectWidth: profile.aspectWidth,
+    aspectHeight: profile.aspectHeight,
+    outputWidth: profile.outputWidth,
+    quality: profile.quality,
+    maximumBytes: Math.min(profile.maxBytes, 4 * 1024 * 1024),
+  };
   const source = descriptor(body.files?.source, "source");
-  validateDescriptor(source, "source", profile, source.mime_type);
-  const animated = source.mime_type === "image/gif";
-  const requiredSlots: MediaUploadSlot[] = animated
-    ? ["source", "desktop"]
-    : ["source", ...MEDIA_RENDITION_SLOTS];
-  const files = Object.fromEntries(
-    requiredSlots.map((slot) => {
-      const value = descriptor(body.files?.[slot], slot);
-      validateDescriptor(value, slot, profile, source.mime_type);
-      return [slot, value];
-    }),
-  ) as Record<MediaUploadSlot, MediaFileDescriptor>;
+  validateDescriptor(source, "source", profile);
+  const transforms = sanitizeResponsiveTransforms(
+    body.crop_metadata?.transforms,
+  );
+  const requiredSlots: MediaUploadSlot[] = [
+    "source",
+    ...MEDIA_RENDITION_SLOTS,
+  ];
   const attachment = await validateMediaAttachment(
     context,
     bucket,
@@ -443,13 +447,40 @@ export async function prepareMediaUpload(
   const uploadId = randomUUID();
   const expected: Partial<Record<MediaUploadSlot, ExpectedObject>> = {};
   for (const slot of requiredSlots) {
-    const value = files[slot];
     const targetBucket = slot === "source" ? MEDIA_SOURCE_BUCKET : bucket;
     const targetFolder =
       slot === "source"
         ? [bucket, folder].filter(Boolean).join("/")
         : folder;
-    const path = `${targetFolder ? `${targetFolder}/` : ""}${uploadId}-${slot}-${safeMediaName(value.name)}.${extensionFor(value.mime_type)}`;
+    const targetDimensions =
+      slot === "source"
+        ? null
+        : preparedMediaRenditionDimensions(
+            profileSnapshot,
+            slot as Exclude<MediaUploadSlot, "source">,
+          );
+    const mimeType =
+      slot === "source"
+        ? source.mime_type
+        : source.mime_type === "image/png"
+          ? "image/png"
+          : "image/jpeg";
+    const value =
+      slot === "source"
+        ? source
+        : {
+            name: source.name,
+            mime_type: mimeType,
+            file_size_bytes: 0,
+            width: Number(targetDimensions?.width || 0),
+            height: Number(targetDimensions?.height || 0),
+          };
+    // Server-generated renditions use a neutral extension because PNG input
+    // can be safely encoded as either PNG or JPEG depending on alpha and size.
+    // Supabase serves the authoritative content type recorded at finalize.
+    const extension =
+      slot === "source" ? extensionFor(value.mime_type) : "img";
+    const path = `${targetFolder ? `${targetFolder}/` : ""}${uploadId}-${slot}-${safeMediaName(value.name)}.${extension}`;
     expected[slot] = {
       ...value,
       slot,
@@ -458,15 +489,17 @@ export async function prepareMediaUpload(
     };
   }
 
-  const uploads = [];
-  for (const slot of requiredSlots) {
-    const target = expected[slot]!;
-    const { data, error } = await context.admin.storage
-      .from(target.bucket)
-      .createSignedUploadUrl(target.path, { upsert: false });
-    if (error || !data?.token) throw error || new Error("Signed upload unavailable.");
-    uploads.push({ ...target, token: data.token });
+  const sourceTarget = expected.source!;
+  const { data: signedSource, error: signedSourceError } =
+    await context.admin.storage
+      .from(sourceTarget.bucket)
+      .createSignedUploadUrl(sourceTarget.path, { upsert: false });
+  if (signedSourceError || !signedSource?.token) {
+    throw (
+      signedSourceError || new Error("Signed source upload is unavailable.")
+    );
   }
+  const uploads = [{ ...sourceTarget, token: signedSource.token }];
 
   const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
   const { error: sessionError } = await context.admin
@@ -479,12 +512,20 @@ export async function prepareMediaUpload(
       destination_folder: folder,
       media_kind: kind,
       expected_objects: expected,
-      crop_metadata:
-        body.crop_metadata &&
-        typeof body.crop_metadata === "object" &&
-        !Array.isArray(body.crop_metadata)
-          ? body.crop_metadata
-          : {},
+      crop_metadata: {
+        version: 3,
+        mode: "server_canonical_crop",
+        source: { width: source.width, height: source.height },
+        transforms,
+        profile: {
+          key: profileSnapshot.key,
+          aspect_width: profileSnapshot.aspectWidth,
+          aspect_height: profileSnapshot.aspectHeight,
+          output_width: profileSnapshot.outputWidth,
+          quality: profileSnapshot.quality,
+          maximum_bytes: profileSnapshot.maximumBytes,
+        },
+      },
       attachment: attachment || {},
       status: "Prepared",
       expires_at: expiresAt,
@@ -509,6 +550,8 @@ function expectedObjects(value: unknown) {
 export async function verifyPreparedMediaObjects(
   admin: ReturnType<typeof getSupabaseAdmin>,
   expectedValue: unknown,
+  cropMetadataValue: unknown,
+  profile: PreparedMediaProfileSnapshot,
 ) {
   const expected = expectedObjects(expectedValue);
   const sourceExpected = expected.source;
@@ -516,53 +559,130 @@ export async function verifyPreparedMediaObjects(
   if (!sourceExpected || !desktopExpected) {
     throw new Error("The prepared upload is incomplete.");
   }
-  const verified: Record<string, Record<string, unknown>> = {};
-  for (const [slot, target] of Object.entries(expected) as Array<
-    [MediaUploadSlot, ExpectedObject]
-  >) {
-    if (!target?.bucket || !target.path) continue;
-    const { data, error } = await admin.storage
-      .from(target.bucket)
-      .download(target.path);
-    if (error || !data) {
-      throw Object.assign(new Error("MEDIA_STORAGE_OBJECT_MISSING"), {
-        provider: "supabase",
-        code: "STORAGE_OBJECT_MISSING",
-      });
+  const { data: sourceBlob, error: sourceError } = await admin.storage
+    .from(sourceExpected.bucket)
+    .download(sourceExpected.path);
+  if (sourceError || !sourceBlob) {
+    throw Object.assign(new Error("MEDIA_STORAGE_OBJECT_MISSING"), {
+      provider: "supabase",
+      code: "STORAGE_OBJECT_MISSING",
+    });
+  }
+  const sourceBuffer = Buffer.from(await sourceBlob.arrayBuffer());
+  if (sourceBuffer.length !== Number(sourceExpected.file_size_bytes)) {
+    throw new Error("The original upload size does not match its preparation.");
+  }
+  const source = await inspectCanonicalMediaSource(
+    sourceBuffer,
+    sourceExpected.mime_type,
+  );
+  const cropMetadata =
+    cropMetadataValue &&
+    typeof cropMetadataValue === "object" &&
+    !Array.isArray(cropMetadataValue)
+      ? (cropMetadataValue as Record<string, unknown>)
+      : {};
+  const transforms = sanitizeResponsiveTransforms(cropMetadata.transforms);
+  const verified: Record<string, Record<string, unknown>> = {
+    source: {
+      bucket: sourceExpected.bucket,
+      path: sourceExpected.path,
+      mime_type: source.mimeType,
+      file_size_bytes: sourceBuffer.length,
+      width: source.width,
+      height: source.height,
+      checksum_sha256: source.checksum,
+    },
+  };
+  for (const slot of MEDIA_RENDITION_SLOTS) {
+    const target = expected[slot];
+    if (!target?.bucket || !target.path) {
+      throw new Error(`The ${slot} derivative was not prepared.`);
     }
-    const buffer = Buffer.from(await data.arrayBuffer());
-    const actualMime = String(data.type || target.mime_type).toLowerCase();
-    if (actualMime && actualMime !== target.mime_type) {
-      throw new Error(`The ${slot} upload type does not match its preparation.`);
-    }
-    if (buffer.length !== Number(target.file_size_bytes)) {
-      throw new Error(`The ${slot} upload size does not match its preparation.`);
-    }
-    const dimensions = imageDimensions(buffer, target.mime_type);
+    const preparedDimensions = preparedMediaRenditionDimensions(
+      profile,
+      slot,
+    );
     if (
-      dimensions.width !== Number(target.width) ||
-      dimensions.height !== Number(target.height)
+      Number(target.width) !== preparedDimensions.width ||
+      Number(target.height) !== preparedDimensions.height
     ) {
       throw new Error(
-        `The ${slot} upload dimensions do not match its preparation.`,
+        `The ${slot} derivative does not match its prepared profile.`,
       );
     }
-    const object: Record<string, unknown> = {
+    const transform =
+      slot === "thumbnail"
+        ? transforms.desktop
+        : transforms[slot as ImageRenditionDevice];
+    const rendition = await createCanonicalMediaRendition({
+      source,
+      target: {
+        width: Number(target.width),
+        height: Number(target.height),
+      },
+      transform,
+      quality: profile.quality,
+      maximumBytes: profile.maximumBytes,
+    });
+    if (!renditionPathMatchesMimeType(target.path, rendition.mimeType)) {
+      throw new Error(
+        "The prepared derivative extension does not match its generated format.",
+      );
+    }
+    const { error: uploadError } = await admin.storage
+      .from(target.bucket)
+      .upload(target.path, rendition.buffer, {
+        contentType: rendition.mimeType,
+        cacheControl: "31536000",
+        upsert: true,
+      });
+    if (uploadError) {
+      throw Object.assign(new Error("MEDIA_DERIVATIVE_STORAGE_FAILED"), {
+        provider: "supabase",
+        code: "STORAGE_DERIVATIVE_UPLOAD_FAILED",
+      });
+    }
+    const { data: storedBlob, error: storedError } = await admin.storage
+      .from(target.bucket)
+      .download(target.path);
+    if (storedError || !storedBlob) {
+      throw Object.assign(new Error("MEDIA_DERIVATIVE_VERIFY_FAILED"), {
+        provider: "supabase",
+        code: "STORAGE_DERIVATIVE_VERIFY_FAILED",
+      });
+    }
+    const storedBuffer = Buffer.from(await storedBlob.arrayBuffer());
+    const storedDimensions = imageDimensions(
+      storedBuffer,
+      rendition.mimeType,
+    );
+    const storedChecksum = createHash("sha256")
+      .update(storedBuffer)
+      .digest("hex");
+    if (
+      storedDimensions.width !== rendition.width ||
+      storedDimensions.height !== rendition.height ||
+      storedChecksum !== rendition.checksum
+    ) {
+      throw Object.assign(new Error("MEDIA_DERIVATIVE_VERIFY_FAILED"), {
+        provider: "supabase",
+        code: "STORAGE_DERIVATIVE_VERIFY_FAILED",
+      });
+    }
+    const { data: publicData } = admin.storage
+      .from(target.bucket)
+      .getPublicUrl(target.path);
+    verified[slot] = {
       bucket: target.bucket,
       path: target.path,
-      mime_type: target.mime_type,
-      file_size_bytes: buffer.length,
-      width: dimensions.width,
-      height: dimensions.height,
-      checksum_sha256: createHash("sha256").update(buffer).digest("hex"),
+      url: publicData.publicUrl,
+      mime_type: rendition.mimeType,
+      file_size_bytes: storedBuffer.length,
+      width: storedDimensions.width,
+      height: storedDimensions.height,
+      checksum_sha256: storedChecksum,
     };
-    if (slot !== "source") {
-      const { data: publicData } = admin.storage
-        .from(target.bucket)
-        .getPublicUrl(target.path);
-      object.url = publicData.publicUrl;
-    }
-    verified[slot] = object;
   }
   const desktop = verified.desktop;
   if (!desktop?.url) throw new Error("The public image rendition is unavailable.");
@@ -570,6 +690,7 @@ export async function verifyPreparedMediaObjects(
     desktop,
     tablet: verified.tablet || desktop,
     mobile: verified.mobile || desktop,
+    thumbnail: verified.thumbnail || verified.mobile || desktop,
   };
   return { source: verified.source, renditions };
 }

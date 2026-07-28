@@ -264,9 +264,31 @@ const parsedEdgeFailure = await apiResponseClient.readApiResponse(
   edgeHtmlFailure,
   "The image upload could not be completed.",
 );
-assert.equal(parsedEdgeFailure.request_id, matchingReference);
-assert.match(parsedEdgeFailure.error, new RegExp(matchingReference));
+assert.equal(parsedEdgeFailure.request_id, undefined);
+assert.doesNotMatch(parsedEdgeFailure.error, new RegExp(matchingReference));
 assert.doesNotMatch(parsedEdgeFailure.error, /DOCTYPE|Internal Error/i);
+
+const correlatedEdgeFailure = new Response(
+  "<!DOCTYPE html><title>Internal Error</title>",
+  {
+    status: 502,
+    headers: {
+      "content-type": "text/html",
+      "x-request-id": matchingReference,
+      "x-nf-request-id": matchingReference,
+    },
+  },
+);
+const parsedCorrelatedEdgeFailure = await apiResponseClient.readApiResponse(
+  correlatedEdgeFailure,
+  "The image upload could not be completed.",
+);
+assert.equal(parsedCorrelatedEdgeFailure.request_id, matchingReference);
+assert.match(parsedCorrelatedEdgeFailure.error, new RegExp(matchingReference));
+assert.doesNotMatch(
+  parsedCorrelatedEdgeFailure.error,
+  /DOCTYPE|Internal Error/i,
+);
 
 const monitoring = await import(
   `${pathToFileURL(path.join(root, "netlify", "functions", "_monitoring.mjs")).href}?v=${Date.now()}`

@@ -24,6 +24,7 @@ import {
 import { readApiResponse } from "@/lib/apiResponseClient";
 import {
   getImageUploadError,
+  getSourceImageQualityError,
   IMAGE_UPLOAD_PROFILES,
   inferImagePreset,
   inspectImageFile,
@@ -88,6 +89,14 @@ type QueueItem = {
   canUpload: boolean;
   resultUrl?: string;
   attached?: boolean;
+  pendingUploadId?: string;
+  placement: {
+    bucket: string;
+    folder: string;
+    preset: ImagePresetKey;
+    profile: ImageUploadProfile;
+    attachment?: MediaAttachment | null;
+  };
 };
 
 const DEVICES: ImageRenditionDevice[] = ["desktop", "tablet", "mobile"];
@@ -161,18 +170,35 @@ export default function ImageUpload({
   });
   const [device, setDevice] =
     useState<ImageRenditionDevice>("desktop");
-  const [configuredProfile, setConfiguredProfile] =
-    useState<ImageUploadProfile | null>(null);
+  const [configuredProfile, setConfiguredProfile] = useState<{
+    key: ImagePresetKey;
+    profile: ImageUploadProfile;
+  } | null>(null);
+  const [profileLoad, setProfileLoad] = useState<{
+    key: ImagePresetKey;
+    status: "loading" | "ready" | "error";
+  }>({
+    key: preset || inferImagePreset(label, bucket, folder),
+    status: "loading",
+  });
+  const [profileReload, setProfileReload] = useState(0);
   const current = useMemo(() => values(value, multiple), [multiple, value]);
   const presetKey = preset || inferImagePreset(label, bucket, folder);
-  const profile = configuredProfile || IMAGE_UPLOAD_PROFILES[presetKey];
-  const activeProfile = useMemo(
-    () => profileForRendition(profile, device),
-    [device, profile],
-  );
+  const profileReady =
+    configuredProfile?.key === presetKey &&
+    profileLoad.key === presetKey &&
+    profileLoad.status === "ready";
+  const profile =
+    profileReady
+      ? configuredProfile.profile
+      : IMAGE_UPLOAD_PROFILES[presetKey];
   const active = useMemo(
     () => queue.find((item) => item.id === activeId) || null,
     [activeId, queue],
+  );
+  const activeProfile = useMemo(
+    () => profileForRendition(active?.placement.profile || profile, device),
+    [active?.placement.profile, device, profile],
   );
   const transform = active?.transforms[device] || DEFAULT_TRANSFORM;
   const previewKey = active
@@ -234,6 +260,7 @@ export default function ImageUpload({
     void fetch(`/api/media/upload?kind=${presetKey}`, {
       signal: controller.signal,
       headers: { Accept: "application/json" },
+      cache: "no-store",
     })
       .then(async (response) => {
         const body = await readApiResponse(
@@ -241,12 +268,26 @@ export default function ImageUpload({
           "The image requirements could not be loaded.",
         );
         if (response.ok && body.profile) {
-          setConfiguredProfile(body.profile as ImageUploadProfile);
+          setConfiguredProfile({
+            key: presetKey,
+            profile: body.profile as ImageUploadProfile,
+          });
+          setProfileLoad({ key: presetKey, status: "ready" });
+          return;
         }
+        throw new Error("The image requirements could not be loaded.");
       })
-      .catch(() => undefined);
+      .catch((reason) => {
+        if (controller.signal.aborted) return;
+        setProfileLoad({ key: presetKey, status: "error" });
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "The image requirements could not be loaded.",
+        );
+      });
     return () => controller.abort();
-  }, [presetKey]);
+  }, [presetKey, profileReload]);
 
   useEffect(
     () => () => {
@@ -310,7 +351,7 @@ export default function ImageUpload({
   function setTransform(
     update: (current: ImageTransform) => ImageTransform,
   ) {
-    if (!active) return;
+    if (!active || active.pendingUploadId) return;
     updateQueueItem(active.id, (item) => ({
       ...item,
       transforms: {
@@ -362,6 +403,18 @@ export default function ImageUpload({
     for (const file of candidates) {
       const id = queueId();
       const sourcePreview = URL.createObjectURL(file);
+      const placement: QueueItem["placement"] = {
+        bucket,
+        folder: folder || "",
+        preset: presetKey,
+        profile: {
+          ...profile,
+          acceptedMimeTypes: profile.acceptedMimeTypes
+            ? [...profile.acceptedMimeTypes]
+            : undefined,
+        },
+        attachment: attachment ? { ...attachment } : null,
+      };
       const validation = getImageUploadError(file, profile);
       if (validation) {
         prepared.push({
@@ -375,19 +428,14 @@ export default function ImageUpload({
           stage: "Needs attention",
           error: validation,
           canUpload: false,
+          placement,
         });
         continue;
       }
       try {
         const dimensions = await inspectImageFile(file);
-        if (
-          dimensions.width < profile.minWidth ||
-          dimensions.height < profile.minHeight
-        ) {
-          throw new Error(
-            `This image is ${dimensions.width} × ${dimensions.height}px. Choose one at least ${profile.minWidth} × ${profile.minHeight}px.`,
-          );
-        }
+        const qualityError = getSourceImageQualityError(dimensions);
+        if (qualityError) throw new Error(qualityError);
         prepared.push({
           id,
           file,
@@ -399,6 +447,7 @@ export default function ImageUpload({
           stage: "Ready to upload",
           error: "",
           canUpload: true,
+          placement,
         });
       } catch (reason) {
         prepared.push({
@@ -415,6 +464,7 @@ export default function ImageUpload({
               ? reason.message
               : "This image could not be read.",
           canUpload: false,
+          placement,
         });
       }
     }
@@ -435,39 +485,31 @@ export default function ImageUpload({
     updateQueueItem(id, {
       status: "uploading",
       progress: 2,
-      stage: "Preparing responsive crops",
+      stage: "Preparing original image",
       error: "",
     });
+    let finalizePendingId = item.pendingUploadId || "";
     try {
       const session = await getValidSessionForScope(authScope);
       if (!session) throw new Error("Please sign in again before uploading.");
-      const animated = item.file.type === "image/gif";
-      const outputs = animated
-        ? { desktop: item.file }
-        : Object.fromEntries(
-            await Promise.all(
-              DEVICES.map(async (target) => [
-                target,
-                await optimizeImageFile(
-                  item.file,
-                  profileForRendition(profile, target),
-                  item.transforms[target],
-                ),
-              ]),
-            ),
-          );
       const oldUrls = [...committedRef.current];
       const result = await directMediaUpload({
         client: supabase,
         session,
-        bucket,
-        folder: folder || "",
-        kind: presetKey,
+        bucket: item.placement.bucket,
+        folder: item.placement.folder,
+        kind: item.placement.preset,
         source: item.file,
-        files: outputs,
         sourceDimensions: item.dimensions,
         transforms: item.transforms,
-        attachment,
+        attachment: item.placement.attachment,
+        resumeUploadId: item.pendingUploadId,
+        onFinalizePending: (pendingUploadId) => {
+          finalizePendingId = pendingUploadId || "";
+          updateQueueItem(id, {
+            pendingUploadId: pendingUploadId || undefined,
+          });
+        },
         onProgress: (progress, stage) =>
           updateQueueItem(id, { progress, stage }),
       });
@@ -491,6 +533,7 @@ export default function ImageUpload({
         error: "",
         resultUrl: result.url,
         attached: result.attached,
+        pendingUploadId: undefined,
       });
       if (!multiple && oldUrls[0] && oldUrls[0] !== result.url) {
         void fetch("/api/media/upload", {
@@ -507,8 +550,10 @@ export default function ImageUpload({
     } catch (reason) {
       updateQueueItem(id, {
         status: "error",
-        progress: 0,
-        stage: "Upload failed",
+        progress: finalizePendingId ? 84 : 0,
+        stage: finalizePendingId
+          ? "Image uploaded; save confirmation interrupted"
+          : "Upload failed",
         error:
           reason instanceof Error
             ? reason.message
@@ -626,10 +671,12 @@ export default function ImageUpload({
   function drop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
+    if (locked) return;
     void prepareFiles(Array.from(event.dataTransfer.files || []));
   }
 
   function beginCropDrag(event: PointerEvent<HTMLDivElement>) {
+    if (active?.pendingUploadId) return;
     cropDrag.current = {
       id: event.pointerId,
       x: event.clientX,
@@ -686,10 +733,17 @@ export default function ImageUpload({
   const occupied =
     current.length +
     queue.filter((item) => item.status !== "complete").length;
+  const requiresSavedRecord =
+    !attachment &&
+    (bucket === "stylist-photos" ||
+      (bucket === "salon-photos" &&
+        (folder || "").split("/").filter(Boolean)[2] === "products"));
   const locked =
     disabled ||
     authenticated !== true ||
+    !profileReady ||
     busy ||
+    requiresSavedRecord ||
     (multiple && occupied >= maxFiles);
   const aspect = `${activeProfile.aspectWidth} / ${activeProfile.aspectHeight}`;
   const savedAspect = `${profile.aspectWidth} / ${profile.aspectHeight}`;
@@ -715,16 +769,19 @@ export default function ImageUpload({
             · original up to 12 MB
           </li>
           <li>
-            Recommended {profile.minWidth}×{profile.minHeight}px or larger
+            {profile.label} guide: {profile.minWidth}×{profile.minHeight}px
+            (recommended, not required)
           </li>
           <li>
-            Originals are preserved; responsive crops are optimized separately
+            One original is preserved; responsive crops are created securely
+            after upload
           </li>
         </ul>
       </div>
       <input
         ref={inputRef}
         type="file"
+        disabled={locked}
         multiple={multiple}
         accept={
           profile.acceptedMimeTypes?.join(",") ||
@@ -799,15 +856,18 @@ export default function ImageUpload({
                 ) : null}
               </div>
               <p className="mt-2 text-center text-[10px] text-ink/55">
-                {animatedGif
-                  ? `Animated GIF preview in the ${device} frame. Animation and original pixels are preserved.`
-                  : `Canonical ${device} crop · drag with a mouse or finger. This exact crop is saved.`}
+                {active.pendingUploadId
+                  ? "This crop is locked because the original is already uploaded. Retry finishes the same saved upload without creating a duplicate."
+                  : animatedGif
+                  ? `Animated source preview in the ${device} frame. The original file is preserved.`
+                  : `Canonical ${device} crop · drag with a mouse or finger. The server creates this output.`}
               </p>
             </div>
             {animatedGif ? (
               <div className="rounded-xl border border-amber/30 bg-white p-4 text-xs leading-5 text-ink/65">
-                Animated GIFs retain their frames. Static JPG and PNG files
-                provide independent crop controls for each device.
+                The private original keeps its animation. Responsive public
+                crops use a still frame; JPG and PNG files provide independent
+                crop controls for each device.
               </div>
             ) : (
               <div>
@@ -929,7 +989,9 @@ export default function ImageUpload({
             {active.status === "complete" ? (
               <p className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-50 px-5 text-xs font-bold text-emerald-800">
                 <Check size={16} />
-                Image saved
+                {active.attached
+                  ? "Image saved to this record"
+                  : "Upload ready; save this form"}
               </p>
             ) : (
               <button
@@ -1038,16 +1100,18 @@ export default function ImageUpload({
                   item.status !== "uploading" &&
                   item.status !== "complete" ? (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveId(item.id);
-                          setDevice("desktop");
-                        }}
-                        className="min-h-10 rounded-lg border border-plum/15 px-3 text-[10px] font-bold text-plum"
-                      >
-                        Edit crop
-                      </button>
+                      {!item.pendingUploadId ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveId(item.id);
+                            setDevice("desktop");
+                          }}
+                          className="min-h-10 rounded-lg border border-plum/15 px-3 text-[10px] font-bold text-plum"
+                        >
+                          Edit crop
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         disabled={busy}
@@ -1106,8 +1170,9 @@ export default function ImageUpload({
               ) : (
                 <button
                   type="button"
+                  disabled={locked}
                   onClick={() => inputRef.current?.click()}
-                  className="min-h-10 rounded-full bg-white/20 px-3 text-xs font-bold"
+                  className="min-h-10 rounded-full bg-white/20 px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Replace
                 </button>
@@ -1152,13 +1217,33 @@ export default function ImageUpload({
               <span className="mt-1 text-[10px] text-ink/55">
                 {authenticated === null
                   ? "Checking access..."
+                  : profileLoad.key !== presetKey ||
+                      profileLoad.status === "loading"
+                    ? "Loading image requirements..."
+                    : profileLoad.status === "error"
+                      ? "Image requirements unavailable"
                   : authenticated
-                    ? multiple
-                      ? `${Math.min(occupied, maxFiles)}/${maxFiles} selected or saved`
-                      : "One image"
+                    ? requiresSavedRecord
+                      ? "Save the record details before adding photos"
+                      : multiple
+                        ? `${Math.min(occupied, maxFiles)}/${maxFiles} selected or saved`
+                        : "One image"
                     : "Sign in to upload"}
               </span>
             </button>
+            {profileLoad.key === presetKey &&
+            profileLoad.status === "error" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileLoad({ key: presetKey, status: "loading" });
+                  setProfileReload((value) => value + 1);
+                }}
+                className="mx-auto mb-2 block min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta"
+              >
+                Retry image requirements
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>

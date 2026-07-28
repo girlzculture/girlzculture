@@ -10,11 +10,15 @@ export const MEDIA_UPLOAD_SLOTS = [
   "desktop",
   "tablet",
   "mobile",
+  "thumbnail",
 ] as const;
-export const MEDIA_RENDITION_SLOTS: ImageRenditionDevice[] = [
+export const MEDIA_RENDITION_SLOTS: Array<
+  ImageRenditionDevice | "thumbnail"
+> = [
   "desktop",
   "tablet",
   "mobile",
+  "thumbnail",
 ];
 
 export type MediaUploadSlot = (typeof MEDIA_UPLOAD_SLOTS)[number];

@@ -10,6 +10,7 @@ import {
   mediaRequestId,
   verifyPreparedMediaObjects,
 } from "@/lib/mediaUploadServer";
+import { preparedMediaProfileSnapshot } from "@/lib/mediaUploadProfileSnapshotCore";
 import { expectedMediaRequestFailure } from "@/lib/mediaUploadErrorCore";
 import { isUuid } from "@/lib/mediaUploadProtocol";
 
@@ -24,10 +25,7 @@ async function POSTHandler(request: Request) {
       body = (await request.json()) as { upload_id?: string };
     } catch {
       return Response.json(
-        {
-          error: "Send a valid JSON image-finalization request.",
-          request_id: requestId,
-        },
+        { error: "Send a valid JSON image-finalization request." },
         {
           status: 400,
           headers: { "Cache-Control": "private, no-store" },
@@ -37,7 +35,7 @@ async function POSTHandler(request: Request) {
     const uploadId = String(body.upload_id || "");
     if (!isUuid(uploadId)) {
       return Response.json(
-        { error: "The upload reference is invalid.", request_id: requestId },
+        { error: "The upload reference is invalid." },
         {
           status: 400,
           headers: { "Cache-Control": "private, no-store" },
@@ -87,9 +85,17 @@ async function POSTHandler(request: Request) {
     ) {
       throw new Error("The upload session is no longer available.");
     }
+    const profile = preparedMediaProfileSnapshot(
+      session.crop_metadata,
+      String(session.media_kind) as Parameters<
+        typeof preparedMediaProfileSnapshot
+      >[1],
+    );
     const verified = await verifyPreparedMediaObjects(
       admin,
       session.expected_objects,
+      session.crop_metadata,
+      profile,
     );
     const result = await admin.rpc("finalize_media_upload_session", {
       p_session_id: uploadId,
@@ -117,10 +123,7 @@ async function POSTHandler(request: Request) {
     const expected = expectedMediaRequestFailure(error);
     if (expected) {
       return Response.json(
-        {
-          error: expected.message,
-          request_id: requestId,
-        },
+        { error: expected.message },
         {
           status: expected.status,
           headers: { "Cache-Control": "private, no-store" },

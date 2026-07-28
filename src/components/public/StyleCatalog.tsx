@@ -69,7 +69,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
         {filtered.map((item) => (
           <Link key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(13,17,20,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(13,17,20,0.12)]">
             {item.image ? <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
-              <SafeImage src={item.image} fallbackSrc={item.image} alt={`${item.name} hairstyle`} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+              <SafeImage src={item.image} fallbackSrc={item.image} alt={`${item.name} hairstyle`} rendition="thumbnail" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
             </div> : null}
             <div className="px-3 py-3 sm:px-4">
               <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-amber">{item.category}</p>
