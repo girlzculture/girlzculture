@@ -17,6 +17,13 @@ const TABLE_ACCESS: Record<WorkspaceKey, string | null> = {
   salon_blockouts: "availability",
 };
 
+const ARCHIVED_RECORD_TABLES = new Set<WorkspaceKey>([
+  "styles",
+  "stylists",
+  "salon_products",
+  "salon_promotions",
+]);
+
 async function GETHandler(request: Request) {
   let admin;
   try {
@@ -27,7 +34,14 @@ async function GETHandler(request: Request) {
       const permission = TABLE_ACCESS[table];
       const allowed = context.isOwner ? true : Boolean(permission && permissions[permission]);
       if (!allowed) return [table, []] as const;
-      const result = await context.admin.from(table).select("*").eq("salon_id", context.salon.id).order("created_at", { ascending: false });
+      let query = context.admin
+        .from(table)
+        .select("*")
+        .eq("salon_id", context.salon.id);
+      if (ARCHIVED_RECORD_TABLES.has(table)) {
+        query = query.is("archived_at", null);
+      }
+      const result = await query.order("created_at", { ascending: false });
       if (result.error) throw result.error;
       return [table, result.data || []] as const;
     }));
