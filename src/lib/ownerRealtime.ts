@@ -1,6 +1,7 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 type RealtimeRow = Record<string, unknown>;
+export type OwnerFallbackOutcome = "ready" | "transient" | "terminal";
 export type OwnerRealtimeConnectionState =
   | "connecting"
   | "connected"
@@ -15,12 +16,26 @@ type OwnerRealtimeOptions = {
     state: OwnerRealtimeConnectionState,
     status?: string,
   ) => void;
-  onFallbackRefresh?: () => void | Promise<void>;
+  onFallbackRefresh?: () =>
+    | void
+    | OwnerFallbackOutcome
+    | Promise<void | OwnerFallbackOutcome>;
   retryDelaysMs?: number[];
   pollingIntervalMs?: number;
 };
 
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 15_000, 30_000];
+
+export function ownerFallbackDelay(
+  pollingIntervalMs: number,
+  attempt: number,
+) {
+  const base = Math.max(1_000, pollingIntervalMs);
+  return Math.min(
+    5 * 60_000,
+    base * 2 ** Math.min(Math.max(0, attempt), 6),
+  );
+}
 
 export function subscribeToOwnerUpdates({
   client,
@@ -34,9 +49,11 @@ export function subscribeToOwnerUpdates({
 }: OwnerRealtimeOptions) {
   let channel: RealtimeChannel | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
-  let pollingTimer: ReturnType<typeof setInterval> | null = null;
+  let pollingTimer: ReturnType<typeof setTimeout> | null = null;
   let retryAttempt = 0;
+  let pollingAttempt = 0;
   let stopped = false;
+  let terminalAuthFailure = false;
   let connectionGeneration = 0;
   let degraded = false;
 
@@ -45,16 +62,52 @@ export function subscribeToOwnerUpdates({
     retryTimer = null;
   };
   const stopPolling = () => {
-    if (pollingTimer) clearInterval(pollingTimer);
+    if (pollingTimer) clearTimeout(pollingTimer);
     pollingTimer = null;
+    pollingAttempt = 0;
   };
-  const startPolling = () => {
-    if (stopped || pollingTimer || !onFallbackRefresh) return;
-    void onFallbackRefresh();
-    pollingTimer = setInterval(() => {
-      if (!stopped) void onFallbackRefresh();
-    }, Math.max(1_000, pollingIntervalMs));
+  const schedulePolling = (delay: number) => {
+    if (
+      stopped ||
+      terminalAuthFailure ||
+      pollingTimer ||
+      !onFallbackRefresh
+    ) {
+      return;
+    }
+    pollingTimer = setTimeout(() => {
+      pollingTimer = null;
+      if (stopped || terminalAuthFailure) return;
+      void Promise.resolve(onFallbackRefresh())
+        .then((outcome) => {
+          if (stopped) return;
+          if (outcome === "terminal") {
+            terminalAuthFailure = true;
+            clearRetry();
+            stopPolling();
+            const current = channel;
+            if (current) void removeCurrentChannel(current);
+            return;
+          }
+          if (outcome === "transient") {
+            pollingAttempt += 1;
+          } else {
+            pollingAttempt = 0;
+          }
+          const next =
+            outcome === "transient"
+              ? ownerFallbackDelay(pollingIntervalMs, pollingAttempt)
+              : ownerFallbackDelay(pollingIntervalMs, 0);
+          schedulePolling(next);
+        })
+        .catch(() => {
+          if (stopped || terminalAuthFailure) return;
+          pollingAttempt += 1;
+          schedulePolling(ownerFallbackDelay(pollingIntervalMs, pollingAttempt));
+        });
+    }, Math.max(0, delay));
   };
+  const startPolling = () => schedulePolling(0);
   const removeCurrentChannel = async (expected: RealtimeChannel | null) => {
     if (!expected || channel !== expected) return;
     channel = null;
@@ -66,7 +119,7 @@ export function subscribeToOwnerUpdates({
     }
   };
   const scheduleReconnect = () => {
-    if (stopped || retryTimer) return;
+    if (stopped || terminalAuthFailure || retryTimer) return;
     const delay =
       retryDelaysMs[
         Math.min(retryAttempt, Math.max(0, retryDelaysMs.length - 1))
@@ -91,7 +144,7 @@ export function subscribeToOwnerUpdates({
     void removeCurrentChannel(failedChannel).finally(scheduleReconnect);
   };
   const connect = () => {
-    if (stopped) return;
+    if (stopped || terminalAuthFailure) return;
     clearRetry();
     connectionGeneration += 1;
     const generation = connectionGeneration;

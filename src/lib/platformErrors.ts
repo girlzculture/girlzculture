@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { deploymentReleaseId } from "@/lib/deploymentIdentity";
 
 export type ErrorContext = {
   request?: Request;
@@ -75,7 +76,7 @@ export async function capturePlatformError(context: ErrorContext) {
   const record = context.error && typeof context.error === "object" ? context.error as Record<string, unknown> : {};
   const technicalMessage = safeText(context.error instanceof Error ? context.error.message : record.message || context.error || "Unknown error");
   const technicalStack = safeText(context.error instanceof Error ? context.error.stack : record.details || "", 6_000);
-  const release = process.env.COMMIT_REF || process.env.NEXT_PUBLIC_COMMIT_REF || process.env.DEPLOY_ID || "local";
+  const release = deploymentReleaseId();
   const environment = process.env.CONTEXT || process.env.NODE_ENV || "unknown";
   const route = context.request ? new URL(context.request.url).pathname : null;
   const fingerprint = hashFingerprint(`${context.feature}|${context.action}|${String(record.code || "")}|${technicalMessage.slice(0, 300)}`);
@@ -164,6 +165,26 @@ export async function monitoredRouteFailure(context: ErrorContext) {
   if (/^Forbidden(?::|$)/i.test(message)) {
     return Response.json({ error: "You do not have permission to use this feature." }, { status: 403, headers: { "Cache-Control": "private, no-store" } });
   }
+  const errorRecord =
+    context.error && typeof context.error === "object"
+      ? (context.error as Record<string, unknown>)
+      : {};
+  const providerUnavailable =
+    Number(errorRecord.status || 0) === 503 &&
+    String(errorRecord.code || "") === "AUTHENTICATION_PROVIDER_UNAVAILABLE";
   const reference = await capturePlatformError(context);
-  return safeFailure(context.safeMessage, reference);
+  return safeFailure(
+    providerUnavailable
+      ? "The authentication service is temporarily unavailable."
+      : context.safeMessage,
+    reference,
+    providerUnavailable ? 503 : 500,
+    {
+      code: providerUnavailable
+        ? "AUTHENTICATION_PROVIDER_UNAVAILABLE"
+        : undefined,
+      recordType: context.recordType,
+      recordId: context.recordId,
+    },
+  );
 }

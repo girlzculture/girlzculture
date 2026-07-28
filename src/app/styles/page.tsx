@@ -3,6 +3,7 @@ import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site
 import StyleCatalog, { StyleCatalogItem } from "@/components/public/StyleCatalog";
 import { supabase } from "@/lib/supabase";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
+import FirstRelevantLocationRequest from "@/components/location/FirstRelevantLocationRequest";
 
 type StyleRow = {
   name?: string | null;
@@ -58,12 +59,10 @@ export default async function StylesPage() {
 
   return <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0">
     <PublicHeader active="styles" />
-    <section className="relative overflow-hidden border-b border-plum/10 bg-[radial-gradient(circle_at_75%_25%,rgba(224,163,78,0.16),transparent_34%)]">
-      <div className="mx-auto w-full max-w-[1760px] px-4 pb-6 pt-8 sm:px-8 lg:px-12 lg:pt-12 2xl:px-16">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-magenta">Explore. Compare. Book with confidence.</p>
-        <h1 className="mt-2 font-serif text-[42px] font-semibold leading-[0.95] tracking-[-0.045em] text-ink sm:text-[58px]">Browse by Style<span className="text-magenta">.</span></h1>
-        <p className="mt-2 text-lg text-ink/80">Find your next look.</p>
-        <div className="mt-5"><StyleCatalog items={items} /></div>
+    <FirstRelevantLocationRequest />
+    <section className="relative overflow-hidden border-b border-plum/10">
+      <div className="mx-auto w-full max-w-[1760px] px-4 pb-6 pt-3 sm:px-8 sm:pt-5 lg:px-12 2xl:px-16">
+        <StyleCatalog items={items} />
         <div className="mt-4 flex items-center gap-3 rounded-[12px] bg-blush/50 px-4 py-3 text-[11px]">
           <Compass size={17} className="shrink-0 text-magenta" />
           <span>{items.length ? "Choose a style to explore salons that currently offer it." : "Styles will appear here as salons publish their services."}</span>

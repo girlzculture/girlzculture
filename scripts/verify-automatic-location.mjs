@@ -63,10 +63,22 @@ const provider = fs.readFileSync(
   "src/components/location/CustomerLocationProvider.tsx",
   "utf8",
 );
+const firstRelevantRequest = fs.readFileSync(
+  "src/components/location/FirstRelevantLocationRequest.tsx",
+  "utf8",
+);
 assert.match(provider, /localStorage\.setItem/);
 assert.match(provider, /permission\.state === "granted"/);
 assert.match(provider, /\/api\/location\/resolve/);
 assert.match(provider, /search\.default_radius_miles/);
+assert.match(firstRelevantRequest, /AUTOMATIC_LOCATION_REQUEST_KEY/);
+assert.match(firstRelevantRequest, /remember\("prompted"\)/);
+assert.match(firstRelevantRequest, /remember\(granted \? "granted" : "denied"\)/);
+assert.doesNotMatch(firstRelevantRequest, /watchPosition/);
+for (const route of ["page.tsx", "salons/page.tsx", "styles/page.tsx"]) {
+  const source = fs.readFileSync(`src/app/${route}`, "utf8");
+  assert.match(source, /FirstRelevantLocationRequest/);
+}
 for (const placement of [
   "NearbySalonPlacement.tsx",
   "FeaturedSalonPlacement.tsx",
@@ -78,5 +90,5 @@ for (const placement of [
 }
 
 console.log(
-  "Automatic location verification passed: edge/header/provider resolution returns city-level coordinates without IP data, explicit/stored precedence is wired, and local placements use the Engine radius.",
+  "Automatic location verification passed: the first relevant marketplace visit makes one denial-safe native request, edge/header fallback returns city-level coordinates without IP data, stored precedence is reused, and local placements use the Engine radius.",
 );

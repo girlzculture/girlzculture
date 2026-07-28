@@ -77,6 +77,7 @@ export default async function RootLayout({
       lang={locale}
       dir={localeDirection(locale)}
       className="h-full antialiased"
+      data-scroll-behavior="smooth"
       style={
         {
           "--gc-charcoal": brand.heading,

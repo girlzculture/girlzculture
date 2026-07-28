@@ -1,5 +1,51 @@
 export type FinanceRow = Record<string, unknown>;
 
+export type FinancePageResult<T> = {
+  data: T[] | null;
+  error: unknown;
+};
+
+/**
+ * A selected salon's ledger is an audit surface, so silently truncating it at
+ * the PostgREST row limit is not acceptable. Load deterministic ranges until
+ * the provider returns the final partial page.
+ */
+export async function collectEveryFinancePage<T>(
+  loadPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<FinancePageResult<T>>,
+  pageSize = 1_000,
+): Promise<FinancePageResult<T>> {
+  const safePageSize = Math.max(1, Math.min(1_000, Math.floor(pageSize)));
+  const rows: T[] = [];
+  for (let from = 0; ; from += safePageSize) {
+    const result = await loadPage(from, from + safePageSize - 1);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data || [];
+    rows.push(...page);
+    if (page.length < safePageSize) {
+      return { data: rows, error: null };
+    }
+  }
+}
+
+export type UnifiedFinanceTransactionType =
+  | "Booking deposit"
+  | "Product order"
+  | "Product refund"
+  | "Subscription payment"
+  | "Subscription refund"
+  | "Plan adjustment"
+  | "Billing event";
+
+export type UnifiedFinanceRow = FinanceRow & {
+  transaction_key: string;
+  transaction_type: UnifiedFinanceTransactionType;
+  gross_amount: number;
+  refund_amount: number;
+};
+
 export type FinanceFilters = {
   from: string;
   to: string;
@@ -167,6 +213,33 @@ export function summarizeBookingTransactions(rows: FinanceRow[]) {
   );
 }
 
+export function classifyBillingTransaction(
+  eventType: unknown,
+): UnifiedFinanceTransactionType {
+  const value = String(eventType || "");
+  if (/refund|credit|dispute/i.test(value)) return "Subscription refund";
+  if (/subscription|upgrade|renewal|downgrade|invoice/i.test(value)) {
+    return "Subscription payment";
+  }
+  return "Billing event";
+}
+
+export function summarizeUnifiedFinanceTransactions(
+  rows: UnifiedFinanceRow[],
+) {
+  return rows.reduce(
+    (summary, row) => {
+      summary.received += number(row.gross_amount);
+      summary.returned += number(row.refund_amount);
+      summary.owed += number(row.net_amount_owed_salon);
+      summary.processing += number(row.stripe_processing_fee);
+      summary.platform += number(row.platform_fee);
+      return summary;
+    },
+    { received: 0, returned: 0, owed: 0, processing: 0, platform: 0 },
+  );
+}
+
 function csvCell(value: unknown) {
   let text = String(value ?? "");
   if (/^[=+\-@]/.test(text)) text = `'${text}`;
@@ -185,6 +258,42 @@ function csvDate(value: unknown, timeZone: string) {
     minute: "2-digit",
     timeZoneName: "short",
   }).format(date);
+}
+
+export function unifiedFinanceCsv(
+  rows: UnifiedFinanceRow[],
+  timeZone = "America/New_York",
+) {
+  const columns: Array<[string, string]> = [
+    ["date_local", `Date (${timeZone})`],
+    ["date", "Date (UTC)"],
+    ["public_reference", "Transaction reference"],
+    ["transaction_type", "Transaction type"],
+    ["salon", "Salon"],
+    ["customer", "Customer"],
+    ["service", "Service"],
+    ["gross_amount", "Money received"],
+    ["refund_amount", "Money returned"],
+    ["net_amount_owed_salon", "Net owed salon"],
+    ["stripe_processing_fee", "Stripe processing fee"],
+    ["platform_fee", "Platform fee"],
+    ["payment_status", "Payment status"],
+    ["payout_status", "Payout status"],
+    ["payment_mode", "Provider mode"],
+    ["stripe_reference", "Provider reference"],
+    ["stripe_refund_id", "Provider refund reference"],
+    ["stripe_transfer_id", "Provider transfer reference"],
+  ];
+  return [
+    columns.map(([, label]) => csvCell(label)).join(","),
+    ...rows.map((row) =>
+      columns
+        .map(([key]) =>
+          csvCell(key === "date_local" ? csvDate(row.date, timeZone) : row[key]),
+        )
+        .join(","),
+    ),
+  ].join("\r\n");
 }
 
 export function financeCsv(

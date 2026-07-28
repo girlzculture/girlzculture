@@ -4,7 +4,10 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Check, FileUp, LockKeyhole } from "lucide-react";
-import { salonSupabase as supabase } from "@/lib/supabase";
+import {
+  getSessionForScope,
+  salonSupabase as supabase,
+} from "@/lib/supabase";
 import { normalizePlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
@@ -25,10 +28,13 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   const [uploadingDocs,setUploadingDocs] = useState(false);
 
   useEffect(() => {
-    void supabase.auth.getUser().then(async ({data}) => {
-      if (!data.user) { router.replace("/salon/login"); return; }
-      setUserId(data.user.id);
-      setForm((current) => ({...current, business_email:data.user?.email || "", phone:String(data.user?.user_metadata?.phone || "")}));
+    void getSessionForScope("salon").then((session) => {
+      if (!session?.user) { router.replace("/salon/login"); return; }
+      setUserId(session.user.id);
+      setForm((current) => ({...current, business_email:session.user.email || "", phone:String(session.user.user_metadata?.phone || "")}));
+    }).catch(() => {
+      // A temporary Auth provider failure is not a logout. Keep this form in
+      // place so the next authenticated operation can recover the session.
     });
   }, [router]);
 
@@ -58,7 +64,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
     if (!isValidUsZip(form.zip_code)) { setMessage("Please enter a valid ZIP code (12345 or 12345-6789)."); return; }
     setSaving(true); setMessage("");
     try {
-      const {data:{session}} = await supabase.auth.getSession();
+      const session = await getSessionForScope("salon");
       if (!session) throw new Error("Your session has expired. Please sign in again.");
       const response = await fetch("/api/salon/application", { method:"POST", headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`}, body:JSON.stringify({...form,selected_plan:selectedPlan,website:"",logo_url:null,photo_urls:[],document_urls:documents,consent_authorized:checks[0],consent_terms:checks[1],consent_photos:checks[2]}) });
       const body = await response.json();

@@ -567,7 +567,7 @@ begin
     select 1
     from public.engine_settings
     where setting_key='integrations.expected_migration'
-      and published_value='"20260727210000"'::jsonb
+      and published_value='"20260727230000"'::jsonb
   ) then
     raise exception 'Engine expected migration does not match the repository head';
   end if;
@@ -615,6 +615,219 @@ begin
       and 'image/gif'=any(accepted_mime_types)
   ) then
     raise exception 'Editorial animated GIF support is not configured';
+  end if;
+
+  if to_regclass('public.media_upload_sessions') is null
+    or not exists (
+      select 1
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='media_upload_sessions'
+        and relation.relrowsecurity
+    )
+    or not exists (
+      select 1
+      from pg_policies
+      where schemaname='public'
+        and tablename='media_upload_sessions'
+        and policyname='media_upload_sessions_owner_read'
+    )
+    or not exists (
+      select 1
+      from storage.buckets
+      where id='media-originals'
+        and public=false
+        and file_size_limit=12582912
+    )
+    or not exists (
+      select 1
+      from information_schema.columns
+      where table_schema='public'
+        and table_name='media_assets'
+        and column_name='source_object_path'
+    )
+  then
+    raise exception 'Direct image-upload sessions or private source retention are incomplete';
+  end if;
+
+  if to_regprocedure(
+      'public.finalize_media_upload_session(uuid,jsonb)'
+    ) is null
+    or has_function_privilege(
+      'anon',
+      'public.finalize_media_upload_session(uuid,jsonb)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.finalize_media_upload_session(uuid,jsonb)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.finalize_media_upload_session(uuid,jsonb)',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Direct image finalization function grants are unsafe';
+  end if;
+
+  if not exists (
+      select 1
+      from information_schema.columns
+      where table_schema='public'
+        and table_name='stylists'
+        and column_name='slug'
+        and is_nullable='NO'
+    )
+    or not exists (
+      select 1
+      from pg_constraint constraint_record
+      join pg_class relation on relation.oid=constraint_record.conrelid
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='stylists'
+        and constraint_record.conname='stylists_slug_format_check'
+        and constraint_record.convalidated
+    )
+    or not exists (
+      select 1
+      from pg_indexes
+      where schemaname='public'
+        and indexname='stylists_salon_slug_unique_idx'
+    )
+    or not exists (
+      select 1
+      from pg_trigger trigger_record
+      join pg_class relation on relation.oid=trigger_record.tgrelid
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='stylists'
+        and trigger_record.tgname='stylists_assign_stable_slug'
+        and not trigger_record.tgisinternal
+        and trigger_record.tgenabled <> 'D'
+    )
+  then
+    raise exception 'Stable stylist slug schema is incomplete';
+  end if;
+
+  if to_regclass('public.salon_publication_overrides') is null
+    or to_regclass('public.salon_publication_override_audit') is null
+    or not exists (
+      select 1
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname in (
+          'salon_publication_overrides',
+          'salon_publication_override_audit'
+        )
+        and relation.relrowsecurity
+      group by namespace.nspname
+      having count(*)=2
+    )
+    or has_table_privilege(
+      'anon',
+      'public.salon_publication_overrides',
+      'SELECT'
+    )
+    or has_table_privilege(
+      'authenticated',
+      'public.salon_publication_overrides',
+      'SELECT'
+    )
+    or has_table_privilege(
+      'authenticated',
+      'public.salon_publication_override_audit',
+      'SELECT'
+    )
+    or not has_table_privilege(
+      'service_role',
+      'public.salon_publication_override_audit',
+      'SELECT'
+    )
+    or not exists (
+      select 1
+      from pg_trigger trigger_record
+      join pg_class relation on relation.oid=trigger_record.tgrelid
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='salon_publication_override_audit'
+        and trigger_record.tgname='salon_publication_override_audit_immutable'
+        and not trigger_record.tgisinternal
+        and trigger_record.tgenabled <> 'D'
+    )
+  then
+    raise exception 'Publication override RLS or immutable audit protection is incomplete';
+  end if;
+
+  if to_regprocedure('public.salon_publication_diagnostic(uuid)') is null
+    or to_regprocedure('public.is_salon_profile_public(uuid)') is null
+    or to_regprocedure('public.is_marketplace_visible(uuid)') is null
+    or to_regprocedure(
+      'public.admin_activate_salon_application(uuid,uuid,boolean,text)'
+    ) is null
+    or has_function_privilege(
+      'anon',
+      'public.salon_publication_diagnostic(uuid)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'anon',
+      'public.is_salon_profile_public(uuid)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'anon',
+      'public.is_marketplace_visible(uuid)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.admin_activate_salon_application(uuid,uuid,boolean,text)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.admin_activate_salon_application(uuid,uuid,boolean,text)',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Publication activation function grants are unsafe';
+  end if;
+
+  if not exists (
+      select 1
+      from pg_policies
+      where schemaname='public'
+        and tablename='salons'
+        and policyname='salons_public_read'
+        and qual like '%is_salon_profile_public%'
+        and qual like '%salon_has_permission%'
+    )
+    or not exists (
+      select 1
+      from pg_policies
+      where schemaname='public'
+        and tablename='styles'
+        and policyname='styles_public_read'
+        and qual like '%is_salon_profile_public%'
+        and qual like '%is_draft%'
+        and qual like '%archived_at%'
+    )
+    or not exists (
+      select 1
+      from pg_policies
+      where schemaname='public'
+        and tablename='stylists'
+        and policyname='stylists_public_read'
+        and qual like '%is_salon_profile_public%'
+        and qual like '%is_draft%'
+        and qual like '%archived_at%'
+    )
+  then
+    raise exception 'Publication profile RLS policies are incomplete';
   end if;
 end
 $$;

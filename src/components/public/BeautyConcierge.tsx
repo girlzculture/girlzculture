@@ -2,16 +2,17 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Bot, CalendarDays, Check, Heart, LoaderCircle, MapPin, Scale, Sparkles, Star } from "lucide-react";
+import { CalendarDays, Check, Heart, LoaderCircle, MapPin, Scale, Star } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import SafeImage from "@/components/site/SafeImage";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { getSupabaseForScope } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
 import type { ConciergeAiStatus, ConciergeConfiguration, ConciergeIntent, ConciergeSalonResult } from "@/lib/beautyConciergeServer";
 
 type SearchState = "idle" | "results" | "no_results" | "clarification" | "error";
 type ResponseBody = { mode?: "openai" | "deterministic"; intent?: ConciergeIntent; clarification?: string | null; salons?: ConciergeSalonResult[]; configuration?: ConciergeConfiguration; error?: string; request_id?: string };
-const SEARCH_PLACEHOLDER = "Describe the beauty service you want, your preferred location, date, budget or other preferences—for example, “Affordable knotless braids near Harlem this Saturday morning.”";
+const SEARCH_PLACEHOLDER = "Describe what you want";
 
 export default function BeautyConcierge() {
   const location = useCustomerLocation();
@@ -54,8 +55,11 @@ export default function BeautyConcierge() {
       const { data } = await client.auth.getSession();
       if (!data.session) { window.location.assign(`/login?next=${encodeURIComponent("/salons")}`); return; }
       const already = saved.includes(id);
-      const response = await fetch("/api/customer/favorites", { method: already ? "DELETE" : "POST", headers: { Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ salon_id: id }) });
-      const body = await response.json() as { error?: string };
+      const response = await fetch("/api/customer/favorites", { method: already ? "DELETE" : "POST", redirect: "manual", headers: { Accept: "application/json", Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ salon_id: id }) });
+      const body = await readApiResponse(
+        response,
+        "Unable to update saved salons.",
+      );
       if (!response.ok) throw new Error(body.error || "Unable to update saved salons.");
       setSaved((current) => already ? current.filter((item) => item !== id) : [...current, id]);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to update saved salons."); }
@@ -63,8 +67,8 @@ export default function BeautyConcierge() {
   const compared = results.filter((salon) => compare.includes(salon.id));
 
   return <section className="mb-5 rounded-[18px] border border-plum/10 bg-charcoal p-4 text-white shadow-[0_16px_40px_rgba(13,17,20,.13)] sm:p-6" aria-labelledby="concierge-title">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-magenta"><Sparkles size={20}/></span><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber">Your Beauty Assistant</p><h2 id="concierge-title" className="font-serif text-2xl font-semibold sm:text-3xl">Tell us the look you want</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-white/70">Describe the service, place, date and budget in your own words. Every result is verified against current Girlz Culture data.</p></div></div>{location.location ? <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-[10px]"><MapPin size={12}/>Searching near {location.location.label}</span> : null}</div>
-    <form onSubmit={search} className="mt-4 grid gap-2 md:grid-cols-[1fr_auto]"><label><span className="sr-only">Describe your beauty appointment</span><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={600} rows={2} placeholder={SEARCH_PLACEHOLDER} className="min-h-16 w-full resize-y rounded-[10px] border border-white/15 bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-ink/45 focus:border-magenta" /></label><button disabled={busy || prompt.trim().length < 3} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-6 text-sm font-bold disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={17}/> : <Bot size={17}/>}Find real matches</button></form>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.18em] text-amber">AI</p><h2 id="concierge-title" className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">Tell us the look you want</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-white/70">Describe the beauty service you want, your preferred location, date, or other preferences.</p></div>{location.location ? <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-[10px]"><MapPin size={12}/>Searching near {location.location.label}</span> : null}</div>
+    <form onSubmit={search} className="mt-4 grid gap-2 md:grid-cols-[1fr_auto]"><label><span className="sr-only">Describe your beauty appointment</span><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={600} rows={2} placeholder={SEARCH_PLACEHOLDER} className="min-h-16 w-full resize-y rounded-[10px] border border-white/15 bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-ink/45 focus:border-magenta" /></label><button disabled={busy || prompt.trim().length < 3} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-6 text-sm font-bold disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={17}/> : null}Find real matches</button></form>
     {searchState !== "idle" ? <ConciergeResultHeader state={searchState} configuration={configuration} message={message} count={results.length}/> : null}
     {intent && (intent.style || intent.radius_miles || intent.maximum_price || intent.minimum_rating || intent.date) ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Interpreted search details">{intent.style ? <Chip>{intent.style}</Chip> : null}{intent.radius_miles ? <Chip>Within {intent.radius_miles} mi</Chip> : null}{intent.maximum_price !== null ? <Chip>Up to ${intent.maximum_price}</Chip> : null}{intent.minimum_rating !== null ? <Chip>{intent.minimum_rating}+ stars</Chip> : null}{intent.date ? <Chip>{intent.date} · {intent.time_period}</Chip> : null}{intent.promotion_only ? <Chip>Offers only</Chip> : null}<span className="self-center text-[9px] text-white/45">{mode === "openai" ? "AI interpreted; database verified" : "Standard search fallback"}</span></div> : null}
     {results.length ? <div className="mt-5 -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">{results.map((salon) => <ConciergeCard key={salon.id} salon={salon} selected={compare.includes(salon.id)} saved={saved.includes(salon.id)} toggleCompare={() => toggleCompare(salon.id)} toggleSave={() => void saveSalon(salon.id)}/>)}</div> : null}

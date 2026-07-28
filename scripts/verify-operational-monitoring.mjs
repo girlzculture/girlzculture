@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 const root = process.cwd();
 const apiRoot = path.join(root, "src", "app", "api");
@@ -14,7 +15,7 @@ function walk(directory) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 106, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 108, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -63,8 +64,24 @@ assert.deepEqual(serverActions, [], "Server actions must be added to the monitor
 const core = await import(
   `${pathToFileURL(path.join(root, "src", "lib", "operationalMonitoringCore.ts")).href}?v=${Date.now()}`
 );
+const platformErrorsSource = fs
+  .readFileSync(path.join(root, "src", "lib", "platformErrors.ts"), "utf8")
+  .replace(
+    'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
+    'const deploymentReleaseId = () => "verification";',
+  );
 const platformErrors = await import(
-  `${pathToFileURL(path.join(root, "src", "lib", "platformErrors.ts")).href}?v=${Date.now()}`
+  `data:text/javascript;base64,${Buffer.from(
+    ts.transpileModule(platformErrorsSource, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText,
+  ).toString("base64")}`,
+);
+const apiResponseClient = await import(
+  `${pathToFileURL(path.join(root, "src", "lib", "apiResponseClient.ts")).href}?v=${Date.now()}`
 );
 
 const inventoryRows = new Map(
@@ -104,6 +121,25 @@ for (const route of [
     "protected",
     `${route} must treat authentication/session failures as protected incidents.`,
   );
+}
+
+for (const route of [
+  "/api/media/upload/prepare",
+  "/api/media/upload/finalize",
+]) {
+  assert.equal(
+    core.classifyOperationalRoute(route, "POST"),
+    "provider-backed",
+    `${route} must capture unexpected Storage/database/session failures.`,
+  );
+  const source = fs.readFileSync(
+    path.join(root, "src", "app", ...route.slice(1).split("/"), "route.ts"),
+    "utf8",
+  );
+  assert.match(source, /monitoredRouteFailure/);
+  assert.match(source, /request_id/);
+  assert.match(source, /Cache-Control": "private, no-store"/);
+  assert.doesNotMatch(source, /console\.(?:error|warn)\s*\(/);
 }
 
 const representativeFailures = [
@@ -217,6 +253,21 @@ assert.equal(nextBody.request_id, matchingReference);
 assert.match(nextBody.error, new RegExp(matchingReference));
 assert.equal(nextFailure.headers.get("cache-control"), "private, no-store");
 
+const edgeHtmlFailure = new Response("<!DOCTYPE html><title>Internal Error</title>", {
+  status: 502,
+  headers: {
+    "content-type": "text/html",
+    "x-nf-request-id": matchingReference,
+  },
+});
+const parsedEdgeFailure = await apiResponseClient.readApiResponse(
+  edgeHtmlFailure,
+  "The image upload could not be completed.",
+);
+assert.equal(parsedEdgeFailure.request_id, matchingReference);
+assert.match(parsedEdgeFailure.error, new RegExp(matchingReference));
+assert.doesNotMatch(parsedEdgeFailure.error, /DOCTYPE|Internal Error/i);
+
 const monitoring = await import(
   `${pathToFileURL(path.join(root, "netlify", "functions", "_monitoring.mjs")).href}?v=${Date.now()}`
 );
@@ -293,7 +344,9 @@ const providerEntryPoints = [
   ["src/lib/discoveryServer.ts", /getSupabaseAdmin/, /discover_nearby_salons_ranked/],
   ["src/lib/bookingAvailabilityServer.ts", /getSupabaseAdmin/, /booking_checkout_intents/],
   ["src/lib/bookingRescheduleServer.ts", /capturePlatformError/, /Promise\.allSettled/],
-  ["src/lib/supabase.ts", /protected destination route owns server-side incident monitoring/, /catch\s*\{/],
+  ["src/lib/mediaUploadServer.ts", /verifyPreparedMediaObjects/, /uploadToSignedUrl|createSignedUploadUrl/],
+  ["src/lib/mediaUploadClient.ts", /uploadToSignedUrl/, /reportClientOperationalFailure/],
+  ["src/lib/supabase.ts", /protected API route supplies the canonical incident reference/, /catch\s*\{/],
 ];
 for (const [relative, firstEvidence, secondEvidence] of providerEntryPoints) {
   const source = fs.readFileSync(path.join(root, relative), "utf8");

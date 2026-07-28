@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-07-26. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -37,7 +37,7 @@ Updated: 2026-07-26. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/identity-conflicts` | GET, PATCH | protected | Covered |
 | `/api/admin/identity-deletion` | GET, POST | protected | Covered |
 | `/api/admin/inbox-counts` | GET | protected | Covered |
-| `/api/admin/marketing` | GET, POST, DELETE | protected | Covered |
+| `/api/admin/marketing` | GET, POST | protected | Covered |
 | `/api/admin/media/video-jobs` | GET, POST | provider-backed | Covered |
 | `/api/admin/preferences/time-zone` | GET, PATCH | protected | Covered |
 | `/api/admin/promo-codes` | GET, POST, PATCH | protected | Covered |
@@ -82,7 +82,9 @@ Updated: 2026-07-26. This inventory is enforced by `scripts/verify-operational-m
 | `/api/location/geocode-salon` | POST | provider-backed | Covered |
 | `/api/location/resolve` | GET | public/read-only | Covered |
 | `/api/media/cleanup` | POST | provider-backed | Covered |
-| `/api/media/upload` | GET, POST, DELETE | provider-backed | Covered |
+| `/api/media/upload` | GET, POST, PATCH, DELETE | provider-backed | Covered |
+| `/api/media/upload/prepare` | POST | provider-backed | Covered |
+| `/api/media/upload/finalize` | POST | provider-backed | Covered |
 | `/api/messages` | GET, POST | provider-backed | Covered |
 | `/api/monitor/client-provider` | POST | provider-backed | Covered |
 | `/api/newsletter` | POST | expected-only | Covered |
@@ -140,7 +142,7 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 |---|---|---|
 | Supabase database/RLS | All API routes through shared wrapper | Returned 5xx, unsafe 4xx, and uncaught failures become sanitized Engine events |
 | Supabase Auth/session | Auth, admin, salon, customer routes | Protected 401/session failures create low-severity Engine events; expected 403 denials do not |
-| Supabase Storage/media | `/api/media/*`, signed application media, cleanup function | Route/function events include release, environment, operation and safe record identifiers |
+| Supabase Storage/media | `/api/media/*`, direct signed image transfer, signed application media, cleanup function | Prepare/finalize/sync routes are provider-backed and monitored; direct browser Storage failures use the sanitized client-provider bridge, and route/function events include release, environment, operation and safe record identifiers |
 | Booking/availability | availability, admin booking, salon cancellation/blocking, checkout | Unexpected overlap/query/provider failures are monitored; normal unavailable slots remain 409 responses |
 | Stripe | checkout, portal, subscription lifecycle/change, webhook | Provider failures and 5xx responses are monitored; invalid webhook signatures remain expected 400 responses |
 | OpenAI/AI | concierge and Engine AI sandbox | Timeout/provider/5xx failures are monitored; normal clarification/fallback is not an incident |
@@ -171,6 +173,8 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 | `src/lib/bookingAvailabilityServer.ts` | booking, hold, customer-overlap and blockout reads | provider-backed | Service-role monitored transport covers every query, including legacy result objects, and booking routes expose matching references |
 | `src/lib/bookingRescheduleServer.ts` | customer-approved proposal validation, secure access delivery and multi-channel notifications | provider-backed/protected | Authoritative availability is rechecked before the service-only proposal RPC; partial delivery failures create sanitized Engine references without undoing the saved proposal |
 | `src/lib/guestBookingAccess.ts` | signed booking access, token rotation, recovery verification and access audit | provider-backed/guest | Tokens are scoped, hashed, expiring and revocable; expected invalid/expired responses remain inline while database and delivery failures create sanitized Engine events |
+| `src/lib/mediaUploadServer.ts` | signed upload preparation, private-source/public-rendition verification, cleanup and transactional record attachment | provider-backed/protected | All database and Storage operations run through the monitored service-role transport; prepare/finalize routes return sanitized JSON and the matching Engine reference for unexpected failures |
+| `src/lib/mediaUploadClient.ts` | browser-to-Supabase signed Storage transfer and attachment-order synchronization | provider-backed/client | Binary files bypass Netlify Functions; direct Storage failures are sent to the allowlisted client-provider bridge and its exact sanitized reference is shown to the uploader |
 | `src/lib/supabase.ts` | browser role-scoped sessions and direct Supabase transport | provider-backed/client | Unexpected RLS/session/storage/database responses are replaced with safe text containing the exact reference returned by `/api/monitor/client-provider`; expected auth/validation/no-row outcomes pass through unchanged |
 | `src/app/api/monitor/client-provider/route.ts` | rate-limited sanitized client-provider bridge | provider-backed | Accepts only status, safe code, allowlisted provider, operation and page path; persists no provider body, query, token, cookie or user-entered content and returns the event reference |
 

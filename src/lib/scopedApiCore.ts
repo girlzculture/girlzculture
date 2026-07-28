@@ -11,6 +11,7 @@ export class ScopedApiError extends Error {
   readonly requestId: string | null;
   readonly recordId: string | null;
   readonly authenticationFailure: boolean;
+  readonly retryable: boolean;
 
   constructor(input: {
     message: string;
@@ -18,6 +19,7 @@ export class ScopedApiError extends Error {
     code?: string;
     requestId?: string | null;
     recordId?: string | null;
+    retryable?: boolean;
   }) {
     super(input.message);
     this.name = "ScopedApiError";
@@ -28,6 +30,27 @@ export class ScopedApiError extends Error {
     this.authenticationFailure =
       input.status === 401 ||
       input.code === "AUTHENTICATION_SESSION_FAILURE";
+    this.retryable =
+      input.retryable ??
+      (input.status === 408 ||
+        input.status === 425 ||
+        input.status === 429 ||
+        input.status >= 500);
+  }
+}
+
+export class ScopedSessionProviderError extends ScopedApiError {
+  constructor(
+    scopeLabel = "account",
+    message = `The ${scopeLabel} sign-in service is temporarily unavailable. Try again in a moment.`,
+  ) {
+    super({
+      message,
+      status: 503,
+      code: "AUTHENTICATION_PROVIDER_UNAVAILABLE",
+      retryable: true,
+    });
+    this.name = "ScopedSessionProviderError";
   }
 }
 
@@ -48,6 +71,18 @@ function uuid(value: unknown) {
 
 async function responseBody(response: Response) {
   const contentType = response.headers.get("content-type") || "";
+  if (
+    response.type === "opaqueredirect" ||
+    (response.status >= 300 && response.status < 400)
+  ) {
+    throw new ScopedApiError({
+      message: "The service changed during an update. Refresh and try again.",
+      status: 502,
+      code: "API_REDIRECT_BLOCKED",
+      requestId: uuid(response.headers.get("x-request-id")),
+      retryable: true,
+    });
+  }
   if (!contentType.toLowerCase().includes("application/json")) {
     throw new ScopedApiError({
       message:
@@ -127,9 +162,15 @@ export async function createScopedJsonApiClient(input: {
   const fetcher = input.fetcher || fetch;
 
   async function verifiedSession(forceRefresh: boolean) {
-    const candidate = forceRefresh
-      ? await input.refreshSession()
-      : await input.getSession();
+    let candidate: ScopedApiSession | null;
+    try {
+      candidate = forceRefresh
+        ? await input.refreshSession()
+        : await input.getSession();
+    } catch (error) {
+      if (error instanceof ScopedApiError) throw error;
+      throw new ScopedSessionProviderError(scopeLabel);
+    }
     if (!candidate || candidate.user.id !== actingUserId) {
       throw new ScopedApiError({
         message:
@@ -184,7 +225,7 @@ export function scopedApiErrorMessage(
   recordId?: string | null,
 ) {
   if (!(error instanceof ScopedApiError)) {
-    return error instanceof Error && error.message ? error.message : fallback;
+    return fallback;
   }
   const reference = error.requestId
     ? ` Reference ${error.requestId}.`

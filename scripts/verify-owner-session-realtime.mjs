@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { setTimeout as wait } from "node:timers/promises";
-import { subscribeToOwnerUpdates } from "../src/lib/ownerRealtime.ts";
+import {
+  ownerFallbackDelay,
+  subscribeToOwnerUpdates,
+} from "../src/lib/ownerRealtime.ts";
 import { shouldPreserveSupabaseAuthResponse } from "../src/lib/supabaseFetchPolicy.ts";
 
 class FakeChannel {
@@ -94,6 +97,34 @@ assert.equal(
   "Cleanup allowed another reconnect.",
 );
 
+assert.equal(ownerFallbackDelay(30_000, 0), 30_000);
+assert.equal(ownerFallbackDelay(30_000, 1), 60_000);
+assert.equal(ownerFallbackDelay(30_000, 8), 300_000);
+
+const terminalClient = new FakeClient();
+let terminalFallbacks = 0;
+const cleanupTerminal = subscribeToOwnerUpdates({
+  client: terminalClient,
+  salonId: "aaaaaaaa-3d68-4da2-8d31-b99bcfeea515",
+  onNotification() {},
+  onBooking() {},
+  onFallbackRefresh() {
+    terminalFallbacks += 1;
+    return "terminal";
+  },
+  retryDelaysMs: [5],
+  pollingIntervalMs: 10,
+});
+terminalClient.channels[0].status("CHANNEL_ERROR");
+await wait(30);
+assert.equal(terminalFallbacks, 1);
+assert.equal(
+  terminalClient.channels.length,
+  1,
+  "A terminal session failure allowed realtime to reconnect.",
+);
+await cleanupTerminal();
+
 assert.equal(
   shouldPreserveSupabaseAuthResponse(
     "https://example.supabase.co/auth/v1/token?grant_type=refresh_token",
@@ -108,5 +139,5 @@ assert.equal(
 );
 
 console.log(
-  "Owner session/realtime verification passed: callbacks precede subscribe, reconnect and polling fallback recover, cleanup stops work, and Auth responses stay unchanged.",
+  "Owner session/realtime verification passed: callbacks precede subscribe; reconnect and polling fallback recover; transient polling uses capped backoff; terminal auth stops polling/reconnect; cleanup stops work; and Auth responses stay unchanged.",
 );

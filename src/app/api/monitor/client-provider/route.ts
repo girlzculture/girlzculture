@@ -9,6 +9,7 @@ import {
   publicErrorResponse,
 } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { deploymentReleaseId } from "@/lib/deploymentIdentity";
 
 const SAFE_PROVIDER_CODES = /^[A-Z0-9_.:-]{1,80}$/i;
 const SAFE_OPERATION = /^[a-z0-9_.:/-]{1,120}$/i;
@@ -78,11 +79,7 @@ async function POSTHandler(request: Request) {
           { status: 401, headers: { "Cache-Control": "private, no-store" } },
         );
       }
-      const release =
-        process.env.COMMIT_REF ||
-        process.env.NEXT_PUBLIC_COMMIT_REF ||
-        process.env.DEPLOY_ID ||
-        "local";
+      const release = deploymentReleaseId();
       const environment =
         process.env.CONTEXT || process.env.NODE_ENV || "unknown";
       const { data: openEvents, error: lookupError } = await admin

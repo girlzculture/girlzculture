@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LocateFixed, MapPin, X } from "lucide-react";
+import { LocateFixed } from "lucide-react";
 import { LocationAutocomplete, StyleAutocomplete } from "@/components/search/AutocompleteInputs";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import type { CustomerLocation } from "@/lib/location";
@@ -12,6 +12,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
   const [locationText, setLocationText] = useState("");
   const [resolved, setResolved] = useState<CustomerLocation | null>(null);
   const [editingLocation, setEditingLocation] = useState(false);
+  const [searching, setSearching] = useState(false);
   const customerLocation = useCustomerLocation();
   const router = useRouter();
   const effectiveLocation = resolved || (!editingLocation ? customerLocation.location : null);
@@ -29,11 +30,10 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
       customerLocation.setLocation(next);
     }
   }
-  function clearConfirmedLocation() {
+  function changeConfirmedLocation() {
     setResolved(null);
     setEditingLocation(true);
     setLocationText("");
-    customerLocation.clearLocation();
   }
   async function requestDeviceLocation() {
     setResolved(null);
@@ -41,11 +41,65 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
     setLocationText("");
     await customerLocation.useDeviceLocation();
   }
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function destination(interpretedStyle?: string) {
+    const selectedLocation = effectiveLocation;
     const query = new URLSearchParams();
-    if (style.trim()) query.set("style", style.trim());
-    router.push(query.size ? `/salons?${query}` : "/salons");
+    const selectedStyle = interpretedStyle?.trim() || style.trim();
+    if (selectedStyle) query.set("style", selectedStyle);
+    if (selectedLocation) {
+      query.set("lat", String(selectedLocation.lat));
+      query.set("lng", String(selectedLocation.lng));
+      query.set("location", selectedLocation.label);
+    }
+    return query.size ? `/salons?${query}` : "/salons";
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (searching) return;
+    const prompt = [style.trim(), effectiveLocation?.label]
+      .filter(Boolean)
+      .join(" near ");
+    if (prompt.length < 3) {
+      router.push(destination());
+      return;
+    }
+    setSearching(true);
+    try {
+      const response = await fetch("/api/concierge/search", {
+        method: "POST",
+        credentials: "same-origin",
+        redirect: "manual",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Requested-With": "girlz-culture-home-search",
+        },
+        body: JSON.stringify({
+          prompt,
+          latitude: effectiveLocation?.lat,
+          longitude: effectiveLocation?.lng,
+          website: "",
+        }),
+      });
+      const contentType = response.headers.get("content-type") || "";
+      if (
+        response.ok &&
+        contentType.toLowerCase().includes("application/json")
+      ) {
+        const body = (await response.json()) as {
+          intent?: { style?: string | null };
+        };
+        router.push(destination(body.intent?.style || undefined));
+        return;
+      }
+    } catch {
+      // The standard database search remains available when assisted
+      // interpretation or its provider is temporarily unavailable.
+    } finally {
+      setSearching(false);
+    }
+    router.push(destination());
   }
 
   const locationPlaceholder = effectiveLocation?.source === "device"
@@ -55,11 +109,18 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
       : "City, neighborhood, or ZIP";
 
   return <form onSubmit={submit} className={`relative z-[70] overflow-visible border border-plum/10 bg-white shadow-[0_12px_34px_rgba(13,17,20,.10)] ${compact ? "rounded-[14px] p-2.5" : "rounded-[16px] p-2.5 sm:p-3 md:p-1.5"}`}>
-    <div className="grid gap-2 md:grid-cols-[1.1fr_.9fr_auto] md:items-end">
+    <div className="grid gap-2 md:grid-cols-[1.15fr_1fr_auto] md:items-stretch">
       <label className="block min-w-0 rounded-[10px] px-3 py-1 focus-within:bg-cream/55"><span className="block text-[10px] font-bold text-ink">What service are you looking for?</span><StyleAutocomplete value={style} onChange={setStyle} onLocation={resolve} placeholder="e.g., Knotless Braids" className="mt-0.5"/></label>
-      <div className="block min-w-0 border-t border-plum/10 px-3 py-1 focus-within:bg-cream/55 md:border-l md:border-t-0"><span className="block text-[10px] font-bold text-ink">Where?</span><LocationAutocomplete name="location_query" value={locationText} onChange={beginLocationEdit} onResolved={resolve} placeholder={locationPlaceholder} className="mt-0.5"/><button type="button" onClick={() => void requestDeviceLocation()} className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-[10px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><LocateFixed size={13}/>Use my location</button>{customerLocation.permissionError ? <p role="alert" className="mt-1 text-[10px] text-red-700">{customerLocation.permissionError}</p> : null}</div>
-      <button type="submit" className="min-h-11 rounded-[10px] bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover">Search</button>
+      <div className="block min-w-0 border-t border-plum/10 px-3 py-1 focus-within:bg-cream/55 md:border-l md:border-t-0">
+        <span className="flex min-h-4 items-center justify-between gap-2 text-[10px] font-bold text-ink">
+          <span>Where?</span>
+          {effectiveLocation ? <button type="button" onClick={changeConfirmedLocation} className="max-w-[70%] truncate text-magenta" title={effectiveLocation.label}>{effectiveLocation.label} · Change</button> : null}
+        </span>
+        <LocationAutocomplete name="location_query" value={locationText} onChange={beginLocationEdit} onResolved={resolve} placeholder={locationPlaceholder} className="mt-0.5"/>
+        <button type="button" onClick={() => void requestDeviceLocation()} className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-[10px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><LocateFixed size={13}/>Use my location</button>
+        {customerLocation.permissionError ? <p role="alert" className="mt-1 text-[10px] text-red-700">{customerLocation.permissionError}</p> : null}
+      </div>
+      <button type="submit" disabled={searching} className="min-h-11 rounded-[10px] bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-wait disabled:opacity-70">{searching ? "Searching…" : "Search"}</button>
     </div>
-    {effectiveLocation ? <div className="mt-2 flex items-center gap-2 px-3 text-[10px] text-ink/60"><MapPin size={12} className="text-magenta"/><span>Near <b className="text-plum">{effectiveLocation.label}</b></span><button type="button" onClick={clearConfirmedLocation} className="inline-flex min-h-8 items-center gap-1 font-bold text-magenta">Change <X size={11}/></button></div> : null}
   </form>;
 }

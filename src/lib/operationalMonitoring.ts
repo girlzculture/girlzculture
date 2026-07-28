@@ -285,26 +285,42 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
           );
         }
         const isUnauthorized = /^Unauthorized$/i.test(message);
+        const errorRecord =
+          error && typeof error === "object"
+            ? (error as Record<string, unknown>)
+            : {};
+        const authProviderUnavailable =
+          Number(errorRecord.status || 0) === 503 &&
+          String(errorRecord.code || "") ===
+            "AUTHENTICATION_PROVIDER_UNAVAILABLE";
         const reference = await captureForRoute(
           request,
           profile,
           isUnauthorized ? new Error("AUTHENTICATION_SESSION_FAILURE") : error,
           affectedRecord,
           {
-            severity: isUnauthorized ? "low" : "high",
+            severity: isUnauthorized
+              ? "low"
+              : authProviderUnavailable
+                ? "medium"
+                : "high",
             provider: failureProvider(error),
           },
         );
         return safeFailure(
           isUnauthorized
             ? "Your session could not be verified."
+            : authProviderUnavailable
+              ? "The authentication service is temporarily unavailable."
             : profile.safeMessage || "This operation could not be completed.",
           reference,
-          isUnauthorized ? 401 : 500,
+          isUnauthorized ? 401 : authProviderUnavailable ? 503 : 500,
           {
             code: isUnauthorized
               ? "AUTHENTICATION_SESSION_FAILURE"
-              : undefined,
+              : authProviderUnavailable
+                ? "AUTHENTICATION_PROVIDER_UNAVAILABLE"
+                : undefined,
             recordType: affectedRecord?.type || null,
             recordId: affectedRecord?.id || null,
           },

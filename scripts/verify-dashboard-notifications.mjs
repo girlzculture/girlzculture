@@ -4,6 +4,9 @@ import {
   dashboardNotificationCounts,
   markDashboardNotificationsRead,
 } from "../src/lib/dashboardNotificationsCore.ts";
+import {
+  nextDashboardNotificationPoll,
+} from "../src/lib/dashboardNotificationPollingCore.ts";
 
 const notifications = [
   { id: "one", category: "bookings", read_at: null },
@@ -34,6 +37,22 @@ const allRead = markDashboardNotificationsRead(
   "2026-07-23T15:00:00Z",
 );
 assert.deepEqual(dashboardNotificationCounts(allRead), {});
+assert.deepEqual(nextDashboardNotificationPoll("ready", 4), {
+  attempt: 0,
+  delay: 60_000,
+});
+assert.deepEqual(nextDashboardNotificationPoll("transient", 0), {
+  attempt: 1,
+  delay: 60_000,
+});
+assert.deepEqual(nextDashboardNotificationPoll("transient", 8), {
+  attempt: 9,
+  delay: 300_000,
+});
+assert.deepEqual(nextDashboardNotificationPoll("terminal", 3), {
+  attempt: 3,
+  delay: null,
+});
 
 const center = fs.readFileSync(
   "src/components/notifications/DashboardNotificationCenter.tsx",
@@ -45,10 +64,18 @@ for (const requirement of [
   /await mark\("read",\s*notification\.id\)/,
   /router\.push\(action\)/,
   /mark\("read_all"\)/,
-  /window\.setInterval\(\(\) => void load\(\),\s*60_000\)/,
+  /createAuthenticatedApiClient\(scope\)/,
+  /terminalSession\.current = true/,
+  /nextDashboardNotificationPoll\(outcome,\s*retryAttempt\)/,
+  /auth\.onAuthStateChange/,
 ]) {
   assert.match(center, requirement);
 }
+assert.doesNotMatch(
+  center,
+  /fetch\(`\/api\/notifications/,
+  "The notification center bypasses the shared authenticated JSON client.",
+);
 
 const migration = fs.readFileSync(
   "supabase/migrations/20260723250000_dashboard_notifications.sql",
@@ -73,5 +100,5 @@ assert.match(route, /action === "read_all"/);
 assert.match(route, /Cache-Control": "private, no-store"/);
 
 console.log(
-  "Dashboard notification verification passed: category counts and persisted read transitions execute correctly; authenticated scope isolation, click-outside/Escape behavior, record navigation, grouping, lifecycle/payment/support/error producers, and polling fallback are covered.",
+  "Dashboard notification verification passed: category counts and persisted read transitions execute correctly; the shared scoped JSON client owns refresh/content checks; terminal sessions stop polling; transient failures back off; auth recovery resumes; scope isolation, navigation, grouping, and notification producers are covered.",
 );

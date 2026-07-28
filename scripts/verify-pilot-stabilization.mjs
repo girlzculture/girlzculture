@@ -6,7 +6,17 @@ import {
 import {
   createScopedJsonApiClient,
   ScopedApiError,
+  ScopedSessionProviderError,
 } from "../src/lib/scopedApiCore.ts";
+import {
+  AUTH_STORAGE_SCHEMA_VERSION,
+  buildAuthStorageKeys,
+  buildLegacyAuthStorageKeys,
+  classifySupabaseAuthFailure,
+  createScopedRefreshCoordinator,
+  scopedStorageEntries,
+} from "../src/lib/authSessionCore.ts";
+import { deploymentReleaseId } from "../src/lib/deploymentIdentity.ts";
 import { secureLoginRequest } from "../src/lib/secureLoginClient.ts";
 import { classifyExpectedSecureLoginFailure } from "../src/lib/secureLoginCore.ts";
 import { isPromotionCardActive } from "../src/lib/homePromotionCore.ts";
@@ -20,6 +30,55 @@ const json = (body, status = 200, headers = {}) =>
     status,
     headers: { "content-type": "application/json", ...headers },
   });
+
+const storageKeys = buildAuthStorageKeys(
+  "https://project-reference.supabase.co",
+);
+assert.equal(AUTH_STORAGE_SCHEMA_VERSION, 2);
+assert.match(storageKeys.salon, /v2-project-reference-salon$/);
+assert.notEqual(storageKeys.admin, storageKeys.salon);
+assert.notEqual(storageKeys.customer, storageKeys.salon);
+const legacyStorageKeys = buildLegacyAuthStorageKeys(
+  "https://project-reference.supabase.co",
+);
+assert.ok(
+  legacyStorageKeys.customer.includes("sb-project-reference-auth-token"),
+  "The real Supabase default customer key must be migrated.",
+);
+assert.ok(legacyStorageKeys.salon.includes("girlz-culture-salon-auth"));
+assert.ok(legacyStorageKeys.admin.includes("girlz-culture-admin-auth"));
+assert.deepEqual(scopedStorageEntries("salon", storageKeys), [
+  storageKeys.salon,
+  `${storageKeys.salon}-user`,
+  `${storageKeys.salon}-code-verifier`,
+]);
+assert.equal(
+  scopedStorageEntries("salon", storageKeys).includes(storageKeys.admin),
+  false,
+);
+assert.equal(
+  classifySupabaseAuthFailure({ status: 403, code: "bad_jwt" }),
+  "terminal",
+);
+assert.equal(
+  classifySupabaseAuthFailure({ status: 503, code: "provider_down" }),
+  "transient",
+);
+assert.equal(
+  classifySupabaseAuthFailure({ message: "fetch failed" }),
+  "transient",
+);
+assert.equal(
+  deploymentReleaseId({
+    NODE_ENV: "production",
+    COMMIT_REF: "0123456789abcdef",
+  }),
+  "0123456789abcdef",
+);
+assert.equal(
+  deploymentReleaseId({ NODE_ENV: "production" }),
+  "unidentified-production-release",
+);
 
 // Approval, billing and publication are separate lifecycle stages.
 assert.equal(
@@ -77,6 +136,132 @@ assert.deepEqual(await rotatingClient.request("/api/salon/workspace"), { ok: tru
 assert.equal(refreshCalls, 1);
 assert.equal(fetchCalls, 2);
 assert.equal(getSessionCalls, 2);
+
+// Concurrent workspace and notification 401s share one role-scoped refresh.
+// Each request retries once with the same refreshed acting account.
+const refreshCoordinator = createScopedRefreshCoordinator();
+let sharedSalonSession = session(USER_A, "stale-salon-token");
+let coalescedRefreshCalls = 0;
+const refreshSalon = () =>
+  refreshCoordinator.run("salon", async () => {
+    coalescedRefreshCalls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    sharedSalonSession = session(USER_A, "fresh-salon-token");
+    return sharedSalonSession;
+  });
+const protectedFetcher = async (_target, init) => {
+  const authorization = new Headers(init?.headers).get("authorization");
+  return authorization === "Bearer stale-salon-token"
+    ? json(
+        {
+          error: "Your session could not be verified.",
+          code: "AUTHENTICATION_SESSION_FAILURE",
+          request_id: REQUEST_ID,
+        },
+        401,
+        { "x-request-id": REQUEST_ID },
+      )
+    : json({ ok: true, authorization });
+};
+const [workspaceClient, notificationClient] = await Promise.all([
+  createScopedJsonApiClient({
+    scopeLabel: "salon",
+    getSession: async () => sharedSalonSession,
+    refreshSession: refreshSalon,
+    fetcher: protectedFetcher,
+  }),
+  createScopedJsonApiClient({
+    scopeLabel: "salon",
+    getSession: async () => sharedSalonSession,
+    refreshSession: refreshSalon,
+    fetcher: protectedFetcher,
+  }),
+]);
+const [workspaceReady, notificationsReady] = await Promise.all([
+  workspaceClient.request("/api/salon/workspace"),
+  notificationClient.request("/api/notifications?scope=salon"),
+]);
+assert.equal(coalescedRefreshCalls, 1);
+assert.equal(workspaceReady.authorization, "Bearer fresh-salon-token");
+assert.equal(notificationsReady.authorization, "Bearer fresh-salon-token");
+
+// A transient Auth provider failure is retryable and preserves the locally
+// available session instead of converting the outage into a sign-out.
+const preservedSession = session(USER_A, "preserved-token");
+const transientClient = await createScopedJsonApiClient({
+  scopeLabel: "salon",
+  getSession: async () => preservedSession,
+  refreshSession: async () => {
+    throw new ScopedSessionProviderError("salon");
+  },
+  fetcher: async () =>
+    json(
+      { error: "Your session could not be verified." },
+      401,
+    ),
+});
+await assert.rejects(
+  () => transientClient.request("/api/salon/workspace"),
+  (error) =>
+    error instanceof ScopedApiError &&
+    error.code === "AUTHENTICATION_PROVIDER_UNAVAILABLE" &&
+    error.status === 503 &&
+    error.retryable,
+);
+assert.equal(preservedSession.access_token, "preserved-token");
+
+let forbiddenRefreshes = 0;
+const forbiddenClient = await createScopedJsonApiClient({
+  scopeLabel: "salon",
+  getSession: async () => session(USER_A, "salon-token"),
+  refreshSession: async () => {
+    forbiddenRefreshes += 1;
+    return session(USER_A, "unexpected-refresh");
+  },
+  fetcher: async () =>
+    json(
+      {
+        error: "You do not have permission to use this feature.",
+        code: "FORBIDDEN",
+      },
+      403,
+    ),
+});
+await assert.rejects(
+  () => forbiddenClient.request("/api/salon/restricted"),
+  (error) =>
+    error instanceof ScopedApiError &&
+    error.status === 403 &&
+    !error.authenticationFailure,
+);
+assert.equal(forbiddenRefreshes, 0);
+
+// Admin and salon clients continue to send their own independent identity.
+const roleTokens = [];
+const roleFetcher = async (_target, init) => {
+  roleTokens.push(new Headers(init?.headers).get("authorization"));
+  return json({ ok: true });
+};
+const independentSalon = await createScopedJsonApiClient({
+  scopeLabel: "salon",
+  getSession: async () => session(USER_A, "salon-only-token"),
+  refreshSession: async () => session(USER_A, "salon-only-refresh"),
+  fetcher: roleFetcher,
+});
+const independentAdmin = await createScopedJsonApiClient({
+  scopeLabel: "admin",
+  getSession: async () => session(USER_B, "admin-only-token"),
+  refreshSession: async () => session(USER_B, "admin-only-refresh"),
+  fetcher: roleFetcher,
+});
+await Promise.all([
+  independentSalon.request("/api/salon/workspace"),
+  independentAdmin.request("/api/admin/settings"),
+]);
+assert.deepEqual(new Set(roleTokens), new Set([
+  "Bearer salon-only-token",
+  "Bearer admin-only-token",
+]));
 
 // A refresh can never silently switch the acting account.
 const mismatchClient = await createScopedJsonApiClient({
@@ -196,5 +381,5 @@ assert.equal(
 );
 
 console.log(
-  "Pilot stabilization verification passed: lifecycle stages are separated; scoped sessions refresh once without cross-account drift; HTML auth redirects are rejected; login transport failures are sanitized; and homepage promotion schedules enforce public visibility.",
+  "Pilot stabilization verification passed: lifecycle stages are separated; auth storage is project/version/role-scoped; simultaneous protected requests coalesce one refresh; terminal and transient Auth failures are distinguished; admin/salon sessions remain independent; HTML auth redirects are rejected; deployment releases are identifiable; login transport failures are sanitized; and homepage promotion schedules enforce public visibility.",
 );

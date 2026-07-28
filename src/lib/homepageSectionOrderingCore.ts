@@ -98,6 +98,20 @@ export function moveHomepageSection(
   return next.map((row, index) => ({ ...row, sort_order: index + 1 }));
 }
 
+/**
+ * Search is a core marketplace function, not promotional content. Place it
+ * immediately after the promo rail when that optional section is visible, or
+ * first when the rail is hidden.
+ */
+export function homepageSearchInsertIndex(
+  visibleSections: readonly { section_key: string }[],
+) {
+  const promoIndex = visibleSections.findIndex(
+    (section) => section.section_key === "promo_rail",
+  );
+  return promoIndex < 0 ? 0 : promoIndex + 1;
+}
+
 export function validateHomepageSectionPublication(value: unknown) {
   if (!Array.isArray(value) || value.length !== 4) {
     throw new Error("All four required homepage sections must be included.");

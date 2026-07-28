@@ -51,6 +51,7 @@ type SalonRecord = {
   review_count?: number | null;
   status?: string | null;
   is_discoverable?: boolean | null;
+  accepting_bookings?: boolean | null;
   subscription_tier?: string | null;
   vanity_slug?: string | null;
   instagram_url?: string | null;
@@ -80,6 +81,7 @@ type StyleRecord = {
 
 type StylistRecord = {
   id?: string;
+  slug?: string | null;
   name?: string | null;
   specialties?: string[] | string | null;
   bio?: string | null;
@@ -133,6 +135,8 @@ const dayLabels = [
   ["sat", "Sat"],
   ["sun", "Sun"],
 ] as const;
+
+export const dynamic = "force-dynamic";
 
 function normalizeStringArray(value: string[] | string | null | undefined) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -213,7 +217,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -223,14 +227,23 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
     notFound();
   }
-  if (slug.startsWith("pending-") || salon.status !== "Active" || salon.is_discoverable !== true) notFound();
+  const profileVisibility = await supabase.rpc("is_salon_profile_public", {
+    target_salon_id: salon.id,
+  });
+  if (profileVisibility.error) throw profileVisibility.error;
+  if (
+    slug.startsWith("pending-")
+    || salon.status !== "Active"
+    || salon.is_discoverable !== true
+    || profileVisibility.data !== true
+  ) notFound();
 
   const now = new Date().toISOString();
   const [stylesResult, stylistsResult, reviewsResult, productsResult, promotionsResult] = await Promise.all([
     supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
-    supabase.from("stylists").select("*").eq("salon_id", salon.id).is("archived_at", null).order("created_at", { ascending: true }),
-    supabase.from("reviews").select("*").eq("salon_id", salon.id).eq("moderation_status", "Published").is("archived_at", null).order("created_at", { ascending: false }),
-    supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).order("created_at", { ascending: true }),
+    supabase.from("stylists").select("*").eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("reviews").select("*").eq("salon_id", salon.id).eq("moderation_status", "Published").is("archived_at", null).or("dispute_status.is.null,dispute_status.neq.Removed").order("created_at", { ascending: false }),
+    supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).eq("product_status", "Active").is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order("created_at",{ascending:false}),
   ]);
 
@@ -281,7 +294,11 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
   const rating = typeof salon.rating_overall === "number" ? salon.rating_overall : 0;
   const closedToday = isSalonClosedToday(salon);
-  const statusLabel = getSalonStatusLabel(salon);
+  const acceptingBookings = salon.accepting_bookings !== false;
+  const canBook = acceptingBookings && !closedToday;
+  const statusLabel = !acceptingBookings
+    ? "Bookings paused"
+    : getSalonStatusLabel(salon);
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
   const uploadedGallery = [salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)].filter((photo): photo is string => Boolean(photo));
   const locationLine = [salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
@@ -330,7 +347,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             {salon.description?.trim() ? <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description}</p> : null}
 
             <div className="mt-4 flex items-center gap-2">
-              <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link>
+              {canBook ? <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link> : <span aria-disabled="true" className="inline-flex min-h-11 flex-1 cursor-not-allowed items-center justify-center rounded-[9px] bg-ink/10 px-6 text-[12px] font-semibold text-ink/55">{closedToday ? "Closed today" : "Bookings paused"}</span>}
               <SalonProfileActions
                 salonId={salon.id}
                 salonName={salon.name || "Salon"}

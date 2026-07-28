@@ -1,5 +1,12 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { normalizePlan } from "@/lib/plans";
+import {
+  pilotOverrideReasonError,
+  publicationBlockMessage,
+  publicationGateFailures,
+  publicationOverriddenGateLabels,
+  type PublicationDiagnostic,
+} from "@/lib/publicationActivationCore";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
 
@@ -15,11 +22,27 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
     if (error || !application) return Response.json({ error: "Application not found" }, { status: 404 });
 
     const safeReason = cleanText(body.reason, 1_000) || null;
-    if (decision === "reject" && (!safeReason || safeReason.length < 5)) throw new Error("Enter a rejection reason of at least 5 characters.");
+    const usePilotOverride = decision === "activate" && body.pilot_override === true;
+    if (decision === "reject" && (!safeReason || safeReason.length < 5)) {
+      return Response.json(
+        { error: "Enter a rejection reason of at least 5 characters." },
+        { status: 400 },
+      );
+    }
+    if (usePilotOverride) {
+      const reasonError = pilotOverrideReasonError(safeReason);
+      if (reasonError) {
+        return Response.json({ error: reasonError }, { status: 400 });
+      }
+    }
     const plan = normalizePlan(application.selected_plan);
     const reviewedAt = new Date().toISOString();
     let status = "Approved";
     let changed = true;
+    let lifecycle: PublicationDiagnostic | null = null;
+    let overrideActive = false;
+    let overriddenGates: string[] = [];
+    let overriddenGateLabels: string[] = [];
 
     if (decision === "approve") {
       const approval = await admin.rpc("approve_salon_application", {
@@ -29,28 +52,51 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
       if (approval.error) throw approval.error;
       changed = approval.data?.changed !== false;
     } else if (decision === "activate") {
-      const diagnostic = await admin.rpc("salon_publication_diagnostic", {
-        p_salon_id: application.salon_id,
+      const activation = await admin.rpc("admin_activate_salon_application", {
+        p_application_id: application.id,
+        p_actor_id: user.id,
+        p_use_pilot_override: usePilotOverride,
+        p_reason: safeReason,
       });
-      if (diagnostic.error) throw diagnostic.error;
-      const checks =
-        diagnostic.data?.checks && typeof diagnostic.data.checks === "object"
-          ? diagnostic.data.checks as Record<string, { required?: boolean; passed?: boolean; label?: string }>
+      if (activation.error) throw activation.error;
+      const result =
+        activation.data && typeof activation.data === "object"
+          ? activation.data as Record<string, unknown>
           : {};
-      const missing = Object.values(checks)
-        .filter((check) => check.required === true && check.passed !== true)
-        .map((check) => check.label || "Marketplace requirement");
-      return Response.json(
-        {
-          error: missing.length
-            ? `The application is approved, but the salon is not public yet. Complete: ${missing.join(", ")}.`
-            : "Every marketplace requirement is complete. Publication is automatic; use the lifecycle panel to recheck if the salon is not yet visible.",
-          code: "MARKETPLACE_ACTIVATION_IS_AUTOMATIC",
-          lifecycle: diagnostic.data,
-          missing,
-        },
-        { status: 409, headers: { "Cache-Control": "private, no-store" } },
-      );
+      lifecycle =
+        result.lifecycle && typeof result.lifecycle === "object"
+          ? result.lifecycle as PublicationDiagnostic
+          : null;
+      const missing = publicationGateFailures(lifecycle);
+      if (result.ok !== true) {
+        const code = String(
+          result.code || "PUBLICATION_GATES_INCOMPLETE",
+        );
+        return Response.json(
+          {
+            error:
+              code === "PUBLICATION_GATES_INCOMPLETE"
+                ? publicationBlockMessage(missing)
+                : typeof result.message === "string"
+                  ? result.message
+                  : publicationBlockMessage(missing),
+            code,
+            lifecycle,
+            missing,
+          },
+          {
+            status: 409,
+            headers: { "Cache-Control": "private, no-store" },
+          },
+        );
+      }
+      status = "Active";
+      changed = result.changed !== false;
+      overrideActive = result.override_active === true;
+      overriddenGates = Array.isArray(result.overridden_gates)
+        ? result.overridden_gates.map(String)
+        : [];
+      overriddenGateLabels = publicationOverriddenGateLabels(lifecycle);
     } else {
       const offboard = await admin.rpc("admin_change_salon_status", {
         acting_admin_id: user.id,
@@ -62,7 +108,7 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
       status = "Rejected";
     }
 
-    if (decision !== "approve") {
+    if (decision === "reject") {
       const { error: applicationError } = await admin.from("salon_applications").update({
         status,
         rejection_reason: decision === "reject" ? safeReason : null,
@@ -79,7 +125,9 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
         ? "Your Girlz Culture application is approved"
         : "Update on your Girlz Culture application";
     const html = decision === "activate"
-      ? `<h1>Your salon is live</h1><p>Every required setup and eligibility gate passed. Clients can now discover and book your salon.</p><p><a href="${base}/salon/dashboard">Open your dashboard</a></p>`
+      ? overrideActive
+        ? `<h1>Your salon is live for the founding pilot</h1><p>An authorized Girlz Culture administrator published your salon for the pilot. Any remaining setup items will stay visible in your dashboard and do not change your real subscription or payment records.</p><p><a href="${base}/salon/dashboard">Open your dashboard</a></p>`
+        : `<h1>Your salon is live</h1><p>Every required setup and eligibility gate passed. Clients can now discover and book your salon.</p><p><a href="${base}/salon/dashboard">Open your dashboard</a></p>`
       : decision === "approve"
         ? `<h1>You’re approved</h1><p>Log in to activate your ${plan} subscription and complete the marketplace setup checklist. Your salon will remain private until every required gate passes.</p><p><a href="${base}/salon/login">Continue setup</a></p>`
         : `<h1>Application update</h1><p>We’re unable to approve your salon at this time.</p><p><strong>Reason:</strong> ${safeReason}</p>`;
@@ -90,7 +138,17 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
         noteOperationalFailure("Application decision email failed", emailError);
       }
     }
-    return Response.json({ ok: true, status, plan, changed, idempotent: !changed });
+    return Response.json({
+      ok: true,
+      status,
+      plan,
+      changed,
+      idempotent: !changed,
+      lifecycle,
+      override_active: overrideActive,
+      overridden_gates: overriddenGates,
+      overridden_gate_labels: overriddenGateLabels,
+    });
   } catch (error) {
     noteOperationalFailure("Application decision failed", error);
     return errorResponse(error, "Request failed");

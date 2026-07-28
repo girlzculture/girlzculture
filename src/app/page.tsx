@@ -1,4 +1,5 @@
 import { ArrowRight, CalendarDays, Heart, Search } from "lucide-react";
+import { Fragment } from "react";
 import { supabase } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 import SearchComposer from "@/components/site/SearchComposer";
@@ -16,9 +17,11 @@ import {
   TrustStrip,
 } from "@/components/site/PublicChrome";
 import MobileLocationOnboarding from "@/components/location/MobileLocationOnboarding";
+import FirstRelevantLocationRequest from "@/components/location/FirstRelevantLocationRequest";
 import FeaturedProductPlacement from "@/components/public/FeaturedProductPlacement";
 import HomepagePromoRail from "@/components/public/HomepagePromoRail";
 import { resolvePublishedHomepagePromotions } from "@/lib/homepagePromotionServer";
+import { homepageSearchInsertIndex } from "@/lib/homepageSectionOrderingCore";
 
 type HomeSectionKey = "promo_rail" | "salons_near_you" | "featured_salons" | "featured_products" | "trending_now" | "trending_picks";
 type HomeSection = { section_key: HomeSectionKey; title: string; description: string | null; is_visible: boolean; sort_order: number };
@@ -62,29 +65,23 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const configuredPromotionCards = promoSection?.cards?.length ? promoSection.cards : DEFAULT_PROMOTION_CARDS;
   const promotionCards = await resolvePublishedHomepagePromotions(configuredPromotionCards);
   const contentSections = homeContent.sections?.filter((section) => section.type !== "promo_rail") || [];
-  const desktopIntroVisible = homeContent.labels?.home_intro_visible !== "false";
   const [nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.featured_product_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
+  const searchInsertIndex = homepageSearchInsertIndex(homepageSections);
 
   return (
     <main data-homepage-variant={depthPreview ? "depth" : "standard"} className={`min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0 ${depthPreview ? "gc-home-depth" : ""}`}>
       <PublicHeader />
+      <FirstRelevantLocationRequest />
       <MobileLocationOnboarding />
 
-      {desktopIntroVisible ? <section data-home-intro className="hidden border-b border-plum/[0.08] bg-[radial-gradient(circle_at_85%_10%,rgba(230,234,237,.72),transparent_28%),linear-gradient(180deg,#fff,#f5f7f8)] py-5 lg:block">
-        <div className="mx-auto w-full max-w-[1760px] px-10 xl:px-12 2xl:px-16">
-          <div className="grid items-end gap-6 lg:grid-cols-[.72fr_1.28fr]">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-magenta">Real salons · real prices · real availability</p>
-              <h1 className="mt-2 max-w-2xl font-serif text-[42px] font-semibold leading-[.94] tracking-[-.045em] text-charcoal">{homeContent.hero_title}</h1>
-              {homeContent.hero_subtitle ? <p className="mt-2 max-w-xl text-xs leading-5 text-ink/70">{homeContent.hero_subtitle}</p> : null}
-            </div>
-            <SearchComposer />
-          </div>
-        </div>
-      </section> : null}
-
-      <div className="gc-home-content mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        {homepageSections.map((section) => <HomepageRow key={section.section_key} section={section} promotionCards={promotionCards} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} productCardCount={productCardCount} trendingCardCount={trendingCardCount}/>)}
+      <div className="gc-home-content mx-auto w-full max-w-[1760px] px-4 pt-2 sm:px-6 sm:pt-3 lg:px-10 xl:px-12 2xl:px-16">
+        {homepageSections.map((section, index) => (
+          <Fragment key={section.section_key}>
+            {index === searchInsertIndex ? <HomepageSearch /> : null}
+            <HomepageRow section={section} promotionCards={promotionCards} nearbyCardCount={nearbyCardCount} featuredCardCount={featuredCardCount} productCardCount={productCardCount} trendingCardCount={trendingCardCount}/>
+          </Fragment>
+        ))}
+        {searchInsertIndex === homepageSections.length ? <HomepageSearch /> : null}
 
         <PublicContentSections sections={contentSections} variant="homepage" />
 
@@ -126,4 +123,12 @@ function HomepageRow({ section,promotionCards,nearbyCardCount,featuredCardCount,
   if (section.section_key === "featured_products") return <FeaturedProductPlacement title={section.title} description={section.description} maxCards={productCardCount}/>;
   if (section.section_key === "trending_picks" || section.section_key === "trending_now") return <TrendingVideoPlacement title={section.title} description={section.description} maxCards={trendingCardCount}/>;
   return null;
+}
+
+function HomepageSearch() {
+  return (
+    <section data-home-search aria-label="Search Girlz Culture" className="pb-3 pt-1 sm:pb-4 sm:pt-2">
+      <SearchComposer />
+    </section>
+  );
 }

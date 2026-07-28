@@ -5,6 +5,7 @@ import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 type PublicSalonMetadataRow = {
+  id: string;
   name: string | null;
   description: string | null;
   slug: string | null;
@@ -19,10 +20,11 @@ export async function getSalonPublicMetadata(
   field: "slug" | "vanity_slug",
 ): Promise<Metadata | null> {
   try {
-    const result = await getSupabaseAdmin()
+    const admin = getSupabaseAdmin();
+    const result = await admin
       .from("salons")
       .select(
-        "name,description,slug,vanity_slug,cover_photo_url,address_city,address_state",
+        "id,name,description,slug,vanity_slug,cover_photo_url,address_city,address_state",
       )
       .eq(field, value)
       .eq("status", "Active")
@@ -32,6 +34,12 @@ export async function getSalonPublicMetadata(
     if (!result.data) return null;
 
     const salon = result.data;
+    const visibility = await admin.rpc("is_salon_profile_public", {
+      target_salon_id: salon.id,
+    });
+    if (visibility.error) throw visibility.error;
+    if (visibility.data !== true) return null;
+
     const title = salon.name || "Salon";
     const location = [salon.address_city, salon.address_state]
       .filter(Boolean)

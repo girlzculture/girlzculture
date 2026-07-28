@@ -1,12 +1,20 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft, BriefcaseBusiness, CalendarDays, Scissors, Star, UserRound } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 
-type Salon = { id: string; name?: string | null; slug?: string | null; address_city?: string | null; address_state?: string | null };
-type Stylist = { id: string; name?: string | null; bio?: string | null; specialties?: string[] | string | null; avatar_url?: string | null; photos?: string[] | string | null; years_experience?: number | null; rating?: number | null };
+type Salon = {
+  id: string;
+  name?: string | null;
+  slug?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+};
+type Stylist = { id: string; slug?: string | null; name?: string | null; bio?: string | null; specialties?: string[] | string | null; avatar_url?: string | null; photos?: string[] | string | null; years_experience?: number | null; rating?: number | null };
+
+export const dynamic = "force-dynamic";
 
 function normalizeList(value: string[] | string | null | undefined) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -23,11 +31,62 @@ function normalizeList(value: string[] | string | null | undefined) {
 
 export default async function StylistProfilePage({ params }: { params: Promise<{ slug: string; stylistId: string }> }) {
   const { slug, stylistId } = await params;
-  const { data: salon } = await supabase.from("salons").select("id,name,slug,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
-  if (!salon) notFound();
+  const admin = getSupabaseAdmin();
+  const salonResult = await admin
+    .from("salons")
+    .select("id,name,slug,address_city,address_state")
+    .eq("slug", slug)
+    .maybeSingle<Salon>();
+  if (salonResult.error) throw salonResult.error;
+  if (!salonResult.data) {
+    const redirectResult = await admin
+      .from("salon_slug_redirects")
+      .select("new_slug")
+      .eq("route_scope", "salon")
+      .eq("old_slug", slug)
+      .is("retired_at", null)
+      .maybeSingle();
+    if (redirectResult.error) throw redirectResult.error;
+    if (redirectResult.data?.new_slug) {
+      permanentRedirect(
+        `/salon/${redirectResult.data.new_slug}/stylist/${stylistId}`,
+      );
+    }
+    notFound();
+  }
+  const salon = salonResult.data;
+  const profileVisibility = await admin.rpc("is_salon_profile_public", {
+    target_salon_id: salon.id,
+  });
+  if (profileVisibility.error) throw profileVisibility.error;
+  if (profileVisibility.data !== true) notFound();
+  const bookingVisibility = await admin.rpc("is_marketplace_visible", {
+    target_salon_id: salon.id,
+  });
+  if (bookingVisibility.error) throw bookingVisibility.error;
+  const canBook = bookingVisibility.data === true;
 
-  const { data: stylist } = await supabase.from("stylists").select("*").eq("id", stylistId).eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).maybeSingle<Stylist>();
+  const legacyId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stylistId);
+  let stylistQuery = admin
+    .from("stylists")
+    .select("*")
+    .eq("salon_id", salon.id)
+    .eq("is_active", true)
+    .eq("is_draft", false)
+    .is("archived_at", null);
+  stylistQuery = legacyId
+    ? stylistQuery.eq("id", stylistId)
+    : stylistQuery.eq("slug", stylistId);
+  const { data: stylist, error: stylistError } =
+    await stylistQuery.maybeSingle<Stylist>();
+  if (stylistError) throw stylistError;
   if (!stylist) notFound();
+  const canonicalSalonSlug = salon.slug || slug;
+  if (stylist.slug && (legacyId || stylistId !== stylist.slug)) {
+    permanentRedirect(
+      `/salon/${canonicalSalonSlug}/stylist/${stylist.slug}`,
+    );
+  }
 
   const specialties = normalizeList(stylist.specialties);
   const portfolio = normalizeList(stylist.photos);
@@ -39,7 +98,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
     <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0">
       <PublicHeader />
       <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-        <Link href={`/salon/${slug}`} className="inline-flex items-center gap-2 text-[12px] font-semibold text-plum hover:text-magenta"><ArrowLeft size={16} />Back to {salon.name || "salon"}</Link>
+        <Link href={`/salon/${canonicalSalonSlug}`} className="inline-flex items-center gap-2 text-[12px] font-semibold text-plum hover:text-magenta"><ArrowLeft size={16} />Back to {salon.name || "salon"}</Link>
 
         <section className="mt-5 overflow-hidden rounded-[20px] border border-plum/10 bg-white/75 shadow-[0_18px_50px_rgba(13,17,20,0.07)]">
           <div className="grid lg:grid-cols-[0.72fr_1.28fr]">
@@ -56,7 +115,11 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
               </div>
               {stylist.bio ? <p className="mt-6 max-w-2xl text-[14px] leading-7 text-ink/75">{stylist.bio}</p> : <p className="mt-6 text-[13px] text-ink/55">This stylist has not added a full description yet.</p>}
               {specialties.length ? <div className="mt-6"><h2 className="flex items-center gap-2 text-[12px] font-bold text-plum"><Scissors size={16} />Specialties</h2><div className="mt-3 flex flex-wrap gap-2">{specialties.map((specialty) => <span key={specialty} className="rounded-full border border-plum/10 bg-white px-3 py-2 text-[11px] text-ink/70">{specialty}</span>)}</div></div> : null}
-              <Link href={`/salon/${slug}/book?stylist=${stylist.id}`} className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(0,131,166,0.2)] hover:bg-primary-hover"><CalendarDays size={17} />Book with {stylist.name || "this stylist"}</Link>
+              {canBook ? (
+                <Link href={`/salon/${canonicalSalonSlug}/book?stylist=${stylist.id}`} className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(0,131,166,0.2)] hover:bg-primary-hover"><CalendarDays size={17} />Book with {stylist.name || "this stylist"}</Link>
+              ) : (
+                <span className="mt-8 inline-flex min-h-12 cursor-not-allowed items-center justify-center gap-2 rounded-[10px] bg-ink/10 px-7 text-[13px] font-bold text-ink/55" aria-disabled="true"><CalendarDays size={17} />Bookings are paused</span>
+              )}
             </div>
           </div>
         </section>
