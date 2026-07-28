@@ -244,6 +244,15 @@ export default function AdminContentManager({
 }
 
 type CatalogKind = "service_category" | "service_group" | "master_style" | "service_addon";
+type CatalogView = "active" | "archived" | "all";
+function filterCatalogRows(items: Row[], view: CatalogView) {
+  return items.filter((item) => {
+    if (view === "all") return true;
+    const archived = Boolean(item.archived_at) || item.is_active === false;
+    return view === "archived" ? archived : !archived;
+  });
+}
+
 function ServiceCatalogManager({ categories, groups, addons, services, initialService, setInitialService, authHeaders, reload, setNotice, saving, setSaving }: {
   categories: Row[]; groups: Row[]; addons: Row[]; services: Row[]; initialService: Row | null;
   setInitialService: React.Dispatch<React.SetStateAction<Row | null>>;
@@ -252,13 +261,18 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
   setNotice: (message: string) => void; saving: boolean; setSaving: (value: boolean) => void;
 }) {
   const [kind, setKind] = useState<CatalogKind>("master_style");
-  const [selected, setSelected] = useState<Row | null>(initialService || services[0] || null);
+  const [selected, setSelected] = useState<Row | null>(() =>
+    filterCatalogRows(initialService ? [initialService] : services, "active")[0]
+      || filterCatalogRows(services, "active")[0]
+      || null
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [dependency, setDependency] = useState<Row | null>(null);
   const [batchDependencies, setBatchDependencies] = useState<Record<string, Row>>({});
   const [batchResults, setBatchResults] = useState<Array<{ id: string; name: string; ok: boolean; message: string }>>([]);
   const [reason, setReason] = useState("Catalog maintenance");
   const [replacementId, setReplacementId] = useState("");
+  const [catalogView, setCatalogView] = useState<CatalogView>("active");
   const [orderingMode,setOrderingMode]=useState<"alphabetical"|"custom">(Number((initialService||services[0])?.sort_order||0)>0?"custom":"alphabetical");
   const collections: Record<CatalogKind, Row[]> = {
     service_category: sortCatalogRecords(categories),
@@ -267,14 +281,26 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     service_addon: sortCatalogRecords(addons),
   };
   const labels: Record<CatalogKind, string> = { service_category: "Categories", service_group: "Service Groups", master_style: "Service Names", service_addon: "Add-ons" };
-  const rows = collections[kind];
+  const rows = filterCatalogRows(collections[kind], catalogView);
   const visibleIds = new Set(rows.map((row) => String(row.id)));
   const selectedRows = rows.filter((row) => selectedIds.includes(String(row.id)));
   const displayedTargets = selectedRows.length ? selectedRows : selected?.id ? [selected] : [];
 
   function switchKind(next: CatalogKind) {
     setKind(next);
-    const first = collections[next][0] || null;
+    const first = filterCatalogRows(collections[next], catalogView)[0] || null;
+    setSelected(first);
+    setOrderingMode(Number(first?.sort_order || 0) > 0 ? "custom" : "alphabetical");
+    setSelectedIds([]);
+    setDependency(null);
+    setBatchDependencies({});
+    setBatchResults([]);
+    setReplacementId("");
+  }
+
+  function switchCatalogView(next: CatalogView) {
+    setCatalogView(next);
+    const first = filterCatalogRows(collections[kind], next)[0] || null;
     setSelected(first);
     setOrderingMode(Number(first?.sort_order || 0) > 0 ? "custom" : "alphabetical");
     setSelectedIds([]);
@@ -404,7 +430,16 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
   return <div>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap rounded-lg border border-plum/10 bg-white p-1">{(Object.keys(labels) as CatalogKind[]).map((value) => <button key={value} type="button" onClick={() => switchKind(value)} className={`rounded-md px-4 py-2 text-xs font-bold ${kind === value ? "bg-plum text-white" : "text-plum"}`}>{labels[value]}</button>)}</div>
-      <button type="button" onClick={createItem} className="inline-flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-[10px] font-bold text-plum">Show
+          <select value={catalogView} onChange={(event)=>switchCatalogView(event.target.value as CatalogView)} className="ml-2 min-h-10 rounded-lg border border-plum/10 bg-white px-3 text-xs font-normal">
+            <option value="active">Active catalog</option>
+            <option value="archived">Hidden & archived</option>
+            <option value="all">All records</option>
+          </select>
+        </label>
+        <button type="button" onClick={createItem} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
+      </div>
     </div>
     <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
       <div className="min-w-0">
