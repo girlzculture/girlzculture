@@ -28,15 +28,29 @@ export default function MobileRecordEditor({
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-    const priorOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    backRef.current?.focus();
+    const mobileViewport = window.matchMedia("(max-width: 1023px)");
+    let priorOverflow = "";
+    let bodyLocked = false;
+    const syncBodyLock = () => {
+      if (mobileViewport.matches && !bodyLocked) {
+        priorOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        bodyLocked = true;
+        backRef.current?.focus();
+      } else if (!mobileViewport.matches && bodyLocked) {
+        document.body.style.overflow = priorOverflow;
+        bodyLocked = false;
+      }
+    };
+    syncBodyLock();
+    mobileViewport.addEventListener("change", syncBodyLock);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = priorOverflow;
+      if (bodyLocked) document.body.style.overflow = priorOverflow;
+      mobileViewport.removeEventListener("change", syncBodyLock);
       window.removeEventListener("keydown", onKeyDown);
       returnFocusRef.current?.focus();
     };
