@@ -8,6 +8,7 @@ const searchLanguage = read("src/lib/searchLanguage.ts");
 const composer = read("src/components/site/SearchComposer.tsx");
 const discovery = read("src/components/public/SalonDiscovery.tsx");
 const locationProvider = read("src/components/location/CustomerLocationProvider.tsx");
+const firstRelevantRequest = read("src/components/location/FirstRelevantLocationRequest.tsx");
 const autocomplete = read("src/components/search/AutocompleteInputs.tsx");
 
 for (const behavior of [
@@ -34,8 +35,11 @@ assert.match(autocomplete, /HighlightedText/);
 // controlled input. Typing or clearing operates only on locationText.
 assert.match(composer, /value=\{locationText\}/);
 assert.doesNotMatch(composer, /value=\{[^}]*customerLocation\.location\?\.label/);
-assert.match(composer, /customerLocation\.clearLocation\(\)/);
-assert.match(composer, /Near <b[^>]*>\{effectiveLocation\.label\}/);
+assert.doesNotMatch(composer, /customerLocation\.clearLocation\(\)/);
+assert.doesNotMatch(composer, /Near <b/);
+assert.match(composer, /query\.set\("lat", String\(selectedLocation\.lat\)\)/);
+assert.match(composer, /query\.set\("lng", String\(selectedLocation\.lng\)\)/);
+assert.match(composer, /query\.set\("location", selectedLocation\.label\)/);
 assert.match(composer, /\? "Current location"/);
 assert.match(discovery, /const displayedLocation = locationText/);
 assert.doesNotMatch(discovery, /locationText \|\| customerLocation\.location\?\.label/);
@@ -46,6 +50,9 @@ assert.match(locationProvider, /permission\.state === "granted"/);
 assert.match(locationProvider, /const precise = await devicePosition\(\)/);
 assert.match(locationProvider, /const useDeviceLocation = useCallback/);
 assert.doesNotMatch(locationProvider, /permission\.state === "prompt"[\s\S]{0,180}devicePosition/);
+assert.match(firstRelevantRequest, /permission\.state === "denied"/);
+assert.match(firstRelevantRequest, /remember\("prompted"\)/);
+assert.match(firstRelevantRequest, /location\.useDeviceLocation\(\)/);
 assert.match(locationProvider, /popstate/);
 assert.match(locationProvider, /pageshow/);
 assert.match(autocomplete, /onResolved\?\.\(null\)/);

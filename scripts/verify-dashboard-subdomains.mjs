@@ -5,6 +5,11 @@ import {
   resolveHostRoute,
   surfacePathForHost,
 } from "../src/lib/hostRouting.ts";
+import {
+  buildAuthStorageKeys,
+  buildLegacyAuthStorageKeys,
+  LEGACY_AUTH_STORAGE_KEYS,
+} from "../src/lib/authSessionCore.ts";
 
 const config = {
   enabled: true,
@@ -101,8 +106,18 @@ for (const control of [
   assert.match(loginServer, control);
 assert.match(adminSecurity, /CONFIRMED_COMPANY_DOMAIN = "girlzculture\.com"/);
 assert.match(adminSecurity, /ADMIN_MFA_MODE/);
-assert.match(scopedAuth, /girlz-culture-salon-auth/);
-assert.match(scopedAuth, /girlz-culture-admin-auth/);
+assert.match(scopedAuth, /buildAuthStorageKeys\(supabaseUrl\)/);
+const scopedKeys = buildAuthStorageKeys(
+  "https://project-reference.supabase.co",
+);
+assert.notEqual(scopedKeys.salon, scopedKeys.admin);
+assert.match(scopedKeys.salon, /v2-project-reference-salon$/);
+assert.ok(LEGACY_AUTH_STORAGE_KEYS.salon.includes("girlz-culture-salon-auth"));
+assert.ok(LEGACY_AUTH_STORAGE_KEYS.admin.includes("girlz-culture-admin-auth"));
+assert.ok(
+  buildLegacyAuthStorageKeys("https://project-reference.supabase.co")
+    .customer.includes("sb-project-reference-auth-token"),
+);
 assert.match(boundary, /ADMIN_IDLE_TIMEOUT/);
 assert.match(boundary, /ADMIN_ABSOLUTE_SESSION/);
 assert.match(proxy, /X-Robots-Tag/);

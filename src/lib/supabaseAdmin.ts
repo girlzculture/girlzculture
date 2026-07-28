@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
 import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
@@ -21,6 +21,7 @@ import {
   refundCustomerSummary,
   safeCancellationReason,
 } from "@/lib/bookingCancellation";
+import { classifySupabaseAuthFailure } from "@/lib/authSessionCore";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -54,7 +55,22 @@ async function monitoredSupabaseFetch(
     } catch {
       // Provider response bodies are deliberately not retained.
     }
-    const operationalFailure = shouldCaptureProviderResponse(
+    let isAuthResponse = false;
+    try {
+      isAuthResponse = new URL(
+        input instanceof Request ? input.url : String(input),
+      ).pathname.startsWith("/auth/v1/");
+    } catch {
+      // An unparseable provider URL remains an operational provider failure.
+    }
+    const terminalAuthFailure =
+      isAuthResponse &&
+      classifySupabaseAuthFailure({
+        status: response.status,
+        code,
+        message,
+      }) === "terminal";
+    const operationalFailure = !terminalAuthFailure && shouldCaptureProviderResponse(
       response.status,
       code,
       message,
@@ -80,25 +96,61 @@ export function getSupabaseAdmin() {
   });
 }
 
+export class AuthenticationProviderUnavailableError extends Error {
+  readonly status = 503;
+  readonly code = "AUTHENTICATION_PROVIDER_UNAVAILABLE";
+  readonly provider = "supabase";
+  readonly retryable = true;
+
+  constructor() {
+    super("The authentication service is temporarily unavailable.");
+    this.name = "AuthenticationProviderUnavailableError";
+  }
+}
+
+async function verifiedAuthUser(
+  admin: SupabaseClient,
+  token: string,
+): Promise<User> {
+  try {
+    const { data, error } = await admin.auth.getUser(token);
+    if (error) {
+      if (classifySupabaseAuthFailure(error) === "transient") {
+        throw new AuthenticationProviderUnavailableError();
+      }
+      throw new Error("Unauthorized");
+    }
+    if (!data.user) throw new Error("Unauthorized");
+    return data.user;
+  } catch (error) {
+    if (
+      error instanceof AuthenticationProviderUnavailableError ||
+      (error instanceof Error && error.message === "Unauthorized")
+    ) {
+      throw error;
+    }
+    throw new AuthenticationProviderUnavailableError();
+  }
+}
+
 export async function requireAdmin(request: Request) {
   assertRoleSurfaceHost(request, "admin");
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) throw new Error("Unauthorized");
   const admin = getSupabaseAdmin();
-  const { data } = await admin.auth.getUser(token);
-  if (!data.user) throw new Error("Unauthorized");
-  const normalizedEmail = data.user.email?.trim().toLowerCase() || "";
-  const { data: identity, error: identityError } = await admin.from("platform_identities").select("email_normalized,primary_role,status").eq("user_id", data.user.id).maybeSingle();
+  const user = await verifiedAuthUser(admin, token);
+  const normalizedEmail = user.email?.trim().toLowerCase() || "";
+  const { data: identity, error: identityError } = await admin.from("platform_identities").select("email_normalized,primary_role,status").eq("user_id", user.id).maybeSingle();
   if (identityError && identityError.code !== "PGRST205") throw identityError;
   if (!identity || identity.status !== "Active" || identity.primary_role !== "admin" || identity.email_normalized !== normalizedEmail) throw new Error("Forbidden");
-  let row = await assertAuthorizedAdminUser(admin, data.user);
+  let row = await assertAuthorizedAdminUser(admin, user);
   if (row?.status === "Invited") {
     const activatedAt = new Date().toISOString();
     const { error: activationError } = await admin.from("admin_users").update({ status: "Active", activated_at: activatedAt }).eq("id", row.id).eq("status", "Invited");
     if (activationError) throw activationError;
     row = { ...row, status: "Active", activated_at: activatedAt };
   }
-  return { admin, user: data.user, adminUser: row };
+  return { admin, user, adminUser: row };
 }
 
 export async function requireAdminPermission(request: Request, permission: string) {
@@ -113,15 +165,15 @@ export async function requireSalonOwner(request: Request) {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) throw new Error("Unauthorized");
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) throw new Error("Unauthorized");
-  const { data: ownedSalon, error: salonError } = await admin.from("salons").select("*").eq("user_id", data.user.id).limit(1).maybeSingle();
+  const user = await verifiedAuthUser(admin, token);
+  const { data: ownedSalon, error: salonError } = await admin.from("salons").select("*").eq("user_id", user.id).limit(1).maybeSingle();
   if (salonError) throw salonError;
-  if (ownedSalon) return { admin, user: data.user, salon: ownedSalon, teamMember: null, isOwner: true };
-  const { data: teamMember, error: teamError } = await admin.from("salon_team_members").select("*,salon:salons(*)").eq("user_id", data.user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle();
-  if (teamError || !teamMember?.salon) throw new Error("This account is not linked to a salon.");
+  if (ownedSalon) return { admin, user, salon: ownedSalon, teamMember: null, isOwner: true };
+  const { data: teamMember, error: teamError } = await admin.from("salon_team_members").select("*,salon:salons(*)").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle();
+  if (teamError) throw teamError;
+  if (!teamMember?.salon) throw new Error("Forbidden: this account is not linked to a salon.");
   if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);
-  return { admin, user: data.user, salon: teamMember.salon, teamMember, isOwner: false };
+  return { admin, user, salon: teamMember.salon, teamMember, isOwner: false };
 }
 
 export async function requireSalonPermission(request: Request, permission: string) {

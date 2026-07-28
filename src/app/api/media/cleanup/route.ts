@@ -1,6 +1,7 @@
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
+import { removePreparedMediaObjects } from "@/lib/mediaUploadServer";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,7 @@ async function POSTHandler(request: Request) {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString();
     const { data, error } = await admin
       .from("media_assets")
-      .select("id,bucket_id,object_path,renditions")
+      .select("id,bucket_id,object_path,renditions,source_bucket_id,source_object_path")
       .eq("status", "Staged")
       .lt("created_at", cutoff)
       .order("created_at")
@@ -32,9 +33,38 @@ async function POSTHandler(request: Request) {
       const paths = [...new Set([asset.object_path, ...renditionPaths].filter(Boolean))];
       const removal = await admin.storage.from(asset.bucket_id).remove(paths);
       if (removal.error) throw removal.error;
+      if (asset.source_bucket_id && asset.source_object_path) {
+        const sourceRemoval = await admin.storage
+          .from(asset.source_bucket_id)
+          .remove([asset.source_object_path]);
+        if (sourceRemoval.error) throw sourceRemoval.error;
+      }
       const archived = await admin.from("media_assets").update({ status: "Archived", archived_at: new Date().toISOString() }).eq("id", asset.id).eq("status", "Staged");
       if (archived.error) throw archived.error;
       cleaned += 1;
+    }
+    const { data: expiredSessions, error: expiredSessionError } = await admin
+      .from("media_upload_sessions")
+      .select("id,expected_objects")
+      .eq("status", "Prepared")
+      .lt("expires_at", new Date().toISOString())
+      .order("expires_at")
+      .limit(100);
+    if (expiredSessionError) throw expiredSessionError;
+    let expiredUploadsCleaned = 0;
+    for (const session of expiredSessions || []) {
+      await removePreparedMediaObjects(admin, session.expected_objects);
+      const expired = await admin
+        .from("media_upload_sessions")
+        .update({
+          status: "Expired",
+          failure_code: "SIGNED_UPLOAD_EXPIRED",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", session.id)
+        .eq("status", "Prepared");
+      if (expired.error) throw expired.error;
+      expiredUploadsCleaned += 1;
     }
     const { data: videoJobs, error: videoError } = await admin
       .from("video_processing_jobs")
@@ -75,9 +105,12 @@ async function POSTHandler(request: Request) {
     }
     return Response.json({
       staged_images_cleaned: cleaned,
+      expired_image_uploads_cleaned: expiredUploadsCleaned,
       video_sources_cleaned: videoSourcesCleaned,
       remaining_batch_possible:
-        (data || []).length === 100 || (videoJobs || []).length === 100,
+        (data || []).length === 100 ||
+        (expiredSessions || []).length === 100 ||
+        (videoJobs || []).length === 100,
     });
   } catch (error) {
     return monitoredRouteFailure({ request, admin, error, feature: "media", action: "cleanup_staged_media", actorRole: "system", safeMessage: "Staged media cleanup could not finish." });

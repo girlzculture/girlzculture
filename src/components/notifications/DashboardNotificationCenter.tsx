@@ -3,8 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, CircleAlert, CreditCard, MessageSquare, X } from "lucide-react";
-import { getSessionForScope } from "@/lib/supabase";
+import { getSupabaseForScope } from "@/lib/supabase";
+import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
+import {
+  ScopedApiError,
+  scopedApiErrorMessage,
+} from "@/lib/scopedApiCore";
 import { dashboardNotificationCounts, markDashboardNotificationsRead } from "@/lib/dashboardNotificationsCore";
+import {
+  nextDashboardNotificationPoll,
+  type DashboardNotificationPollOutcome,
+} from "@/lib/dashboardNotificationPollingCore";
 
 export type DashboardNotification = {
   id?: string;
@@ -20,7 +29,6 @@ export type DashboardNotification = {
 };
 
 type Scope = "admin" | "salon";
-
 const categoryIcon = (category?: string) =>
   category === "payments"
     ? CreditCard
@@ -44,33 +52,108 @@ export default function DashboardNotificationCenter({
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [busy, setBusy] = useState(false);
+  const [loadMessage, setLoadMessage] = useState("");
+  const terminalSession = useRef(false);
 
   const updateCounts = useCallback((rows: DashboardNotification[]) => {
     onCounts?.(dashboardNotificationCounts(rows));
   }, [onCounts]);
 
-  const load = useCallback(async () => {
-    const session = await getSessionForScope(scope);
-    if (!session) return;
-    const response = await fetch(`/api/notifications?scope=${scope}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-      cache: "no-store",
-    });
-    if (!response.ok) return;
-    const body = await response.json() as { notifications?: DashboardNotification[] };
-    const rows = Array.isArray(body.notifications) ? body.notifications : [];
-    setNotifications(rows);
-    updateCounts(rows);
+  const load = useCallback(async (): Promise<DashboardNotificationPollOutcome> => {
+    if (terminalSession.current) return "terminal";
+    try {
+      const api = await createAuthenticatedApiClient(scope);
+      const body = await api.request<{
+        notifications?: DashboardNotification[];
+      }>(`/api/notifications?scope=${scope}`);
+      const rows = Array.isArray(body.notifications) ? body.notifications : [];
+      terminalSession.current = false;
+      setLoadMessage("");
+      setNotifications(rows);
+      updateCounts(rows);
+      return "ready";
+    } catch (error) {
+      if (error instanceof ScopedApiError && error.authenticationFailure) {
+        terminalSession.current = true;
+        setLoadMessage(
+          scopedApiErrorMessage(
+            error,
+            `Your ${scope} session has expired. Sign in again.`,
+          ),
+        );
+        return "terminal";
+      }
+      setLoadMessage(
+        scopedApiErrorMessage(
+          error,
+          "Notifications are temporarily unavailable. They will retry automatically.",
+        ),
+      );
+      return "transient";
+    }
   }, [scope, updateCounts]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    const poll = window.setInterval(() => void load(), 60_000);
-    return () => {
-      window.clearTimeout(timer);
-      window.clearInterval(poll);
+    let stopped = false;
+    let timer: number | null = null;
+    let running = false;
+    let rerun = false;
+    let retryAttempt = 0;
+    const schedule = (delay: number) => {
+      if (stopped || terminalSession.current) return;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => void tick(), Math.max(0, delay));
     };
-  }, [load]);
+    const tick = async () => {
+      timer = null;
+      if (stopped || terminalSession.current) return;
+      if (running) {
+        rerun = true;
+        return;
+      }
+      running = true;
+      const outcome = await load();
+      running = false;
+      if (stopped || outcome === "terminal") return;
+      if (rerun) {
+        rerun = false;
+        schedule(0);
+        return;
+      }
+      const next = nextDashboardNotificationPoll(outcome, retryAttempt);
+      retryAttempt = next.attempt;
+      if (next.delay !== null) schedule(next.delay);
+    };
+    const client = getSupabaseForScope(scope);
+    const { data: authListener } = client.auth.onAuthStateChange(
+      (event, session) => {
+        if (stopped) return;
+        if (event === "SIGNED_OUT") {
+          terminalSession.current = true;
+          if (timer !== null) window.clearTimeout(timer);
+          timer = null;
+          return;
+        }
+        if (
+          session &&
+          (event === "SIGNED_IN" ||
+            event === "TOKEN_REFRESHED" ||
+            event === "USER_UPDATED")
+        ) {
+          terminalSession.current = false;
+          retryAttempt = 0;
+          setLoadMessage("");
+          schedule(0);
+        }
+      },
+    );
+    schedule(0);
+    return () => {
+      stopped = true;
+      if (timer !== null) window.clearTimeout(timer);
+      authListener.subscription.unsubscribe();
+    };
+  }, [load, scope]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,22 +172,32 @@ export default function DashboardNotificationCenter({
   }, [open]);
 
   async function mark(action: "read" | "read_all", id?: string) {
-    const session = await getSessionForScope(scope);
-    if (!session) return false;
-    const response = await fetch(`/api/notifications?scope=${scope}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ action, id }),
-    });
-    if (!response.ok) return false;
-    const now = new Date().toISOString();
-    const next = markDashboardNotificationsRead(notifications, action, now, id);
-    setNotifications(next);
-    updateCounts(next);
-    return true;
+    if (terminalSession.current) return false;
+    try {
+      const api = await createAuthenticatedApiClient(scope);
+      await api.request(`/api/notifications?scope=${scope}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, id }),
+      });
+      const now = new Date().toISOString();
+      const next = markDashboardNotificationsRead(notifications, action, now, id);
+      setNotifications(next);
+      updateCounts(next);
+      setLoadMessage("");
+      return true;
+    } catch (error) {
+      if (error instanceof ScopedApiError && error.authenticationFailure) {
+        terminalSession.current = true;
+      }
+      setLoadMessage(
+        scopedApiErrorMessage(
+          error,
+          "The notification could not be updated. Try again.",
+        ),
+      );
+      return false;
+    }
   }
 
   async function select(notification: DashboardNotification) {
@@ -143,6 +236,14 @@ export default function DashboardNotificationCenter({
         </div>
       </header>
       <div className="max-h-[calc(72vh-76px)] overflow-y-auto">
+        {loadMessage ? (
+          <p
+            role="status"
+            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-[10px] leading-4 text-amber-950"
+          >
+            {loadMessage}
+          </p>
+        ) : null}
         {notifications.length ? notifications.map((notification) => {
           const Icon = categoryIcon(notification.category);
           return <button type="button" key={notification.id} onClick={() => void select(notification)} className={`flex w-full gap-3 border-b border-plum/8 p-4 text-left hover:bg-blush/20 ${notification.read_at ? "bg-white" : "bg-blush/15"}`}>

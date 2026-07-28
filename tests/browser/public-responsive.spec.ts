@@ -79,14 +79,9 @@ test("homepage promotion rail advances through all eight cards and loops without
   expect(overflow).toBe(false);
 });
 
-test("mobile homepage removes the intro and carousel control row without leaving a gap", async ({
+test("homepage removes the intro on every viewport and keeps promo then search near the header", async ({
   page,
-  isMobile,
 }) => {
-  test.skip(
-    !isMobile && (page.viewportSize()?.width || 2_000) >= 1_024,
-    "Phone and tablet-portrait composition.",
-  );
   await page.addInitScript(() => {
     localStorage.setItem(
       "girlz-culture-mobile-location-prompt-v1",
@@ -95,16 +90,25 @@ test("mobile homepage removes the intro and carousel control row without leaving
   });
   await page.goto("/");
   const intro = page.locator("[data-home-intro]");
-  await expect(intro).toBeHidden();
+  await expect(intro).toHaveCount(0);
+  await expect(page.locator("[data-home-search]")).toBeVisible();
+  await expect(page.getByText("Book with Confidence", { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByText("Real salons · real prices · real availability", {
+      exact: false,
+    }),
+  ).toHaveCount(0);
   await expect(
     page.getByText("Automatic movement paused.", { exact: true }),
   ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Previous promotion" }),
-  ).toBeHidden();
-  await expect(
-    page.getByRole("button", { name: "Next promotion" }),
-  ).toBeHidden();
+  if ((page.viewportSize()?.width || 0) < 1_024) {
+    await expect(
+      page.getByRole("button", { name: "Previous promotion" }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Next promotion" }),
+    ).toBeHidden();
+  }
 
   const headerBox = await page.getByRole("banner").boundingBox();
   const railBox = await page
@@ -112,7 +116,70 @@ test("mobile homepage removes the intro and carousel control row without leaving
     .boundingBox();
   expect(headerBox).not.toBeNull();
   expect(railBox).not.toBeNull();
-  expect((railBox?.y || 0) - ((headerBox?.y || 0) + (headerBox?.height || 0))).toBeLessThanOrEqual(20);
+  const gap =
+    (railBox?.y || 0) -
+    ((headerBox?.y || 0) + (headerBox?.height || 0));
+  expect(gap).toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThanOrEqual(32);
+  const order = await page.evaluate(() => {
+    const rail = document.querySelector("[data-promotion-rail]");
+    const search = document.querySelector("[data-home-search]");
+    return Boolean(
+      rail &&
+        search &&
+        (rail.compareDocumentPosition(search) &
+          Node.DOCUMENT_POSITION_FOLLOWING),
+    );
+  });
+  expect(order).toBe(true);
+});
+
+test("functional public pages begin without the removed marketing introductions", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "One browser covers the content contract.");
+  await page.goto("/salons");
+  await expect(page.getByRole("heading", { name: "Tell us the look you want" })).toBeVisible();
+  await expect(page.getByText("Find salons that fit your style", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("Your Beauty Assistant", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("AI", { exact: true })).toBeVisible();
+
+  await page.goto("/styles");
+  await expect(page.getByText("Explore. Compare. Book with confidence.", { exact: false })).toHaveCount(0);
+  await expect(page.getByPlaceholder("Search styles")).toBeVisible();
+
+  await page.goto("/how-it-works");
+  await expect(page.getByText("How booking works", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("Find a style or salon", { exact: true })).toBeVisible();
+});
+
+test("phone and tablet landscape layouts do not overflow and promotion cards stay compact", async ({
+  page,
+}) => {
+  const viewport = page.viewportSize();
+  test.skip(
+    !viewport || viewport.width <= viewport.height,
+    "Landscape-only responsive assertion.",
+  );
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "girlz-culture-mobile-location-prompt-v1",
+      JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
+    );
+  });
+  await page.goto("/");
+  const layout = await page.locator("[data-promotion-card]").first().evaluate(
+    (card) => ({
+      cardHeight: card.getBoundingClientRect().height,
+      viewportHeight: window.innerHeight,
+      pageOverflow:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth + 1,
+    }),
+  );
+  expect(layout.pageOverflow).toBe(false);
+  expect(layout.cardHeight).toBeLessThan(layout.viewportHeight * 0.62);
 });
 
 test("mobile promotion swipe pauses temporarily, resumes, and cards fit without overlap", async ({
@@ -389,36 +456,120 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
   );
 });
 
-test("first-visit mobile location choice is explicit and dismissible", async ({
+test("first relevant visit requests location once and reuses it across discovery pages", async ({
   page,
-  isMobile,
+  browserName,
 }) => {
-  const viewport = page.viewportSize();
   test.skip(
-    !isMobile || !viewport || viewport.width >= viewport.height,
-    "Portrait mobile onboarding.",
+    browserName !== "chromium",
+    "Chromium provides deterministic geolocation permission controls.",
   );
-  await page.addInitScript(() => localStorage.clear());
+  await page.context().grantPermissions(["geolocation"]);
+  await page.context().setGeolocation({
+    latitude: 40.8116,
+    longitude: -73.9465,
+  });
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem("gc-test-location-initialized")) {
+      localStorage.clear();
+      sessionStorage.setItem("gc-test-location-initialized", "true");
+      sessionStorage.removeItem("gc-test-geo-calls");
+    }
+    const original = navigator.geolocation.getCurrentPosition.bind(
+      navigator.geolocation,
+    );
+    Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
+      configurable: true,
+      value: (...args: Parameters<typeof navigator.geolocation.getCurrentPosition>) => {
+        const calls = Number(sessionStorage.getItem("gc-test-geo-calls") || 0);
+        sessionStorage.setItem("gc-test-geo-calls", String(calls + 1));
+        return original(...args);
+      },
+    });
+  });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Find salons near you" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText(
-      "Allow Girlz Culture to use your location to show nearby salons.",
-      { exact: false },
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("girlz-culture-location-native-request-v1"),
+      ),
+    )
+    .toContain("granted");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("girlz-culture-customer-location-v1"),
+      ),
+    )
+    .toContain("Current location");
+  expect(
+    await page.evaluate(() =>
+      Number(sessionStorage.getItem("gc-test-geo-calls") || 0),
     ),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Use my location" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Choose city or ZIP code" }).click();
-  await expect(page.getByPlaceholder("Choose city or ZIP code")).toBeVisible();
-  await page.getByRole("button", { name: "Close location prompt" }).click();
+  ).toBe(1);
+
+  await page.goto("/salons");
+  await page.goto("/styles");
   await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "Find salons near you" }),
-  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() =>
+      Number(sessionStorage.getItem("gc-test-geo-calls") || 0),
+    ),
+  ).toBe(1);
+});
+
+test("a denied location request is remembered and falls back without reprompting", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "One deterministic denial fixture is sufficient.");
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem("gc-test-denial-initialized")) {
+      localStorage.clear();
+      sessionStorage.setItem("gc-test-denial-initialized", "true");
+      sessionStorage.setItem("gc-test-denied-calls", "0");
+    }
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: { query: async () => ({ state: "prompt" }) },
+    });
+    Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
+      configurable: true,
+      value: (
+        _success: PositionCallback,
+        failure?: PositionErrorCallback | null,
+      ) => {
+        const calls = Number(sessionStorage.getItem("gc-test-denied-calls") || 0);
+        sessionStorage.setItem("gc-test-denied-calls", String(calls + 1));
+        failure?.({
+          code: 1,
+          message: "denied",
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3,
+        });
+      },
+    });
+  });
+  await page.goto("/salons");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("girlz-culture-location-native-request-v1"),
+      ),
+    )
+    .toContain("denied");
+  expect(
+    await page.evaluate(() =>
+      Number(sessionStorage.getItem("gc-test-denied-calls") || 0),
+    ),
+  ).toBe(1);
+  await page.goto("/styles");
+  expect(
+    await page.evaluate(() =>
+      Number(sessionStorage.getItem("gc-test-denied-calls") || 0),
+    ),
+  ).toBe(1);
 });
 
 test("pilot public and authentication routes remain readable at responsive widths and increased text", async ({

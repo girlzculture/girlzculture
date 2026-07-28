@@ -271,6 +271,27 @@ section {
   }
 }
 
+@media (orientation: landscape) and (max-width: 1023px) and (max-height: 600px) {
+  .gc-promotion-card {
+    height: min(10rem, 42vh) !important;
+    min-height: 8.75rem;
+  }
+
+  .gc-promotion-card h2 {
+    font-size: 1.15rem;
+  }
+
+  .gc-promotion-card p {
+    margin-top: 0.25rem;
+  }
+
+  .gc-promotion-card a,
+  .gc-promotion-card span[class*="bg-magenta"] {
+    min-height: 2.25rem;
+    margin-top: 0.4rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

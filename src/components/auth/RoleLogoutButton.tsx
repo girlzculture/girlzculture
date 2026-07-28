@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
-import { type AuthScope, getSupabaseForScope } from "@/lib/supabase";
+import {
+  type AuthScope,
+  getSessionForScope,
+  getSupabaseForScope,
+} from "@/lib/supabase";
 import { surfacePathForHost } from "@/lib/hostRouting";
 
 const destinationFor: Record<AuthScope, string> = {
@@ -41,11 +45,13 @@ export function RoleSessionBoundary({ scope }: { scope: AuthScope }) {
       window.location.replace(loginDestination());
     };
     const verify = async () => {
-      const { data, error } = await getSupabaseForScope(scope).auth.getSession();
-      // A provider/network failure is not proof that the user signed out.
-      // Redirect only when Supabase completed the check without an error.
-      if (active && !error && !data.session)
-        window.location.replace(loginDestination());
+      try {
+        const session = await getSessionForScope(scope);
+        if (active && !session) window.location.replace(loginDestination());
+      } catch {
+        // A provider/network failure is not proof that the user signed out.
+        // Preserve the scoped session and let the next verification retry.
+      }
     };
     const activity = () => {
       lastActivity = Date.now();

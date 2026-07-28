@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -12,13 +12,18 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import {
+  classifyBillingTransaction,
   filterBookingTransactions,
   financeCsv,
   summarizeBookingTransactions,
+  summarizeUnifiedFinanceTransactions,
+  unifiedFinanceCsv,
   type FinanceFilters,
   type FinanceRow,
+  type UnifiedFinanceRow,
 } from "@/lib/financeLedgerCore";
 import { getSessionForScope } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
 import { US_STATES } from "@/lib/usStates";
 import { formatZonedDateTime } from "@/lib/dateTime";
 
@@ -54,12 +59,7 @@ const tabs = [
 ] as const;
 type Tab = (typeof tabs)[number];
 
-type UnifiedTransaction = FinanceRow & {
-  transaction_key: string;
-  transaction_type: "Booking deposit" | "Product order";
-  gross_amount: number;
-  refund_amount: number;
-};
+type UnifiedTransaction = UnifiedFinanceRow;
 
 function money(value: unknown) {
   return Number(value || 0).toLocaleString("en-US", {
@@ -99,6 +99,7 @@ export default function AdminFinanceDashboard() {
   const [actionMessage, setActionMessage] = useState("");
   const [transactionSearch, setTransactionSearch] = useState("");
   const [transactionType, setTransactionType] = useState("all");
+  const [selectedSalonId, setSelectedSalonId] = useState("");
   const [filters, setFilters] = useState<FinanceFilters>({
     from: "",
     to: "",
@@ -110,17 +111,23 @@ export default function AdminFinanceDashboard() {
     mode: "all",
   });
 
-  async function load() {
+  const load = useCallback(async (salonId = "") => {
     setBusy(true);
     setError("");
     try {
       const session = await getSessionForScope("admin");
       if (!session) throw new Error("Your admin session has expired.");
-      const response = await fetch("/api/admin/finance", {
+      const endpoint = salonId
+        ? `/api/admin/finance?salon=${encodeURIComponent(salonId)}`
+        : "/api/admin/finance";
+      const response = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${session.access_token}` },
         cache: "no-store",
       });
-      const body = (await response.json()) as FinanceData & { error?: string };
+      const body = (await readApiResponse(
+        response,
+        "Unable to load finance records.",
+      )) as FinanceData & { error?: string };
       if (!response.ok) {
         throw new Error(body.error || "Unable to load finance records.");
       }
@@ -157,11 +164,20 @@ export default function AdminFinanceDashboard() {
     } finally {
       setBusy(false);
     }
-  }
-  useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    const salonId = new URLSearchParams(window.location.search)
+      .get("salon")
+      ?.trim() || "";
+    const timer = window.setTimeout(() => {
+      if (salonId) {
+        setSelectedSalonId(salonId);
+        setFilters((current) => ({ ...current, salon: salonId }));
+      }
+      void load(salonId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   const filtered = useMemo(
     () => filterBookingTransactions(data.booking_transactions, filters),
@@ -175,15 +191,39 @@ export default function AdminFinanceDashboard() {
     const salonById = new Map(
       data.salons.map((salon) => [String(salon.id), salon]),
     );
-    const successfulRefunds = new Map<string, number>();
-    for (const refund of data.product_refunds) {
-      if (!["Pending", "Succeeded"].includes(String(refund.status))) continue;
-      const orderId = String(refund.order_id || "");
-      successfulRefunds.set(
-        orderId,
-        (successfulRefunds.get(orderId) || 0) + Number(refund.amount || 0),
+    const orderById = new Map(
+      data.product_orders.map((order) => [String(order.id), order]),
+    );
+    const recordLocation = (salonId: unknown) => {
+      const salon = salonById.get(String(salonId || ""));
+      return {
+        salon: salon?.name || "Salon unavailable",
+        city: salon?.address_city || "",
+        state: salon?.address_state || "",
+      };
+    };
+    const matchesSharedFilters = (row: FinanceRow) => {
+      const timestamp = new Date(String(row.date || "")).getTime();
+      const from = filters.from
+        ? new Date(`${filters.from}T00:00:00`).getTime()
+        : Number.NEGATIVE_INFINITY;
+      const to = filters.to
+        ? new Date(`${filters.to}T23:59:59.999`).getTime()
+        : Number.POSITIVE_INFINITY;
+      return (
+        Number.isFinite(timestamp) &&
+        timestamp >= from &&
+        timestamp <= to &&
+        (filters.state === "all" || row.state === filters.state) &&
+        (filters.city === "all" || row.city === filters.city) &&
+        (filters.salon === "all" || row.salon_id === filters.salon) &&
+        (filters.paymentStatus === "all" ||
+          row.payment_status === filters.paymentStatus) &&
+        (filters.payoutStatus === "all" ||
+          row.payout_status === filters.payoutStatus) &&
+        (filters.mode === "all" || row.payment_mode === filters.mode)
       );
-    }
+    };
     const bookingRows: UnifiedTransaction[] = filtered.map((row) => ({
       ...row,
       transaction_key: `booking-${String(row.booking_id)}`,
@@ -205,34 +245,119 @@ export default function AdminFinanceDashboard() {
           city: salon?.address_city || "",
           state: salon?.address_state || "",
           gross_amount: Number(row.total_amount || 0),
-          refund_amount: successfulRefunds.get(String(row.id)) || 0,
+          refund_amount: 0,
           payment_mode: row.payment_mode || "test",
         } as UnifiedTransaction;
       })
-      .filter((row) => {
-        const timestamp = new Date(String(row.date || "")).getTime();
-        const from = filters.from
-          ? new Date(`${filters.from}T00:00:00`).getTime()
-          : Number.NEGATIVE_INFINITY;
-        const to = filters.to
-          ? new Date(`${filters.to}T23:59:59.999`).getTime()
-          : Number.POSITIVE_INFINITY;
-        return (
-          Number.isFinite(timestamp) &&
-          timestamp >= from &&
-          timestamp <= to &&
-          (filters.state === "all" || row.state === filters.state) &&
-          (filters.city === "all" || row.city === filters.city) &&
-          (filters.salon === "all" || row.salon_id === filters.salon) &&
-          (filters.paymentStatus === "all" ||
-            row.payment_status === filters.paymentStatus) &&
-          (filters.payoutStatus === "all" ||
-            row.payout_status === filters.payoutStatus) &&
-          (filters.mode === "all" || row.payment_mode === filters.mode)
-        );
-      });
+      .filter(matchesSharedFilters);
+    const productRefundRows: UnifiedTransaction[] = data.product_refunds
+      .filter((refund) =>
+        ["Pending", "Succeeded"].includes(String(refund.status)),
+      )
+      .map((refund) => {
+        const order = orderById.get(String(refund.order_id || ""));
+        const location = recordLocation(order?.salon_id);
+        return {
+          ...refund,
+          ...location,
+          date: refund.created_at,
+          salon_id: order?.salon_id,
+          customer: order?.guest_name || "Customer",
+          public_reference:
+            order?.public_reference || "Reference pending",
+          transaction_key: `product-refund-${String(refund.id)}`,
+          transaction_type: "Product refund" as const,
+          gross_amount: 0,
+          refund_amount: Number(refund.amount || 0),
+          net_amount_owed_salon: 0,
+          stripe_processing_fee: 0,
+          platform_fee: 0,
+          payment_status: refund.status || "Not recorded",
+          payout_status: "Not applicable",
+          payment_mode: order?.payment_mode || "test",
+          stripe_reference: refund.stripe_refund_id || "",
+        } as UnifiedTransaction;
+      })
+      .filter(matchesSharedFilters);
+    const billingInvoiceIds = new Set(
+      data.billing_events
+        .map((event) => String(event.stripe_invoice_id || ""))
+        .filter(Boolean),
+    );
+    const billingRows: UnifiedTransaction[] = data.billing_events
+      .map((event) => {
+        const location = recordLocation(event.salon_id);
+        const eventType = String(event.event_type || "Billing event");
+        const refund =
+          Number(event.amount_refunded || 0) +
+          Number(event.amount_credited || 0);
+        const type = classifyBillingTransaction(eventType);
+        return {
+          ...event,
+          ...location,
+          date: event.event_date,
+          customer: "Not applicable",
+          public_reference:
+            event.stripe_invoice_id ||
+            event.stripe_event_id ||
+            "Reference pending",
+          transaction_key: `billing-${String(event.id)}`,
+          transaction_type: type,
+          gross_amount: Number(event.amount_collected || 0) / 100,
+          refund_amount: refund / 100,
+          net_amount_owed_salon: 0,
+          stripe_processing_fee: 0,
+          platform_fee: 0,
+          payout_status: "Not applicable",
+          payment_mode: event.livemode ? "live" : "test",
+          stripe_reference:
+            event.stripe_invoice_id || event.stripe_event_id || "",
+        } as UnifiedTransaction;
+      })
+      .filter(matchesSharedFilters);
+    const changeRows: UnifiedTransaction[] =
+      data.subscription_change_requests
+        .filter(
+          (change) =>
+            !change.stripe_invoice_id ||
+            !billingInvoiceIds.has(String(change.stripe_invoice_id)),
+        )
+        .map((change) => {
+          const location = recordLocation(change.salon_id);
+          return {
+            ...change,
+            ...location,
+            date: change.requested_at,
+            customer: "Not applicable",
+            public_reference:
+              change.stripe_invoice_id ||
+              change.stripe_payment_reference ||
+              "Reference pending",
+            transaction_key: `plan-change-${String(change.id)}`,
+            transaction_type: "Plan adjustment" as const,
+            gross_amount: Number(change.amount_collected || 0) / 100,
+            refund_amount: Number(change.proration_credit || 0) / 100,
+            net_amount_owed_salon: 0,
+            stripe_processing_fee: 0,
+            platform_fee: 0,
+            payment_status: change.status || "Not recorded",
+            payout_status: "Not applicable",
+            payment_mode: change.payment_mode || "test",
+            stripe_reference:
+              change.stripe_invoice_id ||
+              change.stripe_payment_reference ||
+              "",
+          } as UnifiedTransaction;
+        })
+        .filter(matchesSharedFilters);
     const query = transactionSearch.trim().toLowerCase();
-    return [...bookingRows, ...productRows]
+    return [
+      ...bookingRows,
+      ...productRows,
+      ...productRefundRows,
+      ...billingRows,
+      ...changeRows,
+    ]
       .filter(
         (row) =>
           (transactionType === "all" ||
@@ -257,6 +382,8 @@ export default function AdminFinanceDashboard() {
   }, [
     data.product_orders,
     data.product_refunds,
+    data.billing_events,
+    data.subscription_change_requests,
     data.salons,
     filtered,
     filters,
@@ -264,22 +391,14 @@ export default function AdminFinanceDashboard() {
     transactionType,
   ]);
   const unifiedTotals = useMemo(
-    () =>
-      unifiedTransactions.reduce(
-        (summary, row) => {
-          summary.received += Number(row.gross_amount || 0);
-          summary.returned += Number(row.refund_amount || 0);
-          summary.owed += Number(row.net_amount_owed_salon || 0);
-          summary.processing += Number(row.stripe_processing_fee || 0);
-          summary.platform += Number(row.platform_fee || 0);
-          return summary;
-        },
-        { received: 0, returned: 0, owed: 0, processing: 0, platform: 0 },
-      ),
+    () => summarizeUnifiedFinanceTransactions(unifiedTransactions),
     [unifiedTransactions],
   );
   const setFilter = (key: keyof FinanceFilters, value: string) =>
     setFilters((current) => ({ ...current, [key]: value }));
+  const selectedSalon = selectedSalonId
+    ? data.salons.find((salon) => String(salon.id) === selectedSalonId)
+    : null;
 
   function exportCsv() {
     const blob = new Blob([financeCsv(filtered, data.admin_time_zone)], {
@@ -296,46 +415,16 @@ export default function AdminFinanceDashboard() {
   }
 
   function exportUnifiedCsv() {
-    const columns = [
-      "date",
-      "public_reference",
-      "transaction_type",
-      "salon",
-      "customer",
-      "gross_amount",
-      "refund_amount",
-      "net_amount_owed_salon",
-      "payment_status",
-      "payout_status",
-      "payment_mode",
-      "stripe_reference",
-      "stripe_payment_intent_id",
-      "stripe_transfer_id",
-    ];
-    const safe = (value: unknown) => {
-      let text = String(value ?? "");
-      if (/^[=+\-@]/.test(text)) text = `'${text}`;
-      return `"${text.replaceAll('"', '""')}"`;
-    };
-    const csv = [
-      columns.map(safe).join(","),
-      ...unifiedTransactions.map((row) =>
-        columns
-          .map((column) =>
-            safe(
-              column === "date"
-                ? when(row.date, data.admin_time_zone)
-                : row[column],
-            ),
-          )
-          .join(","),
-      ),
-    ].join("\r\n");
+    const csv = unifiedFinanceCsv(
+      unifiedTransactions,
+      data.admin_time_zone,
+    );
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const href = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = href;
-    link.download = `girlz-culture-finance-transactions-${new Date()
+    const salonSuffix = selectedSalonId ? "-selected-salon" : "";
+    link.download = `girlz-culture-finance-transactions${salonSuffix}-${new Date()
       .toISOString()
       .slice(0, 10)}.csv`;
     link.click();
@@ -404,7 +493,10 @@ export default function AdminFinanceDashboard() {
           notes,
         }),
       });
-      const body = (await response.json()) as {
+      const body = (await readApiResponse(
+        response,
+        "The refund could not be processed.",
+      )) as {
         error?: string;
         refund?: FinanceRow;
       };
@@ -413,7 +505,7 @@ export default function AdminFinanceDashboard() {
       setActionMessage(
         `Refund ${String(body.refund?.status || "submitted")} for ${String(order.public_reference || order.id)}.`,
       );
-      await load();
+      await load(selectedSalonId);
     } catch (refundError) {
       setActionMessage(
         refundError instanceof Error
@@ -439,7 +531,7 @@ export default function AdminFinanceDashboard() {
         <p className="mt-2 text-sm text-ink/65">{error}</p>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => void load(selectedSalonId)}
           className="mt-5 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"
         >
           Try again
@@ -450,6 +542,20 @@ export default function AdminFinanceDashboard() {
 
   return (
     <div className="space-y-5">
+      {selectedSalonId ? (
+        <section className="rounded-2xl border border-magenta/20 bg-blush/45 px-5 py-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-magenta">
+            Salon financial records
+          </p>
+          <h2 className="mt-1 font-serif text-2xl text-plum">
+            {String(selectedSalon?.name || "Selected salon")}
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-ink/60">
+            This view is limited to this salon. Totals and CSV exports are
+            calculated from the same filtered transaction rows.
+          </p>
+        </section>
+      ) : null}
       <div className="flex gap-2 overflow-x-auto rounded-2xl border border-plum/10 bg-white p-2">
         {tabs.map((item) => (
           <button
@@ -491,10 +597,15 @@ export default function AdminFinanceDashboard() {
                 label="Transaction type"
                 value={transactionType}
                 onChange={setTransactionType}
-                options={[
-                  ["Booking deposit", "Booking deposit"],
-                  ["Product order", "Product order"],
-                ]}
+                 options={[
+                   ["Booking deposit", "Booking deposit"],
+                   ["Product order", "Product order"],
+                   ["Product refund", "Product refund"],
+                   ["Subscription payment", "Subscription payment"],
+                   ["Subscription refund", "Subscription refund"],
+                   ["Plan adjustment", "Plan adjustment"],
+                   ["Billing event", "Other billing event"],
+                 ]}
               />
               <Input
                 label="From"

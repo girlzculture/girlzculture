@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   REQUIRED_HOMEPAGE_SECTION_KEYS,
+  homepageSearchInsertIndex,
   moveHomepageSection,
   normalizeHomepageSectionOrder,
   validateHomepageSectionPublication,
@@ -30,6 +31,10 @@ const mediaRoute = readFileSync(
   `${root}/src/app/api/media/upload/route.ts`,
   "utf8",
 );
+const mediaServer = readFileSync(
+  `${root}/src/lib/mediaUploadServer.ts`,
+  "utf8",
+);
 const migration = readFileSync(
   `${root}/supabase/migrations/20260727210000_mobile_homepage_order_and_promotion_media.sql`,
   "utf8",
@@ -45,6 +50,14 @@ assert.equal(moved[0].section_key, "trending_picks");
 assert.deepEqual(
   moved.map((row) => row.sort_order),
   [1, 2, 3, 4],
+);
+assert.equal(homepageSearchInsertIndex(defaults), 1);
+assert.equal(
+  homepageSearchInsertIndex(
+    defaults.filter((row) => row.section_key !== "promo_rail"),
+  ),
+  0,
+  "Hiding the optional promotional rail must not hide or displace search.",
 );
 assert.throws(
   () =>
@@ -76,7 +89,10 @@ assert.equal(
   false,
 );
 
-assert.match(page, /data-home-intro[\s\S]*hidden[\s\S]*lg:block/);
+assert.doesNotMatch(page, /data-home-intro/);
+assert.match(page, /data-home-search/);
+assert.match(page, /homepageSearchInsertIndex/);
+assert.match(page, /searchInsertIndex === homepageSections\.length/);
 assert.match(page, /resolvePublishedHomepagePromotions/);
 assert.match(rail, /IntersectionObserver/);
 assert.match(rail, /visibilitychange/);
@@ -112,9 +128,10 @@ assert.match(migration, /homepage_sections_unique_position/);
 assert.match(migration, /record_management_events/);
 assert.match(migration, /resolve_homepage_promotion_target/);
 assert.match(migration, /image\/gif/);
-assert.match(mediaRoute, /GIF87a/);
-assert.match(mediaRoute, /image\/gif/);
+assert.match(mediaServer, /GIF87a/);
+assert.match(mediaServer, /image\/gif/);
+assert.match(mediaRoute, /Binary uploads are no longer accepted/);
 
 console.log(
-  "Mobile homepage correction verification passed: authoritative ordering rejects duplicates, promotion schedules are enforced, the mobile rail omits controls, and salon/campaign/GIF administration is wired.",
+  "Mobile homepage correction verification passed: authoritative ordering rejects duplicates, promotion schedules are enforced, the promo rail leads every layout without the removed marketing intro, the normal search follows it, and salon/campaign/GIF administration is wired.",
 );

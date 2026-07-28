@@ -97,7 +97,8 @@ for (const column of [
   assert.ok(finance.includes(`"${column}"`), `Finance column is missing: ${column}`);
 }
 assert.match(finance, /lg:hidden[\s\S]*View details/);
-assert.match(finance, /unifiedTransactions\.map/);
+assert.match(finance, /rows=\{unifiedTransactions\}/);
+assert.match(finance, /function TransactionRows[\s\S]*rows\.map/);
 
 const engineUi = read("src/components/admin/EngineControlCenter.tsx");
 for (const workflow of [

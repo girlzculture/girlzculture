@@ -6,8 +6,23 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
 const isSecureDeployment =
   process.env.NODE_ENV === "production" &&
   /^https:\/\//i.test(process.env.NEXT_PUBLIC_SITE_URL || "");
+const releaseId =
+  process.env.GIRLZ_CULTURE_RELEASE_ID ||
+  process.env.COMMIT_REF ||
+  process.env.DEPLOY_ID ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  (process.env.NODE_ENV === "production"
+    ? "unidentified-production-release"
+    : "local-development");
 
 const nextConfig: NextConfig = {
+  env: {
+    // Netlify exposes COMMIT_REF during the build, but not reliably inside
+    // every generated function. Compile the non-secret release identifier
+    // into server bundles so Engine incidents remain deployment-searchable.
+    GIRLZ_CULTURE_RELEASE_ID: releaseId,
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   poweredByHeader: false,
   compress: true,

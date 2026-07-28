@@ -237,7 +237,7 @@ export default function HomepagePromoRail({
         <article
           data-promotion-clone
           aria-hidden="true"
-          className="relative h-[214px] w-[calc(100vw-52px)] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-charcoal shadow-[0_12px_28px_rgba(13,17,20,.13)] sm:h-[222px] sm:w-[62vw] sm:max-w-[420px] md:w-[45vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
+          className="gc-promotion-card relative h-[214px] w-[calc(100vw-52px)] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-charcoal shadow-[0_12px_28px_rgba(13,17,20,.13)] sm:h-[222px] sm:w-[62vw] sm:max-w-[420px] md:w-[45vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
         >
           <SafeImage
             src={clone.media_url}
@@ -298,7 +298,7 @@ function PromotionCard({
   return (
     <article
       data-promotion-card
-      className="relative h-[214px] w-[calc(100vw-52px)] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-charcoal shadow-[0_12px_28px_rgba(13,17,20,.13)] sm:h-[222px] sm:w-[62vw] sm:max-w-[420px] md:w-[45vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
+      className="gc-promotion-card relative h-[214px] w-[calc(100vw-52px)] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-charcoal shadow-[0_12px_28px_rgba(13,17,20,.13)] sm:h-[222px] sm:w-[62vw] sm:max-w-[420px] md:w-[45vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
     >
       <SafeImage
         src={card.media_url}

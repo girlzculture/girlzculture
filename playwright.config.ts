@@ -50,5 +50,9 @@ export default defineConfig({
       name: "tablet",
       use: { viewport: { width: 820, height: 1180 }, hasTouch: true },
     },
+    {
+      name: "tablet-landscape",
+      use: { viewport: { width: 1180, height: 820 }, hasTouch: true },
+    },
   ],
 });

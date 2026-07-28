@@ -69,7 +69,10 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     const headers = { Authorization: `Bearer ${session.access_token}` };
     const verification = await fetch("/api/admin/verify", { method: "POST", headers });
     if (!verification.ok) throw new Error("This saved admin session is no longer authorized. Sign in with an active platform-admin account.");
-    const verified = await verification.json() as { permissions?: Record<string,boolean>; is_super_admin?: boolean };
+    const verified = await readApiResponse(
+      verification,
+      "Unable to verify admin permissions.",
+    ) as { permissions?: Record<string,boolean>; is_super_admin?: boolean; error?: string };
     const verifiedAccess = verified.is_super_admin ? null : verified.permissions || {};
     setAccess(verifiedAccess);
     if (verifiedAccess !== null && !verifiedAccess[permissionForSection(section)]) {
@@ -80,7 +83,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     }
     setDenied(false);
     const response = await fetch(`/api/admin/data?section=${encodeURIComponent(section)}`, { headers, cache: "no-store" });
-    const body = await response.json();
+    const body = await readApiResponse(response, "Unable to load admin data.");
     if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
     const next: DataState = {
       salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
@@ -116,10 +119,27 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
     const session = await getSessionForScope("admin");
     if (!session) { setNotice("Your admin session has expired."); return; }
     const response = await fetch(`/api/admin/submissions/${id}/decision`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ decision, reason }) });
-    const body = await response.json();
-    if (!response.ok) { setNotice(body.error || "Unable to update application."); return; }
+    const body = await readApiResponse(
+      response,
+      "Unable to update application.",
+    );
+    if (!response.ok) {
+      const missing = Array.isArray(body.missing) ? body.missing.map(String) : [];
+      setNotice(
+        missing.length
+          ? `${body.error || "Publication requirements remain."} Missing: ${missing.join(", ")}.`
+          : body.error || "Unable to update application.",
+      );
+      return;
+    }
     await load();
-    setNotice(decision === "activate" ? "Salon activated and dashboard access updated." : `Application ${String(body.status).toLowerCase()}.`);
+    setNotice(
+      decision === "activate"
+        ? body.idempotent
+          ? "The salon was already active and public. No duplicate action was recorded."
+          : "Every required publication gate passed and the salon is now public."
+        : `Application ${String(body.status).toLowerCase()}.`,
+    );
   }
 
   async function update(table: string, id: string, changes: Row) {
@@ -213,7 +233,7 @@ function Submissions(p: any) {
 }
 
 function ApplicationDetails({ application, decide }: { application: Row | null; decide: (id: string, decision: "approve" | "reject" | "activate") => void }) {
-  return <Panel title={application?.business_name || "Application details"}>{application ? <div className="space-y-4 text-sm"><Badge value={application.status} />{[["Owner", application.owner_name], ["Email", application.business_email], ["Phone", application.phone], ["Location", [application.city, application.state].filter(Boolean).join(", ")], ["Type", application.business_type || "Not provided"], ["Years operating", application.years_in_operation], ["Stylists", application.stylist_count], ["Plan", application.selected_plan]].map(([label, value]) => <div key={label}><b>{label}</b><p className="text-ink/60">{value || "Not provided"}</p></div>)}{application.logo_url ? <img src={application.logo_url} alt="Salon logo" className="h-20 w-20 rounded-lg object-cover" /> : null}{application.photo_urls?.length ? <div><b>Photos</b><div className="mt-2 grid grid-cols-3 gap-2">{application.photo_urls.map((url: string) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="Application upload" className="h-20 w-full rounded-lg object-cover" /></a>)}</div></div> : null}{application.document_urls?.length ? <div><b>Documents</b>{application.document_urls.map((url: string, index: number) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-1 block text-magenta">Open document {index + 1}</a>)}</div> : null}<Link href={`/admin/submissions/${application.id}`} className="block rounded-lg border border-plum/15 py-3 text-center font-bold text-magenta">Open full application</Link><div className="grid grid-cols-2 gap-3">{application.status === "Pending" ? <><button onClick={() => decide(application.id, "approve")} className="rounded-lg bg-magenta py-3 font-bold text-white">Approve</button><button onClick={() => decide(application.id, "reject")} className="rounded-lg border border-magenta py-3 font-bold text-magenta">Reject</button></> : application.status === "Approved" ? <button onClick={() => decide(application.id, "activate")} className="col-span-2 rounded-lg bg-plum py-3 font-bold text-white">Activate salon dashboard</button> : null}</div></div> : <p>Select an application.</p>}</Panel>;
+  return <Panel title={application?.business_name || "Application details"}>{application ? <div className="space-y-4 text-sm"><Badge value={application.status} />{[["Owner", application.owner_name], ["Email", application.business_email], ["Phone", application.phone], ["Location", [application.city, application.state].filter(Boolean).join(", ")], ["Type", application.business_type || "Not provided"], ["Years operating", application.years_in_operation], ["Stylists", application.stylist_count], ["Plan", application.selected_plan]].map(([label, value]) => <div key={label}><b>{label}</b><p className="text-ink/60">{value || "Not provided"}</p></div>)}{application.logo_url ? <img src={application.logo_url} alt="Salon logo" className="h-20 w-20 rounded-lg object-cover" /> : null}{application.photo_urls?.length ? <div><b>Photos</b><div className="mt-2 grid grid-cols-3 gap-2">{application.photo_urls.map((url: string) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="Application upload" className="h-20 w-full rounded-lg object-cover" /></a>)}</div></div> : null}{application.document_urls?.length ? <div><b>Documents</b>{application.document_urls.map((url: string, index: number) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-1 block text-magenta">Open document {index + 1}</a>)}</div> : null}<Link href={`/admin/submissions/${application.id}`} className="block rounded-lg border border-plum/15 py-3 text-center font-bold text-magenta">Open full application & pilot controls</Link><div className="grid grid-cols-2 gap-3">{application.status === "Pending" ? <><button onClick={() => decide(application.id, "approve")} className="rounded-lg bg-magenta py-3 font-bold text-white">Approve</button><button onClick={() => decide(application.id, "reject")} className="rounded-lg border border-magenta py-3 font-bold text-magenta">Reject</button></> : application.status === "Approved" ? <button onClick={() => decide(application.id, "activate")} className="col-span-2 rounded-lg bg-plum px-3 py-3 font-bold text-white">Recheck gates & publish if ready</button> : null}</div></div> : <p>Select an application.</p>}</Panel>;
 }
 
 function Customers(p: any) {
@@ -242,7 +262,7 @@ function ManualBooking({ salons, onCreated }: { salons: Row[]; onCreated: () => 
   const [message, setMessage] = useState(""); const [saving, setSaving] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const formElement=event.currentTarget; setSaving(true); setMessage("");
-    try { const form = new FormData(formElement); const session = await getSessionForScope("admin"); if (!session) throw new Error("Your admin session has expired."); const response = await fetch("/api/admin/bookings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ salon_id: form.get("salon"), guest_name: form.get("name"), guest_email: form.get("email"), guest_phone: form.get("phone"), appointment_local: form.get("date") }) }); const body = await response.json(); if (!response.ok) throw new Error(body.next_available ? `${body.error} Next available: ${body.next_available.date} at ${body.next_available.label}.` : body.error || "Unable to create booking."); setMessage("Booking created and synced to the salon calendar."); formElement.reset(); await onCreated(); }
+    try { const form = new FormData(formElement); const session = await getSessionForScope("admin"); if (!session) throw new Error("Your admin session has expired."); const response = await fetch("/api/admin/bookings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ salon_id: form.get("salon"), guest_name: form.get("name"), guest_email: form.get("email"), guest_phone: form.get("phone"), appointment_local: form.get("date") }) }); const body = await readApiResponse(response, "Unable to create booking."); if (!response.ok) { const nextAvailable = body.next_available && typeof body.next_available === "object" ? body.next_available as Record<string, unknown> : null; throw new Error(nextAvailable ? `${body.error} Next available: ${String(nextAvailable.date || "")} at ${String(nextAvailable.label || "")}.` : body.error || "Unable to create booking."); } setMessage("Booking created and synced to the salon calendar."); formElement.reset(); await onCreated(); }
     catch (submitError) { setMessage(submitError instanceof Error ? submitError.message : "Unable to create booking."); }
     finally { setSaving(false); }
   }

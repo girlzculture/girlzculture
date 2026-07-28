@@ -27,6 +27,10 @@ import {
 } from "lucide-react";
 import { getSessionForScope, reportClientOperationalFailure, reportClientOperationalRecovery, salonSupabase as supabase } from "@/lib/supabase";
 import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
+import {
+  ScopedApiError,
+  scopedApiErrorMessage,
+} from "@/lib/scopedApiCore";
 import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
 import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
@@ -333,7 +337,7 @@ export default function OwnerDashboardApp({
           }
         },
         onFallbackRefresh: async () => {
-          if (!live) return;
+          if (!live) return "terminal";
           try {
             const refreshed = await api.request<{
               records?: Record<string, Row[]>;
@@ -342,19 +346,36 @@ export default function OwnerDashboardApp({
             const refreshedRecords = refreshed.records || {};
             setBookings(refreshedRecords.bookings || []);
             setNotifications(refreshedRecords.notifications || []);
-          } catch {
-            // Polling is a temporary fallback. The next scheduled attempt or
-            // realtime reconnect continues without taking down the dashboard.
+            return "ready";
+          } catch (error) {
+            if (
+              error instanceof ScopedApiError &&
+              error.authenticationFailure
+            ) {
+              setRealtimeNotice(
+                scopedApiErrorMessage(
+                  error,
+                  "Your salon session has expired. Sign in again to resume live updates.",
+                ),
+              );
+              return "terminal";
+            }
+            return "transient";
           }
         },
       });
       if (!live && removeRealtime) await removeRealtime();
     }
 
-    void loadDashboard().catch(() => {
+    void loadDashboard().catch((error) => {
       if (!live) return;
       setError(
-        "The salon workspace is temporarily unavailable. Please try again in a moment.",
+        scopedApiErrorMessage(
+          error,
+          error instanceof ScopedApiError && error.authenticationFailure
+            ? "Your salon session has expired. Sign in again."
+            : "The salon workspace is temporarily unavailable. Please try again in a moment.",
+        ),
       );
       setLoading(false);
     });
@@ -688,6 +709,7 @@ export default function OwnerDashboardApp({
     setStyles,
     setStylists,
     setProducts,
+    setSalon,
     setPromotions,
     setBookings,
     setReviews,
@@ -797,6 +819,7 @@ type Ctx = {
   setStyles: React.Dispatch<React.SetStateAction<Row[]>>;
   setStylists: React.Dispatch<React.SetStateAction<Row[]>>;
   setProducts: React.Dispatch<React.SetStateAction<Row[]>>;
+  setSalon: React.Dispatch<React.SetStateAction<Salon | null>>;
   setPromotions: React.Dispatch<React.SetStateAction<Row[]>>;
   setBookings: React.Dispatch<React.SetStateAction<Row[]>>;
   setReviews: React.Dispatch<React.SetStateAction<Row[]>>;
@@ -1975,6 +1998,18 @@ function MyPage({ c }: { c: Ctx }) {
               label="Cover Photo (Required)"
               value={cover}
               onChange={(v) => setCover(typeof v === "string" ? v : "")}
+              attachment={{
+                record_type: "salon",
+                record_id: String(c.salon.id),
+                field: "cover_photo_url",
+              }}
+              onPersisted={(value) => {
+                const next = typeof value === "string" ? value : "";
+                setCover(next);
+                c.setSalon((row) =>
+                  row ? { ...row, cover_photo_url: next || undefined } : row,
+                );
+              }}
               helperText="This is the main image at the top of your public page."
             />
           </div>
@@ -1987,6 +2022,18 @@ function MyPage({ c }: { c: Ctx }) {
               label="Gallery"
               value={gallery}
               onChange={(v) => setGallery(Array.isArray(v) ? v : [])}
+              attachment={{
+                record_type: "salon",
+                record_id: String(c.salon.id),
+                field: "gallery_photos",
+              }}
+              onPersisted={(value) => {
+                const next = Array.isArray(value) ? value.map(String) : [];
+                setGallery(next);
+                c.setSalon((row) =>
+                  row ? { ...row, gallery_photos: next } : row,
+                );
+              }}
               helperText="Showcase your work and your space."
             />
           </div>
@@ -2027,6 +2074,18 @@ function SalonLogoEditor({ c }: { c: Ctx }) {
               onChange={(value) =>
                 setLogo(typeof value === "string" ? value : "")
               }
+              attachment={{
+                record_type: "salon",
+                record_id: String(c.salon.id),
+                field: "logo_url",
+              }}
+              onPersisted={(value) => {
+                const next = typeof value === "string" ? value : "";
+                setLogo(next);
+                c.setSalon((row) =>
+                  row ? { ...row, logo_url: next || undefined } : row,
+                );
+              }}
             />
           </div>
         </div>
@@ -2075,6 +2134,18 @@ function Photos({ c }: { c: Ctx }) {
             label="Cover Photo"
             value={cover}
             onChange={(v) => setCover(typeof v === "string" ? v : "")}
+            attachment={{
+              record_type: "salon",
+              record_id: String(c.salon.id),
+              field: "cover_photo_url",
+            }}
+            onPersisted={(value) => {
+              const next = typeof value === "string" ? value : "";
+              setCover(next);
+              c.setSalon((row) =>
+                row ? { ...row, cover_photo_url: next || undefined } : row,
+              );
+            }}
             helperText="JPG or PNG, maximum 2MB after optimization."
           />
         </Panel>
@@ -2087,6 +2158,18 @@ function Photos({ c }: { c: Ctx }) {
             label="Media Library"
             value={gallery}
             onChange={(v) => setGallery(Array.isArray(v) ? v : [])}
+            attachment={{
+              record_type: "salon",
+              record_id: String(c.salon.id),
+              field: "gallery_photos",
+            }}
+            onPersisted={(value) => {
+              const next = Array.isArray(value) ? value.map(String) : [];
+              setGallery(next);
+              c.setSalon((row) =>
+                row ? { ...row, gallery_photos: next } : row,
+              );
+            }}
             helperText="Upload, remove, and reorder salon work photos."
           />
           <label className="mt-5 flex gap-3 text-xs font-semibold">
@@ -2633,6 +2716,15 @@ function TruthfulProducts({ c }: { c: Ctx }) {
               folder={`salons/${c.salon.id}/products`}
               label="Product Photos"
               value={images}
+              attachment={
+                active?.id
+                  ? {
+                      record_type: "product",
+                      record_id: String(active.id),
+                      field: "images",
+                    }
+                  : null
+              }
               onChange={(value) => {
                 const next = Array.isArray(value)
                   ? value.map(String)
@@ -2641,6 +2733,28 @@ function TruthfulProducts({ c }: { c: Ctx }) {
                     : [];
                 setImages(next);
                 setPhoto(next[0] || "");
+              }}
+              onPersisted={(value) => {
+                const next = Array.isArray(value)
+                  ? value.map(String)
+                  : value
+                    ? [String(value)]
+                    : [];
+                setImages(next);
+                setPhoto(next[0] || "");
+                if (active?.id) {
+                  c.setProducts((rows) =>
+                    rows.map((row) =>
+                      row.id === active.id
+                        ? {
+                            ...row,
+                            images: next,
+                            photo_url: next[0] || null,
+                          }
+                        : row,
+                    ),
+                  );
+                }
               }}
             />
             <div className="grid gap-3 sm:grid-cols-2">
