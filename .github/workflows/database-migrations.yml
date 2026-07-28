@@ -51,6 +51,7 @@ jobs:
         run: npm run verify:database-clean
       - run: npm run verify:engine-expansion
       - run: npm run verify:catalog-management
+      - run: npm run verify:catalog-spreadsheet
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run build

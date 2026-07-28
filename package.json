@@ -39,6 +39,7 @@
     "verify:database-clean": "node scripts/verify-clean-database.mjs",
     "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs",
     "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
+    "verify:catalog-spreadsheet": "node scripts/verify-platform-catalog-spreadsheet-import.mjs",
     "verify:owner-realtime": "node scripts/verify-owner-session-realtime.mjs",
     "verify:auto-location": "node scripts/verify-automatic-location.mjs",
     "verify:location-persistence": "node scripts/verify-location-persistence.mjs",
@@ -72,6 +73,7 @@
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",
     "@supabase/supabase-js": "^2.109.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.24.0",
     "next": "16.2.11",
     "qrcode": "^1.5.4",
@@ -94,6 +96,7 @@
     "brace-expansion": "^5.0.8",
     "minimatch": "^10.2.5",
     "postcss": "^8.5.10",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.3",
+    "uuid": "^11.1.0"
   }
 }
