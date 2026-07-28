@@ -7,6 +7,8 @@ const contentApi = read("src/app/api/admin/content/route.ts");
 const recordsApi = read("src/app/api/admin/records/route.ts");
 const adminManager = read("src/components/AdminContentManager.tsx");
 const ownerEditors = read("src/components/owner/StructuredCatalogEditors.tsx");
+const mobileRecordEditor = read("src/components/owner/MobileRecordEditor.tsx");
+const ownerWorkspace = read("src/app/api/salon/workspace/route.ts");
 const migration = read("supabase/migrations/20260721140000_flexible_service_catalog.sql");
 const lifecycleMigration = read("supabase/migrations/20260720180000_record_lifecycle_management.sql");
 
@@ -27,6 +29,12 @@ for (const token of [
   "Last batch results",
   "Every successful change is written to the audit history",
 ]) assert.ok(adminManager.includes(token), `Catalog batch workflow is missing ${token}`);
+for (const token of ["Active catalog", "Hidden & archived", "catalogView", "filterCatalogRows"])
+  assert.ok(adminManager.includes(token), `Catalog active/archive separation is missing ${token}`);
+for (const token of ['"styles"', '"stylists"', '"salon_products"', '"salon_promotions"', '.is("archived_at", null)'])
+  assert.ok(ownerWorkspace.includes(token), `Owner workspace archive filtering is missing ${token}`);
+for (const token of ['matchMedia("(max-width: 1023px)")', 'mobileViewport.addEventListener("change"', "bodyLocked"])
+  assert.ok(mobileRecordEditor.includes(token), `Responsive record-editor body locking is missing ${token}`);
 
 for (const token of ["dependencyPlan", "confirmation", "record_management_events", "admin_manage_catalog_record", "still used"])
   assert.ok(recordsApi.includes(token), `Managed-record safety is missing ${token}`);
