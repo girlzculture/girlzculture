@@ -18,6 +18,7 @@ import {
 } from "@/lib/salonPresets";
 import NumericInput from "@/components/forms/NumericInput";
 import MobileRecordEditor from "@/components/owner/MobileRecordEditor";
+import SalonSpreadsheetPanel from "@/components/owner/SalonSpreadsheetPanel";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Row = Record<string, any> & { id?: string; name?: string };
@@ -205,6 +206,19 @@ export function StructuredStylesEditor({ c }: { c: Context }) {
 
   return <>
     <EditorTitle title="Styles & Pricing" subtitle="Use category-aware service options so customers can compare and book accurately." action={<button type="button" onClick={() => { c.setSelectedStyle(null); setMobileEditorOpen(true); }} className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"><Plus className="mr-1 inline" size={16} />Add Service</button>} />
+    <SalonSpreadsheetPanel
+      kind="services"
+      onImported={(records) => {
+        c.setStyles(records);
+        if (
+          c.selectedStyle &&
+          !records.some((record) => record.id === c.selectedStyle)
+        ) {
+          c.setSelectedStyle(null);
+          setMobileEditorOpen(false);
+        }
+      }}
+    />
     <div className="grid gap-4 xl:grid-cols-[.7fr_1.3fr]" onClickCapture={(event) => { const target = event.target as HTMLElement; if (target.closest("button") && !target.closest("form") && !target.closest('[role="dialog"]')) setMobileEditorOpen(true); }}>
       <EditorPanel><h2 className="font-serif text-xl text-plum">Your Services</h2><div className="mt-3 space-y-2">{c.styles.map((style) => { const managed = masters.find((master) => master.id === style.master_style_id); return <button key={style.id} type="button" onClick={() => c.setSelectedStyle(style.id || null)} className={`grid w-full ${style.photos?.[0] ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[1fr_auto]"} gap-3 rounded-[10px] border p-3 text-left ${active?.id === style.id ? "border-magenta bg-blush/30" : "border-plum/10"}`}>{style.photos?.[0] ? <Image unoptimized width={64} height={64} src={String(style.photos[0])} alt={style.name || "Service"} className="h-16 w-16 rounded-[8px] object-cover" /> : null}<span><b className="font-serif text-base">{style.name}</b><span className="mt-1 block text-[10px] text-ink/55">{managed?.service_category?.name || "Service"} · {style.category || "General"} · {Number(style.duration_min_hours || 0)}–{Number(style.duration_max_hours || 0)} hrs</span>{!style.photos?.[0] ? <span className="mt-1 flex items-center gap-1 text-[9px] text-ink/40"><ImageIcon size={11} />No service image uploaded</span> : null}</span><span className="text-right text-[10px]">From<br /><b className="text-sm">${Number(style.price_display_min || style.base_price || 0)}</b></span></button>; })}{!c.styles.length ? <Empty text="Add your first service." /> : null}</div></EditorPanel>
       <MobileRecordEditor open={mobileEditorOpen} title={active ? `Edit ${active.name || "service"}` : "Add service"} onClose={() => setMobileEditorOpen(false)}><form key={active?.id || "new"} onSubmit={save}><EditorPanel><div className="flex items-center justify-between"><h2 className="font-serif text-xl text-plum">{active ? "Edit Service" : "Add Service"}</h2><span className="text-[9px] font-bold uppercase text-green-700">Category-aware</span></div>
