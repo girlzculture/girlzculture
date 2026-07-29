@@ -17,6 +17,7 @@ Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-m
 |---|---|---|---|
 | `/api/admin/bookings/[id]` | GET, PATCH | protected | Covered |
 | `/api/admin/bookings` | POST | protected | Covered |
+| `/api/admin/catalog-spreadsheet` | GET, POST | protected | Covered |
 | `/api/admin/content` | GET, PUT, DELETE | protected | Covered |
 | `/api/admin/data` | GET | provider-backed | Covered |
 | `/api/admin/engine/ai` | GET, PATCH, POST | provider-backed | Covered |
@@ -100,6 +101,7 @@ Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-m
 | `/api/salon/bookings/[id]/reschedule` | GET, POST | provider-backed | Covered |
 | `/api/salon/bookings/[id]/service` | POST | provider-backed | Covered |
 | `/api/salon/bootstrap` | POST | protected | Covered |
+| `/api/salon/catalog-spreadsheet` | GET, POST | protected | Covered |
 | `/api/salon/discovery-diagnostics` | GET | protected | Covered |
 | `/api/salon/lifecycle` | GET, POST | protected | Covered |
 | `/api/salon/onboarding` | GET, POST | protected | Covered |

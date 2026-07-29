@@ -912,6 +912,86 @@ begin
   then
     raise exception 'Publication profile RLS policies are incomplete';
   end if;
+
+  if to_regclass('public.salon_spreadsheet_imports') is null
+    or not exists (
+      select 1
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='salon_spreadsheet_imports'
+        and relation.relrowsecurity
+    )
+    or not exists (
+      select 1
+      from pg_policies
+      where schemaname='public'
+        and tablename='salon_spreadsheet_imports'
+        and policyname='salon_spreadsheet_imports_owner_read'
+        and qual like '%owns_salon%'
+        and qual like '%is_admin%'
+    )
+  then
+    raise exception 'Salon spreadsheet import audit RLS is incomplete';
+  end if;
+
+  if to_regprocedure(
+      'public.import_salon_services_spreadsheet(uuid,uuid,text,jsonb)'
+    ) is null
+    or to_regprocedure(
+      'public.import_salon_products_spreadsheet(uuid,uuid,text,jsonb)'
+    ) is null
+    or has_function_privilege(
+      'anon',
+      'public.import_salon_services_spreadsheet(uuid,uuid,text,jsonb)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.import_salon_services_spreadsheet(uuid,uuid,text,jsonb)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'anon',
+      'public.import_salon_products_spreadsheet(uuid,uuid,text,jsonb)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.import_salon_products_spreadsheet(uuid,uuid,text,jsonb)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.import_salon_services_spreadsheet(uuid,uuid,text,jsonb)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.import_salon_products_spreadsheet(uuid,uuid,text,jsonb)',
+      'EXECUTE'
+    )
+    or position(
+      'pg_advisory_xact_lock'
+      in pg_get_functiondef(
+        'public.import_salon_services_spreadsheet(uuid,uuid,text,jsonb)'::regprocedure
+      )
+    ) = 0
+    or position(
+      'product.salon_id = p_salon_id'
+      in pg_get_functiondef(
+        'public.import_salon_products_spreadsheet(uuid,uuid,text,jsonb)'::regprocedure
+      )
+    ) = 0
+    or position(
+      'style.salon_id = p_salon_id'
+      in pg_get_functiondef(
+        'public.import_salon_services_spreadsheet(uuid,uuid,text,jsonb)'::regprocedure
+      )
+    ) = 0
+  then
+    raise exception 'Salon spreadsheet import function isolation or grants are unsafe';
+  end if;
 end
 $$;
 
