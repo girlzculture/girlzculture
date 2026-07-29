@@ -630,9 +630,11 @@ export async function verifyPreparedMediaObjects(
         "The prepared derivative extension does not match its generated format.",
       );
     }
+        const uploadBytes = Uint8Array.from(rendition.buffer);
+
     const { error: uploadError } = await admin.storage
       .from(target.bucket)
-      .upload(target.path, rendition.buffer, {
+      .upload(target.path, uploadBytes, {
         contentType: rendition.mimeType,
         cacheControl: "31536000",
         upsert: true,
