@@ -9,7 +9,6 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 import NumericInput from "@/components/forms/NumericInput";
-import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
