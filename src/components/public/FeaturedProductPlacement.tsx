@@ -164,6 +164,7 @@ export default async function FeaturedProductPlacement({
                       src={image}
                       fallbackSrc="/images/braids-knotless.jpg"
                       alt={String(product.name)}
+                      rendition="thumbnail"
                       className="h-full w-full object-cover transition duration-300 hover:scale-[1.025]"
                     />
                     <span className="absolute left-3 top-3 rounded-full bg-ink/90 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.12em] text-white">

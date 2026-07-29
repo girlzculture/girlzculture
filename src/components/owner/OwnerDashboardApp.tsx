@@ -77,6 +77,7 @@ import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
 import SalonProductOrders from "@/components/owner/SalonProductOrders";
 import MobileRecordEditor from "@/components/owner/MobileRecordEditor";
+import { readApiResponse } from "@/lib/apiResponseClient";
 import {
   bookingTransaction,
   financeCsv,
@@ -422,7 +423,10 @@ export default function OwnerDashboardApp({
         },
         body: JSON.stringify(safePatch),
       });
-      const body = (await response.json()) as {
+      const body = (await readApiResponse(
+        response,
+        "We couldn't save this salon change.",
+      )) as {
         salon?: Salon;
         error?: string;
         verified?: boolean;
@@ -504,7 +508,10 @@ export default function OwnerDashboardApp({
         },
         body: JSON.stringify({ table, id, values }),
       });
-      const body = (await response.json()) as {
+      const body = (await readApiResponse(
+        response,
+        "We couldn't save this salon record.",
+      )) as {
         record?: Row;
         error?: string;
         verified?: boolean;
@@ -1994,6 +2001,7 @@ function MyPage({ c }: { c: Ctx }) {
           <div className="mt-4">
             <ImageUpload
               bucket="salon-photos"
+              preset="cover"
               folder={`salons/${c.salon.id}`}
               label="Cover Photo (Required)"
               value={cover}
@@ -2016,6 +2024,7 @@ function MyPage({ c }: { c: Ctx }) {
           <div className="mt-5">
             <ImageUpload
               bucket="salon-photos"
+              preset="gallery"
               multiple
               maxFiles={12}
               folder={`salons/${c.salon.id}/gallery`}
@@ -2068,6 +2077,7 @@ function SalonLogoEditor({ c }: { c: Ctx }) {
           <div className="mt-4 max-w-xl">
             <ImageUpload
               bucket="salon-photos"
+              preset="logo"
               folder={`salons/${c.salon.id}/logo`}
               label="Salon logo"
               value={logo}
@@ -2130,6 +2140,7 @@ function Photos({ c }: { c: Ctx }) {
         <Panel>
           <ImageUpload
             bucket="salon-photos"
+            preset="cover"
             folder={`salons/${c.salon.id}`}
             label="Cover Photo"
             value={cover}
@@ -2152,6 +2163,7 @@ function Photos({ c }: { c: Ctx }) {
         <Panel>
           <ImageUpload
             bucket="salon-photos"
+            preset="gallery"
             multiple
             maxFiles={16}
             folder={`salons/${c.salon.id}/gallery`}
@@ -2477,6 +2489,7 @@ function Stylists({ c }: { c: Ctx }) {
           <div>
             <ImageUpload
               bucket="stylist-photos"
+              preset="avatar"
               folder={`stylists/${active?.id || "new"}`}
               label="Profile Photo"
               value={avatar}
@@ -2516,6 +2529,7 @@ function Stylists({ c }: { c: Ctx }) {
           </div>
           <ImageUpload
             bucket="stylist-photos"
+            preset="gallery"
             multiple
             maxFiles={10}
             folder={`stylists/${active?.id || "new"}/portfolio`}
@@ -2711,6 +2725,7 @@ function TruthfulProducts({ c }: { c: Ctx }) {
           >
             <ImageUpload
               bucket="salon-photos"
+              preset="product"
               multiple
               maxFiles={12}
               folder={`salons/${c.salon.id}/products`}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
+import { responsiveMediaSources } from "@/lib/responsiveMedia";
 
 export default function SafeImage({
   src,
@@ -11,6 +12,7 @@ export default function SafeImage({
   priority = false,
   style,
   draggable,
+  rendition = "responsive",
 }: {
   src?: string | null;
   fallbackSrc: string;
@@ -19,12 +21,23 @@ export default function SafeImage({
   priority?: boolean;
   style?: CSSProperties;
   draggable?: boolean;
+  rendition?: "responsive" | "thumbnail";
 }) {
   const desiredSrc = src || fallbackSrc;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const currentSrc = failedSrc === desiredSrc ? fallbackSrc : desiredSrc;
+  const [failedThumbnailSrc, setFailedThumbnailSrc] = useState<string | null>(
+    null,
+  );
+  const baseSrc = failedSrc === desiredSrc ? fallbackSrc : desiredSrc;
+  const responsiveSources = responsiveMediaSources(baseSrc);
+  const useThumbnail =
+    rendition === "thumbnail" &&
+    Boolean(responsiveSources) &&
+    failedThumbnailSrc !== baseSrc;
+  const currentSrc =
+    useThumbnail && responsiveSources ? responsiveSources.thumbnail : baseSrc;
 
-  return (
+  const image = (
     // Dynamic salon uploads may come from more than one approved storage host.
     // A native image lets us guarantee a local visual fallback if an upload is unavailable.
     // eslint-disable-next-line @next/next/no-img-element
@@ -34,11 +47,31 @@ export default function SafeImage({
       loading={priority ? "eager" : "lazy"}
       decoding="async"
       onError={() => {
-        if (currentSrc !== fallbackSrc) setFailedSrc(desiredSrc);
+        if (useThumbnail) {
+          setFailedThumbnailSrc(baseSrc);
+        } else if (baseSrc !== fallbackSrc) {
+          setFailedSrc(desiredSrc);
+        }
       }}
       className={className}
       style={style}
       draggable={draggable}
     />
+  );
+
+  if (!responsiveSources || rendition === "thumbnail") return image;
+
+  return (
+    <picture className="contents">
+      <source
+        media="(max-width: 767px)"
+        srcSet={responsiveSources.mobile}
+      />
+      <source
+        media="(min-width: 768px) and (max-width: 1199px)"
+        srcSet={responsiveSources.tablet}
+      />
+      {image}
+    </picture>
   );
 }

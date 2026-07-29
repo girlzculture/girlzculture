@@ -9,6 +9,7 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 import NumericInput from "@/components/forms/NumericInput";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
@@ -57,8 +58,8 @@ export default function AdminContentManager({
   async function loadContent(selectFirst = true) {
     try {
       const response = await fetch("/api/admin/content", { headers: await authHeaders(), cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to load content");
+      const body = await readApiResponse(response, "Unable to load content.");
+      if (!response.ok || body.error) throw new Error(body.error || "Unable to load content");
       const loadedPages = asRows(body.pages);
       const loadedPosts = asRows(body.posts);
       const loadedStyles = asRows(body.masterStyles);
@@ -94,8 +95,8 @@ export default function AdminContentManager({
       try {
         const headers = await authHeaders();
         const response = await fetch("/api/admin/content", { headers, cache: "no-store" });
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || "Unable to load content");
+        const body = await readApiResponse(response, "Unable to load content.");
+        if (!response.ok || body.error) throw new Error(body.error || "Unable to load content");
         if (!active) return;
         const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedGroups = asRows(body.serviceGroups); const loadedAddons = asRows(body.serviceAddons); const loadedTargets = asRows(body.linkTargets);
         setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setServiceGroups(loadedGroups); setServiceAddons(loadedAddons); setLinkTargets(loadedTargets);
@@ -131,9 +132,12 @@ export default function AdminContentManager({
     setSaving(true); setNotice("");
     try {
       const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "page", payload }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Page save failed");
-      const data = body.data;
+      const body = await readApiResponse(response, "Page save failed.");
+      if (!response.ok || body.error) throw new Error(body.error || "Page save failed");
+      const data = body.data as Row | undefined;
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        throw new Error(body.error || "Page save failed.");
+      }
       const reloaded = await loadContent(false);
       const persisted = reloaded.pages.find((row) => row.slug === data.slug);
       if (!persisted || persisted.updated_at !== data.updated_at) throw new Error("The page was sent but could not be verified after saving.");
@@ -159,9 +163,12 @@ export default function AdminContentManager({
     setSaving(true); setNotice("");
     try {
       const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "post", payload }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Post save failed");
-      const data = body.data;
+      const body = await readApiResponse(response, "Post save failed.");
+      if (!response.ok || body.error) throw new Error(body.error || "Post save failed");
+      const data = body.data as Row | undefined;
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        throw new Error(body.error || "Post save failed.");
+      }
       const reloaded = await loadContent(false);
       const persisted = reloaded.posts.find((row) => row.id === data.id);
       if (!persisted || persisted.updated_at !== data.updated_at) throw new Error("The post was sent but could not be verified after saving.");
@@ -177,8 +184,8 @@ export default function AdminContentManager({
     if (!post?.id || !confirm("Delete this blog post?")) return;
     try {
       const response = await fetch("/api/admin/content", { method: "DELETE", headers: await authHeaders(), body: JSON.stringify({ id: post.id }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Delete failed");
+      const body = await readApiResponse(response, "Delete failed.");
+      if (!response.ok || body.error) throw new Error(body.error || "Delete failed");
       setPosts(rows => rows.filter(row => row.id !== post.id));
       setPost(null);
       setNotice("Blog post deleted.");
@@ -670,8 +677,11 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
 
   async function inspectDependency(recordId: string) {
     const response = await fetch(`/api/admin/records?resource=${encodeURIComponent(kind)}&id=${encodeURIComponent(recordId)}`, { headers: await authHeaders(), cache: "no-store" });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || "Unable to inspect dependencies.");
+    const body = await readApiResponse(
+      response,
+      "Unable to inspect dependencies.",
+    );
+    if (!response.ok || body.error) throw new Error(body.error || "Unable to inspect dependencies.");
     return body as Row;
   }
 
@@ -725,10 +735,14 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
     setSaving(true); setNotice("");
     try {
       const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: kind, payload }) });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Catalog save failed");
+      const body = await readApiResponse(response, "Catalog save failed.");
+      if (!response.ok || body.error) throw new Error(body.error || "Catalog save failed");
       const loaded = await reload(false);
-      const refreshed = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind].find((item) => item.id === body.data.id);
+      const savedData = body.data as Row | undefined;
+      if (!savedData || typeof savedData !== "object" || Array.isArray(savedData)) {
+        throw new Error(body.error || "Catalog save failed.");
+      }
+      const refreshed = ({ service_category: loaded.serviceCategories, service_group: loaded.serviceGroups, master_style: loaded.masterStyles, service_addon: loaded.serviceAddons } as Record<CatalogKind, Row[]>)[kind].find((item) => item.id === savedData.id);
       if (!refreshed) throw new Error("The saved catalog item could not be verified after reloading.");
       setSelected(refreshed);
       if (kind === "master_style") setInitialService(refreshed);
@@ -761,8 +775,11 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
       for (const target of targets) {
         try {
           const response = await fetch("/api/admin/records", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ resource: kind, id: target.id, action, reason: reason.trim(), reassign_to: replacementId || null, confirmation: target.name }) });
-          const body = await response.json();
-          if (!response.ok) throw new Error(body.error || `${action} failed`);
+          const body = await readApiResponse(
+            response,
+            `${action} failed.`,
+          );
+          if (!response.ok || body.error) throw new Error(body.error || `${action} failed`);
           results.push({ id: String(target.id), name: String(target.name), ok: true, message: "Completed" });
         } catch (error) {
           const message = error instanceof Error ? error.message : `${action} failed`;
@@ -870,8 +887,8 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
       <Field label="Eyebrow" name="eyebrow" value={page.eyebrow} />
       <div className="lg:col-span-2"><Field required label="Hero heading" name="hero_title" value={page.hero_title} /></div>
       <Area label="Hero description" name="hero_subtitle" value={page.hero_subtitle} rows={3} />
-      <ImageUpload bucket="content-media" value={page.hero_image_url} onChange={value => setPage(row => ({ ...row, hero_image_url: value }))} label="Hero image" folder={page.slug} />
-      <ImageUpload bucket="content-media" value={page.background_image_url} onChange={value => setPage(row => ({ ...row, background_image_url: value }))} label="Background image" folder={page.slug} />
+      <ImageUpload bucket="content-media" preset="content" value={page.hero_image_url} onChange={value => setPage(row => ({ ...row, hero_image_url: value }))} label="Hero image" folder={page.slug} />
+      <ImageUpload bucket="content-media" preset="content" value={page.background_image_url} onChange={value => setPage(row => ({ ...row, background_image_url: value }))} label="Background image" folder={page.slug} />
     </div>
     <HeroImageFraming imageUrl={page.hero_image_url} positionX={Number(page.hero_position_x ?? 50)} positionY={Number(page.hero_position_y ?? 50)} zoom={Number(page.hero_zoom ?? 1)} onChange={({ positionX, positionY, zoom }) => setPage(row => ({ ...row, hero_position_x: positionX, hero_position_y: positionY, hero_zoom: zoom }))} />
     {slots.length ? <>
@@ -928,7 +945,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
     {cards.length ? <div className="mt-4 grid gap-4 xl:grid-cols-2">{cards.map((card, cardIndex) => <article key={card.id || cardIndex} className="rounded-xl border border-plum/10 bg-white p-4">
       <div className="flex items-center justify-between gap-3"><b className="font-serif text-lg text-plum">Card {cardIndex + 1}</b><div className="flex gap-1"><button type="button" aria-label="Move card up" onClick={() => moveCard(cardIndex, -1)} disabled={cardIndex === 0} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label="Move card down" onClick={() => moveCard(cardIndex, 1)} disabled={cardIndex === cards.length - 1} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div></div>
       <label className="mt-3 block text-xs font-bold">Card source<select value={card.association_type === "campaign" ? "campaign" : type === "promo_rail" && card.content_type === "video" ? "image" : card.content_type || "image"} onChange={(event) => { const value=event.target.value;updateCard(cardIndex,{...card,content_type:value==="campaign"?"image":value,association_type:value==="campaign"?"campaign":value==="salon"?"salon":"",salon_id:value==="salon"?card.salon_id||"":"",campaign_id:value==="campaign"?card.campaign_id||"":""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="image">Uploaded image or GIF</option>{type !== "promo_rail" ? <option value="video">Video</option> : null}<option value="link">Image with another link</option><option value="salon">Specific salon profile</option>{type === "promo_rail" ? <option value="campaign">Paid featured campaign</option> : null}</select></label>
-      {card.content_type === "salon" ? <label className="mt-3 block text-xs font-bold">Salon to feature<select required value={card.salon_id || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Salon" && item.id === event.target.value); updateCard(cardIndex, { ...card, salon_id: target?.id || "", title: target?.label || "", body: target?.body || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a live salon</option>{linkTargets.filter((target) => target.type === "Salon").map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">The card uses this salon’s name, cover photo, location, and public profile link.</small></label> : card.content_type === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://…/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : <ImageUpload bucket="content-media" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label={card.content_type === "link" ? "Link card image" : "Card image"} folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
+      {card.content_type === "salon" ? <label className="mt-3 block text-xs font-bold">Salon to feature<select required value={card.salon_id || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Salon" && item.id === event.target.value); updateCard(cardIndex, { ...card, salon_id: target?.id || "", title: target?.label || "", body: target?.body || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a live salon</option>{linkTargets.filter((target) => target.type === "Salon").map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">The card uses this salon’s name, cover photo, location, and public profile link.</small></label> : card.content_type === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://…/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : <ImageUpload bucket="content-media" preset="content" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label={card.content_type === "link" ? "Link card image" : "Card image"} folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
       {card.association_type === "campaign" ? <label className="mt-3 block text-xs font-bold">Campaign to feature<select required value={card.campaign_id || ""} onChange={(event) => { const target=linkTargets.find((item)=>item.type==="Campaign"&&item.id===event.target.value);updateCard(cardIndex,{...card,campaign_id:target?.id||"",salon_id:target?.salon_id||"",title:card.title||target?.label||"",body:card.body||target?.body||"",media_url:card.media_url||target?.media_url||"",href:target?.href||""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose an eligible paid campaign</option>{linkTargets.filter((target)=>target.type==="Campaign").map((target)=><option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">Only paid campaigns inside a valid schedule are selectable. Public eligibility is checked again on every request.</small></label> : null}
       <label className="mt-3 block text-xs font-bold">Card title<input value={card.title || ""} onChange={(event) => updateCard(cardIndex, { ...card, title: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
       <label className="mt-3 block text-xs font-bold">Card text<textarea rows={3} value={card.body || ""} onChange={(event) => updateCard(cardIndex, { ...card, body: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
@@ -947,7 +964,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
 function ContentPagePreview({page,mode}:{page:Row;mode:"desktop"|"mobile"}){const sections=asRows(page.sections).filter(section=>section.is_visible!==false);return <section className="mb-6 rounded-xl border border-dashed border-magenta/30 bg-cream p-4"><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Eye size={13}/>Unpublished draft preview · {mode}</p><div className={`mx-auto mt-3 overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${mode==="mobile"?"max-w-[360px]":"max-w-full"}`}><div className="relative min-h-36 bg-[linear-gradient(120deg,#0D1114,#0083A6)] p-6 text-white"><span className="text-[9px] font-bold uppercase tracking-[.16em] text-amber">{String(page.eyebrow||page.title||"Girlz Culture")}</span><h3 className="mt-2 font-serif text-3xl leading-none">{String(page.hero_title||page.title||"Untitled page")}</h3><p className="mt-3 max-w-xl text-xs leading-5 text-white/75">{String(page.hero_subtitle||"")}</p></div><div className="space-y-4 p-4">{sections.map((section,index)=><div key={section.id||index} className="rounded-lg bg-blush/25 p-4"><h4 className="font-serif text-xl text-plum">{String(section.title||`Section ${index+1}`)}</h4>{section.body?<p className="mt-2 text-[10px] leading-5 text-ink/60">{String(section.body).slice(0,260)}</p>:null}{asRows(section.cards).length?<div className={`mt-3 grid gap-2 ${mode==="mobile"?"grid-cols-2":"grid-cols-4"}`}>{asRows(section.cards).slice(0,mode==="mobile"?4:8).map((card,cardIndex)=><div key={card.id||cardIndex} className="min-h-20 rounded-md border bg-white p-2"><b className="text-[9px] text-plum">{String(card.title||`Card ${cardIndex+1}`)}</b><p className="mt-1 line-clamp-2 text-[8px] text-ink/50">{String(card.body||"")}</p></div>)}</div>:null}</div>)}{!sections.length?<p className="rounded-lg border border-dashed p-6 text-center text-xs text-ink/45">No visible sections in this draft.</p>:null}</div></div></section>}
 
 function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void }) {
-  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
+  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" preset="content" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
 }
 
 function Field({ label, name, value, required = false, type = "text", onChange }: { label: string; name: string; value?: string | number; required?: boolean; type?: string; onChange?: (value: string) => void }) { return <label className="block text-xs font-bold">{label}<input required={required} type={type} name={name} defaultValue={value ?? ""} onChange={onChange ? (event)=>onChange(event.target.value) : undefined} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>; }

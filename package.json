@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:browser": "playwright test",
+    "test:media-browser": "playwright test tests/browser/media-upload-regression.spec.ts --project=chromium",
     "verify:billing": "node scripts/verify-subscription-finance.mjs",
     "verify:production-foundation": "node scripts/verify-service-worker-csp.mjs",
     "verify:location": "node scripts/verify-location-foundation.mjs",
@@ -23,7 +24,9 @@
     "verify:admin-security": "node scripts/verify-admin-identity-security.mjs",
     "verify:lifecycle": "node scripts/verify-salon-lifecycle-engine.mjs",
     "verify:search-location": "node scripts/verify-search-location.mjs",
-    "verify:media": "node scripts/verify-unified-media.mjs",
+    "verify:media": "node scripts/verify-unified-media.mjs && node scripts/verify-media-pixels.mjs",
+    "verify:media-runtime": "node scripts/verify-media-runtime.mjs",
+    "verify:media-pixels": "node scripts/verify-media-pixels.mjs",
     "verify:i18n": "node scripts/verify-localization-engine.mjs",
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
     "verify:design-system": "node scripts/verify-launch-design-system.mjs",
@@ -78,7 +81,8 @@
     "next": "16.2.11",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

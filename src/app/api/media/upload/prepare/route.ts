@@ -22,10 +22,7 @@ async function POSTHandler(request: Request) {
       body = (await request.json()) as MediaPrepareRequest;
     } catch {
       return Response.json(
-        {
-          error: "Send a valid JSON image-upload request.",
-          request_id: requestId,
-        },
+        { error: "Send a valid JSON image-upload request." },
         {
           status: 400,
           headers: { "Cache-Control": "private, no-store" },
@@ -46,10 +43,7 @@ async function POSTHandler(request: Request) {
     const expected = expectedMediaRequestFailure(error);
     if (expected) {
       return Response.json(
-        {
-          error: expected.message,
-          request_id: requestId,
-        },
+        { error: expected.message },
         {
           status: expected.status,
           headers: { "Cache-Control": "private, no-store" },

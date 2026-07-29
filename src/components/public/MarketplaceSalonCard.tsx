@@ -25,7 +25,7 @@ export default function MarketplaceSalonCard({ salon, variant = "grid", selected
   return (
     <article id={`salon-result-${salon.id}`} onMouseEnter={() => onFocus?.(salon.id)} onFocus={() => onFocus?.(salon.id)} className={`relative overflow-hidden rounded-[14px] border bg-white shadow-[0_5px_20px_rgba(13,17,20,.06)] transition ${selected ? "border-magenta ring-2 ring-magenta/20" : "border-plum/10"} ${isList ? "grid min-w-0 grid-cols-[118px_1fr] sm:grid-cols-[220px_1fr]" : isCompact ? "w-[78vw] max-w-[330px] shrink-0 snap-start sm:w-[310px] lg:w-[320px]" : "min-w-[76vw] snap-start sm:min-w-0"}`}>
       <Link href={profileHref} aria-label={`View ${salon.name}`} className={`relative block overflow-hidden bg-blush ${isList ? "min-h-[168px]" : "aspect-[16/10]"}`}>
-        <SafeImage src={salon.cover_photo_url} fallbackSrc="/images/salon-warm.jpg" alt={`${salon.name} salon`} className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"/>
+        <SafeImage src={salon.cover_photo_url} fallbackSrc="/images/salon-warm.jpg" alt={`${salon.name} salon`} rendition="thumbnail" className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"/>
         {verified ? <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-plum/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-white"><ShieldCheck size={11}/>Verified</span> : null}
       </Link>
       <button type="button" aria-label={`Save ${salon.name} to favorites`} className="absolute right-2 top-2 z-10 grid min-h-10 min-w-10 place-items-center rounded-full bg-white/90 text-plum shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><Heart size={17}/></button>

@@ -51,7 +51,7 @@ export default function SalonStylists({ stylists, salonSlug }: { stylists: Styli
             <div className="grid grid-cols-[116px_1fr] gap-4 p-4">
               <div className="relative h-[138px] overflow-hidden rounded-[12px] bg-blush/60">
                 {stylist.avatar_url ? (
-                  <SafeImage src={stylist.avatar_url} fallbackSrc={stylist.avatar_url} alt={stylist.name || "Stylist"} className="h-full w-full object-cover" />
+                  <SafeImage src={stylist.avatar_url} fallbackSrc={stylist.avatar_url} alt={stylist.name || "Stylist"} rendition="thumbnail" className="h-full w-full object-cover" />
                 ) : (
                   <span className="grid h-full place-items-center text-plum/45"><UserRound size={46} strokeWidth={1.3} aria-hidden="true" /></span>
                 )}
@@ -72,7 +72,7 @@ export default function SalonStylists({ stylists, salonSlug }: { stylists: Styli
               <div className="grid grid-cols-4 gap-1.5 border-t border-plum/10 p-3">
                 {portfolio.slice(0, 4).map((photo, index) => (
                   <div key={`${photo}-${index}`} className="relative h-14 overflow-hidden rounded-[7px] bg-blush">
-                    <SafeImage src={photo} fallbackSrc={photo} alt={`${stylist.name || "Stylist"} work ${index + 1}`} className="h-full w-full object-cover" />
+                    <SafeImage src={photo} fallbackSrc={photo} alt={`${stylist.name || "Stylist"} work ${index + 1}`} rendition="thumbnail" className="h-full w-full object-cover" />
                   </div>
                 ))}
               </div>

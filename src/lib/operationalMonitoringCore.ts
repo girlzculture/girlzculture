@@ -33,7 +33,7 @@ const UNSAFE_ERROR_PATTERN =
   /\b(row[- ]level security|permission denied for|duplicate key|violates .* constraint|pgrst\d*|sqlstate|(?:22|23|28|40|42|53|54|55|57|58|XX)[0-9A-Z]{3}|supabase|stripe|openai|twilio|resend|vapid|service[_ -]?role|relation .* does not exist|column .* does not exist|jwt|fetch failed|econn|enotfound|socket hang up|provider payload|storage object|stack trace|authorization bearer|whsec_|sk_(?:live|test)_|pk_(?:live|test)_|api[-_ ]?key|card number|cvc)\b/i;
 
 const SAFE_EXPECTED_PATTERN =
-  /^(please |choose |enter |select |unable to submit this form|too many requests|not found|another administrator changed|this .* (?:is|required|must|cannot|belongs|has)|[^.!]{1,100}\b(?:is required|must|cannot|not found)\b|no .* found|invalid (?:request|code|signature)|booking is no longer|the appointment|you do not have permission)/i;
+  /^(please |choose |enter |select |send a valid |upload (?:a|an|one|the|supported)|save (?:this|the)|only |unable to submit this form|too many requests|not found|another administrator changed|(?:this|the) .* (?:is|required|must|cannot|belongs|has)|[^.!]{1,100}\b(?:is required|must|cannot|not found)\b|no .* found|invalid (?:request|code|signature)|booking is no longer|the appointment|you do not have permission)/i;
 
 export function isUnsafeOperationalMessage(value: unknown) {
   const message = String(value || "").slice(0, 2_000);
