@@ -77,6 +77,7 @@ import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
 import SalonProductOrders from "@/components/owner/SalonProductOrders";
 import MobileRecordEditor from "@/components/owner/MobileRecordEditor";
+import SalonSpreadsheetPanel from "@/components/owner/SalonSpreadsheetPanel";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import {
   bookingTransaction,
@@ -2635,6 +2636,19 @@ function TruthfulProducts({ c }: { c: Ctx }) {
             Add Product
           </button>
         }
+      />
+      <SalonSpreadsheetPanel
+        kind="products"
+        onImported={(records) => {
+          c.setProducts(records as Row[]);
+          if (
+            c.selectedProduct &&
+            !records.some((record) => record.id === c.selectedProduct)
+          ) {
+            c.setSelectedProduct(null);
+            setMobileEditorOpen(false);
+          }
+        }}
       />
       <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
         <Info size={16} className="shrink-0" aria-hidden="true" />
