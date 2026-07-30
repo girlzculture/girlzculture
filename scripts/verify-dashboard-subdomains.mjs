@@ -118,10 +118,23 @@ assert.ok(
   buildLegacyAuthStorageKeys("https://project-reference.supabase.co")
     .customer.includes("sb-project-reference-auth-token"),
 );
-assert.match(boundary, /ADMIN_IDLE_TIMEOUT/);
-assert.match(boundary, /ADMIN_ABSOLUTE_SESSION/);
+assert.doesNotMatch(
+  boundary,
+  /ADMIN_IDLE_TIMEOUT|ADMIN_ABSOLUTE_SESSION|expireAdminSession/,
+  "Dashboard sessions must not be ended by an idle or absolute client timer.",
+);
+assert.doesNotMatch(
+  boundary,
+  /setInterval/,
+  "The role session boundary must not run an automatic logout interval.",
+);
+assert.match(
+  boundary,
+  /auth\.signOut\(\{ scope: "local" \}\)/,
+  "The explicit role-scoped Logout control must remain available.",
+);
 assert.match(proxy, /X-Robots-Tag/);
 
 console.log(
-  "Dashboard subdomain verification passed: executable host redirects/rewrites, public salon preservation, role-host denial, scoped sessions, company-domain admin identity, MFA, rate/audit hooks, expiry controls, and noindex behavior are covered.",
+  "Dashboard subdomain verification passed: executable host redirects/rewrites, public salon preservation, role-host denial, persistent scoped sessions, explicit logout, company-domain admin identity, MFA, rate/audit hooks, and noindex behavior are covered.",
 );
