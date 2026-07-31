@@ -51,6 +51,11 @@ runPsql(["--file", prerequisites], "Supabase platform prerequisite setup");
 const migrations = readdirSync(migrationDirectory)
   .filter((file) => /^\d{14}_[a-z0-9_]+\.sql$/.test(file))
   .sort();
+const expectedMigration = migrations.at(-1)?.slice(0, 14);
+if (!expectedMigration) {
+  console.error("No ordered database migrations were found.");
+  process.exit(1);
+}
 
 for (const [index, migration] of migrations.entries()) {
   process.stdout.write(`[${index + 1}/${migrations.length}] ${migration}\n`);
@@ -174,4 +179,19 @@ process.stdout.write(
 
 const assertionOutput = runPsql(["--file", assertions], "Post-migration assertions");
 if (assertionOutput) process.stdout.write(`${assertionOutput}\n`);
+const deployedMigration = runPsql(
+  [
+    "--tuples-only",
+    "--no-align",
+    "--command",
+    "select coalesce(published_value #>> '{}','') from public.engine_settings where setting_key='integrations.expected_migration';",
+  ],
+  "Engine migration marker assertion",
+);
+if (deployedMigration !== expectedMigration) {
+  console.error(
+    `Engine expected migration ${deployedMigration || "<missing>"} does not match repository head ${expectedMigration}.`,
+  );
+  process.exit(1);
+}
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);
