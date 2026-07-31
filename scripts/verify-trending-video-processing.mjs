@@ -96,6 +96,8 @@ for (const control of [
   /assertJobActive/,
   /VIDEO_PROCESSING_CANCELLED/,
   /source_cleanup_status:\s*"Scheduled"/,
+  /eager_async:\s*"true"/,
+  /state:\s*"pending"/,
 ])
   assert.match(server, control);
 const transcoderRuntime = fs.readFileSync(
@@ -125,7 +127,9 @@ assert.match(manager, /\/api\/admin\/media\/video-jobs/);
 assert.match(manager, /action:\s*"process"/);
 assert.match(manager, /cancelActiveUpload/);
 assert.match(manager, /video\/quicktime/);
-assert.match(manager, /setInterval/);
+assert.match(manager, /pollVideoJobUntilReady/);
+assert.match(manager, /recover=1/);
+assert.match(manager, /maxAttempts:\s*80/);
 assert.match(manager, /Retry upload/);
 assert.match(manager, /Cancel upload/);
 const cleanup = fs.readFileSync("src/app/api/media/cleanup/route.ts", "utf8");

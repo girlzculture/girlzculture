@@ -127,7 +127,7 @@ function HomepageRow({ section,promotionCards,nearbyCardCount,featuredCardCount,
 
 function HomepageSearch() {
   return (
-    <section data-home-search aria-label="Search Girlz Culture" className="pb-3 pt-1 sm:pb-4 sm:pt-2">
+    <section data-home-search aria-label="Search Girlz Culture" className="gc-desktop-home-search pb-3 pt-1 sm:pb-4 sm:pt-2">
       <SearchComposer />
     </section>
   );

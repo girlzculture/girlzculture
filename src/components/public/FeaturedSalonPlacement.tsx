@@ -132,7 +132,7 @@ export default function FeaturedSalonPlacement({
               {title}
             </h2>
             <span className="text-[10px] font-normal text-ink/55">
-              Sponsored
+              Featured
             </span>
           </div>
           {description ? (
@@ -151,9 +151,9 @@ export default function FeaturedSalonPlacement({
             Local featured salons need a search area
           </h3>
           <p className="mt-1 text-xs leading-5 text-ink/65">
-            Choose a city or ZIP in Find Salons. We only show eligible paid
+            Choose a city or ZIP in Find Salons. We only show eligible featured
             placements within their real campaign radius. We will not fill this row with distant
-            or unpaid salons.
+            or ineligible salons.
           </p>
           <Link
             href="/salons"

@@ -25,7 +25,7 @@ export type ServerMediaSource = {
 
 export type ServerMediaRendition = {
   buffer: Buffer;
-  mimeType: "image/jpeg" | "image/png";
+  mimeType: "image/jpeg" | "image/png" | "image/gif";
   width: number;
   height: number;
   checksum: string;
@@ -119,6 +119,49 @@ export async function createCanonicalMediaRendition(input: {
   maximumBytes: number;
 }): Promise<ServerMediaRendition> {
   const transform = sanitizeImageTransform(input.transform);
+  if (input.source.mimeType === "image/gif") {
+    const animated = sharp(input.source.buffer, {
+      animated: true,
+      failOn: "error",
+      limitInputPixels: MAX_SOURCE_PIXELS,
+    });
+    const metadata = await animated.metadata();
+    const sourceDimensions = {
+      width: Number(metadata.width || 0),
+      height: Number(metadata.pageHeight || metadata.height || 0),
+    };
+    const rotatedDimensions = transform.rotation % 180
+      ? { width: sourceDimensions.height, height: sourceDimensions.width }
+      : sourceDimensions;
+    const crop = canonicalCropRegion(rotatedDimensions, input.target, transform);
+    const output = await sharp(input.source.buffer, {
+      animated: true,
+      failOn: "error",
+      limitInputPixels: MAX_SOURCE_PIXELS,
+    })
+      .rotate(transform.rotation)
+      .extract(crop)
+      .resize(input.target.width, input.target.height, {
+        fit: "fill",
+        kernel: sharp.kernel.lanczos3,
+      })
+      .gif({ effort: 4, colours: 256 })
+      .toBuffer();
+    if (output.length > input.maximumBytes) {
+      throw new Error("This animated GIF remains too large after responsive resizing. Choose a shorter or more compressed GIF.");
+    }
+    const outputMetadata = await sharp(output, { animated: true }).metadata();
+    if (Number(outputMetadata.width) !== input.target.width || Number(outputMetadata.pageHeight || outputMetadata.height) !== input.target.height) {
+      throw new Error("The responsive animated GIF could not be verified.");
+    }
+    return {
+      buffer: output,
+      mimeType: "image/gif",
+      width: input.target.width,
+      height: input.target.height,
+      checksum: createHash("sha256").update(output).digest("hex"),
+    };
+  }
   const rotated =
     transform.rotation === 0
       ? input.source.normalizedBuffer

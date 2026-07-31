@@ -67,10 +67,10 @@ async function validatePromotionAssociations(
       if (!data) rejectRequest("That salon is not currently eligible for a public promotion.");
     }
     if (card.association_type === "campaign") {
-      if (!card.campaign_id) rejectRequest("Choose an eligible paid campaign.");
+      if (!card.campaign_id) rejectRequest("Choose an eligible featured campaign.");
       const { data: campaign, error } = await admin
         .from("featured_salon_campaigns")
-        .select("id,salon_id,status,starts_at,ends_at,entitlement:marketing_entitlements(status,valid_from,valid_until)")
+        .select("id,salon_id,status,starts_at,ends_at,placement_basis,complimentary_reason,complimentary_approved_by,entitlement:marketing_entitlements(status,valid_from,valid_until)")
         .eq("id", card.campaign_id)
         .maybeSingle();
       if (error) throw error;
@@ -78,8 +78,10 @@ async function validatePromotionAssociations(
       const eligibleCampaign = campaign
         && ["Scheduled", "Active"].includes(String(campaign.status))
         && Date.parse(campaign.ends_at) > Date.now()
-        && ["Paid", "Credited"].includes(String(entitlement?.status || ""));
-      if (!eligibleCampaign) rejectRequest("That campaign is paused, expired, unpaid, or no longer eligible.");
+        && (campaign.placement_basis === "complimentary_admin"
+          ? Boolean(campaign.complimentary_approved_by) && String(campaign.complimentary_reason || "").trim().length >= 5
+          : ["Paid", "Credited"].includes(String(entitlement?.status || "")));
+      if (!eligibleCampaign) rejectRequest("That campaign is paused, expired, or no longer eligible.");
       const { data: visible, error: visibilityError } = await admin.rpc("is_marketplace_visible", { target_salon_id: campaign.salon_id });
       if (visibilityError) throw visibilityError;
       if (!visible) rejectRequest("The campaign salon is not currently eligible for public placement.");
@@ -122,8 +124,8 @@ async function GETHandler(request: Request) {
       admin.from("service_groups").select("*,service_category:service_categories(id,name,slug)").order("sort_order").order("name"),
       admin.from("service_addons").select("*,service_category:service_categories(id,name,slug)").order("sort_order").order("name"),
       admin.from("salons").select("id,name,slug,cover_photo_url,address_city,address_state").eq("status", "Active").eq("is_discoverable", true).not("slug", "is", null).order("name"),
-      admin.from("salon_products").select("id,name,salon:salons(name,slug)").eq("is_visible", true).order("name"),
-      admin.from("featured_salon_campaigns").select("id,status,starts_at,ends_at,salon_id,entitlement:marketing_entitlements(status,valid_from,valid_until),salon:salons(id,name,slug,cover_photo_url,address_city,address_state)").in("status", ["Scheduled", "Active"]).gt("ends_at", new Date().toISOString()).order("starts_at"),
+      admin.from("salon_products").select("id,name,photo_url,images,salon:salons(name,slug)").eq("is_visible", true).order("name"),
+      admin.from("featured_salon_campaigns").select("id,status,starts_at,ends_at,salon_id,placement_basis,complimentary_reason,complimentary_approved_by,entitlement:marketing_entitlements(status,valid_from,valid_until),salon:salons(id,name,slug,cover_photo_url,address_city,address_state)").in("status", ["Scheduled", "Active"]).gt("ends_at", new Date().toISOString()).order("starts_at"),
     ]);
     if (pages.error) throw pages.error;
     if (posts.error) throw posts.error;
@@ -146,13 +148,19 @@ async function GETHandler(request: Request) {
       ...(campaigns.data || []).flatMap((campaign) => {
         const salon = Array.isArray(campaign.salon) ? campaign.salon[0] : campaign.salon;
         const entitlement = Array.isArray(campaign.entitlement) ? campaign.entitlement[0] : campaign.entitlement;
-        if (!salon?.slug || !eligibleSalonIds.has(campaign.salon_id) || !["Paid", "Credited"].includes(String(entitlement?.status || ""))) return [];
+        const validBasis = campaign.placement_basis === "complimentary_admin"
+          ? Boolean(campaign.complimentary_approved_by) && String(campaign.complimentary_reason || "").trim().length >= 5
+          : ["Paid", "Credited"].includes(String(entitlement?.status || ""));
+        if (!salon?.slug || !eligibleSalonIds.has(campaign.salon_id) || !validBasis) return [];
         return [{ id: campaign.id, salon_id: campaign.salon_id, type: "Campaign", label: `${salon.name} · ${campaign.status}`, href: `/salon/${salon.slug}?campaign=${campaign.id}`, media_url: salon.cover_photo_url || "", body: [salon.address_city, salon.address_state].filter(Boolean).join(", ") }];
       }),
       ...(products.data || []).flatMap((product) => {
         const salon = Array.isArray(product.salon) ? product.salon[0] : product.salon;
-        return salon?.slug ? [{ type: "Product", label: `${product.name} â€” ${salon.name}`, href: `/salon/${salon.slug}/product/${product.id}` }] : [];
+        const images = Array.isArray(product.images) ? product.images : [];
+        return salon?.slug ? [{ type: "Product", label: `${product.name} — ${salon.name}`, href: `/salon/${salon.slug}/product/${product.id}`, media_url: product.photo_url || images[0] || "" }] : [];
       }),
+      ...(posts.data || []).filter((post) => post.status === "Published").map((post) => ({ id: post.id, type: "Blog", label: post.title, href: `/blog/${post.slug}`, media_url: post.cover_image_url || "" })),
+      ...(pages.data || []).filter((page) => page.status === "Published" && page.is_enabled !== false).map((page) => ({ id: page.slug, type: "Page", label: page.title, href: page.slug === "home" ? "/" : `/${page.slug}`, media_url: page.hero_image_url || "" })),
     ];
     return Response.json({
       pages: pages.data || [],

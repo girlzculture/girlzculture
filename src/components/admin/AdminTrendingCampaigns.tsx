@@ -224,7 +224,10 @@ export default function AdminTrendingCampaigns() {
     if (!editing && !file) { setNotice("Choose a video to upload."); return; }
     if (file && !needsServerPipeline && (trimStart === "" || trimEnd === "" || Number(trimEnd) - Number(trimStart) <= 0 || Number(trimEnd) - Number(trimStart) > 30.5)) { setNotice("Choose a trim range between 0.1 and 30 seconds."); return; }
     const requestedStatus=String(form.get("status")||"Draft");
-    if (["Scheduled","Active"].includes(requestedStatus) && (!String(form.get("entitlement_source")||"") || !String(form.get("entitlement_reference")||"").trim())) { setNotice("Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign."); return; }
+    const placementBasis=String(form.get("placement_basis")||"paid");
+    const reason=String(form.get("reason")||"").trim();
+    if (["Scheduled","Active"].includes(requestedStatus) && placementBasis === "paid" && (!String(form.get("entitlement_source")||"") || !String(form.get("entitlement_reference")||"").trim())) { setNotice("Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign."); return; }
+    if (placementBasis === "complimentary_admin" && reason.length < 5) { setNotice("Enter an internal reason of at least 5 characters for a complimentary placement."); return; }
     setBusy(true);
     setUploading(true);
     setRetryReady(false);
@@ -282,36 +285,7 @@ export default function AdminTrendingCampaigns() {
           if (!processingJobId)
             throw new Error("The video processing job was not created.");
           setActiveJobId(processingJobId);
-          let polledReadyJob: VideoProcessingJob | null = null;
-          const poller = window.setInterval(() => {
-            void (async () => {
-              const body = await api.request<{
-                jobs?: VideoProcessingJob[];
-              }>(
-                `/api/admin/media/video-jobs?id=${encodeURIComponent(processingJobId)}`,
-                { signal: controller.signal },
-              );
-              const current = body.jobs?.[0];
-              if (current) {
-                if (current.status === "Ready" && current.output_url) {
-                  polledReadyJob = current;
-                }
-                setProgress(
-                  62 + Math.round(Number(current.progress_percent || 0) * 0.2),
-                );
-                setNotice(
-                  current.status === "Transcoding"
-                    ? "Converting video for reliable browser playback…"
-                    : current.status === "Inspecting"
-                      ? "Inspecting video and audio tracks…"
-                      : `Video processing: ${current.status}.`,
-                );
-              }
-            })().catch(() => undefined);
-          }, 1500);
-          let processingBody: { job?: VideoProcessingJob };
-          try {
-            processingBody = await api.request<{
+          const processingBody = await api.request<{
               job?: VideoProcessingJob;
             }>("/api/admin/media/video-jobs", {
               method: "POST",
@@ -322,30 +296,32 @@ export default function AdminTrendingCampaigns() {
               }),
               signal: controller.signal,
             });
-          } catch (processingError) {
-            const recoveredJob =
-              polledReadyJob ||
-              (await pollVideoJobUntilReady({
+          const submittedJob = processingBody.job;
+          const job = submittedJob?.status === "Ready" && submittedJob.output_url
+            ? submittedJob
+            : await pollVideoJobUntilReady({
                 jobId: processingJobId,
                 signal: controller.signal,
-                maxAttempts: 6,
+                maxAttempts: 80,
+                intervalMs: 1_500,
+                onUpdate: (current) => {
+                  setProgress(62 + Math.round(Number(current.progress_percent || 0) * 0.2));
+                  setNotice(
+                    current.status === "Transcoding"
+                      ? "Cloudinary accepted the upload. Creating the browser-safe video and poster…"
+                      : current.status === "Inspecting"
+                        ? "Inspecting video and audio tracks…"
+                        : `Video processing: ${current.status}.`,
+                  );
+                },
                 getJob: async () => {
-                  const body = await api.request<{
-                    jobs?: VideoProcessingJob[];
-                  }>(
+                  const body = await api.request<{ jobs?: VideoProcessingJob[] }>(
                     `/api/admin/media/video-jobs?id=${encodeURIComponent(processingJobId)}&recover=1`,
                     { signal: controller.signal },
                   );
                   return Array.isArray(body.jobs) ? body.jobs[0] || null : null;
                 },
-                stopError: (current) =>
-                  current.status === "Uploaded" ? processingError : null,
-              }));
-            processingBody = { job: recoveredJob };
-          } finally {
-            window.clearInterval(poller);
-          }
-          const job = processingBody.job;
+              });
           if (job?.status !== "Ready" || !job.output_url)
             throw new Error("Video preparation did not finish. Retry the upload.");
           video = {
@@ -380,8 +356,9 @@ export default function AdminTrendingCampaigns() {
         video_processing_job_id: processingJobId || editing?.video_processing_job_id || null,
         description: form.get("description"), status: form.get("status"), starts_at: form.get("starts_at"), ends_at: form.get("ends_at"), timezone: form.get("timezone"),
         radius_miles: form.get("radius"), priority: form.get("priority"), rotation_weight: form.get("weight"), internal_note: form.get("note"),
+        placement_basis: placementBasis,
         entitlement_source: form.get("entitlement_source"), entitlement_reference: form.get("entitlement_reference"), entitlement_amount_minor: form.get("amount") ? Math.round(Number(form.get("amount")) * 100) : null,
-        reason: form.get("reason"),
+        reason,
       };
       await api.request("/api/admin/trending-campaigns", {
         method: "POST",
@@ -450,7 +427,7 @@ export default function AdminTrendingCampaigns() {
   async function status(campaign: Row, next: string) {
     const reason = window.prompt(`Reason for ${next.toLowerCase()}:`)?.trim() || "";
     if (reason.length < 5) { setNotice("Enter a reason of at least 5 characters."); return; }
-    const payload = { action: "save", id: campaign.id, salon_id: campaign.salon_id, video_url: campaign.video_url, storage_path: campaign.storage_path, thumbnail_url: campaign.thumbnail_url, description: campaign.description, duration_seconds: campaign.duration_seconds, file_size_bytes: campaign.file_size_bytes, mime_type: campaign.mime_type, status: next, starts_at: campaign.starts_at, ends_at: campaign.ends_at, timezone: campaign.timezone, radius_miles: campaign.radius_miles, priority: campaign.priority, rotation_weight: campaign.rotation_weight, internal_note: campaign.internal_note, reason };
+    const payload = { action: "save", id: campaign.id, salon_id: campaign.salon_id, video_url: campaign.video_url, storage_path: campaign.storage_path, thumbnail_url: campaign.thumbnail_url, description: campaign.description, duration_seconds: campaign.duration_seconds, file_size_bytes: campaign.file_size_bytes, mime_type: campaign.mime_type, status: next, starts_at: campaign.starts_at, ends_at: campaign.ends_at, timezone: campaign.timezone, radius_miles: campaign.radius_miles, priority: campaign.priority, rotation_weight: campaign.rotation_weight, internal_note: campaign.internal_note, placement_basis: campaign.placement_basis || "paid", reason };
     setBusy(true);
     try {
       const api = await createAuthenticatedApiClient("admin");
@@ -493,6 +470,7 @@ export default function AdminTrendingCampaigns() {
         <Field name="ends_at" label="End" type="datetime-local" defaultValue={editing ? localInput(editing.ends_at) : windowDefaults.end} />
         <Field name="timezone" label="Timezone" defaultValue={editing?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone} />
         <Select name="status" label="Status" defaultValue={editing?.status || "Draft"} options={["Draft", "Scheduled", "Active", "Paused", "Expired"]} />
+        <Select name="placement_basis" label="Placement basis" defaultValue={editing?.placement_basis || "paid"} options={["paid", "complimentary_admin"]} />
         <Field name="radius" label="Radius miles" type="number" min="1" max="250" defaultValue={editing?.radius_miles || 25} />
         <Field name="priority" label="Priority" type="number" min="0" max="100" defaultValue={editing?.priority ?? 50} />
         <Field name="weight" label="Rotation weight" type="number" min="0.1" max="100" step="0.1" defaultValue={editing?.rotation_weight || 1} />
@@ -500,7 +478,7 @@ export default function AdminTrendingCampaigns() {
         <Field name="entitlement_reference" label="Required verified payment / credit reference" placeholder={editing?.entitlement?.external_reference || "pi_, in_, or approved platform-credit reference"} />
         <Field name="amount" label="Amount USD" type="number" min="0" step="0.01" />
         <Field name="note" label="Internal note" defaultValue={editing?.internal_note} />
-        {editing ? <Field name="reason" label="Change reason" required /> : null}
+        <Field name="reason" label="Internal reason (required for complimentary or edits)" />
         <div className="flex items-end gap-2 xl:col-span-2"><button disabled={busy} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Upload size={14} />{busy ? "Saving…" : retryReady ? "Retry upload" : editing ? "Save audited changes" : "Upload draft campaign"}</button>{uploading ? <button type="button" onClick={() => void cancelActiveUpload()} className="min-h-11 rounded-lg border border-red-300 px-4 text-xs font-bold text-red-700">Cancel upload</button> : editing ? <button type="button" onClick={() => { setEditing(null); resetMedia(); }} className="min-h-11 rounded-lg border px-4 text-xs font-bold">Cancel</button> : null}</div>
       </form>
     </section>
@@ -516,5 +494,5 @@ function Field({ name, label, type = "text", defaultValue, placeholder, required
   return <Label text={label}>{numeric ? <NumericInput key={onValue ? undefined : `${name}-${defaultValue}`} name={name} integer={decimals === 0} decimalPlaces={decimals} required={required} defaultValue={onValue ? undefined : defaultValue} value={onValue ? value : undefined} onValueChange={onValue ? (draft) => onValue(draft === "" ? "" : Number(draft)) : undefined} placeholder={placeholder} min={min == null ? undefined : Number(min)} max={max == null ? undefined : Number(max)} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" /> : <input key={`${name}-${defaultValue}`} name={name} type={type} required={required} defaultValue={defaultValue} placeholder={placeholder} className="min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal" />}</Label>;
 }
 
-function Select({ name, label, defaultValue, options }: { name: string; label: string; defaultValue: string; options: string[] }) { return <Label text={label}><select key={`${name}-${defaultValue}`} name={name} defaultValue={defaultValue} className="min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal">{options.map((option) => <option value={option} key={option}>{option || "Attach later"}</option>)}</select></Label>; }
+function Select({ name, label, defaultValue, options }: { name: string; label: string; defaultValue: string; options: string[] }) { return <Label text={label}><select key={`${name}-${defaultValue}`} name={name} defaultValue={defaultValue} className="min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal">{options.map((option) => <option value={option} key={option}>{option === "paid" ? "Paid / verified platform credit" : option === "complimentary_admin" ? "Complimentary admin placement" : option || "Attach later"}</option>)}</select></Label>; }
 function Badge({ value }: { value: string }) { return <span className="rounded-full bg-blush px-2 py-1 text-[9px] font-bold text-plum">{value}</span>; }

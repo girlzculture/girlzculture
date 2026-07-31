@@ -79,7 +79,7 @@ test("homepage promotion rail advances through all eight cards and loops without
   expect(overflow).toBe(false);
 });
 
-test("homepage removes the intro on every viewport and keeps promo then search near the header", async ({
+test("homepage removes the intro and keeps mobile/tablet focused on promotions and salons", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -91,7 +91,11 @@ test("homepage removes the intro on every viewport and keeps promo then search n
   await page.goto("/");
   const intro = page.locator("[data-home-intro]");
   await expect(intro).toHaveCount(0);
-  await expect(page.locator("[data-home-search]")).toBeVisible();
+  if ((page.viewportSize()?.width || 0) < 1_024) {
+    await expect(page.locator("[data-home-search]")).toBeHidden();
+  } else {
+    await expect(page.locator("[data-home-search]")).toBeVisible();
+  }
   await expect(page.getByText("Book with Confidence", { exact: false })).toHaveCount(0);
   await expect(
     page.getByText("Real salons · real prices · real availability", {

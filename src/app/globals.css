@@ -292,6 +292,19 @@ section {
   }
 }
 
+/* The full location/service composer is a desktop discovery tool. Touch
+   phones and tablets use the compact header search so marketplace cards stay
+   above the fold. */
+.gc-desktop-home-search {
+  display: none;
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .gc-desktop-home-search {
+    display: block;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

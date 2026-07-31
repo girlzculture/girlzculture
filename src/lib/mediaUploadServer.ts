@@ -94,6 +94,7 @@ function renditionPathMatchesMimeType(path: string, mimeType: string) {
   if (mimeType === "image/jpeg") {
     return extension === "jpg" || extension === "jpeg";
   }
+  if (mimeType === "image/gif") return extension === "gif";
   return false;
 }
 

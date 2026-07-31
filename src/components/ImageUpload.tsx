@@ -25,6 +25,7 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import {
   getImageUploadError,
   getSourceImageQualityError,
+  getSourceImageQualityWarning,
   IMAGE_UPLOAD_PROFILES,
   inferImagePreset,
   inspectImageFile,
@@ -436,6 +437,7 @@ export default function ImageUpload({
         const dimensions = await inspectImageFile(file);
         const qualityError = getSourceImageQualityError(dimensions);
         if (qualityError) throw new Error(qualityError);
+        const qualityWarning = getSourceImageQualityWarning(dimensions);
         prepared.push({
           id,
           file,
@@ -444,7 +446,7 @@ export default function ImageUpload({
           transforms: freshTransforms(),
           status: "ready",
           progress: 0,
-          stage: "Ready to upload",
+          stage: qualityWarning || "Ready to upload",
           error: "",
           canUpload: true,
           placement,
@@ -469,6 +471,8 @@ export default function ImageUpload({
       }
     }
     updateQueue((rows) => [...rows, ...prepared]);
+    const warning = prepared.find((item) => item.canUpload && item.stage !== "Ready to upload")?.stage;
+    if (warning) setStatus(warning);
     setActiveId(prepared.find((item) => item.canUpload)?.id || prepared[0]?.id);
     setDevice("desktop");
     if (fileList.length > candidates.length) {

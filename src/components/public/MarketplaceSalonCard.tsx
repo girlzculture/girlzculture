@@ -40,7 +40,7 @@ export default function MarketplaceSalonCard({ salon, variant = "grid", selected
           {isList && salon.services.length ? <p data-no-translate="true" className="mt-2 line-clamp-1 text-[10px] text-ink/55">{salon.services.map((service) => service.name).join(" · ")}</p> : null}
         </div>
         <div className={`flex items-end gap-2 ${isList ? "sm:flex-col sm:justify-end" : "mt-3"}`}>
-          <Link href={profileHref} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta">View salon</Link>
+          <Link href={profileHref} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta">View</Link>
           <Link href={bookHref} className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white"><CalendarDays size={13}/>Book</Link>
         </div>
       </div>

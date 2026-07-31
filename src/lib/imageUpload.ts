@@ -29,6 +29,8 @@ export const MAX_IMAGE_UPLOAD_BYTES = 12 * 1024 * 1024;
 export const DEFAULT_MAX_IMAGE_WIDTH = 1920;
 export const MIN_SOURCE_EDGE_PX = 320;
 export const MIN_SOURCE_PIXELS = 160_000;
+export const MIN_SAFE_SOURCE_EDGE_PX = 48;
+export const MIN_SAFE_SOURCE_PIXELS = 4_096;
 export const MAX_SOURCE_PIXELS = 40_000_000;
 
 export function isSupportedImageType(file: File) {
@@ -79,14 +81,28 @@ export function getSourceImageQualityError(dimensions: {
   const width = Math.floor(Number(dimensions.width || 0));
   const height = Math.floor(Number(dimensions.height || 0));
   if (!width || !height) return "This image could not be read.";
-  if (
-    Math.min(width, height) < MIN_SOURCE_EDGE_PX ||
-    width * height < MIN_SOURCE_PIXELS
-  ) {
-    return `This image is ${width} × ${height}px and is too small to crop clearly. Choose an image at least ${MIN_SOURCE_EDGE_PX}px on its shortest side.`;
+  if (Math.min(width, height) < MIN_SAFE_SOURCE_EDGE_PX || width * height < MIN_SAFE_SOURCE_PIXELS) {
+    return `This image is ${width} × ${height}px and does not contain enough image data to process safely.`;
   }
   if (width * height > MAX_SOURCE_PIXELS) {
     return "This image contains too many pixels to process safely. Choose a smaller original.";
+  }
+  return null;
+}
+
+export function getSourceImageQualityWarning(dimensions: {
+  width: number;
+  height: number;
+}) {
+  const width = Math.floor(Number(dimensions.width || 0));
+  const height = Math.floor(Number(dimensions.height || 0));
+  if (
+    width &&
+    height &&
+    (Math.min(width, height) < MIN_SOURCE_EDGE_PX ||
+      width * height < MIN_SOURCE_PIXELS)
+  ) {
+    return `This ${width} × ${height}px image is below the recommended source size. Girlz Culture will enlarge and crop it automatically; review the device previews before uploading.`;
   }
   return null;
 }
