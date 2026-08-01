@@ -58,6 +58,43 @@ async function fixture(width, height, background) {
 
 const processor = await loadActualProcessor();
 
+const animatedGifFixture = Buffer.from(
+  "R0lGODlhkAHhAPAAAACKhgAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACH/C0ltYWdlTWFnaWNrDmdhbW1hPTAuNDU0NTQ1ACwAAAAAkAHhAAAC/4SPqcvtD6OctNqLs968+w+G4kiW5omm6sq27gvH8kzX9o3n+s73/g8MCofEovGITCqXzKbzCY1Kp9Sq9YrNarfcrvcLDovH5LL5jE6r1+y2+w2Py+f0uv2Oz+v3/L7/DxgoOEhYaHiImKi4yNjo+AgZKTlJWWl5iZmpucnZ6fkJGio6SlpqeoqaqrrK2ur6ChsrO0tba3uLm6u7y9vr+wscLDxMXGx8jJysvMzc7PwMHS09TV1tfY2drb3N3e39DR4uPk5ebn6Onq6+zt7u/g4fLz9PX29/j5+vv8/f7/8PMKDAgQQLGjyIMKHChQwbOnwIMaLEiRQrWryIMaPGjaUcO3r8CDKkyJEkS5o8iTKlypUsW7p8CTOmzJk0a9q8iTOnzp08e/r8CTSo0KFEixo9ijSp0qVMmzp9CjWq1KlUq1q9ijWr1q1cu3r9Cjas2LFky5o9izat2rVs27p9Czeu3Ll069q9izev3r18+/r9Cziw4MGECxs+jDix4sWMGzt+DDmy5MmUK1u+jDmz5s2cO3v+DDq06NGkS5s+jTq16tVICwAAIfkEAAoAAAAh/wtJbWFnZU1hZ2ljaw5nYW1tYT0wLjQ1NDU0NQAsAAAAAJAB4QCA/2hoAAAAAv+Ej6nL7Q+jnLTai7PevPsPhuJIluaJpurKtu4Lx/JM1/aN5/rO9/4PDAqHxKLxiEwql8ym8wmNSqfUqvWKzWq33K73Cw6Lx+Sy+YxOq9fstvsNj8vn9Lr9js/r9/y+/w8YKDhIWGh4iJiouMjY6PgIGSk5SVlpeYmZqbnJ2en5CRoqOkpaanqKmqq6ytrq+gobKztLW2t7i5uru8vb6/sLHCw8TFxsfIycrLzM3Oz8DB0tPU1dbX2Nna29zd3t/Q0eLj5OXm5+jp6uvs7e7v4OHy8/T19vf4+fr7/P3+//DzCgwIEECxo8iDChwoUMGzp8CDGixIkUK1q8iDGjxo2lHDt6/AgypMiRJEuaPIkypcqVLFu6fAkzpsyZNGvavIkzp86dPHv6/Ak0qNChRIsaPYo0qdKlTJs6fQo1qtSpVKtavYo1q9atXLt6/Qo2rNixZMuaPYs2rdq1bNu6fQs3rty5dOvavYs3r969fPv6/Qs4sODBhAsbPow4seLFjBs7fgw5suTJlCtbvow5s+bNnDt7/gw6tOjRpEubPo06terVSAsAACH5BAAKAAAAIf8LSW1hZ2VNYWdpY2sOZ2FtbWE9MC40NTQ1NDUALAAAAACQAeEAgA0RFAAAAAL/hI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zvf+DwwKh8Si8YhMKpfMpvMJjUqn1Kr1is1qt9yu9wsOi8fksvmMTqvX7Lb7DY/L5/S6/Y7P6/f8vv8PGCg4SFhoeIiYqLjI2Oj4CBkpOUlZaXmJmam5ydnp+QkaKjpKWmp6ipqqusra6voKGys7S1tre4ubq7vL2+v7CxwsPExcbHyMnKy8zNzs/AwdLT1NXW19jZ2tvc3d7f0NHi4+Tl5ufo6err7O3u7+Dh8vP09fb3+Pn6+/z9/v/w8woMCBBAsaPIgwocKFDBs6fAgxosSJFCtavIgxo8aNpRw7evwIMqTIkSRLmjyJMqXKlSxbunwJM6bMmTRr2ryJM6fOnTx7+vwJNKjQoUSLGj2KNKnSpUybOn0KNarUqVSrWr2KNavWrVy7ev0KNqzYsWTLmj2LNq3atWzbun0LN67cuXTr2r2LN6/evXz7+v0LOLDgwYQLGz6MOLHixYwbO34MObLkyZQrW76MObPmzZw7e/4MOrTo0aRLmz6NOrXq1UgLAAA7",
+  "base64",
+);
+const animatedSource = await processor.inspectCanonicalMediaSource(
+  animatedGifFixture,
+  "image/gif",
+);
+assert.equal(animatedSource.mimeType, "image/gif");
+assert.equal(animatedSource.width, 400);
+assert.equal(
+  animatedSource.height,
+  225,
+  "animated source dimensions use one frame rather than the stacked animation height",
+);
+const animatedTarget = processor.animatedRenditionDimensions({
+  source: { width: 400, height: 225 },
+  target: { width: 1920, height: 1080 },
+  maximumLongEdge: 960,
+});
+assert.deepEqual(animatedTarget, { width: 400, height: 225 });
+const animatedOutput = await processor.createCanonicalMediaRendition({
+  source: animatedSource,
+  target: animatedTarget,
+  transform: { zoom: 1, positionX: 0, positionY: 0, rotation: 0 },
+  quality: 88,
+  maximumBytes: 4 * 1024 * 1024,
+});
+const animatedMetadata = await sharp(animatedOutput.buffer, {
+  animated: true,
+}).metadata();
+assert.equal(animatedOutput.mimeType, "image/gif");
+assert.equal(animatedMetadata.pages, 3, "responsive GIF remains animated");
+assert.equal(animatedMetadata.width, 400);
+assert.equal(animatedMetadata.pageHeight, 225);
+assert.ok(animatedOutput.buffer.length <= 4 * 1024 * 1024);
+
 for (const [width, height] of [
   [1200, 525],
   [800, 600],
@@ -245,5 +282,5 @@ assert.equal(
 );
 
 console.log(
-  "Verified real Sharp pixel buffers, Engine output quality, placement-independent source acceptance, EXIF auto-orientation, focal edge preservation, transparent-logo rotation, and exact desktop/tablet/mobile/thumbnail outputs.",
+  "Verified real Sharp pixel buffers, animated GIF preservation without destructive upscaling, Engine output quality, placement-independent source acceptance, EXIF auto-orientation, focal edge preservation, transparent-logo rotation, and exact desktop/tablet/mobile/thumbnail outputs.",
 );
