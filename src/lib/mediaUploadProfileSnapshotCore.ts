@@ -100,7 +100,7 @@ export function preparedMediaProfileSnapshot(
       profile.maximum_bytes,
       "file-size limit",
       64 * 1024,
-      4 * 1024 * 1024,
+      8 * 1024 * 1024,
     ),
   };
 }
