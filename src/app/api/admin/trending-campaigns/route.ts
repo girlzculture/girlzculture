@@ -193,7 +193,9 @@ async function POSTHandler(request: Request) {
     const entitlementSource = cleanText(body.entitlement_source, 40) || null;
     if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) rejectRequest("Choose a valid paid entitlement source.");
     const entitlementReference = cleanText(body.entitlement_reference, 160) || null;
-    if (entitlementSource && !entitlementReference) rejectRequest("Enter the verified payment, invoice, or credit reference.");
+    if (Boolean(entitlementSource) !== Boolean(entitlementReference)) {
+      rejectRequest("Choose both a verified funding source and its payment, invoice, or platform-credit reference.");
+    }
     const requestedEntitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
       ? null
       : boundedNumber(body.entitlement_amount_minor, 0, 0, 100_000_000, "Entitlement amount", true);
