@@ -31,6 +31,40 @@ export type ServerMediaRendition = {
   checksum: string;
 };
 
+/**
+ * Animated editorial media is displayed in relatively small promotional
+ * cards. Upscaling every GIF frame to the static-image master dimensions can
+ * multiply the encoded payload by an order of magnitude and make an otherwise
+ * valid GIF impossible to save. Keep the requested aspect ratio, but never
+ * enlarge the animation beyond either its source pixels or the display-sized
+ * animated ceiling.
+ */
+export function animatedRenditionDimensions(input: {
+  source: { width: number; height: number };
+  target: { width: number; height: number };
+  maximumLongEdge?: number;
+}) {
+  const sourceWidth = Math.max(1, Math.floor(input.source.width));
+  const sourceHeight = Math.max(1, Math.floor(input.source.height));
+  const targetWidth = Math.max(1, Math.floor(input.target.width));
+  const targetHeight = Math.max(1, Math.floor(input.target.height));
+  const ceiling = Math.max(
+    1,
+    Math.min(
+      Math.max(targetWidth, targetHeight),
+      Math.floor(input.maximumLongEdge || 960),
+    ),
+  );
+  const ratio = targetWidth / targetHeight;
+  let width = Math.min(targetWidth, sourceWidth, ceiling);
+  let height = Math.max(1, Math.round(width / ratio));
+  if (height > sourceHeight || height > targetHeight || height > ceiling) {
+    height = Math.min(targetHeight, sourceHeight, ceiling);
+    width = Math.max(1, Math.round(height * ratio));
+  }
+  return { width, height };
+}
+
 function mimeForFormat(format: string | undefined) {
   if (format === "jpeg") return "image/jpeg" as const;
   if (format === "png") return "image/png" as const;
@@ -57,7 +91,10 @@ export async function inspectCanonicalMediaSource(
       "This image format does not match the selected file. Export it as JPG, PNG, or GIF and try again.",
     );
   }
-  const dimensions = orientedDimensions(metadata);
+  const dimensions =
+    mimeType === "image/gif" && metadata.width && metadata.pageHeight
+      ? { width: metadata.width, height: metadata.pageHeight }
+      : orientedDimensions(metadata);
   const qualityError = getSourceImageQualityError(dimensions);
   if (qualityError) throw new Error(qualityError);
   const normalizedBuffer = await sharp(buffer, {
@@ -134,7 +171,7 @@ export async function createCanonicalMediaRendition(input: {
       ? { width: sourceDimensions.height, height: sourceDimensions.width }
       : sourceDimensions;
     const crop = canonicalCropRegion(rotatedDimensions, input.target, transform);
-    const output = await sharp(input.source.buffer, {
+    const pipeline = sharp(input.source.buffer, {
       animated: true,
       failOn: "error",
       limitInputPixels: MAX_SOURCE_PIXELS,
@@ -144,10 +181,19 @@ export async function createCanonicalMediaRendition(input: {
       .resize(input.target.width, input.target.height, {
         fit: "fill",
         kernel: sharp.kernel.lanczos3,
-      })
-      .gif({ effort: 4, colours: 256 })
-      .toBuffer();
-    if (output.length > input.maximumBytes) {
+      });
+    let output: Buffer | null = null;
+    for (const colours of [256, 192, 128, 96, 64, 48, 32]) {
+      const candidate = await pipeline
+        .clone()
+        .gif({ effort: 4, colours, dither: colours >= 128 ? 1 : 0.75 })
+        .toBuffer();
+      if (candidate.length <= input.maximumBytes) {
+        output = candidate;
+        break;
+      }
+    }
+    if (!output) {
       throw new Error("This animated GIF remains too large after responsive resizing. Choose a shorter or more compressed GIF.");
     }
     const outputMetadata = await sharp(output, { animated: true }).metadata();
