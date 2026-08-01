@@ -112,18 +112,25 @@ export default function AdminFeaturedCampaigns() {
       return;
     }
     const requestedStatus = String(form.get("status") || "Draft");
+    const placementBasis = String(form.get("placement_basis") || "paid");
     const entitlementSource = String(form.get("entitlement_source") || "");
     const entitlementReference = String(
       form.get("entitlement_reference") || "",
     ).trim();
     if (
       ["Scheduled", "Active"].includes(requestedStatus) &&
+      placementBasis === "paid" &&
       !editing?.entitlement &&
       (!entitlementSource || !entitlementReference)
     ) {
       setNotice(
         "Choose a required funding source and enter its verified Stripe or platform-credit reference before scheduling this campaign.",
       );
+      return;
+    }
+    const reason = String(form.get("reason") || "").trim();
+    if (placementBasis === "complimentary_admin" && reason.length < 5) {
+      setNotice("Enter an internal reason of at least 5 characters for a complimentary placement.");
       return;
     }
     setBusy(true);
@@ -141,12 +148,13 @@ export default function AdminFeaturedCampaigns() {
         priority: form.get("priority"),
         rotation_weight: form.get("weight"),
         internal_note: form.get("note"),
+        placement_basis: placementBasis,
         entitlement_source: entitlementSource || null,
         entitlement_reference: entitlementReference || null,
         entitlement_amount_minor: form.get("amount")
           ? Math.round(Number(form.get("amount")) * 100)
           : null,
-        reason: form.get("reason"),
+        reason,
       };
       const response = await fetch("/api/admin/featured-campaigns", {
         method: "POST",
@@ -195,6 +203,7 @@ export default function AdminFeaturedCampaigns() {
           priority: campaign.priority,
           rotation_weight: campaign.rotation_weight,
           internal_note: campaign.internal_note,
+          placement_basis: campaign.placement_basis || "paid",
           reason,
         }),
       });
@@ -251,17 +260,16 @@ export default function AdminFeaturedCampaigns() {
           <ShieldCheck className="text-magenta" />
           <div>
             <h2 className="font-serif text-2xl text-plum">
-              Paid placement controls
+              Paid and complimentary placement controls
             </h2>
             <p className="mt-1 text-xs leading-5 text-ink/60">
-              A campaign cannot become Scheduled or Active without a traceable
-              paid or credited entitlement. Subscription tier alone never
-              qualifies a placement.
+              Use verified funding for paid placements, or record an authorized
+              complimentary platform-admin placement with a required internal
+              reason and complete audit history.
             </p>
             <p className="mt-1 text-[10px] font-semibold leading-4 text-magenta">
-              Scheduled and Active campaigns require a verified Stripe payment,
-              paid invoice, or approved platform credit covering the full
-              campaign period.
+              Complimentary placement never fabricates a payment or credit.
+              The salon must still be active, public, discoverable, and mapped.
             </p>
           </div>
         </div>
@@ -343,6 +351,12 @@ export default function AdminFeaturedCampaigns() {
             defaultValue={editing?.status || "Draft"}
             options={["Draft", "Scheduled", "Active", "Paused", "Expired"]}
           />
+          <Select
+            label="Placement basis"
+            name="placement_basis"
+            defaultValue={editing?.placement_basis || "paid"}
+            options={["paid", "complimentary_admin"]}
+          />
           <Field
             label="Radius (miles)"
             name="radius"
@@ -405,14 +419,11 @@ export default function AdminFeaturedCampaigns() {
             name="note"
             defaultValue={editing?.internal_note || ""}
           />
-          {editing ? (
-            <Field
-              label="Change reason (required)"
-              name="reason"
-              required
-              placeholder="Why this campaign is changing"
-            />
-          ) : null}
+          <Field
+            label="Internal reason (required for complimentary or edits)"
+            name="reason"
+            placeholder="Why this campaign is changing"
+          />
           <div className="flex items-end gap-2 xl:col-span-2">
             <button
               disabled={busy}
@@ -458,8 +469,10 @@ export default function AdminFeaturedCampaigns() {
                     {campaign.radius_miles} mi
                   </p>
                   <p className="mt-1 text-[10px] text-ink/55">
-                    Entitlement:{" "}
-                    {campaign.entitlement
+                    Basis:{" "}
+                    {campaign.placement_basis === "complimentary_admin"
+                      ? "Complimentary admin placement"
+                      : campaign.entitlement
                       ? `${campaign.entitlement.source} · ${campaign.entitlement.external_reference} · ${campaign.entitlement.status}`
                       : "Not attached"}
                   </p>
@@ -542,7 +555,7 @@ export default function AdminFeaturedCampaigns() {
           Zero-result promotional card
         </h2>
         <p className="mt-1 text-xs text-ink/55">
-          This single honest card appears only when no paid featured campaign
+          This single honest card appears only when no eligible featured campaign
           qualifies near a customer.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -646,7 +659,11 @@ function Select({
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {option || "Attach later (Draft only)"}
+            {option === "paid"
+              ? "Paid / verified platform credit"
+              : option === "complimentary_admin"
+                ? "Complimentary admin placement"
+                : option || "Attach later (Draft only)"}
           </option>
         ))}
       </select>

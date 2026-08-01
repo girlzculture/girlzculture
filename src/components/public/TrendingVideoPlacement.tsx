@@ -108,7 +108,7 @@ export default function TrendingVideoPlacement({
         <div>
           <div className="flex items-baseline gap-3">
             <h2 id="trending-picks-heading" className="font-serif text-[23px] font-semibold text-ink sm:text-[28px]">{title}</h2>
-            <span className="text-[10px] font-normal text-ink/55">Sponsored</span>
+            <span className="text-[10px] font-normal text-ink/55">Featured</span>
           </div>
           {description ? <p className="mt-1 text-xs text-ink/60">{description}</p> : null}
         </div>

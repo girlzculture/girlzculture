@@ -63,7 +63,10 @@ async function transcodeWithCloudinary(input: {
   ].join("|");
   const signedParams = {
     eager,
-    eager_async: "false",
+    // Cloudinary video derivatives are intentionally asynchronous. Waiting
+    // for eager transformations inside a Netlify function can exhaust the
+    // edge/function deadline even for a very short source clip.
+    eager_async: "true",
     invalidate: "true",
     overwrite: "true",
     public_id: publicId,
@@ -101,11 +104,7 @@ async function transcodeWithCloudinary(input: {
     eager?: Array<Row>;
   };
   const duration = Number(payload.duration || 0);
-  if (
-    !Number.isFinite(duration) ||
-    duration <= 0 ||
-    duration > input.maxDuration
-  ) {
+  if (Number.isFinite(duration) && duration > input.maxDuration) {
     throw new VideoTranscoderError({
       code: "VIDEO_TRANSCODING_FAILED",
       state: "transcoding_failure",
@@ -125,28 +124,26 @@ async function transcodeWithCloudinary(input: {
       safeHttpsUrl(item.secure_url),
   );
   const outputSize = Number(video?.bytes || 0);
-  if (
-    !video ||
-    !poster ||
-    !Number.isFinite(outputSize) ||
-    outputSize < 1 ||
-    outputSize > 25 * 1024 * 1024
-  ) {
-    throw new VideoTranscoderError({
-      code: "VIDEO_TRANSCODING_FAILED",
-      state: "transcoding_failure",
-      status: 502,
-      safeMessage: "Cloudinary did not return a valid video and poster.",
-    });
+  const providerJobId = `cloudinary:${String(payload.public_id || publicId)}`;
+  if (video && poster && Number.isFinite(outputSize) && outputSize > 0 && outputSize <= 25 * 1024 * 1024 && Number.isFinite(duration) && duration > 0) {
+    return {
+      state: "ready" as const,
+      output_url: safeHttpsUrl(video.secure_url),
+      poster_url: safeHttpsUrl(poster.secure_url),
+      output_size_bytes: outputSize,
+      duration_seconds: duration,
+      width_px: Number(video.width || payload.width || 0) || null,
+      height_px: Number(video.height || payload.height || 0) || null,
+      provider_job_id: providerJobId,
+    };
   }
+  // An accepted asynchronous upload normally has no eager derivatives in the
+  // initial response. The existing authenticated GET route reconciles this
+  // provider id until both the MP4 and poster are present.
   return {
-    output_url: safeHttpsUrl(video.secure_url),
-    poster_url: safeHttpsUrl(poster.secure_url),
-    output_size_bytes: outputSize,
-    duration_seconds: duration,
-    width_px: Number(video.width || payload.width || 0) || null,
-    height_px: Number(video.height || payload.height || 0) || null,
-    provider_job_id: `cloudinary:${String(payload.public_id || publicId)}`,
+    state: "pending" as const,
+    provider_job_id: providerJobId,
+    duration_seconds: Number.isFinite(duration) && duration > 0 ? duration : null,
   };
 }
 
@@ -263,10 +260,34 @@ export async function processVideoJob(
         signal: controller.signal,
       });
       await assertJobActive(admin, id);
+      if (cloudinary.state === "pending") {
+        const { data, error } = await admin
+          .from("video_processing_jobs")
+          .update({
+            status: "Transcoding",
+            progress_percent: 45,
+            provider_job_id: cloudinary.provider_job_id,
+            duration_seconds: cloudinary.duration_seconds,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .neq("status", "Cancelled")
+          .select()
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("VIDEO_PROCESSING_CANCELLED");
+        return data;
+      }
       return await complete(admin, id, {
         output_bucket: null,
         output_path: null,
-        ...cloudinary,
+        output_url: cloudinary.output_url,
+        poster_url: cloudinary.poster_url,
+        output_size_bytes: cloudinary.output_size_bytes,
+        duration_seconds: cloudinary.duration_seconds,
+        width_px: cloudinary.width_px,
+        height_px: cloudinary.height_px,
+        provider_job_id: cloudinary.provider_job_id,
         detected_container: "mp4",
         detected_video_codec: "h264",
         detected_audio_codec: "aac",

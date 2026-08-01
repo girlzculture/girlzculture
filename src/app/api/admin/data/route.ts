@@ -15,10 +15,10 @@ async function GETHandler(request: Request) {
       ["subscription_change_requests", "requested_at", false], ["review_dispute_events", "created_at", true],
     ] as const;
     const needed: Record<string, string[]> = {
-      overview: allSources.map(([table]) => table), submissions: ["salon_applications"], salons: [],
+      overview: allSources.map(([table]) => table), submissions: ["salon_applications", "salons"], salons: [],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
       reviews: ["reviews", "salons", "bookings", "review_dispute_events"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
-      content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
+      content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
     };
     const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));
     const results = await Promise.all(sources.map(async ([table, order, required]) => {
@@ -45,6 +45,20 @@ async function GETHandler(request: Request) {
     const applications = Array.isArray(payload.salon_applications)
       ? payload.salon_applications as Array<Record<string, unknown>>
       : [];
+    const salonById = new Map(
+      (Array.isArray(payload.salons) ? payload.salons : []).map((salon) => [
+        String((salon as Record<string, unknown>).id || ""),
+        salon as Record<string, unknown>,
+      ]),
+    );
+    applications.forEach((application) => {
+      const salon = salonById.get(String(application.salon_id || ""));
+      application.marketplace_status = salon?.status || null;
+      application.approval_status = application.status;
+      application.status = String(salon?.status || "").toLowerCase() === "offboarded"
+        ? "Offboarded"
+        : application.status;
+    });
     await Promise.all(applications.map(async (application) => {
       const paths = Array.isArray(application.document_urls) ? application.document_urls.map(String) : [];
       const signed = await Promise.all(paths.map(async (path) => {

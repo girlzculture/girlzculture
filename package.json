@@ -71,6 +71,7 @@
     "verify:pilot-stabilization": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-pilot-stabilization.mjs",
     "verify:publication-activation": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-publication-activation.mjs",
     "verify:mobile-homepage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-mobile-homepage-correction.mjs",
+    "verify:consolidated-corrections": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-consolidated-platform-corrections.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },

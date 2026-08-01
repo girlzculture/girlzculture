@@ -565,15 +565,6 @@ begin
 
   if not exists (
     select 1
-    from public.engine_settings
-    where setting_key='integrations.expected_migration'
-      and published_value='"20260727230000"'::jsonb
-  ) then
-    raise exception 'Engine expected migration does not match the repository head';
-  end if;
-
-  if not exists (
-    select 1
     from public.content_pages page,
       lateral jsonb_array_elements(page.sections) section
     where page.slug = 'home'

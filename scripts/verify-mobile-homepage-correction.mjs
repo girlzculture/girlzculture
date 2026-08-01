@@ -11,6 +11,9 @@ import { isPromotionCardActive } from "../src/lib/homePromotionCore.ts";
 
 const root = process.cwd();
 const page = readFileSync(`${root}/src/app/page.tsx`, "utf8");
+const globalStyles = readFileSync(`${root}/src/app/globals.css`, "utf8");
+const imageUpload = readFileSync(`${root}/src/lib/imageUpload.ts`, "utf8");
+const imageProcessor = readFileSync(`${root}/src/lib/mediaImageProcessor.ts`, "utf8");
 const rail = readFileSync(
   `${root}/src/components/public/HomepagePromoRail.tsx`,
   "utf8",
@@ -91,6 +94,9 @@ assert.equal(
 
 assert.doesNotMatch(page, /data-home-intro/);
 assert.match(page, /data-home-search/);
+assert.match(page, /gc-desktop-home-search/);
+assert.match(globalStyles, /\.gc-desktop-home-search\s*\{[\s\S]*display:\s*none/);
+assert.match(globalStyles, /min-width:\s*1024px/);
 assert.match(page, /homepageSearchInsertIndex/);
 assert.match(page, /searchInsertIndex === homepageSections\.length/);
 assert.match(page, /resolvePublishedHomepagePromotions/);
@@ -115,7 +121,8 @@ for (const control of [
   "Archived",
   "Move card up",
   "Move card down",
-  "Paid featured campaign",
+  "Featured campaign",
+  "Custom Promotion",
   "Specific salon profile",
 ]) {
   assert.ok(contentAdmin.includes(control), `Missing promotional control: ${control}`);
@@ -130,7 +137,11 @@ assert.match(migration, /resolve_homepage_promotion_target/);
 assert.match(migration, /image\/gif/);
 assert.match(mediaServer, /GIF87a/);
 assert.match(mediaServer, /image\/gif/);
-assert.match(mediaRoute, /Binary uploads are no longer accepted/);
+assert.match(imageUpload, /MIN_SAFE_SOURCE_EDGE_PX\s*=\s*48/);
+assert.match(imageUpload, /enlarge and crop it automatically/i);
+assert.match(imageProcessor, /animated:\s*true/);
+assert.match(imageProcessor, /\.gif\(/);
+assert.match(mediaRoute, /binary upload route is no longer available/i);
 
 console.log(
   "Mobile homepage correction verification passed: authoritative ordering rejects duplicates, promotion schedules are enforced, the promo rail leads every layout without the removed marketing intro, the normal search follows it, and salon/campaign/GIF administration is wired.",

@@ -1244,6 +1244,7 @@ function SalonDetail({
                       </button>
                     ))}
                 </div>
+                {salon.status === "Offboarded" ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50/60 p-3"><b className="text-xs text-red-800">Archive or permanently remove test data</b><p className="mt-1 text-[10px] leading-4 text-red-700">Offboarding is the safe archive action and preserves bookings, finance, reviews, and audit history. Permanent deletion is available only for a record explicitly registered as test data after its dependency preview is reviewed.</p><Link href="/admin/engine?category=data_management" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-400 px-4 text-xs font-bold text-red-700">Open protected test-data deletion</Link></div> : null}
               </section>
               <section className="rounded-[13px] border border-plum/10 bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">

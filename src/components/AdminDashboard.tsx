@@ -30,6 +30,7 @@ import AdminTimeZonePreference from "@/components/admin/AdminTimeZonePreference"
 import NumericInput from "@/components/forms/NumericInput";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
+import AdminSubscriptionsDashboard from "@/components/admin/AdminSubscriptionsDashboard";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
@@ -229,7 +230,17 @@ function Submissions(p: any) {
   const selectedState = states.includes(state) ? state : states[0] || "";
   const rows = p.applications.filter((item: Row) => (item.state || "State not provided") === selectedState);
   if (!p.applications.length) return <EmptyState title="No salon submissions yet" body="New salon applications will be grouped by state here." />;
-  return <div className="grid min-w-0 gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="min-w-0 rounded-[14px] border border-plum/10 bg-white p-4"><div className="flex gap-2 overflow-x-auto border-b border-plum/10 pb-3">{states.map((item) => <button key={item} onClick={() => setState(item)} className={`shrink-0 rounded-full px-4 py-2 text-xs ${selectedState === item ? "bg-magenta text-white" : "bg-blush/30"}`}>{item} <b>{p.applications.filter((application: Row) => (application.state || "State not provided") === item).length}</b></button>)}</div><DataTable headers={["Business Name", "Owner / Contact", "Submitted", "Status", "Review"]}>{rows.map((application: Row) => <tr key={application.id} onClick={() => p.setSelected(application)} className="border-b border-plum/10 hover:bg-blush/20"><Td>{application.business_name}</Td><Td>{application.owner_name}</Td><Td>{date(application.submitted_at)}</Td><Td><Badge value={application.status} /></Td><Td><Link href={`/admin/submissions/${application.id}`} onClick={(event) => event.stopPropagation()} className="font-bold text-magenta">Full details</Link></Td></tr>)}</DataTable></section><ApplicationDetails application={p.selected} decide={p.decide} /></div>;
+  return <div className="grid min-w-0 gap-5 xl:grid-cols-[1.2fr_.8fr]">
+    <section className="min-w-0 rounded-[14px] border border-plum/10 bg-white p-4">
+      <div className="flex gap-2 overflow-x-auto border-b border-plum/10 pb-3">{states.map((item) => <button key={item} onClick={() => setState(item)} className={`shrink-0 rounded-full px-4 py-2 text-xs ${selectedState === item ? "bg-magenta text-white" : "bg-blush/30"}`}>{item} <b>{p.applications.filter((application: Row) => (application.state || "State not provided") === item).length}</b></button>)}</div>
+      <DataTable headers={["Business Name", "Owner / Contact", "Submitted", "Status", "Review"]}>{rows.map((application: Row) => <tr key={application.id} onClick={() => p.setSelected(application)} className="border-b border-plum/10 hover:bg-blush/20">
+        <Td>{application.business_name}</Td><Td>{application.owner_name}</Td><Td>{date(application.submitted_at)}</Td>
+        <Td><Badge value={application.status} />{application.status === "Offboarded" && application.approval_status ? <span className="mt-1 block text-[9px] text-ink/50">Application history: {application.approval_status}</span> : null}</Td>
+        <Td><div className="flex flex-col items-start gap-2"><Link href={`/admin/submissions/${application.id}`} onClick={(event) => event.stopPropagation()} className="font-bold text-magenta">Full details</Link>{application.status === "Offboarded" ? <Link href="/admin/engine?category=data_management" onClick={(event) => event.stopPropagation()} className="text-[10px] font-bold text-red-700">Archive / delete test record</Link> : null}</div></Td>
+      </tr>)}</DataTable>
+    </section>
+    <ApplicationDetails application={p.selected} decide={p.decide} />
+  </div>;
 }
 
 function ApplicationDetails({ application, decide }: { application: Row | null; decide: (id: string, decision: "approve" | "reject" | "activate") => void }) {
@@ -450,7 +461,7 @@ function Marketing(p: any) {
 }
 
 function Subscriptions(p: any) {
-  return <><div className="grid gap-5 sm:grid-cols-3">{[["Basic", "$99.50"], ["Growth", "$129.50"], ["Premium", "$159.50"]].map(([name, price]) => <Panel key={name} title={name}><b className="font-serif text-4xl text-plum">{price}<small className="text-sm">/mo</small></b><p className="mt-3 text-sm">{p.salons.filter((salon: Row) => salon.subscription_tier === name).length} salons</p><p className="mt-4 text-xs text-ink/55">Stripe test-mode plan configured for this tier.</p></Panel>)}</div><div className="mt-5"><Panel title="Subscription Records">{p.subscriptions.length ? p.subscriptions.map((subscription: Row) => <Line key={subscription.id} label={p.salons.find((salon: Row) => salon.id === subscription.salon_id)?.name || "Salon"} meta={subscription.status || "Unknown"} />) : <EmptyState title="No subscription records" body="Stripe subscription webhooks will populate this list." />}</Panel></div></>;
+  return <AdminSubscriptionsDashboard salons={p.salons} subscriptions={p.subscriptions} billingEvents={p.billingEvents} changeRequests={p.changeRequests}/>;
 }
 
 function SettingsTeam(p: any) {

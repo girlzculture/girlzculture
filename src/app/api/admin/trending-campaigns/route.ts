@@ -37,7 +37,8 @@ async function GETHandler(request: Request) {
         .select("id,name,address_city,address_state")
         .eq("status", "Active")
         .eq("is_discoverable", true)
-        .in("subscription_status", ["active", "trialing"])
+        .eq("geocode_status", "success")
+        .eq("address_needs_review", false)
         .not("latitude", "is", null)
         .not("longitude", "is", null)
         .order("name")
@@ -100,6 +101,95 @@ async function POSTHandler(request: Request) {
 
     const status = cleanText(body.status, 20) || "Draft";
     if (!STATUSES.has(status)) rejectRequest("Choose a valid campaign status.");
+    const placementBasis = cleanText(body.placement_basis, 30) || "paid";
+    if (!new Set(["paid", "complimentary_admin"]).has(placementBasis)) rejectRequest("Choose a valid placement basis.");
+    if (placementBasis === "complimentary_admin" && (!reason || reason.length < 5)) rejectRequest("Enter an internal reason of at least 5 characters for this complimentary placement.");
+    const durationSeconds = boundedNumber(body.duration_seconds, 0, 0.01, 30.5, "Video duration");
+    const fileSizeBytes = boundedNumber(body.file_size_bytes, 0, 1, 26_214_400, "Video file size", true);
+    const timezone = validTimezone(body.timezone);
+    const radiusMiles = boundedNumber(body.radius_miles, 25, 1, 250, "Radius");
+    const priority = boundedNumber(body.priority, 50, 0, 100, "Priority", true);
+    const rotationWeight = boundedNumber(body.rotation_weight, 1, 0.1, 100, "Rotation weight");
+    const internalNote = cleanText(body.internal_note, 1000) || null;
+
+    if (placementBasis === "complimentary_admin") {
+      const { data: salon, error: salonError } = await admin.from("salons")
+        .select("id,status,is_discoverable,latitude,longitude,geocode_status,address_needs_review")
+        .eq("id", salonId).maybeSingle();
+      if (salonError) throw salonError;
+      if (!salon) rejectRequest("Salon not found.");
+      let existing: Record<string, unknown> | null = null;
+      if (id) {
+        const existingResult = await admin.from("trending_video_campaigns").select("*").eq("id", id).maybeSingle();
+        if (existingResult.error) throw existingResult.error;
+        if (!existingResult.data) rejectRequest("Campaign not found.");
+        if (existingResult.data.salon_id !== salonId) rejectRequest("A campaign salon cannot be replaced.");
+        existing = existingResult.data;
+      }
+      const replacementVideo = Boolean(existing && existing.storage_path !== storagePath);
+      if (["Scheduled", "Active"].includes(status)) {
+        if (!existing || existing.moderation_status !== "Approved") rejectRequest("Approve video moderation before scheduling or activation.");
+        if (replacementVideo) rejectRequest("Save a replacement video as Draft and approve it before activation.");
+        if (salon.status !== "Active" || !salon.is_discoverable || salon.latitude == null || salon.longitude == null || salon.geocode_status !== "success" || salon.address_needs_review) {
+          rejectRequest("Only active, public, discoverable salons with a verified location can trend.");
+        }
+      }
+      const now = Date.now();
+      const normalizedStatus = replacementVideo ? "Draft" : ["Scheduled", "Active"].includes(status)
+        ? startTime > now ? "Scheduled" : endTime <= now ? "Expired" : "Active"
+        : status;
+      const savedValues: Record<string, unknown> = {
+        salon_id: salonId,
+        entitlement_id: null,
+        placement_basis: "complimentary_admin",
+        complimentary_reason: reason,
+        complimentary_approved_by: user.id,
+        complimentary_approved_at: new Date().toISOString(),
+        video_url: videoUrl,
+        storage_path: storagePath,
+        thumbnail_url: cleanText(body.thumbnail_url, 1200) || null,
+        description,
+        duration_seconds: durationSeconds,
+        file_size_bytes: fileSizeBytes,
+        mime_type: mime,
+        status: normalizedStatus,
+        starts_at: new Date(startTime).toISOString(),
+        ends_at: new Date(endTime).toISOString(),
+        timezone,
+        radius_miles: radiusMiles,
+        priority,
+        rotation_weight: rotationWeight,
+        internal_note: internalNote,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
+      if (replacementVideo) Object.assign(savedValues, { moderation_status: "Pending", moderation_note: null, moderated_by: null, moderated_at: null });
+      let savedId = id;
+      if (id) {
+        const updateResult = await admin.from("trending_video_campaigns").update(savedValues).eq("id", id).select("id").single();
+        if (updateResult.error) throw updateResult.error;
+      } else {
+        const insertResult = await admin.from("trending_video_campaigns").insert({ ...savedValues, created_by: user.id }).select("id").single();
+        if (insertResult.error) throw insertResult.error;
+        savedId = insertResult.data.id;
+      }
+      const auditResult = await admin.from("trending_campaign_audit").insert({
+        campaign_id: savedId,
+        action: id ? "Complimentary placement edited" : "Complimentary placement created",
+        previous_values: existing,
+        new_values: savedValues,
+        reason,
+        acting_admin_id: user.id,
+      });
+      if (auditResult.error) throw auditResult.error;
+      const processingJobId = cleanText(body.video_processing_job_id, 60);
+      if (processingJobId) {
+        if (!UUID.test(processingJobId)) rejectRequest("Video processing reference is invalid.");
+        const linked = await admin.from("trending_video_campaigns").update({ video_processing_job_id: processingJobId }).eq("id", savedId).eq("salon_id", salonId);
+        if (linked.error) throw linked.error;
+      }
+      return Response.json({ campaign_id: savedId, placement_basis: placementBasis });
+    }
     const entitlementSource = cleanText(body.entitlement_source, 40) || null;
     if (entitlementSource && !ENTITLEMENT_SOURCES.has(entitlementSource)) rejectRequest("Choose a valid paid entitlement source.");
     const entitlementReference = cleanText(body.entitlement_reference, 160) || null;
@@ -118,23 +208,27 @@ async function POSTHandler(request: Request) {
       campaign_storage_path: storagePath,
       campaign_thumbnail_url: cleanText(body.thumbnail_url, 1200) || null,
       campaign_description: description,
-      campaign_duration_seconds: boundedNumber(body.duration_seconds, 0, 0.01, 30.5, "Video duration"),
-      campaign_file_size_bytes: boundedNumber(body.file_size_bytes, 0, 1, 26_214_400, "Video file size", true),
+      campaign_duration_seconds: durationSeconds,
+      campaign_file_size_bytes: fileSizeBytes,
       campaign_mime_type: mime,
       requested_status: status,
       campaign_starts_at: new Date(startTime).toISOString(),
       campaign_ends_at: new Date(endTime).toISOString(),
-      campaign_timezone: validTimezone(body.timezone),
-      campaign_radius_miles: boundedNumber(body.radius_miles, 25, 1, 250, "Radius"),
-      campaign_priority: boundedNumber(body.priority, 50, 0, 100, "Priority", true),
-      campaign_rotation_weight: boundedNumber(body.rotation_weight, 1, 0.1, 100, "Rotation weight"),
-      campaign_internal_note: cleanText(body.internal_note, 1000) || null,
+      campaign_timezone: timezone,
+      campaign_radius_miles: radiusMiles,
+      campaign_priority: priority,
+      campaign_rotation_weight: rotationWeight,
+      campaign_internal_note: internalNote,
       entitlement_source: entitlementSource,
       entitlement_reference: entitlementReference,
       entitlement_amount_minor: entitlementAmount,
       change_reason: reason,
     });
     if (error) throw error;
+    const basisUpdate = await admin.from("trending_video_campaigns")
+      .update({ placement_basis: "paid", complimentary_reason: null, complimentary_approved_by: null, complimentary_approved_at: null })
+      .eq("id", data);
+    if (basisUpdate.error) throw basisUpdate.error;
     const processingJobId=cleanText(body.video_processing_job_id,60);
     if(processingJobId){
       if(!UUID.test(processingJobId))rejectRequest("Video processing reference is invalid.");

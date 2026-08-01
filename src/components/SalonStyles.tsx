@@ -81,8 +81,7 @@ function formatAddOnPrice(value: number) {
 }
 
 export default function SalonStyles({ styles, styleMaterialsByStyleId, salonSlug, salonId, promotions = [] }: SalonStylesProps) {
-  const defaultOpenId = styles[1]?.id || styles[1]?.name || styles[0]?.id || styles[0]?.name || null;
-  const [openId, setOpenId] = useState<string | null>(defaultOpenId);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const styleCards = useMemo(() => styles.map((style, index) => {
     const id = style.id || style.name || `style-${index}`;
