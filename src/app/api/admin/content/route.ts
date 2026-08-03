@@ -34,7 +34,7 @@ function sanitizeSections(value: unknown) {
   return value.slice(0, 30).map((raw) => {
     const section = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
     const type = safeSectionTypes.has(String(section.type)) ? String(section.type) : "text";
-    const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 8 : 12;
+    const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 20 : 12;
     const cards = Array.isArray(section.cards) ? section.cards.slice(0, maximum).map((rawCard) => {
       const card = rawCard && typeof rawCard === "object" ? rawCard as Record<string, unknown> : {};
       const requestedContentType = safeCardTypes.has(String(card.content_type)) ? String(card.content_type) : "image";
@@ -43,7 +43,13 @@ function sanitizeSections(value: unknown) {
       const salonId = associationType === "salon" && /^[0-9a-f-]{36}$/i.test(text(card.salon_id, 50)) ? text(card.salon_id, 50) : "";
       const campaignId = associationType === "campaign" && /^[0-9a-f-]{36}$/i.test(text(card.campaign_id, 50)) ? text(card.campaign_id, 50) : "";
       const status = ["Draft", "Active", "Archived"].includes(String(card.status)) ? String(card.status) : "Active";
-      return { id: text(card.id, 80), content_type: contentType, association_type: associationType, salon_id: salonId, campaign_id: campaignId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at) };
+      const marketId = /^[0-9a-f-]{36}$/i.test(text(card.market_id, 50)) ? text(card.market_id, 50) : "";
+      const targetLatitude = card.target_latitude === "" || card.target_latitude == null ? null : Number(card.target_latitude);
+      const targetLongitude = card.target_longitude === "" || card.target_longitude == null ? null : Number(card.target_longitude);
+      const radiusMiles = Math.max(1, Math.min(250, Number(card.radius_miles || 25)));
+      const validLatitude = targetLatitude !== null && Number.isFinite(targetLatitude) && targetLatitude >= -90 && targetLatitude <= 90;
+      const validLongitude = targetLongitude !== null && Number.isFinite(targetLongitude) && targetLongitude >= -180 && targetLongitude <= 180;
+      return { id: text(card.id, 80), content_type: contentType, association_type: associationType, salon_id: salonId, campaign_id: campaignId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at), market_id: marketId, target_label: text(card.target_label, 120), target_latitude: validLatitude ? targetLatitude : null, target_longitude: validLongitude ? targetLongitude : null, radius_miles: radiusMiles };
     }) : [];
     return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), cards };
   });
@@ -116,7 +122,7 @@ async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
     monitoringAdmin = admin;
-    const [pages, posts, masterStyles, serviceCategories, serviceGroups, serviceAddons, salons, products, campaigns] = await Promise.all([
+    const [pages, posts, masterStyles, serviceCategories, serviceGroups, serviceAddons, salons, products, campaigns, markets] = await Promise.all([
       admin.from("content_pages").select("*").order("slug"),
       admin.from("blog_posts").select("*").order("updated_at", { ascending: false }),
       admin.from("master_styles").select("*,service_category:service_categories(id,name,slug),service_group:service_groups(id,name,category_id)").order("sort_order").order("name"),
@@ -126,6 +132,7 @@ async function GETHandler(request: Request) {
       admin.from("salons").select("id,name,slug,cover_photo_url,address_city,address_state").eq("status", "Active").eq("is_discoverable", true).not("slug", "is", null).order("name"),
       admin.from("salon_products").select("id,name,photo_url,images,salon:salons(name,slug)").eq("is_visible", true).order("name"),
       admin.from("featured_salon_campaigns").select("id,status,starts_at,ends_at,salon_id,placement_basis,complimentary_reason,complimentary_approved_by,entitlement:marketing_entitlements(status,valid_from,valid_until),salon:salons(id,name,slug,cover_photo_url,address_city,address_state)").in("status", ["Scheduled", "Active"]).gt("ends_at", new Date().toISOString()).order("starts_at"),
+      admin.from("location_markets").select("id,name,state_code,center_latitude,center_longitude").eq("is_active", true).order("state_code").order("name"),
     ]);
     if (pages.error) throw pages.error;
     if (posts.error) throw posts.error;
@@ -136,6 +143,7 @@ async function GETHandler(request: Request) {
     if (salons.error) throw salons.error;
     if (products.error) throw products.error;
     if (campaigns.error) throw campaigns.error;
+    if (markets.error) throw markets.error;
     const eligibility = await Promise.all((salons.data || []).map(async (salon) => {
       const { data, error } = await admin.rpc("is_marketplace_visible", { target_salon_id: salon.id });
       if (error) throw error;
@@ -161,6 +169,7 @@ async function GETHandler(request: Request) {
       }),
       ...(posts.data || []).filter((post) => post.status === "Published").map((post) => ({ id: post.id, type: "Blog", label: post.title, href: `/blog/${post.slug}`, media_url: post.cover_image_url || "" })),
       ...(pages.data || []).filter((page) => page.status === "Published" && page.is_enabled !== false).map((page) => ({ id: page.slug, type: "Page", label: page.title, href: page.slug === "home" ? "/" : `/${page.slug}`, media_url: page.hero_image_url || "" })),
+      ...(markets.data || []).map((market) => ({ id: market.id, type: "Market", label: `${market.name}, ${market.state_code}`, target_latitude: market.center_latitude, target_longitude: market.center_longitude })),
     ];
     return Response.json({
       pages: pages.data || [],
@@ -245,9 +254,9 @@ async function PUTHandler(request: Request) {
       const sections = sanitizeSections(payload.sections);
       if (payload.slug === "home") {
         const promotionRail = sections.find((section) => section.type === "promo_rail");
-        if (!promotionRail || promotionRail.cards.length !== 8) {
+        if (!promotionRail || promotionRail.cards.length < 1 || promotionRail.cards.length > 20) {
           return Response.json(
-            { error: "The homepage promotion rail must contain exactly eight cards." },
+            { error: "The homepage promotion rail must contain between 1 and 20 cards." },
             { status: 400 },
           );
         }

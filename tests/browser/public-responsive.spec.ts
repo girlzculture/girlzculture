@@ -226,7 +226,8 @@ test("mobile promotion swipe pauses temporarily, resumes, and cards fit without 
   expect(layout.pageOverflow).toBe(false);
   for (const box of layout.boxes) {
     expect(box.width).toBeLessThan(layout.viewport);
-    expect(box.width).toBeGreaterThan(240);
+    expect(box.width).toBeGreaterThanOrEqual(150);
+    if (layout.viewport < 640) expect(box.width).toBeLessThanOrEqual(240);
   }
   for (let index = 1; index < layout.boxes.length; index += 1) {
     expect(layout.boxes[index].left).toBeGreaterThan(layout.boxes[index - 1].right);

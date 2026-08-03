@@ -112,7 +112,7 @@ export default function TrendingVideoPlacement({
           </div>
           {description ? <p className="mt-1 text-xs text-ink/60">{description}</p> : null}
         </div>
-        {!viewAll && videos.length ? <div className="flex items-center gap-2"><button type="button" aria-label="Previous Trending Picks" onClick={()=>scroll(-1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowLeft size={16}/></button><button type="button" aria-label="Next Trending Picks" onClick={()=>scroll(1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowRight size={16}/></button><Link href="/trending" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div> : null}
+        {!viewAll && videos.length ? <div className="flex items-center gap-2"><button type="button" aria-label="Previous Trending Picks" onClick={()=>scroll(-1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowLeft size={16}/></button><button type="button" aria-label="Next Trending Picks" onClick={()=>scroll(1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowRight size={16}/></button><Link href="/trending" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div> : null}
       </div>
 
       {!locationState.ready || (loading && !videos.length) ? <Skeletons /> : !location ? (

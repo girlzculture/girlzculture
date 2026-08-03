@@ -31,6 +31,7 @@ import NumericInput from "@/components/forms/NumericInput";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
 import AdminSubscriptionsDashboard from "@/components/admin/AdminSubscriptionsDashboard";
+import ActionToast from "@/components/ActionToast";
 
 export type AdminSection = "overview" | "submissions" | "salons" | "customers" | "bookings" | "quality" | "reviews" | "finance" | "marketing" | "content" | "support" | "complaints" | "subscriptions" | "engine" | "settings";
 type Row = Record<string, any>;
@@ -160,7 +161,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
 
   return <AdminShell section={section} access={access} inboxCounts={inboxCounts}><RoleSessionBoundary scope="admin" />
     <div data-language-selector-host className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-serif text-[40px] font-semibold leading-none text-plum">{navigation.find((item) => item[0] === section)?.[1]}</h1><p className="mt-2 text-sm text-ink/55">{subtitle(section)}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><LanguageSelector compact/><div className="flex items-center gap-3 rounded-[11px] border border-plum/10 bg-white px-4 py-3 text-xs"><Search size={17} /><input className="w-44 bg-transparent outline-none sm:w-64" placeholder="Search platform records" /></div></div></div>
-    {notice ? <div className="mb-4 rounded-lg bg-blush/55 p-3 text-sm text-plum">{notice}</div> : null}
+    <ActionToast message={notice} onDismiss={() => setNotice("")} />
     <AdminSectionView section={section} data={data} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} onTicketRead={(mode) => setInboxCounts((counts) => ({ ...counts, [mode]: Math.max(0, counts[mode] - 1) }))} />
   </AdminShell>;
 }

@@ -23,7 +23,7 @@ export default function MarketplaceSalonCard({ salon, variant = "grid", selected
   const bookHref = `/salon/${salon.slug}/book${bookingQuery.size ? `?${bookingQuery}` : ""}`;
 
   return (
-    <article id={`salon-result-${salon.id}`} onMouseEnter={() => onFocus?.(salon.id)} onFocus={() => onFocus?.(salon.id)} className={`relative overflow-hidden rounded-[14px] border bg-white shadow-[0_5px_20px_rgba(13,17,20,.06)] transition ${selected ? "border-magenta ring-2 ring-magenta/20" : "border-plum/10"} ${isList ? "grid min-w-0 grid-cols-[118px_1fr] sm:grid-cols-[220px_1fr]" : isCompact ? "w-[78vw] max-w-[330px] shrink-0 snap-start sm:w-[310px] lg:w-[320px]" : "min-w-[76vw] snap-start sm:min-w-0"}`}>
+    <article id={`salon-result-${salon.id}`} onMouseEnter={() => onFocus?.(salon.id)} onFocus={() => onFocus?.(salon.id)} className={`relative overflow-hidden rounded-[14px] border bg-white shadow-[0_5px_20px_rgba(13,17,20,.06)] transition ${selected ? "border-magenta ring-2 ring-magenta/20" : "border-plum/10"} ${isList ? "grid min-w-0 grid-cols-[118px_1fr] sm:grid-cols-[220px_1fr]" : isCompact ? "w-[calc((100vw-44px)/2)] min-w-[154px] max-w-[220px] shrink-0 snap-start sm:w-[240px] sm:max-w-[240px] lg:w-[270px] lg:max-w-[270px]" : "min-w-[76vw] snap-start sm:min-w-0"}`}>
       <Link href={profileHref} aria-label={`View ${salon.name}`} className={`relative block overflow-hidden bg-blush ${isList ? "min-h-[168px]" : "aspect-[16/10]"}`}>
         <SafeImage src={salon.cover_photo_url} fallbackSrc="/images/salon-warm.jpg" alt={`${salon.name} salon`} rendition="thumbnail" className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"/>
         {verified ? <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-plum/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-white"><ShieldCheck size={11}/>Verified</span> : null}
@@ -31,7 +31,7 @@ export default function MarketplaceSalonCard({ salon, variant = "grid", selected
       <button type="button" aria-label={`Save ${salon.name} to favorites`} className="absolute right-2 top-2 z-10 grid min-h-10 min-w-10 place-items-center rounded-full bg-white/90 text-plum shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><Heart size={17}/></button>
       <div className={`min-w-0 ${isList ? "grid gap-3 p-3 sm:grid-cols-[1fr_auto] sm:p-4" : "p-3"}`}>
         <div>
-          <Link data-no-translate="true" href={profileHref} className="font-serif text-lg font-semibold text-ink hover:text-magenta sm:text-xl">{salon.name}</Link>
+          <Link data-no-translate="true" href={profileHref} className={`${isCompact ? "line-clamp-1 text-base" : "text-lg sm:text-xl"} font-serif font-semibold text-ink hover:text-magenta`}>{salon.name}</Link>
           <p className="mt-1 flex items-center gap-1 text-[11px] text-ink/65"><MapPin size={12}/><span data-no-translate="true">{area || "Location available on profile"}</span>{Number.isFinite(salon.distance_miles) ? <> · {salon.distance_miles < 0.1 ? "Under 0.1" : salon.distance_miles.toFixed(1)} mi away</> : null}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
             {salon.review_count > 0 && salon.rating_overall > 0 ? <span className="inline-flex items-center gap-1"><Star size={13} className="fill-amber text-amber"/><b>{Number(salon.rating_overall).toFixed(1)}</b> <span className="text-ink/55">({salon.review_count})</span></span> : <span className="rounded-full bg-blush px-2 py-1 font-bold text-plum">New</span>}
@@ -39,7 +39,7 @@ export default function MarketplaceSalonCard({ salon, variant = "grid", selected
           </div>
           {isList && salon.services.length ? <p data-no-translate="true" className="mt-2 line-clamp-1 text-[10px] text-ink/55">{salon.services.map((service) => service.name).join(" · ")}</p> : null}
         </div>
-        <div className={`flex items-end gap-2 ${isList ? "sm:flex-col sm:justify-end" : "mt-3"}`}>
+        <div className={`flex items-end gap-2 ${isList ? "sm:flex-col sm:justify-end" : "mt-3"} ${isCompact ? "hidden sm:flex" : ""}`}>
           <Link href={profileHref} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta">View</Link>
           <Link href={bookHref} className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white"><CalendarDays size={13}/>Book</Link>
         </div>
