@@ -5,7 +5,7 @@ import { DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "reac
 import Image from "next/image";
 import { Archive, CheckCircle2, Film, ImageIcon, Pause, Play, Search, Upload, XCircle } from "lucide-react";
 import { adminSupabase, getValidSessionForScope } from "@/lib/supabase";
-import { createVideoPoster, getVideoDuration, optimizeTrendingVideo, uploadTrendingFile } from "@/lib/videoUploadClient";
+import { canonicalVideoMime, createVideoPoster, getVideoDuration, optimizeTrendingVideo, uploadTrendingFile } from "@/lib/videoUploadClient";
 import NumericInput from "@/components/forms/NumericInput";
 import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
 import { scopedApiErrorMessage } from "@/lib/scopedApiCore";
@@ -31,7 +31,9 @@ function storedPosterPath(url: unknown) {
 }
 
 function sourceVideoMime(file: File) {
-  if (file.type) return file.type;
+  const canonical = canonicalVideoMime(file);
+  if (canonical) return canonical;
+  if (file.type === "video/quicktime" || file.type === "video/x-m4v" || file.type === "video/x-matroska") return file.type;
   if (/\.mov$/i.test(file.name)) return "video/quicktime";
   if (/\.m4v$/i.test(file.name)) return "video/x-m4v";
   if (/\.mkv$/i.test(file.name)) return "video/x-matroska";
@@ -129,7 +131,15 @@ export default function AdminTrendingCampaigns() {
       setTrimStart(0);
       setTrimEnd(Math.min(duration, 30));
       setPosterTime(Math.max(0, Math.min(duration / 3, Math.min(duration, 30) - 0.05)));
-      setNotice(duration > 30.5 ? "Choose a trim range of 30 seconds or less, then choose a poster frame." : "Preview the clip and choose a poster frame before saving.");
+      const providerPreparationRequired = !canonicalVideoMime(next);
+      setNeedsServerPipeline(providerPreparationRequired);
+      setNotice(
+        providerPreparationRequired
+          ? "This video will be converted to a browser-safe H.264/AAC MP4 automatically after upload."
+          : duration > 30.5
+            ? "Choose a trim range of 30 seconds or less, then choose a poster frame."
+            : "Preview the clip and choose a poster frame before saving.",
+      );
     } catch (error) {
       const ordinaryVideo =
         next.size <= 100 * 1024 * 1024 &&
@@ -360,6 +370,9 @@ export default function AdminTrendingCampaigns() {
         entitlement_source: form.get("entitlement_source"), entitlement_reference: form.get("entitlement_reference"), entitlement_amount_minor: form.get("amount") ? Math.round(Number(form.get("amount")) * 100) : null,
         reason,
       };
+      if (payload.mime_type === "application/octet-stream" || !payload.mime_type) {
+        payload.mime_type = file ? sourceVideoMime(file) : payload.mime_type;
+      }
       await api.request("/api/admin/trending-campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

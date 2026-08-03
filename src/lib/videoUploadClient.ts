@@ -73,7 +73,7 @@ function videoFileName(file: File, suffix: string, extension: string) {
   return `${file.name.replace(/\.[^.]+$/, "")}-${suffix}.${extension}`;
 }
 
-function inferredMime(file: File) {
+export function canonicalVideoMime(file: { name: string; type?: string }) {
   if (file.type === "video/mp4" || file.type === "video/webm") return file.type;
   if (/\.mp4$/i.test(file.name)) return "video/mp4";
   if (/\.webm$/i.test(file.name)) return "video/webm";
@@ -82,7 +82,7 @@ function inferredMime(file: File) {
 
 async function validateContainerSignature(file: File) {
   const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  const mime = inferredMime(file);
+  const mime = canonicalVideoMime(file);
   const mp4 = bytes.length >= 8 && String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
   const webm = bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
   if (mime === "video/mp4" && !mp4) throw new Error("This file is named as MP4, but its container is not a readable MP4. Export a genuine H.264/AAC MP4 and try again.");
@@ -90,7 +90,7 @@ async function validateContainerSignature(file: File) {
 }
 
 function videoReadFailure(video: HTMLVideoElement, file: File, failure: "error" | "timeout" = "error") {
-  const mime = inferredMime(file);
+  const mime = canonicalVideoMime(file);
   const mediaCode = video.error?.code || 0;
   const codecUnsupported = mediaCode === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || Boolean(mime && video.canPlayType(mime) === "");
   const reference = crypto.randomUUID();
@@ -179,9 +179,13 @@ export async function createVideoPoster(file: File, atSeconds: number) {
 
 export async function optimizeTrendingVideo(file: File, edits: VideoEditOptions = {}) {
   if (edits.signal?.aborted) throw cancelled();
-  const mime = inferredMime(file);
+  const mime = canonicalVideoMime(file);
   if (!mime) throw new Error("Upload an MP4 or WebM video.");
-  if (!file.type) file = new File([file], file.name, { type: mime, lastModified: file.lastModified });
+  // Mobile file pickers and some generated MP4s report an empty or generic
+  // MIME type even when the container signature and extension are valid. The
+  // campaign API accepts canonical media types, so normalize the File before
+  // it is uploaded and persisted.
+  if (file.type !== mime) file = new File([file], file.name, { type: mime, lastModified: file.lastModified });
   const sourceDuration = await getVideoDuration(file);
   const start = edits.startSeconds ?? 0;
   const end = edits.endSeconds ?? sourceDuration;

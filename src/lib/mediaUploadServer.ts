@@ -14,6 +14,7 @@ import {
   type ImageUploadProfile,
 } from "@/lib/imageUpload";
 import {
+  animatedRenditionDimensions,
   createCanonicalMediaRendition,
   inspectCanonicalMediaSource,
 } from "@/lib/mediaImageProcessor";
@@ -428,7 +429,10 @@ export async function prepareMediaUpload(
     aspectHeight: profile.aspectHeight,
     outputWidth: profile.outputWidth,
     quality: profile.quality,
-    maximumBytes: Math.min(profile.maxBytes, 4 * 1024 * 1024),
+    maximumBytes: Math.min(
+      profile.maxBytes,
+      bucket === "content-media" ? 8 * 1024 * 1024 : 4 * 1024 * 1024,
+    ),
   };
   const source = descriptor(body.files?.source, "source");
   validateDescriptor(source, "source", profile);
@@ -453,19 +457,35 @@ export async function prepareMediaUpload(
       slot === "source"
         ? [bucket, folder].filter(Boolean).join("/")
         : folder;
-    const targetDimensions =
+    const configuredTargetDimensions =
       slot === "source"
         ? null
         : preparedMediaRenditionDimensions(
             profileSnapshot,
             slot as Exclude<MediaUploadSlot, "source">,
           );
+    const transform = slot === "thumbnail"
+      ? transforms.desktop
+      : transforms[slot as ImageRenditionDevice];
+    const rotatedSourceDimensions = Number(transform?.rotation || 0) % 180
+      ? { width: source.height, height: source.width }
+      : { width: source.width, height: source.height };
+    const targetDimensions =
+      slot !== "source" && source.mime_type === "image/gif" && configuredTargetDimensions
+        ? animatedRenditionDimensions({
+            source: rotatedSourceDimensions,
+            target: configuredTargetDimensions,
+            maximumLongEdge: slot === "desktop" ? 960 : slot === "thumbnail" ? 480 : 720,
+          })
+        : configuredTargetDimensions;
     const mimeType =
       slot === "source"
         ? source.mime_type
         : source.mime_type === "image/png"
           ? "image/png"
-          : "image/jpeg";
+          : source.mime_type === "image/gif"
+            ? "image/gif"
+            : "image/jpeg";
     const value =
       slot === "source"
         ? source
@@ -604,23 +624,35 @@ export async function verifyPreparedMediaObjects(
       profile,
       slot,
     );
+    const targetWidth = Number(target.width);
+    const targetHeight = Number(target.height);
+    const transform =
+      slot === "thumbnail"
+        ? transforms.desktop
+        : transforms[slot as ImageRenditionDevice];
+    const rotatedSourceDimensions = Number(transform?.rotation || 0) % 180
+      ? { width: source.height, height: source.width }
+      : { width: source.width, height: source.height };
+    const requiredDimensions = source.mimeType === "image/gif"
+      ? animatedRenditionDimensions({
+          source: rotatedSourceDimensions,
+          target: preparedDimensions,
+          maximumLongEdge: slot === "desktop" ? 960 : slot === "thumbnail" ? 480 : 720,
+        })
+      : preparedDimensions;
     if (
-      Number(target.width) !== preparedDimensions.width ||
-      Number(target.height) !== preparedDimensions.height
+      targetWidth !== requiredDimensions.width ||
+      targetHeight !== requiredDimensions.height
     ) {
       throw new Error(
         `The ${slot} derivative does not match its prepared profile.`,
       );
     }
-    const transform =
-      slot === "thumbnail"
-        ? transforms.desktop
-        : transforms[slot as ImageRenditionDevice];
     const rendition = await createCanonicalMediaRendition({
       source,
       target: {
-        width: Number(target.width),
-        height: Number(target.height),
+        width: targetWidth,
+        height: targetHeight,
       },
       transform,
       quality: profile.quality,
@@ -631,7 +663,7 @@ export async function verifyPreparedMediaObjects(
         "The prepared derivative extension does not match its generated format.",
       );
     }
-        const uploadBytes = Uint8Array.from(rendition.buffer);
+    const uploadBytes = Uint8Array.from(rendition.buffer);
 
     const { error: uploadError } = await admin.storage
       .from(target.bucket)
