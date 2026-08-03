@@ -15,6 +15,9 @@ type ResolvedTarget = {
   cover_photo_url: string | null;
   address_city: string | null;
   address_state: string | null;
+  target_latitude: number | null;
+  target_longitude: number | null;
+  radius_miles: number | null;
 };
 
 const UUID_PATTERN =
@@ -61,6 +64,10 @@ async function resolveAssociation(card: ContentCard) {
         target.target_type === "campaign"
           ? `/salon/${target.salon_slug}?campaign=${target.campaign_id}`
           : `/salon/${target.salon_slug}`,
+      target_label: location,
+      target_latitude: target.target_latitude ?? undefined,
+      target_longitude: target.target_longitude ?? undefined,
+      radius_miles: Number(target.radius_miles || card.radius_miles || 25),
     } satisfies ContentCard,
   };
 }
@@ -70,7 +77,7 @@ export async function resolvePublishedHomepagePromotions(
   now = Date.now(),
 ) {
   const scheduled = cards
-    .slice(0, 8)
+    .slice(0, 20)
     .filter((card) => isPromotionCardActive(card, now));
   const resolved = await Promise.all(scheduled.map(resolveAssociation));
   return resolved

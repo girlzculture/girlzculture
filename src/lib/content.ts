@@ -19,6 +19,11 @@ export type ContentCard = {
   status?: "Draft" | "Active" | "Archived";
   starts_at?: string;
   ends_at?: string;
+  market_id?: string;
+  target_label?: string;
+  target_latitude?: number;
+  target_longitude?: number;
+  radius_miles?: number;
 };
 export type ContentSection = {
   id?: string;

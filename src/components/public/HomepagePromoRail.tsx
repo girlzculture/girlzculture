@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import SafeImage from "@/components/site/SafeImage";
 import type { ContentCard } from "@/lib/content";
 import { isPromotionCardActive } from "@/lib/homePromotionCore";
+import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
+import { distanceMiles, validCoordinates } from "@/lib/location";
 
 const ACCEPTANCE_MODE =
   process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS === "true";
@@ -30,13 +32,20 @@ export default function HomepagePromoRail({
   const [railVisible, setRailVisible] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const customerLocation = useCustomerLocation();
   const currentTime = Date.parse(now);
   const visibleCards = useMemo(
-    () =>
-      cards
-        .filter((card) => isPromotionCardActive(card, currentTime))
-        .slice(0, 8),
-    [cards, currentTime],
+    () => {
+      const active = cards.filter((card) => isPromotionCardActive(card, currentTime));
+      const globals = active.filter((card) => !validCoordinates({ lat: Number(card.target_latitude), lng: Number(card.target_longitude) }));
+      if (!customerLocation.ready || !customerLocation.location || !validCoordinates(customerLocation.location)) return globals.slice(0, 20);
+      const regional = active.filter((card) => {
+        const target = { lat: Number(card.target_latitude), lng: Number(card.target_longitude) };
+        return validCoordinates(target) && distanceMiles(customerLocation.location!, target) <= Math.max(1, Math.min(250, Number(card.radius_miles || 25)));
+      });
+      return [...regional, ...globals.filter((card) => !regional.some((item) => item.id === card.id))].slice(0, 20);
+    },
+    [cards, currentTime, customerLocation.location, customerLocation.ready],
   );
   const canAutomaticallyMove =
     visibleCards.length > 1 &&
@@ -237,7 +246,7 @@ export default function HomepagePromoRail({
         <article
           data-promotion-clone
           aria-hidden="true"
-          className="gc-promotion-card relative h-[214px] w-[calc(100vw-52px)] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-charcoal shadow-[0_12px_28px_rgba(13,17,20,.13)] sm:h-[222px] sm:w-[62vw] sm:max-w-[420px] md:w-[45vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
+          className="gc-promotion-card relative h-[176px] w-[54vw] min-w-[172px] max-w-[230px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:h-[210px] sm:w-[42vw] sm:max-w-[360px] md:w-[36vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
         >
           <SafeImage
             src={clone.media_url}
@@ -246,9 +255,9 @@ export default function HomepagePromoRail({
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/20 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+          <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4">
             {clone.title ? (
-              <h2 className="font-serif text-[23px] font-semibold leading-[.95]">
+              <h2 className="font-serif text-[18px] font-semibold leading-[.95] sm:text-[23px]">
                 {clone.title}
               </h2>
             ) : null}
@@ -258,7 +267,7 @@ export default function HomepagePromoRail({
               </p>
             ) : null}
             {clone.href ? (
-              <span className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white">
+              <span className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-magenta px-3 text-[9px] font-bold text-white sm:mt-3 sm:min-h-10 sm:px-4 sm:text-[10px]">
                 {clone.cta_label || "Explore"}
               </span>
             ) : null}
@@ -298,7 +307,7 @@ function PromotionCard({
   return (
     <article
       data-promotion-card
-      className="gc-promotion-card relative h-[214px] w-[calc(100vw-52px)] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-charcoal shadow-[0_12px_28px_rgba(13,17,20,.13)] sm:h-[222px] sm:w-[62vw] sm:max-w-[420px] md:w-[45vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
+      className="gc-promotion-card relative h-[176px] w-[54vw] min-w-[172px] max-w-[230px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:h-[210px] sm:w-[42vw] sm:max-w-[360px] md:w-[36vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
     >
       <SafeImage
         src={card.media_url}
@@ -308,9 +317,9 @@ function PromotionCard({
         className="absolute inset-0 h-full w-full select-none object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/20 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+      <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4">
         {card.title ? (
-          <h2 className="font-serif text-[23px] font-semibold leading-[.95]">
+          <h2 className="font-serif text-[18px] font-semibold leading-[.95] sm:text-[23px]">
             {card.title}
           </h2>
         ) : null}
@@ -324,7 +333,7 @@ function PromotionCard({
             href={card.href}
             draggable={false}
             onClick={onNavigate}
-            className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white"
+            className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-magenta px-3 text-[9px] font-bold text-white sm:mt-3 sm:min-h-10 sm:px-4 sm:text-[10px]"
           >
             {card.cta_label || "Explore"}
           </Link>

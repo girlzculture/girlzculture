@@ -97,7 +97,12 @@ async function POSTHandler(request: Request) {
     const videoUrl = cleanText(body.video_url, 1200);
     const storagePath = cleanText(body.storage_path, 600);
     const description = cleanText(body.description, 180);
-    if (!videoUrl || !storagePath || !description || !["video/mp4", "video/webm"].includes(mime)) rejectRequest("Upload a valid video and enter its description.");
+    if (!videoUrl) rejectRequest("The uploaded video is missing its saved playback URL. Upload the video again.");
+    if (!storagePath) rejectRequest("The uploaded video is missing its storage path. Upload the video again.");
+    if (!description) rejectRequest("Enter a description for this Trending Picks video.");
+    if (!["video/mp4", "video/webm"].includes(mime)) rejectRequest("The saved video must be an MP4 or WebM file.");
+    const processingJobId = cleanText(body.video_processing_job_id, 60);
+    if (processingJobId && !UUID.test(processingJobId)) rejectRequest("Video processing reference is invalid.");
 
     const status = cleanText(body.status, 20) || "Draft";
     if (!STATUSES.has(status)) rejectRequest("Choose a valid campaign status.");
@@ -182,9 +187,7 @@ async function POSTHandler(request: Request) {
         acting_admin_id: user.id,
       });
       if (auditResult.error) throw auditResult.error;
-      const processingJobId = cleanText(body.video_processing_job_id, 60);
       if (processingJobId) {
-        if (!UUID.test(processingJobId)) rejectRequest("Video processing reference is invalid.");
         const linked = await admin.from("trending_video_campaigns").update({ video_processing_job_id: processingJobId }).eq("id", savedId).eq("salon_id", salonId);
         if (linked.error) throw linked.error;
       }
@@ -199,6 +202,70 @@ async function POSTHandler(request: Request) {
     const requestedEntitlementAmount = body.entitlement_amount_minor === null || body.entitlement_amount_minor === "" || body.entitlement_amount_minor === undefined
       ? null
       : boundedNumber(body.entitlement_amount_minor, 0, 0, 100_000_000, "Entitlement amount", true);
+
+    // A draft is editorial work, not a claim that payment has occurred. Save
+    // it without fabricating an entitlement; real evidence is still mandatory
+    // before the campaign can be Scheduled or Active.
+    if (status === "Draft" && !entitlementSource && !entitlementReference) {
+      let existing: Record<string, unknown> | null = null;
+      if (id) {
+        const existingResult = await admin.from("trending_video_campaigns").select("*").eq("id", id).maybeSingle();
+        if (existingResult.error) throw existingResult.error;
+        if (!existingResult.data) rejectRequest("Campaign not found.");
+        if (existingResult.data.salon_id !== salonId) rejectRequest("A campaign salon cannot be replaced.");
+        existing = existingResult.data;
+      }
+      const replacementVideo = Boolean(existing && existing.storage_path !== storagePath);
+      const savedValues: Record<string, unknown> = {
+        salon_id: salonId,
+        entitlement_id: existing?.entitlement_id || null,
+        placement_basis: "paid",
+        complimentary_reason: null,
+        complimentary_approved_by: null,
+        complimentary_approved_at: null,
+        video_url: videoUrl,
+        storage_path: storagePath,
+        thumbnail_url: cleanText(body.thumbnail_url, 1200) || null,
+        description,
+        duration_seconds: durationSeconds,
+        file_size_bytes: fileSizeBytes,
+        mime_type: mime,
+        status: "Draft",
+        starts_at: new Date(startTime).toISOString(),
+        ends_at: new Date(endTime).toISOString(),
+        timezone,
+        radius_miles: radiusMiles,
+        priority,
+        rotation_weight: rotationWeight,
+        internal_note: internalNote,
+        video_processing_job_id: processingJobId || null,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+        ...(replacementVideo
+          ? { moderation_status: "Pending", moderation_note: null, moderated_by: null, moderated_at: null }
+          : {}),
+      };
+      let savedId = id;
+      if (id) {
+        const updateResult = await admin.from("trending_video_campaigns").update(savedValues).eq("id", id).select("id").single();
+        if (updateResult.error) throw updateResult.error;
+      } else {
+        const insertResult = await admin.from("trending_video_campaigns").insert({ ...savedValues, created_by: user.id }).select("id").single();
+        if (insertResult.error) throw insertResult.error;
+        savedId = insertResult.data.id;
+      }
+      const auditResult = await admin.from("trending_campaign_audit").insert({
+        campaign_id: savedId,
+        action: id ? "Draft edited" : "Draft created",
+        previous_values: existing,
+        new_values: savedValues,
+        reason,
+        acting_admin_id: user.id,
+      });
+      if (auditResult.error) throw auditResult.error;
+      return Response.json({ campaign_id: savedId, placement_basis: "paid", entitlement_attached: Boolean(existing?.entitlement_id) });
+    }
+
     const verifiedEntitlement = await verifyMarketingEntitlement({ admin, source: entitlementSource, reference: entitlementReference, salonId, placement: "Trending Video", startsAt: new Date(startTime).toISOString(), endsAt: new Date(endTime).toISOString() });
     const entitlementAmount = verifiedEntitlement?.amountMinor ?? requestedEntitlementAmount;
 
@@ -231,9 +298,7 @@ async function POSTHandler(request: Request) {
       .update({ placement_basis: "paid", complimentary_reason: null, complimentary_approved_by: null, complimentary_approved_at: null })
       .eq("id", data);
     if (basisUpdate.error) throw basisUpdate.error;
-    const processingJobId=cleanText(body.video_processing_job_id,60);
     if(processingJobId){
-      if(!UUID.test(processingJobId))rejectRequest("Video processing reference is invalid.");
       const linked=await admin.from("trending_video_campaigns").update({video_processing_job_id:processingJobId}).eq("id",data).eq("salon_id",salonId);
       if(linked.error)throw linked.error;
     }

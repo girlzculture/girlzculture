@@ -24,7 +24,7 @@ export function loadGoogleMaps() {
   if (googleMapsPromise) return googleMapsPromise;
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (!key) return Promise.reject(new Error("Google Maps is not configured."));
-  googleMapsPromise = new Promise((resolve, reject) => {
+  googleMapsPromise = new Promise<void>((resolve, reject) => {
     const existing = document.getElementById(
       "girlz-google-maps",
     ) as HTMLScriptElement | null;
@@ -44,6 +44,12 @@ export function loadGoogleMaps() {
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("Google Maps failed to load."));
     document.head.appendChild(script);
+  }).catch((error) => {
+    // A transient script, network, or provider failure must not poison every
+    // later map/autocomplete attempt for the rest of the browser session.
+    googleMapsPromise = null;
+    document.getElementById("girlz-google-maps")?.remove();
+    throw error;
   });
   return googleMapsPromise;
 }

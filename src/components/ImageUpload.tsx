@@ -698,6 +698,7 @@ export default function ImageUpload({
     const height = Math.max(1, event.currentTarget.clientHeight);
     setTransform((currentTransform) => ({
       ...currentTransform,
+      zoom: Math.max(1.1, Number(currentTransform.zoom || 1)),
       positionX: Math.max(
         -100,
         Math.min(
@@ -727,6 +728,7 @@ export default function ImageUpload({
   ) {
     setTransform((currentTransform) => ({
       ...currentTransform,
+      zoom: Math.max(1.1, Number(currentTransform.zoom || 1)),
       [axis]: Math.max(
         -100,
         Math.min(100, Number(currentTransform[axis] || 0) + amount),
@@ -894,7 +896,7 @@ export default function ImageUpload({
                   />
                 </label>
                 <label className="mt-3 block text-[10px] font-bold">
-                  Move left/right
+                  Position image left/right
                   <input
                     aria-label={`${device} horizontal image position`}
                     type="range"
@@ -904,6 +906,10 @@ export default function ImageUpload({
                     onChange={(event) =>
                       setTransform((row) => ({
                         ...row,
+                        zoom:
+                          Number(event.target.value) === 0
+                            ? row.zoom
+                            : Math.max(1.1, Number(row.zoom || 1)),
                         positionX: Number(event.target.value),
                       }))
                     }
@@ -911,7 +917,7 @@ export default function ImageUpload({
                   />
                 </label>
                 <label className="mt-3 block text-[10px] font-bold">
-                  Move up/down
+                  Position image up/down
                   <input
                     aria-label={`${device} vertical image position`}
                     type="range"
@@ -921,6 +927,10 @@ export default function ImageUpload({
                     onChange={(event) =>
                       setTransform((row) => ({
                         ...row,
+                        zoom:
+                          Number(event.target.value) === 0
+                            ? row.zoom
+                            : Math.max(1.1, Number(row.zoom || 1)),
                         positionY: Number(event.target.value),
                       }))
                     }
@@ -929,25 +939,25 @@ export default function ImageUpload({
                 </label>
                 <div className="mt-3 grid grid-cols-4 gap-1">
                   <CropButton
-                    label="Move crop left"
+                    label="Move image left"
                     onClick={() => nudge("positionX", 10)}
                   >
                     <ArrowLeft size={15} />
                   </CropButton>
                   <CropButton
-                    label="Move crop right"
+                    label="Move image right"
                     onClick={() => nudge("positionX", -10)}
                   >
                     <ArrowRight size={15} />
                   </CropButton>
                   <CropButton
-                    label="Move crop up"
+                    label="Move image up"
                     onClick={() => nudge("positionY", 10)}
                   >
                     <ArrowUp size={15} />
                   </CropButton>
                   <CropButton
-                    label="Move crop down"
+                    label="Move image down"
                     onClick={() => nudge("positionY", -10)}
                   >
                     <ArrowDown size={15} />

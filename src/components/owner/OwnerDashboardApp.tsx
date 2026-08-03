@@ -84,6 +84,7 @@ import {
   financeCsv,
   summarizeBookingTransactions,
 } from "@/lib/financeLedgerCore";
+import ActionToast from "@/components/ActionToast";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -785,15 +786,7 @@ export default function OwnerDashboardApp({
           {realtimeNotice}
         </div>
       ) : null}
-      {notice ? (
-        <div
-          role="status"
-          className="mb-4 flex items-center justify-between rounded-[10px] border border-magenta/20 bg-blush/45 px-4 py-3 text-xs text-plum"
-        >
-          <span>{notice}</span>
-          <button onClick={() => setNotice("")}>×</button>
-        </div>
-      ) : null}
+      <ActionToast message={notice} onDismiss={() => setNotice("")} />
       <DashboardContent section={section} context={context} />
     </OwnerDashboardShell>
   );

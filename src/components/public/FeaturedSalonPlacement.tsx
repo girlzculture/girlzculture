@@ -140,7 +140,7 @@ export default function FeaturedSalonPlacement({
           ) : null}
         </div>
         {!viewAll && salons.length ? (
-          <div className="flex items-center gap-2"><button type="button" aria-label="Previous featured salons" onClick={()=>scroll(-1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowLeft size={16}/></button><button type="button" aria-label="Next featured salons" onClick={()=>scroll(1)} className="grid h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum"><ArrowRight size={16}/></button><Link href="/featured" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div>
+          <div className="flex items-center gap-2"><button type="button" aria-label="Previous featured salons" onClick={()=>scroll(-1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowLeft size={16}/></button><button type="button" aria-label="Next featured salons" onClick={()=>scroll(1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowRight size={16}/></button><Link href="/featured" className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div>
         ) : null}
       </div>
       {!customerLocation.ready ? (

@@ -569,9 +569,9 @@ begin
       lateral jsonb_array_elements(page.sections) section
     where page.slug = 'home'
       and section->>'type' = 'promo_rail'
-      and jsonb_array_length(coalesce(section->'cards', '[]'::jsonb)) = 8
+      and jsonb_array_length(coalesce(section->'cards', '[]'::jsonb)) between 1 and 20
   ) then
-    raise exception 'Homepage promotion rail is missing or does not contain eight cards';
+    raise exception 'Homepage promotion rail is missing or does not contain between 1 and 20 cards';
   end if;
 
   if not exists (

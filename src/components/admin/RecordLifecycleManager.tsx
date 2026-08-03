@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Archive, ArrowRightLeft, RefreshCw, RotateCcw, ShieldAlert, Trash2 } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
+import ActionToast from "@/components/ActionToast";
 
 type Resource={type:string;label:string;actions:string[]};
 type RecordSummary={id:string;label:string;status:string;archived:boolean};
@@ -26,6 +27,6 @@ export default function RecordLifecycleManager(){
     {selected?<div className="mt-5 rounded-xl border border-plum/10 bg-cream/55 p-4"><div className="flex items-center gap-2"><ShieldAlert size={18} className="text-amber"/><b className="text-sm text-plum">Dependency preview for {selected.label}</b></div><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{dependencies.map(item=><div key={item.label} className="rounded-lg bg-white p-3"><b className="font-serif text-xl text-plum">{item.count}</b><span className="ml-2 text-xs">{item.label}</span><span className="mt-1 block text-[9px] text-ink/50">{item.retention}</span></div>)}{!dependencies.length?<p className="text-xs text-ink/55">No registered dependent records were found.</p>:null}</div>
       {action==="reassign"?<label className="mt-4 block text-xs font-bold">Replacement record<select value={replacement} onChange={event=>setReplacement(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3"><option value="">Choose the replacement</option>{records.filter(item=>item.id!==selected.id&&!item.archived).map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>:null}
       <label className="mt-4 block text-xs font-bold">Reason<textarea rows={2} value={reason} onChange={event=>setReason(event.target.value.slice(0,500))} className="mt-1 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal" placeholder="Explain why this change is needed"/></label><label className="mt-3 block text-xs font-bold">Type <span className="text-magenta">{selected.label}</span> to confirm<input value={confirmation} onChange={event=>setConfirmation(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal"/></label><button type="button" onClick={()=>void execute()} disabled={busy||confirmation!==selected.label||reason.trim().length<5||(action==="reassign"&&!replacement)} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-6 text-xs font-bold text-white disabled:opacity-40"><ActionIcon size={15}/>{busy?"Checking dependencies…":`${action[0]?.toUpperCase()||""}${action.slice(1)} ${selected.label}`}</button></div>:null}
-    {message?<p role="status" className="mt-4 rounded-lg bg-blush p-3 text-xs text-plum">{message}</p>:null}
+    <ActionToast message={message} onDismiss={()=>setMessage("")} />
   </section>
 }

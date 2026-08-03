@@ -116,7 +116,7 @@ async function POSTHandler(request: Request) {
     const receipt = await sendEmail(
       salonPatch.email,
       "We received your Girlz Culture application",
-      "<p>Thank you for applying to partner with Girlz Culture. Our team will review your application and get back to you within 24–48 hours. You'll receive an email once you're approved, and then you can set up your page.</p>",
+      "<p>We have received your application. Our team will review and get back to you within 2–4 business days.</p>",
       "account",
     ).catch((deliveryError) => {
       noteOperationalFailure("Salon application confirmation email failed", { applicationId: saved.id, salonId: salon.id, deliveryError });

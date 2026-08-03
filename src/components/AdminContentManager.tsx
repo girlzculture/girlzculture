@@ -9,6 +9,7 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 import NumericInput from "@/components/forms/NumericInput";
+import ActionToast from "@/components/ActionToast";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
@@ -228,7 +229,7 @@ export default function AdminContentManager({
         </div>
         {tab !== "legal" && tab !== "styles" ? <button onClick={createNew} className="flex items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16} />Create {tab === "pages" ? "Page" : "Post"}</button> : null}
       </div>
-      {notice ? <p role="status" aria-live="polite" className="mb-4 rounded-lg bg-blush/50 p-3 text-sm text-plum">{notice}</p> : null}
+      <ActionToast message={notice} onDismiss={() => setNotice("")} />
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
       {tab === "pages" || tab === "legal" ? (
         <div className="grid min-w-0 gap-5 xl:grid-cols-[250px_1fr]">
@@ -906,7 +907,7 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
 function SectionEditor({ section, index, sectionCount, linkTargets, update, remove, move }: { section: Row; index: number; sectionCount:number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void;move:(direction:-1|1)=>void }) {
   const type = String(section.type || "text");
   const cards = asRows(section.cards);
-  const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 8 : 12;
+  const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 20 : 12;
   const [cardCountDraft, setCardCountDraft] = useState(String(cards.length || 1));
   function resizeCards(count: number) {
     const next = [...cards];
@@ -922,7 +923,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
   }
   function commitCardCount() {
     const count = Number(cardCountDraft);
-    if (!Number.isInteger(count) || count < 1 || count > maximum || (type === "promo_rail" && count !== 8)) {
+    if (!Number.isInteger(count) || count < 1 || count > maximum) {
       setCardCountDraft(String(cards.length || 1));
       return;
     }
@@ -932,7 +933,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
     <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
       <div className="grid flex-1 gap-3 sm:grid-cols-2">
         <label className="text-xs font-bold">Layout<select value={type} onChange={(event) => update({ ...section, type: event.target.value, cards: ["card_grid", "carousel", "community_carousel", "promo_rail"].includes(event.target.value) ? cards : [] })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="text">Text</option><option value="card_grid">Card grid</option><option value="carousel">Horizontal carousel</option><option value="community_carousel">Auto-scrolling community carousel</option><option value="promo_rail">Homepage promotion rail</option><option value="banner">Banner</option></select></label>
-        {["card_grid", "carousel", "community_carousel", "promo_rail"].includes(type) ? <label className="text-xs font-bold">Number of cards<NumericInput integer min={type === "promo_rail" ? 8 : 1} max={maximum} value={cardCountDraft} onValueChange={setCardCountDraft} onBlur={commitCardCount} onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();commitCardCount();}}} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
+        {["card_grid", "carousel", "community_carousel", "promo_rail"].includes(type) ? <label className="text-xs font-bold">Number of cards<NumericInput integer min={1} max={maximum} value={cardCountDraft} onValueChange={setCardCountDraft} onBlur={commitCardCount} onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();commitCardCount();}}} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /></label> : null}
       </div>
       <div className="flex gap-1"><button type="button" aria-label={`Move section ${index+1} earlier`} onClick={()=>move(-1)} disabled={index===0} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label={`Move section ${index+1} later`} onClick={()=>move(1)} disabled={index===sectionCount-1} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div><label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
       <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button>
@@ -954,8 +955,10 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
         <label className="text-xs font-bold">Start date and time<input type="datetime-local" value={String(card.starts_at || "").slice(0, 16)} onChange={(event) => updateCard(cardIndex, { ...card, starts_at: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
         <label className="text-xs font-bold">End date and time<input type="datetime-local" value={String(card.ends_at || "").slice(0, 16)} onChange={(event) => updateCard(cardIndex, { ...card, ends_at: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
         <label className="text-xs font-bold sm:col-span-2">Alternative text<input value={card.alt_text || ""} onChange={(event) => updateCard(cardIndex, { ...card, alt_text: event.target.value })} placeholder="Describe the image for customers using screen readers" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
+        <label className="text-xs font-bold sm:col-span-2">Audience market<select value={card.market_id || ""} onChange={(event) => { const market=linkTargets.find((item)=>item.type==="Market"&&item.id===event.target.value);updateCard(cardIndex,{...card,market_id:market?.id||"",target_label:market?.label||"",target_latitude:market?.target_latitude??null,target_longitude:market?.target_longitude??null}); }} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="">All locations</option>{linkTargets.filter((target)=>target.type==="Market").map((target)=><option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">Choose a market to show this card only to customers inside its radius. Salon and campaign cards inherit their real salon location.</small></label>
+        {card.market_id ? <label className="text-xs font-bold">Market radius (miles)<NumericInput integer min={1} max={250} value={String(card.radius_miles || 25)} onValueChange={(value)=>updateCard(cardIndex,{...card,radius_miles:value===""?25:Number(value)})} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : null}
       </div> : null}
-      {card.content_type !== "salon" ? <><label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.map((target) => <option key={`${target.type}-${target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label><label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://…" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label></> : <p className="mt-3 rounded-lg bg-blush/40 p-3 text-xs text-plum">Salon profile destination is linked automatically.</p>}
+      {card.content_type !== "salon" ? <><label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href && target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.filter((target)=>Boolean(target.href)).map((target) => <option key={`${target.type}-${target.id || target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label><label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://…" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label></> : <p className="mt-3 rounded-lg bg-blush/40 p-3 text-xs text-plum">Salon profile destination is linked automatically.</p>}
     </article>)}</div> : null}
   </div>;
 }
