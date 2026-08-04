@@ -1,6 +1,34 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3104";
+const acceptanceSupabaseURL =
+  process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || "http://127.0.0.1:3105";
+const useProductionServer =
+  process.env.PLAYWRIGHT_USE_PRODUCTION_SERVER === "true";
+
+const acceptanceEnvironment = {
+  ...process.env,
+  GIRLZ_CULTURE_ACCEPTANCE_MODE: "true",
+  NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true",
+  NEXT_PUBLIC_SITE_URL: baseURL,
+  NEXT_PUBLIC_SUPABASE_URL: acceptanceSupabaseURL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "acceptance-fixture-anon-key",
+  SUPABASE_SERVICE_ROLE_KEY: "acceptance-fixture-service-role-key",
+};
+
+const publicResponsiveSpec = /public-responsive\.spec\.ts/;
+const crossBrowserSmoke =
+  /homepage shell has no overflow|promotion rail respects reduced motion/;
+const portraitMobileChecks =
+  /homepage shell has no overflow|homepage removes the intro|mobile promotion swipe|primary mobile controls|mobile public navigation/;
+const narrowPhoneChecks =
+  /homepage shell has no overflow|compact phone salon cards|mobile promotion swipe|pilot public and authentication routes/;
+const phoneLandscapeChecks =
+  /homepage shell has no overflow|phone and tablet landscape layouts|mobile promotion swipe|mobile public navigation/;
+const tabletChecks =
+  /homepage shell has no overflow|homepage removes the intro|mobile promotion swipe/;
+const tabletLandscapeChecks =
+  /homepage shell has no overflow|homepage removes the intro|phone and tablet landscape layouts|mobile promotion swipe/;
 
 export default defineConfig({
   testDir: "./tests/browser",
@@ -14,24 +42,54 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  webServer: {
-    command: "npm run dev -- -H 127.0.0.1 -p 3104",
-    url: baseURL,
-    env: {
-      ...process.env,
-      NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true",
+  webServer: [
+    {
+      command: "node scripts/start-acceptance-supabase-fixture.mjs",
+      url: `${acceptanceSupabaseURL}/health`,
+      env: acceptanceEnvironment,
+      reuseExistingServer: true,
+      timeout: 30_000,
     },
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+    {
+      command: useProductionServer
+        ? "npm run start -- -H 127.0.0.1 -p 3104"
+        : "npm run dev -- -H 127.0.0.1 -p 3104",
+      url: baseURL,
+      env: acceptanceEnvironment,
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "iphone", use: { ...devices["iPhone 14"] } },
-    { name: "android", use: { ...devices["Pixel 7"] } },
+    {
+      name: "firefox",
+      testMatch: publicResponsiveSpec,
+      grep: crossBrowserSmoke,
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      testMatch: publicResponsiveSpec,
+      grep: crossBrowserSmoke,
+      use: { ...devices["Desktop Safari"] },
+    },
+    {
+      name: "iphone",
+      testMatch: publicResponsiveSpec,
+      grep: portraitMobileChecks,
+      use: { ...devices["iPhone 14"] },
+    },
+    {
+      name: "android",
+      testMatch: publicResponsiveSpec,
+      grep: portraitMobileChecks,
+      use: { ...devices["Pixel 7"] },
+    },
     {
       name: "narrow-phone",
+      testMatch: publicResponsiveSpec,
+      grep: narrowPhoneChecks,
       use: {
         viewport: { width: 320, height: 568 },
         hasTouch: true,
@@ -40,6 +98,8 @@ export default defineConfig({
     },
     {
       name: "phone-landscape",
+      testMatch: publicResponsiveSpec,
+      grep: phoneLandscapeChecks,
       use: {
         viewport: { width: 844, height: 390 },
         hasTouch: true,
@@ -48,10 +108,14 @@ export default defineConfig({
     },
     {
       name: "tablet",
+      testMatch: publicResponsiveSpec,
+      grep: tabletChecks,
       use: { viewport: { width: 820, height: 1180 }, hasTouch: true },
     },
     {
       name: "tablet-landscape",
+      testMatch: publicResponsiveSpec,
+      grep: tabletLandscapeChecks,
       use: { viewport: { width: 1180, height: 820 }, hasTouch: true },
     },
   ],

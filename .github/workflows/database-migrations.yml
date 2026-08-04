@@ -68,11 +68,40 @@ jobs:
       - run: npm run verify:monitoring
       - run: npx tsc --noEmit
       - run: npm run lint
-      - run: npm run build
+      - name: Build the browser acceptance release
+        run: node scripts/build-browser-acceptance.mjs
+        env:
+          GIRLZ_CULTURE_ACCEPTANCE_MODE: "true"
+          NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3104
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3105
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
+          PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
       - name: Install supported browser engines
         run: npx playwright install --with-deps chromium firefox webkit
       - name: Exercise responsive and affected browser workflows
+        timeout-minutes: 15
         run: npm run test:browser
+        env:
+          GIRLZ_CULTURE_ACCEPTANCE_MODE: "true"
+          NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3104
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3105
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
+          PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
+          PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
+      - name: Upload browser failure report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
 
   migrate:
     if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'APPLY REVIEWED MIGRATIONS'

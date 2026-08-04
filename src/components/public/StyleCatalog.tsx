@@ -41,14 +41,14 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
   }, [category, items, length, maintenance, price, query, sort]);
 
   return (
-    <>
-      <div className="rounded-[14px] border border-plum/10 bg-white/85 p-3 shadow-[0_10px_32px_rgba(13,17,20,0.08)]">
-        <div className="md:grid md:grid-cols-[1.5fr_repeat(4,0.55fr)_0.75fr_auto] md:gap-2">
-          <label className="flex min-h-12 items-center gap-3 rounded-[10px] border border-plum/10 px-4">
+    <div className="min-w-0 max-w-full overflow-hidden">
+      <div className="min-w-0 max-w-full rounded-[14px] border border-plum/10 bg-white/85 p-3 shadow-[0_10px_32px_rgba(13,17,20,0.08)]">
+        <div className="min-w-0 md:grid md:grid-cols-[1.5fr_repeat(4,0.55fr)_0.75fr_auto] md:gap-2">
+          <label className="flex min-h-12 min-w-0 items-center gap-3 rounded-[10px] border border-plum/10 px-4">
             <Search size={19} className="text-plum" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search styles" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
           </label>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] md:contents [&::-webkit-scrollbar]:hidden">
+          <div className="mt-2 flex min-w-0 max-w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] md:contents [&::-webkit-scrollbar]:hidden">
             <FilterSelect value={category} onChange={setCategory} options={categories} />
             <FilterSelect value={length} onChange={setLength} options={["Length", "Shoulder", "Mid-back", "Waist"]} />
             <FilterSelect value={maintenance} onChange={setMaintenance} options={["Maintenance", "Low", "Medium", "High"]} />
@@ -59,31 +59,31 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex min-w-0 max-w-full items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <span className="shrink-0 text-xs font-semibold text-ink">Available styles</span>
         {chips.map((chip) => <button key={chip.name} type="button" onClick={() => setQuery(chip.name)} className="inline-flex shrink-0 items-center rounded-full border border-plum/10 bg-white/75 px-3 py-1.5 text-[11px] font-semibold text-ink/75">{chip.name}</button>)}
         <button type="button" onClick={() => { setQuery(""); setCategory("All categories"); setLength("Length"); setMaintenance("Maintenance"); setPrice("Price"); }} className="ml-auto shrink-0 text-xs font-bold text-magenta">View all</button>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+      <div className="mt-3 grid min-w-0 max-w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {filtered.map((item) => (
-          <Link key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(13,17,20,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(13,17,20,0.12)]">
+          <Link key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group min-w-0 overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(13,17,20,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(13,17,20,0.12)]">
             {item.image ? <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
               <SafeImage src={item.image} fallbackSrc={item.image} alt={`${item.name} hairstyle`} rendition="thumbnail" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
             </div> : null}
             <div className="px-3 py-3 sm:px-4">
-              <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-amber">{item.category}</p>
-              <h2 className="font-serif text-[15px] font-semibold leading-tight text-ink sm:text-[18px]">{item.name}</h2>
+              <p className="mb-1 break-words text-[9px] font-bold uppercase tracking-[0.12em] text-amber">{item.category}</p>
+              <h2 className="break-words font-serif text-[15px] font-semibold leading-tight text-ink sm:text-[18px]">{item.name}</h2>
               <p className="mt-1 text-[10px] font-semibold text-magenta sm:text-xs">{item.count} {item.count === 1 ? "salon" : "salons"}</p>
             </div>
           </Link>
         ))}
       </div>
       {!filtered.length ? <div className="mt-6 rounded-[14px] border border-dashed border-plum/20 bg-white/65 p-8 text-center text-sm text-ink/65">No styles match those filters. Try clearing one.</div> : null}
-    </>
+    </div>
   );
 }
 
 function FilterSelect({ value, onChange, options, prefix = "" }: { value: string; onChange: (value: string) => void; options: string[]; prefix?: string }) {
-  return <label className="min-w-[128px]"><span className="sr-only">{options[0]}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="min-h-12 w-full rounded-[10px] border border-plum/10 bg-white px-3 text-xs font-medium text-ink outline-none">{options.map((option, index) => <option key={option} value={option}>{prefix && index === 0 ? `${prefix}${option}` : option}</option>)}</select></label>;
+  return <label className="w-[128px] min-w-[128px] max-w-full shrink-0 overflow-hidden md:w-auto md:min-w-0 md:overflow-visible"><span className="sr-only">{options[0]}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="min-h-12 min-w-0 w-full max-w-full rounded-[10px] border border-plum/10 bg-white px-3 text-xs font-medium text-ink outline-none">{options.map((option, index) => <option key={option} value={option}>{prefix && index === 0 ? `${prefix}${option}` : option}</option>)}</select></label>;
 }

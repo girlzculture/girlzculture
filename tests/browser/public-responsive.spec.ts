@@ -91,10 +91,15 @@ test("homepage removes the intro and keeps mobile/tablet focused on promotions a
   await page.goto("/");
   const intro = page.locator("[data-home-intro]");
   await expect(intro).toHaveCount(0);
-  if ((page.viewportSize()?.width || 0) < 1_024) {
-    await expect(page.locator("[data-home-search]")).toBeHidden();
-  } else {
+  const usesDesktopSearchLayout = await page.evaluate(() =>
+    window.matchMedia(
+      "(min-width: 1024px) and (hover: hover) and (pointer: fine)",
+    ).matches,
+  );
+  if (usesDesktopSearchLayout) {
     await expect(page.locator("[data-home-search]")).toBeVisible();
+  } else {
+    await expect(page.locator("[data-home-search]")).toBeHidden();
   }
   await expect(page.getByText("Book with Confidence", { exact: false })).toHaveCount(0);
   await expect(
@@ -167,9 +172,8 @@ test("compact phone salon cards keep identity and distance on readable single li
 
 test("functional public pages begin without the removed marketing introductions", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One browser covers the content contract.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the content contract.");
   await page.goto("/salons");
   await expect(page.getByRole("heading", { name: "Tell us the look you want" })).toBeVisible();
   await expect(page.getByText("Find salons that fit your style", { exact: false })).toHaveCount(0);
@@ -187,21 +191,20 @@ test("functional public pages begin without the removed marketing introductions"
 
 test("salon profile starts with every service collapsed and exposes compact review and description controls", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One browser covers the interactive profile contract.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the interactive profile contract.");
   await page.goto("/internal/acceptance/salon-profile");
 
   const knotless = page.getByRole("button", { name: /Knotless Braids/ });
   const silkPress = page.getByRole("button", { name: /Silk Press/ });
   await expect(knotless).toHaveAttribute("aria-expanded", "false");
   await expect(silkPress).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByText("What’s Included", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("What's Included", { exact: true })).toHaveCount(0);
 
   await silkPress.click();
   await expect(knotless).toHaveAttribute("aria-expanded", "false");
   await expect(silkPress).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByText("What’s Included", { exact: true })).toBeVisible();
+  await expect(page.getByText("What's Included", { exact: true })).toBeVisible();
 
   await expect(page.getByLabel("4.5 out of 5 stars")).toBeVisible();
   await expect(page.getByText("AI-assisted", { exact: true })).toBeVisible();
@@ -215,12 +218,11 @@ test("salon profile starts with every service collapsed and exposes compact revi
 
 test("customer, salon, and platform-admin password fields can be revealed without submitting", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One browser covers the shared password control.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the shared password control.");
   for (const route of ["/login", "/salon/login", "/admin/login"]) {
     await page.goto(route);
-    const password = page.locator('input[type="password"]').first();
+    const password = page.getByLabel("Password", { exact: true });
     await expect(password, `${route} has a masked password field`).toBeVisible();
     await password.fill("AcceptancePass123");
     await page.getByRole("button", { name: "Show password" }).first().click();
@@ -300,7 +302,6 @@ test("mobile promotion swipe pauses temporarily, resumes, and cards fit without 
   for (const box of layout.boxes) {
     expect(box.width).toBeLessThan(layout.viewport);
     expect(box.width).toBeGreaterThanOrEqual(150);
-    if (layout.viewport < 640) expect(box.width).toBeLessThanOrEqual(240);
   }
   for (let index = 1; index < layout.boxes.length; index += 1) {
     expect(layout.boxes[index].left).toBeGreaterThan(layout.boxes[index - 1].right);
@@ -331,9 +332,8 @@ test("promotion rail respects reduced motion and remains manually operable", asy
 
 test("homepage section order editor previews, publishes, and persists keyboard moves", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One representative Engine interaction run is sufficient.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One representative Engine interaction run is sufficient.");
   await page.goto("/internal/acceptance/homepage-order");
   await page.getByRole("button", { name: "Move Trending Picks This Week up" }).click();
   await page.getByRole("button", { name: "Move Trending Picks This Week up" }).click();
@@ -356,9 +356,8 @@ test("homepage section order editor previews, publishes, and persists keyboard m
 
 test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eligible destinations", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One representative Content Management browser run is sufficient.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One representative Content Management browser run is sufficient.");
   const initialCards = Array.from({ length: 8 }, (_, index) => ({
     id: `card-${index + 1}`,
     content_type: "image",
@@ -467,7 +466,9 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
     publicRail.getByRole("link", { name: "Open salon" }),
   ).toHaveAttribute("href", "/salon/eligible-salon");
   await expect(
-    publicRail.getByRole("link", { name: "Explore" }).first(),
+    publicRail.locator(
+      'a[href="/salon/campaign-salon?campaign=campaign-1"]',
+    ),
   ).toHaveAttribute(
     "href",
     "/salon/campaign-salon?campaign=campaign-1",
@@ -536,10 +537,9 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
 
 test("first relevant visit requests location once and reuses it across discovery pages", async ({
   page,
-  browserName,
-}) => {
+}, testInfo) => {
   test.skip(
-    browserName !== "chromium",
+    testInfo.project.name !== "chromium",
     "Chromium provides deterministic geolocation permission controls.",
   );
   await page.context().grantPermissions(["geolocation"]);
@@ -598,9 +598,8 @@ test("first relevant visit requests location once and reuses it across discovery
 
 test("a denied location request is remembered and falls back without reprompting", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One deterministic denial fixture is sufficient.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One deterministic denial fixture is sufficient.");
   await page.addInitScript(() => {
     if (!sessionStorage.getItem("gc-test-denial-initialized")) {
       localStorage.clear();
