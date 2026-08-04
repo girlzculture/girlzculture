@@ -5,6 +5,7 @@ import { deterministicContentDecision } from "../src/lib/contentModerationCore.t
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const migration = read("supabase/migrations/20260804200000_salon_profile_assistance_and_review_safety.sql");
+const cleanDatabaseVerifier = read("scripts/sql/verify-clean-database.sql");
 const passwordInput = read("src/components/auth/PasswordInput.tsx");
 const passwordSurfaces = [
   "src/components/AdminLogin.tsx",
@@ -84,6 +85,18 @@ assert.match(migration, /new\.review_title is distinct from old\.review_title/);
 assert.match(migration, /p_review_title text/);
 assert.match(migration, /v_display_name ~ '\[\[:space:\]\[:digit:\]\[:cntrl:\]\]'/);
 assert.match(moderation, /catch \{[\s\S]*return deterministic/);
+const verifiedGuestReviewSignature =
+  /public\.submit_verified_guest_review\(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb\)/g;
+assert.equal(
+  cleanDatabaseVerifier.match(verifiedGuestReviewSignature)?.length,
+  4,
+  "clean-database verification must check the current review-title function and all three role grants",
+);
+assert.match(
+  cleanDatabaseVerifier,
+  /to_regprocedure\([\s\S]*submit_verified_guest_review\(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb\)[\s\S]*\) is not null/,
+  "clean-database verification must reject the obsolete overload",
+);
 
 assert.deepEqual(deterministicContentDecision({ name: "Ava", body: "The appointment was thoughtful and professional." }), { allowed: true, source: "deterministic" });
 assert.equal(deterministicContentDecision({ name: "bitch", body: "Ordinary review body." }).reason, "abusive");
