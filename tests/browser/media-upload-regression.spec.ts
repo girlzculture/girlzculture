@@ -168,10 +168,10 @@ test("canonical crop math is invariant across browser DPR", async ({
     (row) => row.name === "source-1200x600.png",
   )!;
   const url = String(baseURL || "http://127.0.0.1:3104");
-  const [dprOne, dprThree] = await Promise.all([
-    cropAtDpr(browser, url, 1, fixture),
-    cropAtDpr(browser, url, 3, fixture),
-  ]);
+  // Keep traced context teardown isolated. The CI trace showed both crop reads
+  // succeeding before the overlapping second context close lost its transport.
+  const dprOne = await cropAtDpr(browser, url, 1, fixture);
+  const dprThree = await cropAtDpr(browser, url, 3, fixture);
   expect(dprThree).toEqual(dprOne);
 });
 
