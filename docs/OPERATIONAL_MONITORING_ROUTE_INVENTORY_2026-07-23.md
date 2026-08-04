@@ -86,6 +86,7 @@ Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-m
 | `/api/media/upload` | GET, POST, PATCH, DELETE | provider-backed | Covered |
 | `/api/media/upload/prepare` | POST | provider-backed | Covered |
 | `/api/media/upload/finalize` | POST | provider-backed | Covered |
+| `/api/media/video/cloudinary-callback` | POST | provider-backed | Covered |
 | `/api/messages` | GET, POST | provider-backed | Covered |
 | `/api/monitor/client-provider` | POST | provider-backed | Covered |
 | `/api/newsletter` | POST | expected-only | Covered |
@@ -107,6 +108,7 @@ Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-m
 | `/api/salon/onboarding` | GET, POST | protected | Covered |
 | `/api/salon/open-status` | POST | protected | Covered |
 | `/api/salon/profile` | GET, PATCH, POST | protected | Covered |
+| `/api/salon/profile/description-draft` | POST | protected | Covered |
 | `/api/salon/product-orders` | GET, POST | protected | Covered |
 | `/api/salon/records` | GET, POST | protected | Covered |
 | `/api/salon/records/save` | POST | protected | Covered |

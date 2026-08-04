@@ -138,6 +138,33 @@ test("homepage removes the intro and keeps mobile/tablet focused on promotions a
   expect(order).toBe(true);
 });
 
+test("compact phone salon cards keep identity and distance on readable single lines", async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 2_000) >= 640, "Phone-only compact-card contract.");
+  await page.goto("/internal/acceptance/mobile-cards");
+  const cards = page.locator('[data-salon-card][data-card-variant="compact"]');
+  await expect(cards).toHaveCount(2);
+  const layout = await cards.first().evaluate((card) => {
+      const title = card.querySelector("a[data-no-translate]") as HTMLElement | null;
+      const location = card.querySelector("p span[data-no-translate]") as HTMLElement | null;
+      const box = card.getBoundingClientRect();
+      const locationStyle = location ? getComputedStyle(location) : null;
+      return {
+        width: box.width,
+        height: box.height,
+        viewport: window.innerWidth,
+        titleOverflow: Boolean(title && title.scrollWidth > title.clientWidth && getComputedStyle(title).textOverflow !== "ellipsis"),
+        locationWraps: locationStyle?.whiteSpace !== "nowrap",
+        pageOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+  });
+  expect(layout.width).toBeLessThan(layout.viewport * 0.52);
+  expect(layout.height).toBeLessThan(220);
+  expect(layout.titleOverflow).toBe(false);
+  expect(layout.locationWraps).toBe(false);
+  expect(layout.pageOverflow).toBe(false);
+  await expect(cards.first().locator("p span[data-no-translate]")).toHaveAttribute("title", /Manhattan, NY · Under 0.1 mi away/);
+});
+
 test("functional public pages begin without the removed marketing introductions", async ({
   page,
   browserName,
@@ -156,6 +183,52 @@ test("functional public pages begin without the removed marketing introductions"
   await page.goto("/how-it-works");
   await expect(page.getByText("How booking works", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Find a style or salon", { exact: true })).toBeVisible();
+});
+
+test("salon profile starts with every service collapsed and exposes compact review and description controls", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "One browser covers the interactive profile contract.");
+  await page.goto("/internal/acceptance/salon-profile");
+
+  const knotless = page.getByRole("button", { name: /Knotless Braids/ });
+  const silkPress = page.getByRole("button", { name: /Silk Press/ });
+  await expect(knotless).toHaveAttribute("aria-expanded", "false");
+  await expect(silkPress).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("What’s Included", { exact: true })).toHaveCount(0);
+
+  await silkPress.click();
+  await expect(knotless).toHaveAttribute("aria-expanded", "false");
+  await expect(silkPress).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByText("What’s Included", { exact: true })).toBeVisible();
+
+  await expect(page.getByLabel("4.5 out of 5 stars")).toBeVisible();
+  await expect(page.getByText("AI-assisted", { exact: true })).toBeVisible();
+  await expect(page.getByText("description-word-81", { exact: false })).toHaveCount(0);
+  await page.getByRole("button", { name: "Read more" }).click();
+  await expect(page.getByText("description-word-110", { exact: false })).toBeVisible();
+
+  await page.getByRole("button", { name: "View reviews" }).click();
+  await expect(page.locator("#reviews")).toBeFocused();
+});
+
+test("customer, salon, and platform-admin password fields can be revealed without submitting", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "One browser covers the shared password control.");
+  for (const route of ["/login", "/salon/login", "/admin/login"]) {
+    await page.goto(route);
+    const password = page.locator('input[type="password"]').first();
+    await expect(password, `${route} has a masked password field`).toBeVisible();
+    await password.fill("AcceptancePass123");
+    await page.getByRole("button", { name: "Show password" }).first().click();
+    await expect(password).toHaveAttribute("type", "text");
+    await expect(password).toHaveValue("AcceptancePass123");
+    await page.getByRole("button", { name: "Hide password" }).first().click();
+    await expect(password).toHaveAttribute("type", "password");
+  }
 });
 
 test("phone and tablet landscape layouts do not overflow and promotion cards stay compact", async ({

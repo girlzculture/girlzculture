@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 
 async function POSTHandler(request: Request) {
   const requestId = mediaRequestId();
-  const admin = getSupabaseAdmin();
+  let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
     let body: { upload_id?: string };
     try {
@@ -42,6 +42,7 @@ async function POSTHandler(request: Request) {
         },
       );
     }
+    admin = getSupabaseAdmin();
     const authenticatedUser = await authenticateMediaRequest(request, admin);
     const { data: session, error: sessionError } = await admin
       .from("media_upload_sessions")

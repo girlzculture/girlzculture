@@ -7,6 +7,7 @@ import { useCustomerLocation } from "@/components/location/CustomerLocationProvi
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
 import { validCoordinates } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 export default function NearbySalonPlacement({ title = "Salons Near You", description,maxCards=6 }: { title?: string; description?: string | null;maxCards?:number }) {
   const locationState = useCustomerLocation();
@@ -24,12 +25,12 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
     try {
       const query = new URLSearchParams({ lat: String(location.lat), lng: String(location.lng), radius: String(locationState.radiusMiles), limit: String(Math.max(1,Math.min(24,Math.round(maxCards)))), offset: "0", sort: "distance" });
       const response = await fetch(`/api/discovery/salons?${query}`, { cache: "no-store", signal });
-      const body = await response.json() as { salons?: PublicSalonResult[]; total?: number; error?: string };
+      const body = await readApiResponse(response, "Nearby salons could not be loaded.") as { salons?: PublicSalonResult[]; total?: number; error?: string };
       if (!response.ok) throw new Error(body.error || "Nearby salons could not be loaded.");
       setSalons(Array.isArray(body.salons) ? body.salons : []);
       setTotal(Number(body.total || 0));
     } catch (loadError) {
-      if ((loadError as Error).name !== "AbortError") setError("We could not load nearby salons just now.");
+      if ((loadError as Error).name !== "AbortError") setError(loadError instanceof Error ? loadError.message : "We could not load nearby salons just now.");
     } finally { setLoading(false); }
   }
 
@@ -47,8 +48,8 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
     carousel.current?.scrollBy({ left: direction * Math.min(720, carousel.current.clientWidth * 0.82), behavior });
   }
 
-  return <section aria-labelledby="nearby-salons-heading" className="py-2 sm:py-5">
-    <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+  return <section data-home-salon-section="nearby" aria-labelledby="nearby-salons-heading" className="pb-2 pt-1 sm:py-5">
+    <div className="mb-2.5 flex flex-wrap items-end justify-between gap-3 sm:mb-3">
       <div><h2 id="nearby-salons-heading" className="font-serif text-[23px] font-semibold text-ink sm:text-[28px]">{title}</h2>{description ? <p className="mt-1 text-xs text-ink/60">{description}</p> : null}</div>
       {salons.length && total ? <div className="flex items-center gap-2"><button type="button" aria-label="Previous nearby salons" onClick={()=>scroll(-1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowLeft size={16}/></button><button type="button" aria-label="Next nearby salons" onClick={()=>scroll(1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowRight size={16}/></button><Link href={viewAllHref} className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div> : null}
     </div>

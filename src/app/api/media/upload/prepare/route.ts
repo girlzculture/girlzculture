@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 
 async function POSTHandler(request: Request) {
   const requestId = mediaRequestId();
-  const admin = getSupabaseAdmin();
+  let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
     let body: MediaPrepareRequest;
     try {
@@ -29,6 +29,7 @@ async function POSTHandler(request: Request) {
         },
       );
     }
+    admin = getSupabaseAdmin();
     const prepared = await prepareMediaUpload(request, body);
     return Response.json(
       {

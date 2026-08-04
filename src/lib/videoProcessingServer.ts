@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   cloudinaryCompletedVideoResult,
   classifyVideoProviderStatus,
@@ -41,6 +41,50 @@ function cloudinarySignature(
   return createHash("sha1").update(`${payload}${secret}`).digest("hex");
 }
 
+function publicCallbackOrigin() {
+  for (const candidate of [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.URL,
+  ]) {
+    try {
+      const url = new URL(String(candidate || "").trim());
+      if (url.protocol === "https:") return url.origin;
+    } catch {
+      // Ignore malformed optional origins. Sparse authenticated polling remains
+      // the recovery path when a public callback cannot be registered.
+    }
+  }
+  return "";
+}
+
+export function cloudinaryVideoCallbackToken(jobId: string, secret: string) {
+  return createHmac("sha256", secret)
+    .update(`girlz-culture:cloudinary-eager:${jobId}`)
+    .digest("hex");
+}
+
+export function validCloudinaryVideoCallbackToken(
+  jobId: string,
+  secret: string,
+  supplied: string,
+) {
+  const expected = cloudinaryVideoCallbackToken(jobId, secret);
+  if (!/^[a-f0-9]{64}$/i.test(supplied)) return false;
+  return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(supplied, "hex"));
+}
+
+function cloudinaryVideoCallbackUrl(jobId: string, secret: string) {
+  const origin = publicCallbackOrigin();
+  if (!origin) return "";
+  const callback = new URL("/api/media/video/cloudinary-callback", origin);
+  callback.searchParams.set("job", jobId);
+  callback.searchParams.set(
+    "token",
+    cloudinaryVideoCallbackToken(jobId, secret),
+  );
+  return callback.toString();
+}
+
 async function transcodeWithCloudinary(input: {
   config: {
     cloudName: string;
@@ -61,12 +105,16 @@ async function transcodeWithCloudinary(input: {
     `c_limit,h_${input.maxHeight},w_${input.maxWidth},q_auto:good,vc_h264,ac_aac,f_mp4`,
     `c_limit,h_${input.maxHeight},w_${input.maxWidth},q_auto:good,so_0,f_jpg`,
   ].join("|");
+  const eagerNotificationUrl = cloudinaryVideoCallbackUrl(
+    input.jobId,
+    config.apiSecret,
+  );
   const signedParams = {
     eager,
-    // Cloudinary video derivatives are intentionally asynchronous. Waiting
-    // for eager transformations inside a Netlify function can exhaust the
-    // edge/function deadline even for a very short source clip.
     eager_async: "true",
+    ...(eagerNotificationUrl
+      ? { eager_notification_url: eagerNotificationUrl }
+      : {}),
     invalidate: "true",
     overwrite: "true",
     public_id: publicId,
@@ -100,11 +148,13 @@ async function transcodeWithCloudinary(input: {
   }
   if (!response.ok)
     throw classifyVideoProviderStatus(response.status, "transcode");
-  const payload = (await response.json()) as Row & {
-    eager?: Array<Row>;
-  };
+  const payload = (await response.json()) as Row;
   const duration = Number(payload.duration || 0);
-  if (Number.isFinite(duration) && duration > input.maxDuration) {
+  if (
+    !Number.isFinite(duration) ||
+    duration <= 0 ||
+    duration > input.maxDuration
+  ) {
     throw new VideoTranscoderError({
       code: "VIDEO_TRANSCODING_FAILED",
       state: "transcoding_failure",
@@ -112,38 +162,18 @@ async function transcodeWithCloudinary(input: {
       safeMessage: "Cloudinary returned an invalid video duration.",
     });
   }
-  const derivatives = Array.isArray(payload.eager) ? payload.eager : [];
-  const video = derivatives.find(
-    (item) =>
-      String(item.format || "").toLowerCase() === "mp4" &&
-      safeHttpsUrl(item.secure_url),
-  );
-  const poster = derivatives.find(
-    (item) =>
-      ["jpg", "jpeg"].includes(String(item.format || "").toLowerCase()) &&
-      safeHttpsUrl(item.secure_url),
-  );
-  const outputSize = Number(video?.bytes || 0);
-  const providerJobId = `cloudinary:${String(payload.public_id || publicId)}`;
-  if (video && poster && Number.isFinite(outputSize) && outputSize > 0 && outputSize <= 25 * 1024 * 1024 && Number.isFinite(duration) && duration > 0) {
-    return {
-      state: "ready" as const,
-      output_url: safeHttpsUrl(video.secure_url),
-      poster_url: safeHttpsUrl(poster.secure_url),
-      output_size_bytes: outputSize,
-      duration_seconds: duration,
-      width_px: Number(video.width || payload.width || 0) || null,
-      height_px: Number(video.height || payload.height || 0) || null,
-      provider_job_id: providerJobId,
-    };
+  const acceptedPublicId = String(payload.public_id || "");
+  if (!acceptedPublicId || acceptedPublicId !== publicId) {
+    throw new VideoTranscoderError({
+      code: "VIDEO_TRANSCODING_FAILED",
+      state: "transcoding_failure",
+      status: 502,
+      safeMessage: "Cloudinary did not accept the governed video job.",
+    });
   }
-  // An accepted asynchronous upload normally has no eager derivatives in the
-  // initial response. The existing authenticated GET route reconciles this
-  // provider id until both the MP4 and poster are present.
   return {
-    state: "pending" as const,
-    provider_job_id: providerJobId,
-    duration_seconds: Number.isFinite(duration) && duration > 0 ? duration : null,
+    duration_seconds: duration,
+    provider_job_id: `cloudinary:${acceptedPublicId}`,
   };
 }
 
@@ -210,26 +240,10 @@ export async function processVideoJob(
     .neq("status", "Cancelled");
   await assertJobActive(admin, id);
 
-  if (
-    inspected.browserSafe &&
-    Number(job.source_size_bytes) <= 25 * 1024 * 1024
-  ) {
-    const { data } = admin.storage
-      .from(String(job.source_bucket))
-      .getPublicUrl(String(job.source_path));
-    return await complete(admin, id, {
-      output_bucket: job.source_bucket,
-      output_path: job.source_path,
-      output_url: data.publicUrl,
-      output_size_bytes: job.source_size_bytes,
-      detected_container: inspected.container,
-      detected_video_codec: inspected.videoCodec,
-      detected_audio_codec: inspected.audioCodec,
-      source_cleanup_after: null,
-      source_cleanup_status: "Retained",
-    });
-  }
-
+  // Every public campaign asset goes through the configured provider, even
+  // when the source codecs are already browser-safe. Ready means the provider
+  // returned an authoritative duration, a bounded H.264/AAC MP4, and a poster;
+  // the previous fast path could not satisfy the duration/poster contract.
   const runtime = loadVideoTranscoderRuntimeConfig();
   if (!runtime.diagnostic.configured)
     throw missingVideoTranscoderConfiguration();
@@ -247,7 +261,9 @@ export async function processVideoJob(
     .neq("status", "Cancelled");
   await assertJobActive(admin, id);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 110_000);
+  // The Cloudinary request only registers an asynchronous eager job. The UI
+  // then polls the recover endpoint, so one function invocation is bounded.
+  const timer = setTimeout(() => controller.abort(), 30_000);
   try {
     if (runtime.cloudinary) {
       const cloudinary = await transcodeWithCloudinary({
@@ -260,43 +276,22 @@ export async function processVideoJob(
         signal: controller.signal,
       });
       await assertJobActive(admin, id);
-      if (cloudinary.state === "pending") {
-        const { data, error } = await admin
-          .from("video_processing_jobs")
-          .update({
-            status: "Transcoding",
-            progress_percent: 45,
-            provider_job_id: cloudinary.provider_job_id,
-            duration_seconds: cloudinary.duration_seconds,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", id)
-          .neq("status", "Cancelled")
-          .select()
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) throw new Error("VIDEO_PROCESSING_CANCELLED");
-        return data;
-      }
-      return await complete(admin, id, {
-        output_bucket: null,
-        output_path: null,
-        output_url: cloudinary.output_url,
-        poster_url: cloudinary.poster_url,
-        output_size_bytes: cloudinary.output_size_bytes,
-        duration_seconds: cloudinary.duration_seconds,
-        width_px: cloudinary.width_px,
-        height_px: cloudinary.height_px,
-        provider_job_id: cloudinary.provider_job_id,
-        detected_container: "mp4",
-        detected_video_codec: "h264",
-        detected_audio_codec: "aac",
-        source_cleanup_after: new Date(
-          Date.now() + 24 * 60 * 60 * 1000,
-        ).toISOString(),
-        source_cleanup_status: "Scheduled",
-        original_preserved: true,
-      });
+      const { data: accepted, error: acceptedError } = await admin
+        .from("video_processing_jobs")
+        .update({
+          status: "Transcoding",
+          progress_percent: 55,
+          duration_seconds: cloudinary.duration_seconds,
+          provider_job_id: cloudinary.provider_job_id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .neq("status", "Cancelled")
+        .select()
+        .maybeSingle();
+      if (acceptedError) throw acceptedError;
+      if (!accepted) throw new Error("VIDEO_PROCESSING_CANCELLED");
+      return accepted;
     }
     if (!runtime.custom) throw missingVideoTranscoderConfiguration();
     let response: Response;
@@ -395,6 +390,8 @@ async function complete(
       ...output,
       status: "Ready",
       progress_percent: 100,
+      safe_error_code: null,
+      error_reference: null,
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -413,7 +410,7 @@ export async function reconcileCloudinaryVideoJob(
 ) {
   if (String(job.status) !== "Transcoding") return job;
   const runtime = loadVideoTranscoderRuntimeConfig();
-  if (!runtime.cloudinary) return job;
+  if (!runtime.cloudinary) throw missingVideoTranscoderConfiguration();
   const id = String(job.id || "");
   if (!id) return job;
   const expectedProviderId = `cloudinary:girlz-culture/trending/${id}`;

@@ -5,9 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SafeImage from "@/components/site/SafeImage";
 import type { ContentCard } from "@/lib/content";
-import { isPromotionCardActive } from "@/lib/homePromotionCore";
+import { selectLocalPromotionCards } from "@/lib/homePromotionCore";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
-import { distanceMiles, validCoordinates } from "@/lib/location";
 
 const ACCEPTANCE_MODE =
   process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS === "true";
@@ -36,14 +35,14 @@ export default function HomepagePromoRail({
   const currentTime = Date.parse(now);
   const visibleCards = useMemo(
     () => {
-      const active = cards.filter((card) => isPromotionCardActive(card, currentTime));
-      const globals = active.filter((card) => !validCoordinates({ lat: Number(card.target_latitude), lng: Number(card.target_longitude) }));
-      if (!customerLocation.ready || !customerLocation.location || !validCoordinates(customerLocation.location)) return globals.slice(0, 20);
-      const regional = active.filter((card) => {
-        const target = { lat: Number(card.target_latitude), lng: Number(card.target_longitude) };
-        return validCoordinates(target) && distanceMiles(customerLocation.location!, target) <= Math.max(1, Math.min(250, Number(card.radius_miles || 25)));
+      const configuredLimit = Number(cards[0]?.display_limit || 8);
+      return selectLocalPromotionCards({
+        cards,
+        now: currentTime,
+        customerLocation:
+          customerLocation.ready ? customerLocation.location : null,
+        limit: configuredLimit,
       });
-      return [...regional, ...globals.filter((card) => !regional.some((item) => item.id === card.id))].slice(0, 20);
     },
     [cards, currentTime, customerLocation.location, customerLocation.ready],
   );
@@ -57,7 +56,7 @@ export default function HomepagePromoRail({
   function cardElements() {
     return Array.from(
       railRef.current?.querySelectorAll<HTMLElement>(
-        "[data-promotion-card], [data-promotion-clone]",
+        "[data-promotion-card]",
       ) || [],
     );
   }
@@ -72,18 +71,10 @@ export default function HomepagePromoRail({
       left: target.offsetLeft - rail.offsetLeft,
       behavior: reducedMotion ? "auto" : behavior,
     });
-    if (index === visibleCards.length) {
-      window.setTimeout(() => {
-        rail.scrollTo({ left: 0, behavior: "auto" });
-        setCurrentIndex(0);
-        programmaticScroll.current = false;
-      }, reducedMotion ? 0 : 700);
-    } else {
-      setCurrentIndex(index);
-      window.setTimeout(() => {
-        programmaticScroll.current = false;
-      }, reducedMotion ? 0 : 700);
-    }
+    setCurrentIndex(index);
+    window.setTimeout(() => {
+      programmaticScroll.current = false;
+    }, reducedMotion ? 0 : 700);
   }
 
   function pauseForInteraction() {
@@ -100,9 +91,7 @@ export default function HomepagePromoRail({
     if (userInitiated) pauseForInteraction();
     const next =
       direction === 1
-        ? currentIndex === visibleCards.length - 1
-          ? visibleCards.length
-          : currentIndex + 1
+        ? (currentIndex + 1) % visibleCards.length
         : currentIndex === 0
           ? visibleCards.length - 1
           : currentIndex - 1;
@@ -136,6 +125,15 @@ export default function HomepagePromoRail({
   }, [visibleCards.length]);
 
   useEffect(() => {
+    if (currentIndex < visibleCards.length) return;
+    const timer = window.setTimeout(() => {
+      setCurrentIndex(0);
+      railRef.current?.scrollTo({ left: 0, behavior: "auto" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [currentIndex, visibleCards.length]);
+
+  useEffect(() => {
     if (!canAutomaticallyMove) return;
     const timer = window.setInterval(() => move(1, false), AUTO_INTERVAL_MS);
     return () => window.clearInterval(timer);
@@ -151,7 +149,6 @@ export default function HomepagePromoRail({
   );
 
   if (!visibleCards.length) return null;
-  const clone = visibleCards[0];
 
   return (
     <section
@@ -243,36 +240,6 @@ export default function HomepagePromoRail({
             }}
           />
         ))}
-        <article
-          data-promotion-clone
-          aria-hidden="true"
-          className="gc-promotion-card relative h-[176px] w-[54vw] min-w-[172px] max-w-[230px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:h-[210px] sm:w-[42vw] sm:max-w-[360px] md:w-[36vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
-        >
-          <SafeImage
-            src={clone.media_url}
-            fallbackSrc="/images/hero-braids.jpg"
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/20 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4">
-            {clone.title ? (
-              <h2 className="font-serif text-[18px] font-semibold leading-[.95] sm:text-[23px]">
-                {clone.title}
-              </h2>
-            ) : null}
-            {clone.body ? (
-              <p className="mt-2 line-clamp-2 text-[10px] leading-4 text-white/85">
-                {clone.body}
-              </p>
-            ) : null}
-            {clone.href ? (
-              <span className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-magenta px-3 text-[9px] font-bold text-white sm:mt-3 sm:min-h-10 sm:px-4 sm:text-[10px]">
-                {clone.cta_label || "Explore"}
-              </span>
-            ) : null}
-          </div>
-        </article>
         <span className="w-1 shrink-0" aria-hidden="true" />
       </div>
       <div className="mt-1 hidden items-center justify-end gap-2 lg:flex">
@@ -307,7 +274,8 @@ function PromotionCard({
   return (
     <article
       data-promotion-card
-      className="gc-promotion-card relative h-[176px] w-[54vw] min-w-[172px] max-w-[230px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:h-[210px] sm:w-[42vw] sm:max-w-[360px] md:w-[36vw] lg:h-[232px] lg:w-[31vw] lg:max-w-[470px] xl:w-[24vw]"
+      data-media-kind={/\.gif(?:$|[?#])/i.test(card.media_url || "") ? "animated-gif" : "image"}
+      className="gc-promotion-card relative aspect-[16/9] w-[86vw] min-w-[280px] max-w-[420px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:w-[58vw] sm:max-w-[460px] md:w-[45vw] lg:aspect-[2/1] lg:w-[31vw] lg:max-w-[470px] xl:w-[28vw]"
     >
       <SafeImage
         src={card.media_url}

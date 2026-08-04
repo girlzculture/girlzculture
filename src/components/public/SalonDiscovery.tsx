@@ -9,6 +9,7 @@ import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import { DEFAULT_NEARBY_RADIUS_MILES, validCoordinates, type Coordinates, type CustomerLocation } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Props = {
   initialSalons: PublicSalonResult[];
@@ -66,7 +67,10 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
       if (priceRange[0] !== null) params.set("min_price", String(priceRange[0]));
       if (priceRange[1] !== null) params.set("max_price", String(priceRange[1]));
       const response = await fetch(`/api/discovery/salons?${params}`, { cache: "no-store", signal: controller.signal });
-      const body = await response.json() as { salons?: PublicSalonResult[]; total?: number; error?: string };
+      const body = await readApiResponse(
+        response,
+        "Nearby salons could not be loaded.",
+      ) as { salons?: PublicSalonResult[]; total?: number; error?: string };
       if (!response.ok) throw new Error(body.error || "Nearby salons could not be loaded.");
       if (requestId !== requestSequence.current) return;
       const next = Array.isArray(body.salons) ? body.salons : [];
@@ -115,7 +119,10 @@ export default function SalonDiscovery({ initialSalons, initialTotal, initialSty
       setAvailabilityLoading(true);
       try {
         const response = await fetch("/api/discovery/availability", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: availabilityDate, salons: rows }), signal: controller.signal });
-        const body = await response.json() as { availability?: Record<string, boolean> };
+        const body = await readApiResponse(
+          response,
+          "Availability could not be checked.",
+        ) as { availability?: Record<string, boolean> };
         setAvailability(response.ok && body.availability ? body.availability : {});
       } catch (requestError) { if ((requestError as Error).name !== "AbortError") setAvailability({}); }
       finally { setAvailabilityLoading(false); }

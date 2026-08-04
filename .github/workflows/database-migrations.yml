@@ -40,10 +40,10 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
       CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run verify:migrations
@@ -53,9 +53,26 @@ jobs:
       - run: npm run verify:catalog-management
       - run: npm run verify:catalog-spreadsheet
       - run: npm run verify:salon-spreadsheet
+      - run: npm run verify:repository-metadata
+      - run: npm run verify:media-contract
+      - run: npm run verify:media
+      - run: npm run verify:video-job-auth
+      - run: npm run verify:video-transcoder-runtime
+      - run: npm run verify:trending-video-processing
+      - run: npm run verify:promotion-media-pool
+      - run: npm run verify:salon-profile-safety
+      - run: npm run verify:test-salon-deletion
+      - run: npm run verify:launch-owner-controls
+      - run: npm run verify:password-reset-security
+      - run: node scripts/verify-crop-map-toast-runtime.mjs
+      - run: npm run verify:monitoring
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run build
+      - name: Install supported browser engines
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Exercise responsive and affected browser workflows
+        run: npm run test:browser
 
   migrate:
     if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'APPLY REVIEWED MIGRATIONS'
@@ -70,10 +87,10 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
       - name: Require migration secrets
         shell: bash
         run: |

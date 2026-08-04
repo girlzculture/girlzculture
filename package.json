@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/generate-repository-metadata.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -27,6 +28,7 @@
     "verify:media": "node scripts/verify-unified-media.mjs && node scripts/verify-media-pixels.mjs",
     "verify:media-runtime": "node scripts/verify-media-runtime.mjs",
     "verify:media-pixels": "node scripts/verify-media-pixels.mjs",
+    "verify:media-contract": "node scripts/verify-media-upload-contract.mjs",
     "verify:i18n": "node scripts/verify-localization-engine.mjs",
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
     "verify:design-system": "node scripts/verify-launch-design-system.mjs",
@@ -39,6 +41,7 @@
     "verify:engine-governance": "node scripts/verify-engine-governance.mjs",
     "verify:self-audit": "node scripts/verify-platform-self-audit.mjs",
     "verify:migrations": "node scripts/verify-migration-order.mjs",
+    "verify:repository-metadata": "node scripts/generate-repository-metadata.mjs --check",
     "verify:database-clean": "node scripts/verify-clean-database.mjs",
     "verify:engine-expansion": "node scripts/verify-engine-expansion.mjs",
     "verify:catalog-management": "node scripts/verify-service-catalog-management.mjs",
@@ -73,7 +76,12 @@
     "verify:mobile-homepage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-mobile-homepage-correction.mjs",
     "verify:consolidated-corrections": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-consolidated-platform-corrections.mjs",
     "verify:launch-owner-controls": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-launch-owner-controls-and-ux.mjs",
+    "verify:password-reset-security": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-password-reset-identity-boundary.mjs",
+    "verify:test-salon-deletion": "node scripts/verify-offboarded-test-salon-deletion.mjs",
+    "verify:promotion-media-pool": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-homepage-promotion-pool-and-trending-media.mjs",
+    "verify:salon-profile-safety": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-salon-profile-assistance-and-safety.mjs",
     "i18n:extract": "node scripts/generate-interface-source-registry.mjs",
+    "generate:repository-metadata": "node scripts/generate-repository-metadata.mjs",
     "audit:inventory": "node scripts/generate-platform-inventory.mjs"
   },
   "dependencies": {

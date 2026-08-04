@@ -69,8 +69,15 @@ export async function monitoredNetlifyFailure({
   const reference = crypto.randomUUID();
   const technicalMessage = safeText(error instanceof Error ? error.message : error || "Unknown error");
   const route = request ? new URL(request.url).pathname : `/.netlify/functions/${action}`;
-  const release = process.env.COMMIT_REF || process.env.DEPLOY_ID || "local";
   const environment = process.env.CONTEXT || process.env.NODE_ENV || "unknown";
+  const release =
+    process.env.GIRLZ_CULTURE_RELEASE_ID ||
+    process.env.COMMIT_REF ||
+    process.env.DEPLOY_ID ||
+    process.env.BUILD_ID ||
+    (environment === "production"
+      ? "production-release-not-injected"
+      : "local");
   const record = {
     reference,
     fingerprint: fingerprint(`${feature}|${action}|${technicalMessage.slice(0, 300)}`),

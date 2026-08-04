@@ -3,6 +3,7 @@ import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
 import { hasPlanFeature, isSubscriptionActive, normalizePlan } from "@/lib/plans";
+import { moderatePublicContent } from "@/lib/contentModerationServer";
 
 type SaveConfig = { permission: string; fields: ReadonlySet<string>; label: string };
 
@@ -171,6 +172,17 @@ async function POSTHandler(request: Request) {
     const id = cleanText(body.id, 60) || null;
     const rawValues = body.values && typeof body.values === "object" && !Array.isArray(body.values) ? body.values as Record<string, unknown> : {};
     const values = sanitize(table, rawValues, !id);
+    if (["styles", "stylists", "salon_products", "salon_promotions"].includes(table)) {
+      const moderation = await moderatePublicContent(admin, {
+        name: typeof values.name === "string" ? values.name : undefined,
+        title: typeof values.title === "string" ? values.title : typeof values.public_headline === "string" ? values.public_headline : undefined,
+        body: [values.description, values.bio]
+          .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+          .join("\n"),
+      });
+      if (!moderation.allowed)
+        throw new Error(`Please revise the ${config.label} content to remove abusive, hateful, threatening, or unsafe language.`);
+    }
 
     if (table === "styles" && Array.isArray(rawValues.style_materials)) {
       const materials = rawValues.style_materials.slice(0, 30).map((item) => {

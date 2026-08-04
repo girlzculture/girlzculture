@@ -19,11 +19,12 @@ import {
   videoTranscoderRuntimeDiagnostic,
 } from "@/lib/videoTranscoderServer";
 import { capturePlatformError } from "@/lib/platformErrors";
+import { REPOSITORY_MIGRATION_HEAD } from "@/generated/repositoryMetadata";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const EXPECTED_MIGRATION = "20260727230000";
+const EXPECTED_MIGRATION = REPOSITORY_MIGRATION_HEAD;
 type State = "healthy" | "degraded" | "not_configured";
 type HealthRow = {
   integration_key: string;
@@ -282,7 +283,7 @@ function providerSpecs(
         required: true,
         envNames: [...CLOUDINARY_RUNTIME_VARIABLE_NAMES],
         setup:
-          "Create a Cloudinary account, configure the three server-only environment variables, then use Test Connection. Never expose the API secret to the browser.",
+          "Install the Cloudinary extension so it provides the server-only CLOUDINARY_URL, or configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET separately. Then use Test Connection. Never expose provider credentials to the browser.",
         canTest: true,
         diagnostic: transcoderDiagnostic,
       },

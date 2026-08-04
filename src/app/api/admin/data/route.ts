@@ -22,7 +22,9 @@ async function GETHandler(request: Request) {
     };
     const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));
     const results = await Promise.all(sources.map(async ([table, order, required]) => {
-      const result = await admin.from(table).select("*").order(order, { ascending: false }).limit(500);
+      let query = admin.from(table).select("*");
+      if (table === "salons") query = query.is("deleted_at", null);
+      const result = await query.order(order, { ascending: false }).limit(500);
       if (result.error && !required) {
         noteOperationalFailure("Optional admin data source unavailable", {
           table,

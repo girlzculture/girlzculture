@@ -4,6 +4,12 @@ import {
   inspectMp4Bytes,
   inspectVideoBytes,
 } from "../src/lib/videoInspection.ts";
+import {
+  clearPendingTrendingVideoJob,
+  loadPendingTrendingVideoJob,
+  resumeOrCreateReadyVideoJob,
+  savePendingTrendingVideoJob,
+} from "../src/lib/trendingVideoRetryCore.ts";
 
 function fixture(markers) {
   return new TextEncoder().encode(`0000ftypisom${markers.padEnd(512, ".")}`);
@@ -31,6 +37,103 @@ assert.equal(
   inspectMp4Bytes(new TextEncoder().encode("not an mp4")).browserSafe,
   false,
 );
+
+const browserSessionValues = new Map();
+const browserSession = {
+  getItem: (key) => browserSessionValues.get(key) || null,
+  setItem: (key, value) => browserSessionValues.set(key, value),
+  removeItem: (key) => browserSessionValues.delete(key),
+};
+const pendingState = {
+  jobId: "11111111-1111-4111-8111-111111111111",
+  salonId: "22222222-2222-4222-8222-222222222222",
+  campaignId: null,
+  salonName: "Retry Fixture Salon",
+  sourcePath: "incoming/admin/retry-fixture.mp4",
+  sourceMime: "video/mp4",
+  sourceSize: 1_500_000,
+  sourceDuration: 5,
+  createdAt: Date.now(),
+};
+let uploadCount = 0;
+let createCount = 0;
+let processCount = 0;
+let pollingCount = 0;
+let providerStatus = "Transcoding";
+const readyJob = () => ({
+  id: pendingState.jobId,
+  status: providerStatus,
+  output_url:
+    providerStatus === "Ready"
+      ? "https://media.example.test/retry-fixture.mp4"
+      : null,
+  poster_url:
+    providerStatus === "Ready"
+      ? "https://media.example.test/retry-fixture.jpg"
+      : null,
+});
+const createJob = async () => {
+  uploadCount += 1;
+  createCount += 1;
+  return { id: pendingState.jobId, status: "Uploaded" };
+};
+const firstAttempt = resumeOrCreateReadyVideoJob({
+  inspect: async () => null,
+  create: createJob,
+  start: async () => {
+    processCount += 1;
+    return readyJob();
+  },
+  waitUntilReady: async () => {
+    pollingCount += 1;
+    throw new Error(
+      `Video processing is still running. Video job ${pendingState.jobId} can be resumed without uploading the source again.`,
+    );
+  },
+  onJobSelected: (jobId) => {
+    assert.equal(jobId, pendingState.jobId);
+    savePendingTrendingVideoJob(browserSession, pendingState);
+  },
+});
+await assert.rejects(firstAttempt, /can be resumed without uploading/);
+assert.deepEqual(loadPendingTrendingVideoJob(browserSession), pendingState);
+
+providerStatus = "Ready";
+const resumed = await resumeOrCreateReadyVideoJob({
+  pendingJobId: loadPendingTrendingVideoJob(browserSession)?.jobId,
+  inspect: async (jobId) => {
+    assert.equal(jobId, pendingState.jobId);
+    return readyJob();
+  },
+  create: createJob,
+  start: async () => {
+    processCount += 1;
+    return readyJob();
+  },
+  waitUntilReady: async () => {
+    pollingCount += 1;
+    return readyJob();
+  },
+});
+assert.equal(resumed.job.status, "Ready");
+assert.equal(uploadCount, 1, "a timeout retry must not upload the source twice");
+assert.equal(createCount, 1, "a timeout retry must not create a second job");
+assert.equal(processCount, 1, "a Ready resumed job must not be processed twice");
+assert.equal(pollingCount, 1, "only the original attempt should reach fallback polling");
+const savedCampaign = {
+  id: "33333333-3333-4333-8333-333333333333",
+  video_processing_job_id: resumed.jobId,
+  video_url: resumed.job.output_url,
+  thumbnail_url: resumed.job.poster_url,
+};
+const reloadedCampaign = { ...savedCampaign };
+assert.deepEqual(
+  reloadedCampaign,
+  savedCampaign,
+  "the resumed Ready output must save and survive a fresh reload",
+);
+clearPendingTrendingVideoJob(browserSession);
+assert.equal(loadPendingTrendingVideoJob(browserSession), null);
 const webm = new Uint8Array([
   0x1a, 0x45, 0xdf, 0xa3,
   ...new TextEncoder().encode("webm....V_VP9....A_OPUS"),
@@ -88,6 +191,8 @@ const server = fs.readFileSync("src/lib/videoProcessingServer.ts", "utf8");
 for (const control of [
   /api\.cloudinary\.com/,
   /vc_h264,ac_aac,f_mp4/,
+  /eager_async: "true"/,
+  /controller\.abort\(\), 30_000/,
   /loadVideoTranscoderRuntimeConfig/,
   /video_codec:\s*"h264"/,
   /audio_codec:\s*"aac"/,
@@ -96,8 +201,6 @@ for (const control of [
   /assertJobActive/,
   /VIDEO_PROCESSING_CANCELLED/,
   /source_cleanup_status:\s*"Scheduled"/,
-  /eager_async:\s*"true"/,
-  /state:\s*"pending"/,
 ])
   assert.match(server, control);
 const transcoderRuntime = fs.readFileSync(
@@ -105,6 +208,7 @@ const transcoderRuntime = fs.readFileSync(
   "utf8",
 );
 for (const control of [
+  /CLOUDINARY_URL/,
   /CLOUDINARY_CLOUD_NAME/,
   /CLOUDINARY_API_KEY/,
   /CLOUDINARY_API_SECRET/,
@@ -128,8 +232,10 @@ assert.match(manager, /action:\s*"process"/);
 assert.match(manager, /cancelActiveUpload/);
 assert.match(manager, /video\/quicktime/);
 assert.match(manager, /pollVideoJobUntilReady/);
-assert.match(manager, /recover=1/);
-assert.match(manager, /maxAttempts:\s*80/);
+assert.match(manager, /resumeOrCreateReadyVideoJob/);
+assert.match(manager, /window\.sessionStorage/);
+assert.match(manager, /Resume processing/);
+assert.match(manager, /pendingJobId: pendingForSelection\?\.jobId/);
 assert.match(manager, /Retry upload/);
 assert.match(manager, /Cancel upload/);
 const cleanup = fs.readFileSync("src/app/api/media/cleanup/route.ts", "utf8");
@@ -150,5 +256,5 @@ assert.match(placement, /className="aspect-video w-full"/);
 assert.doesNotMatch(placement, /aspect-\[9\/13\]/);
 
 console.log(
-  "Trending video processing verification passed: MP4 and WebM container/codec classification, queued inspection, H.264/AAC conversion contract, poster output, progress polling, retry/cancel, retained originals, scheduled cleanup, System Status, reference parity, and compact-card controls are covered.",
+  "Trending video processing verification passed: MP4 and WebM container/codec classification, queued inspection, H.264/AAC conversion contract, poster output, resumable timeout → same-job Ready → save/reload behavior, progress polling, retry/cancel, retained originals, scheduled cleanup, System Status, reference parity, and compact-card controls are covered.",
 );

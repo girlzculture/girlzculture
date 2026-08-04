@@ -85,6 +85,9 @@ import {
   summarizeBookingTransactions,
 } from "@/lib/financeLedgerCore";
 import ActionToast from "@/components/ActionToast";
+import SalonDescriptionEditor from "@/components/owner/SalonDescriptionEditor";
+import OwnerSetupGuideLink from "@/components/owner/OwnerSetupGuideLink";
+import StylistSectionFallbackEditor from "@/components/owner/StylistSectionFallbackEditor";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -104,6 +107,13 @@ type Salon = Row & {
   status?: string;
   subscription_status?: string;
   description?: string;
+  description_ai_assisted?: boolean;
+  stylist_section_fallback?: {
+    mode?: "empty" | "image" | "product" | "promotion";
+    image_url?: string | null;
+    product_id?: string | null;
+    promotion_id?: string | null;
+  };
   email?: string;
   phone?: string;
   address_street?: string;
@@ -778,6 +788,7 @@ export default function OwnerDashboardApp({
       <div className="mb-4">
         <PushSetup scope="salon" compact />
       </div>
+      <OwnerSetupGuideLink />
       {realtimeNotice ? (
         <div
           role="status"
@@ -875,7 +886,7 @@ function DashboardContent({
     );
   if (section === "photos") return <Photos c={c} />;
   if (section === "styles") return <StructuredStylesEditor c={c} />;
-  if (section === "stylists") return <StructuredStylistsEditor c={c} />;
+  if (section === "stylists") return <><StructuredStylistsEditor c={c} />{c.stylists.length === 0 ? <StylistSectionFallbackEditor plan={c.plan} gallery={Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : []} products={c.products} promotions={c.promotions} initial={c.salon.stylist_section_fallback} onSave={c.updateSalon} onNotice={c.setNotice} /> : null}</>;
   if (section === "products") return <TruthfulProducts c={c} />;
   if (section === "availability") return <Availability c={c} />;
   if (section === "bookings") return <Bookings c={c} />;
@@ -1828,6 +1839,8 @@ function MyPage({ c }: { c: Ctx }) {
     await c.updateSalon({
       name: f.get("name"),
       description: f.get("description"),
+      description_ai_assisted: f.get("description_ai_assisted") === "true",
+      description_ai_draft_id: f.get("description_ai_draft_id"),
       address_street: f.get("address_street"),
       address_line2: f.get("address_line2") || null,
       address_city: f.get("address_city"),
@@ -1905,11 +1918,9 @@ function MyPage({ c }: { c: Ctx }) {
               required
               wide
             />
-            <TextArea
-              label="About / Description"
-              name="description"
-              defaultValue={c.salon.description}
-              wide
+            <SalonDescriptionEditor
+              initialValue={c.salon.description || ""}
+              initiallyAiAssisted={c.salon.description_ai_assisted === true}
             />
             <Field
               label="Address Line 1"

@@ -34,7 +34,7 @@ function sanitizeSections(value: unknown) {
   return value.slice(0, 30).map((raw) => {
     const section = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
     const type = safeSectionTypes.has(String(section.type)) ? String(section.type) : "text";
-    const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 20 : 12;
+    const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 200 : 12;
     const cards = Array.isArray(section.cards) ? section.cards.slice(0, maximum).map((rawCard) => {
       const card = rawCard && typeof rawCard === "object" ? rawCard as Record<string, unknown> : {};
       const requestedContentType = safeCardTypes.has(String(card.content_type)) ? String(card.content_type) : "image";
@@ -49,10 +49,47 @@ function sanitizeSections(value: unknown) {
       const radiusMiles = Math.max(1, Math.min(250, Number(card.radius_miles || 25)));
       const validLatitude = targetLatitude !== null && Number.isFinite(targetLatitude) && targetLatitude >= -90 && targetLatitude <= 90;
       const validLongitude = targetLongitude !== null && Number.isFinite(targetLongitude) && targetLongitude >= -180 && targetLongitude <= 180;
-      return { id: text(card.id, 80), content_type: contentType, association_type: associationType, salon_id: salonId, campaign_id: campaignId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at), market_id: marketId, target_label: text(card.target_label, 120), target_latitude: validLatitude ? targetLatitude : null, target_longitude: validLongitude ? targetLongitude : null, radius_miles: radiusMiles };
+      const priority = Math.max(0, Math.min(100, Number(card.priority ?? 50)));
+      const rotationWeight = Math.max(0.1, Math.min(100, Number(card.rotation_weight ?? 1)));
+      return { id: text(card.id, 80), content_type: contentType, association_type: associationType, salon_id: salonId, campaign_id: campaignId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at), market_id: marketId, target_label: text(card.target_label, 120), target_latitude: validLatitude ? targetLatitude : null, target_longitude: validLongitude ? targetLongitude : null, radius_miles: radiusMiles, priority: Number.isFinite(priority) ? priority : 50, rotation_weight: Number.isFinite(rotationWeight) ? rotationWeight : 1, editorial_fallback: card.editorial_fallback === true };
     }) : [];
-    return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), cards };
+    const displayLimit = Math.max(1, Math.min(20, Math.round(Number(section.display_limit || 8))));
+    return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), display_limit: Number.isFinite(displayLimit) ? displayLimit : 8, cards };
   });
+}
+
+function rawPromotionRail(value: unknown) {
+  if (!Array.isArray(value)) return null;
+  return value.find((item) => item && typeof item === "object" && (item as Record<string, unknown>).type === "promo_rail") as Record<string, unknown> | undefined || null;
+}
+
+function promotionIdentity(card: Record<string, unknown>) {
+  const associationType = text(card.association_type, 20);
+  if (associationType === "campaign" && card.campaign_id) return `campaign:${text(card.campaign_id, 80).toLowerCase()}`;
+  if (associationType === "salon" && card.salon_id) return `salon:${text(card.salon_id, 80).toLowerCase()}`;
+  return `editorial:${text(card.href, 1200).toLowerCase()}|${text(card.media_url, 1200).toLowerCase()}`;
+}
+
+function promotionCardIds(value: unknown) {
+  const rail = rawPromotionRail(value);
+  const cards = Array.isArray(rail?.cards) ? rail.cards : [];
+  return cards.map((item) => text((item as Record<string, unknown>)?.id, 80)).filter(Boolean);
+}
+
+function validatePromotionCollection(sections: ReturnType<typeof sanitizeSections>) {
+  const rail = sections.find((section) => section.type === "promo_rail");
+  if (!rail) return;
+  const ids = new Set<string>();
+  const identities = new Set<string>();
+  for (const card of rail.cards) {
+    if (!card.id) rejectRequest("Every homepage promotion card must have a stable card ID.");
+    const normalizedId = card.id.toLowerCase();
+    if (ids.has(normalizedId)) rejectRequest("Homepage promotion cards cannot reuse the same card ID.");
+    ids.add(normalizedId);
+    const identity = promotionIdentity(card);
+    if (identities.has(identity)) rejectRequest("The same salon, campaign, or editorial promotion cannot appear twice in the homepage rail.");
+    identities.add(identity);
+  }
 }
 
 async function validatePromotionAssociations(
@@ -251,13 +288,36 @@ async function PUTHandler(request: Request) {
 
     if (type === "page") {
       const { data: before } = await admin.from("content_pages").select("*").eq("slug", payload.slug).maybeSingle();
+      const expectedUpdatedAt = text(payload.expected_updated_at, 80);
+      if (before?.updated_at && expectedUpdatedAt !== String(before.updated_at)) {
+        return Response.json(
+          { error: "This page changed in another tab. Reload it before saving so no promotion cards are overwritten.", code: "CONTENT_REVISION_CONFLICT" },
+          { status: 409 },
+        );
+      }
       const sections = sanitizeSections(payload.sections);
       if (payload.slug === "home") {
         const promotionRail = sections.find((section) => section.type === "promo_rail");
-        if (!promotionRail || promotionRail.cards.length < 1 || promotionRail.cards.length > 20) {
+        if (!promotionRail || promotionRail.cards.length < 8 || promotionRail.cards.length > 200) {
           return Response.json(
-            { error: "The homepage promotion rail must contain between 1 and 20 cards." },
+            { error: "The homepage promotion source pool must contain between 8 and 200 cards." },
             { status: 400 },
+          );
+        }
+        validatePromotionCollection(sections);
+        const rawRail = rawPromotionRail(payload.sections);
+        const countChangeAllowed = rawRail?._allow_card_count_change === true;
+        const beforeIds = promotionCardIds(before?.sections);
+        const afterIds = promotionRail.cards.map((card) => card.id);
+        const membershipChanged = beforeIds.length > 0 && (
+          beforeIds.length !== afterIds.length ||
+          beforeIds.some((cardId) => !afterIds.includes(cardId)) ||
+          afterIds.some((cardId) => !beforeIds.includes(cardId))
+        );
+        if (membershipChanged && !countChangeAllowed) {
+          return Response.json(
+            { error: "The promotion-card collection changed without using Add promotion to pool or Remove promotion card. Reload and try again so existing cards are not lost.", code: "PROMOTION_COLLECTION_CONFLICT" },
+            { status: 409 },
           );
         }
       }

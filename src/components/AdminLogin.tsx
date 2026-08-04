@@ -2,19 +2,19 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Eye, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { adminSupabase } from "@/lib/supabase";
 import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 import { startSecureLogin, verifySecureLogin, type LoginChallenge, type LoginSession } from "@/lib/secureLoginClient";
 import MfaCodeField from "@/components/auth/MfaCodeField";
 import { surfacePathForHost } from "@/lib/hostRouting";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
-  const [show, setShow] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -47,7 +47,7 @@ export default function AdminLogin() {
   return <form onSubmit={submit} className="space-y-5">
     {challenge ? <MfaCodeField challenge={challenge} code={code} setCode={setCode} reset={() => { setChallenge(null); setCode(""); setPassword(""); }} /> : <>
       <label className="block"><span className="mb-2 block text-sm font-semibold">Email</span><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 px-4 py-3"><Mail size={18}/><input required type="email" pattern={EMAIL_PATTERN} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="admin@girlzculture.com" className="w-full bg-transparent outline-none"/></span></label>
-      <label className="block"><span className="mb-2 block text-sm font-semibold">Password</span><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 px-4 py-3"><LockKeyhole size={18}/><input required type={show ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full bg-transparent outline-none"/><button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"}><Eye size={18}/></button></span></label>
+      <div className="block"><label htmlFor="admin-password" className="mb-2 block text-sm font-semibold">Password</label><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 px-4 py-2"><LockKeyhole size={18}/><PasswordInput id="admin-password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} inputClassName="w-full bg-transparent py-1 outline-none"/></span></div>
       <Link href="/forgot-password" className="block text-right text-sm font-semibold text-magenta">Forgot password?</Link>
     </>}
     {message ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}

@@ -24,6 +24,11 @@ export type ContentCard = {
   target_latitude?: number;
   target_longitude?: number;
   radius_miles?: number;
+  priority?: number;
+  rotation_weight?: number;
+  editorial_fallback?: boolean;
+  /** Server-provided per-visitor display intent; never persisted on a card. */
+  display_limit?: number;
 };
 export type ContentSection = {
   id?: string;
@@ -35,6 +40,8 @@ export type ContentSection = {
   cta_href?: string;
   is_visible?: boolean;
   columns?: number;
+  /** Number selected for one visitor; the national source pool may be larger. */
+  display_limit?: number;
   cards?: ContentCard[];
 };
 export type ContentPage = {

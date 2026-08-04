@@ -7,6 +7,7 @@ import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 import { startSecureLogin, verifySecureLogin, type LoginChallenge, type LoginSession } from "@/lib/secureLoginClient";
 import MfaCodeField from "@/components/auth/MfaCodeField";
 import { surfacePathForHost } from "@/lib/hostRouting";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function SalonLogin() {
   const [email, setEmail] = useState("");
@@ -51,7 +52,7 @@ export default function SalonLogin() {
   return <form onSubmit={submit} className="space-y-4">
     {challenge ? <MfaCodeField challenge={challenge} code={code} setCode={setCode} reset={() => { setChallenge(null); setCode(""); setPassword(""); }} /> : <>
       <label className="block text-sm font-semibold">Email<input type="email" pattern={EMAIL_PATTERN} value={email} onChange={(event) => setEmail(event.target.value)} required className="mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-3" /></label>
-      <label className="block text-sm font-semibold">Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required className="mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-3" /></label>
+      <div className="block text-sm font-semibold"><label htmlFor="salon-password">Password</label><span className="mt-2 flex w-full rounded-md border border-ink/15 bg-white px-3 py-1.5"><PasswordInput id="salon-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required inputClassName="bg-transparent py-1.5 outline-none" /></span></div>
       <Link className="block text-right text-sm font-semibold text-magenta" href="/forgot-password">Forgot password?</Link>
     </>}
     {errorMsg ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{errorMsg}</p> : null}

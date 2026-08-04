@@ -2,7 +2,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { loadGoogleMaps } from "@/components/search/AutocompleteInputs";
+import {
+  GOOGLE_MAPS_AUTH_FAILURE_EVENT,
+  GoogleMapsLoadError,
+  loadGoogleMaps,
+  resetGoogleMapsLoader,
+} from "@/components/search/AutocompleteInputs";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { reportClientOperationalFailure } from "@/lib/supabase";
 
@@ -12,6 +17,8 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
   const element = useRef<HTMLDivElement>(null);
   const markerButtons = useRef(new Map<string, HTMLButtonElement>());
   const [message, setMessage] = useState("");
+  const [retryable, setRetryable] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
     for (const [salonId, button] of markerButtons.current) {
       const selected = salonId === selectedSalonId;
@@ -25,17 +32,51 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
     let active = true;
     let clusterer: MarkerClusterer | null = null;
     let fallbackOverlays: any[] = [];
+    let advancedMarkers: any[] = [];
+    let authFailureHandled = false;
     const buttons = markerButtons.current;
     const mapped = salons.filter((salon) => Number.isFinite(Number(salon.latitude)) && Number.isFinite(Number(salon.longitude)));
+    const presentFailure = async (error: GoogleMapsLoadError | null) => {
+      const report = await reportClientOperationalFailure({
+        status: 502,
+        code: error?.code || "GOOGLE_MAP_RENDER_FAILED",
+        operation: "maps:render-salon-results",
+        provider: "google-maps",
+      });
+      if (!active) return;
+      const actionable = error?.message || "Google Maps could not render these salon results. Check the Maps JavaScript API configuration and provider status.";
+      setMessage(`${actionable}${report.reference ? ` Reference ${report.reference}.` : ""} You can still use List view.`);
+      setRetryable(error?.code !== "GOOGLE_MAPS_NOT_CONFIGURED");
+    };
+    const onAuthenticationFailure = (event: Event) => {
+      authFailureHandled = true;
+      const detail = (event as CustomEvent<{ code?: string; message?: string }>).detail;
+      void presentFailure(
+        new GoogleMapsLoadError(
+          "GOOGLE_MAPS_AUTH_REJECTED",
+          detail?.message || "Google Maps rejected the API key or site referrer. Enable Maps JavaScript API and allow this site's HTTPS domain in Google Cloud.",
+        ),
+      );
+    };
+    window.addEventListener(
+      GOOGLE_MAPS_AUTH_FAILURE_EVENT,
+      onAuthenticationFailure,
+    );
     const timer = window.setTimeout(() => void (async () => {
-      if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) { setMessage("Add the Google Maps API key to enable the live map."); return; }
-      if (!mapped.length) { setMessage("These salons do not have map coordinates yet."); return; }
+      setMessage("");
+      setRetryable(false);
+      if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) { setMessage("Google Maps is not configured. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to the deployed site environment."); return; }
+      if (!mapped.length) { setMessage("These salons do not have map coordinates yet. Add latitude and longitude to each salon address."); return; }
       try {
         await loadGoogleMaps();
         const maps = await (window as any).google.maps.importLibrary("maps");
         if (!active || !element.current) return;
         const first = mapped[0];
-        const mapId = String(process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "").trim();
+        const configuredMapId = String(process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "").trim();
+        // Google's DEMO_MAP_ID is for samples and can be rate-limited or
+        // rejected in production. The standards-based overlay works without
+        // a Map ID and preserves the rich salon label/click behavior.
+        const mapId = configuredMapId === "DEMO_MAP_ID" ? "" : configuredMapId;
         const map = new maps.Map(element.current, { center: { lat: Number(first.latitude), lng: Number(first.longitude) }, zoom: 12, ...(mapId ? { mapId } : {}), mapTypeControl: false, streetViewControl: false, fullscreenControl: false });
         const bounds = new (window as any).google.maps.LatLngBounds();
         buttons.clear();
@@ -90,21 +131,18 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
             fallbackOverlays.push(overlay);
             return overlay;
           }
-          return new markerLibrary.AdvancedMarkerElement({ map: mapped.length > 10 ? null : map, position, content: button, title: salon.name });
+          const marker = new markerLibrary.AdvancedMarkerElement({ map: mapped.length > 10 ? null : map, position, content: button, title: salon.name });
+          advancedMarkers.push(marker);
+          return marker;
         });
         if (mapped.length > 10 && markerLibrary) clusterer = new MarkerClusterer({ map, markers });
         if (mapped.length > 1) map.fitBounds(bounds, 48);
-      } catch {
-        const report = await reportClientOperationalFailure({
-          status: 502,
-          code: "GOOGLE_MAP_LOAD_FAILED",
-          operation: "maps:render-salon-results",
-          provider: "google-maps",
-        });
-        if (active) setMessage(`${report.message} You can still use List view.`);
+      } catch (error) {
+        const loadError = error instanceof GoogleMapsLoadError ? error : null;
+        if (!authFailureHandled) await presentFailure(loadError);
       }
     })(), 0);
-    return () => { active = false; window.clearTimeout(timer); clusterer?.clearMarkers(); fallbackOverlays.forEach((overlay) => overlay.setMap(null)); fallbackOverlays = []; buttons.clear(); };
-  }, [onSelect, salons]);
-  return <div className={`relative overflow-hidden rounded-[12px] border border-plum/10 bg-blush/20 ${compact ? "sticky top-4 h-[560px]" : "mt-3 h-[540px]"}`}>{message ? <div className="grid h-full place-items-center p-8 text-center text-sm text-ink/60">{message}</div> : <div ref={element} className="h-full w-full"/>}</div>;
+    return () => { active = false; window.removeEventListener(GOOGLE_MAPS_AUTH_FAILURE_EVENT, onAuthenticationFailure); window.clearTimeout(timer); clusterer?.clearMarkers(); advancedMarkers.forEach((marker) => { marker.map = null; }); advancedMarkers = []; fallbackOverlays.forEach((overlay) => overlay.setMap(null)); fallbackOverlays = []; buttons.clear(); };
+  }, [loadAttempt, onSelect, salons]);
+  return <div className={`relative overflow-hidden rounded-[12px] border border-plum/10 bg-blush/20 ${compact ? "sticky top-4 h-[560px]" : "mt-3 h-[540px]"}`}>{message ? <div className="grid h-full place-items-center p-8 text-center text-sm text-ink/60"><div><p>{message}</p>{retryable ? <button type="button" onClick={() => { resetGoogleMapsLoader(); setLoadAttempt((value) => value + 1); }} className="mt-4 min-h-11 rounded-[10px] border border-magenta bg-white px-5 font-bold text-magenta">Retry map</button> : null}</div></div> : <div ref={element} className="h-full w-full"/>}</div>;
 }

@@ -9,6 +9,7 @@ import SafeImage from "@/components/site/SafeImage";
 type ReviewRecord = {
   id?: string;
   display_name?: string | null;
+  review_title?: string | null;
   rating_overall?: number | null;
   rating_price_accuracy?: number | null;
   rating_punctuality?: number | null;
@@ -88,7 +89,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
   const showNext = () => setActiveIndex((current) => localReviews.length ? (current + 1) % localReviews.length : 0);
 
   return (
-    <section id="reviews" className="rounded-[15px] border border-plum/10 bg-white/75 p-4 shadow-[0_5px_18px_rgba(13,17,20,0.05)] sm:p-5">
+    <section id="reviews" tabIndex={-1} className="scroll-mt-24 rounded-[15px] border border-plum/10 bg-white/75 p-4 shadow-[0_5px_18px_rgba(13,17,20,0.05)] outline-none focus-visible:ring-2 focus-visible:ring-magenta sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="font-serif text-[24px] font-semibold text-ink">Reviews</h2>
@@ -120,8 +121,9 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
                 <div className="mt-1 flex gap-0.5">{renderStars(activeReview.rating_overall ?? salonRating)}</div>
               </div>
             </div>
+            {activeReview.review_title ? <h4 data-no-translate="true" className="mt-3 text-[12px] font-bold text-ink">{activeReview.review_title}</h4> : null}
             <p data-no-translate="true" className="mt-3 line-clamp-3 text-[11px] leading-[1.55] text-ink/75">{activeReview.written_review || "This verified client rated their completed appointment."}</p>
-            {activeReview.result_photos?.length ? <div className="mt-3 flex gap-1.5">{activeReview.result_photos.slice(0, 4).map((photo, index) => <div key={`${photo}-${index}`} className="relative h-11 w-14 overflow-hidden rounded-[6px] bg-blush"><SafeImage src={photo} fallbackSrc={photo} alt={`Review result ${index + 1}`} rendition="thumbnail" className="h-full w-full object-cover" /></div>)}</div> : null}
+            {activeReview.result_photos?.length ? <div className="mt-3 flex gap-1.5">{activeReview.result_photos.slice(0, 4).map((photo, index) => <div key={`${photo}-${index}`} className="relative h-11 w-14 overflow-hidden rounded-[6px] bg-blush"><SafeImage src={photo} fallbackSrc={photo} alt={`Review result ${index + 1}`} className="h-full w-full object-cover" /></div>)}</div> : null}
             {activeReview.salon_reply ? <div className="mt-3 rounded-[8px] bg-blush/25 p-3 text-[10px] leading-4 text-ink/70"><strong className="text-plum">Salon reply:</strong> {activeReview.salon_reply}</div> : canReply ? <div className="mt-3">{activeReply === activeReview.id ? <><textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} rows={2} placeholder="Write a reply" className="w-full rounded-[8px] border border-plum/10 px-3 py-2 text-[10px] outline-none" /><div className="mt-2 flex gap-2"><button type="button" onClick={() => submitReply(activeReview.id || "")} disabled={replySaving} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">{replySaving ? "Saving…" : "Save reply"}</button><button type="button" onClick={() => { setActiveReply(null); setReplyText(""); }} className="rounded-full border border-magenta px-3 py-1.5 text-[9px] text-magenta">Cancel</button></div>{replyError ? <p className="mt-2 text-[9px] text-red-700">{replyError}</p> : null}</> : <button type="button" onClick={() => setActiveReply(activeReview.id || null)} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">Reply as salon</button>}</div> : null}
           </article>
         ) : <p className="grid min-h-28 place-items-center rounded-[12px] border border-dashed border-plum/15 text-[11px] text-ink/55">No reviews yet. Reviews from completed bookings will appear here automatically.</p>}

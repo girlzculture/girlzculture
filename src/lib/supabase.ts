@@ -1,6 +1,9 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
-import { shouldPreserveSupabaseAuthResponse } from "@/lib/supabaseFetchPolicy";
+import {
+  shouldPreserveSupabaseAuthResponse,
+  shouldRetryTransientAuthTokenResponse,
+} from "@/lib/supabaseFetchPolicy";
 import {
   buildAuthStorageKeys,
   buildLegacyAuthStorageKeys,
@@ -146,9 +149,20 @@ async function monitoredBrowserSupabaseFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ) {
+  let replayableAuthRequest: Request | null = null;
+  if (shouldPreserveSupabaseAuthResponse(input)) {
+    try {
+      replayableAuthRequest = new Request(input, init);
+    } catch {
+      // If a caller supplied a non-replayable stream, preserve the ordinary
+      // single-attempt fetch path instead of risking duplicate partial work.
+    }
+  }
   let response: Response;
   try {
-    response = await fetch(input, init);
+    response = replayableAuthRequest
+      ? await fetch(replayableAuthRequest.clone())
+      : await fetch(input, init);
   } catch (error) {
     void reportClientOperationalFailure({
       status: 503,
@@ -162,6 +176,30 @@ async function monitoredBrowserSupabaseFetch(
       dedupeScope: scope,
     });
     throw error;
+  }
+  if (
+    replayableAuthRequest &&
+    shouldRetryTransientAuthTokenResponse(input, response.status) &&
+    !replayableAuthRequest.signal.aborted
+  ) {
+    // One short retry absorbs a transient Supabase token-edge 502/503/504.
+    // It is deliberately limited to the Auth token endpoint and one attempt;
+    // invalid/expired credentials and every non-token operation retain their
+    // original behavior. A failed retry is still reported below.
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
+    try {
+      response = await fetch(replayableAuthRequest.clone());
+    } catch (error) {
+      void reportClientOperationalFailure({
+        status: 503,
+        code: "NETWORK",
+        operation: `${providerOperation(input)}:${scope}`,
+        provider: "supabase",
+        authorization: requestAuthorization(input, init),
+        dedupeScope: scope,
+      });
+      throw error;
+    }
   }
   if (response.ok || typeof window === "undefined") return response;
   let code = "";

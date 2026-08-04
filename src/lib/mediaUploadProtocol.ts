@@ -12,6 +12,9 @@ export const MEDIA_UPLOAD_SLOTS = [
   "mobile",
   "thumbnail",
 ] as const;
+// The browser uploads only the untouched source. Responsive derivatives are
+// generated, stored, and verified by the trusted finalize route.
+export const MEDIA_DIRECT_UPLOAD_SLOTS = ["source"] as const;
 export const MEDIA_RENDITION_SLOTS: Array<
   ImageRenditionDevice | "thumbnail"
 > = [
@@ -22,6 +25,13 @@ export const MEDIA_RENDITION_SLOTS: Array<
 ];
 
 export type MediaUploadSlot = (typeof MEDIA_UPLOAD_SLOTS)[number];
+
+export function isCanonicalDirectUploadPlan(slots: readonly unknown[]) {
+  return (
+    slots.length === MEDIA_DIRECT_UPLOAD_SLOTS.length &&
+    MEDIA_DIRECT_UPLOAD_SLOTS.every((slot, index) => slots[index] === slot)
+  );
+}
 
 export type MediaAttachment =
   | {

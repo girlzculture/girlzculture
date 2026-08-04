@@ -595,8 +595,13 @@ begin
     'anon',
     'public.resolve_homepage_promotion_target(text,uuid)',
     'EXECUTE'
+  )
+    or not has_function_privilege(
+      'anon',
+      'public.resolve_homepage_promotion_targets(jsonb)',
+      'EXECUTE'
   ) then
-    raise exception 'Public homepage promotion target resolver is unavailable';
+    raise exception 'Public homepage promotion target resolvers are unavailable';
   end if;
 
   if not exists (

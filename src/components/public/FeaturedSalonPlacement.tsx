@@ -7,6 +7,7 @@ import { useCustomerLocation } from "@/components/location/CustomerLocationProvi
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
 import { validCoordinates } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Promo = { title: string; body: string; href: string };
 const SESSION_SEED_KEY = "girlz-culture-featured-rotation-v1";
@@ -68,13 +69,13 @@ export default function FeaturedSalonPlacement({
         cache: "no-store",
         signal,
       });
-      const body = (await response.json()) as {
+      const body = (await readApiResponse(response, "Featured salons could not be loaded.")) as {
         salons?: PublicSalonResult[];
         total?: number;
         promo?: Promo;
         error?: string;
       };
-      if (!response.ok) throw new Error("request failed");
+      if (!response.ok) throw new Error(body.error || "Featured salons could not be loaded.");
       const next = Array.isArray(body.salons) ? body.salons : [];
       setSalons((current) =>
         append
@@ -90,7 +91,7 @@ export default function FeaturedSalonPlacement({
       if (body.promo) setPromo(body.promo);
     } catch (loadError) {
       if ((loadError as Error).name !== "AbortError")
-        setError("Featured salons could not be loaded. Please try again.");
+        setError(loadError instanceof Error ? loadError.message : "Featured salons could not be loaded. Please try again.");
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -120,9 +121,10 @@ export default function FeaturedSalonPlacement({
   return (
     <section
       aria-labelledby="featured-salons-heading"
-      className={viewAll ? "py-6" : "pb-5 pt-3 sm:pb-6"}
+      data-home-salon-section="featured"
+      className={viewAll ? "py-6" : "pb-3 pt-1 sm:pb-6 sm:pt-3"}
     >
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-2.5 flex flex-wrap items-end justify-between gap-3 sm:mb-3">
         <div>
           <div className="flex items-baseline gap-3">
             <h2

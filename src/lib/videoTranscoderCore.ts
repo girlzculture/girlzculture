@@ -2,6 +2,7 @@ export const CLOUDINARY_RUNTIME_VARIABLE_NAMES = [
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
   "CLOUDINARY_API_SECRET",
+  "CLOUDINARY_URL",
 ] as const;
 
 export type CloudinaryRuntimeVariableName =
@@ -70,6 +71,20 @@ function present(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function cloudinaryUrlCredentials(value: unknown): CloudinaryRuntimeConfig | null {
+  try {
+    const parsed = new URL(String(value || "").trim());
+    if (parsed.protocol !== "cloudinary:" || !parsed.hostname || !parsed.username || !parsed.password) return null;
+    return {
+      cloudName: decodeURIComponent(parsed.hostname),
+      apiKey: decodeURIComponent(parsed.username),
+      apiSecret: decodeURIComponent(parsed.password),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function safeVideoProviderUrl(value: unknown) {
   try {
     const url = new URL(String(value || ""));
@@ -131,10 +146,24 @@ export function loadVideoTranscoderRuntime(
     name,
     present: present(values[name]),
   }));
-  const missingVariables = variables
-    .filter((variable) => !variable.present)
-    .map((variable) => variable.name);
-  const cloudinaryConfigured = missingVariables.length === 0;
+  const explicitCloudinary =
+    present(values.CLOUDINARY_CLOUD_NAME) &&
+    present(values.CLOUDINARY_API_KEY) &&
+    present(values.CLOUDINARY_API_SECRET)
+      ? {
+          cloudName: values.CLOUDINARY_CLOUD_NAME,
+          apiKey: values.CLOUDINARY_API_KEY,
+          apiSecret: values.CLOUDINARY_API_SECRET,
+        }
+      : null;
+  // Netlify's Cloudinary extension normally provides one CLOUDINARY_URL.
+  // Explicit variables remain preferred when all three are present.
+  const urlCloudinary = cloudinaryUrlCredentials(values.CLOUDINARY_URL);
+  const cloudinary = explicitCloudinary || urlCloudinary;
+  const cloudinaryConfigured = Boolean(cloudinary);
+  const missingVariables = cloudinaryConfigured
+    ? []
+    : variables.filter((variable) => !variable.present).map((variable) => variable.name);
   const customEndpoint = safeVideoProviderUrl(
     readEnvironment("MEDIA_TRANSCODE_ENDPOINT"),
   );
@@ -158,13 +187,7 @@ export function loadVideoTranscoderRuntime(
       variables,
       missingVariables,
     },
-    cloudinary: cloudinaryConfigured
-      ? {
-          cloudName: values.CLOUDINARY_CLOUD_NAME,
-          apiKey: values.CLOUDINARY_API_KEY,
-          apiSecret: values.CLOUDINARY_API_SECRET,
-        }
-      : null,
+    cloudinary,
     custom: customFallbackConfigured
       ? { endpoint: customEndpoint, token: customToken }
       : null,
@@ -198,7 +221,7 @@ export function classifyVideoProviderStatus(
         "Cloudinary rejected the configured cloud name or API credentials.",
     });
   }
-  if ([408, 425, 429].includes(status) || status >= 500) {
+  if ([408, 420, 425, 429].includes(status) || status >= 500) {
     return new VideoTranscoderError({
       code: "VIDEO_TRANSCODER_PROVIDER_UNAVAILABLE",
       state: "cloudinary_provider_outage",

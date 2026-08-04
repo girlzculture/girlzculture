@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   CLOUDINARY_RUNTIME_VARIABLE_NAMES,
+  cloudinaryCompletedVideoResult,
   classifyVideoProviderStatus,
   classifyVideoTranscoderError,
   loadVideoTranscoderRuntime,
@@ -28,7 +29,11 @@ assert.deepEqual(
   })),
 );
 
-for (const missingName of CLOUDINARY_RUNTIME_VARIABLE_NAMES) {
+for (const missingName of [
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+]) {
   const values = {
     CLOUDINARY_CLOUD_NAME: "fixture-cloud",
     CLOUDINARY_API_KEY: "fixture-key",
@@ -37,13 +42,14 @@ for (const missingName of CLOUDINARY_RUNTIME_VARIABLE_NAMES) {
   delete values[missingName];
   const partial = runtime(values);
   assert.equal(partial.diagnostic.cloudinaryConfigured, false);
-  assert.deepEqual(partial.diagnostic.missingVariables, [missingName]);
+  assert.deepEqual(partial.diagnostic.missingVariables, [missingName, "CLOUDINARY_URL"]);
 }
 
 const cloudinary = runtime({
   CLOUDINARY_CLOUD_NAME: "fixture-cloud",
   CLOUDINARY_API_KEY: "fixture-key",
   CLOUDINARY_API_SECRET: "fixture-secret",
+  CLOUDINARY_URL: "cloudinary://url-key:url-secret@url-cloud",
 });
 assert.equal(cloudinary.diagnostic.configured, true);
 assert.equal(cloudinary.diagnostic.cloudinaryConfigured, true);
@@ -59,6 +65,63 @@ assert.equal(
 assert.equal(
   JSON.stringify(cloudinary.diagnostic).includes("fixture-secret"),
   false,
+);
+assert.equal(cloudinary.cloudinary.cloudName, "fixture-cloud", "complete explicit variables must be preferred over CLOUDINARY_URL");
+
+const extensionStyle = runtime({
+  CLOUDINARY_URL: "cloudinary://extension-key:extension-secret@extension-cloud",
+});
+assert.equal(extensionStyle.diagnostic.configured, true);
+assert.equal(extensionStyle.diagnostic.provider, "cloudinary");
+assert.deepEqual(extensionStyle.diagnostic.missingVariables, []);
+assert.deepEqual(extensionStyle.cloudinary, {
+  cloudName: "extension-cloud",
+  apiKey: "extension-key",
+  apiSecret: "extension-secret",
+});
+assert.equal(JSON.stringify(extensionStyle.diagnostic).includes("extension-secret"), false);
+
+const malformedExtensionUrl = runtime({
+  CLOUDINARY_URL: "https://not-a-cloudinary-url.example.test",
+});
+assert.equal(malformedExtensionUrl.diagnostic.configured, false);
+assert.equal(malformedExtensionUrl.diagnostic.provider, "none");
+
+const fiveSecondReadyAsset = cloudinaryCompletedVideoResult({
+  duration: 5,
+  width: 720,
+  height: 1280,
+  derived: [
+    {
+      format: "mp4",
+      secure_url: "https://res.cloudinary.com/fixture/video/upload/ready.mp4",
+      bytes: 1_500_000,
+      width: 720,
+      height: 1280,
+    },
+    {
+      format: "jpg",
+      secure_url: "https://res.cloudinary.com/fixture/video/upload/poster.jpg",
+      bytes: 55_000,
+    },
+  ],
+});
+assert.equal(fiveSecondReadyAsset?.duration_seconds, 5);
+assert.match(fiveSecondReadyAsset?.output_url || "", /ready\.mp4$/);
+assert.match(fiveSecondReadyAsset?.poster_url || "", /poster\.jpg$/);
+assert.equal(
+  cloudinaryCompletedVideoResult({
+    duration: 5,
+    derived: [
+      {
+        format: "mp4",
+        secure_url: "https://res.cloudinary.com/fixture/video/upload/no-poster.mp4",
+        bytes: 1_500_000,
+      },
+    ],
+  }),
+  null,
+  "a video must never become Ready without its persisted public poster",
 );
 
 const customFallback = runtime({
@@ -91,6 +154,11 @@ const outage = classifyVideoProviderStatus(503, "connection");
 assert.equal(outage.state, "cloudinary_provider_outage");
 assert.equal(outage.code, "VIDEO_TRANSCODER_PROVIDER_UNAVAILABLE");
 assert.equal(outage.status, 503);
+assert.equal(
+  classifyVideoProviderStatus(420, "connection").state,
+  "cloudinary_provider_outage",
+  "Cloudinary rate limiting must remain retryable instead of becoming a permanent failure",
+);
 assert.equal(
   providerNetworkFailure(new TypeError("fetch failed")).state,
   "cloudinary_provider_outage",
