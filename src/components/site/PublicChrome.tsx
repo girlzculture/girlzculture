@@ -173,9 +173,9 @@ export async function PublicFooter() {
     links:footerItems.filter((item) => item.group_key === groupKey),
   }));
   return (
-    <footer className="gc-brand-footer text-white">
+    <footer className="gc-brand-footer overflow-x-clip text-white">
       <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
-        <div>
+        <div className="min-w-0">
           {footerLogo?.published_url ? <img src={footerLogo.published_url} alt={footerLogo.published_alt_text || "Girlz Culture"} className="h-10 w-auto max-w-[220px] object-contain object-left"/> : <div className="font-serif text-[25px] font-bold tracking-[-0.035em]">Girlz Culture</div>}
           <div className="mt-5 flex gap-3 text-white/75">
             <Camera aria-label="Instagram" size={17} />
@@ -183,17 +183,17 @@ export async function PublicFooter() {
           </div>
         </div>
         {footerGroups.map((group) => (
-          <div key={group.groupKey}>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/80"><LocalizedText messageKey={group.key} fallback={group.title}/></h2>
-            <ul className="mt-3 space-y-2 text-[11px] text-white/65">
+          <div key={group.groupKey} className="min-w-0">
+            <h2 className="[overflow-wrap:anywhere] text-[10px] font-bold uppercase tracking-[0.08em] text-white/80"><LocalizedText messageKey={group.key} fallback={group.title}/></h2>
+            <ul className="mt-3 min-w-0 space-y-2 [overflow-wrap:anywhere] text-[11px] text-white/65">
               {group.links.map((item) => <li key={item.item_key}><Link href={item.href} className="hover:text-white"><LocalizedText messageKey={item.translation_key||`navigation.${item.item_key}`} fallback={item.label}/>{item.show_new_badge ? <span className="ml-1 rounded-full bg-magenta px-1.5 py-0.5 text-[7px] font-bold uppercase">New</span> : null}</Link></li>)}
             </ul>
           </div>
         ))}
-        {legalLinks.length ? <div className="col-span-2 grid grid-cols-2 gap-x-6 gap-y-2 lg:col-span-1">
+        {legalLinks.length ? <div className="col-span-2 grid min-w-0 grid-cols-2 gap-x-6 gap-y-2 [overflow-wrap:anywhere] lg:col-span-1">
           {legalColumns.map((column, index) => <ul key={index} className="space-y-2 text-[10px] leading-4 text-white/65">{column.map(([label, href]) => <li key={href}><Link href={href} className="hover:text-white">{label}</Link></li>)}</ul>)}
         </div> : <div className="hidden lg:block"/>}
-        <div className="col-span-2 lg:col-span-1">
+        <div className="col-span-2 min-w-0 lg:col-span-1">
           <h2 className="font-serif text-[17px] font-semibold"><LocalizedText messageKey="footer.newsletter" fallback="Stay in the loop"/></h2>
           <p className="mt-2 text-[11px] leading-5 text-white/65"><LocalizedText messageKey="footer.newsletter_help" fallback="Tips, new salons, and exclusive offers."/></p>
           <NewsletterForm />

@@ -30,6 +30,16 @@ const tabletChecks =
 const tabletLandscapeChecks =
   /homepage shell has no overflow|homepage removes the intro|phone and tablet landscape layouts|mobile promotion swipe/;
 
+function acceptanceClientHeaders(lastOctet: number) {
+  return {
+    // The production limiter keys public location resolution by the visitor's
+    // proxy-provided address. CI runs every isolated browser project through
+    // one localhost proxy, so give each simulated visitor class a distinct
+    // reserved TEST-NET address instead of exhausting one visitor's budget.
+    extraHTTPHeaders: { "x-forwarded-for": `192.0.2.${lastOctet}` },
+  };
+}
+
 export default defineConfig({
   testDir: "./tests/browser",
   timeout: 30_000,
@@ -61,36 +71,40 @@ export default defineConfig({
     },
   ],
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], ...acceptanceClientHeaders(10) },
+    },
     {
       name: "firefox",
       testMatch: publicResponsiveSpec,
       grep: crossBrowserSmoke,
-      use: { ...devices["Desktop Firefox"] },
+      use: { ...devices["Desktop Firefox"], ...acceptanceClientHeaders(11) },
     },
     {
       name: "webkit",
       testMatch: publicResponsiveSpec,
       grep: crossBrowserSmoke,
-      use: { ...devices["Desktop Safari"] },
+      use: { ...devices["Desktop Safari"], ...acceptanceClientHeaders(12) },
     },
     {
       name: "iphone",
       testMatch: publicResponsiveSpec,
       grep: portraitMobileChecks,
-      use: { ...devices["iPhone 14"] },
+      use: { ...devices["iPhone 14"], ...acceptanceClientHeaders(13) },
     },
     {
       name: "android",
       testMatch: publicResponsiveSpec,
       grep: portraitMobileChecks,
-      use: { ...devices["Pixel 7"] },
+      use: { ...devices["Pixel 7"], ...acceptanceClientHeaders(14) },
     },
     {
       name: "narrow-phone",
       testMatch: publicResponsiveSpec,
       grep: narrowPhoneChecks,
       use: {
+        ...acceptanceClientHeaders(15),
         viewport: { width: 320, height: 568 },
         hasTouch: true,
         isMobile: true,
@@ -101,6 +115,7 @@ export default defineConfig({
       testMatch: publicResponsiveSpec,
       grep: phoneLandscapeChecks,
       use: {
+        ...acceptanceClientHeaders(16),
         viewport: { width: 844, height: 390 },
         hasTouch: true,
         isMobile: true,
@@ -110,13 +125,21 @@ export default defineConfig({
       name: "tablet",
       testMatch: publicResponsiveSpec,
       grep: tabletChecks,
-      use: { viewport: { width: 820, height: 1180 }, hasTouch: true },
+      use: {
+        ...acceptanceClientHeaders(17),
+        viewport: { width: 820, height: 1180 },
+        hasTouch: true,
+      },
     },
     {
       name: "tablet-landscape",
       testMatch: publicResponsiveSpec,
       grep: tabletLandscapeChecks,
-      use: { viewport: { width: 1180, height: 820 }, hasTouch: true },
+      use: {
+        ...acceptanceClientHeaders(18),
+        viewport: { width: 1180, height: 820 },
+        hasTouch: true,
+      },
     },
   ],
 });
