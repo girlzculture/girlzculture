@@ -1,5 +1,46 @@
 import { expect, test } from "@playwright/test";
 
+const acceptanceOrigin = new URL(
+  process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3104",
+).origin;
+
+const projectVisitorAddress: Record<string, string> = {
+  chromium: "192.0.2.10",
+  firefox: "192.0.2.11",
+  webkit: "192.0.2.12",
+  iphone: "192.0.2.13",
+  android: "192.0.2.14",
+  "narrow-phone": "192.0.2.15",
+  "phone-landscape": "192.0.2.16",
+  tablet: "192.0.2.17",
+  "tablet-landscape": "192.0.2.18",
+};
+
+test.beforeEach(async ({ page }, testInfo) => {
+  const visitorAddress = projectVisitorAddress[testInfo.project.name];
+  if (!visitorAddress) return;
+
+  // CI sends every browser project through one local proxy, while the
+  // production location limiter keys requests by visitor address. Give each
+  // simulated visitor class a reserved TEST-NET address, but only on the
+  // same-origin endpoint that consumes it. A global extraHTTPHeaders setting
+  // would also send this non-safelisted header to fonts and other providers,
+  // triggering cross-origin preflight failures.
+  await page.route(
+    (url) =>
+      url.origin === acceptanceOrigin &&
+      url.pathname === "/api/location/resolve",
+    async (route) => {
+      await route.continue({
+        headers: {
+          ...route.request().headers(),
+          "x-forwarded-for": visitorAddress,
+        },
+      });
+    },
+  );
+});
+
 const pilotPublicRoutes = [
   "/",
   "/salons",
