@@ -189,28 +189,37 @@ export async function createScopedJsonApiClient(input: {
     target: RequestInfo | URL,
     init: RequestInit = {},
   ): Promise<T> {
-    let refreshed = false;
-    while (true) {
-      session = await verifiedSession(refreshed);
+    const send = async (candidate: ScopedApiSession) => {
       const headers = new Headers(init.headers);
-      headers.set("Authorization", `Bearer ${session.access_token}`);
+      headers.set("Authorization", `Bearer ${candidate.access_token}`);
       headers.set("Accept", "application/json");
       headers.set("X-Requested-With", requestedWith);
-      const response = await fetcher(target, {
+      return fetcher(target, {
         ...init,
         headers,
         credentials: "same-origin",
         cache: init.cache || "no-store",
         redirect: "manual",
       });
-      if (response.status === 401 && !refreshed) {
-        refreshed = true;
-        continue;
+    };
+
+    session = await verifiedSession(false);
+    const attemptedAccessToken = session.access_token;
+    let response = await send(session);
+    if (response.status === 401) {
+      // Another request or browser tab may already have refreshed this role's
+      // session while the rejected request was in flight. Reuse that newer
+      // same-user token; force another rotation only when the stored token is
+      // still the exact token the server rejected.
+      session = await verifiedSession(false);
+      if (session.access_token === attemptedAccessToken) {
+        session = await verifiedSession(true);
       }
-      const body = await responseBody(response);
-      if (!response.ok) throw apiError(response, body);
-      return body as T;
+      response = await send(session);
     }
+    const body = await responseBody(response);
+    if (!response.ok) throw apiError(response, body);
+    return body as T;
   }
 
   return {

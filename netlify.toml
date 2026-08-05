@@ -3,7 +3,9 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "24"
+  # Keep native media on Node 22 until a Node 24 function deploy has passed the
+  # same cold-start and pixel checks as production.
+  NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
 
 [[plugins]]

@@ -135,7 +135,7 @@ const rotatingClient = await createScopedJsonApiClient({
 assert.deepEqual(await rotatingClient.request("/api/salon/workspace"), { ok: true });
 assert.equal(refreshCalls, 1);
 assert.equal(fetchCalls, 2);
-assert.equal(getSessionCalls, 2);
+assert.equal(getSessionCalls, 3);
 
 // Concurrent workspace and notification 401s share one role-scoped refresh.
 // Each request retries once with the same refreshed acting account.

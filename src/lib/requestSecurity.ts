@@ -48,6 +48,28 @@ export function errorResponse(error: unknown, fallback: string) {
   if (error instanceof RateLimitError) {
     return Response.json({ error: error.message }, { status: 429, headers: { "Retry-After": String(error.retryAfter) } });
   }
+  const record = error && typeof error === "object"
+    ? error as Record<string, unknown>
+    : {};
+  if (
+    Number(record.status || 0) === 503 &&
+    String(record.code || "") === "AUTHENTICATION_PROVIDER_UNAVAILABLE"
+  ) {
+    return Response.json(
+      {
+        error: "The authentication service is temporarily unavailable.",
+        code: "AUTHENTICATION_PROVIDER_UNAVAILABLE",
+        retryable: true,
+      },
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "private, no-store",
+          "Retry-After": "1",
+        },
+      },
+    );
+  }
   const message = error instanceof Error ? error.message : fallback;
   const status = /^Unauthorized\b/i.test(message)
     ? 401

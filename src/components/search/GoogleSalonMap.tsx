@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   GOOGLE_MAPS_AUTH_FAILURE_EVENT,
   GoogleMapsLoadError,
-  loadGoogleMaps,
+  loadGoogleMapsWithBoundedRetry,
   resetGoogleMapsLoader,
 } from "@/components/search/AutocompleteInputs";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
@@ -68,7 +68,7 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
       if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) { setMessage("Google Maps is not configured. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to the deployed site environment."); return; }
       if (!mapped.length) { setMessage("These salons do not have map coordinates yet. Add latitude and longitude to each salon address."); return; }
       try {
-        await loadGoogleMaps();
+        await loadGoogleMapsWithBoundedRetry();
         const maps = await (window as any).google.maps.importLibrary("maps");
         if (!active || !element.current) return;
         const first = mapped[0];

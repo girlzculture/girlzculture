@@ -9,10 +9,13 @@ import {
   type ImageTransform,
 } from "@/lib/imageUpload";
 import {
+  animatedRenditionDimensions,
   canonicalCropRegion,
   orientedDimensions,
   sanitizeImageTransform,
 } from "@/lib/mediaImageProcessingCore";
+
+export { animatedRenditionDimensions };
 
 export type ServerMediaSource = {
   buffer: Buffer;
@@ -30,40 +33,6 @@ export type ServerMediaRendition = {
   height: number;
   checksum: string;
 };
-
-/**
- * Animated editorial media is displayed in relatively small promotional
- * cards. Upscaling every GIF frame to the static-image master dimensions can
- * multiply the encoded payload by an order of magnitude and make an otherwise
- * valid GIF impossible to save. Keep the requested aspect ratio, but never
- * enlarge the animation beyond either its source pixels or the display-sized
- * animated ceiling.
- */
-export function animatedRenditionDimensions(input: {
-  source: { width: number; height: number };
-  target: { width: number; height: number };
-  maximumLongEdge?: number;
-}) {
-  const sourceWidth = Math.max(1, Math.floor(input.source.width));
-  const sourceHeight = Math.max(1, Math.floor(input.source.height));
-  const targetWidth = Math.max(1, Math.floor(input.target.width));
-  const targetHeight = Math.max(1, Math.floor(input.target.height));
-  const ceiling = Math.max(
-    1,
-    Math.min(
-      Math.max(targetWidth, targetHeight),
-      Math.floor(input.maximumLongEdge || 960),
-    ),
-  );
-  const ratio = targetWidth / targetHeight;
-  let width = Math.min(targetWidth, sourceWidth, ceiling);
-  let height = Math.max(1, Math.round(width / ratio));
-  if (height > sourceHeight || height > targetHeight || height > ceiling) {
-    height = Math.min(targetHeight, sourceHeight, ceiling);
-    width = Math.max(1, Math.round(height * ratio));
-  }
-  return { width, height };
-}
 
 function mimeForFormat(format: string | undefined) {
   if (format === "jpeg") return "image/jpeg" as const;

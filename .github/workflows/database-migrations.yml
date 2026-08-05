@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run verify:migrations
@@ -64,6 +64,9 @@ jobs:
       - run: npm run verify:test-salon-deletion
       - run: npm run verify:launch-owner-controls
       - run: npm run verify:password-reset-security
+      - run: npm run verify:auth-session-resilience
+      - run: npm run verify:dashboard-notifications
+      - run: npm run verify:location
       - run: node scripts/verify-crop-map-toast-runtime.mjs
       - run: npm run verify:monitoring
       - run: npx tsc --noEmit
@@ -78,6 +81,10 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
           SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
           PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
+      - name: Verify route-scoped native media packaging
+        run: npm run verify:media-trace
+      - name: Verify production media route cold starts
+        run: npm run verify:media-runtime
       - name: Install supported browser engines
         run: npx playwright install --with-deps chromium firefox webkit
       - name: Exercise responsive and affected browser workflows

@@ -96,6 +96,10 @@ const ownerRecordSave = ownerDashboard.slice(
   ownerDashboard.indexOf("async function saveRecordServer"),
   ownerDashboard.indexOf("async function removeRecord"),
 );
+const uploadLock = upload.slice(
+  upload.indexOf("const locked ="),
+  upload.indexOf("const aspect ="),
+);
 assert.ok(
   ownerProfileSave.includes("readApiResponse") &&
     !ownerProfileSave.includes("response.json()"),
@@ -157,11 +161,12 @@ const checks = [
   ],
   [
     upload.includes("const profileReady =") &&
-      upload.includes("!profileReady") &&
+      !uploadLock.includes("!profileReady") &&
       upload.includes("disabled={locked}") &&
-      upload.includes("Loading image requirements...") &&
-      upload.includes("Retry image requirements"),
-    "file selection waits for the authoritative placement profile",
+      upload.includes("profile: IMAGE_UPLOAD_PROFILES[presetKey]") &&
+      !upload.includes("Image requirements unavailable") &&
+      !upload.includes("Retry image requirements"),
+    "safe checked-in placement rules remain usable while authoritative guidance reloads",
   ],
   [
     client.includes("/api/media/upload/prepare") &&
@@ -196,13 +201,18 @@ const checks = [
   [
     legacyApi.includes("loadConfiguredMediaProfile") &&
       !legacyApi.includes("getEngineNumber") &&
-      server.includes(
-        'getEngineNumber("media.public_image_quality", 88, 60, 100)',
-      ) &&
+      !server.includes('from "@/lib/mediaImageProcessor"') &&
+      !server.includes('await import("@/lib/mediaImageProcessor")') &&
+      finalizeApi.includes('await import("@/lib/mediaImageProcessor")') &&
+      server.includes("resolveMediaUploadProfile") &&
+      server.includes("runWithOperationalContext") &&
+      server.includes("MEDIA_UPLOAD_PROFILE_TIMEOUT_MS") &&
+      server.includes("reportMediaUploadProfileFallback({ kind, failures })") &&
+      server.includes('.from("engine_settings")') &&
       (server.match(/loadConfiguredMediaProfile/g) || []).length >= 2 &&
       server.includes("quality: profile.quality,") &&
       server.includes("quality: profileSnapshot.quality"),
-    "one authoritative server profile loader applies Engine quality to GET and immutable upload preparation",
+    "one bounded server profile loader applies configured overrides or safe deduplicated fallbacks to GET and immutable upload preparation",
   ],
   [
     finalizeApi.includes("preparedMediaProfileSnapshot") &&

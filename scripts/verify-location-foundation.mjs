@@ -18,6 +18,26 @@ for (const required of [
 
 assert.ok(geocoder.includes("process.env.GOOGLE_MAPS_SERVER_API_KEY"), "Server geocoder must use a server-only key.");
 assert.ok(!geocoder.includes("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"), "Server geocoder must not reuse the browser key.");
+const systemStatus = fs.readFileSync(
+  "src/app/api/admin/engine/system-status/route.ts",
+  "utf8",
+);
+const mapsIntegration = systemStatus.slice(
+  systemStatus.indexOf('key: "maps"'),
+  systemStatus.indexOf('key: "openai"'),
+);
+assert.match(mapsIntegration, /NEXT_PUBLIC_GOOGLE_MAPS_API_KEY/);
+assert.match(mapsIntegration, /GOOGLE_MAPS_SERVER_API_KEY/);
+const mapsConnectionTest = systemStatus.slice(
+  systemStatus.indexOf('if (key === "maps")'),
+  systemStatus.indexOf('if (key === "openai")'),
+);
+assert.match(mapsConnectionTest, /process\.env\.GOOGLE_MAPS_SERVER_API_KEY/);
+assert.doesNotMatch(
+  mapsConnectionTest,
+  /process\.env\.(?:NEXT_PUBLIC_GOOGLE_MAPS_API_KEY|GOOGLE_MAPS_API_KEY)/,
+  "The server geocoding health test must not reuse a browser/referrer key.",
+);
 assert.ok(geocoder.includes('"ROOFTOP", "RANGE_INTERPOLATED"'), "Approximate addresses must not receive coordinates.");
 assert.ok(provider.includes("navigator.geolocation.getCurrentPosition"), "Device location must use the browser geolocation boundary.");
 assert.match(firstRelevantRequest, /AUTOMATIC_LOCATION_REQUEST_KEY/);

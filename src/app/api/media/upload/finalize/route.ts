@@ -92,11 +92,16 @@ async function POSTHandler(request: Request) {
         typeof preparedMediaProfileSnapshot
       >[1],
     );
+    // Sharp is native and platform-specific. Only this final processing path
+    // loads it, keeping profile, prepare, legacy, and cleanup route bundles
+    // independent from the native binary.
+    const processor = await import("@/lib/mediaImageProcessor");
     const verified = await verifyPreparedMediaObjects(
       admin,
       session.expected_objects,
       session.crop_metadata,
       profile,
+      processor,
     );
     const result = await admin.rpc("finalize_media_upload_session", {
       p_session_id: uploadId,

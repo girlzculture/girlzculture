@@ -1,15 +1,13 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
-import {
-  shouldPreserveSupabaseAuthResponse,
-  shouldRetryTransientAuthTokenResponse,
-} from "@/lib/supabaseFetchPolicy";
+import { shouldPreserveSupabaseAuthResponse } from "@/lib/supabaseFetchPolicy";
 import {
   buildAuthStorageKeys,
   buildLegacyAuthStorageKeys,
   classifySupabaseAuthFailure,
   createScopedRefreshCoordinator,
   isStoredSessionShape,
+  retryTransientAuthOperation,
   type AuthScopeName,
 } from "@/lib/authSessionCore";
 import { ScopedSessionProviderError } from "@/lib/scopedApiCore";
@@ -149,20 +147,9 @@ async function monitoredBrowserSupabaseFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ) {
-  let replayableAuthRequest: Request | null = null;
-  if (shouldPreserveSupabaseAuthResponse(input)) {
-    try {
-      replayableAuthRequest = new Request(input, init);
-    } catch {
-      // If a caller supplied a non-replayable stream, preserve the ordinary
-      // single-attempt fetch path instead of risking duplicate partial work.
-    }
-  }
   let response: Response;
   try {
-    response = replayableAuthRequest
-      ? await fetch(replayableAuthRequest.clone())
-      : await fetch(input, init);
+    response = await fetch(input, init);
   } catch (error) {
     void reportClientOperationalFailure({
       status: 503,
@@ -176,30 +163,6 @@ async function monitoredBrowserSupabaseFetch(
       dedupeScope: scope,
     });
     throw error;
-  }
-  if (
-    replayableAuthRequest &&
-    shouldRetryTransientAuthTokenResponse(input, response.status) &&
-    !replayableAuthRequest.signal.aborted
-  ) {
-    // One short retry absorbs a transient Supabase token-edge 502/503/504.
-    // It is deliberately limited to the Auth token endpoint and one attempt;
-    // invalid/expired credentials and every non-token operation retain their
-    // original behavior. A failed retry is still reported below.
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
-    try {
-      response = await fetch(replayableAuthRequest.clone());
-    } catch (error) {
-      void reportClientOperationalFailure({
-        status: 503,
-        code: "NETWORK",
-        operation: `${providerOperation(input)}:${scope}`,
-        provider: "supabase",
-        authorization: requestAuthorization(input, init),
-        dedupeScope: scope,
-      });
-      throw error;
-    }
   }
   if (response.ok || typeof window === "undefined") return response;
   let code = "";
@@ -388,13 +351,19 @@ async function refreshLegacySession(
     },
   });
   try {
-    const { data, error } = await ephemeral.auth.refreshSession({
-      refresh_token: session.refresh_token,
+    const { data, error } = await retryTransientAuthOperation(async () => {
+      const result = await ephemeral.auth.refreshSession({
+        refresh_token: session.refresh_token,
+      });
+      if (
+        result.error &&
+        classifySupabaseAuthFailure(result.error) === "transient"
+      ) {
+        throw result.error;
+      }
+      return result;
     });
     if (error) {
-      if (classifySupabaseAuthFailure(error) === "transient") {
-        throw new ScopedSessionProviderError(scope);
-      }
       return null;
     }
     return data.session;
@@ -448,11 +417,23 @@ async function migrateLegacySession(scope: AuthScope): Promise<Session | null> {
 // to the project/version-scoped destination key.
 export async function getSessionForScope(scope: AuthScope): Promise<Session | null> {
   const scopedClient = getSupabaseForScope(scope);
-  const { data: scopedData, error } = await scopedClient.auth.getSession();
+  let result: Awaited<ReturnType<typeof scopedClient.auth.getSession>>;
+  try {
+    result = await retryTransientAuthOperation(async () => {
+      const current = await scopedClient.auth.getSession();
+      if (
+        current.error &&
+        classifySupabaseAuthFailure(current.error) === "transient"
+      ) {
+        throw current.error;
+      }
+      return current;
+    });
+  } catch {
+    throw new ScopedSessionProviderError(scope);
+  }
+  const { data: scopedData, error } = result;
   if (error) {
-    if (classifySupabaseAuthFailure(error) === "transient") {
-      throw new ScopedSessionProviderError(scope);
-    }
     await clearSessionForScope(scope);
     return null;
   }
@@ -538,14 +519,17 @@ export async function refreshSessionForScope(
   return scopedRefreshes.run(scope, async () => {
     const scopedClient = getSupabaseForScope(scope);
     try {
-      const { data, error } = await scopedClient.auth.refreshSession();
-      if (error || !data.session) {
+      const { data, error } = await retryTransientAuthOperation(async () => {
+        const result = await scopedClient.auth.refreshSession();
         if (
-          error &&
-          classifySupabaseAuthFailure(error) === "transient"
+          result.error &&
+          classifySupabaseAuthFailure(result.error) === "transient"
         ) {
-          throw new ScopedSessionProviderError(scope);
+          throw result.error;
         }
+        return result;
+      });
+      if (error || !data.session) {
         await clearSessionForScope(scope);
         return null;
       }

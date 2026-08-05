@@ -40,25 +40,32 @@ export type MonitoringProfile = {
   classification: MonitoringClassification;
   safeMessage?: string;
   provider?: string;
+  processOnlyPartialWarnings?: boolean;
 };
 
-function responseMessage(body: unknown) {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return "";
+function responseDetails(body: unknown) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { message: "", code: "" };
+  }
   const record = body as Record<string, unknown>;
-  return typeof record.error === "string"
+  const message = typeof record.error === "string"
     ? record.error
     : typeof record.message === "string"
       ? record.message
       : "";
+  return {
+    message,
+    code: typeof record.code === "string" ? record.code : "",
+  };
 }
 
-async function responseErrorMessage(response: Response) {
+async function responseErrorDetails(response: Response) {
   try {
     const type = response.headers.get("content-type") || "";
-    if (!type.includes("application/json")) return "";
-    return responseMessage(await response.clone().json());
+    if (!type.includes("application/json")) return { message: "", code: "" };
+    return responseDetails(await response.clone().json());
   } catch {
-    return "";
+    return { message: "", code: "" };
   }
 }
 
@@ -113,15 +120,22 @@ async function captureForRoute(
   error: unknown,
   record: { type: string; id: string } | null,
   overrides: Partial<ErrorContext> = {},
+  options: { skipProviderCalls?: boolean } = {},
 ) {
   return capturePlatformError({
     request,
-    admin: monitoringAdmin(),
+    // When Supabase Auth itself is unavailable, another actor lookup and
+    // database RPC would amplify the same outage and delay the 503 response.
+    // The structured function log still carries the correlation reference.
+    admin: options.skipProviderCalls ? undefined : monitoringAdmin(),
     error,
     feature: profile.feature,
     action: `${profile.method.toLowerCase()}:${profile.route}`,
     actorRole: profile.actorRole,
-    actorId: await verifiedActorId(request),
+    actorId:
+      options.skipProviderCalls || profile.actorRole === "system"
+        ? null
+        : await verifiedActorId(request),
     recordType: record?.type || null,
     recordId: record?.id || null,
     provider: overrides.provider || profile.provider || null,
@@ -158,7 +172,11 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
         const response = await handler(request, ...args);
         if (response.headers.get("X-Request-ID")) return response;
 
-        const message = await responseErrorMessage(response);
+        const responseError = await responseErrorDetails(response);
+        const message = responseError.message;
+        const authenticationProviderUnavailable =
+          response.status === 503 &&
+          responseError.code === "AUTHENTICATION_PROVIDER_UNAVAILABLE";
         const failures = operationalFailures();
         const unsafeReportedFailure = failures.find((failure) => {
           const record = failure.error && typeof failure.error === "object"
@@ -182,7 +200,11 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
           || (response.status >= 400 && Boolean(unsafeReportedFailure))
         ) {
           const authFailure = response.status === 401 || isAuthenticationFailureMessage(message);
-          const severity = authFailure ? "low" : "high";
+          const severity = authFailure
+            ? "low"
+            : authenticationProviderUnavailable
+              ? "medium"
+              : "high";
           const reported = unsafeReportedFailure || failures.at(-1);
           const reference = await captureForRoute(
             request,
@@ -197,13 +219,24 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
                 reported_operation: reported?.operation || null,
               },
             },
+            { skipProviderCalls: authenticationProviderUnavailable },
           );
-          const status = authFailure ? 401 : 500;
+          const status = authFailure
+            ? 401
+            : authenticationProviderUnavailable
+              ? 503
+              : 500;
           const safeMessage = authFailure
             ? "Your session could not be verified."
-            : profile.safeMessage || "This operation could not be completed.";
+            : authenticationProviderUnavailable
+              ? "The authentication service is temporarily unavailable."
+              : profile.safeMessage || "This operation could not be completed.";
           return safeFailure(safeMessage, reference, status, {
-            code: authFailure ? "AUTHENTICATION_SESSION_FAILURE" : undefined,
+            code: authFailure
+              ? "AUTHENTICATION_SESSION_FAILURE"
+              : authenticationProviderUnavailable
+                ? "AUTHENTICATION_PROVIDER_UNAVAILABLE"
+                : undefined,
             recordType: affectedRecord?.type || null,
             recordId: affectedRecord?.id || null,
           });
@@ -225,6 +258,9 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
                   partial_operation: true,
                   reported_operation: reported.operation,
                 },
+              },
+              {
+                skipProviderCalls: profile.processOnlyPartialWarnings === true,
               },
             ));
           }
@@ -306,6 +342,7 @@ export function withOperationalMonitoring<TArgs extends unknown[]>(
                 : "high",
             provider: failureProvider(error),
           },
+          { skipProviderCalls: authProviderUnavailable },
         );
         return safeFailure(
           isUnauthorized
