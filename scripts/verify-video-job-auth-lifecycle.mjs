@@ -343,15 +343,27 @@ const originalConsoleError = console.error;
 console.error = () => undefined;
 const canonicalReference = await capturePlatformError({
   admin: {
-    rpc: async () => ({ data: eventId, error: null }),
+    rpc: () => ({
+      abortSignal: async (signal) => {
+        assert.ok(signal instanceof AbortSignal);
+        return { data: eventId, error: null };
+      },
+    }),
     from: () => ({
       select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({
-            data: { reference: engineReference },
-            error: null,
-          }),
-        }),
+        eq: () => {
+          const builder = {
+            abortSignal(signal) {
+              assert.ok(signal instanceof AbortSignal);
+              return builder;
+            },
+            maybeSingle: async () => ({
+              data: { reference: engineReference },
+              error: null,
+            }),
+          };
+          return builder;
+        },
       }),
     }),
   },
