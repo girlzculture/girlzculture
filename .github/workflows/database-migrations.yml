@@ -55,7 +55,6 @@ jobs:
       - run: npm run verify:salon-spreadsheet
       - run: npm run verify:repository-metadata
       - run: npm run verify:media-contract
-      - run: npm run verify:media-runtime
       - run: npm run verify:media
       - run: npm run verify:video-job-auth
       - run: npm run verify:video-transcoder-runtime
@@ -84,6 +83,8 @@ jobs:
           PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
       - name: Verify route-scoped native media packaging
         run: npm run verify:media-trace
+      - name: Verify production media route cold starts
+        run: npm run verify:media-runtime
       - name: Install supported browser engines
         run: npx playwright install --with-deps chromium firefox webkit
       - name: Exercise responsive and affected browser workflows
