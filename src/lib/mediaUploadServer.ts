@@ -26,6 +26,7 @@ import {
 } from "@/lib/mediaUploadProfileSnapshotCore";
 import {
   MEDIA_RENDITION_SLOTS,
+  MEDIA_DIRECT_UPLOAD_SLOTS,
   MEDIA_SOURCE_BUCKET,
   normalizeAttachment,
   type MediaAttachment,
@@ -510,17 +511,18 @@ export async function prepareMediaUpload(
     };
   }
 
-  const sourceTarget = expected.source!;
-  const { data: signedSource, error: signedSourceError } =
-    await context.admin.storage
-      .from(sourceTarget.bucket)
-      .createSignedUploadUrl(sourceTarget.path, { upsert: false });
-  if (signedSourceError || !signedSource?.token) {
-    throw (
-      signedSourceError || new Error("Signed source upload is unavailable.")
-    );
+  const uploads = [];
+  for (const slot of MEDIA_DIRECT_UPLOAD_SLOTS) {
+    const target = expected[slot];
+    if (!target) throw new Error("The prepared source upload is incomplete.");
+    const { data, error } = await context.admin.storage
+      .from(target.bucket)
+      .createSignedUploadUrl(target.path, { upsert: false });
+    if (error || !data?.token) {
+      throw error || new Error("Signed source upload is unavailable.");
+    }
+    uploads.push({ ...target, token: data.token });
   }
-  const uploads = [{ ...sourceTarget, token: signedSource.token }];
 
   const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
   const { error: sessionError } = await context.admin

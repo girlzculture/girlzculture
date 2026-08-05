@@ -14,6 +14,7 @@ import {
   verifyReviewToken,
 } from "@/lib/reviewAccessServer";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { moderatePublicContent } from "@/lib/contentModerationServer";
 
 export const runtime = "nodejs";
 
@@ -56,18 +57,30 @@ async function POSTHandler(
     if (ratings.some((value) => !Number.isInteger(value) || value < 1 || value > 5))
       return Response.json({ error: "Choose a rating from 1 to 5 for every category." }, { status: 400 });
     const writtenReview = cleanText(body.written_review, 3000);
-    const displayName = cleanText(body.display_name, 60);
-    if (!displayName)
+    const displayName = cleanText(body.display_name, 40);
+    const reviewTitle = cleanText(body.review_title, 100);
+    if (!displayName || /\s/u.test(displayName) || !/^[\p{L}\p{M}'’-]+$/u.test(displayName))
       return Response.json(
-        { error: "Enter the first name or display name you want shown publicly." },
+        { error: "Enter your first name only, using letters, an apostrophe, or a hyphen." },
         { status: 400 },
       );
     if (writtenReview.length < 10)
       return Response.json({ error: "Write at least 10 characters about your experience." }, { status: 400 });
     const admin = getSupabaseAdmin();
+    const moderation = await moderatePublicContent(admin, {
+      name: displayName,
+      title: reviewTitle,
+      body: writtenReview,
+    });
+    if (!moderation.allowed)
+      return Response.json(
+        { error: "Please revise the name, title, or review to remove abusive, hateful, threatening, or unsafe language." },
+        { status: 422 },
+      );
     const { data, error } = await admin.rpc("submit_verified_guest_review", {
       p_token_hash: reviewTokenHash(token),
       p_display_name: displayName,
+      p_review_title: reviewTitle || null,
       p_rating_overall: ratings[0],
       p_rating_price_accuracy: ratings[1],
       p_rating_punctuality: ratings[2],

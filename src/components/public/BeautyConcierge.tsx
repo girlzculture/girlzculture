@@ -33,11 +33,13 @@ export default function BeautyConcierge() {
     setBusy(true); setMessage(""); setCompare([]); setSearchState("idle");
     try {
       const response = await fetch("/api/concierge/search", { method: "POST", credentials: "same-origin", redirect: "manual", headers: { "Accept": "application/json", "Content-Type": "application/json", "X-Requested-With": "girlz-culture-public" }, body: JSON.stringify({ prompt, language: locale, latitude: location.location?.lat, longitude: location.location?.lng, website: "" }) });
-      const contentType = response.headers.get("content-type") || "";
-      if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400) || !contentType.toLowerCase().includes("application/json")) {
+      if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
         throw new Error("Beauty search is temporarily unavailable.");
       }
-      const body = await response.json() as ResponseBody;
+      const body = await readApiResponse(
+        response,
+        "Beauty search is temporarily unavailable.",
+      ) as ResponseBody;
       if (!response.ok) throw new Error(body.error || "Beauty search is temporarily unavailable.");
       const salons = Array.isArray(body.salons) ? body.salons : [];
       setIntent(body.intent || null); setMode(body.mode || null); setConfiguration(body.configuration || null); setResults(salons);

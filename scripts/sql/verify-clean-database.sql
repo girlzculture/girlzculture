@@ -385,21 +385,24 @@ begin
   end if;
 
   if to_regprocedure(
-      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
     ) is null
+    or to_regprocedure(
+      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
+    ) is not null
     or has_function_privilege(
       'anon',
-      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
       'EXECUTE'
     )
     or has_function_privilege(
       'authenticated',
-      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
       'EXECUTE'
     )
     or not has_function_privilege(
       'service_role',
-      'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
       'EXECUTE'
     )
   then
@@ -595,8 +598,13 @@ begin
     'anon',
     'public.resolve_homepage_promotion_target(text,uuid)',
     'EXECUTE'
+  )
+    or not has_function_privilege(
+      'anon',
+      'public.resolve_homepage_promotion_targets(jsonb)',
+      'EXECUTE'
   ) then
-    raise exception 'Public homepage promotion target resolver is unavailable';
+    raise exception 'Public homepage promotion target resolvers are unavailable';
   end if;
 
   if not exists (

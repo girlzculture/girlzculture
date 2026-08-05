@@ -8,7 +8,6 @@ import {
   Navigation,
   Package,
   ShieldCheck,
-  Star,
   Tag,
 } from "lucide-react";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
@@ -25,6 +24,9 @@ import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
+import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescription";
+import SalonRatingSummary from "@/components/public/SalonRatingSummary";
+import SalonStylistFallback from "@/components/public/SalonStylistFallback";
 
 type SalonRecord = {
   id: string;
@@ -34,6 +36,8 @@ type SalonRecord = {
   time_zone?: string | null;
   slug?: string | null;
   description?: string | null;
+  description_ai_assisted?: boolean | null;
+  stylist_section_fallback?: { mode?: string; image_url?: string | null; product_id?: string | null; promotion_id?: string | null } | null;
   address_street?: string | null;
   address_line2?: string | null;
   address_city?: string | null;
@@ -105,6 +109,7 @@ type StyleMaterialRecord = {
 type ReviewRecord = {
   id?: string;
   display_name?: string | null;
+  review_title?: string | null;
   rating_overall?: number | null;
   rating_price_accuracy?: number | null;
   rating_punctuality?: number | null;
@@ -187,10 +192,6 @@ function normalizeHours(value: unknown) {
   });
 }
 
-function renderStars(rating: number) {
-  return Array.from({ length: 5 }, (_, index) => <Star key={index} size={14} className={index < Math.round(rating) ? "fill-amber text-amber" : "fill-transparent text-ink/20"} />);
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -217,7 +218,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -309,6 +310,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const hours = normalizeHours(salon.hours);
   const isVerified = salon.verification_status?.toLowerCase().startsWith("verified") ?? false;
   const verifiedLabel=await getEngineText("trust.verified_label","Verified Salon",60);
+  const stylistFallback = salon.stylist_section_fallback || { mode: "empty" };
+  const canShowStylistFallback = !stylists.length && ["Growth", "Premium"].includes(String(salon.subscription_tier || ""));
 
   const trustIcons = [ShieldCheck, Tag, Clock3];
   const trustLabels = [pageContent.labels?.trust_label_1, pageContent.labels?.trust_label_2, pageContent.labels?.trust_label_3].filter(Boolean) as string[];
@@ -330,7 +333,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-blush px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? verifiedLabel : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 text-red-700":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-charcoal sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span><SalonDistance latitude={salon.latitude} longitude={salon.longitude}/></div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">{reviewCount > 0 && rating > 0 ? <><Star size={15} className="fill-amber text-amber" /><strong>{rating.toFixed(1)}</strong><span className="flex gap-0.5">{renderStars(rating)}</span><span className="text-ink/55">({reviewCount} reviews)</span></> : <span className="rounded-full bg-blush px-2.5 py-1 font-bold text-plum">New</span>}</div>
+            <SalonRatingSummary rating={rating} reviewCount={reviewCount} />
 
             {trustLabels.length ? <div className="mt-4 grid grid-cols-3 gap-2">
               {trustLabels.map((label, index) => {
@@ -344,7 +347,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
               })}
             </div> : null}
 
-            {salon.description?.trim() ? <p className="mt-4 max-w-[760px] text-[11px] leading-[1.55] text-ink/75 sm:text-[12px]">{salon.description}</p> : null}
+            {salon.description?.trim() ? <ExpandableSalonDescription description={salon.description} aiAssisted={salon.description_ai_assisted === true} /> : null}
 
             <div className="mt-4 flex items-center gap-2">
               {canBook ? <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link> : <span aria-disabled="true" className="inline-flex min-h-11 flex-1 cursor-not-allowed items-center justify-center rounded-[9px] bg-ink/10 px-6 text-[12px] font-semibold text-ink/55">{closedToday ? "Closed today" : "Bookings paused"}</span>}
@@ -386,8 +389,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
           </div>
 
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-[22px] font-semibold text-ink">Our Stylists</h2><p className="mt-1 text-[9px] text-ink/55">Meet the pros behind your perfect style.</p></div><a href="#stylists" className="text-[9px] font-semibold text-magenta">View all</a></div>
-            <div id="stylists" className="mt-4"><SalonStylists stylists={stylists} salonSlug={salon.slug || slug} /></div>
+            <div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-[22px] font-semibold text-ink">{canShowStylistFallback && stylistFallback.mode !== "empty" ? "Salon Highlight" : "Our Stylists"}</h2><p className="mt-1 text-[9px] text-ink/55">{canShowStylistFallback && stylistFallback.mode !== "empty" ? "Selected by this salon for its public page." : "Meet the pros behind your perfect style."}</p></div>{stylists.length ? <a href="#stylists" className="text-[9px] font-semibold text-magenta">View all</a> : null}</div>
+            <div id="stylists" className="mt-4">{canShowStylistFallback && stylistFallback.mode !== "empty" ? <SalonStylistFallback fallback={stylistFallback} products={products} promotions={promotions} salonSlug={salon.slug || slug} /> : <SalonStylists stylists={stylists} salonSlug={salon.slug || slug} />}</div>
           </div>
         </section>
 
@@ -400,7 +403,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
               {products.map((product, index) => {
                 const offer = bestPromotionForContext(promotions, { salonId: salon.id, productId: product.id || null, basePrice: Number(product.price || 0), selectedAddons: [], subtotal: Number(product.price || 0) });
                 return <Link key={product.id || index} href={`/salon/${salon.slug || slug}/product/${product.id}${offer ? `?promotion=${encodeURIComponent(String(offer.promotion.id || ""))}` : ""}`} className="group min-w-[72vw] max-w-[300px] snap-start overflow-hidden rounded-[13px] border border-plum/10 bg-white shadow-[0_7px_20px_rgba(13,17,20,0.05)] transition hover:-translate-y-0.5 hover:border-magenta/30 sm:min-w-0 sm:max-w-none">
-                  <div className="relative aspect-square w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} rendition="thumbnail" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}{offer ? <span className="absolute bottom-2 left-2 rounded-full bg-amber px-2 py-1 text-[9px] font-bold text-ink">{promotionLabel(offer.promotion)}</span> : null}</div>
+                  <div className="relative aspect-square w-full bg-blush/45">{product.photo_url ? <SafeImage src={product.photo_url} fallbackSrc={product.photo_url} alt={product.name || "Salon product"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <span className="grid h-full place-items-center text-plum/30"><Package size={48} strokeWidth={1.2} /></span>}{offer ? <span className="absolute bottom-2 left-2 rounded-full bg-amber px-2 py-1 text-[9px] font-bold text-ink">{promotionLabel(offer.promotion)}</span> : null}</div>
                   <div className="p-4"><div className="flex items-start justify-between gap-3"><h3 className="font-serif text-[19px] font-semibold leading-tight text-ink">{product.name}</h3><p className="shrink-0 text-right text-[13px] font-bold">{offer ? <><span className="block text-[10px] text-ink/40 line-through">${Number(product.price || 0).toFixed(2)}</span><span className="text-magenta">${offer.price.total.toFixed(2)}</span></> : `$${Number(product.price || 0).toFixed(2)}`}</p></div><p className="mt-2 line-clamp-2 text-[11px] leading-5 text-ink/55">{product.description || "Available at the salon."}</p><p className="mt-3 text-[11px] font-bold text-magenta">{offer ? "View product offer" : "View product details"}</p></div>
                 </Link>;
               })}

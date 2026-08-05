@@ -113,27 +113,36 @@ async function GETHandler(request: Request) {
       p_result_offset: (page - 1) * pageSize,
     };
 
-    const [listResult, totalResult, activeResult, pendingResult, newResult, suspendedResult, offboardedResult, addressReviewResult, marketResult] = await Promise.all([
+    const [listResult, deletedResult, totalResult, activeResult, pendingResult, newResult, suspendedResult, offboardedResult, addressReviewResult, marketResult] = await Promise.all([
       admin.rpc("admin_list_salons", rpcParams),
-      admin.from("salons").select("id", { count: "exact", head: true }),
-      admin.from("salons").select("id", { count: "exact", head: true }).eq("status", "Active"),
-      admin.from("salons").select("id", { count: "exact", head: true }).eq("status", "Pending"),
-      admin.from("salons").select("id", { count: "exact", head: true }).eq("status", "New"),
-      admin.from("salons").select("id", { count: "exact", head: true }).eq("status", "Suspended"),
-      admin.from("salons").select("id", { count: "exact", head: true }).eq("status", "Offboarded"),
-      admin.from("salons").select("id", { count: "exact", head: true }).eq("address_needs_review", true),
+      admin.from("salons").select("id").not("deleted_at", "is", null),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Active"),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Pending"),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "New"),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Suspended"),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Offboarded"),
+      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("address_needs_review", true),
       admin.from("location_markets").select("id,state_code,name,market_type,center_latitude,center_longitude").eq("is_active", true).order("state_code").order("name"),
     ]);
     if (listResult.error) throw listResult.error;
+    if (deletedResult.error) throw deletedResult.error;
     for (const result of [totalResult, activeResult, pendingResult, newResult, suspendedResult, offboardedResult, addressReviewResult]) if (result.error) throw result.error;
     if (marketResult.error) throw marketResult.error;
 
-    const rows = Array.isArray(listResult.data) ? listResult.data : [];
-    let filteredTotal = Number(rows[0]?.total_count || 0);
+    const deletedIds = new Set((deletedResult.data || []).map((row) => String(row.id)));
+    const rows = (Array.isArray(listResult.data) ? listResult.data : []).filter((row) => !deletedIds.has(String(row.id)));
+    const simpleDeletedAdjustment = !cleanText(search.get("q"), 120)
+      && !state && !marketText && !plan && rating === null && addressReview === null
+      && !setup && !subscription && discoverability === null && radius === null
+      && (!status || status === "Offboarded")
+      ? deletedIds.size
+      : 0;
+    let filteredTotal = Math.max(0, Number(rows[0]?.total_count || 0) - simpleDeletedAdjustment);
     if (!rows.length && page > 1) {
       const countProbe = await admin.rpc("admin_list_salons", { ...rpcParams, p_result_limit: 1, p_result_offset: 0 });
       if (countProbe.error) throw countProbe.error;
-      filteredTotal = Number(countProbe.data?.[0]?.total_count || 0);
+      filteredTotal = Math.max(0, Number(countProbe.data?.[0]?.total_count || 0) - simpleDeletedAdjustment);
     }
 
     return Response.json({

@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test("Backspace, Delete, selection, decimals and bounds behave as editors", async ({
   page,
-}) => {
+}, testInfo) => {
+  test.skip(
+    !["chromium", "firefox", "webkit"].includes(testInfo.project.name),
+    "The three desktop engine projects cover numeric keyboard editing.",
+  );
   await page.goto("/internal/acceptance/numeric");
   const quantity = page.getByLabel("Quantity");
   await quantity.focus();
@@ -34,9 +38,8 @@ test("Backspace, Delete, selection, decimals and bounds behave as editors", asyn
 test("valid numeric clipboard text pastes without cursor jumps", async ({
   page,
   context,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "Clipboard permissions vary by engine.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Clipboard permissions vary by engine.");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/internal/acceptance/numeric");
   await page.evaluate(() => navigator.clipboard.writeText("123.45"));

@@ -47,6 +47,13 @@ import {
 } from "@/lib/mediaUploadProtocol";
 import { runMediaUploadQueue } from "@/lib/mediaUploadQueueCore";
 import {
+  createImageCropDrag,
+  INTERACTIVE_CROP_ZOOM,
+  nudgeImageCrop,
+  transformForCropPointer,
+  type ImageCropDrag,
+} from "@/lib/imageCropCore";
+import {
   getSupabaseForScope,
   getValidSessionForScope,
   type AuthScope,
@@ -151,13 +158,7 @@ export default function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const queueRef = useRef<QueueItem[]>([]);
   const committedRef = useRef<string[]>([]);
-  const cropDrag = useRef<{
-    id: number;
-    x: number;
-    y: number;
-    positionX: number;
-    positionY: number;
-  } | null>(null);
+  const cropDrag = useRef<ImageCropDrag | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -681,59 +682,45 @@ export default function ImageUpload({
 
   function beginCropDrag(event: PointerEvent<HTMLDivElement>) {
     if (active?.pendingUploadId) return;
-    cropDrag.current = {
-      id: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      positionX: Number(transform.positionX || 0),
-      positionY: Number(transform.positionY || 0),
-    };
+    cropDrag.current = createImageCropDrag(
+      event.pointerId,
+      event.clientX,
+      event.clientY,
+      transform,
+    );
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function moveCrop(event: PointerEvent<HTMLDivElement>) {
     const drag = cropDrag.current;
-    if (!drag || drag.id !== event.pointerId) return;
+    if (!drag || drag.pointerId !== event.pointerId) return;
     const width = Math.max(1, event.currentTarget.clientWidth);
     const height = Math.max(1, event.currentTarget.clientHeight);
-    setTransform((currentTransform) => ({
-      ...currentTransform,
-      zoom: Math.max(1.1, Number(currentTransform.zoom || 1)),
-      positionX: Math.max(
-        -100,
-        Math.min(
-          100,
-          drag.positionX -
-            ((event.clientX - drag.x) / width) * 200,
-        ),
+    setTransform((currentTransform) =>
+      transformForCropPointer(
+        drag,
+        event.clientX,
+        event.clientY,
+        width,
+        height,
+        currentTransform,
       ),
-      positionY: Math.max(
-        -100,
-        Math.min(
-          100,
-          drag.positionY -
-            ((event.clientY - drag.y) / height) * 200,
-        ),
-      ),
-    }));
+    );
   }
 
   function endCropDrag(event: PointerEvent<HTMLDivElement>) {
-    if (cropDrag.current?.id === event.pointerId) cropDrag.current = null;
+    if (cropDrag.current?.pointerId === event.pointerId) {
+      cropDrag.current = null;
+    }
   }
 
   function nudge(
     axis: "positionX" | "positionY",
     amount: number,
   ) {
-    setTransform((currentTransform) => ({
-      ...currentTransform,
-      zoom: Math.max(1.1, Number(currentTransform.zoom || 1)),
-      [axis]: Math.max(
-        -100,
-        Math.min(100, Number(currentTransform[axis] || 0) + amount),
-      ),
-    }));
+    setTransform((currentTransform) =>
+      nudgeImageCrop(currentTransform, axis, amount),
+    );
   }
 
   const occupied =
@@ -872,7 +859,7 @@ export default function ImageUpload({
             {animatedGif ? (
               <div className="rounded-xl border border-amber/30 bg-white p-4 text-xs leading-5 text-ink/65">
                 The private original keeps its animation. Responsive public
-                crops use a still frame; JPG and PNG files provide independent
+                crops preserve the animation; JPG and PNG files provide independent
                 crop controls for each device.
               </div>
             ) : (
@@ -909,7 +896,10 @@ export default function ImageUpload({
                         zoom:
                           Number(event.target.value) === 0
                             ? row.zoom
-                            : Math.max(1.1, Number(row.zoom || 1)),
+                            : Math.max(
+                                INTERACTIVE_CROP_ZOOM,
+                                Number(row.zoom || 1),
+                              ),
                         positionX: Number(event.target.value),
                       }))
                     }
@@ -930,7 +920,10 @@ export default function ImageUpload({
                         zoom:
                           Number(event.target.value) === 0
                             ? row.zoom
-                            : Math.max(1.1, Number(row.zoom || 1)),
+                            : Math.max(
+                                INTERACTIVE_CROP_ZOOM,
+                                Number(row.zoom || 1),
+                              ),
                         positionY: Number(event.target.value),
                       }))
                     }

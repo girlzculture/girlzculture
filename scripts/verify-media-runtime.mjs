@@ -12,12 +12,16 @@ const nextBin = path.join(
   "bin",
   "next",
 );
-const server = spawn(process.execPath, [nextBin, "start", "-p", String(port)], {
+const server = spawn(
+  process.execPath,
+  [nextBin, "start", "-H", "127.0.0.1", "-p", String(port)],
+  {
   cwd: process.cwd(),
   env: process.env,
   stdio: ["ignore", "pipe", "pipe"],
   windowsHide: true,
-});
+  },
+);
 
 let output = "";
 for (const stream of [server.stdout, server.stderr]) {

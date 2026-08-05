@@ -6,6 +6,7 @@ import { sendPushToUsers } from "@/lib/webPushServer";
 import { generateTranslationDraft } from "@/lib/aiAutomationServer";
 import { normalizeLocale } from "@/i18n/catalog";
 import { translatedMessageFields } from "@/lib/localizationCore";
+import { moderatePublicContent } from "@/lib/contentModerationServer";
 
 type Row = Record<string, unknown>;
 type Role = "customer" | "salon" | "admin";
@@ -92,6 +93,13 @@ async function POSTHandler(request: Request) {
     const messageBody = cleanText(body.body, 2000);
     if (!bookingId || !messageBody) throw new Error("Enter a message before sending.");
     const access = await accessForBooking(admin, user.id, user.email || "", bookingId);
+    const moderation = await moderatePublicContent(admin, { body: messageBody });
+    if (!moderation.allowed) {
+      return Response.json(
+        { error: "Please revise the message to remove abusive, hateful, threatening, or unsafe language." },
+        { status: 400 },
+      );
+    }
     if (body.action === "translate_preview") {
       const targetLocale = normalizeLocale(body.target_locale);
       if (targetLocale === "en")

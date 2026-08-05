@@ -4,9 +4,14 @@ import { capturePlatformError, monitoredRouteFailure, safeFailure } from "@/lib/
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizeSalonVanitySlug } from "@/lib/salonVanity";
+import { moderatePublicContent } from "@/lib/contentModerationServer";
 
 const TEXT_FIELDS = new Set(["name", "description", "address_street", "address_line2", "address_city", "address_state", "address_zip", "phone", "email", "logo_url", "cover_photo_url"]);
-const ALLOWED_FIELDS = new Set([...TEXT_FIELDS, "gallery_photos", "languages", "trust_info", "media_consent", "hours", "booking_settings", "notification_preferences"]);
+const ALLOWED_FIELDS = new Set([...TEXT_FIELDS, "description_ai_assisted", "description_ai_draft_id", "stylist_section_fallback", "gallery_photos", "languages", "trust_info", "media_consent", "hours", "booking_settings", "notification_preferences"]);
+
+function countWords(value: string) {
+  return value.trim().split(/\s+/u).filter(Boolean).length;
+}
 
 function httpsUrl(value: unknown) {
   const text = cleanText(value, 1200);
@@ -46,7 +51,25 @@ function sanitizePatch(body: Record<string, unknown>) {
     else if (key === "address_state") patch.address_state = normalizeUsState(body.address_state);
     else if (key === "address_zip") patch.address_zip = normalizeUsZip(body.address_zip);
     else if (key === "logo_url" || key === "cover_photo_url") patch[key] = httpsUrl(body[key]);
-    else patch[key] = cleanText(body[key], key === "description" ? 2_000 : 240) || (key === "address_line2" ? null : "");
+    else {
+      const value = cleanText(body[key], key === "description" ? 12_000 : 240);
+      if (key === "description" && countWords(value) > 300)
+        throw new Error("The salon description must be 300 words or fewer.");
+      patch[key] = value || (key === "address_line2" ? null : "");
+    }
+  }
+  if ("description_ai_assisted" in body) patch.description_ai_assisted = body.description_ai_assisted === true;
+  if ("stylist_section_fallback" in body) {
+    const fallback = objectValue(body.stylist_section_fallback, "Stylist section fallback");
+    const mode = cleanText(fallback.mode, 20) || "empty";
+    if (!["empty", "image", "product", "promotion"].includes(mode))
+      throw new Error("Choose a valid stylist-section fallback.");
+    patch.stylist_section_fallback = {
+      mode,
+      image_url: mode === "image" ? httpsUrl(fallback.image_url) : null,
+      product_id: mode === "product" ? cleanText(fallback.product_id, 60) || null : null,
+      promotion_id: mode === "promotion" ? cleanText(fallback.promotion_id, 60) || null : null,
+    };
   }
   if ("gallery_photos" in body) {
     if (!Array.isArray(body.gallery_photos)) throw new Error("Gallery photos must be a list.");
@@ -164,6 +187,56 @@ async function PATCHHandler(request: Request) {
       throw new Error("Forbidden: this salon role cannot update these profile fields.");
     }
     const patch = sanitizePatch(body);
+    const publicCopy = [patch.name, patch.description]
+      .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+      .join("\n");
+    if (publicCopy) {
+      const moderation = await moderatePublicContent(context.admin, {
+        name: typeof patch.name === "string" ? patch.name : undefined,
+        body: publicCopy,
+      });
+      if (!moderation.allowed)
+        throw new Error("Please revise the public salon content to remove abusive, hateful, threatening, or unsafe language.");
+    }
+    const descriptionChanged =
+      typeof patch.description === "string" &&
+      String(patch.description) !== String(context.salon.description || "");
+    if (
+      patch.description_ai_assisted === true &&
+      (descriptionChanged || context.salon.description_ai_assisted !== true)
+    ) {
+      const draftId = cleanText(body.description_ai_draft_id, 60);
+      const draft = await context.admin
+        .from("ai_generation_drafts")
+        .select("id,output_text")
+        .eq("id", draftId)
+        .eq("feature_key", "salon_description")
+        .eq("requested_by", context.user.id)
+        .eq("status", "AI-generated draft")
+        .maybeSingle();
+      if (draft.error || !draft.data || String(draft.data.output_text) !== String(patch.description || ""))
+        throw new Error("Choose a description draft created for this account before marking it AI-assisted.");
+    }
+    const fallback = patch.stylist_section_fallback as { mode?: string } | undefined;
+    if (fallback?.mode && fallback.mode !== "empty" && !["Growth", "Premium"].includes(String(context.salon.subscription_tier || "")))
+      throw new Error("Upgrade to Growth or Premium to publish a salon-page stylist replacement.");
+    if (fallback?.mode === "image") {
+      const selected = String((patch.stylist_section_fallback as { image_url?: string }).image_url || "");
+      const allowed = [context.salon.cover_photo_url, ...(Array.isArray(context.salon.gallery_photos) ? context.salon.gallery_photos : [])]
+        .map(String)
+        .includes(selected);
+      if (!selected || !allowed) throw new Error("Choose an image already saved to this salon's gallery.");
+    }
+    if (fallback?.mode === "product") {
+      const productId = String((patch.stylist_section_fallback as { product_id?: string }).product_id || "");
+      const product = await context.admin.from("salon_products").select("id").eq("id", productId).eq("salon_id", context.salon.id).eq("is_visible", true).eq("product_status", "Active").is("archived_at", null).maybeSingle();
+      if (product.error || !product.data) throw new Error("Choose an active product from this salon.");
+    }
+    if (fallback?.mode === "promotion") {
+      const promotionId = String((patch.stylist_section_fallback as { promotion_id?: string }).promotion_id || "");
+      const promotion = await context.admin.from("salon_promotions").select("id").eq("id", promotionId).eq("salon_id", context.salon.id).eq("status", "Active").eq("is_active", true).is("archived_at", null).maybeSingle();
+      if (promotion.error || !promotion.data) throw new Error("Choose an active promotion from this salon.");
+    }
     const { error } = await context.admin.from("salons").update(patch).eq("id", context.salon.id);
     if (error) throw error;
     const readBack = await context.admin.from("salons").select("*").eq("id", context.salon.id).single();
@@ -171,7 +244,7 @@ async function PATCHHandler(request: Request) {
     return Response.json({ salon: readBack.data, verified: true }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    if (/^(Unauthorized|Forbidden)|must be|cannot be changed|valid object|valid email|US phone|HTTPS|at least one/i.test(message)) return errorResponse(error, "Unable to update the salon profile.");
+    if (/^(Unauthorized|Forbidden)|must be|cannot be changed|valid object|valid email|US phone|HTTPS|at least one|Upgrade to|Choose an|Please revise/i.test(message)) return errorResponse(error, "Unable to update the salon profile.");
     const safeMessage = "We couldn't save this change.";
     const reference = await capturePlatformError({ request, admin, error, feature: "salon-profile", action: "update", actorRole: "salon", salonId, safeMessage });
     return safeFailure(safeMessage, reference);

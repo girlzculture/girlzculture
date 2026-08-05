@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { clientAddress, cleanEmail, cleanText, enforceRateLimit, errorResponse, RateLimitError, rejectBot } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { getEngineList } from "@/lib/engineConfigServer";
+import { moderatePublicContent } from "@/lib/contentModerationServer";
 
 async function GETHandler() {
   try {
@@ -32,6 +33,9 @@ async function POSTHandler(request: Request) {
     if (name.length < 2 || !salonId || !allowedReasons.includes(reason) || issue.length < 20) throw new Error("Please complete every complaint field and describe the issue in at least 20 characters.");
 
     const admin = getSupabaseAdmin();
+    // Complaints can legitimately quote abusive language. Preserve the report
+    // and elevate it for human review instead of rejecting the evidence.
+    const moderation = await moderatePublicContent(admin, { name, title: reason, body: issue });
     const { data: salon, error: salonError } = await admin.from("salons").select("id,name").eq("id", salonId).ilike("status", "active").maybeSingle();
     if (salonError || !salon) throw new Error("Choose an active Girlz Culture business.");
     const fingerprint = createHash("sha256").update(`${clientAddress(request)}:${process.env.COMPLAINT_RATE_LIMIT_SALT || "girlz-culture"}`).digest("hex");
@@ -67,6 +71,9 @@ async function POSTHandler(request: Request) {
       booking_verified: verified,
       verification_method: verified ? "booking_email" : null,
       submitted_fingerprint: fingerprint,
+      content_moderation_status: moderation.allowed ? "Clear" : "Flagged",
+      content_moderation_reason: moderation.reason || null,
+      content_moderation_source: moderation.source,
     }).select("id").single();
     if (complaintError) throw complaintError;
     const verificationNote = verified
@@ -85,6 +92,9 @@ async function POSTHandler(request: Request) {
       message: `${issue}\n\n${verificationNote}`,
       status: "Open",
       priority: "High",
+      content_moderation_status: moderation.allowed ? "Clear" : "Flagged",
+      content_moderation_reason: moderation.reason || null,
+      content_moderation_source: moderation.source,
     }).select("id").single();
     if (ticketError) throw ticketError;
     await admin.from("complaints_log").update({ support_ticket_id: ticket.id }).eq("id", complaint.id);

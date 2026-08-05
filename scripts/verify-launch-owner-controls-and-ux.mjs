@@ -15,6 +15,7 @@ const trending = read("src/app/api/admin/trending-campaigns/route.ts");
 const crop = read("src/components/ImageUpload.tsx");
 const map = read("src/components/search/GoogleSalonMap.tsx");
 const promo = read("src/components/public/HomepagePromoRail.tsx");
+const promoCore = read("src/lib/homePromotionCore.ts");
 const promoApi = read("src/app/api/admin/content/route.ts");
 const promoAdmin = read("src/components/AdminContentManager.tsx");
 const actionToast = read("src/components/ActionToast.tsx");
@@ -45,23 +46,29 @@ assert.match(crop, /Position image left\/right/);
 assert.match(crop, /Position image up\/down/);
 assert.match(crop, /label="Move image left"/);
 assert.match(crop, /label="Move image up"/);
-assert.match(crop, /zoom: Math\.max\(1\.1/);
+assert.match(crop, /transformForCropPointer/);
+assert.match(crop, /nudgeImageCrop/);
 
-assert.doesNotMatch(map, /DEMO_MAP_ID/);
+assert.match(map, /configuredMapId === "DEMO_MAP_ID" \? ""/);
 assert.match(map, /window\.location\.assign\(`\/salon\//);
 assert.match(map, /From \$/);
 assert.match(map, /rating_overall/);
 assert.match(map, /class SalonOverlay/);
 
-assert.match(promo, /distanceMiles/);
-assert.match(promo, /radius_miles/);
-assert.match(promo, /slice\(0, 20\)/);
+assert.match(promo, /selectLocalPromotionCards/);
+assert.match(promoCore, /distanceMiles/);
+assert.match(promoCore, /radius_miles/);
+assert.match(promoCore, /MAX_HOMEPAGE_PROMOTION_COUNT/);
 assert.match(promoApi, /location_markets/);
-assert.match(promoApi, /between 1 and 20 cards/);
+assert.match(promoApi, /between 8 and 200 cards/);
+assert.match(promoApi, /display_limit/);
 assert.match(promoAdmin, /Audience market/);
-assert.match(promoAdmin, /Market radius \(miles\)/);
+assert.match(promoAdmin, /Audience radius \(miles\)/);
+assert.match(promoAdmin, /Cards shown per customer/);
 assert.match(actionToast, /fixed inset-x-4 bottom-24/);
-assert.match(actionToast, /window\.setTimeout\(dismiss, 3_000\)/);
+assert.match(actionToast, /ACTION_TOAST_SUCCESS_DURATION_MS/);
+assert.match(actionToast, /Copy reference/);
+assert.doesNotMatch(actionToast, /addEventListener\("pointerdown"/);
 
 console.log(
   "Verified application deletion, password recovery repair, precise Trending Picks validation, independent crop controls, navigable map markers, and regional 20-card promotion targeting.",

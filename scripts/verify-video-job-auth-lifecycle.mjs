@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import ts from "typescript";
 import {
   ScopedApiError,
   createScopedJsonApiClient,
@@ -8,10 +9,26 @@ import {
 import {
   pollVideoJobUntilReady,
 } from "../src/lib/videoJobPollingCore.ts";
-import { capturePlatformError } from "../src/lib/platformErrors.ts";
 import {
   cloudinaryCompletedVideoResult,
 } from "../src/lib/videoTranscoderCore.ts";
+
+const platformErrorsSource = fs
+  .readFileSync("src/lib/platformErrors.ts", "utf8")
+  .replace(
+    'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
+    'const deploymentReleaseId = () => "verification";',
+  );
+const { capturePlatformError } = await import(
+  `data:text/javascript;base64,${Buffer.from(
+    ts.transpileModule(platformErrorsSource, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText,
+  ).toString("base64")}`
+);
 
 const adminId = "10000000-0000-4000-8000-000000000001";
 const jobId = "20000000-0000-4000-8000-000000000002";

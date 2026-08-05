@@ -9,7 +9,10 @@ import type {
   MediaPrepareResponse,
   MediaUploadSlot,
 } from "@/lib/mediaUploadProtocol";
-import { isUuid } from "@/lib/mediaUploadProtocol";
+import {
+  isCanonicalDirectUploadPlan,
+  isUuid,
+} from "@/lib/mediaUploadProtocol";
 import {
   MEDIA_FINALIZE_MAX_ATTEMPTS,
   mediaFinalizeSessionIsTerminal,
@@ -202,6 +205,15 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
             prepareBody,
             "The image upload could not be prepared.",
           ),
+        );
+      }
+      if (
+        !isCanonicalDirectUploadPlan(
+          prepareBody.uploads.map((prepared) => prepared.slot),
+        )
+      ) {
+        throw new Error(
+          "The image upload protocol is out of date. Refresh the page and try again.",
         );
       }
       uploadId = prepareBody.upload_id;

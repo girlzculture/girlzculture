@@ -2,18 +2,19 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { BadgeCheck as Star, Eye, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck as Star, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
 import { startSecureLogin, verifySecureLogin, type LoginChallenge, type LoginSession } from "@/lib/secureLoginClient";
 import MfaCodeField from "@/components/auth/MfaCodeField";
+import PasswordInput from "@/components/auth/PasswordInput";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 export default function CustomerAuth() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [show, setShow] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState("");
@@ -49,7 +50,10 @@ export default function CustomerAuth() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scope: "customer", name, email: validEmail, password, website: "" }),
       });
-      const body = await response.json() as { error?: string; confirmation_required?: boolean; session?: LoginSession | null };
+      const body = await readApiResponse(
+        response,
+        "Your account could not be created.",
+      ) as { error?: string; confirmation_required?: boolean; session?: LoginSession | null };
       if (!response.ok) throw new Error(body.error || "Your account could not be created.");
       if (body.session) await finishLogin(body.session);
       else setMessage("Account created. Check your email to confirm it, then log in.");
@@ -70,7 +74,7 @@ export default function CustomerAuth() {
       {challenge ? <MfaCodeField challenge={challenge} code={code} setCode={setCode} reset={() => { setChallenge(null); setCode(""); setPassword(""); }} /> : null}
       {mode === "signup" ? <Field label="Full name" icon={UserRound}><input required value={name} onChange={(event) => setName(event.target.value)} className="w-full bg-transparent outline-none" placeholder="Your name" /></Field> : null}
       <Field label="Email" icon={Mail}><input required type="email" pattern={EMAIL_PATTERN} value={email} onChange={(event) => setEmail(event.target.value)} className="w-full bg-transparent outline-none" placeholder="name@example.com" /></Field>
-      <Field label="Password" icon={LockKeyhole}><input required minLength={8} type={show ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full bg-transparent outline-none" placeholder="Enter your password" /><button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"}><Eye size={18} /></button></Field>
+      <div className="block"><label htmlFor="customer-password" className="mb-2 block text-sm font-semibold">Password</label><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 px-4 py-3"><LockKeyhole size={18} className="text-ink/50" /><PasswordInput id="customer-password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} inputClassName="w-full bg-transparent outline-none" placeholder="Enter your password" /></span></div>
       {mode === "login" && !challenge ? <Link href="/forgot-password" className="block text-right text-sm font-semibold text-magenta">Forgot password?</Link> : null}
       {message ? <p role="alert" className="rounded-lg bg-blush/55 p-3 text-sm text-plum">{message}</p> : null}
       <button disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta py-3.5 font-bold text-white disabled:opacity-60">{loading ? "Please wait..." : mode === "login" ? challenge ? "Verify and log in" : "Log in" : "Sign up"}</button>

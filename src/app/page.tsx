@@ -63,7 +63,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const promoSection = homeContent.sections?.find((section) => section.type === "promo_rail" && section.is_visible !== false);
   const configuredPromotionCards = promoSection?.cards?.length ? promoSection.cards : DEFAULT_PROMOTION_CARDS;
-  const promotionCards = await resolvePublishedHomepagePromotions(configuredPromotionCards);
+  const promotionCards = await resolvePublishedHomepagePromotions(
+    configuredPromotionCards,
+    undefined,
+    promoSection?.display_limit || 8,
+  );
   const contentSections = homeContent.sections?.filter((section) => section.type !== "promo_rail") || [];
   const [nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.featured_product_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
   const searchInsertIndex = homepageSearchInsertIndex(homepageSections);

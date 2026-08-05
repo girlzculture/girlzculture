@@ -35,18 +35,28 @@ export async function pollVideoJobUntilReady(input: {
   onUpdate?: (job: VideoProcessingJob) => void;
   signal?: AbortSignal;
   intervalMs?: number;
+  maxIntervalMs?: number;
+  backoffFactor?: number;
   maxAttempts?: number;
   sleep?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
   stopError?: (job: VideoProcessingJob) => unknown;
 }) {
   const maxAttempts = Math.max(1, input.maxAttempts || 90);
+  const initialInterval = Math.max(250, input.intervalMs || 1_500);
+  const maximumInterval = Math.max(
+    initialInterval,
+    input.maxIntervalMs || initialInterval,
+  );
+  const backoffFactor = Math.max(1, input.backoffFactor || 1);
   const sleeper = input.sleep || wait;
+  let lastJob: VideoProcessingJob | null = null;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     if (input.signal?.aborted) throw abortError();
     const job = await input.getJob();
     if (!job || job.id !== input.jobId) {
       throw new Error(`Video job ${input.jobId} could not be found.`);
     }
+    lastJob = job;
     input.onUpdate?.(job);
     const stopError = input.stopError?.(job);
     if (stopError) throw stopError;
@@ -67,9 +77,14 @@ export async function pollVideoJobUntilReady(input: {
       );
     }
     if (job.status === "Cancelled") throw abortError();
-    await sleeper(input.intervalMs || 1_500, input.signal);
+    if (attempt === maxAttempts - 1) break;
+    const delay = Math.min(
+      maximumInterval,
+      Math.round(initialInterval * backoffFactor ** attempt),
+    );
+    await sleeper(delay, input.signal);
   }
   throw new Error(
-    `Video processing is still running. Video job ${input.jobId} can be resumed without uploading the source again.`,
+    `Video processing is still running. Video job ${input.jobId} can be resumed without uploading the source again.${lastJob?.error_reference ? ` Provider recovery reference ${lastJob.error_reference}.` : ""}`,
   );
 }

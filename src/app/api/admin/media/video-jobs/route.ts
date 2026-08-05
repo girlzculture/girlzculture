@@ -4,7 +4,12 @@ import {
   routeMonitoringProfile,
   withOperationalMonitoring,
 } from "@/lib/operationalMonitoring";
-import { capturePlatformError } from "@/lib/platformErrors";
+import {
+  UserSafeRequestError,
+  capturePlatformError,
+  monitoredRouteFailure,
+  rejectRequest,
+} from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import {
   processVideoJob,
@@ -20,9 +25,19 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function videoJobValidationField(message: string) {
+  if (/salon/i.test(message)) return "salon_id";
+  if (/duration/i.test(message)) return "duration_seconds";
+  if (/size|MB/i.test(message)) return "file_size_bytes";
+  if (/MP4|WebM|MOV|M4V|Matroska|mime/i.test(message)) return "mime_type";
+  if (/uploaded video|source/i.test(message)) return "source_path";
+  if (/processing action|retryable|video job/i.test(message)) return "video_processing_job_id";
+  return "video";
+}
+
 async function GETHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "marketing");
+    const { admin, user } = await requireAdminPermission(request, "marketing");
     const search = new URL(request.url).searchParams;
     const id = cleanText(search.get("id"), 80);
     let query = admin.from("video_processing_jobs").select("*")
@@ -39,6 +54,63 @@ async function GETHandler(request: Request) {
       try {
         jobs = [await reconcileCloudinaryVideoJob(admin, jobs[0])];
       } catch (providerError) {
+        const failure = classifyVideoTranscoderError(providerError);
+        const retryable = failure.state === "cloudinary_provider_outage";
+        const existingReference = cleanText(jobs[0]?.error_reference, 80);
+        const reference =
+          existingReference ||
+          (await capturePlatformError({
+            request,
+            admin,
+            error: providerError,
+            feature: "trending-video-processing",
+            action: "recover-cloudinary-video-job",
+            actorRole: "admin",
+            actorId: user.id,
+            recordType: "video_processing_job",
+            recordId: id,
+            provider: "cloudinary",
+            safeMessage: failure.safeMessage,
+            severity: retryable ? "medium" : "high",
+            metadata: {
+              provider_state: failure.state,
+              code: failure.code,
+              retryable,
+            },
+          }));
+        const recoveryState: Record<string, unknown> = {
+          safe_error_code: failure.code,
+          error_reference: reference,
+          updated_at: new Date().toISOString(),
+          ...(retryable
+            ? {}
+            : {
+                status: "Failed",
+                progress_percent: 0,
+                source_cleanup_status: "Scheduled",
+                source_cleanup_after: new Date(
+                  Date.now() + 7 * 24 * 60 * 60 * 1000,
+                ).toISOString(),
+                original_preserved: true,
+              }),
+        };
+        const recovered = await admin
+          .from("video_processing_jobs")
+          .update(recoveryState)
+          .eq("id", id)
+          .eq("status", "Transcoding")
+          .select()
+          .maybeSingle();
+        if (recovered.error) throw recovered.error;
+        jobs = [
+          {
+            ...(recovered.data || jobs[0]),
+            recovery_retryable: retryable,
+            recovery_message: retryable
+              ? `${failure.safeMessage} Automatic recovery will continue. Reference ${reference}.`
+              : `${failure.safeMessage} Reference ${reference}.`,
+          },
+        ];
         noteOperationalFailure(
           "Cloudinary video-job reconciliation failed",
           providerError,
@@ -67,9 +139,8 @@ async function POSTHandler(request: Request) {
     userId = auth.user.id;
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 20) || "create";
-    if (!["create", "process", "retry", "cancel"].includes(action)) {
-      throw new Error("Choose a valid video-processing action.");
-    }
+    if (!["create", "process", "retry", "cancel"].includes(action))
+      rejectRequest("Choose a valid video-processing action.");
     if (action === "cancel") {
       jobId = cleanText(body.id, 80);
       const { data, error } = await admin.from("video_processing_jobs").update({
@@ -89,15 +160,19 @@ async function POSTHandler(request: Request) {
       jobId = cleanText(body.id, 80);
       const { data, error } = await admin.from("video_processing_jobs")
         .select("*").eq("id", jobId).in("status", ["Failed", "Uploaded"]).single();
-      if (error || !data) throw error || new Error("Choose a retryable video job.");
+      if (error || !data) {
+        if (!error) rejectRequest("Choose a retryable video job.");
+        throw error;
+      }
       job = data;
     } else {
       const sourcePath = cleanText(body.source_path, 700);
       const salonId = cleanText(body.salon_id, 80);
       const mime = cleanText(body.mime_type, 100).toLowerCase();
       const size = Number(body.file_size_bytes);
+      const duration = Number(body.duration_seconds);
       if (!sourcePath.startsWith(`incoming/${userId}/`) || !salonId)
-        throw new Error("Choose a valid uploaded video.");
+        rejectRequest("Choose a valid uploaded video and salon.");
       if (![
         "video/mp4",
         "video/webm",
@@ -105,12 +180,18 @@ async function POSTHandler(request: Request) {
         "video/x-m4v",
         "video/x-matroska",
       ].includes(mime))
-        throw new Error("Upload an MP4, WebM, MOV, M4V, or Matroska video.");
+        rejectRequest("Upload an MP4, WebM, MOV, M4V, or Matroska video.");
       const { data: profile, error: profileError } = await admin
         .from("media_video_profiles").select("*").eq("profile_key", "trending").single();
       if (profileError || !profile) throw profileError || new Error("Video limits are unavailable.");
       if (!Number.isFinite(size) || size < 1 || size > Number(profile.max_source_bytes))
-        throw new Error(`The source video must be ${Math.round(Number(profile.max_source_bytes) / 1048576)} MB or smaller.`);
+        rejectRequest(`The source video must be ${Math.round(Number(profile.max_source_bytes) / 1048576)} MB or smaller.`);
+      const hasClientDuration = Number.isFinite(duration) && duration > 0;
+      if (hasClientDuration && duration > Number(profile.max_duration_seconds)) {
+        rejectRequest(
+          `The prepared video duration must be between 0.1 and ${Number(profile.max_duration_seconds)} seconds.`,
+        );
+      }
       const { data, error } = await admin.from("video_processing_jobs").insert({
         profile_key: "trending",
         requested_by: userId,
@@ -119,6 +200,7 @@ async function POSTHandler(request: Request) {
         source_path: sourcePath,
         source_mime_type: mime,
         source_size_bytes: size,
+        duration_seconds: hasClientDuration ? duration : null,
         source_cleanup_after: new Date(
           Date.now() + 24 * 60 * 60 * 1000,
         ).toISOString(),
@@ -133,6 +215,38 @@ async function POSTHandler(request: Request) {
     const ready = await processVideoJob(admin, job, profile);
     return Response.json({ job: ready });
   } catch (error) {
+    if (error instanceof UserSafeRequestError) {
+      const field = videoJobValidationField(error.message);
+      const reference = await capturePlatformError({
+        request,
+        admin: admin || undefined,
+        error,
+        feature: "trending-video-processing",
+        action: "validate-video-processing-job",
+        actorRole: "admin",
+        actorId: userId || null,
+        recordType: "video_processing_job",
+        recordId: jobId || null,
+        safeMessage: error.message,
+        severity: "low",
+        metadata: { field, code: "VIDEO_JOB_VALIDATION" },
+      });
+      return Response.json(
+        {
+          error: error.message,
+          code: "VIDEO_JOB_VALIDATION",
+          field,
+          request_id: reference,
+        },
+        {
+          status: error.status,
+          headers: {
+            "Cache-Control": "private, no-store",
+            "X-Request-ID": reference,
+          },
+        },
+      );
+    }
     if (
       error instanceof Error &&
       error.message === "VIDEO_PROCESSING_CANCELLED"
@@ -146,11 +260,26 @@ async function POSTHandler(request: Request) {
       const failure = classifyVideoTranscoderError(error);
       const diagnostic = videoTranscoderRuntimeDiagnostic();
       if (failure.state === "unsupported_input_media") {
+        const reference = await capturePlatformError({
+          request,
+          admin,
+          error,
+          feature: "trending-video-processing",
+          action: "inspect-video-input",
+          actorRole: "admin",
+          actorId: userId,
+          recordType: "video_processing_job",
+          recordId: jobId,
+          provider: "media-inspector",
+          safeMessage: failure.safeMessage,
+          severity: "low",
+          metadata: { provider_state: failure.state, code: failure.code },
+        });
         await admin.from("video_processing_jobs").update({
           status: "Failed",
           progress_percent: 0,
           safe_error_code: failure.code,
-          error_reference: null,
+          error_reference: reference,
           updated_at: new Date().toISOString(),
           source_cleanup_after: new Date(
             Date.now() + 7 * 24 * 60 * 60 * 1000,
@@ -163,10 +292,14 @@ async function POSTHandler(request: Request) {
             error: failure.safeMessage,
             code: failure.code,
             state: failure.state,
+            request_id: reference,
           },
           {
             status: failure.status,
-            headers: { "Cache-Control": "private, no-store" },
+            headers: {
+              "Cache-Control": "private, no-store",
+              "X-Request-ID": reference,
+            },
           },
         );
       }
@@ -223,7 +356,19 @@ async function POSTHandler(request: Request) {
         },
       );
     }
-    return errorResponse(error, "Unable to start video processing.");
+    return monitoredRouteFailure({
+      request,
+      admin: admin || undefined,
+      error,
+      feature: "trending-video-processing",
+      action: "create-video-processing-job",
+      actorRole: "admin",
+      actorId: userId || null,
+      recordType: "video_processing_job",
+      recordId: jobId || null,
+      provider: "media-transcoder",
+      safeMessage: "We couldn't start video processing.",
+    });
   }
 }
 

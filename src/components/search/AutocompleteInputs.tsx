@@ -15,40 +15,170 @@ import { MapPin, Search, X } from "lucide-react";
 import type { CustomerLocation } from "@/lib/location";
 import { reportClientOperationalFailure } from "@/lib/supabase";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 let googleMapsPromise: Promise<void> | null = null;
+const GOOGLE_MAPS_SCRIPT_ID = "girlz-google-maps";
+const GOOGLE_MAPS_LOAD_TIMEOUT_MS = 15_000;
+export const GOOGLE_MAPS_AUTH_FAILURE_EVENT =
+  "girlz-culture:google-maps-auth-failure";
+let googleMapsAuthError: GoogleMapsLoadError | null = null;
+let restoreGoogleMapsAuthHandler: (() => void) | null = null;
+
+export type GoogleMapsLoadCode =
+  | "GOOGLE_MAPS_NOT_CONFIGURED"
+  | "GOOGLE_MAPS_AUTH_REJECTED"
+  | "GOOGLE_MAPS_LOAD_TIMEOUT"
+  | "GOOGLE_MAPS_SCRIPT_FAILED"
+  | "GOOGLE_MAPS_SDK_INVALID";
+
+export class GoogleMapsLoadError extends Error {
+  constructor(
+    readonly code: GoogleMapsLoadCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "GoogleMapsLoadError";
+  }
+}
+
+function googleMapsReady() {
+  return Boolean((window as any).google?.maps?.importLibrary);
+}
+
+export function resetGoogleMapsLoader() {
+  googleMapsPromise = null;
+  googleMapsAuthError = null;
+  restoreGoogleMapsAuthHandler?.();
+  restoreGoogleMapsAuthHandler = null;
+  document.getElementById(GOOGLE_MAPS_SCRIPT_ID)?.remove();
+}
+
 export function loadGoogleMaps() {
   if (typeof window === "undefined")
-    return Promise.reject(new Error("Google Maps requires a browser."));
-  if ((window as any).google?.maps?.importLibrary) return Promise.resolve();
+    return Promise.reject(
+      new GoogleMapsLoadError(
+        "GOOGLE_MAPS_SDK_INVALID",
+        "Google Maps requires a browser.",
+      ),
+    );
+  if (googleMapsAuthError) return Promise.reject(googleMapsAuthError);
+  if (googleMapsReady()) return Promise.resolve();
   if (googleMapsPromise) return googleMapsPromise;
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!key) return Promise.reject(new Error("Google Maps is not configured."));
+  if (!key)
+    return Promise.reject(
+      new GoogleMapsLoadError(
+        "GOOGLE_MAPS_NOT_CONFIGURED",
+        "Google Maps is not configured. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to the deployed site environment.",
+      ),
+    );
   googleMapsPromise = new Promise<void>((resolve, reject) => {
-    const existing = document.getElementById(
-      "girlz-google-maps",
+    let existing = document.getElementById(
+      GOOGLE_MAPS_SCRIPT_ID,
     ) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener(
-        "error",
-        () => reject(new Error("Google Maps failed to load.")),
-        { once: true },
-      );
-      return;
+    // A script whose event already fired but did not create the SDK cannot
+    // become healthy by adding another load listener. Replace it on retry.
+    if (existing && existing.dataset.loadState !== "loading") {
+      existing.remove();
+      existing = null;
     }
-    const script = document.createElement("script");
-    script.id = "girlz-google-maps";
-    script.async = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&libraries=places,marker`;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Google Maps failed to load."));
-    document.head.appendChild(script);
+    const script = existing || document.createElement("script");
+    script.id = GOOGLE_MAPS_SCRIPT_ID;
+    script.dataset.loadState = "loading";
+    restoreGoogleMapsAuthHandler?.();
+    restoreGoogleMapsAuthHandler = null;
+    const previousAuthFailure = (window as any).gm_authFailure;
+    const restoreAuthHandler = () => {
+      if ((window as any).gm_authFailure === authFailed) {
+        (window as any).gm_authFailure = previousAuthFailure;
+      }
+      if (restoreGoogleMapsAuthHandler === restoreAuthHandler) {
+        restoreGoogleMapsAuthHandler = null;
+      }
+    };
+    let settled = false;
+    const finish = (error?: GoogleMapsLoadError) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      script.removeEventListener("load", loaded);
+      script.removeEventListener("error", failed);
+      if (error) {
+        restoreAuthHandler();
+        script.dataset.loadState = "failed";
+        reject(error);
+      } else {
+        script.dataset.loadState = "ready";
+        resolve();
+      }
+    };
+    const loaded = () => {
+      if (!googleMapsReady()) {
+        finish(
+          new GoogleMapsLoadError(
+            "GOOGLE_MAPS_SDK_INVALID",
+            "Google Maps loaded an invalid response. Verify that Maps JavaScript API is enabled for this key.",
+          ),
+        );
+        return;
+      }
+      finish();
+    };
+    const failed = () =>
+      finish(
+        new GoogleMapsLoadError(
+          "GOOGLE_MAPS_SCRIPT_FAILED",
+          "Google Maps could not be downloaded. Check the network and Google Maps provider status, then retry.",
+        ),
+      );
+    function authFailed() {
+      const error = new GoogleMapsLoadError(
+        "GOOGLE_MAPS_AUTH_REJECTED",
+        "Google Maps rejected the API key or site referrer. Enable Maps JavaScript API and allow this site's HTTPS domain in Google Cloud.",
+      );
+      googleMapsAuthError = error;
+      window.dispatchEvent(
+        new CustomEvent(GOOGLE_MAPS_AUTH_FAILURE_EVENT, {
+          detail: { code: error.code, message: error.message },
+        }),
+      );
+      if (typeof previousAuthFailure === "function") {
+        try {
+          previousAuthFailure();
+        } catch {
+          // The Girlz Culture error state remains authoritative even if a
+          // provider-installed callback throws.
+        }
+      }
+      finish(error);
+    }
+    const timeout = window.setTimeout(
+      () =>
+        finish(
+          new GoogleMapsLoadError(
+            "GOOGLE_MAPS_LOAD_TIMEOUT",
+            "Google Maps did not finish loading within 15 seconds. Check provider status and retry.",
+          ),
+        ),
+      GOOGLE_MAPS_LOAD_TIMEOUT_MS,
+    );
+    restoreGoogleMapsAuthHandler = restoreAuthHandler;
+    (window as any).gm_authFailure = authFailed;
+    script.addEventListener("load", loaded, { once: true });
+    script.addEventListener("error", failed, { once: true });
+    if (!existing) {
+      script.async = true;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&libraries=places,marker`;
+      document.head.appendChild(script);
+    } else if (googleMapsReady()) {
+      loaded();
+    }
   }).catch((error) => {
     // A transient script, network, or provider failure must not poison every
     // later map/autocomplete attempt for the rest of the browser session.
     googleMapsPromise = null;
-    document.getElementById("girlz-google-maps")?.remove();
+    document.getElementById(GOOGLE_MAPS_SCRIPT_ID)?.remove();
     throw error;
   });
   return googleMapsPromise;
@@ -116,7 +246,10 @@ export function StyleAutocomplete({
           `/api/search/suggestions?type=style&q=${encodeURIComponent(value)}`,
           { signal: controller.signal },
         );
-        const body = await response.json();
+        const body = await readApiResponse(
+          response,
+          "Search suggestions are temporarily unavailable.",
+        );
         if (!response.ok) throw new Error(body.error || "Search suggestions are temporarily unavailable.");
         setGroups(Array.isArray(body.groups) ? body.groups : []);
         setNoResult(body.no_result === true);

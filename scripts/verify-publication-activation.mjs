@@ -22,6 +22,9 @@ const stylistPage = read("src/app/salon/[slug]/stylist/[stylistId]/page.tsx");
 const stylistCards = read("src/components/SalonStylists.tsx");
 const publicMetadata = read("src/lib/salonPublicMetadata.ts");
 const systemStatus = read("src/app/api/admin/engine/system-status/route.ts");
+const deletionHardening = read(
+  "supabase/migrations/20260804210000_offboarded_test_salon_protected_deletion.sql",
+);
 
 const diagnostic = {
   checks: {
@@ -163,7 +166,31 @@ assert.match(stylistPage, /legacyId/);
 assert.match(stylistPage, /permanentRedirect/);
 assert.match(stylistCards, /stylist\.slug \|\| stylist\.id/);
 assert.match(publicMetadata, /is_salon_profile_public/);
-assert.match(systemStatus, /EXPECTED_MIGRATION = "20260727230000"/);
+assert.match(systemStatus, /EXPECTED_MIGRATION = REPOSITORY_MIGRATION_HEAD/);
+assert.match(systemStatus, /generated\/repositoryMetadata/);
+
+const hardenedReconcile = deletionHardening.match(
+  /create or replace function public\.reconcile_salon_publication\([\s\S]*?\n\$\$;/,
+)?.[0];
+assert.ok(hardenedReconcile, "Deletion hardening must retain publication reconciliation.");
+for (const requiredFragment of [
+  "v_before public.salons%rowtype",
+  "v_after public.salons%rowtype",
+  "v_override_effective boolean",
+  "v_application_active boolean",
+  "v_before.status = 'Active'",
+  "and v_override_effective",
+  "application.status = 'Active'",
+  "v_after.status not in ('Suspended', 'Offboarded')",
+  "Authorized pilot publication override remains effective",
+  "pilot_publication_override",
+  "if v_before.deleted_at is not null then",
+]) {
+  assert.ok(
+    hardenedReconcile.includes(requiredFragment),
+    `Deletion hardening regressed publication reconciliation: ${requiredFragment}`,
+  );
+}
 
 console.log(
   "Publication activation verification passed: the canonical diagnostic separates raw and effective gates, normal activation and authorized pilot overrides are explicit and idempotent, financial records are untouched, profile visibility is distinct from bookability, RLS excludes draft content, and stylist URLs are stable with legacy UUID redirects.",

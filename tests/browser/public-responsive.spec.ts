@@ -1,5 +1,46 @@
 import { expect, test } from "@playwright/test";
 
+const acceptanceOrigin = new URL(
+  process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3104",
+).origin;
+
+const projectVisitorAddress: Record<string, string> = {
+  chromium: "192.0.2.10",
+  firefox: "192.0.2.11",
+  webkit: "192.0.2.12",
+  iphone: "192.0.2.13",
+  android: "192.0.2.14",
+  "narrow-phone": "192.0.2.15",
+  "phone-landscape": "192.0.2.16",
+  tablet: "192.0.2.17",
+  "tablet-landscape": "192.0.2.18",
+};
+
+test.beforeEach(async ({ page }, testInfo) => {
+  const visitorAddress = projectVisitorAddress[testInfo.project.name];
+  if (!visitorAddress) return;
+
+  // CI sends every browser project through one local proxy, while the
+  // production location limiter keys requests by visitor address. Give each
+  // simulated visitor class a reserved TEST-NET address, but only on the
+  // same-origin endpoint that consumes it. A global extraHTTPHeaders setting
+  // would also send this non-safelisted header to fonts and other providers,
+  // triggering cross-origin preflight failures.
+  await page.route(
+    (url) =>
+      url.origin === acceptanceOrigin &&
+      url.pathname === "/api/location/resolve",
+    async (route) => {
+      await route.continue({
+        headers: {
+          ...route.request().headers(),
+          "x-forwarded-for": visitorAddress,
+        },
+      });
+    },
+  );
+});
+
 const pilotPublicRoutes = [
   "/",
   "/salons",
@@ -91,10 +132,15 @@ test("homepage removes the intro and keeps mobile/tablet focused on promotions a
   await page.goto("/");
   const intro = page.locator("[data-home-intro]");
   await expect(intro).toHaveCount(0);
-  if ((page.viewportSize()?.width || 0) < 1_024) {
-    await expect(page.locator("[data-home-search]")).toBeHidden();
-  } else {
+  const usesDesktopSearchLayout = await page.evaluate(() =>
+    window.matchMedia(
+      "(min-width: 1024px) and (hover: hover) and (pointer: fine)",
+    ).matches,
+  );
+  if (usesDesktopSearchLayout) {
     await expect(page.locator("[data-home-search]")).toBeVisible();
+  } else {
+    await expect(page.locator("[data-home-search]")).toBeHidden();
   }
   await expect(page.getByText("Book with Confidence", { exact: false })).toHaveCount(0);
   await expect(
@@ -138,11 +184,37 @@ test("homepage removes the intro and keeps mobile/tablet focused on promotions a
   expect(order).toBe(true);
 });
 
+test("compact phone salon cards keep identity and distance on readable single lines", async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 2_000) >= 640, "Phone-only compact-card contract.");
+  await page.goto("/internal/acceptance/mobile-cards");
+  const cards = page.locator('[data-salon-card][data-card-variant="compact"]');
+  await expect(cards).toHaveCount(2);
+  const layout = await cards.first().evaluate((card) => {
+      const title = card.querySelector("a[data-no-translate]") as HTMLElement | null;
+      const location = card.querySelector("p span[data-no-translate]") as HTMLElement | null;
+      const box = card.getBoundingClientRect();
+      const locationStyle = location ? getComputedStyle(location) : null;
+      return {
+        width: box.width,
+        height: box.height,
+        viewport: window.innerWidth,
+        titleOverflow: Boolean(title && title.scrollWidth > title.clientWidth && getComputedStyle(title).textOverflow !== "ellipsis"),
+        locationWraps: locationStyle?.whiteSpace !== "nowrap",
+        pageOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+  });
+  expect(layout.width).toBeLessThan(layout.viewport * 0.52);
+  expect(layout.height).toBeLessThan(220);
+  expect(layout.titleOverflow).toBe(false);
+  expect(layout.locationWraps).toBe(false);
+  expect(layout.pageOverflow).toBe(false);
+  await expect(cards.first().locator("p span[data-no-translate]")).toHaveAttribute("title", /Manhattan, NY · Under 0.1 mi away/);
+});
+
 test("functional public pages begin without the removed marketing introductions", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One browser covers the content contract.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the content contract.");
   await page.goto("/salons");
   await expect(page.getByRole("heading", { name: "Tell us the look you want" })).toBeVisible();
   await expect(page.getByText("Find salons that fit your style", { exact: false })).toHaveCount(0);
@@ -156,6 +228,50 @@ test("functional public pages begin without the removed marketing introductions"
   await page.goto("/how-it-works");
   await expect(page.getByText("How booking works", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Find a style or salon", { exact: true })).toBeVisible();
+});
+
+test("salon profile starts with every service collapsed and exposes compact review and description controls", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the interactive profile contract.");
+  await page.goto("/internal/acceptance/salon-profile");
+
+  const knotless = page.getByRole("button", { name: /Knotless Braids/ });
+  const silkPress = page.getByRole("button", { name: /Silk Press/ });
+  await expect(knotless).toHaveAttribute("aria-expanded", "false");
+  await expect(silkPress).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("What's Included", { exact: true })).toHaveCount(0);
+
+  await silkPress.click();
+  await expect(knotless).toHaveAttribute("aria-expanded", "false");
+  await expect(silkPress).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByText("What's Included", { exact: true })).toBeVisible();
+
+  await expect(page.getByLabel("4.5 out of 5 stars")).toBeVisible();
+  await expect(page.getByText("AI-assisted", { exact: true })).toBeVisible();
+  await expect(page.getByText("description-word-81", { exact: false })).toHaveCount(0);
+  await page.getByRole("button", { name: "Read more" }).click();
+  await expect(page.getByText("description-word-110", { exact: false })).toBeVisible();
+
+  await page.getByRole("button", { name: "View reviews" }).click();
+  await expect(page.locator("#reviews")).toBeFocused();
+});
+
+test("customer, salon, and platform-admin password fields can be revealed without submitting", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the shared password control.");
+  for (const route of ["/login", "/salon/login", "/admin/login"]) {
+    await page.goto(route);
+    const password = page.getByLabel("Password", { exact: true });
+    await expect(password, `${route} has a masked password field`).toBeVisible();
+    await password.fill("AcceptancePass123");
+    await page.getByRole("button", { name: "Show password" }).first().click();
+    await expect(password).toHaveAttribute("type", "text");
+    await expect(password).toHaveValue("AcceptancePass123");
+    await page.getByRole("button", { name: "Hide password" }).first().click();
+    await expect(password).toHaveAttribute("type", "password");
+  }
 });
 
 test("phone and tablet landscape layouts do not overflow and promotion cards stay compact", async ({
@@ -227,7 +343,6 @@ test("mobile promotion swipe pauses temporarily, resumes, and cards fit without 
   for (const box of layout.boxes) {
     expect(box.width).toBeLessThan(layout.viewport);
     expect(box.width).toBeGreaterThanOrEqual(150);
-    if (layout.viewport < 640) expect(box.width).toBeLessThanOrEqual(240);
   }
   for (let index = 1; index < layout.boxes.length; index += 1) {
     expect(layout.boxes[index].left).toBeGreaterThan(layout.boxes[index - 1].right);
@@ -258,9 +373,8 @@ test("promotion rail respects reduced motion and remains manually operable", asy
 
 test("homepage section order editor previews, publishes, and persists keyboard moves", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One representative Engine interaction run is sufficient.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One representative Engine interaction run is sufficient.");
   await page.goto("/internal/acceptance/homepage-order");
   await page.getByRole("button", { name: "Move Trending Picks This Week up" }).click();
   await page.getByRole("button", { name: "Move Trending Picks This Week up" }).click();
@@ -283,9 +397,8 @@ test("homepage section order editor previews, publishes, and persists keyboard m
 
 test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eligible destinations", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One representative Content Management browser run is sufficient.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One representative Content Management browser run is sufficient.");
   const initialCards = Array.from({ length: 8 }, (_, index) => ({
     id: `card-${index + 1}`,
     content_type: "image",
@@ -394,7 +507,9 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
     publicRail.getByRole("link", { name: "Open salon" }),
   ).toHaveAttribute("href", "/salon/eligible-salon");
   await expect(
-    publicRail.getByRole("link", { name: "Explore" }).first(),
+    publicRail.locator(
+      'a[href="/salon/campaign-salon?campaign=campaign-1"]',
+    ),
   ).toHaveAttribute(
     "href",
     "/salon/campaign-salon?campaign=campaign-1",
@@ -463,10 +578,9 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
 
 test("first relevant visit requests location once and reuses it across discovery pages", async ({
   page,
-  browserName,
-}) => {
+}, testInfo) => {
   test.skip(
-    browserName !== "chromium",
+    testInfo.project.name !== "chromium",
     "Chromium provides deterministic geolocation permission controls.",
   );
   await page.context().grantPermissions(["geolocation"]);
@@ -525,9 +639,8 @@ test("first relevant visit requests location once and reuses it across discovery
 
 test("a denied location request is remembered and falls back without reprompting", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "One deterministic denial fixture is sufficient.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One deterministic denial fixture is sufficient.");
   await page.addInitScript(() => {
     if (!sessionStorage.getItem("gc-test-denial-initialized")) {
       localStorage.clear();

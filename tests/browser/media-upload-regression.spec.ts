@@ -113,10 +113,9 @@ async function cropAtDpr(
 
 test("real browser Files and Blobs accept every required source for every placement", async ({
   page,
-  browserName,
-}) => {
+}, testInfo) => {
   test.setTimeout(90_000);
-  test.skip(browserName !== "chromium", "Chromium exercises the image decoder contract.");
+  test.skip(testInfo.project.name !== "chromium", "Chromium exercises the image decoder contract.");
   const fixtures = await requiredFixtures();
   await page.goto("/internal/acceptance/media-upload");
   await page.getByLabel("Real image files").setInputFiles(fixtures);
@@ -162,26 +161,24 @@ test("real browser Files and Blobs accept every required source for every placem
 
 test("canonical crop math is invariant across browser DPR", async ({
   browser,
-  browserName,
   baseURL,
-}) => {
-  test.skip(browserName !== "chromium", "One browser is sufficient for deterministic crop math.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser is sufficient for deterministic crop math.");
   const fixture = (await requiredFixtures()).find(
     (row) => row.name === "source-1200x600.png",
   )!;
   const url = String(baseURL || "http://127.0.0.1:3104");
-  const [dprOne, dprThree] = await Promise.all([
-    cropAtDpr(browser, url, 1, fixture),
-    cropAtDpr(browser, url, 3, fixture),
-  ]);
+  // Keep traced context teardown isolated. The CI trace showed both crop reads
+  // succeeding before the overlapping second context close lost its transport.
+  const dprOne = await cropAtDpr(browser, url, 1, fixture);
+  const dprThree = await cropAtDpr(browser, url, 3, fixture);
   expect(dprThree).toEqual(dprOne);
 });
 
 test("one failed real File does not remove successful multi-file outcomes", async ({
   page,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "Chromium exercises the queue contract.");
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Chromium exercises the queue contract.");
   const [first, middle, last] = await Promise.all([
     solidPng("first-success.png", 1200, 600, "#d6186b"),
     solidPng("partial-failure.png", 800, 600, "#5b1a6b"),
