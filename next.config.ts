@@ -17,6 +17,18 @@ const releaseId =
     : "local-development");
 
 const nextConfig: NextConfig = {
+  // Keep Sharp external to the JavaScript server bundle and explicitly trace
+  // only the native files required by the image-finalization route. Netlify's
+  // Next runtime packages these traced files with that function; a global
+  // `included_files` rule would copy them into unrelated functions as well.
+  serverExternalPackages: ["sharp"],
+  outputFileTracingIncludes: {
+    "/api/media/upload/finalize": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+  },
   env: {
     // Netlify exposes COMMIT_REF during the build, but not reliably inside
     // every generated function. Compile the non-secret release identifier

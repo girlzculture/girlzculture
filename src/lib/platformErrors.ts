@@ -109,16 +109,21 @@ export async function capturePlatformError(context: ErrorContext) {
   console.error("Platform operation failed", logRecord);
   if (context.admin) {
     try {
+      // Monitoring must never hold the original user/system operation open
+      // behind a slow or unavailable database. The function log above is the
+      // durable provider-side fallback when this bounded persistence misses.
+      const persistenceSignal = AbortSignal.timeout(1_500);
       const { data: eventId, error } = await context.admin.rpc(
         "capture_platform_error",
         { p_event: logRecord },
-      );
+      ).abortSignal(persistenceSignal);
       if (error && error.code !== "PGRST202") console.error("Platform error persistence failed", { reference, code: error.code, message: safeText(error.message, 500) });
       if (!error && /^[0-9a-f-]{36}$/i.test(String(eventId || ""))) {
         const { data: event } = await context.admin
           .from("platform_error_events")
           .select("reference")
           .eq("id", eventId)
+          .abortSignal(persistenceSignal)
           .maybeSingle();
         const canonicalReference = String(event?.reference || "");
         if (/^[0-9a-f-]{36}$/i.test(canonicalReference)) {
@@ -172,7 +177,18 @@ export async function monitoredRouteFailure(context: ErrorContext) {
   const providerUnavailable =
     Number(errorRecord.status || 0) === 503 &&
     String(errorRecord.code || "") === "AUTHENTICATION_PROVIDER_UNAVAILABLE";
-  const reference = await capturePlatformError(context);
+  const reference = await capturePlatformError(
+    providerUnavailable
+      ? {
+          ...context,
+          // Supabase cannot persist its own outage while it is unavailable.
+          // Return promptly and retain the correlation record in function logs.
+          admin: undefined,
+          actorId: null,
+          provider: context.provider || "supabase",
+        }
+      : context,
+  );
   return safeFailure(
     providerUnavailable
       ? "The authentication service is temporarily unavailable."

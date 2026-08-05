@@ -37,6 +37,38 @@ function fingerprint(value) {
   return `gc-${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 
+function netlifyEnvironment() {
+  if (process.env.CONTEXT) return process.env.CONTEXT;
+  if (process.env.NODE_ENV) return process.env.NODE_ENV;
+  // Scheduled functions do not consistently receive CONTEXT at runtime, but
+  // Netlify exposes URL for the production site. Do not mislabel a deployed
+  // cleanup failure as "unknown · local" simply because those two variables
+  // were omitted from the isolated function process.
+  try {
+    const productionUrl = new URL(process.env.URL || "");
+    if (
+      productionUrl.protocol === "https:" &&
+      !["localhost", "127.0.0.1"].includes(productionUrl.hostname)
+    ) {
+      return "production";
+    }
+  } catch {
+    // Fall through to the deploy URL or the honest unknown label.
+  }
+  try {
+    const deployUrl = new URL(process.env.DEPLOY_PRIME_URL || "");
+    if (
+      deployUrl.protocol === "https:" &&
+      !["localhost", "127.0.0.1"].includes(deployUrl.hostname)
+    ) {
+      return "deployed";
+    }
+  } catch {
+    // No trusted Netlify deployment identity was injected.
+  }
+  return "unknown";
+}
+
 async function persist(record) {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -69,7 +101,7 @@ export async function monitoredNetlifyFailure({
   const reference = crypto.randomUUID();
   const technicalMessage = safeText(error instanceof Error ? error.message : error || "Unknown error");
   const route = request ? new URL(request.url).pathname : `/.netlify/functions/${action}`;
-  const environment = process.env.CONTEXT || process.env.NODE_ENV || "unknown";
+  const environment = netlifyEnvironment();
   const release =
     process.env.GIRLZ_CULTURE_RELEASE_ID ||
     process.env.COMMIT_REF ||

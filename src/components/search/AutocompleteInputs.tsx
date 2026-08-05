@@ -16,6 +16,13 @@ import type { CustomerLocation } from "@/lib/location";
 import { reportClientOperationalFailure } from "@/lib/supabase";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import { readApiResponse } from "@/lib/apiResponseClient";
+import {
+  googleMapsIncidentMessage,
+  runGoogleMapsLoadWithRetry,
+  type GoogleMapsLoadCode,
+} from "@/lib/googleMapsFailureCore";
+
+export type { GoogleMapsLoadCode } from "@/lib/googleMapsFailureCore";
 
 let googleMapsPromise: Promise<void> | null = null;
 const GOOGLE_MAPS_SCRIPT_ID = "girlz-google-maps";
@@ -25,13 +32,6 @@ export const GOOGLE_MAPS_AUTH_FAILURE_EVENT =
 let googleMapsAuthError: GoogleMapsLoadError | null = null;
 let restoreGoogleMapsAuthHandler: (() => void) | null = null;
 
-export type GoogleMapsLoadCode =
-  | "GOOGLE_MAPS_NOT_CONFIGURED"
-  | "GOOGLE_MAPS_AUTH_REJECTED"
-  | "GOOGLE_MAPS_LOAD_TIMEOUT"
-  | "GOOGLE_MAPS_SCRIPT_FAILED"
-  | "GOOGLE_MAPS_SDK_INVALID";
-
 export class GoogleMapsLoadError extends Error {
   constructor(
     readonly code: GoogleMapsLoadCode,
@@ -40,6 +40,20 @@ export class GoogleMapsLoadError extends Error {
     super(message);
     this.name = "GoogleMapsLoadError";
   }
+}
+
+function currentGoogleMapsLoadError(error: unknown) {
+  return error instanceof GoogleMapsLoadError ? error : googleMapsAuthError;
+}
+
+export async function loadGoogleMapsWithBoundedRetry() {
+  return runGoogleMapsLoadWithRetry({
+    load: loadGoogleMaps,
+    reset: resetGoogleMapsLoader,
+    codeForError: (error) => currentGoogleMapsLoadError(error)?.code || null,
+    wait: (milliseconds) =>
+      new Promise((resolve) => window.setTimeout(resolve, milliseconds)),
+  });
 }
 
 function googleMapsReady() {
@@ -425,7 +439,13 @@ export function LocationAutocomplete({
   const configured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<{
+    code: string;
+    message: string;
+    reference: string | null;
+    retryable: boolean;
+  } | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const sessionToken = useRef<any>(null);
   const requestSequence = useRef(0);
   const root = useRef<HTMLDivElement>(null);
@@ -440,9 +460,9 @@ export function LocationAutocomplete({
           return;
         }
         setLoading(true);
-        setError("");
+        setFailure(null);
         try {
-          await loadGoogleMaps();
+          await loadGoogleMapsWithBoundedRetry();
           const places = await (window as any).google.maps.importLibrary(
             "places",
           );
@@ -466,16 +486,29 @@ export function LocationAutocomplete({
               .slice(0, 6),
           );
           setActiveIndex(-1);
-        } catch {
+        } catch (caught) {
           if (requestId === requestSequence.current) {
+            const loadError = currentGoogleMapsLoadError(caught);
+            const code =
+              loadError?.code || "GOOGLE_PLACES_AUTOCOMPLETE_FAILED";
             const report = await reportClientOperationalFailure({
               status: 502,
-              code: "GOOGLE_PLACES_AUTOCOMPLETE_FAILED",
+              code,
               operation: "maps:place-autocomplete",
               provider: "google-maps",
             });
+            if (requestId !== requestSequence.current) return;
             setSuggestions([]);
-            setError(report.message);
+            setFailure({
+              code,
+              reference: report.reference,
+              message: googleMapsIncidentMessage(
+                loadError?.message ||
+                  "Google Maps could not load location suggestions. Check the provider configuration or connection, then retry.",
+                report.reference,
+              ),
+              retryable: code !== "GOOGLE_MAPS_NOT_CONFIGURED",
+            });
           }
         } finally {
           if (requestId === requestSequence.current) setLoading(false);
@@ -484,7 +517,7 @@ export function LocationAutocomplete({
       value.trim().length < 2 ? 0 : 220,
     );
     return () => window.clearTimeout(timer);
-  }, [configured, value]);
+  }, [configured, retryAttempt, value]);
   useEffect(() => {
     function outside(event: PointerEvent) {
       if (!root.current?.contains(event.target as Node)) setOpen(false);
@@ -519,7 +552,12 @@ export function LocationAutocomplete({
       } else {
         onCoordinates?.(null);
         onResolved?.(null);
-        setError("That location could not be resolved. Choose another suggestion.");
+        setFailure({
+          code: "GOOGLE_PLACE_DETAILS_EMPTY",
+          message: "That location could not be resolved. Choose another suggestion.",
+          reference: null,
+          retryable: true,
+        });
       }
       sessionToken.current = null;
     } catch {
@@ -531,7 +569,12 @@ export function LocationAutocomplete({
       });
       onCoordinates?.(null);
       onResolved?.(null);
-      setError(report.message);
+      setFailure({
+        code: "GOOGLE_PLACE_DETAILS_FAILED",
+        message: googleMapsIncidentMessage(report.message, report.reference),
+        reference: report.reference,
+        retryable: true,
+      });
     }
   }
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -561,7 +604,7 @@ export function LocationAutocomplete({
     setSuggestions([]);
     setOpen(false);
     setActiveIndex(-1);
-    setError("");
+    setFailure(null);
   }
   return (
     <div ref={root} className={`relative overflow-visible ${className}`}>
@@ -584,7 +627,7 @@ export function LocationAutocomplete({
             onChange(event.target.value);
             onCoordinates?.(null);
             onResolved?.(null);
-            setError("");
+            setFailure(null);
             setOpen(true);
           }}
           autoComplete="off"
@@ -631,11 +674,32 @@ export function LocationAutocomplete({
               </button>
             ))
           ) : (
-            <p role="status" className="px-4 py-3 text-xs text-ink/60">
-              {error || (configured
-                ? "No matching U.S. locations."
-                : "Location suggestions require Google Maps setup.")}
-            </p>
+            <div className="px-4 py-3 text-xs text-ink/60">
+              <p
+                role="status"
+                data-error-code={failure?.code || undefined}
+                data-error-reference={failure?.reference || undefined}
+              >
+                {failure?.message ||
+                  (configured
+                    ? "No matching U.S. locations."
+                    : "Location suggestions require Google Maps setup.")}
+              </p>
+              {failure?.retryable ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetGoogleMapsLoader();
+                    sessionToken.current = null;
+                    setFailure(null);
+                    setRetryAttempt((attempt) => attempt + 1);
+                  }}
+                  className="mt-2 min-h-9 rounded-lg border border-magenta bg-white px-3 font-bold text-magenta"
+                >
+                  Retry location suggestions
+                </button>
+              ) : null}
+            </div>
           )}
           <p className="border-t border-plum/10 px-4 py-2 text-right text-[10px] text-ink/60">
             Suggestions by Google

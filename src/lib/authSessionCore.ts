@@ -56,6 +56,14 @@ type AuthFailureInput = {
 
 export type SupabaseAuthFailureKind = "terminal" | "transient";
 
+const DEFAULT_TRANSIENT_AUTH_RETRY_DELAYS_MS = [150, 600] as const;
+
+type TransientAuthRetryOptions = {
+  delaysMs?: readonly number[];
+  wait?: (delayMs: number) => Promise<void>;
+  random?: () => number;
+};
+
 /**
  * Auth failures must be split before the UI decides whether to discard a
  * session. Invalid/expired credentials are terminal. Provider throttling,
@@ -97,6 +105,44 @@ export function classifySupabaseAuthFailure(
   // Unknown Auth failures are preserved. It is safer to retry a temporarily
   // unavailable provider than to destroy a valid role-scoped session.
   return "transient";
+}
+
+/**
+ * A short provider or network interruption must not turn a still-recoverable
+ * persisted session into a sign-out. Retry only failures classified as
+ * transient, keep the retry budget bounded, and add jitter so many resumed
+ * browser tabs do not all retry Supabase Auth at the same instant.
+ */
+export async function retryTransientAuthOperation<T>(
+  operation: (attempt: number) => Promise<T>,
+  options: TransientAuthRetryOptions = {},
+): Promise<T> {
+  const delays = options.delaysMs || DEFAULT_TRANSIENT_AUTH_RETRY_DELAYS_MS;
+  const wait = options.wait || ((delayMs: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, delayMs)));
+  const random = options.random || Math.random;
+  let attempt = 0;
+  while (true) {
+    try {
+      return await operation(attempt);
+    } catch (error) {
+      if (
+        classifySupabaseAuthFailure(
+          error && typeof error === "object"
+            ? (error as AuthFailureInput)
+            : { message: error },
+        ) !== "transient" ||
+        attempt >= delays.length
+      ) {
+        throw error;
+      }
+      const baseDelay = Math.max(0, Number(delays[attempt] || 0));
+      const jitterRatio = Math.max(0, Math.min(1, Number(random()) || 0));
+      const delay = baseDelay + Math.floor(baseDelay * 0.5 * jitterRatio);
+      attempt += 1;
+      await wait(delay);
+    }
+  }
 }
 
 export function isStoredSessionShape(value: unknown): value is {

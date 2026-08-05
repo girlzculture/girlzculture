@@ -55,6 +55,7 @@ import {
 } from "@/lib/imageCropCore";
 import {
   getSupabaseForScope,
+  getSessionForScope,
   getValidSessionForScope,
   type AuthScope,
 } from "@/lib/supabase";
@@ -160,6 +161,8 @@ export default function ImageUpload({
   const committedRef = useRef<string[]>([]);
   const cropDrag = useRef<ImageCropDrag | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [authUnavailable, setAuthUnavailable] = useState(false);
+  const [authReload, setAuthReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState("");
@@ -183,7 +186,6 @@ export default function ImageUpload({
     key: preset || inferImagePreset(label, bucket, folder),
     status: "loading",
   });
-  const [profileReload, setProfileReload] = useState(0);
   const current = useMemo(() => values(value, multiple), [multiple, value]);
   const presetKey = preset || inferImagePreset(label, bucket, folder);
   const profileReady =
@@ -245,17 +247,42 @@ export default function ImageUpload({
 
   useEffect(() => {
     let mounted = true;
-    void getValidSessionForScope(authScope, 15)
-      .then((session) => {
-        if (mounted) setAuthenticated(Boolean(session));
-      })
-      .catch(() => {
-        if (mounted) setAuthenticated(false);
-      });
+    void (async () => {
+      let cachedSession = false;
+      try {
+        const current = await getSessionForScope(authScope);
+        cachedSession = Boolean(current);
+        if (!mounted) return;
+        // Preserve file selection and cropping while a short-lived provider
+        // outage is recovering. Every upload is still authorized by the
+        // server, and getValidSessionForScope refreshes before bytes are sent.
+        if (current) setAuthenticated(true);
+        const valid = await getValidSessionForScope(authScope, 15);
+        if (!mounted) return;
+        setAuthenticated(Boolean(valid));
+        setAuthUnavailable(false);
+      } catch {
+        if (!mounted) return;
+        setAuthUnavailable(true);
+        if (!cachedSession) {
+          // A provider 5xx is not a sign-out. Keep the control retryable until
+          // Auth answers again instead of permanently locking it until remount.
+          setAuthenticated((current) => current === true ? true : null);
+        }
+      }
+    })();
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+        setAuthenticated(Boolean(session));
+        if (session) setAuthUnavailable(false);
+      },
+    );
     return () => {
       mounted = false;
+      authListener.subscription.unsubscribe();
     };
-  }, [authScope]);
+  }, [authReload, authScope, supabase.auth]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -279,17 +306,20 @@ export default function ImageUpload({
         }
         throw new Error("The image requirements could not be loaded.");
       })
-      .catch((reason) => {
+      .catch(() => {
         if (controller.signal.aborted) return;
-        setProfileLoad({ key: presetKey, status: "error" });
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "The image requirements could not be loaded.",
-        );
+        // File selection is safe with the checked-in profile. The prepare API
+        // independently applies the authoritative server profile before it
+        // signs any upload, so a transient guidance read must not disable every
+        // salon image control.
+        setConfiguredProfile({
+          key: presetKey,
+          profile: IMAGE_UPLOAD_PROFILES[presetKey],
+        });
+        setProfileLoad({ key: presetKey, status: "ready" });
       });
     return () => controller.abort();
-  }, [presetKey, profileReload]);
+  }, [presetKey]);
 
   useEffect(
     () => () => {
@@ -734,7 +764,6 @@ export default function ImageUpload({
   const locked =
     disabled ||
     authenticated !== true ||
-    !profileReady ||
     busy ||
     requiresSavedRecord ||
     (multiple && occupied >= maxFiles);
@@ -1224,11 +1253,6 @@ export default function ImageUpload({
               <span className="mt-1 text-[10px] text-ink/55">
                 {authenticated === null
                   ? "Checking access..."
-                  : profileLoad.key !== presetKey ||
-                      profileLoad.status === "loading"
-                    ? "Loading image requirements..."
-                    : profileLoad.status === "error"
-                      ? "Image requirements unavailable"
                   : authenticated
                     ? requiresSavedRecord
                       ? "Save the record details before adding photos"
@@ -1238,22 +1262,30 @@ export default function ImageUpload({
                     : "Sign in to upload"}
               </span>
             </button>
-            {profileLoad.key === presetKey &&
-            profileLoad.status === "error" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setProfileLoad({ key: presetKey, status: "loading" });
-                  setProfileReload((value) => value + 1);
-                }}
-                className="mx-auto mb-2 block min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta"
-              >
-                Retry image requirements
-              </button>
-            ) : null}
           </div>
         ) : null}
       </div>
+      {authUnavailable ? (
+        <div
+          role="status"
+          className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber/10 px-3 py-2 text-xs text-ink/70"
+        >
+          <span>
+            The sign-in service is temporarily unavailable. Your selected
+            images are safe while access reconnects.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthUnavailable(false);
+              setAuthReload((attempt) => attempt + 1);
+            }}
+            className="min-h-9 rounded-lg border border-magenta bg-white px-3 font-bold text-magenta"
+          >
+            Retry access
+          </button>
+        </div>
+      ) : null}
       {error ? (
         <p
           role="alert"

@@ -11,7 +11,12 @@ import {
   actionToastIsError,
   actionToastReference,
 } from "../src/lib/actionToastCore.ts";
-import { shouldRetryTransientAuthTokenResponse } from "../src/lib/supabaseFetchPolicy.ts";
+import {
+  GOOGLE_MAPS_AUTOMATIC_RETRY_LIMIT,
+  googleMapsIncidentMessage,
+  runGoogleMapsLoadWithRetry,
+  shouldRetryGoogleMapsLoad,
+} from "../src/lib/googleMapsFailureCore.ts";
 
 const read = (path) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -76,27 +81,64 @@ assert.equal(
   "11111111-1111-4111-8111-111111111111",
 );
 
+assert.equal(GOOGLE_MAPS_AUTOMATIC_RETRY_LIMIT, 1);
+assert.equal(shouldRetryGoogleMapsLoad("GOOGLE_MAPS_SCRIPT_FAILED", 0), true);
+assert.equal(shouldRetryGoogleMapsLoad("GOOGLE_MAPS_LOAD_TIMEOUT", 0), true);
+assert.equal(shouldRetryGoogleMapsLoad("GOOGLE_MAPS_LOAD_TIMEOUT", 1), false);
+assert.equal(shouldRetryGoogleMapsLoad("GOOGLE_MAPS_AUTH_REJECTED", 0), false);
+assert.equal(shouldRetryGoogleMapsLoad("GOOGLE_MAPS_NOT_CONFIGURED", 0), false);
 assert.equal(
-  shouldRetryTransientAuthTokenResponse(
-    "https://project.supabase.co/auth/v1/token?grant_type=refresh_token",
-    503,
+  googleMapsIncidentMessage(
+    "Google Maps rejected the browser key.",
+    "11111111-1111-4111-8111-111111111111",
   ),
-  true,
+  "Google Maps rejected the browser key. Reference 11111111-1111-4111-8111-111111111111.",
 );
 assert.equal(
-  shouldRetryTransientAuthTokenResponse(
-    "https://project.supabase.co/auth/v1/token?grant_type=refresh_token",
-    401,
+  googleMapsIncidentMessage(
+    "This operation failed with reference 11111111-1111-4111-8111-111111111111.",
+    "11111111-1111-4111-8111-111111111111",
   ),
-  false,
+  "This operation failed with reference 11111111-1111-4111-8111-111111111111.",
 );
-assert.equal(
-  shouldRetryTransientAuthTokenResponse(
-    "https://project.supabase.co/rest/v1/salons",
-    503,
-  ),
-  false,
+
+let transientLoadAttempts = 0;
+let transientLoadResets = 0;
+const retryWaits = [];
+const recoveredLoad = await runGoogleMapsLoadWithRetry({
+  load: async () => {
+    transientLoadAttempts += 1;
+    if (transientLoadAttempts === 1) {
+      throw { code: "GOOGLE_MAPS_SCRIPT_FAILED" };
+    }
+    return "ready";
+  },
+  reset: () => {
+    transientLoadResets += 1;
+  },
+  codeForError: (error) => error?.code || null,
+  wait: async (milliseconds) => {
+    retryWaits.push(milliseconds);
+  },
+});
+assert.equal(recoveredLoad, "ready");
+assert.equal(transientLoadAttempts, 2);
+assert.equal(transientLoadResets, 1);
+assert.deepEqual(retryWaits, [250]);
+
+let rejectedLoadAttempts = 0;
+await assert.rejects(
+  runGoogleMapsLoadWithRetry({
+    load: async () => {
+      rejectedLoadAttempts += 1;
+      throw { code: "GOOGLE_MAPS_AUTH_REJECTED" };
+    },
+    reset: () => assert.fail("an authentication rejection must not retry"),
+    codeForError: (error) => error?.code || null,
+    wait: async () => assert.fail("an authentication rejection must not wait"),
+  }),
 );
+assert.equal(rejectedLoadAttempts, 1);
 
 const upload = read("src/components/ImageUpload.tsx");
 const toast = read("src/components/ActionToast.tsx");
@@ -117,13 +159,23 @@ assert.match(loader, /GOOGLE_MAPS_LOAD_TIMEOUT_MS/);
 assert.match(loader, /gm_authFailure/);
 assert.match(loader, /GOOGLE_MAPS_AUTH_FAILURE_EVENT/);
 assert.match(loader, /googleMapsPromise = null/);
+assert.match(loader, /loadGoogleMapsWithBoundedRetry/);
+assert.match(loader, /const code =[\s\S]{0,180}loadError\?\.code/);
+assert.match(loader, /reportClientOperationalFailure\(\{[\s\S]{0,100}code,/);
+assert.match(loader, /data-error-reference=\{failure\?\.reference/);
+assert.match(loader, /Retry location suggestions/);
 assert.match(map, /configuredMapId === "DEMO_MAP_ID" \? ""/);
+assert.match(map, /await loadGoogleMapsWithBoundedRetry\(\)/);
 assert.match(map, /Retry map/);
 assert.match(map, /addEventListener\([\s\S]*GOOGLE_MAPS_AUTH_FAILURE_EVENT/);
 assert.match(map, /window\.location\.assign\(`\/salon\//);
 assert.match(map, /rating\.toFixed\(1\)/);
 assert.match(map, /From \$/);
-assert.match(supabase, /one short retry absorbs a transient Supabase token-edge/i);
+assert.doesNotMatch(
+  supabase,
+  /shouldRetryTransientAuthTokenResponse|one short retry absorbs a transient Supabase token-edge/i,
+  "Auth retries must have one coordinated owner instead of replaying every raw token request.",
+);
 assert.match(deployment, /const COMPILED_RELEASE_ID = process\.env\.GIRLZ_CULTURE_RELEASE_ID/);
 for (const [name, placement] of [["nearby", nearby], ["featured", featured]]) {
   assert.match(placement, /readApiResponse/);

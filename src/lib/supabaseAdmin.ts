@@ -21,7 +21,10 @@ import {
   refundCustomerSummary,
   safeCancellationReason,
 } from "@/lib/bookingCancellation";
-import { classifySupabaseAuthFailure } from "@/lib/authSessionCore";
+import {
+  classifySupabaseAuthFailure,
+  retryTransientAuthOperation,
+} from "@/lib/authSessionCore";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -113,11 +116,17 @@ async function verifiedAuthUser(
   token: string,
 ): Promise<User> {
   try {
-    const { data, error } = await admin.auth.getUser(token);
-    if (error) {
-      if (classifySupabaseAuthFailure(error) === "transient") {
-        throw new AuthenticationProviderUnavailableError();
+    const { data, error } = await retryTransientAuthOperation(async () => {
+      const result = await admin.auth.getUser(token);
+      if (
+        result.error &&
+        classifySupabaseAuthFailure(result.error) === "transient"
+      ) {
+        throw result.error;
       }
+      return result;
+    });
+    if (error) {
       throw new Error("Unauthorized");
     }
     if (!data.user) throw new Error("Unauthorized");

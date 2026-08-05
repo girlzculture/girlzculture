@@ -70,6 +70,11 @@ const platformErrorsSource = fs
     'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
     'const deploymentReleaseId = () => "verification";',
   );
+assert.match(
+  platformErrorsSource,
+  /AbortSignal\.timeout\(1_500\)[\s\S]*?capture_platform_error[\s\S]*?abortSignal\(persistenceSignal\)/,
+  "Monitoring persistence must have a hard deadline and never block the original operation indefinitely.",
+);
 const platformErrors = await import(
   `data:text/javascript;base64,${Buffer.from(
     ts.transpileModule(platformErrorsSource, {
@@ -122,6 +127,16 @@ for (const route of [
     `${route} must treat authentication/session failures as protected incidents.`,
   );
 }
+const cleanupRoute = fs.readFileSync(
+  path.join(root, "src", "app", "api", "media", "cleanup", "route.ts"),
+  "utf8",
+);
+assert.match(cleanupRoute, /processOnlyPartialWarnings:\s*true/);
+assert.match(
+  fs.readFileSync(path.join(root, "src", "lib", "operationalMonitoring.ts"), "utf8"),
+  /skipProviderCalls:\s*profile\.processOnlyPartialWarnings\s*===\s*true/,
+  "Cleanup partial warnings must not call the failed provider again to persist monitoring.",
+);
 
 for (const route of [
   "/api/media/upload/prepare",
@@ -296,9 +311,15 @@ const monitoring = await import(
 const previousUrl = process.env.SUPABASE_URL;
 const previousPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const previousServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const previousSiteUrl = process.env.URL;
+const previousContext = process.env.CONTEXT;
+const previousNodeEnvironment = process.env.NODE_ENV;
 delete process.env.SUPABASE_URL;
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+process.env.URL = "https://girlzculture.com";
+delete process.env.CONTEXT;
+delete process.env.NODE_ENV;
 const capturedLogs = [];
 const originalConsoleError = console.error;
 console.error = (...values) => capturedLogs.push(values);
@@ -320,6 +341,9 @@ console.error = originalConsoleError;
 if (previousUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = previousUrl;
 if (previousPublicUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = previousPublicUrl;
 if (previousServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = previousServiceKey;
+if (previousSiteUrl === undefined) delete process.env.URL; else process.env.URL = previousSiteUrl;
+if (previousContext === undefined) delete process.env.CONTEXT; else process.env.CONTEXT = previousContext;
+if (previousNodeEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnvironment;
 
 const netlifyBody = await netlifyFailure.json();
 const netlifyReference = netlifyFailure.headers.get("x-request-id");
@@ -327,6 +351,7 @@ assert.match(netlifyReference || "", /^[0-9a-f-]{36}$/);
 assert.equal(netlifyBody.request_id, netlifyReference);
 assert.match(netlifyBody.error, new RegExp(netlifyReference));
 const serializedLogs = JSON.stringify(capturedLogs);
+assert.equal(capturedLogs[0]?.[1]?.environment, "production");
 assert.doesNotMatch(
   serializedLogs,
   /top-secret-token|sk_test_not-a-real-key|test@example\.com|must-never-be-stored|private@example\.com/,

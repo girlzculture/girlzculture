@@ -2,18 +2,19 @@
 
 import type { AuthScope } from "@/lib/supabase";
 import {
-  getSessionForScope,
+  getValidSessionForScope,
   refreshSessionForScope,
 } from "@/lib/supabase";
 import { createScopedJsonApiClient } from "@/lib/scopedApiCore";
 
 export async function createAuthenticatedApiClient(scope: AuthScope) {
   return createScopedJsonApiClient({
-    // Supabase already owns background token refresh. Use the current scoped
-    // session for ordinary requests and refresh exactly once only after a real
-    // 401. Pre-emptive refreshes can rotate a token while another upload or
-    // dashboard request is still using it.
-    getSession: () => getSessionForScope(scope),
+    // Browser timers are throttled while a phone sleeps or a tab is in the
+    // background. Validate the short expiry window before calling a protected
+    // route so an ordinary token rollover does not create a false production
+    // authentication incident. The role-scoped coordinator coalesces any
+    // necessary refresh for simultaneous dashboard requests.
+    getSession: () => getValidSessionForScope(scope, 30),
     refreshSession: () => refreshSessionForScope(scope),
     scopeLabel:
       scope === "admin" ? "admin" : scope === "salon" ? "salon" : "customer",

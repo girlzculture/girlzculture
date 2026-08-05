@@ -14,12 +14,14 @@ import {
   type ImageUploadProfile,
 } from "@/lib/imageUpload";
 import {
+  MEDIA_UPLOAD_PROFILE_TIMEOUT_MS,
+  reportMediaUploadProfileFallback,
+  resolveMediaUploadProfile,
+} from "@/lib/mediaUploadProfileCore";
+import {
   animatedRenditionDimensions,
-  createCanonicalMediaRendition,
-  inspectCanonicalMediaSource,
-} from "@/lib/mediaImageProcessor";
-import { getEngineNumber } from "@/lib/engineConfigServer";
-import { sanitizeResponsiveTransforms } from "@/lib/mediaImageProcessingCore";
+  sanitizeResponsiveTransforms,
+} from "@/lib/mediaImageProcessingCore";
 import {
   preparedMediaRenditionDimensions,
   type PreparedMediaProfileSnapshot,
@@ -34,6 +36,7 @@ import {
   type MediaPrepareRequest,
   type MediaUploadSlot,
 } from "@/lib/mediaUploadProtocol";
+import { runWithOperationalContext } from "@/lib/operationalTelemetryContext";
 
 export type MediaAuthorizationContext = {
   admin: ReturnType<typeof getSupabaseAdmin>;
@@ -46,6 +49,11 @@ type ExpectedObject = MediaFileDescriptor & {
   bucket: string;
   path: string;
 };
+
+type CanonicalMediaProcessor = Pick<
+  typeof import("@/lib/mediaImageProcessor"),
+  "createCanonicalMediaRendition" | "inspectCanonicalMediaSource"
+>;
 
 export function mediaRequestId() {
   return randomUUID();
@@ -161,36 +169,37 @@ export async function loadConfiguredMediaProfile(
 ) {
   const fallback = IMAGE_UPLOAD_PROFILES[kind];
   if (!fallback) throw new Error("This image placement is not supported.");
-  const [{ data, error }, quality] = await Promise.all([
-    admin
-      .from("media_upload_profiles")
-      .select("*")
-      .eq("profile_key", kind)
-      .eq("is_active", true)
-      .maybeSingle(),
-    getEngineNumber("media.public_image_quality", 88, 60, 100),
-  ]);
-  if (error) throw error;
-  const placement = data
-    ? {
-        ...fallback,
-        label: String(data.display_name || fallback.label),
-        aspectWidth: Number(data.aspect_width || fallback.aspectWidth),
-        aspectHeight: Number(data.aspect_height || fallback.aspectHeight),
-        minWidth: Number(data.min_width_px || fallback.minWidth),
-        minHeight: Number(data.min_height_px || fallback.minHeight),
-        outputWidth: Number(data.output_width_px || fallback.outputWidth),
-        maxBytes: Number(data.max_bytes || fallback.maxBytes),
-        safeArea: data.safe_area_enabled === true,
-        acceptedMimeTypes: Array.isArray(data.accepted_mime_types)
-          ? data.accepted_mime_types.map(String)
-          : fallback.acceptedMimeTypes,
-      }
-    : fallback;
-  return {
-    ...placement,
-    quality,
-  } satisfies ImageUploadProfile;
+  const lookupSignal = AbortSignal.timeout(MEDIA_UPLOAD_PROFILE_TIMEOUT_MS);
+  // These are optional overrides. Keep their provider telemetry in an inner
+  // request context so the outer route does not synchronously write one Engine
+  // incident per failed read before returning the checked-in safe profile.
+  const { profile, failures } = await runWithOperationalContext(() =>
+    resolveMediaUploadProfile({
+      fallback,
+      timeoutMs: MEDIA_UPLOAD_PROFILE_TIMEOUT_MS,
+      loadConfiguration: () =>
+        admin
+          .from("media_upload_profiles")
+          .select("*")
+          .eq("profile_key", kind)
+          .eq("is_active", true)
+          .abortSignal(lookupSignal)
+          .maybeSingle(),
+      loadQuality: async () => {
+        const { data, error } = await admin
+          .from("engine_settings")
+          .select("published_value")
+          .eq("setting_key", "media.public_image_quality")
+          .eq("status", "Published")
+          .abortSignal(lookupSignal)
+          .maybeSingle();
+        if (error) throw error;
+        return data?.published_value;
+      },
+    }),
+  );
+  reportMediaUploadProfileFallback({ kind, failures });
+  return profile satisfies ImageUploadProfile;
 }
 
 export async function authorizeMediaUpload(
@@ -575,6 +584,7 @@ export async function verifyPreparedMediaObjects(
   expectedValue: unknown,
   cropMetadataValue: unknown,
   profile: PreparedMediaProfileSnapshot,
+  processor: CanonicalMediaProcessor,
 ) {
   const expected = expectedObjects(expectedValue);
   const sourceExpected = expected.source;
@@ -595,7 +605,7 @@ export async function verifyPreparedMediaObjects(
   if (sourceBuffer.length !== Number(sourceExpected.file_size_bytes)) {
     throw new Error("The original upload size does not match its preparation.");
   }
-  const source = await inspectCanonicalMediaSource(
+  const source = await processor.inspectCanonicalMediaSource(
     sourceBuffer,
     sourceExpected.mime_type,
   );
@@ -650,7 +660,7 @@ export async function verifyPreparedMediaObjects(
         `The ${slot} derivative does not match its prepared profile.`,
       );
     }
-    const rendition = await createCanonicalMediaRendition({
+    const rendition = await processor.createCanonicalMediaRendition({
       source,
       target: {
         width: targetWidth,

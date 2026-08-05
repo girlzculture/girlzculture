@@ -242,18 +242,18 @@ function providerSpecs(
         key: "maps",
         label: "Maps & geocoding",
         configured: Boolean(
-          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-            process.env.GOOGLE_MAPS_API_KEY,
+          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY &&
+            process.env.GOOGLE_MAPS_SERVER_API_KEY,
         ),
         detail:
-          "Maps enrich location selection and results; structured list discovery remains the fallback.",
+          "Browser maps and server geocoding use separate restricted keys; structured list discovery remains the fallback.",
         required: false,
         envNames: [
           "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
-          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_MAPS_SERVER_API_KEY",
         ],
         setup:
-          "Restrict the browser key by approved domains and APIs. Keep any server geocoding key server-only.",
+          "Restrict the browser key to approved HTTPS domains and Maps JavaScript/Places. Keep the Geocoding API key server-only with server-appropriate restrictions.",
         canTest: true,
       },
       history.get("maps"),
@@ -502,9 +502,10 @@ async function testIntegration(
     return;
   }
   if (key === "maps") {
-    const apiKey =
-      process.env.GOOGLE_MAPS_API_KEY ||
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    // This server-side connection test validates the same dedicated key used
+    // by geocodingServer. A browser/referrer-restricted Maps key cannot safely
+    // stand in for it and previously produced misleading health results.
+    const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY;
     if (!apiKey) throw new Error("NOT_CONFIGURED");
     const response = await safeFetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=New%20York&key=${encodeURIComponent(apiKey)}`,

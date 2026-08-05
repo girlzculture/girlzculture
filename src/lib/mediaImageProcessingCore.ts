@@ -15,6 +15,37 @@ export type PixelCropRegion = {
   height: number;
 };
 
+/**
+ * Animated promotional media should never be enlarged beyond either its
+ * source pixels or the display-sized ceiling. This calculation is kept in
+ * the dependency-free core so upload preparation does not load Sharp.
+ */
+export function animatedRenditionDimensions(input: {
+  source: { width: number; height: number };
+  target: { width: number; height: number };
+  maximumLongEdge?: number;
+}) {
+  const sourceWidth = Math.max(1, Math.floor(input.source.width));
+  const sourceHeight = Math.max(1, Math.floor(input.source.height));
+  const targetWidth = Math.max(1, Math.floor(input.target.width));
+  const targetHeight = Math.max(1, Math.floor(input.target.height));
+  const ceiling = Math.max(
+    1,
+    Math.min(
+      Math.max(targetWidth, targetHeight),
+      Math.floor(input.maximumLongEdge || 960),
+    ),
+  );
+  const ratio = targetWidth / targetHeight;
+  let width = Math.min(targetWidth, sourceWidth, ceiling);
+  let height = Math.max(1, Math.round(width / ratio));
+  if (height > sourceHeight || height > targetHeight || height > ceiling) {
+    height = Math.min(targetHeight, sourceHeight, ceiling);
+    width = Math.max(1, Math.round(height * ratio));
+  }
+  return { width, height };
+}
+
 const DEFAULT_TRANSFORM: Required<ImageTransform> = {
   zoom: 1,
   positionX: 0,
