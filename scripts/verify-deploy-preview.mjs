@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { setDefaultResultOrder } from "node:dns";
+import { resolve4 } from "node:dns/promises";
 import {
   appendFileSync,
   mkdirSync,
@@ -7,8 +9,15 @@ import {
 import path from "node:path";
 import { chromium } from "playwright";
 
+setDefaultResultOrder("ipv4first");
+
 const baseUrl = String(process.env.DEPLOY_PREVIEW_URL || "").replace(/\/$/, "");
 assert(baseUrl.startsWith("https://"), "DEPLOY_PREVIEW_URL must be an HTTPS URL.");
+
+const repository = String(process.env.GITHUB_REPOSITORY || "");
+const pullRequestNumber = String(process.env.PULL_REQUEST_NUMBER || "");
+const pullRequestHeadSha = String(process.env.PULL_REQUEST_HEAD_SHA || "");
+const githubToken = String(process.env.GITHUB_TOKEN || "");
 
 const outputDirectory = path.resolve("test-results/deploy-preview");
 const statusPath = path.join(outputDirectory, "status.log");
@@ -29,37 +38,69 @@ function recordFailure(error) {
   log(`FAILURE: ${message.split("\n")[0]}`);
 }
 
-async function waitForPreview() {
-  let lastMessage = "No response received.";
-  const maxAttempts = 24;
+async function waitForNetlifyReady() {
+  assert(repository, "GITHUB_REPOSITORY is required for deploy-preview readiness.");
+  assert(pullRequestNumber, "PULL_REQUEST_NUMBER is required for deploy-preview readiness.");
+  assert(pullRequestHeadSha, "PULL_REQUEST_HEAD_SHA is required for deploy-preview readiness.");
+  assert(githubToken, "GITHUB_TOKEN is required for deploy-preview readiness.");
+
+  const commentsUrl = `https://api.github.com/repos/${repository}/issues/${pullRequestNumber}/comments?per_page=100`;
+  const maxAttempts = 48;
+  let lastMessage = "Netlify has not published a status comment yet.";
+
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await fetch(baseUrl, {
-        redirect: "manual",
-        signal: AbortSignal.timeout(5_000),
-        headers: { "User-Agent": "Girlz-Culture-Preview-Acceptance" },
+      const response = await fetch(commentsUrl, {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${githubToken}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "Girlz-Culture-Preview-Acceptance",
+        },
+        signal: AbortSignal.timeout(8_000),
       });
-      lastMessage = `HTTP ${response.status}`;
-      log(`Preview readiness attempt ${attempt}/${maxAttempts}: ${lastMessage}`);
-      if (response.status >= 200 && response.status < 400) return;
-      if ([401, 403].includes(response.status)) {
-        throw new Error(
-          `Netlify Deploy Preview is access-protected (${response.status}). The automated browser cannot verify it without a preview access credential.`,
-        );
+      if (!response.ok) {
+        throw new Error(`GitHub comments API returned HTTP ${response.status}.`);
       }
+      const comments = await response.json();
+      const netlifyComment = Array.isArray(comments)
+        ? comments.find((comment) => comment?.user?.login === "netlify[bot]")
+        : null;
+      const body = String(netlifyComment?.body || "");
+      const matchesHead = body.includes(pullRequestHeadSha);
+      if (matchesHead && /Deploy Preview[\s\S]*ready!/i.test(body)) {
+        log(`Netlify reports the Deploy Preview ready for ${pullRequestHeadSha}.`);
+        return;
+      }
+      if (matchesHead && /Deploy Preview[\s\S]*(?:failed|error)/i.test(body)) {
+        throw new Error(`Netlify reported a failed Deploy Preview for ${pullRequestHeadSha}.`);
+      }
+      lastMessage = matchesHead
+        ? "Netlify is still processing the current commit."
+        : "Netlify has not reported the current commit yet.";
+      log(`Netlify readiness attempt ${attempt}/${maxAttempts}: ${lastMessage}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (/access-protected/.test(message)) throw error;
+      if (/reported a failed Deploy Preview/.test(message)) throw error;
       lastMessage = message;
-      log(`Preview readiness attempt ${attempt}/${maxAttempts}: ${message}`);
+      log(`Netlify readiness attempt ${attempt}/${maxAttempts}: ${message}`);
     }
     if (attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
     }
   }
+
   throw new Error(
-    `Netlify Deploy Preview did not become reachable within the bounded readiness window: ${lastMessage}`,
+    `Netlify did not report the current Deploy Preview ready within the bounded readiness window: ${lastMessage}`,
   );
+}
+
+async function resolvePreviewAddress() {
+  const hostname = new URL(baseUrl).hostname;
+  const addresses = await resolve4(hostname);
+  assert(addresses.length, `No IPv4 address resolved for ${hostname}.`);
+  log(`Resolved ${hostname} to IPv4 ${addresses[0]}.`);
+  return { hostname, address: addresses[0] };
 }
 
 function screenshotPath(name) {
@@ -70,7 +111,7 @@ async function openPage(page, pathname, screenshotName) {
   log(`Opening ${pathname}`);
   const response = await page.goto(`${baseUrl}${pathname}`, {
     waitUntil: "domcontentloaded",
-    timeout: 35_000,
+    timeout: 45_000,
   });
   assert(response, `No navigation response for ${pathname}.`);
   assert(response.status() < 400, `${pathname} returned HTTP ${response.status()}.`);
@@ -128,7 +169,7 @@ async function newPage(browser, viewport) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   page.setDefaultTimeout(20_000);
-  page.setDefaultNavigationTimeout(35_000);
+  page.setDefaultNavigationTimeout(45_000);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
@@ -148,8 +189,14 @@ log(`Deploy-preview verification target: ${baseUrl}`);
 let browser;
 
 try {
-  await stage("preview readiness", waitForPreview);
-  browser = await chromium.launch({ headless: true });
+  await stage("Netlify deployment readiness", waitForNetlifyReady);
+  const previewAddress = await stage("preview IPv4 resolution", resolvePreviewAddress);
+  browser = await chromium.launch({
+    headless: true,
+    args: [
+      `--host-resolver-rules=MAP ${previewAddress.hostname} ${previewAddress.address},EXCLUDE localhost`,
+    ],
+  });
 
   await stage("desktop homepage", async () => {
     const { context, page, pageErrors } = await newPage(browser, {
