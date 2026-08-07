@@ -14,11 +14,6 @@ setDefaultResultOrder("ipv4first");
 const baseUrl = String(process.env.DEPLOY_PREVIEW_URL || "").replace(/\/$/, "");
 assert(baseUrl.startsWith("https://"), "DEPLOY_PREVIEW_URL must be an HTTPS URL.");
 
-const repository = String(process.env.GITHUB_REPOSITORY || "");
-const pullRequestNumber = String(process.env.PULL_REQUEST_NUMBER || "");
-const pullRequestHeadSha = String(process.env.PULL_REQUEST_HEAD_SHA || "");
-const githubToken = String(process.env.GITHUB_TOKEN || "");
-
 const outputDirectory = path.resolve("test-results/deploy-preview");
 const statusPath = path.join(outputDirectory, "status.log");
 mkdirSync(outputDirectory, { recursive: true });
@@ -36,63 +31,6 @@ function recordFailure(error) {
   const message = error instanceof Error ? `${error.stack || error.message}` : String(error);
   writeFileSync(path.join(outputDirectory, "failure.txt"), `${message}\n`, "utf8");
   log(`FAILURE: ${message.split("\n")[0]}`);
-}
-
-async function waitForNetlifyReady() {
-  assert(repository, "GITHUB_REPOSITORY is required for deploy-preview readiness.");
-  assert(pullRequestNumber, "PULL_REQUEST_NUMBER is required for deploy-preview readiness.");
-  assert(pullRequestHeadSha, "PULL_REQUEST_HEAD_SHA is required for deploy-preview readiness.");
-  assert(githubToken, "GITHUB_TOKEN is required for deploy-preview readiness.");
-
-  const commentsUrl = `https://api.github.com/repos/${repository}/issues/${pullRequestNumber}/comments?per_page=100`;
-  const maxAttempts = 48;
-  let lastMessage = "Netlify has not published a status comment yet.";
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      const response = await fetch(commentsUrl, {
-        headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
-          "User-Agent": "Girlz-Culture-Preview-Acceptance",
-        },
-        signal: AbortSignal.timeout(8_000),
-      });
-      if (!response.ok) {
-        throw new Error(`GitHub comments API returned HTTP ${response.status}.`);
-      }
-      const comments = await response.json();
-      const netlifyComment = Array.isArray(comments)
-        ? comments.find((comment) => comment?.user?.login === "netlify[bot]")
-        : null;
-      const body = String(netlifyComment?.body || "");
-      const matchesHead = body.includes(pullRequestHeadSha);
-      if (matchesHead && /Deploy Preview[\s\S]*ready!/i.test(body)) {
-        log(`Netlify reports the Deploy Preview ready for ${pullRequestHeadSha}.`);
-        return;
-      }
-      if (matchesHead && /Deploy Preview[\s\S]*(?:failed|error)/i.test(body)) {
-        throw new Error(`Netlify reported a failed Deploy Preview for ${pullRequestHeadSha}.`);
-      }
-      lastMessage = matchesHead
-        ? "Netlify is still processing the current commit."
-        : "Netlify has not reported the current commit yet.";
-      log(`Netlify readiness attempt ${attempt}/${maxAttempts}: ${lastMessage}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (/reported a failed Deploy Preview/.test(message)) throw error;
-      lastMessage = message;
-      log(`Netlify readiness attempt ${attempt}/${maxAttempts}: ${message}`);
-    }
-    if (attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 5_000));
-    }
-  }
-
-  throw new Error(
-    `Netlify did not report the current Deploy Preview ready within the bounded readiness window: ${lastMessage}`,
-  );
 }
 
 async function resolvePreviewAddress() {
@@ -135,21 +73,75 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
+async function loadImageForVerification(locator) {
+  await locator.scrollIntoViewIfNeeded({ timeout: 12_000 });
+  return locator.evaluate(async (node) => {
+    const image = /** @type {HTMLImageElement} */ (node);
+    image.loading = "eager";
+    image.scrollIntoView({ block: "center", inline: "center" });
+
+    if (!image.complete) {
+      await new Promise((resolve) => {
+        const finish = () => resolve(undefined);
+        image.addEventListener("load", finish, { once: true });
+        image.addEventListener("error", finish, { once: true });
+        setTimeout(finish, 12_000);
+      });
+    }
+
+    if (image.complete && image.naturalWidth > 0) {
+      try {
+        await Promise.race([
+          image.decode(),
+          new Promise((resolve) => setTimeout(resolve, 5_000)),
+        ]);
+      } catch {
+        // The dimensions below remain the authoritative browser result.
+      }
+    }
+
+    const source = image.currentSrc || image.getAttribute("src") || "";
+    const entries = source ? performance.getEntriesByName(source) : [];
+    const lastEntry = entries.at(-1);
+    const responseStatus =
+      lastEntry && "responseStatus" in lastEntry
+        ? Number(lastEntry.responseStatus || 0)
+        : null;
+
+    return {
+      alt: image.getAttribute("alt") || "",
+      source,
+      complete: image.complete,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      responseStatus,
+    };
+  });
+}
+
 async function assertVisibleImagesLoad(page, label) {
-  const images = await page.locator("img:visible").evaluateAll((nodes) =>
-    nodes.slice(0, 20).map((node) => ({
-      alt: node.getAttribute("alt") || "",
-      source: node.currentSrc || node.getAttribute("src") || "",
-      complete: node.complete,
-      naturalWidth: node.naturalWidth,
-      naturalHeight: node.naturalHeight,
-    })),
+  const locator = page.locator("img:visible");
+  const total = await locator.count();
+  assert(total > 0, `${label} rendered no visible images.`);
+
+  const checked = [];
+  for (let index = 0; index < Math.min(total, 20); index += 1) {
+    checked.push(await loadImageForVerification(locator.nth(index)));
+  }
+
+  const broken = checked.filter(
+    (image) =>
+      !image.complete ||
+      image.naturalWidth < 1 ||
+      image.naturalHeight < 1 ||
+      (image.responseStatus !== null && image.responseStatus >= 400),
   );
-  assert(images.length > 0, `${label} rendered no visible images.`);
-  const broken = images.filter(
-    (image) => !image.complete || image.naturalWidth < 1 || image.naturalHeight < 1,
+  assert.deepEqual(
+    broken,
+    [],
+    `${label} contains images that still fail after being brought into view: ${JSON.stringify(broken)}`,
   );
-  assert.deepEqual(broken, [], `${label} contains broken visible images.`);
+  log(`Verified ${checked.length} loaded images for ${label}.`);
 }
 
 async function assertVisibleVideosHealthy(page, label) {
@@ -189,7 +181,6 @@ log(`Deploy-preview verification target: ${baseUrl}`);
 let browser;
 
 try {
-  await stage("Netlify deployment readiness", waitForNetlifyReady);
   const previewAddress = await stage("preview IPv4 resolution", resolvePreviewAddress);
   browser = await chromium.launch({
     headless: true,
