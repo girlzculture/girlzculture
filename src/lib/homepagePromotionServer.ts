@@ -11,6 +11,8 @@ import {
 } from "@/lib/homePromotionCore";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 
+const PUBLIC_PROMOTION_READ_TIMEOUT_MS = 2_500;
+
 /**
  * Distinct, non-paid editorial cards used only when a local pool has fewer
  * eligible promotions than the configured rail size. These never bypass a
@@ -71,33 +73,36 @@ async function resolveAssociations(cards: ContentCard[]) {
   }
   if (!requested.size) return new Map<string, ResolvedTarget>();
 
-  const { data, error } = await supabase.rpc(
-    "resolve_homepage_promotion_targets",
-    {
-      p_targets: Array.from(requested.values(), (reference) => ({
-        target_type: reference.type,
-        target_id: reference.id,
-      })),
-    },
-  );
-  if (error) {
+  try {
+    const { data, error } = await supabase
+      .rpc("resolve_homepage_promotion_targets", {
+        p_targets: Array.from(requested.values(), (reference) => ({
+          target_type: reference.type,
+          target_id: reference.id,
+        })),
+      })
+      .abortSignal(AbortSignal.timeout(PUBLIC_PROMOTION_READ_TIMEOUT_MS));
+    if (error) throw error;
+
+    const resolved = new Map<string, ResolvedTarget>();
+    for (const target of (data || []) as ResolvedTarget[]) {
+      const key = `${target.target_type}:${String(target.target_id).toLowerCase()}`;
+      // Defense in depth: a SECURITY DEFINER response can hydrate only a tuple
+      // explicitly requested by this page load. Never accept an unrelated salon
+      // or campaign if a database regression returns an over-broad result set.
+      if (requested.has(key)) resolved.set(key, target);
+    }
+    return resolved;
+  } catch (error) {
     await capturePublicPageFailure(
       error,
       "homepage",
       "resolve-promotion-associations",
     );
+    // Editorial fallbacks are already approved and must keep the homepage
+    // available when a nonessential promotion lookup is slow or unavailable.
     return new Map<string, ResolvedTarget>();
   }
-
-  const resolved = new Map<string, ResolvedTarget>();
-  for (const target of (data || []) as ResolvedTarget[]) {
-    const key = `${target.target_type}:${String(target.target_id).toLowerCase()}`;
-    // Defense in depth: a SECURITY DEFINER response can hydrate only a tuple
-    // explicitly requested by this page load. Never accept an unrelated salon
-    // or campaign if a database regression returns an over-broad result set.
-    if (requested.has(key)) resolved.set(key, target);
-  }
-  return resolved;
 }
 
 function hydrateAssociation(card: ContentCard, target: ResolvedTarget) {
