@@ -58,7 +58,9 @@ assert.doesNotMatch(salonPage, /BeautyConcierge/);
 assert.match(salonPage, /<SalonDiscovery/);
 assert.match(discovery, /placeholder="Search"/);
 assert.ok(
-  discovery.includes('{filterCount ? `Filter (${filterCount})` : "Filter"}'),
+  discovery.includes(
+    '{activeFilterCount\n            ? `Filter (${activeFilterCount})`\n            : "Filter"}',
+  ),
   "Filter control must display the active filter count without adding a second filter bar.",
 );
 assert.match(discovery, /role="dialog"/);
