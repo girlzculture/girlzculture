@@ -25,6 +25,7 @@ import { homepageSearchInsertIndex } from "@/lib/homepageSectionOrderingCore";
 
 type HomeSectionKey = "promo_rail" | "salons_near_you" | "featured_salons" | "featured_products" | "trending_now" | "trending_picks";
 type HomeSection = { section_key: HomeSectionKey; title: string; description: string | null; is_visible: boolean; sort_order: number };
+const PUBLIC_HOME_SECTION_TIMEOUT_MS = 2_500;
 const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { section_key: "promo_rail", title: "Featured", description: null, is_visible: true, sort_order: 1 },
   { section_key: "salons_near_you", title: "Salons Near You", description: null, is_visible: true, sort_order: 2 },
@@ -44,13 +45,35 @@ const DEFAULT_PROMOTION_CARDS: ContentCard[] = [
   { id: "pilot-trust", content_type: "image", title: "Real work. Real reviews.", body: "Book from transparent salon profiles with verified feedback.", media_url: "/images/salon-dark.jpg", href: "/safety", cta_label: "Safety and trust", alt_text: "Premium dark-toned salon interior", status: "Active" },
 ];
 
+async function loadHomepageSections() {
+  try {
+    const { data, error } = await supabase
+      .from("homepage_sections")
+      .select("*")
+      .order("sort_order")
+      .abortSignal(AbortSignal.timeout(PUBLIC_HOME_SECTION_TIMEOUT_MS));
+    if (error) throw error;
+    return (data || []) as HomeSection[];
+  } catch (error) {
+    await capturePublicPageFailure(
+      error,
+      "homepage",
+      "load-section-controls",
+    );
+    // Section order is an enhancement layer. The approved default order keeps
+    // the public homepage usable if this nonessential lookup is slow.
+    return [] as HomeSection[];
+  }
+}
+
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const previewQuery = await searchParams;
   const depthPreview = previewQuery.homepage3d === "1";
-  const homeContent = await getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] });
-  const { data: sectionData, error: sectionError } = await supabase.from("homepage_sections").select("*").order("sort_order");
-  if (sectionError) await capturePublicPageFailure(sectionError, "homepage", "load-section-controls");
-  const sectionOverrides = new Map(((sectionData || []) as HomeSection[]).map((section) => [section.section_key, section]));
+  const [homeContent, sectionData] = await Promise.all([
+    getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] }),
+    loadHomepageSections(),
+  ]);
+  const sectionOverrides = new Map(sectionData.map((section) => [section.section_key, section]));
   const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {
     const override = sectionOverrides.get(section.section_key);
     const merged = override || section;
@@ -63,13 +86,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const promoSection = homeContent.sections?.find((section) => section.type === "promo_rail" && section.is_visible !== false);
   const configuredPromotionCards = promoSection?.cards?.length ? promoSection.cards : DEFAULT_PROMOTION_CARDS;
-  const promotionCards = await resolvePublishedHomepagePromotions(
-    configuredPromotionCards,
-    undefined,
-    promoSection?.display_limit || 8,
-  );
+  const [promotionCards, cardCounts] = await Promise.all([
+    resolvePublishedHomepagePromotions(
+      configuredPromotionCards,
+      undefined,
+      promoSection?.display_limit || 8,
+    ),
+    Promise.all([
+      getEngineNumber("homepage.nearby_card_count",6,1,24),
+      getEngineNumber("homepage.featured_card_count",12,1,24),
+      getEngineNumber("homepage.featured_product_card_count",12,1,24),
+      getEngineNumber("homepage.trending_card_count",12,1,24),
+    ]),
+  ]);
+  const [nearbyCardCount, featuredCardCount, productCardCount, trendingCardCount] = cardCounts;
   const contentSections = homeContent.sections?.filter((section) => section.type !== "promo_rail") || [];
-  const [nearbyCardCount,featuredCardCount,productCardCount,trendingCardCount]=await Promise.all([getEngineNumber("homepage.nearby_card_count",6,1,24),getEngineNumber("homepage.featured_card_count",12,1,24),getEngineNumber("homepage.featured_product_card_count",12,1,24),getEngineNumber("homepage.trending_card_count",12,1,24)]);
   const searchInsertIndex = homepageSearchInsertIndex(homepageSections);
 
   return (
