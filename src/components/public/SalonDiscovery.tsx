@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { List, LocateFixed, Map, MapPin } from "lucide-react";
 import {
   type FormEvent,
   useCallback,
@@ -9,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
 import GoogleSalonMap from "@/components/search/GoogleSalonMap";
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
@@ -16,6 +18,7 @@ import {
   DEFAULT_NEARBY_RADIUS_MILES,
   validCoordinates,
   type Coordinates,
+  type CustomerLocation,
 } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 import { readApiResponse } from "@/lib/apiResponseClient";
@@ -52,15 +55,6 @@ type SearchResponse = {
   question?: string | null;
   needs_location?: boolean;
   location_label?: string | null;
-  intent?: {
-    service?: string | null;
-    radius_miles?: number;
-    minimum_rating?: number | null;
-    maximum_price?: number | null;
-    date?: string | null;
-    sort?: string;
-    promotion_only?: boolean;
-  };
   error?: string;
 };
 
@@ -143,8 +137,7 @@ export default function SalonDiscovery({
   const [query, setQuery] = useState(initialQuery);
   const [draftQuery, setDraftQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [draftFilters, setDraftFilters] =
-    useState<Filters>(defaultFilters);
+  const [draftFilters, setDraftFilters] = useState<Filters>(defaultFilters);
   const [salons, setSalons] = useState<DecisionSalon[]>(
     asDecisionRows(initialSalons),
   );
@@ -154,6 +147,9 @@ export default function SalonDiscovery({
       : "",
   );
   const [locationLabel, setLocationLabel] = useState(initialLocation);
+  const [locationText, setLocationText] = useState("");
+  const [locationEditorOpen, setLocationEditorOpen] = useState(!initialOrigin);
+  const [ignoreInitialOrigin, setIgnoreInitialOrigin] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -165,19 +161,31 @@ export default function SalonDiscovery({
   const restoredFromStorage = useRef(false);
   const initialIntentHandled = useRef(false);
   const automaticNearbySearch = useRef(false);
-  const pendingDeviceSearch = useRef(false);
+  const pendingLocationSearch = useRef(false);
   const pendingScroll = useRef<number | null>(null);
 
   const origin = useMemo(() => {
-    if (customerLocation.location && validCoordinates(customerLocation.location))
+    if (
+      customerLocation.location &&
+      validCoordinates(customerLocation.location)
+    ) {
       return {
         lat: customerLocation.location.lat,
         lng: customerLocation.location.lng,
       };
-    return initialOrigin && validCoordinates(initialOrigin)
+    }
+    return !ignoreInitialOrigin &&
+      initialOrigin &&
+      validCoordinates(initialOrigin)
       ? initialOrigin
       : null;
-  }, [customerLocation.location, initialOrigin]);
+  }, [customerLocation.location, ignoreInitialOrigin, initialOrigin]);
+
+  const visibleLocation =
+    customerLocation.location?.label ||
+    locationLabel ||
+    initialLocation ||
+    (origin ? "Selected location" : "");
 
   const activeFilterCount = [
     filters.radiusMiles !== DEFAULT_NEARBY_RADIUS_MILES,
@@ -198,16 +206,15 @@ export default function SalonDiscovery({
           filters,
           salons,
           summary,
-          locationLabel,
+          locationLabel: visibleLocation,
           view,
           scrollY,
         };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch {
-        // Search still works when browser storage is unavailable.
+        // Search remains usable when browser storage is unavailable.
       }
-    },
-    [filters, locationLabel, query, salons, summary, view],
+    }, [filters, query, salons, summary, view, visibleLocation],
   );
 
   useEffect(() => {
@@ -234,15 +241,15 @@ export default function SalonDiscovery({
     if (pendingScroll.current === null) return;
     const position = pendingScroll.current;
     pendingScroll.current = null;
-    let second = 0;
-    const first = requestAnimationFrame(() => {
-      second = requestAnimationFrame(() => {
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
         window.scrollTo({ top: position, behavior: "auto" });
       });
     });
     return () => {
-      cancelAnimationFrame(first);
-      if (second) cancelAnimationFrame(second);
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
     };
   }, [salons.length]);
 
@@ -261,54 +268,44 @@ export default function SalonDiscovery({
       nextFilters: Filters,
       options: { restoreScroll?: boolean } = {},
     ) => {
-      const normalizedQuery =
-        nextQuery.trim() || "salons near me";
+      const normalizedQuery = nextQuery.trim() || "salons near me";
       requestController.current?.abort();
       const controller = new AbortController();
       requestController.current = controller;
       setLoading(true);
       setError("");
       try {
-        const response = await fetch(
-          "/api/discovery/decision-search",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              query: normalizedQuery,
-              latitude: origin?.lat,
-              longitude: origin?.lng,
-              filters: {
-                radiusMiles: nextFilters.radiusMiles,
-                minimumRating:
-                  nextFilters.minimumRating || null,
-                maximumPrice: priceValue(
-                  nextFilters.maximumPrice,
-                ),
-                date: nextFilters.date || null,
-                sort: nextFilters.sort,
-                promotionOnly: nextFilters.promotionOnly,
-              },
-              website: "",
-            }),
-            cache: "no-store",
-            signal: controller.signal,
+        const response = await fetch("/api/discovery/decision-search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
           },
-        );
+          body: JSON.stringify({
+            query: normalizedQuery,
+            latitude: origin?.lat,
+            longitude: origin?.lng,
+            filters: {
+              radiusMiles: nextFilters.radiusMiles,
+              minimumRating: nextFilters.minimumRating || null,
+              maximumPrice: priceValue(nextFilters.maximumPrice),
+              date: nextFilters.date || null,
+              sort: nextFilters.sort,
+              promotionOnly: nextFilters.promotionOnly,
+            },
+            website: "",
+          }),
+          cache: "no-store",
+          signal: controller.signal,
+        });
         const body = (await readApiResponse(
           response,
           "Search could not be completed.",
         )) as SearchResponse;
         if (!response.ok)
-          throw new Error(
-            body.error || "Search could not be completed.",
-          );
-        const rows = Array.isArray(body.salons)
-          ? body.salons
-          : [];
+          throw new Error(body.error || "Search could not be completed.");
+
+        const rows = Array.isArray(body.salons) ? body.salons : [];
         setQuery(normalizedQuery);
         setDraftQuery(normalizedQuery);
         setFilters(nextFilters);
@@ -327,50 +324,44 @@ export default function SalonDiscovery({
         );
         setSelectedSalonId("");
         if (body.needs_location) {
+          setLocationEditorOpen(true);
           setError(
             body.question ||
-              "Add a city, neighborhood, or ZIP to your search, or use your location.",
+              "Add a city, neighborhood, or ZIP, or use your location.",
           );
+        } else {
+          setLocationEditorOpen(false);
         }
+
         const params = new URLSearchParams();
         params.set("q", normalizedQuery);
-        if (
-          nextFilters.radiusMiles !==
-          DEFAULT_NEARBY_RADIUS_MILES
-        )
-          params.set(
-            "radius",
-            String(nextFilters.radiusMiles),
-          );
+        if (origin) {
+          params.set("lat", String(origin.lat));
+          params.set("lng", String(origin.lng));
+          if (visibleLocation) params.set("location", visibleLocation);
+        }
+        if (nextFilters.radiusMiles !== DEFAULT_NEARBY_RADIUS_MILES)
+          params.set("radius", String(nextFilters.radiusMiles));
         if (nextFilters.minimumRating)
-          params.set(
-            "rating",
-            String(nextFilters.minimumRating),
-          );
+          params.set("rating", String(nextFilters.minimumRating));
         if (nextFilters.maximumPrice)
-          params.set(
-            "max_price",
-            nextFilters.maximumPrice,
-          );
-        if (nextFilters.date)
-          params.set("date", nextFilters.date);
+          params.set("max_price", nextFilters.maximumPrice);
+        if (nextFilters.date) params.set("date", nextFilters.date);
         if (nextFilters.sort !== "distance")
           params.set("sort", nextFilters.sort);
-        if (nextFilters.promotionOnly)
-          params.set("offers", "true");
+        if (nextFilters.promotionOnly) params.set("offers", "true");
         window.history.replaceState(
           null,
           "",
           `/salons?${params.toString()}`,
         );
+
         if (!options.restoreScroll) {
-          requestAnimationFrame(() =>
-            document
-              .getElementById("salon-results")
-              ?.scrollIntoView({
-                block: "start",
-                behavior: "smooth",
-              }),
+          window.requestAnimationFrame(() =>
+            document.getElementById("salon-results")?.scrollIntoView({
+              block: "start",
+              behavior: "smooth",
+            }),
           );
         }
       } catch (requestError) {
@@ -385,11 +376,9 @@ export default function SalonDiscovery({
             : "Search could not be completed.",
         );
       } finally {
-        if (requestController.current === controller)
-          setLoading(false);
+        if (requestController.current === controller) setLoading(false);
       }
-    },
-    [customerLocation.location, initialLocation, origin],
+    }, [customerLocation.location, initialLocation, origin, visibleLocation],
   );
 
   useEffect(() => {
@@ -398,7 +387,8 @@ export default function SalonDiscovery({
       restoredFromStorage.current ||
       !initialQuery.trim() ||
       !customerLocation.ready
-    ) return;
+    )
+      return;
     initialIntentHandled.current = true;
     void runSearch(initialQuery, filters, { restoreScroll: true });
   }, [customerLocation.ready, filters, initialQuery, runSearch]);
@@ -413,9 +403,7 @@ export default function SalonDiscovery({
     )
       return;
     automaticNearbySearch.current = true;
-    void runSearch("salons near me", filters, {
-      restoreScroll: true,
-    });
+    void runSearch("salons near me", filters, { restoreScroll: true });
   }, [
     customerLocation.ready,
     filters,
@@ -426,13 +414,10 @@ export default function SalonDiscovery({
   ]);
 
   useEffect(() => {
-    if (!pendingDeviceSearch.current || !origin) return;
-    pendingDeviceSearch.current = false;
+    if (!pendingLocationSearch.current || !origin) return;
+    pendingLocationSearch.current = false;
     automaticNearbySearch.current = true;
-    void runSearch(
-      draftQuery || query || "salons near me",
-      filters,
-    );
+    void runSearch(draftQuery || query || "salons near me", filters);
   }, [draftQuery, filters, origin, query, runSearch]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -450,29 +435,48 @@ export default function SalonDiscovery({
     setDraftFilters(defaultFilters);
   }
 
+  function resolveLocation(next: CustomerLocation | null) {
+    if (!next) return;
+    pendingLocationSearch.current = true;
+    setIgnoreInitialOrigin(true);
+    setLocationLabel(next.label);
+    setLocationText("");
+    setLocationEditorOpen(false);
+    customerLocation.setLocation(next);
+  }
+
   async function requestDeviceLocation() {
     setLocationBusy(true);
     setError("");
+    pendingLocationSearch.current = true;
+    setIgnoreInitialOrigin(true);
     try {
-      const granted =
-        await customerLocation.useDeviceLocation();
+      const granted = await customerLocation.useDeviceLocation();
       if (!granted) {
+        pendingLocationSearch.current = false;
+        setLocationEditorOpen(true);
         setError(
           customerLocation.permissionError ||
-            "Location was not available. Include a city or ZIP in your search.",
+            "Location was not available. Enter a city or ZIP instead.",
         );
-        return;
       }
-      pendingDeviceSearch.current = true;
     } finally {
       setLocationBusy(false);
     }
   }
 
-  const visibleLocation =
-    locationLabel ||
-    customerLocation.location?.label ||
-    "";
+  function changeLocation() {
+    pendingLocationSearch.current = false;
+    setIgnoreInitialOrigin(true);
+    customerLocation.clearLocation();
+    setLocationLabel("");
+    setLocationText("");
+    setLocationEditorOpen(true);
+    setSalons([]);
+    setSummary("");
+    setError("");
+    setView("list");
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1500px]">
@@ -485,9 +489,7 @@ export default function SalonDiscovery({
             <span className="sr-only">Search salons</span>
             <input
               value={draftQuery}
-              onChange={(event) =>
-                setDraftQuery(event.target.value)
-              }
+              onChange={(event) => setDraftQuery(event.target.value)}
               placeholder="Search"
               maxLength={600}
               autoComplete="off"
@@ -498,31 +500,51 @@ export default function SalonDiscovery({
           <button
             type="submit"
             disabled={loading}
-            className="min-h-10 rounded-[9px] bg-magenta px-4 text-[12px] font-bold text-white disabled:opacity-60 sm:px-6"
+            className="min-h-10 shrink-0 rounded-[9px] bg-magenta px-4 text-[12px] font-bold text-white disabled:opacity-60 sm:px-6"
           >
             {loading ? "Searching…" : "Search"}
           </button>
         </div>
       </form>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 flex-1 text-[11px] font-medium leading-5 text-ink/70">
-          {visibleLocation
-            ? `Comparing salons near ${visibleLocation}.`
-            : "Include a city, neighborhood, or ZIP in your search, or use your location."}
-        </p>
-        {!origin ? (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {locationEditorOpen || !origin ? (
+          <div className="relative z-[70] min-w-0 flex-[1_1_250px] rounded-[9px] bg-white">
+            <LocationAutocomplete
+              name="discovery_location_query"
+              value={locationText}
+              onChange={setLocationText}
+              onResolved={resolveLocation}
+              placeholder="City, neighborhood, or ZIP"
+              className="rounded-[9px] border border-plum/15 bg-white px-3"
+            />
+          </div>
+        ) : (
+          <p className="flex min-h-9 min-w-0 flex-1 items-center gap-1 text-[11px] font-medium text-ink/70">
+            <MapPin aria-hidden="true" size={13} className="shrink-0" />
+            <span className="truncate">Near {visibleLocation}</span>
+            <button
+              type="button"
+              onClick={changeLocation}
+              className="shrink-0 font-bold text-magenta"
+            >
+              Change
+            </button>
+          </p>
+        )}
+
+        {(locationEditorOpen || !origin) && (
           <button
             type="button"
             onClick={() => void requestDeviceLocation()}
             disabled={locationBusy}
-            className="min-h-9 rounded-[8px] border border-magenta bg-white px-3 text-[10px] font-bold text-magenta disabled:opacity-60"
+            className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-[8px] border border-magenta bg-white px-3 text-[10px] font-bold text-magenta disabled:opacity-60"
           >
-            {locationBusy
-              ? "Locating…"
-              : "Use my location"}
+            <LocateFixed aria-hidden="true" size={13} />
+            {locationBusy ? "Locating…" : "Use my location"}
           </button>
-        ) : null}
+        )}
+
         <button
           type="button"
           aria-expanded={filtersOpen}
@@ -530,11 +552,9 @@ export default function SalonDiscovery({
             setDraftFilters(filters);
             setFiltersOpen(true);
           }}
-          className="min-h-9 rounded-[8px] border border-plum/15 bg-white px-3 text-[10px] font-bold text-plum"
+          className="min-h-9 shrink-0 rounded-[8px] border border-plum/15 bg-white px-3 text-[10px] font-bold text-plum"
         >
-          {activeFilterCount
-            ? `Filter (${activeFilterCount})`
-            : "Filter"}
+          {activeFilterCount ? `Filter (${activeFilterCount})` : "Filter"}
         </button>
       </div>
 
@@ -560,60 +580,62 @@ export default function SalonDiscovery({
         <div className="flex items-end justify-between gap-3">
           <div>
             <h1 className="font-serif text-[24px] font-semibold leading-none text-ink sm:text-[28px]">
-              Salons
+              {origin ? "Salons Near You" : "Salons"}
             </h1>
             <p className="mt-1 text-[11px] font-medium text-ink/65">
               Verified marketplace information only.
             </p>
           </div>
-          <div className="flex rounded-[8px] border border-plum/15 bg-white p-1 text-[10px] font-bold">
+          <div className="flex overflow-hidden rounded-[9px] border border-plum/15 bg-white text-[10px] font-bold">
             <button
               type="button"
               aria-pressed={view === "list"}
               onClick={() => setView("list")}
-              className={`min-h-8 rounded-[6px] px-3 ${
-                view === "list"
-                  ? "bg-plum text-white"
-                  : "text-plum"
+              className={`inline-flex min-h-9 items-center gap-1 px-3 ${
+                view === "list" ? "bg-plum text-white" : "text-plum"
               }`}
             >
+              <List aria-hidden="true" size={14} />
               List
             </button>
             <button
               type="button"
               aria-pressed={view === "map"}
               onClick={() => setView("map")}
-              className={`min-h-8 rounded-[6px] px-3 ${
-                view === "map"
-                  ? "bg-plum text-white"
-                  : "text-plum"
+              className={`inline-flex min-h-9 items-center gap-1 px-3 ${
+                view === "map" ? "bg-plum text-white" : "text-plum"
               }`}
             >
+              <Map aria-hidden="true" size={14} />
               Map
             </button>
           </div>
         </div>
 
         {loading && !salons.length ? (
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-3" aria-label="Loading salons">
             {[0, 1, 2].map((row) => (
               <div
                 key={row}
-                className="h-32 animate-pulse rounded-[12px] bg-white"
+                className="h-40 animate-pulse rounded-[14px] bg-white"
               />
             ))}
           </div>
         ) : view === "map" ? (
-          <div className="mt-3">
-            <GoogleSalonMap
-              salons={salons}
-              selectedSalonId={selectedSalonId}
-              onSelect={setSelectedSalonId}
-            />
-          </div>
+          salons.length ? (
+            <div className="mt-3">
+              <GoogleSalonMap
+                salons={salons}
+                selectedSalonId={selectedSalonId}
+                onSelect={setSelectedSalonId}
+              />
+            </div>
+          ) : (
+            <EmptyState />
+          )
         ) : salons.length ? (
           <div
-            className="mt-3 grid gap-2.5 lg:grid-cols-2"
+            className="mt-3 grid gap-3 lg:grid-cols-2"
             onClickCapture={(event) => {
               if (
                 (event.target as HTMLElement).closest(
@@ -635,21 +657,7 @@ export default function SalonDiscovery({
             ))}
           </div>
         ) : (
-          <div className="mt-3 rounded-[12px] border border-dashed border-plum/20 bg-white p-6 text-center">
-            <h2 className="font-serif text-xl font-semibold text-plum">
-              No matching salons
-            </h2>
-            <p className="mx-auto mt-2 max-w-lg text-[12px] leading-6 text-ink/65">
-              Try a wider distance, a higher budget, or fewer
-              requirements. You can also browse styles first.
-            </p>
-            <Link
-              href="/styles"
-              className="mt-4 inline-flex min-h-10 items-center rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white"
-            >
-              Browse styles
-            </Link>
-          </div>
+          <EmptyState />
         )}
       </section>
 
@@ -660,8 +668,7 @@ export default function SalonDiscovery({
           aria-labelledby="salon-filter-title"
           className="fixed inset-0 z-[100] flex items-end bg-charcoal/55 sm:items-center sm:justify-center sm:p-5"
           onPointerDown={(event) => {
-            if (event.target === event.currentTarget)
-              setFiltersOpen(false);
+            if (event.target === event.currentTarget) setFiltersOpen(false);
           }}
         >
           <form
@@ -677,8 +684,7 @@ export default function SalonDiscovery({
                   Filter
                 </h2>
                 <p className="mt-1 text-[11px] leading-5 text-ink/60">
-                  Choose only what matters for this purchase
-                  decision.
+                  Choose the details that matter for this booking.
                 </p>
               </div>
               <button
@@ -842,5 +848,24 @@ function FilterSelect({
         ))}
       </select>
     </label>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="mt-3 rounded-[14px] border border-dashed border-plum/20 bg-white p-7 text-center">
+      <h2 className="font-serif text-xl font-semibold text-plum">
+        No matching salons
+      </h2>
+      <p className="mx-auto mt-2 max-w-lg text-[12px] leading-6 text-ink/65">
+        Try a wider distance, a higher budget, fewer requirements, or another location.
+      </p>
+      <Link
+        href="/styles"
+        className="mt-4 inline-flex min-h-10 items-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta"
+      >
+        Browse styles
+      </Link>
+    </div>
   );
 }
