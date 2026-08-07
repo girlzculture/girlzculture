@@ -15,6 +15,7 @@ const ownerShell = read("src/components/owner/OwnerDashboardShell.tsx");
 const dashboardMenu = read("src/components/dashboard/DashboardMobileMenu.tsx");
 const promoRail = read("src/components/public/HomepagePromoRail.tsx");
 const homepage = read("src/app/page.tsx");
+const layout = read("src/app/layout.tsx");
 const supabase = read("src/lib/supabase.ts");
 const descriptionEditor = read(
   "src/components/owner/SalonDescriptionEditor.tsx",
@@ -57,12 +58,13 @@ assert.doesNotMatch(
 assert.doesNotMatch(salonPage, /BeautyConcierge/);
 assert.match(salonPage, /<SalonDiscovery/);
 assert.match(discovery, /placeholder="Search"/);
-assert.ok(
-  discovery.includes(
-    '{activeFilterCount\n            ? `Filter (${activeFilterCount})`\n            : "Filter"}',
-  ),
-  "Filter control must display the active filter count without adding a second filter bar.",
-);
+assert.match(discovery, /LocationAutocomplete/);
+assert.match(discovery, /placeholder="City, neighborhood, or ZIP"/);
+assert.match(discovery, /pendingLocationSearch\.current = true/);
+assert.match(discovery, /customerLocation\.setLocation\(next\)/);
+assert.match(discovery, /customerLocation\.clearLocation\(\)/);
+assert.match(discovery, /Use my location/);
+assert.match(discovery, /Filter \(\$\{activeFilterCount\}\)/);
 assert.match(discovery, /role="dialog"/);
 assert.match(discovery, /Maximum price/);
 assert.match(discovery, /Availability date/);
@@ -70,35 +72,40 @@ assert.match(discovery, /Active offers only/);
 assert.match(discovery, /sessionStorage\.setItem\(STORAGE_KEY/);
 assert.match(discovery, /scrollY/);
 assert.match(discovery, /Verified marketplace information only/);
+assert.match(discovery, /<GoogleSalonMap[\s\S]*?salons=\{salons\}/);
+assert.match(discovery, /salons\.map\(\(salon\)/);
+assert.doesNotMatch(discovery, /StyleAutocomplete/);
+
 assert.match(salonCard, />\s*View\s*</);
 assert.match(salonCard, />\s*Book\s*</);
-assert.doesNotMatch(salonCard, /lucide-react/);
+assert.match(salonCard, />\s*New\s*</);
+assert.doesNotMatch(salonCard, /New on Girlz Culture/);
+assert.match(salonCard, /MapPin/);
+assert.match(salonCard, /Star/);
+assert.match(salonCard, /lg:w-\[260px\]/);
 assert.match(headerSearch, /placeholder="Search"/);
 assert.match(headerSearch, /params\.set\("q", value\)/);
+assert.match(headerSearch, /if \(pathname === "\/salons"\) return null/);
 
-for (const [name, source] of [
-  ["public chrome", publicChrome],
-  ["mobile public menu", mobileMenu],
-  ["owner shell", ownerShell],
-  ["dashboard mobile menu", dashboardMenu],
-  ["promotion rail", promoRail],
-  ["homepage", homepage],
-  ["salon card", salonCard],
-]) {
-  assert.doesNotMatch(
-    source,
-    /from "lucide-react"/,
-    `${name} must remain text-first without decorative icon imports`,
-  );
-}
+assert.doesNotMatch(layout, /text-first\.css/);
+assert.match(publicChrome, /from "lucide-react"/);
 assert.match(publicChrome, /CustomerBottomNav/);
-assert.match(publicChrome, /Favorites/);
-assert.match(mobileMenu, /\{open \? "Close" : "Menu"\}/);
-assert.match(dashboardMenu, /Navigation/);
+assert.match(publicChrome, /View favorite salons/);
+assert.match(mobileMenu, /Menu, X/);
+assert.match(dashboardMenu, /Menu, X/);
 assert.match(ownerShell, /View Public Page/);
-assert.match(promoRail, />\s*Previous\s*</);
-assert.match(promoRail, />\s*Next\s*</);
-assert.match(promoRail, /w-\[68vw\]/);
+assert.match(ownerShell, /CalendarDays/);
+assert.match(promoRail, /ChevronLeft/);
+assert.match(promoRail, /ChevronRight/);
+assert.match(promoRail, /aria-label="Previous promotion"/);
+assert.match(promoRail, /aria-label="Next promotion"/);
+assert.doesNotMatch(promoRail, />\s*Previous\s*</);
+assert.doesNotMatch(promoRail, />\s*Next\s*</);
+assert.match(promoRail, /w-\[74vw\]/);
+assert.match(promoRail, /sm:w-\[52vw\]/);
+assert.match(promoRail, /lg:w-\[31vw\]/);
+assert.match(homepage, /ArrowRight/);
+assert.match(homepage, /CalendarDays/);
 
 assert.match(supabase, /scope === "salon" \? "session" : "local"/);
 assert.match(supabase, /window\.sessionStorage/);
@@ -116,7 +123,6 @@ assert.match(descriptionDraft, /truthfulFallback/);
 assert.match(descriptionDraft, /fallbackUsed: true/);
 assert.match(stylistFallback, /Stylist profiles are being prepared/);
 assert.match(stylistFallback, /View services and prices/);
-assert.doesNotMatch(stylistFallback, /lucide-react/);
 
 assert.match(migration, /resolve_terminal_booking_notifications/);
 assert.match(
@@ -127,5 +133,5 @@ assert.match(migration, /read_at=coalesce\(read_at,now\(\)\)/);
 assert.match(migration, /category='bookings'/);
 
 console.log(
-  "Verified one grounded search, compact mobile filtering/cards, text-first navigation, tab-isolated salon sessions, 200-word profile assistance, enhanced stylist fallback, and actionable-only booking badges.",
+  "Verified one grounded salon search, a shared persisted location for List and Map, compact mobile controls, restored functional navigation, tab-isolated salon sessions, 200-word profile assistance, enhanced stylist fallback, and actionable-only booking badges.",
 );
