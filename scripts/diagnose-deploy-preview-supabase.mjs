@@ -42,9 +42,43 @@ function selectPublicKey(candidates) {
   );
 }
 
+async function providerRequest({ name, url, method, headers, body }) {
+  try {
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+    return {
+      name,
+      status: response.status,
+      content_type: response.headers.get("content-type") || "",
+      request_id:
+        response.headers.get("x-request-id") ||
+        response.headers.get("sb-request-id") ||
+        response.headers.get("cf-ray") ||
+        null,
+      body: redact(await response.text()),
+    };
+  } catch (error) {
+    return {
+      name,
+      status: 0,
+      content_type: "",
+      request_id: null,
+      body: redact(error instanceof Error ? error.stack || error.message : String(error)),
+    };
+  }
+}
+
 const diagnostic = {
   target: baseUrl,
   provider_url_found: false,
+  provider_host: null,
+  provider_ipv4: [],
+  provider_dns_error: null,
   public_key_found: false,
   public_key_kind: null,
   bundle_count: 0,
@@ -79,11 +113,15 @@ try {
   await page.waitForTimeout(1_000);
 
   const bundles = await page.evaluate(async () => {
-    const urls = [...new Set(
-      Array.from(document.scripts)
-        .map((script) => script.src)
-        .filter((source) => source && new URL(source).origin === location.origin),
-    )];
+    const urls = [
+      ...new Set(
+        Array.from(document.scripts)
+          .map((script) => script.src)
+          .filter(
+            (source) => source && new URL(source).origin === location.origin,
+          ),
+      ),
+    ];
     const results = [];
     for (const url of urls) {
       try {
@@ -101,7 +139,9 @@ try {
   });
   diagnostic.bundle_count = bundles.length;
   const source = bundles.map((bundle) => bundle.text).join("\n");
-  const providerUrls = [...new Set(source.match(/https:\/\/[a-z0-9]+\.supabase\.co/gi) || [])];
+  const providerUrls = [
+    ...new Set(source.match(/https:\/\/[a-z0-9]+\.supabase\.co/gi) || []),
+  ];
   const publicKeys = [
     ...new Set([
       ...(source.match(/sb_(?:publishable|anon)_[A-Za-z0-9._-]+/gi) || []),
@@ -124,92 +164,72 @@ try {
     );
   }
 
-  const calls = await page.evaluate(
-    async ({ providerUrl, publicKey }) => {
-      const headers = {
-        apikey: publicKey,
-        Authorization: `Bearer ${publicKey}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "Accept-Profile": "public",
-        "Content-Profile": "public",
-      };
-      const requests = [
-        {
-          name: "auth-settings",
-          url: `${providerUrl}/auth/v1/settings`,
-          method: "GET",
-        },
-        {
-          name: "resolve-search-service-query",
-          url: `${providerUrl}/rest/v1/rpc/resolve_search_service_query`,
-          method: "POST",
-          body: { p_query: "salons near me" },
-        },
-        {
-          name: "discover-nearby-salons-ranked",
-          url: `${providerUrl}/rest/v1/rpc/discover_nearby_salons_ranked`,
-          method: "POST",
-          body: {
-            origin_latitude: 40.8116,
-            origin_longitude: -73.9465,
-            radius_miles: 50,
-            style_query: null,
-            minimum_rating: null,
-            minimum_price: null,
-            maximum_price: null,
-            sort_mode: "distance",
-            result_limit: 6,
-            result_offset: 0,
-          },
-        },
-        {
-          name: "discover-trending-videos",
-          url: `${providerUrl}/rest/v1/rpc/discover_trending_videos`,
-          method: "POST",
-          body: {
-            origin_latitude: 40.8116,
-            origin_longitude: -73.9465,
-            request_radius_miles: 50,
-            rotation_seed: "preview-diagnostic",
-            result_limit: 12,
-            result_offset: 0,
-          },
-        },
-      ];
-      const results = [];
-      for (const request of requests) {
-        try {
-          const response = await fetch(request.url, {
-            method: request.method,
-            headers,
-            body: request.body ? JSON.stringify(request.body) : undefined,
-            cache: "no-store",
-          });
-          results.push({
-            name: request.name,
-            status: response.status,
-            content_type: response.headers.get("content-type") || "",
-            body: (await response.text()).slice(0, 4_000),
-          });
-        } catch (error) {
-          results.push({
-            name: request.name,
-            status: 0,
-            content_type: "",
-            body: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-      return results;
-    },
-    { providerUrl, publicKey },
-  );
+  const providerHost = new URL(providerUrl).hostname;
+  diagnostic.provider_host = providerHost;
+  try {
+    diagnostic.provider_ipv4 = await resolve4(providerHost);
+  } catch (error) {
+    diagnostic.provider_dns_error = redact(
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 
-  diagnostic.calls = calls.map((call) => ({
-    ...call,
-    body: redact(call.body),
-  }));
+  const headers = {
+    apikey: publicKey,
+    Authorization: `Bearer ${publicKey}`,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    "Accept-Profile": "public",
+    "Content-Profile": "public",
+  };
+
+  diagnostic.calls = await Promise.all([
+    providerRequest({
+      name: "auth-settings",
+      url: `${providerUrl}/auth/v1/settings`,
+      method: "GET",
+      headers,
+    }),
+    providerRequest({
+      name: "resolve-search-service-query",
+      url: `${providerUrl}/rest/v1/rpc/resolve_search_service_query`,
+      method: "POST",
+      headers,
+      body: { p_query: "salons near me" },
+    }),
+    providerRequest({
+      name: "discover-nearby-salons-ranked",
+      url: `${providerUrl}/rest/v1/rpc/discover_nearby_salons_ranked`,
+      method: "POST",
+      headers,
+      body: {
+        origin_latitude: 40.8116,
+        origin_longitude: -73.9465,
+        radius_miles: 50,
+        style_query: null,
+        minimum_rating: null,
+        minimum_price: null,
+        maximum_price: null,
+        sort_mode: "distance",
+        result_limit: 6,
+        result_offset: 0,
+      },
+    }),
+    providerRequest({
+      name: "discover-trending-videos",
+      url: `${providerUrl}/rest/v1/rpc/discover_trending_videos`,
+      method: "POST",
+      headers,
+      body: {
+        origin_latitude: 40.8116,
+        origin_longitude: -73.9465,
+        request_radius_miles: 50,
+        rotation_seed: "preview-diagnostic",
+        result_limit: 12,
+        result_offset: 0,
+      },
+    }),
+  ]);
   await context.close();
 } catch (error) {
   diagnostic.diagnostic_error = redact(
