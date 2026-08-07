@@ -1,11 +1,12 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 
 export default function HeaderStyleSearch() {
   const [query, setQuery] = useState("");
+  const pathname = usePathname();
   const router = useRouter();
   const customerLocation = useCustomerLocation();
 
@@ -34,6 +35,11 @@ export default function HeaderStyleSearch() {
         : "/salons",
     );
   }
+
+  // Find Salons owns the one unified search field on that route. Keeping the
+  // global header search there would recreate the duplicate-search problem and
+  // can force the mobile header wider than the viewport at increased text size.
+  if (pathname === "/salons") return null;
 
   return (
     <form
