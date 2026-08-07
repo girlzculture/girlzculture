@@ -215,16 +215,19 @@ export default function SalonDiscovery({
     restored.current = true;
     const state = storedState();
     if (!state) return;
-    restoredFromStorage.current = true;
-    setQuery(state.query);
-    setDraftQuery(state.query);
-    setFilters(state.filters);
-    setDraftFilters(state.filters);
-    setSalons(state.salons);
-    setSummary(state.summary);
-    setLocationLabel(state.locationLabel);
-    setView(state.view);
-    pendingScroll.current = state.scrollY;
+    const frame = window.requestAnimationFrame(() => {
+      restoredFromStorage.current = true;
+      setQuery(state.query);
+      setDraftQuery(state.query);
+      setFilters(state.filters);
+      setDraftFilters(state.filters);
+      setSalons(state.salons);
+      setSummary(state.summary);
+      setLocationLabel(state.locationLabel);
+      setView(state.view);
+      pendingScroll.current = state.scrollY;
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -386,12 +389,7 @@ export default function SalonDiscovery({
           setLoading(false);
       }
     },
-    [
-      customerLocation.location?.label,
-      initialLocation,
-      origin?.lat,
-      origin?.lng,
-    ],
+    [customerLocation.location, initialLocation, origin],
   );
 
   useEffect(() => {
@@ -452,7 +450,7 @@ export default function SalonDiscovery({
     setDraftFilters(defaultFilters);
   }
 
-  async function useLocation() {
+  async function requestDeviceLocation() {
     setLocationBusy(true);
     setError("");
     try {
@@ -516,7 +514,7 @@ export default function SalonDiscovery({
         {!origin ? (
           <button
             type="button"
-            onClick={() => void useLocation()}
+            onClick={() => void requestDeviceLocation()}
             disabled={locationBusy}
             className="min-h-9 rounded-[8px] border border-magenta bg-white px-3 text-[10px] font-bold text-magenta disabled:opacity-60"
           >
