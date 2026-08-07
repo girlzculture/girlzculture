@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./text-first.css";
 import PwaRegistration from "@/components/PwaRegistration";
 import InlineFormValidation from "@/components/InlineFormValidation";
 import CustomerLocationProvider from "@/components/location/CustomerLocationProvider";
