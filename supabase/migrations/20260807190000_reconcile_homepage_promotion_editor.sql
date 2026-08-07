@@ -121,4 +121,11 @@ begin
 end
 $migration$;
 
+update public.engine_settings
+set published_value='"20260807190000"'::jsonb,
+    draft_value='"20260807190000"'::jsonb,
+    updated_at=now()
+where setting_key='integrations.expected_migration';
+
+notify pgrst,'reload schema';
 commit;
