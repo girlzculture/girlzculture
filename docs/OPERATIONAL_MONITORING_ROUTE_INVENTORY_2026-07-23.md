@@ -48,7 +48,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/salons/reconcile` | GET, POST | protected | Covered |
 | `/api/admin/salons` | GET | protected | Covered |
 | `/api/admin/submissions/[id]/decision` | POST | provider-backed | Covered |
-| `/api/admin/submissions/[id]` | GET | provider-backed | Covered |
+| `/api/admin/submissions/[id]` | GET, POST | provider-backed | Covered |
 | `/api/admin/submissions` | GET | provider-backed | Covered |
 | `/api/admin/support/[id]/read` | PATCH | provider-backed | Covered |
 | `/api/admin/support/[id]/respond` | POST | provider-backed | Covered |
