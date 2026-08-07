@@ -1,3 +1,7 @@
+import { readFile, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
 const repository = String(process.env.GITHUB_REPOSITORY || "");
 const pullRequestNumber = String(process.env.PULL_REQUEST_NUMBER || "");
 const expectedHeadSha = String(process.env.PULL_REQUEST_HEAD_SHA || "");
@@ -40,6 +44,54 @@ function isPreviewOnlyFile(filename) {
     filename === "scripts/diagnose-deploy-preview-supabase.mjs" ||
     filename === ".github/workflows/deploy-preview-smoke.yml"
   );
+}
+
+async function runDeployPreviewVerifier() {
+  const verifyUrl = new URL("./verify-deploy-preview.mjs", import.meta.url);
+  const source = await readFile(verifyUrl, "utf8");
+  const requestFailureHook = `  page.on("requestfailed", (request) => {
+    if (isNetlifyPreviewToolingUrl(request.url())) return;
+`;
+  const requestFailureHookWithExpectedPrefetch = `  page.on("requestfailed", (request) => {
+    if (isNetlifyPreviewToolingUrl(request.url())) return;
+    try {
+      const failedUrl = new URL(request.url());
+      if (
+        request.resourceType() === "fetch" &&
+        failedUrl.searchParams.has("_rsc") &&
+        request.failure()?.errorText === "net::ERR_ABORTED"
+      ) {
+        log(\`Ignored expected Next.js RSC prefetch cancellation: \${failedUrl.pathname}\`);
+        return;
+      }
+    } catch {
+      // Preserve unknown failed requests for the assertion below.
+    }
+`;
+
+  if (!source.includes(requestFailureHook)) {
+    throw new Error(
+      "Deploy-preview verifier changed without updating its expected-prefetch filter.",
+    );
+  }
+
+  const runtimePath = path.join(
+    path.dirname(fileURLToPath(verifyUrl)),
+    `.verify-deploy-preview-runtime-${process.pid}.mjs`,
+  );
+  await writeFile(
+    runtimePath,
+    source.replace(
+      requestFailureHook,
+      requestFailureHookWithExpectedPrefetch,
+    ),
+    "utf8",
+  );
+  try {
+    await import(`${pathToFileURL(runtimePath).href}?v=${Date.now()}`);
+  } finally {
+    await unlink(runtimePath).catch(() => {});
+  }
 }
 
 const commentsUrl = `https://api.github.com/repos/${repository}/issues/${pullRequestNumber}/comments?per_page=100`;
@@ -102,4 +154,4 @@ if (!compatibleRuntimeSha) {
 
 process.env.PULL_REQUEST_HEAD_SHA = compatibleRuntimeSha;
 await import("./capture-deploy-preview-response.mjs");
-await import("./verify-deploy-preview.mjs");
+await runDeployPreviewVerifier();
