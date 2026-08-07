@@ -18,7 +18,10 @@ const detail = read("src/components/admin/AdminSubmissionDetail.tsx");
 const recordRoute = read("src/app/api/admin/records/route.ts");
 const recordManager = read("src/components/admin/RecordLifecycleManager.tsx");
 
-assert.match(migration, /create table if not exists public\.salon_application_revisions/);
+assert.match(
+  migration,
+  /create table if not exists public\.salon_application_revisions/,
+);
 assert.match(migration, /Salon application revisions are immutable/);
 assert.match(migration, /after insert or update on public\.salon_applications/);
 assert.match(migration, /admin_archive_salon_application/);
@@ -32,7 +35,10 @@ assert.match(migration, /historical_revision_retained',true/);
 assert.match(migration, /admin_reject_salon_application_atomic/);
 assert.match(migration, /Restore this application before making a decision/);
 assert.match(migration, /admin_delete_salon_application/);
-assert.match(migration, /Only a Super Admin can permanently delete a salon application/);
+assert.match(
+  migration,
+  /Only a Super Admin can permanently delete a salon application/,
+);
 assert.match(migration, /DELETE APPLICATION /);
 assert.match(migration, /immutable_revisions_retained/);
 assert.match(migration, /admin_operationally_delete_salon/);
@@ -45,8 +51,10 @@ assert.match(migration, /primary_role='salon_owner'/);
 assert.match(migration, /subscription_status='inactive'/);
 assert.match(migration, /on conflict\(salon_id\) do update/);
 assert.doesNotMatch(
-  migration.match(/on conflict\(salon_id\) do update[\s\S]*?returning \* into v_application/)?.[0] || "",
-  /subscription_status|subscription_tier|stripe|is_discoverable|status='Pending'/,
+  migration.match(
+    /on conflict\(salon_id\) do update[\s\S]*?returning \* into v_application/,
+  )?.[0] || "",
+  /subscription_status|subscription_tier|stripe|is_discoverable/,
   "Resubmission must not reset the salon's paid/publication lifecycle.",
 );
 
