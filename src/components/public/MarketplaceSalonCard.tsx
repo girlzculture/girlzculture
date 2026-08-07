@@ -60,19 +60,25 @@ export default function MarketplaceSalonCard({
   )
     .toLowerCase()
     .startsWith("verified");
+  const isList = variant === "list";
+  const isCompact = variant === "compact";
   const area = [
     salon.borough || salon.address_city,
     salon.address_state,
   ]
     .filter(Boolean)
     .join(", ");
-  const distance = Number.isFinite(salon.distance_miles)
-    ? `${
-        salon.distance_miles < 0.1
-          ? "Under 0.1"
-          : salon.distance_miles.toFixed(1)
-      } miles away`
+  const distanceValue = Number.isFinite(salon.distance_miles)
+    ? salon.distance_miles < 0.1
+      ? "Under 0.1"
+      : salon.distance_miles.toFixed(1)
     : "";
+  const distance = distanceValue
+    ? `${distanceValue} ${isCompact ? "mi" : "miles"} away`
+    : "";
+  const locationText = [area || "Location on profile", distance]
+    .filter(Boolean)
+    .join(" · ");
   const profileHref = `/salon/${salon.slug}`;
   const bookingQuery = new URLSearchParams();
   if (salon.matched_service?.id)
@@ -82,8 +88,6 @@ export default function MarketplaceSalonCard({
   const bookHref = `/salon/${salon.slug}/book${
     bookingQuery.size ? `?${bookingQuery}` : ""
   }`;
-  const isList = variant === "list";
-  const isCompact = variant === "compact";
   const currentPrice =
     salon.matched_service?.price ?? salon.starting_price;
   const originalPrice =
@@ -117,7 +121,7 @@ export default function MarketplaceSalonCard({
           isList
             ? "min-h-[132px]"
             : isCompact
-              ? "aspect-[4/3]"
+              ? "aspect-[16/9]"
               : "aspect-[16/10]"
         }`}
       >
@@ -147,7 +151,7 @@ export default function MarketplaceSalonCard({
           isList
             ? "flex flex-col justify-between p-3"
             : isCompact
-              ? "p-2.5"
+              ? "p-2"
               : "p-3"
         }`}
       >
@@ -158,23 +162,25 @@ export default function MarketplaceSalonCard({
             href={profileHref}
             onClick={onNavigate}
             className={`block truncate font-serif font-semibold text-ink hover:text-magenta ${
-              isCompact ? "text-[14px]" : "text-[17px]"
+              isCompact ? "text-[14px] leading-5" : "text-[17px]"
             }`}
           >
             {salon.name}
           </Link>
 
-          <p
-            data-no-translate="true"
-            className="mt-1 truncate text-[10px] font-medium text-ink/70"
-            title={[area, distance].filter(Boolean).join(" · ")}
-          >
-            {[area || "Location on profile", distance]
-              .filter(Boolean)
-              .join(" · ")}
+          <p className={isCompact ? "mt-0.5" : "mt-1"}>
+            <span
+              data-no-translate="true"
+              title={locationText}
+              className="block truncate whitespace-nowrap text-[10px] font-medium text-ink/70"
+            >
+              {locationText}
+            </span>
           </p>
 
-          <p className="mt-1.5 text-[10px] font-semibold text-ink">
+          <p
+            className={`${isCompact ? "mt-1" : "mt-1.5"} text-[10px] font-semibold text-ink`}
+          >
             {salon.review_count > 0 &&
             salon.rating_overall > 0
               ? `${Number(salon.rating_overall).toFixed(
@@ -190,13 +196,15 @@ export default function MarketplaceSalonCard({
           {salon.matched_service ? (
             <p
               data-no-translate="true"
-              className="mt-1.5 line-clamp-1 text-[10px] font-semibold text-plum"
+              className={`${isCompact ? "mt-1" : "mt-1.5"} line-clamp-1 text-[10px] font-semibold text-plum`}
             >
               {salon.matched_service.name}
             </p>
           ) : null}
 
-          <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+          <div
+            className={`${isCompact ? "mt-0.5" : "mt-1"} flex flex-wrap items-baseline gap-1.5`}
+          >
             {currentPrice !== null ? (
               <span className="text-[10px] text-ink/70">
                 From{" "}
