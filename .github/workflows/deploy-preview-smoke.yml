@@ -5,6 +5,8 @@ on:
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 
 concurrency:
   group: girlz-culture-deploy-preview-${{ github.event.pull_request.number }}
@@ -16,6 +18,10 @@ jobs:
     timeout-minutes: 15
     env:
       DEPLOY_PREVIEW_URL: https://deploy-preview-${{ github.event.pull_request.number }}--girlzculture.netlify.app
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+      PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
