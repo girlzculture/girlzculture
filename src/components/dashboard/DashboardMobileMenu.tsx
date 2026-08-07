@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type DashboardMobileMenuItem = {
   id: string;
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon?: unknown;
   active?: boolean;
   count?: number;
 };
@@ -27,7 +26,8 @@ export default function DashboardMobileMenu({
 
   const close = useCallback((returnFocus = false) => {
     setOpen(false);
-    if (returnFocus) requestAnimationFrame(() => trigger.current?.focus());
+    if (returnFocus)
+      requestAnimationFrame(() => trigger.current?.focus());
   }, []);
 
   useEffect(() => {
@@ -60,50 +60,48 @@ export default function DashboardMobileMenu({
         aria-expanded={open}
         aria-controls={`${ariaLabel.replace(/\W+/g, "-").toLowerCase()}-panel`}
         onClick={() => setOpen((value) => !value)}
-        className="flex h-11 w-11 items-center justify-center rounded-xl text-plum hover:bg-blush/40"
+        className="flex min-h-11 items-center justify-center rounded-[8px] border border-plum/10 px-3 text-sm font-bold text-plum hover:bg-blush/40"
       >
-        {open ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
+        {open ? "Close" : "Menu"}
       </button>
       {open ? (
         <nav
           ref={panel}
           id={`${ariaLabel.replace(/\W+/g, "-").toLowerCase()}-panel`}
           aria-label={ariaLabel}
-          className="absolute left-0 top-12 z-50 max-h-[calc(100vh-7rem)] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto rounded-[14px] border border-plum/10 bg-white p-2 shadow-2xl"
+          className="absolute left-0 top-12 z-50 max-h-[calc(100vh-7rem)] w-[min(19rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[14px] border border-plum/10 bg-white p-2 shadow-2xl"
         >
-          <div className="mb-1 flex items-center justify-between px-3 py-2">
+          <div className="mb-1 flex items-center justify-between gap-3 px-3 py-2">
             <b className="font-serif text-lg text-plum">Navigation</b>
             <button
               type="button"
               aria-label={`Close ${ariaLabel}`}
               onClick={() => close(true)}
-              className="grid h-10 w-10 place-items-center rounded-lg hover:bg-blush/40"
+              className="min-h-10 rounded-[8px] border border-plum/10 px-3 text-sm font-bold text-plum hover:bg-blush/40"
             >
-              <X size={20} aria-hidden="true" />
+              Close
             </button>
           </div>
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                onClick={() => close(false)}
-                className={`flex min-h-11 items-center gap-3 rounded-[9px] px-3 py-3 text-sm ${
-                  item.active ? "bg-blush text-magenta" : "hover:bg-blush/30"
-                }`}
-              >
-                <Icon size={18} aria-hidden="true" />
-                {item.label}
-                {item.count ? (
-                  <span className="ml-auto rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold text-white">
-                    {Math.min(item.count, 99)}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
+          {items.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-current={item.active ? "page" : undefined}
+              onClick={() => close(false)}
+              className={`flex min-h-11 items-center rounded-[9px] px-3 py-3 text-sm font-semibold ${
+                item.active
+                  ? "bg-blush text-magenta"
+                  : "hover:bg-blush/30"
+              }`}
+            >
+              {item.label}
+              {item.count ? (
+                <span className="ml-auto rounded-full bg-magenta px-2 py-0.5 text-[11px] font-bold text-white">
+                  {Math.min(item.count, 99)}
+                </span>
+              ) : null}
+            </Link>
+          ))}
         </nav>
       ) : null}
     </div>

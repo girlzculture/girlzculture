@@ -5,6 +5,7 @@ import { deterministicContentDecision } from "../src/lib/contentModerationCore.t
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const migration = read("supabase/migrations/20260804200000_salon_profile_assistance_and_review_safety.sql");
+const authoritative = read("supabase/migrations/20260807020000_authoritative_submission_lifecycle.sql");
 const cleanDatabaseVerifier = read("scripts/sql/verify-clean-database.sql");
 const passwordInput = read("src/components/auth/PasswordInput.tsx");
 const passwordSurfaces = [
@@ -60,13 +61,16 @@ for (const path of sourceFiles("src")) {
 }
 
 assert.match(migration, /add column if not exists description_ai_assisted boolean not null default false/);
-assert.match(migration, /SALON_DESCRIPTION_WORD_LIMIT/);
-assert.match(profileRoute, /countWords\(value\) > 300/);
+assert.match(authoritative, /if v_word_count>200 then/);
+assert.match(authoritative, /SALON_DESCRIPTION_WORD_LIMIT/);
+assert.match(profileRoute, /countWords\(value\) > 200/);
+assert.match(profileRoute, /description must be 200 words or fewer/);
 assert.match(profileRoute, /feature_key", "salon_description"/);
 assert.match(profileRoute, /String\(draft\.data\.output_text\) !== String\(patch\.description/);
 assert.match(profileRoute, /descriptionChanged \|\| context\.salon\.description_ai_assisted !== true/);
-assert.match(description, /const PREVIEW_WORDS = 80/);
-assert.match(description, /slice\(0, 300\)/);
+assert.match(description, /const PREVIEW_WORDS = 50/);
+assert.match(description, /const MAX_WORDS = 200/);
+assert.match(description, /slice\(0, MAX_WORDS\)/);
 assert.match(description, /Read more/);
 assert.match(description, /AI-assisted/);
 assert.match(publicProfile, /<ExpandableSalonDescription/);
@@ -109,14 +113,21 @@ assert.match(draftServer, /Returns an editable draft only/);
 assert.match(draftServer, /humanReviewRequired: true/);
 assert.match(draftServer, /ai\.emergency_kill_switch/);
 assert.match(draftServer, /daily_request_limit,monthly_budget_cents/);
-assert.match(descriptionEditor, /never published until you review it and save/);
+assert.match(draftServer, /truthfulFallback/);
+assert.match(draftServer, /fallbackUsed: true/);
+assert.match(draftServer, /provider: "deterministic"/);
+assert.match(descriptionEditor, /never publishes it until you choose the draft and save/);
 assert.match(descriptionEditor, /Use this draft/);
+assert.match(descriptionEditor, /200 words/);
 assert.match(migration, /human_review_required=true/);
 
 assert.match(fallbackEditor, /Growth and Premium plans/);
 assert.match(fallbackEditor, /only on your salon page/);
 assert.match(fallbackEditor, /does not guarantee placement/);
-assert.match(fallbackPublic, /Salon highlight/);
+assert.match(fallbackPublic, /Stylist profiles are being prepared/);
+assert.match(fallbackPublic, /View services and prices/);
+assert.match(fallbackPublic, /Current salon offer/);
+assert.match(fallbackPublic, /Featured salon product/);
 assert.match(profileRoute, /Choose an active product from this salon/);
 assert.match(profileRoute, /Choose an active promotion from this salon/);
 assert.match(migration, /STYLIST_FALLBACK_REQUIRES_GROWTH/);
@@ -143,4 +154,4 @@ assert.match(migration, /complaints_log_moderation_queue_idx/);
 assert.match(supportInbox, /Content review required/);
 assert.match(supportInbox, /report was preserved so evidence is not lost/);
 
-console.log("Verified accessible password visibility, bounded salon descriptions and reviewed drafts, compact rating navigation, first-name review safety, cross-surface content moderation, Growth+ salon-page fallback content, and the configurable owner setup guide.");
+console.log("Verified accessible password visibility, 200-word salon descriptions, reliable reviewed writing drafts, compact rating navigation, first-name review safety, cross-surface content moderation, enhanced Growth+ salon-page fallback content, and the configurable owner setup guide.");

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SafeImage from "@/components/site/SafeImage";
 import type { ContentCard } from "@/lib/content";
@@ -33,19 +32,17 @@ export default function HomepagePromoRail({
   const [reducedMotion, setReducedMotion] = useState(false);
   const customerLocation = useCustomerLocation();
   const currentTime = Date.parse(now);
-  const visibleCards = useMemo(
-    () => {
-      const configuredLimit = Number(cards[0]?.display_limit || 8);
-      return selectLocalPromotionCards({
-        cards,
-        now: currentTime,
-        customerLocation:
-          customerLocation.ready ? customerLocation.location : null,
-        limit: configuredLimit,
-      });
-    },
-    [cards, currentTime, customerLocation.location, customerLocation.ready],
-  );
+  const visibleCards = useMemo(() => {
+    const configuredLimit = Number(cards[0]?.display_limit || 8);
+    return selectLocalPromotionCards({
+      cards,
+      now: currentTime,
+      customerLocation: customerLocation.ready
+        ? customerLocation.location
+        : null,
+      limit: configuredLimit,
+    });
+  }, [cards, currentTime, customerLocation.location, customerLocation.ready]);
   const canAutomaticallyMove =
     visibleCards.length > 1 &&
     railVisible &&
@@ -55,13 +52,15 @@ export default function HomepagePromoRail({
 
   function cardElements() {
     return Array.from(
-      railRef.current?.querySelectorAll<HTMLElement>(
-        "[data-promotion-card]",
-      ) || [],
+      railRef.current?.querySelectorAll<HTMLElement>("[data-promotion-card]") ||
+        [],
     );
   }
 
-  function scrollToIndex(index: number, behavior: ScrollBehavior = "smooth") {
+  function scrollToIndex(
+    index: number,
+    behavior: ScrollBehavior = "smooth",
+  ) {
     const rail = railRef.current;
     const targets = cardElements();
     const target = targets[index];
@@ -117,7 +116,8 @@ export default function HomepagePromoRail({
     const rail = railRef.current;
     if (!rail) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setRailVisible(entry.isIntersecting && entry.intersectionRatio > 0.25),
+      ([entry]) =>
+        setRailVisible(entry.isIntersecting && entry.intersectionRatio > 0.25),
       { threshold: [0, 0.25, 0.6] },
     );
     observer.observe(rail);
@@ -162,7 +162,7 @@ export default function HomepagePromoRail({
             ? "running"
             : "paused"
       }
-      className="relative w-full pb-2 pt-2 sm:pb-3 sm:pt-3"
+      className="relative w-full pb-1 pt-2 sm:pb-2 sm:pt-3"
     >
       <p className="sr-only" aria-live="polite">
         Promotion {currentIndex + 1} of {visibleCards.length}
@@ -185,9 +185,8 @@ export default function HomepagePromoRail({
               event.clientX - pointerStart.current.x,
               event.clientY - pointerStart.current.y,
             ) > 8
-          ) {
+          )
             dragged.current = true;
-          }
         }}
         onPointerUp={() => {
           pointerStart.current = null;
@@ -224,7 +223,7 @@ export default function HomepagePromoRail({
             setCurrentIndex(closest.index);
           }, 100);
         }}
-        className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [overscroll-behavior-inline:contain] [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-2 [overscroll-behavior-inline:contain] [scrollbar-width:none] sm:-mx-6 sm:gap-3 sm:px-6 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
       >
         {visibleCards.map((card, index) => (
           <PromotionCard
@@ -245,19 +244,17 @@ export default function HomepagePromoRail({
       <div className="mt-1 hidden items-center justify-end gap-2 lg:flex">
         <button
           type="button"
-          aria-label="Previous promotion"
           onClick={() => move(-1)}
-          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/15 bg-white text-plum"
+          className="min-h-10 rounded-[8px] border border-plum/15 bg-white px-4 text-xs font-bold text-plum"
         >
-          <ChevronLeft size={18} />
+          Previous
         </button>
         <button
           type="button"
-          aria-label="Next promotion"
           onClick={() => move(1)}
-          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/15 bg-white text-plum"
+          className="min-h-10 rounded-[8px] border border-plum/15 bg-white px-4 text-xs font-bold text-plum"
         >
-          <ChevronRight size={18} />
+          Next
         </button>
       </div>
     </section>
@@ -274,8 +271,12 @@ function PromotionCard({
   return (
     <article
       data-promotion-card
-      data-media-kind={/\.gif(?:$|[?#])/i.test(card.media_url || "") ? "animated-gif" : "image"}
-      className="gc-promotion-card relative aspect-[16/9] w-[86vw] min-w-[280px] max-w-[420px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:w-[58vw] sm:max-w-[460px] md:w-[45vw] lg:aspect-[2/1] lg:w-[31vw] lg:max-w-[470px] xl:w-[28vw]"
+      data-media-kind={
+        /\.gif(?:$|[?#])/i.test(card.media_url || "")
+          ? "animated-gif"
+          : "image"
+      }
+      className="gc-promotion-card relative aspect-[16/9] w-[68vw] min-w-[220px] max-w-[330px] shrink-0 snap-start overflow-hidden rounded-[14px] bg-charcoal shadow-[0_8px_20px_rgba(13,17,20,.12)] sm:w-[42vw] sm:max-w-[390px] md:w-[36vw] lg:aspect-[2/1] lg:w-[29vw] lg:max-w-[430px] xl:w-[26vw]"
     >
       <SafeImage
         src={card.media_url}
@@ -284,15 +285,15 @@ function PromotionCard({
         draggable={false}
         className="absolute inset-0 h-full w-full select-none object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/20 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/15 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4">
         {card.title ? (
-          <h2 className="font-serif text-[18px] font-semibold leading-[.95] sm:text-[23px]">
+          <h2 className="font-serif text-[17px] font-semibold leading-tight sm:text-[21px]">
             {card.title}
           </h2>
         ) : null}
         {card.body ? (
-          <p className="mt-2 line-clamp-2 text-[10px] leading-4 text-white/85">
+          <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-white/85">
             {card.body}
           </p>
         ) : null}
@@ -301,7 +302,7 @@ function PromotionCard({
             href={card.href}
             draggable={false}
             onClick={onNavigate}
-            className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-magenta px-3 text-[9px] font-bold text-white sm:mt-3 sm:min-h-10 sm:px-4 sm:text-[10px]"
+            className="mt-2 inline-flex min-h-8 items-center rounded-[7px] bg-magenta px-3 text-[11px] font-bold text-white sm:min-h-9"
           >
             {card.cta_label || "Explore"}
           </Link>

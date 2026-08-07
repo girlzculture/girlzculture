@@ -19,7 +19,9 @@ if (!rawSupabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables.");
 }
 
-const supabaseUrl = rawSupabaseUrl.replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
+const supabaseUrl = rawSupabaseUrl
+  .replace(/\/rest\/v1\/?$/i, "")
+  .replace(/\/$/, "");
 const resolvedSupabaseAnonKey: string = supabaseAnonKey;
 
 export const AUTH_STORAGE_KEYS = buildAuthStorageKeys(supabaseUrl);
@@ -59,7 +61,12 @@ export async function reportClientOperationalFailure(values: {
   status: number;
   code: string;
   operation: string;
-  provider?: "supabase" | "supabase-realtime" | "google-maps" | "web-push" | "service-worker";
+  provider?:
+    | "supabase"
+    | "supabase-realtime"
+    | "google-maps"
+    | "web-push"
+    | "service-worker";
   authorization?: string;
   dedupeScope?: string;
 }) {
@@ -110,17 +117,21 @@ export async function reportClientOperationalFailure(values: {
       ) {
         return fallback;
       }
-      const body = await response.json() as { request_id?: string; error?: string };
+      const body = (await response.json()) as {
+        request_id?: string;
+        error?: string;
+      };
       const reference = /^[0-9a-f-]{36}$/i.test(String(body.request_id || ""))
         ? String(body.request_id)
         : null;
       return {
         reference,
-        message: typeof body.error === "string" && body.error
-          ? body.error
-          : reference
-            ? `This operation could not be completed. Please try again or contact support with reference ${reference}.`
-            : fallback.message,
+        message:
+          typeof body.error === "string" && body.error
+            ? body.error
+            : reference
+              ? `This operation could not be completed. Please try again or contact support with reference ${reference}.`
+              : fallback.message,
       };
     } catch {
       return fallback;
@@ -168,10 +179,12 @@ async function monitoredBrowserSupabaseFetch(
   let code = "";
   let message = "";
   try {
-    const payload = await response.clone().json() as Record<string, unknown>;
+    const payload = (await response.clone().json()) as Record<string, unknown>;
     code = String(payload.code || payload.error_code || "").slice(0, 80);
-    message = String(payload.message || payload.msg || payload.error || "")
-      .slice(0, 300);
+    message = String(payload.message || payload.msg || payload.error || "").slice(
+      0,
+      300,
+    );
   } catch {
     // Provider response bodies are not retained.
   }
@@ -231,15 +244,27 @@ async function monitoredBrowserSupabaseFetch(
   );
 }
 
+export function authStorageKind(scope: AuthScopeName) {
+  return scope === "salon" ? "session" : "local";
+}
+
+function browserStorage(scope: AuthScopeName) {
+  if (typeof window === "undefined") return undefined;
+  return scope === "salon" ? window.sessionStorage : window.localStorage;
+}
+
 function createBrowserClient(scope: AuthScopeName, storageKey: string) {
+  const storage = browserStorage(scope);
   return createClient(supabaseUrl, resolvedSupabaseAnonKey, {
     auth: {
       storageKey,
+      ...(storage ? { storage } : {}),
       persistSession: typeof window !== "undefined",
       autoRefreshToken: typeof window !== "undefined",
       // Only the customer client processes confirmation links. Salon/admin
       // credentials are issued by their dedicated secure-login surfaces.
-      detectSessionInUrl: scope === "customer" && typeof window !== "undefined",
+      detectSessionInUrl:
+        scope === "customer" && typeof window !== "undefined",
     },
     global: {
       fetch: (input, init) => monitoredBrowserSupabaseFetch(scope, input, init),
@@ -247,46 +272,66 @@ function createBrowserClient(scope: AuthScopeName, storageKey: string) {
   });
 }
 
-// Each product area has an independent browser session. Signing into the
-// platform admin never replaces a salon owner's session (and vice versa).
-export const supabase = createBrowserClient("customer", AUTH_STORAGE_KEYS.customer);
-export const salonSupabase = createBrowserClient("salon", AUTH_STORAGE_KEYS.salon);
-export const adminSupabase = createBrowserClient("admin", AUTH_STORAGE_KEYS.admin);
+// Customer and platform-admin sessions persist across browser tabs. Salon-owner
+// sessions deliberately use sessionStorage, which is isolated per tab. Amina can
+// remain open in one tab while Binta remains open in another, and each survives
+// refresh without one salon login overwriting the other.
+export const supabase = createBrowserClient(
+  "customer",
+  AUTH_STORAGE_KEYS.customer,
+);
+export const salonSupabase = createBrowserClient(
+  "salon",
+  AUTH_STORAGE_KEYS.salon,
+);
+export const adminSupabase = createBrowserClient(
+  "admin",
+  AUTH_STORAGE_KEYS.admin,
+);
 
 export type AuthScope = keyof typeof AUTH_STORAGE_KEYS;
 const scopedRefreshes =
   createScopedRefreshCoordinator<AuthScope, Session | null>();
-const scopedMigrations: Partial<
-  Record<AuthScope, Promise<Session | null>>
-> = {};
+const scopedMigrations: Partial<Record<AuthScope, Promise<Session | null>>> = {};
 const completedLegacyMigrationChecks = new Set<AuthScope>();
 
-export function getSupabaseForScope(scope: AuthScope = "customer"): SupabaseClient {
+export function getSupabaseForScope(
+  scope: AuthScope = "customer",
+): SupabaseClient {
   if (scope === "admin") return adminSupabase;
   if (scope === "salon") return salonSupabase;
   return supabase;
 }
 
+function removeStorageEntries(storage: Storage, storageKey: string) {
+  storage.removeItem(storageKey);
+  storage.removeItem(`${storageKey}-user`);
+  storage.removeItem(`${storageKey}-code-verifier`);
+}
+
 function clearStoredAuthKey(storageKey: string) {
   if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(storageKey);
-    window.localStorage.removeItem(`${storageKey}-user`);
-    window.localStorage.removeItem(`${storageKey}-code-verifier`);
-  } catch {
-    // Storage can be unavailable in restricted/private browser contexts. The
-    // in-memory auth client is still signed out by clearSessionForScope.
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      removeStorageEntries(storage, storageKey);
+    } catch {
+      // Storage can be unavailable in restricted/private browser contexts. The
+      // in-memory auth client is still signed out by clearSessionForScope.
+    }
   }
 }
 
 function legacyStoredSession(storageKey: string): Session | null {
   if (typeof window === "undefined") return null;
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "null");
-    return isStoredSessionShape(parsed) ? (parsed as Session) : null;
-  } catch {
-    return null;
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      const parsed = JSON.parse(storage.getItem(storageKey) || "null");
+      if (isStoredSessionShape(parsed)) return parsed as Session;
+    } catch {
+      // Continue to the other browser storage area.
+    }
   }
+  return null;
 }
 
 function expectedDestinationRole(scope: AuthScope) {
@@ -328,7 +373,8 @@ async function destinationRole(accessToken: string) {
   } catch {
     throw new ScopedSessionProviderError();
   }
-  if (response.status === 401) return { kind: "terminal" as const, role: null };
+  if (response.status === 401)
+    return { kind: "terminal" as const, role: null };
   if (response.status === 403) {
     return { kind: "role-mismatch" as const, role: body.role || null };
   }
@@ -363,9 +409,7 @@ async function refreshLegacySession(
       }
       return result;
     });
-    if (error) {
-      return null;
-    }
+    if (error) return null;
     return data.session;
   } catch (error) {
     if (error instanceof ScopedSessionProviderError) throw error;
@@ -415,7 +459,9 @@ async function migrateLegacySession(scope: AuthScope): Promise<Session | null> {
 // Existing installations used unversioned storage keys. A candidate legacy
 // session is authenticated and role-checked by the server before being copied
 // to the project/version-scoped destination key.
-export async function getSessionForScope(scope: AuthScope): Promise<Session | null> {
+export async function getSessionForScope(
+  scope: AuthScope,
+): Promise<Session | null> {
   const scopedClient = getSupabaseForScope(scope);
   let result: Awaited<ReturnType<typeof scopedClient.auth.getSession>>;
   try {
@@ -437,7 +483,8 @@ export async function getSessionForScope(scope: AuthScope): Promise<Session | nu
     await clearSessionForScope(scope);
     return null;
   }
-  if (scopedData.session || typeof window === "undefined") return scopedData.session;
+  if (scopedData.session || typeof window === "undefined")
+    return scopedData.session;
   if (completedLegacyMigrationChecks.has(scope)) return null;
   if (scopedMigrations[scope]) return scopedMigrations[scope] || null;
   const migration = migrateLegacySession(scope)
@@ -485,7 +532,7 @@ export async function reportClientOperationalRecovery(values: {
     ) {
       return { resolved: 0 };
     }
-    const body = await response.json() as { resolved?: number };
+    const body = (await response.json()) as { resolved?: number };
     for (const key of clientFailureReports.keys()) {
       if (
         key.includes(`|${values.provider || "supabase-realtime"}|`) &&

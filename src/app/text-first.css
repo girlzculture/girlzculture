@@ -1,0 +1,26 @@
+/*
+ * Girlz Culture uses text-first controls. New work should not import decorative
+ * icon libraries. This compatibility layer keeps older routes honest while
+ * they are progressively simplified: Lucide drawings disappear everywhere,
+ * and a true icon-only control exposes its existing accessible label as visible
+ * text instead of becoming blank.
+ */
+svg.lucide {
+  display: none !important;
+}
+
+:where(button, a[href], [role="button"])[aria-label]:has(> svg.lucide:only-child)::after {
+  content: attr(aria-label);
+  display: inline;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  white-space: normal;
+  text-align: center;
+}
+
+:where(button, a[href], [role="button"])[aria-label]:has(> svg.lucide:only-child) {
+  width: auto !important;
+  min-width: 2.75rem;
+  padding-inline: 0.75rem !important;
+}

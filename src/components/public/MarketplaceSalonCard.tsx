@@ -1,53 +1,274 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, Heart, MapPin, ShieldCheck, Star } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 
+type ExtendedSalon = PublicSalonResult & {
+  matched_service?: {
+    id: string;
+    name: string;
+    price: number | null;
+    original_price: number | null;
+  } | null;
+  promotion?: {
+    id: string;
+    title: string;
+    label: string | null;
+  } | null;
+  next_slot?: {
+    date: string;
+    value: string;
+    label: string;
+    stylist_name: string | null;
+  } | null;
+  reliability?: {
+    completed_appointments: number;
+    cancellation_rate_percent: number;
+    label: string;
+  };
+  sponsored?: boolean;
+};
+
 type Props = {
-  salon: PublicSalonResult;
+  salon: ExtendedSalon;
   variant?: "grid" | "list" | "compact";
   selected?: boolean;
   onFocus?: (salonId: string) => void;
+  onNavigate?: () => void;
 };
 
-export default function MarketplaceSalonCard({ salon, variant = "grid", selected = false, onFocus }: Props) {
-  const verified = String(salon.verification_status || "").toLowerCase().startsWith("verified");
-  const area = [salon.borough || salon.address_city, salon.address_state].filter(Boolean).join(", ");
-  const distanceLabel = Number.isFinite(salon.distance_miles)
-    ? `${salon.distance_miles < 0.1 ? "Under 0.1" : salon.distance_miles.toFixed(1)} mi away`
-    : "";
-  const locationLabel = [area || "Location available on profile", distanceLabel]
-    .filter(Boolean)
-    .join(" · ");
+function money(value: number | null | undefined) {
+  return value === null ||
+    value === undefined ||
+    !Number.isFinite(Number(value))
+    ? ""
+    : `$${Number(value).toFixed(
+        Number(value) % 1 === 0 ? 0 : 2,
+      )}`;
+}
+
+export default function MarketplaceSalonCard({
+  salon,
+  variant = "grid",
+  selected = false,
+  onFocus,
+  onNavigate,
+}: Props) {
+  const verified = String(
+    salon.verification_status || "",
+  )
+    .toLowerCase()
+    .startsWith("verified");
   const isList = variant === "list";
   const isCompact = variant === "compact";
-  const bookingQuery = new URLSearchParams();
-  if (salon.services[0]?.id) bookingQuery.set("style", salon.services[0].id);
+  const area = [
+    salon.borough || salon.address_city,
+    salon.address_state,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const distanceValue = Number.isFinite(salon.distance_miles)
+    ? salon.distance_miles < 0.1
+      ? "Under 0.1"
+      : salon.distance_miles.toFixed(1)
+    : "";
+  const distance = distanceValue
+    ? `${distanceValue} ${isCompact ? "mi" : "miles"} away`
+    : "";
+  const locationText = [area || "Location on profile", distance]
+    .filter(Boolean)
+    .join(" · ");
   const profileHref = `/salon/${salon.slug}`;
-  const bookHref = `/salon/${salon.slug}/book${bookingQuery.size ? `?${bookingQuery}` : ""}`;
+  const bookingQuery = new URLSearchParams();
+  if (salon.matched_service?.id)
+    bookingQuery.set("style", salon.matched_service.id);
+  else if (salon.services[0]?.id)
+    bookingQuery.set("style", salon.services[0].id);
+  const bookHref = `/salon/${salon.slug}/book${
+    bookingQuery.size ? `?${bookingQuery}` : ""
+  }`;
+  const currentPrice =
+    salon.matched_service?.price ?? salon.starting_price;
+  const originalPrice =
+    salon.matched_service?.original_price ?? null;
 
   return (
-    <article data-salon-card data-card-variant={variant} id={`salon-result-${salon.id}`} onMouseEnter={() => onFocus?.(salon.id)} onFocus={() => onFocus?.(salon.id)} className={`relative overflow-hidden rounded-[14px] border bg-white shadow-[0_5px_20px_rgba(13,17,20,.06)] transition ${selected ? "border-magenta ring-2 ring-magenta/20" : "border-plum/10"} ${isList ? "grid min-w-0 grid-cols-[118px_1fr] sm:grid-cols-[220px_1fr]" : isCompact ? "w-[calc((100vw-44px)/2)] min-w-[154px] max-w-[210px] shrink-0 snap-start sm:w-[230px] sm:max-w-[230px] lg:w-[260px] lg:max-w-[260px]" : "min-w-[76vw] snap-start sm:min-w-0"}`}>
-      <Link href={profileHref} aria-label={`View ${salon.name}`} className={`relative block overflow-hidden bg-blush ${isList ? "min-h-[168px]" : isCompact ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
-        <SafeImage src={salon.cover_photo_url} fallbackSrc="/images/salon-warm.jpg" alt={`${salon.name} salon`} rendition="thumbnail" className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"/>
-        {verified ? <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-plum/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-white"><ShieldCheck size={11}/>Verified</span> : null}
-      </Link>
-      <button type="button" aria-label={`Save ${salon.name} to favorites`} className="absolute right-2 top-2 z-10 grid min-h-10 min-w-10 place-items-center rounded-full bg-white/90 text-plum shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><Heart size={17}/></button>
-      <div className={`min-w-0 ${isList ? "grid gap-3 p-3 sm:grid-cols-[1fr_auto] sm:p-4" : isCompact ? "p-2.5" : "p-3"}`}>
-        <div className="min-w-0">
-          <Link data-no-translate="true" href={profileHref} className={`${isCompact ? "block truncate text-[14px] sm:text-base" : "text-lg sm:text-xl"} font-serif font-semibold text-ink hover:text-magenta`}>{salon.name}</Link>
-          <p className={`mt-1 flex min-w-0 items-center gap-1 text-ink/65 ${isCompact ? "text-[10px]" : "text-[11px]"}`}><MapPin size={isCompact ? 11 : 12} className="shrink-0"/><span data-no-translate="true" title={locationLabel} className="block min-w-0 truncate whitespace-nowrap">{locationLabel}</span></p>
-          <div className={`${isCompact ? "mt-1.5" : "mt-2"} flex flex-nowrap items-center gap-2 whitespace-nowrap text-[11px]`}>
-            {salon.review_count > 0 && salon.rating_overall > 0 ? <span className="inline-flex items-center gap-1"><Star size={13} className="fill-amber text-amber"/><b>{Number(salon.rating_overall).toFixed(1)}</b> <span className="text-ink/55">({salon.review_count})</span></span> : <span className="rounded-full bg-blush px-2 py-1 font-bold text-plum">New</span>}
-            {salon.starting_price !== null ? <span>From <b className="font-serif text-base">${Number(salon.starting_price).toFixed(0)}</b></span> : null}
-          </div>
-          {isList && salon.services.length ? <p data-no-translate="true" className="mt-2 line-clamp-1 text-[10px] text-ink/55">{salon.services.map((service) => service.name).join(" · ")}</p> : null}
+    <article
+      data-salon-card
+      data-card-variant={variant}
+      id={`salon-result-${salon.id}`}
+      onMouseEnter={() => onFocus?.(salon.id)}
+      onFocus={() => onFocus?.(salon.id)}
+      className={`relative overflow-hidden rounded-[12px] border bg-white shadow-[0_5px_18px_rgba(13,17,20,.06)] ${
+        selected
+          ? "border-magenta ring-2 ring-magenta/20"
+          : "border-plum/10"
+      } ${
+        isList
+          ? "grid min-w-0 grid-cols-[104px_1fr] sm:grid-cols-[150px_1fr]"
+          : isCompact
+            ? "w-[calc((100vw-40px)/2)] min-w-[150px] max-w-[205px] shrink-0 snap-start sm:w-[220px] sm:max-w-[220px]"
+            : "min-w-[72vw] snap-start sm:min-w-0"
+      }`}
+    >
+      <Link
+        data-salon-navigation
+        href={profileHref}
+        onClick={onNavigate}
+        aria-label={`View ${salon.name}`}
+        className={`relative block overflow-hidden bg-blush ${
+          isList
+            ? "min-h-[132px]"
+            : isCompact
+              ? "aspect-[16/9]"
+              : "aspect-[16/10]"
+        }`}
+      >
+        <SafeImage
+          src={salon.cover_photo_url}
+          fallbackSrc="/images/salon-warm.jpg"
+          alt={`${salon.name} salon`}
+          rendition="thumbnail"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+          {verified ? (
+            <span className="rounded-full bg-charcoal/92 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-white">
+              Verified
+            </span>
+          ) : null}
+          {salon.sponsored ? (
+            <span className="rounded-full bg-white/95 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-plum">
+              Sponsored
+            </span>
+          ) : null}
         </div>
-        <div className={`flex items-end gap-2 ${isList ? "sm:flex-col sm:justify-end" : "mt-3"} ${isCompact ? "hidden sm:flex" : ""}`}>
-          <Link href={profileHref} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta">View</Link>
-          <Link href={bookHref} className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white"><CalendarDays size={13}/>Book</Link>
+      </Link>
+
+      <div
+        className={`min-w-0 ${
+          isList
+            ? "flex flex-col justify-between p-3"
+            : isCompact
+              ? "p-2"
+              : "p-3"
+        }`}
+      >
+        <div className="min-w-0">
+          <Link
+            data-salon-navigation
+            data-no-translate="true"
+            href={profileHref}
+            onClick={onNavigate}
+            className={`block truncate font-serif font-semibold text-ink hover:text-magenta ${
+              isCompact ? "text-[14px] leading-5" : "text-[17px]"
+            }`}
+          >
+            {salon.name}
+          </Link>
+
+          <p className={isCompact ? "mt-0.5" : "mt-1"}>
+            <span
+              data-no-translate="true"
+              title={locationText}
+              className="block truncate whitespace-nowrap text-[10px] font-medium text-ink/70"
+            >
+              {locationText}
+            </span>
+          </p>
+
+          <p
+            className={`${isCompact ? "mt-1" : "mt-1.5"} text-[10px] font-semibold text-ink`}
+          >
+            {salon.review_count > 0 &&
+            salon.rating_overall > 0
+              ? `${Number(salon.rating_overall).toFixed(
+                  1,
+                )} from ${salon.review_count} ${
+                  salon.review_count === 1
+                    ? "review"
+                    : "reviews"
+                }`
+              : "New on Girlz Culture"}
+          </p>
+
+          {salon.matched_service ? (
+            <p
+              data-no-translate="true"
+              className={`${isCompact ? "mt-1" : "mt-1.5"} line-clamp-1 text-[10px] font-semibold text-plum`}
+            >
+              {salon.matched_service.name}
+            </p>
+          ) : null}
+
+          <div
+            className={`${isCompact ? "mt-0.5" : "mt-1"} flex flex-wrap items-baseline gap-1.5`}
+          >
+            {currentPrice !== null ? (
+              <span className="text-[10px] text-ink/70">
+                From{" "}
+                <b className="font-serif text-[15px] text-ink">
+                  {money(currentPrice)}
+                </b>
+              </span>
+            ) : (
+              <span className="text-[10px] text-ink/60">
+                View pricing
+              </span>
+            )}
+            {originalPrice !== null ? (
+              <span className="text-[9px] text-ink/45 line-through">
+                {money(originalPrice)}
+              </span>
+            ) : null}
+          </div>
+
+          {salon.promotion ? (
+            <p className="mt-1 line-clamp-1 text-[9px] font-bold text-magenta">
+              {salon.promotion.label ||
+                salon.promotion.title}
+            </p>
+          ) : null}
+
+          {isList && salon.next_slot ? (
+            <p className="mt-1 text-[9px] font-semibold text-green-800">
+              Opening {salon.next_slot.date} at{" "}
+              {salon.next_slot.label}
+            </p>
+          ) : null}
+
+          {isList && salon.reliability ? (
+            <p className="mt-1 text-[9px] font-medium text-ink/55">
+              {salon.reliability.label}
+              {salon.reliability.completed_appointments
+                ? ` · ${salon.reliability.completed_appointments} completed`
+                : ""}
+            </p>
+          ) : null}
+        </div>
+
+        <div
+          className={`mt-2 grid grid-cols-2 gap-2 ${
+            isCompact ? "hidden sm:grid" : ""
+          }`}
+        >
+          <Link
+            data-salon-navigation
+            href={profileHref}
+            onClick={onNavigate}
+            className="inline-flex min-h-9 items-center justify-center rounded-[7px] border border-magenta px-2 text-[10px] font-bold text-magenta"
+          >
+            View
+          </Link>
+          <Link
+            data-salon-navigation
+            href={bookHref}
+            onClick={onNavigate}
+            className="inline-flex min-h-9 items-center justify-center rounded-[7px] bg-magenta px-2 text-[10px] font-bold text-white"
+          >
+            Book
+          </Link>
         </div>
       </div>
     </article>

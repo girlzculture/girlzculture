@@ -53,8 +53,8 @@ function sanitizePatch(body: Record<string, unknown>) {
     else if (key === "logo_url" || key === "cover_photo_url") patch[key] = httpsUrl(body[key]);
     else {
       const value = cleanText(body[key], key === "description" ? 12_000 : 240);
-      if (key === "description" && countWords(value) > 300)
-        throw new Error("The salon description must be 300 words or fewer.");
+      if (key === "description" && countWords(value) > 200)
+        throw new Error("The salon description must be 200 words or fewer.");
       patch[key] = value || (key === "address_line2" ? null : "");
     }
   }
