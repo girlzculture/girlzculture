@@ -42,7 +42,7 @@ export default function ExpandableSalonDescription({
           </button>
         ) : null}
         {aiAssisted ? (
-          <span className="text-xs font-medium text-ink/55">Writing-assisted</span>
+          <span className="text-xs font-medium text-ink/55">AI-assisted</span>
         ) : null}
       </div>
     </div>
