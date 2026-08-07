@@ -1,6 +1,10 @@
 import "server-only";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { normalizeRadius, validCoordinates, type Coordinates } from "@/lib/location";
+import { supabase } from "@/lib/supabase";
+import {
+  normalizeRadius,
+  validCoordinates,
+  type Coordinates,
+} from "@/lib/location";
 
 export type PublicSalonResult = {
   id: string;
@@ -34,15 +38,25 @@ export type DiscoveryQuery = {
 };
 
 export async function discoverNearbySalons(query: DiscoveryQuery) {
-  if (!validCoordinates(query.origin)) return { salons: [] as PublicSalonResult[], total: 0 };
+  if (!validCoordinates(query.origin)) {
+    return { salons: [] as PublicSalonResult[], total: 0 };
+  }
   const limit = Math.max(1, Math.min(50, Math.round(query.limit || 20)));
   const offset = Math.max(0, Math.round(query.offset || 0));
-  const supabase = getSupabaseAdmin();
+
+  // Public discovery uses narrowly granted read-only RPCs. It must not depend
+  // on the service-role secret being present in a browser-facing deployment.
+  // The database remains authoritative for marketplace visibility and RLS.
   let resolvedStyle = query.style?.trim() || null;
   if (resolvedStyle) {
-    const resolution = await supabase.rpc("resolve_search_service_query", { p_query: resolvedStyle });
-    if (!resolution.error && resolution.data) resolvedStyle = String(resolution.data);
+    const resolution = await supabase.rpc("resolve_search_service_query", {
+      p_query: resolvedStyle,
+    });
+    if (!resolution.error && resolution.data) {
+      resolvedStyle = String(resolution.data);
+    }
   }
+
   const { data, error } = await supabase.rpc("discover_nearby_salons_ranked", {
     origin_latitude: query.origin.lat,
     origin_longitude: query.origin.lng,
