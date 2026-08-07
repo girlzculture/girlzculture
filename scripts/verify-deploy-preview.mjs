@@ -157,6 +157,18 @@ async function assertVisibleVideosHealthy(page, label) {
   assert.deepEqual(failed, [], `${label} contains a failed visible video.`);
 }
 
+function isNetlifyPreviewToolingUrl(value) {
+  try {
+    const url = new URL(value, baseUrl);
+    return (
+      url.hostname === "app.netlify.com" ||
+      url.pathname.startsWith("/.netlify/scripts/cdp")
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function newPage(browser, viewport) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
@@ -165,7 +177,34 @@ async function newPage(browser, viewport) {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
-    if (message.type() === "error") pageErrors.push(message.text());
+    if (message.type() !== "error") return;
+    const text = message.text();
+    if (
+      text.includes("Framing 'https://app.netlify.com/'") &&
+      text.includes("Content Security Policy")
+    ) {
+      log("Ignored Netlify Deploy Preview drawer CSP noise.");
+      return;
+    }
+    // Chromium's generic resource message omits the URL. The response and
+    // requestfailed listeners below record the exact failing resource instead.
+    if (text.startsWith("Failed to load resource:")) return;
+    pageErrors.push(text);
+  });
+  page.on("response", (response) => {
+    if (response.status() < 400 || isNetlifyPreviewToolingUrl(response.url()))
+      return;
+    pageErrors.push(
+      `HTTP ${response.status()} ${response.request().resourceType()} ${response.url()}`,
+    );
+  });
+  page.on("requestfailed", (request) => {
+    if (isNetlifyPreviewToolingUrl(request.url())) return;
+    pageErrors.push(
+      `REQUEST_FAILED ${request.resourceType()} ${request.url()} ${
+        request.failure()?.errorText || "unknown"
+      }`,
+    );
   });
   return { context, page, pageErrors };
 }
