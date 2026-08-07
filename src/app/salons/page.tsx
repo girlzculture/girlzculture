@@ -67,6 +67,14 @@ export default async function SalonsPage({
       <PublicHeader active="salons" />
       <FirstRelevantLocationRequest />
       <section className="mx-auto w-full max-w-[1760px] px-3 pb-5 pt-3 sm:px-8 sm:pt-5 lg:px-12 2xl:px-16">
+        <div className="mb-2 flex min-w-0 items-center gap-2">
+          <span className="shrink-0 rounded-full bg-plum px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
+            AI
+          </span>
+          <h2 className="min-w-0 truncate text-[13px] font-bold text-ink sm:text-sm">
+            Tell us the look you want
+          </h2>
+        </div>
         <SalonDiscovery
           initialSalons={initial.salons}
           initialTotal={initial.total}
