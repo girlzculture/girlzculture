@@ -72,7 +72,7 @@ assert.match(description, /const PREVIEW_WORDS = 50/);
 assert.match(description, /const MAX_WORDS = 200/);
 assert.match(description, /slice\(0, MAX_WORDS\)/);
 assert.match(description, /Read more/);
-assert.match(description, /Writing-assisted/);
+assert.match(description, /AI-assisted/);
 assert.match(publicProfile, /<ExpandableSalonDescription/);
 
 assert.match(rating, /No reviews yet/);
