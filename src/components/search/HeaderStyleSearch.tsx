@@ -44,9 +44,9 @@ export default function HeaderStyleSearch() {
   return (
     <form
       onSubmit={submit}
-      className="w-[154px] rounded-[10px] border border-plum/15 bg-white px-2 min-[390px]:w-[184px] md:w-[250px] lg:w-[310px] xl:w-[350px]"
+      className="w-full min-w-0 max-w-[154px] overflow-hidden rounded-[10px] border border-plum/15 bg-white px-2 min-[390px]:max-w-[184px] md:max-w-[250px] lg:max-w-[310px] xl:max-w-[350px]"
     >
-      <label className="flex min-h-10 items-center gap-2">
+      <label className="flex min-h-10 min-w-0 items-center gap-1 min-[390px]:gap-2">
         <span className="sr-only">Search</span>
         <input
           value={query}
@@ -59,7 +59,7 @@ export default function HeaderStyleSearch() {
         />
         <button
           type="submit"
-          className="min-h-8 rounded-[7px] bg-magenta px-2.5 text-[9px] font-bold text-white"
+          className="min-h-8 shrink-0 rounded-[7px] bg-magenta px-2 text-[9px] font-bold text-white min-[390px]:px-2.5"
         >
           Search
         </button>
