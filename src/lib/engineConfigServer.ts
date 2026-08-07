@@ -2,6 +2,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { hasOperationalContext } from "@/lib/operationalTelemetryContext";
 
+const PUBLIC_ENGINE_READ_TIMEOUT_MS = 2_500;
+
 export async function getPublishedEngineConfig(keys?: string[], options: { publicOnly?: boolean } = {}) {
   let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
@@ -9,13 +11,16 @@ export async function getPublishedEngineConfig(keys?: string[], options: { publi
     let query = admin.from("engine_settings").select("setting_key,published_value,published_version").eq("status", "Published");
     if (keys?.length) query = query.in("setting_key", keys);
     if (options.publicOnly) query = query.eq("is_public", true);
-    const { data, error } = await query;
+    const { data, error } = await query.abortSignal(
+      AbortSignal.timeout(PUBLIC_ENGINE_READ_TIMEOUT_MS),
+    );
     if (error) throw error;
     return Object.fromEntries((data || []).map((row) => [row.setting_key, row.published_value])) as Record<string, unknown>;
   } catch (error) {
     // Service-role transport monitoring has already attached this failure to an
     // active API request. Outside a route (for example server rendering), persist
-    // the same sanitized operational event directly.
+    // the same sanitized operational event directly. Public rendering must still
+    // return its approved defaults instead of waiting for the host to time out.
     if (!hasOperationalContext()) {
       await capturePlatformError({
         admin,
@@ -30,6 +35,7 @@ export async function getPublishedEngineConfig(keys?: string[], options: { publi
           public_only: Boolean(options.publicOnly),
           requested_key_count: keys?.length || 0,
           fallback_used: true,
+          timeout_ms: PUBLIC_ENGINE_READ_TIMEOUT_MS,
         },
       });
     }
