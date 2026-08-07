@@ -1,4 +1,17 @@
 import Link from "next/link";
+import {
+  ArrowRight,
+  CalendarDays,
+  Camera,
+  Heart,
+  Home,
+  MessageSquare,
+  Search,
+  Share2,
+  ShieldCheck,
+  Tag,
+  UserRound,
+} from "lucide-react";
 import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
@@ -159,7 +172,7 @@ export async function PublicHeader({
             <Link
               key={item.item_key}
               href={item.href}
-              className={`inline-flex items-center border-b-2 py-5 transition-colors hover:text-magenta ${
+              className={`inline-flex items-center gap-2 border-b-2 py-5 transition-colors hover:text-magenta ${
                 active === item.item_key
                   ? "border-magenta text-magenta"
                   : "border-transparent"
@@ -172,7 +185,7 @@ export async function PublicHeader({
                 fallback={item.label}
               />
               {item.show_new_badge ? (
-                <span className="ml-2 rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
+                <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
                   <LocalizedText messageKey="nav.new" fallback="New" />
                 </span>
               ) : null}
@@ -187,9 +200,10 @@ export async function PublicHeader({
           <HeaderStyleSearch />
           <Link
             href="/account?tab=favorites"
-            className="hidden min-h-11 items-center rounded-[9px] px-3 text-[13px] font-semibold text-ink transition-colors hover:bg-blush/50 hover:text-magenta xl:inline-flex"
+            aria-label="View favorite salons"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta xl:inline-flex"
           >
-            Favorites
+            <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
           </Link>
           <Link
             href="/login"
@@ -261,30 +275,44 @@ export async function CustomerBottomNav({
       sort_order: 50,
     },
   ];
+  const iconMap = {
+    home: Home,
+    search: Search,
+    bookings: CalendarDays,
+    social: Share2,
+    profile: UserRound,
+  };
   const records = await getNavigationItems("mobile_bottom", fallback);
   const items = records.slice(0, 5).map((item) => ({
     ...item,
     id: item.item_key as ActiveTab,
     key: item.translation_key || `navigation.${item.item_key}`,
+    icon: iconMap[item.item_key as keyof typeof iconMap] || Home,
   }));
 
   return (
     <nav
       aria-label="Customer navigation"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
     >
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+      <div className="mx-auto grid max-w-md grid-cols-5">
         {items.map((item) => {
+          const Icon = item.icon;
           const isActive = active === item.id;
           return (
             <Link
               key={item.id}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className={`flex min-h-11 items-center justify-center rounded-[9px] px-1 text-center text-[11px] font-bold ${
-                isActive ? "bg-blush text-magenta" : "text-ink/75"
+              className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold ${
+                isActive ? "text-magenta" : "text-ink/75"
               }`}
             >
+              <Icon
+                aria-hidden="true"
+                size={20}
+                strokeWidth={isActive ? 2.4 : 1.8}
+              />
               <LocalizedText messageKey={item.key} fallback={item.label} />
             </Link>
           );
@@ -298,20 +326,24 @@ const trustItems = [
   {
     title: "Verified Salons",
     titleKey: "trust.salons.title",
-    description: "Every salon is vetted for quality, safety, and professionalism.",
+    description:
+      "Every salon is vetted for quality, safety, and professionalism.",
     descriptionKey: "trust.salons.body",
+    icon: ShieldCheck,
   },
   {
     title: "Booking-based Reviews",
     titleKey: "trust.reviews.title",
     description: "Reviews are connected to completed appointments.",
     descriptionKey: "trust.reviews.body",
+    icon: MessageSquare,
   },
   {
     title: "Transparent Pricing",
     titleKey: "trust.pricing.title",
     description: "Upfront pricing, so there are no surprises.",
     descriptionKey: "trust.pricing.body",
+    icon: Tag,
   },
 ];
 
@@ -322,27 +354,37 @@ export function TrustStrip() {
       className="hidden bg-teal text-white md:block"
     >
       <div className="mx-auto grid w-full max-w-[1760px] gap-0 px-5 py-5 sm:grid-cols-3 sm:px-8 lg:px-12 2xl:px-16">
-        {trustItems.map((item, index) => (
-          <div
-            key={item.title}
-            className={`py-4 sm:px-6 ${
-              index > 0 ? "border-t border-white/15 sm:border-l sm:border-t-0" : ""
-            }`}
-          >
-            <span className="block font-serif text-[18px] font-semibold leading-tight">
-              <LocalizedText
-                messageKey={item.titleKey}
-                fallback={item.title}
-              />
-            </span>
-            <span className="mt-1 block max-w-[280px] text-[12px] leading-5 text-white/80">
-              <LocalizedText
-                messageKey={item.descriptionKey}
-                fallback={item.description}
-              />
-            </span>
-          </div>
-        ))}
+        {trustItems.map((item, index) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.title}
+              className={`flex items-center gap-4 py-4 sm:px-6 ${
+                index > 0
+                  ? "border-t border-white/15 sm:border-l sm:border-t-0"
+                  : ""
+              }`}
+            >
+              <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber text-ink shadow-[0_0_0_6px_rgba(224,163,78,0.10)]">
+                <Icon aria-hidden="true" size={24} strokeWidth={1.8} />
+              </span>
+              <span>
+                <span className="block font-serif text-[18px] font-semibold leading-tight">
+                  <LocalizedText
+                    messageKey={item.titleKey}
+                    fallback={item.title}
+                  />
+                </span>
+                <span className="mt-1 block max-w-[260px] text-[11px] leading-[1.45] text-white/75">
+                  <LocalizedText
+                    messageKey={item.descriptionKey}
+                    fallback={item.description}
+                  />
+                </span>
+              </span>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -467,24 +509,20 @@ export async function PublicFooter() {
               Girlz Culture
             </div>
           )}
-          <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold text-white/80">
-            <Link href="/social" className="hover:text-white">
-              Social
-            </Link>
-            <Link href="/contact" className="hover:text-white">
-              Contact
-            </Link>
+          <div className="mt-5 flex gap-3 text-white/75">
+            <Camera aria-label="Instagram" size={17} />
+            <Share2 aria-label="Social channels" size={17} />
           </div>
         </div>
         {footerGroups.map((group) => (
           <div key={group.groupKey} className="min-w-0">
-            <h2 className="[overflow-wrap:anywhere] text-[11px] font-bold uppercase tracking-[0.08em] text-white/80">
+            <h2 className="[overflow-wrap:anywhere] text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">
               <LocalizedText
                 messageKey={group.key}
                 fallback={group.title}
               />
             </h2>
-            <ul className="mt-3 min-w-0 space-y-2 [overflow-wrap:anywhere] text-[12px] text-white/70">
+            <ul className="mt-3 min-w-0 space-y-2 [overflow-wrap:anywhere] text-[11px] text-white/65">
               {group.links.map((item) => (
                 <li key={item.item_key}>
                   <Link href={item.href} className="hover:text-white">
@@ -496,7 +534,7 @@ export async function PublicFooter() {
                       fallback={item.label}
                     />
                     {item.show_new_badge ? (
-                      <span className="ml-1 rounded-full bg-magenta px-1.5 py-0.5 text-[9px] font-bold uppercase">
+                      <span className="ml-1 rounded-full bg-magenta px-1.5 py-0.5 text-[7px] font-bold uppercase">
                         New
                       </span>
                     ) : null}
@@ -511,7 +549,7 @@ export async function PublicFooter() {
             {legalColumns.map((column, index) => (
               <ul
                 key={index}
-                className="space-y-2 text-[11px] leading-4 text-white/70"
+                className="space-y-2 text-[10px] leading-4 text-white/65"
               >
                 {column.map(([label, href]) => (
                   <li key={href}>
@@ -533,14 +571,14 @@ export async function PublicFooter() {
               fallback="Stay in the loop"
             />
           </h2>
-          <p className="mt-2 text-[12px] leading-5 text-white/70">
+          <p className="mt-2 text-[11px] leading-5 text-white/65">
             <LocalizedText
               messageKey="footer.newsletter_help"
               fallback="Tips, new salons, and exclusive offers."
             />
           </p>
           <NewsletterForm />
-          <p className="mt-5 text-[11px] text-white/55">
+          <p className="mt-5 text-[9px] text-white/45">
             © {new Date().getFullYear()} Girlz Culture, Inc.{" "}
             <LocalizedText
               messageKey="footer.rights"
@@ -571,15 +609,16 @@ export function SectionHeading({
           {title}
         </h2>
         {description ? (
-          <p className="mt-2 text-[13px] text-ink/65">{description}</p>
+          <p className="mt-2 text-[12px] text-ink/65">{description}</p>
         ) : null}
       </div>
       {href && linkLabel ? (
         <Link
           href={href}
-          className="inline-flex min-h-9 shrink-0 items-center text-[12px] font-bold text-magenta hover:text-plum"
+          className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold text-magenta hover:text-plum"
         >
           {linkLabel}
+          <ArrowRight aria-hidden="true" size={14} />
         </Link>
       ) : null}
     </div>

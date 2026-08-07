@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, MapPin, ShieldCheck, Star } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 
@@ -55,9 +56,7 @@ export default function MarketplaceSalonCard({
   onFocus,
   onNavigate,
 }: Props) {
-  const verified = String(
-    salon.verification_status || "",
-  )
+  const verified = String(salon.verification_status || "")
     .toLowerCase()
     .startsWith("verified");
   const isList = variant === "list";
@@ -68,15 +67,14 @@ export default function MarketplaceSalonCard({
   ]
     .filter(Boolean)
     .join(", ");
-  const distanceValue = Number.isFinite(salon.distance_miles)
-    ? salon.distance_miles < 0.1
-      ? "Under 0.1"
-      : salon.distance_miles.toFixed(1)
+  const distanceLabel = Number.isFinite(Number(salon.distance_miles))
+    ? `${
+        Number(salon.distance_miles) < 0.1
+          ? "Under 0.1"
+          : Number(salon.distance_miles).toFixed(1)
+      } mi away`
     : "";
-  const distance = distanceValue
-    ? `${distanceValue} ${isCompact ? "mi" : "miles"} away`
-    : "";
-  const locationText = [area || "Location on profile", distance]
+  const locationLabel = [area || "Location available on profile", distanceLabel]
     .filter(Boolean)
     .join(" · ");
   const profileHref = `/salon/${salon.slug}`;
@@ -90,8 +88,7 @@ export default function MarketplaceSalonCard({
   }`;
   const currentPrice =
     salon.matched_service?.price ?? salon.starting_price;
-  const originalPrice =
-    salon.matched_service?.original_price ?? null;
+  const originalPrice = salon.matched_service?.original_price ?? null;
 
   return (
     <article
@@ -100,16 +97,16 @@ export default function MarketplaceSalonCard({
       id={`salon-result-${salon.id}`}
       onMouseEnter={() => onFocus?.(salon.id)}
       onFocus={() => onFocus?.(salon.id)}
-      className={`relative overflow-hidden rounded-[12px] border bg-white shadow-[0_5px_18px_rgba(13,17,20,.06)] ${
+      className={`relative overflow-hidden rounded-[14px] border bg-white shadow-[0_5px_20px_rgba(13,17,20,.06)] transition ${
         selected
           ? "border-magenta ring-2 ring-magenta/20"
           : "border-plum/10"
       } ${
         isList
-          ? "grid min-w-0 grid-cols-[104px_1fr] sm:grid-cols-[150px_1fr]"
+          ? "grid min-w-0 grid-cols-[118px_1fr] sm:grid-cols-[220px_1fr]"
           : isCompact
-            ? "w-[calc((100vw-40px)/2)] min-w-[150px] max-w-[205px] shrink-0 snap-start sm:w-[220px] sm:max-w-[220px]"
-            : "min-w-[72vw] snap-start sm:min-w-0"
+            ? "w-[calc((100vw-44px)/2)] min-w-[154px] max-w-[210px] shrink-0 snap-start sm:w-[230px] sm:max-w-[230px] lg:w-[260px] lg:max-w-[260px]"
+            : "min-w-[76vw] snap-start sm:min-w-0"
       }`}
     >
       <Link
@@ -119,7 +116,7 @@ export default function MarketplaceSalonCard({
         aria-label={`View ${salon.name}`}
         className={`relative block overflow-hidden bg-blush ${
           isList
-            ? "min-h-[132px]"
+            ? "min-h-[168px]"
             : isCompact
               ? "aspect-[16/9]"
               : "aspect-[16/10]"
@@ -130,16 +127,17 @@ export default function MarketplaceSalonCard({
           fallbackSrc="/images/salon-warm.jpg"
           alt={`${salon.name} salon`}
           rendition="thumbnail"
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
         />
         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
           {verified ? (
-            <span className="rounded-full bg-charcoal/92 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-white">
+            <span className="inline-flex items-center gap-1 rounded-full bg-plum/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-white">
+              <ShieldCheck aria-hidden="true" size={11} />
               Verified
             </span>
           ) : null}
           {salon.sponsored ? (
-            <span className="rounded-full bg-white/95 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-plum">
+            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-plum">
               Sponsored
             </span>
           ) : null}
@@ -149,9 +147,9 @@ export default function MarketplaceSalonCard({
       <div
         className={`min-w-0 ${
           isList
-            ? "flex flex-col justify-between p-3"
+            ? "grid gap-3 p-3 sm:grid-cols-[1fr_auto] sm:p-4"
             : isCompact
-              ? "p-2"
+              ? "p-2.5"
               : "p-3"
         }`}
       >
@@ -162,84 +160,86 @@ export default function MarketplaceSalonCard({
             href={profileHref}
             onClick={onNavigate}
             className={`block truncate font-serif font-semibold text-ink hover:text-magenta ${
-              isCompact ? "text-[14px] leading-5" : "text-[17px]"
+              isCompact ? "text-[14px] sm:text-base" : "text-lg sm:text-xl"
             }`}
           >
             {salon.name}
           </Link>
 
-          <p className={isCompact ? "mt-0.5" : "mt-1"}>
+          <p
+            className={`mt-1 flex min-w-0 items-center gap-1 text-ink/65 ${
+              isCompact ? "text-[10px]" : "text-[11px]"
+            }`}
+          >
+            <MapPin aria-hidden="true" size={isCompact ? 11 : 12} className="shrink-0" />
             <span
               data-no-translate="true"
-              title={locationText}
-              className="block truncate whitespace-nowrap text-[10px] font-medium text-ink/70"
+              title={locationLabel}
+              className="block min-w-0 truncate whitespace-nowrap"
             >
-              {locationText}
+              {locationLabel}
             </span>
           </p>
 
-          <p
-            className={`${isCompact ? "mt-1" : "mt-1.5"} text-[10px] font-semibold text-ink`}
-          >
-            {salon.review_count > 0 &&
-            salon.rating_overall > 0
-              ? `${Number(salon.rating_overall).toFixed(
-                  1,
-                )} from ${salon.review_count} ${
-                  salon.review_count === 1
-                    ? "review"
-                    : "reviews"
-                }`
-              : "New on Girlz Culture"}
-          </p>
-
-          {salon.matched_service ? (
-            <p
-              data-no-translate="true"
-              className={`${isCompact ? "mt-1" : "mt-1.5"} line-clamp-1 text-[10px] font-semibold text-plum`}
-            >
-              {salon.matched_service.name}
-            </p>
-          ) : null}
-
           <div
-            className={`${isCompact ? "mt-0.5" : "mt-1"} flex flex-wrap items-baseline gap-1.5`}
+            className={`${isCompact ? "mt-1.5" : "mt-2"} flex flex-wrap items-center gap-2 text-[11px]`}
           >
-            {currentPrice !== null ? (
-              <span className="text-[10px] text-ink/70">
-                From{" "}
-                <b className="font-serif text-[15px] text-ink">
-                  {money(currentPrice)}
-                </b>
+            {salon.review_count > 0 && salon.rating_overall > 0 ? (
+              <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                <Star aria-hidden="true" size={13} className="fill-amber text-amber" />
+                <b>{Number(salon.rating_overall).toFixed(1)}</b>
+                <span className="text-ink/55">({salon.review_count})</span>
               </span>
             ) : (
-              <span className="text-[10px] text-ink/60">
-                View pricing
+              <span className="rounded-full bg-blush px-2 py-1 font-bold text-plum">
+                New
               </span>
             )}
+            {currentPrice !== null ? (
+              <span className="whitespace-nowrap">
+                From{" "}
+                <b className="font-serif text-base">{money(currentPrice)}</b>
+              </span>
+            ) : (
+              <span className="text-ink/55">View pricing</span>
+            )}
             {originalPrice !== null ? (
-              <span className="text-[9px] text-ink/45 line-through">
+              <span className="text-[10px] text-ink/45 line-through">
                 {money(originalPrice)}
               </span>
             ) : null}
           </div>
 
+          {salon.matched_service ? (
+            <p
+              data-no-translate="true"
+              className="mt-2 line-clamp-1 text-[10px] font-semibold text-plum"
+            >
+              {salon.matched_service.name}
+            </p>
+          ) : isList && salon.services.length ? (
+            <p
+              data-no-translate="true"
+              className="mt-2 line-clamp-1 text-[10px] text-ink/55"
+            >
+              {salon.services.map((service) => service.name).join(" · ")}
+            </p>
+          ) : null}
+
           {salon.promotion ? (
-            <p className="mt-1 line-clamp-1 text-[9px] font-bold text-magenta">
-              {salon.promotion.label ||
-                salon.promotion.title}
+            <p className="mt-1 line-clamp-1 text-[10px] font-bold text-magenta">
+              {salon.promotion.label || salon.promotion.title}
             </p>
           ) : null}
 
           {isList && salon.next_slot ? (
-            <p className="mt-1 text-[9px] font-semibold text-green-800">
-              Opening {salon.next_slot.date} at{" "}
-              {salon.next_slot.label}
+            <p className="mt-1 text-[10px] font-semibold text-green-800">
+              Opening {salon.next_slot.date} at {salon.next_slot.label}
             </p>
           ) : null}
 
           {isList && salon.reliability ? (
-            <p className="mt-1 text-[9px] font-medium text-ink/55">
+            <p className="mt-1 text-[10px] font-medium text-ink/55">
               {salon.reliability.label}
               {salon.reliability.completed_appointments
                 ? ` · ${salon.reliability.completed_appointments} completed`
@@ -249,15 +249,15 @@ export default function MarketplaceSalonCard({
         </div>
 
         <div
-          className={`mt-2 grid grid-cols-2 gap-2 ${
-            isCompact ? "hidden sm:grid" : ""
-          }`}
+          className={`flex items-end gap-2 ${
+            isList ? "sm:flex-col sm:justify-end" : "mt-3"
+          } ${isCompact ? "hidden sm:flex" : ""}`}
         >
           <Link
             data-salon-navigation
             href={profileHref}
             onClick={onNavigate}
-            className="inline-flex min-h-9 items-center justify-center rounded-[7px] border border-magenta px-2 text-[10px] font-bold text-magenta"
+            className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[8px] border border-magenta px-4 text-[11px] font-bold text-magenta"
           >
             View
           </Link>
@@ -265,8 +265,9 @@ export default function MarketplaceSalonCard({
             data-salon-navigation
             href={bookHref}
             onClick={onNavigate}
-            className="inline-flex min-h-9 items-center justify-center rounded-[7px] bg-magenta px-2 text-[10px] font-bold text-white"
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white"
           >
+            <CalendarDays aria-hidden="true" size={13} />
             Book
           </Link>
         </div>

@@ -4,6 +4,8 @@ import { supabase } from "@/lib/supabase";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
+const PUBLIC_CONTENT_READ_TIMEOUT_MS = 2_500;
+
 export type ContentCard = {
   id?: string;
   content_type?: "image" | "video" | "link" | "salon";
@@ -106,15 +108,48 @@ export const LEGAL_LINKS = [
 ] as const;
 
 export async function getContentPage(slug: string, fallback: ContentPage) {
-  const { data, error } = await supabase.from("content_pages").select("*").eq("slug", slug).eq("status", "Published").maybeSingle();
-  if (error) await reportPublicContentFailure(error, "load-content-page", "content_page", slug);
-  return (data as ContentPage | null) || fallback;
+  try {
+    const { data, error } = await supabase
+      .from("content_pages")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "Published")
+      .abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS))
+      .maybeSingle();
+    if (error) throw error;
+    return (data as ContentPage | null) || fallback;
+  } catch (error) {
+    await reportPublicContentFailure(
+      error,
+      "load-content-page",
+      "content_page",
+      slug,
+    );
+    return fallback;
+  }
 }
 
 export async function getPublishedContentPage(slug: string) {
-  const { data, error } = await supabase.from("content_pages").select("*").eq("slug", slug).eq("status", "Published").eq("is_enabled", true).maybeSingle();
-  if (error) await reportPublicContentFailure(error, "load-published-content-page", "content_page", slug);
-  return data as ContentPage | null;
+  try {
+    const { data, error } = await supabase
+      .from("content_pages")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "Published")
+      .eq("is_enabled", true)
+      .abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS))
+      .maybeSingle();
+    if (error) throw error;
+    return data as ContentPage | null;
+  } catch (error) {
+    await reportPublicContentFailure(
+      error,
+      "load-published-content-page",
+      "content_page",
+      slug,
+    );
+    return null;
+  }
 }
 
 export async function getVisibleLegalLinks() {

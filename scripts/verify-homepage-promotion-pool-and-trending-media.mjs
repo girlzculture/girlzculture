@@ -309,24 +309,28 @@ const mediaUploadServer = read("src/lib/mediaUploadServer.ts");
 
 assert.match(
   rail,
-  /w-\[68vw\]/,
-  "phone promotion cards must remain compact and horizontal",
+  /w-\[74vw\]/,
+  "phone promotion cards must remain moderately compact and horizontal without becoming tiny",
 );
 assert.match(
   rail,
-  /sm:w-\[42vw\]/,
-  "tablet promotion cards must show more inventory above the fold",
+  /sm:w-\[52vw\]/,
+  "tablet promotion cards must remain readable while exposing adjacent inventory",
 );
 assert.match(
   rail,
-  /lg:w-\[29vw\]/,
-  "desktop promotion cards must remain compact",
+  /lg:w-\[31vw\]/,
+  "desktop promotion cards must retain the previously approved roomy presentation",
 );
 assert.doesNotMatch(
   rail,
   /w-\[86vw\]/,
   "the former oversized phone cards must not return",
 );
+assert.match(rail, /ChevronLeft/);
+assert.match(rail, /ChevronRight/);
+assert.match(rail, /aria-label="Previous promotion"/);
+assert.match(rail, /aria-label="Next promotion"/);
 assert.match(
   rail,
   /aspect-\[16\/9\]/,
@@ -533,5 +537,5 @@ assert.doesNotMatch(
 assert.match(migration, /20260804190000/);
 
 console.log(
-  "Verified one-call bulk association resolution, deterministic weighted rotation, a 200-card nationwide source pool with distinct radius-governed 1–20 per-visitor selection, animated GIF preservation, collection concurrency protection, compact responsive promotion cards, and the upload → processing job → Ready → save → reload Trending Picks contract.",
+  "Verified one-call bulk association resolution, deterministic weighted rotation, a 200-card nationwide source pool with distinct radius-governed 1–20 per-visitor selection, animated GIF preservation, collection concurrency protection, restored responsive promotion cards, functional desktop arrows, and the upload → processing job → Ready → save → reload Trending Picks contract.",
 );

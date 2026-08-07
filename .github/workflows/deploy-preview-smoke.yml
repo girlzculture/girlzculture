@@ -1,0 +1,47 @@
+name: Verify Netlify deploy preview
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: girlz-culture-deploy-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEPLOY_PREVIEW_URL: https://deploy-preview-${{ github.event.pull_request.number }}--girlzculture.netlify.app
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+      PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Exercise the actual Netlify Deploy Preview
+        run: node scripts/run-deploy-preview-smoke.mjs
+      - name: Capture redacted Supabase provider diagnostics
+        if: ${{ failure() }}
+        continue-on-error: true
+        run: node scripts/diagnose-deploy-preview-supabase.mjs
+      - name: Upload deploy-preview screenshots and failure evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: deploy-preview-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/deploy-preview
+          if-no-files-found: warn
+          retention-days: 14
