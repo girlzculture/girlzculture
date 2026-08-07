@@ -32,7 +32,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Exercise the actual Netlify Deploy Preview
-        run: node scripts/verify-deploy-preview.mjs
+        run: node scripts/run-deploy-preview-smoke.mjs
       - name: Upload deploy-preview screenshots and failure evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v5
