@@ -170,7 +170,7 @@ export default function HomepagePromoRail({
       <div
         ref={railRef}
         tabIndex={0}
-        aria-label="Featured promotions. Swipe to browse."
+        aria-label="Promotional cards. Swipe to browse."
         onFocus={() => setInteractionPaused(true)}
         onBlur={pauseForInteraction}
         onPointerDown={(event) => {
