@@ -16,19 +16,31 @@ const dashboardMenu = read("src/components/dashboard/DashboardMobileMenu.tsx");
 const promoRail = read("src/components/public/HomepagePromoRail.tsx");
 const homepage = read("src/app/page.tsx");
 const supabase = read("src/lib/supabase.ts");
-const descriptionEditor = read("src/components/owner/SalonDescriptionEditor.tsx");
-const publicDescription = read("src/components/public/ExpandableSalonDescription.tsx");
-const stylistFallback = read("src/components/public/SalonStylistFallback.tsx");
+const descriptionEditor = read(
+  "src/components/owner/SalonDescriptionEditor.tsx",
+);
+const publicDescription = read(
+  "src/components/public/ExpandableSalonDescription.tsx",
+);
+const stylistFallback = read(
+  "src/components/public/SalonStylistFallback.tsx",
+);
 const descriptionDraft = read("src/lib/salonDescriptionDraftServer.ts");
 const migration = read(
   "supabase/migrations/20260807020000_authoritative_submission_lifecycle.sql",
 );
 
 assert.match(decisionSearch, /function containsPhrase/);
-assert.match(decisionSearch, /` \$\{haystack\} `\.includes\(` \$\{normalizedNeedle\} `\)/);
+assert.match(
+  decisionSearch,
+  /` \$\{haystack\} `\.includes\(` \$\{normalizedNeedle\} `\)/,
+);
 assert.match(decisionSearch, /"affordable"/);
 assert.match(decisionSearch, /"best rated"/);
-assert.match(decisionSearch, /minimumRating, bestIntent \? 3\.9 : null/);
+assert.match(
+  decisionSearch,
+  /finiteNumber\(ratingMatch\?\.\[1\], bestIntent \? 3\.9 : null, 0, 5\)/,
+);
 assert.match(decisionSearch, /price_display_min/);
 assert.match(decisionSearch, /promotionApplies/);
 assert.match(decisionSearch, /completed_appointments/);
@@ -46,8 +58,8 @@ assert.match(discovery, /placeholder="Search"/);
 assert.match(discovery, /Filter \(/);
 assert.match(discovery, /role="dialog"/);
 assert.match(discovery, /Maximum price/);
-assert.match(discovery, /Date and availability/);
-assert.match(discovery, /Active discounts only/);
+assert.match(discovery, /Availability date/);
+assert.match(discovery, /Active offers only/);
 assert.match(discovery, /sessionStorage\.setItem\(STORAGE_KEY/);
 assert.match(discovery, /scrollY/);
 assert.match(discovery, /Verified marketplace information only/);
@@ -74,7 +86,7 @@ for (const [name, source] of [
 }
 assert.match(publicChrome, /CustomerBottomNav/);
 assert.match(publicChrome, /Favorites/);
-assert.match(mobileMenu, />Menu</);
+assert.match(mobileMenu, /\{open \? "Close" : "Menu"\}/);
 assert.match(dashboardMenu, /Navigation/);
 assert.match(ownerShell, /View Public Page/);
 assert.match(promoRail, />Previous</);
@@ -85,7 +97,10 @@ assert.match(supabase, /scope === "salon" \? "session" : "local"/);
 assert.match(supabase, /window\.sessionStorage/);
 assert.match(supabase, /Amina can/);
 assert.match(supabase, /Binta remains/);
-assert.match(supabase, /for \(const storage of \[window\.sessionStorage, window\.localStorage\]\)/);
+assert.match(
+  supabase,
+  /for \(const storage of \[window\.sessionStorage, window\.localStorage\]\)/,
+);
 
 assert.match(descriptionEditor, /200 words/);
 assert.match(publicDescription, /const PREVIEW_WORDS = 50/);
@@ -97,7 +112,10 @@ assert.match(stylistFallback, /View services and prices/);
 assert.doesNotMatch(stylistFallback, /lucide-react/);
 
 assert.match(migration, /resolve_terminal_booking_notifications/);
-assert.match(migration, /'completed','cancelled','canceled','no-show','no show','resolved'/);
+assert.match(
+  migration,
+  /'completed','cancelled','canceled','no-show','no show','resolved'/,
+);
 assert.match(migration, /read_at=coalesce\(read_at,now\(\)\)/);
 assert.match(migration, /category='bookings'/);
 
