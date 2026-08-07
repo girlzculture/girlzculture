@@ -1,0 +1,33 @@
+/*
+ * Girlz Culture uses text-first controls. New work should not import decorative
+ * icon libraries. This compatibility layer keeps older routes honest while
+ * they are progressively simplified: Lucide drawings disappear everywhere,
+ * and icon-only controls expose their existing accessible label as visible
+ * text instead of becoming blank.
+ */
+svg.lucide {
+  display: none !important;
+}
+
+:where(button, a[href], [role="button"])[aria-label]:has(svg.lucide)::after {
+  content: attr(aria-label);
+  display: inline;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  white-space: normal;
+  text-align: center;
+}
+
+:where(button, a[href], [role="button"])[aria-label]:has(> svg.lucide:only-child) {
+  width: auto !important;
+  min-width: 2.75rem;
+  padding-inline: 0.75rem !important;
+}
+
+/* A few legacy controls pair an icon with an unread-count bubble. Keep both the
+   visible text label and the numeric count useful after the drawing is hidden. */
+:where(button, a[href], [role="button"])[aria-label]:has(svg.lucide) > span:not(.sr-only) {
+  position: static !important;
+  margin-left: 0.35rem;
+}
