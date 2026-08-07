@@ -36,6 +36,7 @@ function isPreviewOnlyFile(filename) {
   return (
     filename === "scripts/verify-deploy-preview.mjs" ||
     filename === "scripts/run-deploy-preview-smoke.mjs" ||
+    filename === "scripts/capture-deploy-preview-response.mjs" ||
     filename === ".github/workflows/deploy-preview-smoke.yml"
   );
 }
@@ -99,4 +100,5 @@ if (!compatibleRuntimeSha) {
 }
 
 process.env.PULL_REQUEST_HEAD_SHA = compatibleRuntimeSha;
+await import("./capture-deploy-preview-response.mjs");
 await import("./verify-deploy-preview.mjs");
