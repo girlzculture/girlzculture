@@ -31,9 +31,11 @@ const migration = read(
 );
 
 assert.match(decisionSearch, /function containsPhrase/);
-assert.match(
-  decisionSearch,
-  /` \$\{haystack\} `\.includes\(` \$\{normalizedNeedle\} `\)/,
+assert.ok(
+  decisionSearch.includes(
+    "return ` ${haystack} `.includes(` ${normalizedNeedle} `);",
+  ),
+  "Search must use whole normalized phrases instead of prefix substrings.",
 );
 assert.match(decisionSearch, /"affordable"/);
 assert.match(decisionSearch, /"best rated"/);
