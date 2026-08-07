@@ -342,7 +342,11 @@ assert.doesNotMatch(
   /data-promotion-clone/,
   "the looping rail must not render the first card twice",
 );
-assert.match(rail, /data-media-kind=.*animated-gif/);
+assert.match(
+  rail,
+  /data-media-kind=\{[\s\S]*?\.gif[\s\S]*?\?\s*"animated-gif"\s*:\s*"image"\s*\}/,
+  "promotion cards must mark GIFs explicitly without depending on JSX formatting",
+);
 assert.match(
   safeImage,
   /<img/,
