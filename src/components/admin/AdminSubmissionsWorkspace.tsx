@@ -86,7 +86,8 @@ export default function AdminSubmissionsWorkspace() {
   const load = useCallback(
     async (options: { append?: boolean; cursor?: string | null } = {}) => {
       const append = options.append === true;
-      append ? setLoadingMore(true) : setLoading(true);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       setMessage("");
       try {
         const session = await getSessionForScope("admin");
@@ -131,7 +132,8 @@ export default function AdminSubmissionsWorkspace() {
   );
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   useEffect(() => {
