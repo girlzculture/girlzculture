@@ -7,7 +7,11 @@ const read = (path) =>
 const migration = read(
   "supabase/migrations/20260803160000_launch_owner_controls_and_ux.sql",
 );
+const authoritative = read(
+  "supabase/migrations/20260807020000_authoritative_submission_lifecycle.sql",
+);
 const records = read("src/app/api/admin/records/route.ts");
+const manager = read("src/components/admin/RecordLifecycleManager.tsx");
 const password = read("src/components/PasswordRecovery.tsx");
 const application = read("src/components/SalonApplication.tsx");
 const submitted = read("src/app/salon/application-submitted/page.tsx");
@@ -25,12 +29,24 @@ assert.match(migration, /notify pgrst, 'reload schema'/);
 assert.match(migration, /admin_delete_salon_application/);
 assert.match(migration, /publication_override_audits_retained/);
 assert.match(migration, /on delete set null/);
-assert.match(records, /salon_application:[\s\S]*actions:\["archive","delete"\]/);
+assert.match(
+  records,
+  /salon_application:[\s\S]*actions: \["archive", "restore", "delete"\]/,
+);
+assert.match(records, /admin_archive_salon_application/);
+assert.match(records, /admin_restore_salon_application/);
 assert.match(records, /admin_delete_salon_application/);
+assert.match(authoritative, /Only a Super Admin can permanently delete a salon application/);
+assert.match(authoritative, /immutable_revisions_retained/);
+assert.match(manager, /Super Admin permanent action/);
+assert.match(manager, /Permanently delete/);
 
 assert.doesNotMatch(password, /Customer login|Salon login|Admin login/);
 assert.doesNotMatch(password, /works for customer/i);
-assert.match(application, /Number of stylists[\s\S]*min=\{1\}[\s\S]*max=\{500\}/);
+assert.match(
+  application,
+  /Number of stylists[\s\S]*min=\{1\}[\s\S]*max=\{500\}/,
+);
 assert.match(submitted, /within 2–4 business days/);
 
 for (const message of [
@@ -38,9 +54,16 @@ for (const message of [
   /missing its storage path/,
   /Enter a description for this Trending Picks video/,
   /saved video must be an MP4 or WebM/,
-]) assert.match(trending, message);
-assert.match(trending, /status === "Draft" && !entitlementSource && !entitlementReference/);
-assert.match(trending, /A draft is editorial work, not a claim that payment has occurred/);
+])
+  assert.match(trending, message);
+assert.match(
+  trending,
+  /status === "Draft" && !entitlementSource && !entitlementReference/,
+);
+assert.match(
+  trending,
+  /A draft is editorial work, not a claim that payment has occurred/,
+);
 
 assert.match(crop, /Position image left\/right/);
 assert.match(crop, /Position image up\/down/);
@@ -71,5 +94,5 @@ assert.match(actionToast, /Copy reference/);
 assert.doesNotMatch(actionToast, /addEventListener\("pointerdown"/);
 
 console.log(
-  "Verified application deletion, password recovery repair, precise Trending Picks validation, independent crop controls, navigable map markers, and regional 20-card promotion targeting.",
+  "Verified true application archive/restore and Super Admin deletion, password recovery repair, precise Trending Picks validation, independent crop controls, navigable map markers, and regional promotion targeting.",
 );
