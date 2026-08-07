@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -49,6 +49,7 @@ Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/salons` | GET | protected | Covered |
 | `/api/admin/submissions/[id]/decision` | POST | provider-backed | Covered |
 | `/api/admin/submissions/[id]` | GET | provider-backed | Covered |
+| `/api/admin/submissions` | GET | provider-backed | Covered |
 | `/api/admin/support/[id]/read` | PATCH | provider-backed | Covered |
 | `/api/admin/support/[id]/respond` | POST | provider-backed | Covered |
 | `/api/admin/team` | GET, POST, PATCH, DELETE | provider-backed | Covered |
@@ -72,6 +73,7 @@ Updated: 2026-07-27. This inventory is enforced by `scripts/verify-operational-m
 | `/api/config` | GET | public/read-only | Covered |
 | `/api/customer/favorites` | POST, DELETE | protected | Covered |
 | `/api/discovery/availability` | POST | expected-only | Covered |
+| `/api/discovery/decision-search` | POST | expected-only | Covered |
 | `/api/discovery/featured` | GET | public/read-only | Covered |
 | `/api/discovery/salons` | GET | public/read-only | Covered |
 | `/api/discovery/trending` | GET | public/read-only | Covered |
