@@ -10,6 +10,7 @@ import {
 } from "@/lib/salonPromotions";
 
 type Row = Record<string, unknown>;
+const PUBLIC_PRODUCT_READ_TIMEOUT_MS = 2_500;
 
 function related(value: unknown): Row | null {
   if (Array.isArray(value)) return (value[0] as Row | undefined) || null;
@@ -42,7 +43,8 @@ async function loadFeaturedProducts(maxCards: number) {
       .lte("starts_at", now)
       .or(`ends_at.is.null,ends_at.gt.${now}`)
       .order("sort_order")
-      .limit(Math.max(1, Math.min(24, Math.round(maxCards))));
+      .limit(Math.max(1, Math.min(24, Math.round(maxCards))))
+      .abortSignal(AbortSignal.timeout(PUBLIC_PRODUCT_READ_TIMEOUT_MS));
     if (placements.error) throw placements.error;
 
     const eligible = ((placements.data || []) as Row[]).filter((placement) => {
@@ -84,7 +86,8 @@ async function loadFeaturedProducts(maxCards: number) {
       .eq("is_active", true)
       .is("archived_at", null)
       .lte("starts_at", now)
-      .or(`ends_at.is.null,ends_at.gte.${now}`);
+      .or(`ends_at.is.null,ends_at.gte.${now}`)
+      .abortSignal(AbortSignal.timeout(PUBLIC_PRODUCT_READ_TIMEOUT_MS));
     if (promotions.error) throw promotions.error;
 
     return {
@@ -97,6 +100,8 @@ async function loadFeaturedProducts(maxCards: number) {
       "featured-products",
       "load-homepage-products",
     );
+    // Featured products are optional homepage inventory. A slow provider must
+    // not prevent the main booking/discovery experience from rendering.
     return null;
   }
 }
