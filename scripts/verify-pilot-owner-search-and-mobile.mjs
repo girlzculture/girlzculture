@@ -15,6 +15,11 @@ const ownerShell = read("src/components/owner/OwnerDashboardShell.tsx");
 const dashboardMenu = read("src/components/dashboard/DashboardMobileMenu.tsx");
 const promoRail = read("src/components/public/HomepagePromoRail.tsx");
 const homepage = read("src/app/page.tsx");
+const homepagePromotions = read("src/lib/homepagePromotionServer.ts");
+const featuredProducts = read(
+  "src/components/public/FeaturedProductPlacement.tsx",
+);
+const engineConfig = read("src/lib/engineConfigServer.ts");
 const layout = read("src/app/layout.tsx");
 const supabase = read("src/lib/supabase.ts");
 const descriptionEditor = read(
@@ -107,6 +112,39 @@ assert.match(promoRail, /lg:w-\[31vw\]/);
 assert.match(homepage, /ArrowRight/);
 assert.match(homepage, /CalendarDays/);
 
+assert.match(homepage, /PUBLIC_HOME_SECTION_TIMEOUT_MS = 2_500/);
+assert.match(
+  homepage,
+  /homepage_sections[\s\S]*?abortSignal\(AbortSignal\.timeout\(PUBLIC_HOME_SECTION_TIMEOUT_MS\)\)/,
+);
+assert.match(homepage, /return \[\] as HomeSection\[\]/);
+assert.match(engineConfig, /PUBLIC_ENGINE_READ_TIMEOUT_MS = 2_500/);
+assert.match(
+  engineConfig,
+  /abortSignal\(\s*AbortSignal\.timeout\(PUBLIC_ENGINE_READ_TIMEOUT_MS\)/,
+);
+assert.match(engineConfig, /return \{\}/);
+assert.match(
+  homepagePromotions,
+  /PUBLIC_PROMOTION_READ_TIMEOUT_MS = 2_500/,
+);
+assert.match(
+  homepagePromotions,
+  /abortSignal\(AbortSignal\.timeout\(PUBLIC_PROMOTION_READ_TIMEOUT_MS\)\)/,
+);
+assert.match(homepagePromotions, /return new Map<string, ResolvedTarget>\(\)/);
+assert.match(featuredProducts, /PUBLIC_PRODUCT_READ_TIMEOUT_MS = 2_500/);
+assert.equal(
+  (
+    featuredProducts.match(
+      /abortSignal\(AbortSignal\.timeout\(PUBLIC_PRODUCT_READ_TIMEOUT_MS\)\)/g,
+    ) || []
+  ).length,
+  2,
+  "Both homepage product reads must have a hard provider deadline.",
+);
+assert.match(featuredProducts, /return null/);
+
 assert.match(supabase, /scope === "salon" \? "session" : "local"/);
 assert.match(supabase, /window\.sessionStorage/);
 assert.match(supabase, /Amina can/);
@@ -133,5 +171,5 @@ assert.match(migration, /read_at=coalesce\(read_at,now\(\)\)/);
 assert.match(migration, /category='bookings'/);
 
 console.log(
-  "Verified one grounded salon search, a shared persisted location for List and Map, compact mobile controls, restored functional navigation, tab-isolated salon sessions, 200-word profile assistance, enhanced stylist fallback, and actionable-only booking badges.",
+  "Verified one grounded salon search, a shared persisted location for List and Map, compact mobile controls, restored functional navigation, bounded homepage fallbacks, tab-isolated salon sessions, 200-word profile assistance, enhanced stylist fallback, and actionable-only booking badges.",
 );
