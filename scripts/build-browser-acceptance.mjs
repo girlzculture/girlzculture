@@ -45,8 +45,9 @@ const fixture = run(process.execPath, [
 let exitCode = 1;
 try {
   await waitForFixture();
-  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-  const build = run(npm, ["run", "build"]);
+  const build = process.platform === "win32"
+    ? run(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "npm run build"])
+    : run("npm", ["run", "build"]);
   exitCode = await new Promise((resolve, reject) => {
     build.once("error", reject);
     build.once("exit", (code) => resolve(code ?? 1));

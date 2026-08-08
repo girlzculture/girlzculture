@@ -68,11 +68,13 @@ export default function ReviewForm({
   const [comments, setComments] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [submissionMessage, setSubmissionMessage] = useState("");
+  const [blockedField, setBlockedField] = useState<"name" | "title" | "body" | null>(null);
   const canSubmit = useMemo(
     () =>
       state === "eligible" &&
       displayName.trim().length >= 1 &&
-      comments.trim().length >= 10 &&
+      (comments.trim().length === 0 || comments.trim().length >= 10) &&
       !saving,
     [comments, displayName, saving, state],
   );
@@ -82,6 +84,7 @@ export default function ReviewForm({
     if (!canSubmit) return;
     setSaving(true);
     setError("");
+    setBlockedField(null);
     try {
       const response = await fetch(`/api/reviews/${encodeURIComponent(token)}`, {
         method: "POST",
@@ -99,7 +102,15 @@ export default function ReviewForm({
         }),
       });
       const body = await readApiResponse(response, "Your review could not be submitted.");
-      if (!response.ok) throw new Error(body.error || "Your review could not be submitted.");
+      if (!response.ok) {
+        const field = body.field === "name" || body.field === "title" || body.field === "body"
+          ? body.field
+          : null;
+        setBlockedField(field);
+        setError(body.error || "Your review could not be submitted.");
+        return;
+      }
+      setSubmissionMessage(String(body.message || "Your verified feedback is now part of the Girlz Culture community."));
       setState("submitted");
     } catch (failure) {
       setError(
@@ -127,7 +138,7 @@ export default function ReviewForm({
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-ink/70">
           {submitted
-            ? "Your verified feedback is now part of the Girlz Culture community."
+            ? submissionMessage || "Your verified feedback is now part of the Girlz Culture community."
             : initialMessage || "This secure review link is invalid, expired, or no longer eligible."}
         </p>
         {alreadyUsed && existing ? (
@@ -180,7 +191,8 @@ export default function ReviewForm({
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
             placeholder="For example, Janel"
-            className="mt-3 min-h-11 w-full rounded-xl border border-mist bg-white px-4 outline-none focus:border-teal"
+            aria-invalid={blockedField === "name"}
+            className={`mt-3 min-h-11 w-full rounded-xl border bg-white px-4 outline-none focus:border-teal ${blockedField === "name" ? "border-red-500 ring-2 ring-red-100" : "border-mist"}`}
           />
           <span className="mt-1 block text-xs text-ink/55">
             Enter only your first name. Your booking identity and contact details stay private.
@@ -193,7 +205,8 @@ export default function ReviewForm({
             value={reviewTitle}
             onChange={(event) => setReviewTitle(event.target.value)}
             placeholder="Summarize your visit"
-            className="mt-3 min-h-11 w-full rounded-xl border border-mist bg-white px-4 outline-none focus:border-teal"
+            aria-invalid={blockedField === "title"}
+            className={`mt-3 min-h-11 w-full rounded-xl border bg-white px-4 outline-none focus:border-teal ${blockedField === "title" ? "border-red-500 ring-2 ring-red-100" : "border-mist"}`}
           />
         </label>
         <div className="grid gap-4 md:grid-cols-2">
@@ -219,19 +232,18 @@ export default function ReviewForm({
           </fieldset>
         </div>
         <label className="mt-4 block rounded-2xl border border-mist bg-white p-5">
-          <span className="font-semibold text-charcoal">Your review</span>
+          <span className="font-semibold text-charcoal">Your review <span className="font-normal text-ink/50">(optional)</span></span>
           <textarea
-            required
-            minLength={10}
             maxLength={3000}
             rows={6}
             value={comments}
             onChange={(event) => setComments(event.target.value)}
             placeholder="Share what went well and what future customers should know."
-            className="mt-3 w-full rounded-xl border border-mist bg-white px-4 py-3 outline-none focus:border-teal"
+            aria-invalid={blockedField === "body"}
+            className={`mt-3 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-teal ${blockedField === "body" ? "border-red-500 ring-2 ring-red-100" : "border-mist"}`}
           />
           <span className="mt-1 block text-xs text-ink/55">
-            {comments.length}/3000 · Your rating and words cannot be silently rewritten by an administrator.
+            {comments.length}/3000 · You may submit a rating without written text. Your rating and words cannot be silently rewritten by a salon.
           </span>
         </label>
         {error ? (

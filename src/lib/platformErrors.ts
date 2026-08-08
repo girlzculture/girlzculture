@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isStaticBuildPhase } from "@/lib/buildPhaseCore";
 import { deploymentReleaseId } from "@/lib/deploymentIdentity";
 
 export type ErrorContext = {
@@ -107,7 +108,10 @@ export async function capturePlatformError(context: ErrorContext) {
   };
 
   console.error("Platform operation failed", logRecord);
-  if (context.admin) {
+  // A production build can legitimately encounter a schema that has not yet
+  // received the branch migrations. Preserve a sanitized build log and local
+  // reference, but never mutate an attached database during static generation.
+  if (context.admin && !isStaticBuildPhase()) {
     try {
       // Monitoring must never hold the original user/system operation open
       // behind a slow or unavailable database. The function log above is the

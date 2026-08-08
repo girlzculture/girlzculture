@@ -41,6 +41,11 @@ async function GETHandler(request: Request) {
       if (ARCHIVED_RECORD_TABLES.has(table)) {
         query = query.is("archived_at", null);
       }
+      if (table === "reviews") {
+        query = query
+          .eq("moderation_status", "Published")
+          .or("dispute_status.is.null,dispute_status.neq.Removed");
+      }
       const result = await query.order("created_at", { ascending: false });
       if (result.error) throw result.error;
       return [table, result.data || []] as const;

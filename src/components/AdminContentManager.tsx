@@ -10,17 +10,19 @@ import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 import NumericInput from "@/components/forms/NumericInput";
 import ActionToast from "@/components/ActionToast";
+import { homepagePromotionPreview } from "@/lib/homePromotionCore";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
-const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety"];
+const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "legal"];
 const legalSlugs = ["terms", "privacy", "cookie-notice", "deposit-refund-policy", "salon-partner-agreement", "photo-content-consent", "message-monitoring-disclosure", "do-not-sell-or-share", "accessibility", "community-guidelines"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 const labelSlots: Record<string, Array<[string, string]>> = {
   home: [["home_intro_visible", "Desktop introduction visibility"], ["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"], ["featured_products_subheading", "Featured Products subheading"], ["trending_now_subheading", "Trending Now subheading"]],
   "salon-profile": [["trust_label_1", "Salon trust label 1"], ["trust_label_2", "Salon trust label 2"], ["trust_label_3", "Salon trust label 3"]],
   partner: [["stat_label_1", "Partner photo label 1"], ["stat_label_2", "Partner photo label 2"], ["stat_label_3", "Partner photo label 3"]],
+  about: [["mobile_preview", "Compact mobile introduction"], ["read_more_label", "Mobile read-more label"]],
 };
 
 export default function AdminContentManager({
@@ -120,7 +122,7 @@ export default function AdminContentManager({
       cta_label: String(form.get(`section_cta_label_${index}`) || section.cta_label || ""),
       cta_href: String(form.get(`section_cta_href_${index}`) || section.cta_href || ""),
     }));
-    const labels = Object.fromEntries((labelSlots[page.slug] || []).map(([key]) => [key, String(form.get(`label_${key}`) || "").trim()]));
+    const labels = { ...(page.labels || {}), ...Object.fromEntries((labelSlots[page.slug] || []).map(([key]) => [key, String(form.get(`label_${key}`) || "").trim()])) };
     const payload = {
       ...page,
       expected_updated_at: page.updated_at || "",
@@ -205,9 +207,13 @@ export default function AdminContentManager({
     if (slug) setPage({ slug, title: slug.replaceAll("-", " "), hero_title: "New page", sections: [], status: "Draft" });
   }
 
-  const allSlugs = [...new Set([...defaultSlugs, ...legalSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
-  const contentSlugs = allSlugs.filter((slug) => !legalSlugs.includes(slug));
-  const visibleSlugs = tab === "legal" ? legalSlugs : contentSlugs;
+  const additionalLegalSlugs = pages
+    .filter((item) => item.page_group === "Legal" && item.slug !== "legal")
+    .map((item) => String(item.slug));
+  const editableLegalSlugs = [...new Set([...legalSlugs, ...additionalLegalSlugs])];
+  const allSlugs = [...new Set([...defaultSlugs, ...editableLegalSlugs, ...pages.map(item => item.slug)])].filter(slug => !hiddenSlugs.has(slug));
+  const contentSlugs = allSlugs.filter((slug) => !editableLegalSlugs.includes(slug));
+  const visibleSlugs = tab === "legal" ? editableLegalSlugs : contentSlugs;
 
   function switchTab(value: "pages" | "legal" | "blog" | "styles") {
     setTab(value);
@@ -233,7 +239,7 @@ export default function AdminContentManager({
       <ActionToast message={notice} onDismiss={() => setNotice("")} />
       {saving ? <p className="mb-4 text-xs font-bold text-magenta">Saving and verifying in Supabase…</p> : null}
       {tab === "pages" || tab === "legal" ? (
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[250px_1fr]">
+        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[250px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">
             <h2 className="px-2 py-2 font-serif text-xl text-plum">{tab === "legal" ? "Legal Pages" : "Public Pages"}</h2>
             {visibleSlugs.map(slug => <button key={slug} onClick={() => setPage(pages.find(item => item.slug === slug) || { slug, title: slug.replaceAll("-", " "), hero_title: slug.replaceAll("-", " "), hero_subtitle: "", sections: tab === "legal" ? [{ type: "text", title: "", body: "", is_visible: true }] : [], page_group: tab === "legal" ? "Legal" : "Content", status: tab === "legal" ? "Published" : "Draft", is_enabled: true })} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${page?.slug === slug ? "bg-blush text-magenta" : ""}`}><FileText size={15} />{slug}</button>)}
@@ -241,7 +247,7 @@ export default function AdminContentManager({
           {page ? tab === "legal" ? <LegalPageEditor key={page.slug} page={page} setPage={setPage} save={savePage} /> : <PageEditor key={page.slug} page={page} setPage={setPage} save={savePage} linkTargets={linkTargets} /> : null}
         </div>
       ) : tab === "blog" ? (
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
+        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[280px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">{posts.map(item => <button key={item.id} onClick={() => setPost(item)} className={`mb-1 w-full rounded-lg p-3 text-left ${post?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.title}</b><small>{item.status} · {item.category}</small></button>)}</aside>
           {post ? <PostEditor key={post.id || "new"} post={post} setPost={setPost} save={savePost} remove={removePost} /> : null}
         </div>
@@ -824,12 +830,12 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
         <button type="button" onClick={createItem} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Plus size={15}/>Add {labels[kind].replace(/s$/, "")}</button>
       </div>
     </div>
-    <div className="grid min-w-0 gap-5 xl:grid-cols-[280px_1fr]">
+    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[280px_1fr]">
       <div className="min-w-0">
         <div className="mb-2 flex items-center justify-between rounded-lg border border-plum/10 bg-white px-3 py-2 text-[10px]"><b className="text-plum">{selectedRows.length} selected</b><button type="button" disabled={!selectedRows.length} onClick={()=>{setSelectedIds([]);setBatchDependencies({});setBatchResults([]);}} className="font-bold text-magenta disabled:opacity-40">Clear selection</button></div>
       <aside className="max-h-[700px] overflow-y-auto rounded-xl border border-plum/10 bg-white p-3"><label className="mb-2 flex items-center gap-2 border-b border-plum/10 px-2 pb-3 text-[10px] font-bold text-plum"><input type="checkbox" checked={Boolean(rows.length) && selectedRows.length === rows.length} onChange={(event)=>{setSelectedIds(event.target.checked ? rows.map((row)=>String(row.id)) : []);setBatchResults([]);}} className="accent-magenta" />Select all current visible results</label>{rows.map((item) => <div key={item.id} className={`mb-1 grid grid-cols-[24px_1fr] items-start rounded-lg ${selected?.id === item.id ? "bg-blush" : ""}`}><input aria-label={`Select ${item.name}`} type="checkbox" checked={selectedIds.includes(String(item.id))} onChange={(event)=>{setSelectedIds((current)=>event.target.checked?[...new Set([...current,String(item.id)])]:current.filter((id)=>id!==String(item.id)));setBatchResults([]);}} className="ml-2 mt-4 accent-magenta"/><button type="button" onClick={() => { setDependency(null); setSelected(item);setOrderingMode(Number(item.sort_order||0)>0?"custom":"alphabetical"); if (kind === "master_style") setInitialService(item); }} className="w-full p-3 text-left"><b className="block text-xs text-plum">{item.name}</b><small>{item.service_category?.name || (kind === "service_category" ? item.slug : "")} {item.archived_at ? "· Archived" : item.is_active ? "· Active" : "· Hidden"}</small></button></div>)}{!rows.length ? <p className="p-4 text-center text-xs text-ink/50">No items yet.</p> : null}</aside>
       </div>
-      {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+      {selected ? <form key={`${kind}-${selected.id || "new"}`} onSubmit={save} className="min-w-0 self-start rounded-xl border border-plum/10 bg-white p-5">
         <h2 className="font-serif text-2xl text-plum">{selected.id ? `Edit ${labels[kind].replace(/s$/, "")}` : `Add ${labels[kind].replace(/s$/, "")}`}</h2>
         <p className="mt-1 text-xs leading-5 text-ink/55">Catalog lists are alphabetized automatically. Salon owners see active changes the next time their Styles & Pricing editor loads.</p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -858,7 +864,7 @@ function ServiceCatalogManager({ categories, groups, addons, services, initialSe
 
 function LegalPageEditor({ page, setPage, save }: { page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void }) {
   const section = asRows(page.sections)[0] || { type: "text", title: "", body: "", is_visible: true };
-  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+  return <form onSubmit={save} className="min-w-0 self-start rounded-xl border border-plum/10 bg-white p-5">
     <h2 className="font-serif text-2xl text-plum">Edit Legal Page</h2>
     <p className="mt-1 text-xs leading-5 text-ink/55">Use # for a large heading, ## or ### for smaller headings, - for bullets, and [label](/page) for a link. HTML is not accepted.</p>
     <label className="mt-5 block text-xs font-bold">Page title<input required name="title" value={page.title || ""} onChange={(event) => setPage((row) => ({ ...row, title: event.target.value, hero_title: event.target.value, page_group: "Legal" }))} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
@@ -880,10 +886,10 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
   function moveSection(index: number, direction: -1 | 1) {
     setPage((row) => { const sections = [...asRows(row?.sections)]; const nextIndex=index+direction;if(nextIndex<0||nextIndex>=sections.length)return row;[sections[index],sections[nextIndex]]=[sections[nextIndex],sections[index]];return{...row,sections}; });
   }
-  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5">
+  return <form onSubmit={save} className="min-w-0 self-start rounded-xl border border-plum/10 bg-white p-5">
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Page composition</h2><p className="mt-1 text-xs text-ink/55">Edit constrained Girlz Culture sections and preview the current draft before publishing.</p></div><div className="flex rounded-lg border p-1"><button type="button" onClick={()=>setPreviewMode("desktop")} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-[10px] font-bold ${previewMode==="desktop"?"bg-plum text-white":"text-plum"}`}><Monitor size={13}/>Desktop</button><button type="button" onClick={()=>setPreviewMode("tablet")} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-[10px] font-bold ${previewMode==="tablet"?"bg-plum text-white":"text-plum"}`}><Tablet size={13}/>Tablet</button><button type="button" onClick={()=>setPreviewMode("mobile")} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-[10px] font-bold ${previewMode==="mobile"?"bg-plum text-white":"text-plum"}`}><Smartphone size={13}/>Mobile</button></div></div>
     <ContentPagePreview page={page} mode={previewMode}/>
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid items-start gap-4 lg:grid-cols-2">
       <Field required label="Page title" name="title" value={page.title} />
       <Field label="Eyebrow" name="eyebrow" value={page.eyebrow} />
       <div className="lg:col-span-2"><Field required label="Hero heading" name="hero_title" value={page.hero_title} /></div>
@@ -905,24 +911,50 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
   </form>;
 }
 
+function PromotionRailPreview({ cards, displayLimit, addPromotionCard }: { cards: Row[]; displayLimit: number; addPromotionCard: () => void }) {
+  const [previewTime] = useState(() => Date.now());
+  const preview = homepagePromotionPreview(cards, previewTime, displayLimit);
+  return <section className="mt-4 rounded-lg border border-magenta/20 bg-white p-3" aria-label="Effective homepage promotion rail">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-xs text-ink/60"><b className="text-plum">Saved source pool: {preview.saved.length}</b><br/>{preview.eligible.length} currently eligible · {preview.fallbackCount} unused position{preview.fallbackCount === 1 ? "" : "s"} filled by editorial fallback.</p>
+      <button type="button" onClick={addPromotionCard} disabled={cards.length >= 200} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-40">+ Add saved promotion</button>
+    </div>
+    <p className="mt-3 text-[10px] leading-4 text-ink/55">Fallback cards are generated only for the public rail. They are never written into Content Management and never hide or replace an eligible saved card.</p>
+    <ol className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      {preview.effective.map((card, position) => {
+        const saved = preview.eligible.some((candidate) => candidate.id === card.id);
+        return <li key={`${card.id}-${position}`} className="rounded-lg border border-plum/10 bg-cream/60 p-2 text-[10px]"><span className={`rounded-full px-2 py-0.5 font-bold ${saved ? "bg-green-100 text-green-800" : "bg-amber/20 text-plum"}`}>{position + 1} · {saved ? "Saved" : "Fallback"}</span><b className="mt-2 line-clamp-2 block text-plum">{card.title || "Untitled card"}</b></li>;
+      })}
+    </ol>
+  </section>;
+}
+
+function editorCardSourceKind(card: Row) {
+  if (["upload", "video", "salon", "blog", "custom", "campaign"].includes(String(card.source_kind))) return String(card.source_kind);
+  if (card.association_type === "campaign") return "campaign";
+  if (card.association_type === "salon" || card.content_type === "salon") return "salon";
+  if (card.content_type === "video") return "video";
+  if (card.content_type === "link") return "custom";
+  return "upload";
+}
+
 function SectionEditor({ section, index, sectionCount, linkTargets, update, remove, move }: { section: Row; index: number; sectionCount:number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void;move:(direction:-1|1)=>void }) {
   const type = String(section.type || "text");
   const cards = asRows(section.cards);
-  const minimum = 1;
+  const minimum = type === "promo_rail" ? 0 : 1;
   const maximum = type === "community_carousel" ? 20 : type === "promo_rail" ? 200 : 12;
-  const [cardCountDraft, setCardCountDraft] = useState(String(cards.length || minimum));
+  const [cardCountDraft, setCardCountDraft] = useState(String(cards.length));
   function resizeCards(count: number) {
     const next = [...cards];
-    while (next.length < count) next.push({ id: crypto.randomUUID(), content_type: "image", title: "", body: "", media_url: "", href: "" });
+    while (next.length < count) next.push({ id: crypto.randomUUID(), content_type: "image", source_kind: "upload", title: "", body: "", media_url: "", href: "" });
     update({ ...section, cards: next.slice(0, count), _allow_card_count_change: true });
   }
   function updateCard(cardIndex: number, value: Row) { update({ ...section, cards: cards.map((card, itemIndex) => itemIndex === cardIndex ? value : card) }); }
   function addPromotionCard() {
     if (cards.length >= 200) return;
-    update({ ...section, cards: [...cards, { id: crypto.randomUUID(), content_type: "image", title: "", body: "", media_url: "", href: "", status: "Draft", radius_miles: 25, priority: 50, rotation_weight: 1 }], _allow_card_count_change: true });
+    update({ ...section, cards: [...cards, { id: crypto.randomUUID(), content_type: "image", source_kind: "upload", title: "", body: "", media_url: "", href: "", status: "Draft", radius_miles: 25, priority: 50, rotation_weight: 1 }], _allow_card_count_change: true });
   }
   function removePromotionCard(cardIndex: number) {
-    if (cards.length <= 8) return;
     update({ ...section, cards: cards.filter((_, itemIndex) => itemIndex !== cardIndex), _allow_card_count_change: true });
   }
   function moveCard(cardIndex: number, direction: -1 | 1) {
@@ -953,11 +985,12 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
     <Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} />
     {type === "banner" ? <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Button label" name={`section_cta_label_${index}`} value={section.cta_label} /><Field label="Button destination" name={`section_cta_href_${index}`} value={section.cta_href} /></div> : null}
     {type === "card_grid" ? <label className="mt-3 block text-xs font-bold">Columns<select value={Number(section.columns || 4)} onChange={(event) => update({ ...section, columns: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label> : null}
-    {type === "promo_rail" ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-magenta/20 bg-white p-3"><p className="text-xs text-ink/60"><b className="text-plum">National source pool: {cards.length}</b><br/>Add location-targeted promotions here; only the nearest eligible cards are shown to each customer.</p><button type="button" onClick={addPromotionCard} disabled={cards.length >= 200} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-40">+ Add promotion to pool</button></div> : null}
-    {cards.length ? <div className="mt-4 grid gap-4 xl:grid-cols-2">{cards.map((card, cardIndex) => <article key={card.id || cardIndex} className="rounded-xl border border-plum/10 bg-white p-4">
-      <div className="flex items-center justify-between gap-3"><b className="font-serif text-lg text-plum">Card {cardIndex + 1}</b><div className="flex gap-1"><button type="button" aria-label="Move card up" onClick={() => moveCard(cardIndex, -1)} disabled={cardIndex === 0} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label="Move card down" onClick={() => moveCard(cardIndex, 1)} disabled={cardIndex === cards.length - 1} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button>{type === "promo_rail" ? <button type="button" aria-label={`Remove promotion card ${cardIndex + 1}`} onClick={() => removePromotionCard(cardIndex)} disabled={cards.length <= 8} className="rounded-md border border-red-200 p-2 text-red-600 disabled:opacity-30"><Trash2 size={14}/></button> : null}</div></div>
-      <label className="mt-3 block text-xs font-bold">Card source<select value={card.association_type === "campaign" ? "campaign" : type === "promo_rail" && card.content_type === "video" ? "image" : card.content_type || "image"} onChange={(event) => { const value=event.target.value;updateCard(cardIndex,{...card,content_type:value==="campaign"?"image":value,association_type:value==="campaign"?"campaign":value==="salon"?"salon":"",salon_id:value==="salon"?card.salon_id||"":"",campaign_id:value==="campaign"?card.campaign_id||"":""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="image">Uploaded image or GIF</option>{type !== "promo_rail" ? <option value="video">Video</option> : null}<option value="link">Custom Promotion</option><option value="salon">Specific salon profile</option>{type === "promo_rail" ? <option value="campaign">Featured campaign</option> : null}</select><small className="mt-1 block font-normal text-ink/55">The card image/GIF and click destination are independent. Upload the public thumbnail here, then choose any destination below.</small></label>
-      {card.content_type === "salon" ? <label className="mt-3 block text-xs font-bold">Salon to feature<select required value={card.salon_id || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Salon" && item.id === event.target.value); updateCard(cardIndex, { ...card, salon_id: target?.id || "", title: target?.label || "", body: target?.body || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a live salon</option>{linkTargets.filter((target) => target.type === "Salon").map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">The card uses this salon’s name, cover photo, location, and public profile link.</small></label> : card.content_type === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://…/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : <ImageUpload bucket="content-media" preset="content" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label={card.content_type === "link" ? "Link card image" : "Card image"} folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
+    {type === "community_carousel" ? <label className="mt-3 block text-xs font-bold">Automatic scroll direction<select value={section.scroll_direction === "reverse" ? "reverse" : "forward"} onChange={(event) => update({ ...section, scroll_direction: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="forward">Forward</option><option value="reverse">Reverse</option></select><small className="mt-1 block font-normal text-ink/55">Use opposite directions for the two About carousels.</small></label> : null}
+    {type === "promo_rail" ? <PromotionRailPreview cards={cards} displayLimit={Number(section.display_limit || 8)} addPromotionCard={addPromotionCard}/> : null}
+    {cards.length ? <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">{cards.map((card, cardIndex) => <article key={card.id || cardIndex} className="self-start rounded-xl border border-plum/10 bg-white p-4">
+      <div className="flex items-center justify-between gap-3"><b className="font-serif text-lg text-plum">Card {cardIndex + 1}</b><div className="flex gap-1"><button type="button" aria-label="Move card up" onClick={() => moveCard(cardIndex, -1)} disabled={cardIndex === 0} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label="Move card down" onClick={() => moveCard(cardIndex, 1)} disabled={cardIndex === cards.length - 1} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button>{type === "promo_rail" ? <button type="button" aria-label={`Remove promotion card ${cardIndex + 1}`} onClick={() => removePromotionCard(cardIndex)} className="rounded-md border border-red-200 p-2 text-red-600"><Trash2 size={14}/></button> : null}</div></div>
+      <label className="mt-3 block text-xs font-bold">Card source<select value={editorCardSourceKind(card)} onChange={(event) => { const value=event.target.value;updateCard(cardIndex,{...card,source_kind:value,content_type:value==="video"?"video":value==="salon"?"salon":value==="custom"?"link":"image",association_type:value==="campaign"?"campaign":value==="salon"?"salon":"",salon_id:value==="salon"?card.salon_id||"":"",campaign_id:value==="campaign"?card.campaign_id||"":""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="upload">Upload image or GIF</option>{type !== "promo_rail" ? <option value="video">Video URL</option> : null}<option value="salon">Salon profile</option><option value="blog">Blog post</option><option value="custom">Custom destination</option>{type === "promo_rail" ? <option value="campaign">Featured campaign</option> : null}</select><small className="mt-1 block font-normal text-ink/55">Choose the source first. Only the fields needed for that source are shown below.</small></label>
+      {editorCardSourceKind(card) === "salon" ? <label className="mt-3 block text-xs font-bold">Salon to feature<select required value={card.salon_id || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Salon" && item.id === event.target.value); updateCard(cardIndex, { ...card, salon_id: target?.id || "", title: target?.label || "", body: target?.body || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a live salon</option>{linkTargets.filter((target) => target.type === "Salon").map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">The card uses this salon’s name, cover photo, location, and public profile link.</small></label> : editorCardSourceKind(card) === "blog" ? <label className="mt-3 block text-xs font-bold">Blog post to feature<select required value={linkTargets.find((target) => target.type === "Blog" && target.href === card.href)?.href || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Blog" && item.href === event.target.value); updateCard(cardIndex, { ...card, title: target?.label || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a published blog post</option>{linkTargets.filter((target) => target.type === "Blog").map((target) => <option key={target.id || target.href} value={target.href}>{target.label}</option>)}</select></label> : editorCardSourceKind(card) === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://example.com/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : editorCardSourceKind(card) === "campaign" ? null : <ImageUpload bucket="content-media" preset="content" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label="Card image or GIF" folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
       {card.association_type === "campaign" ? <label className="mt-3 block text-xs font-bold">Campaign to feature<select required value={card.campaign_id || ""} onChange={(event) => { const target=linkTargets.find((item)=>item.type==="Campaign"&&item.id===event.target.value);updateCard(cardIndex,{...card,campaign_id:target?.id||"",salon_id:target?.salon_id||"",title:card.title||target?.label||"",body:card.body||target?.body||"",media_url:card.media_url||target?.media_url||"",href:target?.href||""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose an eligible featured campaign</option>{linkTargets.filter((target)=>target.type==="Campaign").map((target)=><option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">Paid and authorized complimentary campaigns inside a valid schedule are selectable. Public eligibility is checked again on every request.</small></label> : null}
       <label className="mt-3 block text-xs font-bold">Card title<input value={card.title || ""} onChange={(event) => updateCard(cardIndex, { ...card, title: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
       <label className="mt-3 block text-xs font-bold">Card text<textarea rows={3} value={card.body || ""} onChange={(event) => updateCard(cardIndex, { ...card, body: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
@@ -972,7 +1005,7 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
         <label className="text-xs font-bold">Priority<NumericInput integer min={0} max={100} value={String(card.priority ?? 50)} onValueChange={(value)=>updateCard(cardIndex,{...card,priority:value===""?50:Number(value)})} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /><small className="mt-1 block font-normal text-ink/55">Higher-priority eligible cards appear first inside the customer’s radius.</small></label>
         <label className="text-xs font-bold">Rotation weight<NumericInput min={0.1} max={100} decimalPlaces={1} value={String(card.rotation_weight ?? 1)} onValueChange={(value)=>updateCard(cardIndex,{...card,rotation_weight:value===""?1:Number(value)})} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
       </div> : null}
-      {card.content_type !== "salon" ? <><label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href && target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.filter((target)=>Boolean(target.href)).map((target) => <option key={`${target.type}-${target.id || target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label><label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://…" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label></> : <p className="mt-3 rounded-lg bg-blush/40 p-3 text-xs text-plum">Salon profile destination is linked automatically.</p>}
+      {["upload", "video", "custom"].includes(editorCardSourceKind(card)) ? <><label className="mt-3 block text-xs font-bold">Destination<select value={linkTargets.some((target) => target.href && target.href === card.href) ? card.href : ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">No saved destination / custom URL</option>{linkTargets.filter((target)=>Boolean(target.href)).map((target) => <option key={`${target.type}-${target.id || target.href}`} value={target.href}>{target.type}: {target.label}</option>)}</select></label><label className="mt-3 block text-xs font-bold">Custom destination<input value={card.href || ""} onChange={(event) => updateCard(cardIndex, { ...card, href: event.target.value })} placeholder="/salon/example or https://…" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label></> : <p className="mt-3 rounded-lg bg-blush/40 p-3 text-xs text-plum">The {editorCardSourceKind(card)} destination is linked automatically.</p>}
     </article>)}</div> : null}
   </div>;
 }

@@ -29,6 +29,7 @@ import {
   IMAGE_UPLOAD_PROFILES,
   inferImagePreset,
   inspectImageFile,
+  normalizeImageFile,
   optimizeImageFile,
   profileForRendition,
   type ImagePresetKey,
@@ -432,8 +433,15 @@ export default function ImageUpload({
     }
 
     const prepared: QueueItem[] = [];
-    for (const file of candidates) {
+    for (const selectedFile of candidates) {
       const id = queueId();
+      let file = selectedFile;
+      let normalizationError = "";
+      try {
+        file = await normalizeImageFile(selectedFile);
+      } catch (reason) {
+        normalizationError = reason instanceof Error ? reason.message : "This image could not be read.";
+      }
       const sourcePreview = URL.createObjectURL(file);
       const placement: QueueItem["placement"] = {
         bucket,
@@ -447,7 +455,7 @@ export default function ImageUpload({
         },
         attachment: attachment ? { ...attachment } : null,
       };
-      const validation = getImageUploadError(file, profile);
+      const validation = normalizationError || getImageUploadError(file, profile);
       if (validation) {
         prepared.push({
           id,
@@ -785,7 +793,7 @@ export default function ImageUpload({
         </div>
         <ul className="space-y-0.5 text-[10px] font-semibold text-ink/55">
           <li>
-            {profile.acceptedMimeTypes?.includes("image/gif")
+            {(profile.acceptedMimeTypes || ["image/jpeg", "image/png", "image/gif"]).includes("image/gif")
               ? "JPG, PNG, or animated GIF"
               : "JPG or PNG"}{" "}
             · original up to 12 MB
@@ -807,7 +815,7 @@ export default function ImageUpload({
         multiple={multiple}
         accept={
           profile.acceptedMimeTypes?.join(",") ||
-          "image/jpeg,image/png"
+          "image/jpeg,image/png,image/gif"
         }
         onChange={(event) =>
           void prepareFiles(Array.from(event.target.files || []))

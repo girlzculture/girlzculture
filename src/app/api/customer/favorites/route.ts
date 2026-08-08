@@ -9,7 +9,41 @@ async function context(request: Request) {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   const { data, error } = token ? await admin.auth.getUser(token) : { data: { user: null }, error: null };
   if (error || !data.user) rejectRequest("Please sign in to save salons.", 401);
+  const normalizedEmail = data.user.email?.trim().toLowerCase() || "";
+  const [{ data: identity, error: identityError }, { data: customer, error: customerError }] = await Promise.all([
+    admin.from("platform_identities").select("primary_role,status,email_normalized").eq("user_id", data.user.id).maybeSingle(),
+    admin.from("customers").select("id").eq("id", data.user.id).maybeSingle(),
+  ]);
+  if (identityError) throw identityError;
+  if (customerError) throw customerError;
+  if (!identity || identity.status !== "Active" || identity.primary_role !== "customer" || identity.email_normalized !== normalizedEmail || !customer) {
+    rejectRequest("Sign in with a customer account to save salons.", 403);
+  }
   return { admin, user: data.user };
+}
+
+async function GETHandler(request: Request) {
+  let admin: ReturnType<typeof getSupabaseAdmin> | undefined;
+  try {
+    const auth = await context(request); admin = auth.admin;
+    const { data, error } = await admin
+      .from("customer_favorites")
+      .select("salon:salons(id,name,slug,address_city,address_state,borough,cover_photo_url,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,hours)")
+      .eq("customer_id", auth.user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    const candidates = (data || []).map((item) => item.salon).filter(Boolean);
+    const visibility = await Promise.all(candidates.map(async (salon) => {
+      const row = salon as unknown as { id?: string };
+      const { data: visible, error: visibilityError } = await admin!.rpc("is_marketplace_visible", { target_salon_id: row.id });
+      if (visibilityError) throw visibilityError;
+      return visible === true ? salon : null;
+    }));
+    return Response.json({ salons: visibility.filter(Boolean) }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    return monitoredRouteFailure({ request, admin, error, feature: "customer_favorites", action: "list", actorRole: "customer", safeMessage: "We couldn't load your saved salons." });
+  }
 }
 
 async function POSTHandler(request: Request) {
@@ -43,3 +77,4 @@ async function DELETEHandler(request: Request) {
 }
 export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/customer/favorites", "POST"), POSTHandler);
 export const DELETE = withOperationalMonitoring(routeMonitoringProfile("/api/customer/favorites", "DELETE"), DELETEHandler);
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/customer/favorites", "GET"), GETHandler);

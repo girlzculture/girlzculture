@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   GOOGLE_MAPS_AUTH_FAILURE_EVENT,
@@ -10,8 +11,21 @@ import {
 } from "@/components/search/AutocompleteInputs";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { reportClientOperationalFailure } from "@/lib/supabase";
+import { formatDistanceMiles } from "@/lib/location";
 
-type MapSalon = { id: string; name: string; slug: string; starting_price?: number | null; startingPrice?: number | null; rating_overall?: number | null; review_count?: number | null; latitude?: number | null; longitude?: number | null };
+export type MapSalon = { id: string; name: string; slug: string; starting_price?: number | null; startingPrice?: number | null; rating_overall?: number | null; review_count?: number | null; latitude?: number | null; longitude?: number | null; distance_miles?: number | null };
+
+function mapPrice(value: unknown) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) return "View pricing";
+  return `From $${amount.toFixed(Number.isInteger(amount) ? 0 : 2)}`;
+}
+
+export function SalonMapSelectionSummary({ salon }: { salon: MapSalon }) {
+  const reviews = Number(salon.review_count || 0);
+  const rating = Number(salon.rating_overall || 0);
+  return <aside aria-live="polite" data-map-salon-summary className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-[12px] border border-plum/10 bg-white/95 p-3 shadow-[0_10px_30px_rgba(13,17,20,.18)] backdrop-blur"><div className="min-w-0"><p className="truncate font-serif text-base font-semibold text-plum">{salon.name}</p><p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-ink/65"><span>{reviews > 0 && rating > 0 ? `${rating.toFixed(1)} (${reviews})` : "New"}</span><span>{mapPrice(salon.starting_price ?? salon.startingPrice)}</span><span>{formatDistanceMiles(salon.distance_miles)}</span></p></div><Link href={`/salon/${encodeURIComponent(salon.slug)}`} className="inline-flex min-h-10 shrink-0 items-center rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white">View salon</Link></aside>;
+}
 
 export default function GoogleSalonMap({ salons, compact = false, selectedSalonId = "", onSelect }: { salons: MapSalon[]; compact?: boolean; selectedSalonId?: string; onSelect?: (salonId: string) => void }) {
   const element = useRef<HTMLDivElement>(null);
@@ -19,6 +33,7 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
   const [message, setMessage] = useState("");
   const [retryable, setRetryable] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const selectedSalon = salons.find((salon) => salon.id === selectedSalonId) || null;
   useEffect(() => {
     for (const [salonId, button] of markerButtons.current) {
       const selected = salonId === selectedSalonId;
@@ -112,7 +127,7 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
           const reviews = Number(salon.review_count || 0);
           const openSalon = () => {
             onSelect?.(salon.id);
-            window.location.assign(`/salon/${encodeURIComponent(salon.slug)}`);
+            if (!onSelect) window.location.assign(`/salon/${encodeURIComponent(salon.slug)}`);
           };
           const button = document.createElement("button");
           button.type = "button";
@@ -144,5 +159,5 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
     })(), 0);
     return () => { active = false; window.removeEventListener(GOOGLE_MAPS_AUTH_FAILURE_EVENT, onAuthenticationFailure); window.clearTimeout(timer); clusterer?.clearMarkers(); advancedMarkers.forEach((marker) => { marker.map = null; }); advancedMarkers = []; fallbackOverlays.forEach((overlay) => overlay.setMap(null)); fallbackOverlays = []; buttons.clear(); };
   }, [loadAttempt, onSelect, salons]);
-  return <div className={`relative overflow-hidden rounded-[12px] border border-plum/10 bg-blush/20 ${compact ? "sticky top-4 h-[560px]" : "mt-3 h-[540px]"}`}>{message ? <div className="grid h-full place-items-center p-8 text-center text-sm text-ink/60"><div><p>{message}</p>{retryable ? <button type="button" onClick={() => { resetGoogleMapsLoader(); setLoadAttempt((value) => value + 1); }} className="mt-4 min-h-11 rounded-[10px] border border-magenta bg-white px-5 font-bold text-magenta">Retry map</button> : null}</div></div> : <div ref={element} className="h-full w-full"/>}</div>;
+  return <div className={`relative overflow-hidden rounded-[12px] border border-plum/10 bg-blush/20 ${compact ? "sticky top-4 h-[560px]" : "mt-3 h-[540px]"}`}>{message ? <div className="grid h-full place-items-center p-8 text-center text-sm text-ink/60"><div><p>{message}</p>{retryable ? <button type="button" onClick={() => { resetGoogleMapsLoader(); setLoadAttempt((value) => value + 1); }} className="mt-4 min-h-11 rounded-[10px] border border-magenta bg-white px-5 font-bold text-magenta">Retry map</button> : null}</div></div> : <><div ref={element} className="h-full w-full"/>{selectedSalon ? <SalonMapSelectionSummary salon={selectedSalon} /> : null}</>}</div>;
 }

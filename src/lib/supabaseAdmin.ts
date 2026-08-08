@@ -25,6 +25,7 @@ import {
   classifySupabaseAuthFailure,
   retryTransientAuthOperation,
 } from "@/lib/authSessionCore";
+import { bookingReminderDueWindow, notificationDeliveryKey, runIsolatedReminderBatch, type ReminderStage } from "@/lib/bookingReminderCore";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -417,6 +418,40 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
   const admin = getSupabaseAdmin();
   const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; request_id?: string }> = [];
   for (const task of tasks) {
+    const deduplicationKey = notificationDeliveryKey({
+      bookingId,
+      eventType,
+      recipientType: task.recipientType,
+      channel: task.channel,
+    });
+    const claim = await admin.rpc("claim_notification_delivery", {
+      p_booking_id: bookingId,
+      p_event_type: eventType,
+      p_recipient_type: task.recipientType,
+      p_channel: task.channel,
+      p_destination: task.destination,
+      p_deduplication_key: deduplicationKey,
+    });
+    if (claim.error) {
+      const reference = await capturePlatformError({
+        admin,
+        error: claim.error,
+        feature: "booking-notifications",
+        action: "claim_delivery",
+        actorRole: "system",
+        recordType: "booking",
+        recordId: bookingId,
+        provider: "supabase",
+        safeMessage: "A booking notification could not be reserved for delivery.",
+      });
+      results.push({ recipientType: task.recipientType, channel: task.channel, status: "failed", request_id: reference });
+      continue;
+    }
+    const deliveryLogId = typeof claim.data === "string" ? claim.data : "";
+    if (!deliveryLogId) {
+      results.push({ recipientType: task.recipientType, channel: task.channel, status: "skipped" });
+      continue;
+    }
     let status: "delivered" | "failed" | "skipped" = "delivered";
     let reference = "";
     try {
@@ -444,7 +479,7 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
         safeMessage:"A booking notification could not be delivered.",
       });
     }
-    const deliveryLog=await admin.from("notification_delivery_log").insert({ booking_id: bookingId, recipient_type: task.recipientType, channel: task.channel, destination: task.destination, event_type: eventType, delivery_status: status, error_message: reference?`DELIVERY_FAILED_REFERENCE:${reference}`:null });
+    const deliveryLog=await admin.from("notification_delivery_log").update({ delivery_status: status, error_message: reference?`DELIVERY_FAILED_REFERENCE:${reference}`:null }).eq("id",deliveryLogId);
     if(deliveryLog.error){
       const logReference=await capturePlatformError({
         admin,
@@ -634,15 +669,54 @@ export async function deliverBookingReminder(bookingId:string,reminderHours:numb
 export async function processBookingReminders(){
   const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const now=Date.now();const results:Array<Record<string,unknown>>=[];
   for(const reminderHours of notification.reminderHours){
-    const target=now+reminderHours*60*60*1000;const from=new Date(target-10*60*1000).toISOString();const to=new Date(target+20*60*1000).toISOString();
+    const{from,to}=bookingReminderDueWindow({now,reminderHours});
     const{data:bookings,error}=await admin.from("bookings").select("id,appointment_datetime").eq("status","Confirmed").gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(250);
-    if(error)throw error;
-    for(const booking of bookings||[]){
-      const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:booking.id,p_reminder_hours:reminderHours});
-      if(claim.error)throw claim.error;if(claim.data!==true)continue;
-      try{const delivery=await deliverBookingReminder(booking.id,reminderHours);const claimUpdate=await admin.from("booking_reminder_claims").update({completed_at:new Date().toISOString(),error_message:null}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);if(claimUpdate.error)throw claimUpdate.error;results.push({bookingId:booking.id,reminderHours,status:"processed",delivery});}
-      catch(error){const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"deliver_booking_reminder",actorRole:"system",recordType:"booking",recordId:booking.id,provider:"transactional-notifications",safeMessage:"A scheduled booking reminder could not be delivered."});const claimUpdate=await admin.from("booking_reminder_claims").update({error_message:`REMINDER_FAILED_REFERENCE:${reference}`}).eq("booking_id",booking.id).eq("reminder_hours",reminderHours);if(claimUpdate.error)await capturePlatformError({admin,error:claimUpdate.error,feature:"booking-reminders",action:"record_reminder_failure",actorRole:"system",recordType:"booking",recordId:booking.id,provider:"supabase",safeMessage:"A reminder failure could not be recorded."});results.push({bookingId:booking.id,reminderHours,status:"failed",request_id:reference});}
+    if(error){
+      const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"load_due_bookings",actorRole:"system",provider:"supabase",safeMessage:"Due booking reminders could not be loaded."});
+      results.push({reminderHours,status:"failed",stage:"load_due_bookings",request_id:reference});
+      continue;
     }
+    results.push(...await runIsolatedReminderBatch({
+      bookings:bookings||[],
+      reminderHours,
+      claim:async bookingId=>{
+        const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours});
+        if(claim.error)throw claim.error;
+        return claim.data===true;
+      },
+      deliver:bookingId=>deliverBookingReminder(bookingId,reminderHours),
+      getDeliveryFailure:delivery=>{
+        const failedDelivery=delivery.deliveries?.find(item=>item.status==="failed");
+        if(!failedDelivery)return null;
+        return{
+          error:Object.assign(new Error("BOOKING_REMINDER_DELIVERY_REPORTED_FAILURE"),{
+            code:"BOOKING_REMINDER_DELIVERY_REPORTED_FAILURE",
+          }),
+          ...(failedDelivery.request_id?{request_id:failedDelivery.request_id}:{}),
+        };
+      },
+      complete:async bookingId=>{
+        const nowIso=new Date().toISOString();
+        const update=await admin.from("booking_reminder_claims").update({completed_at:nowIso,error_message:null,lease_expires_at:null,next_attempt_at:null,updated_at:nowIso}).eq("booking_id",bookingId).eq("reminder_hours",reminderHours).is("completed_at",null).is("terminal_at",null);
+        if(update.error)throw update.error;
+      },
+      recordDeliveryFailure:async (bookingId,reference)=>{
+        const failure=await admin.rpc("fail_booking_reminder_claim",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_reference:reference});
+        if(failure.error)throw failure.error;
+      },
+      reportFailure:async (stage:ReminderStage,error,bookingId)=>capturePlatformError({
+        admin,error,feature:"booking-reminders",action:stage,actorRole:"system",
+        recordType:"booking",recordId:bookingId,
+        provider:stage==="deliver_booking_reminder"?"transactional-notifications":"supabase",
+        safeMessage:stage==="deliver_booking_reminder"
+          ?"A scheduled booking reminder could not be delivered."
+          :stage==="claim_booking_reminder"
+            ?"A booking reminder could not be claimed."
+            :stage==="complete_booking_reminder_claim"
+              ?"A delivered reminder could not be marked complete."
+              :"A reminder failure could not be recorded.",
+      }),
+    }));
   }
   return{configuredHours:notification.reminderHours,processed:results.length,results,warnings:notification.warningReferences.map(reference=>({message:`Reminder configuration needs attention. Reference ${reference}.`,request_id:reference}))};
 }

@@ -69,7 +69,7 @@ export default async function ProductDetailPage({ params, searchParams }: { para
           </div>
         </section>
       </div>
-      <PublicFooter />
+      <PublicFooter reserveMobileNavigation />
       <CustomerBottomNav active="home" />
     </main>
   );

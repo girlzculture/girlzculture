@@ -4,31 +4,17 @@ import { supabase } from "@/lib/supabase";
 import type { ContentCard } from "@/lib/content";
 import {
   DEFAULT_HOMEPAGE_PROMOTION_COUNT,
+  HOMEPAGE_EDITORIAL_FALLBACKS,
   MAX_HOMEPAGE_PROMOTION_COUNT,
   MAX_HOMEPAGE_PROMOTION_SOURCE_COUNT,
+  isCanonicalHomepageFallback,
+  isHomepagePromotionCardComplete,
   isPromotionCardActive,
   uniquePromotionCards,
 } from "@/lib/homePromotionCore";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 
 const PUBLIC_PROMOTION_READ_TIMEOUT_MS = 2_500;
-
-/**
- * Distinct, non-paid editorial cards used only when a local pool has fewer
- * eligible promotions than the configured rail size. These never bypass a
- * salon/campaign radius: they have no business association and link only to
- * Girlz Culture discovery/editorial pages.
- */
-export const HOMEPAGE_EDITORIAL_FALLBACKS: ContentCard[] = [
-  { id: "editorial-nearby", content_type: "image", title: "Find trusted salons nearby", body: "See verified beauty professionals close to you.", media_url: "/images/salon-warm.jpg", href: "/salons", cta_label: "Find a salon", alt_text: "Warm, modern beauty salon interior", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-knotless", content_type: "image", title: "Knotless braids, clear prices", body: "Compare real service details before you reserve.", media_url: "/images/braids-knotless.jpg", href: "/styles?style=knotless-braids", cta_label: "Browse knotless", alt_text: "Client wearing knotless braids", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-box", content_type: "image", title: "Explore box braids", body: "Choose a salon, stylist, length, and available time.", media_url: "/images/braids-box.jpg", href: "/styles?style=box-braids", cta_label: "Explore styles", alt_text: "Detailed box braid hairstyle", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-cornrows", content_type: "image", title: "Cornrow specialists", body: "Discover local professionals and verified client reviews.", media_url: "/images/braids-cornrows.jpg", href: "/styles?style=cornrows", cta_label: "See specialists", alt_text: "Client wearing neat cornrows", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-book", content_type: "image", title: "Reserve with confidence", body: "Choose an available appointment with clear pricing.", media_url: "/images/hero-braids.jpg", href: "/salons", cta_label: "Book now", alt_text: "Client with a finished braided hairstyle", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-how", content_type: "image", title: "How Girlz Culture works", body: "From discovery to a verified review, see every step.", media_url: "/images/salon-modern.jpg", href: "/how-it-works", cta_label: "How it works", alt_text: "Bright contemporary beauty salon", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-partner", content_type: "image", title: "Built for salon owners", body: "Manage services, availability, bookings, and your public page.", media_url: "/images/salon-blush.jpg", href: "/partner", cta_label: "Partner with us", alt_text: "Blush-toned salon interior", status: "Active", editorial_fallback: true, priority: 0 },
-  { id: "editorial-trust", content_type: "image", title: "Real work. Real reviews.", body: "Book from transparent salon profiles with verified feedback.", media_url: "/images/salon-dark.jpg", href: "/how-it-works", cta_label: "Safety and trust", alt_text: "Premium dark-toned salon interior", status: "Active", editorial_fallback: true, priority: 0 },
-];
 
 type ResolvedTarget = {
   target_type: "salon" | "campaign";
@@ -150,6 +136,7 @@ export async function resolvePublishedHomepagePromotions(
     Math.min(MAX_HOMEPAGE_PROMOTION_COUNT, Math.round(requestedDisplayLimit || DEFAULT_HOMEPAGE_PROMOTION_COUNT)),
   );
   const scheduled = uniquePromotionCards(cards)
+    .filter((card) => !isCanonicalHomepageFallback(card))
     .filter((card) => isPromotionCardActive(card, now))
     .slice(0, MAX_HOMEPAGE_PROMOTION_SOURCE_COUNT);
   const resolvedTargets = await resolveAssociations(scheduled);
@@ -160,6 +147,28 @@ export async function resolvePublishedHomepagePromotions(
     const target = resolvedTargets.get(reference.key);
     return target ? [hydrateAssociation(card, target)] : [];
   });
-  return uniquePromotionCards([...published, ...HOMEPAGE_EDITORIAL_FALLBACKS])
+  const completePublished = published.filter(isHomepagePromotionCardComplete);
+  return uniquePromotionCards([
+    ...completePublished,
+    ...HOMEPAGE_EDITORIAL_FALLBACKS,
+  ])
     .map((card) => ({ ...card, display_limit: poolLimit }));
+}
+
+/** Resolve scheduled, associated cards without adding homepage fallbacks. */
+export async function resolvePublishedContentCards(
+  cards: ContentCard[],
+  now = Date.now(),
+) {
+  const scheduled = uniquePromotionCards(cards)
+    .filter((card) => isPromotionCardActive(card, now))
+    .slice(0, MAX_HOMEPAGE_PROMOTION_SOURCE_COUNT);
+  const resolvedTargets = await resolveAssociations(scheduled);
+  return scheduled.flatMap((card) => {
+    const reference = associationReference(card);
+    if (!reference) return [card];
+    if (!UUID_PATTERN.test(reference.id)) return [];
+    const target = resolvedTargets.get(reference.key);
+    return target ? [hydrateAssociation(card, target)] : [];
+  });
 }

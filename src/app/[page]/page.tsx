@@ -89,7 +89,7 @@ export default async function InfoPage({
       {page.hero_subtitle ? <p className="mx-auto mt-5 max-w-2xl leading-7 text-white/70">{page.hero_subtitle}</p> : null}
     </section>
     <PublicContentSections sections={page.sections?.length ? page.sections : [{ type: "text", title: page.title, body: fallback.body }]} />
-    <div className="px-5 pb-12 text-center"><Link href="/contact" className="inline-flex rounded-lg bg-magenta px-6 py-3 text-sm font-bold text-white">Contact Girlz Culture</Link></div>
+    <div className="flex flex-wrap justify-center gap-3 px-5 pb-12 text-center">{isLegal ? <Link href="/legal" className="inline-flex rounded-lg border border-plum/20 bg-white px-6 py-3 text-sm font-bold text-plum">Back to Legal & Policies</Link> : null}<Link href="/contact" className="inline-flex rounded-lg bg-magenta px-6 py-3 text-sm font-bold text-white">Contact Girlz Culture</Link></div>
     <PublicFooter />
   </main>;
 }

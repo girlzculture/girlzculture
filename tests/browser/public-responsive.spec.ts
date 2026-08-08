@@ -103,17 +103,18 @@ test("homepage promotion rail advances through all eight cards and loops without
   await expect(rail.locator("[data-promotion-card]")).toHaveCount(8);
   await expect(rail).toHaveAttribute("data-auto-state", "running");
   const seen = new Set<number>();
+  let previous = Number(await rail.getAttribute("data-current-index"));
+  let wrapped = false;
   const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline && seen.size < 8) {
-    seen.add(Number(await rail.getAttribute("data-current-index")));
+  while (Date.now() < deadline && (seen.size < 8 || !wrapped)) {
+    const current = Number(await rail.getAttribute("data-current-index"));
+    seen.add(current);
+    if (previous === 7 && current === 0) wrapped = true;
+    previous = current;
     await page.waitForTimeout(180);
   }
   expect([...seen].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
-  await expect
-    .poll(async () => Number(await rail.getAttribute("data-current-index")), {
-      timeout: 3_000,
-    })
-    .toBe(0);
+  expect(wrapped).toBe(true);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth + 1,
   );
@@ -191,7 +192,9 @@ test("compact phone salon cards keep identity and distance on readable single li
   await expect(cards).toHaveCount(2);
   const layout = await cards.first().evaluate((card) => {
       const title = card.querySelector("a[data-no-translate]") as HTMLElement | null;
-      const location = card.querySelector("p span[data-no-translate]") as HTMLElement | null;
+      const location = Array.from(card.querySelectorAll("p span[data-no-translate]")).find(
+        (node) => getComputedStyle(node).display !== "none",
+      ) as HTMLElement | undefined;
       const box = card.getBoundingClientRect();
       const locationStyle = location ? getComputedStyle(location) : null;
       return {
@@ -208,7 +211,124 @@ test("compact phone salon cards keep identity and distance on readable single li
   expect(layout.titleOverflow).toBe(false);
   expect(layout.locationWraps).toBe(false);
   expect(layout.pageOverflow).toBe(false);
-  await expect(cards.first().locator("p span[data-no-translate]")).toHaveAttribute("title", /Manhattan, NY · Under 0.1 mi away/);
+  await expect(cards.first().getByText("Under 0.1 mile away", { exact: true })).toBeVisible();
+  await expect(cards.nth(1).getByText("0.6 miles away", { exact: true })).toBeVisible();
+  await expect(cards.first().getByText("Manhattan, NY", { exact: false })).toBeHidden();
+});
+
+test("Browse Styles carries stable identity and restores filters and scroll after returning", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers state restoration.");
+  await page.goto("/internal/acceptance/style-catalog");
+  const search = page.getByPlaceholder("Search styles");
+  await search.fill("Box");
+  await page.evaluate(() => window.scrollTo({ top: 240, behavior: "auto" }));
+  await page.getByRole("link", { name: /Box Braids/ }).click();
+  await expect(page).toHaveURL(/\/salons\?style=Box(?:\+|%20)Braids/);
+  await expect(page).toHaveURL(/style_id=11111111-1111-4111-8111-111111111111/);
+  await page.goBack();
+  await expect(search).toHaveValue("Box");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+});
+
+test("selected map marker summary exposes the same decision details as the list", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the map summary contract.");
+  await page.goto("/internal/acceptance/map-summary");
+  const summary = page.locator("[data-map-salon-summary]");
+  await expect(summary).toContainText("The Braid Lounge");
+  await expect(summary).toContainText("4.9 (982)");
+  await expect(summary).toContainText("From $150");
+  await expect(summary).toContainText("1.5 miles away");
+  await expect(summary.getByRole("link", { name: "View salon" })).toHaveAttribute(
+    "href",
+    "/salon/the-braid-lounge",
+  );
+});
+
+test("explicit URL location wins over stored location and same-count search state restores scroll", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers discovery restoration.");
+  let decisionSearchRequests = 0;
+  await page.route("**/api/discovery/decision-search", async (route) => {
+    decisionSearchRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        salons: [],
+        summary: "Unexpected automatic search",
+        needs_location: false,
+        location_label: "Texas",
+      }),
+    });
+  });
+  await page.addInitScript(() => {
+    const now = Date.now();
+    localStorage.setItem(
+      "girlz-culture-customer-location-v1",
+      JSON.stringify({
+        version: 2,
+        savedAt: now,
+        expiresAt: now + 86_400_000,
+        location: { lat: 31, lng: -99, label: "Texas", source: "saved" },
+      }),
+    );
+    const salons = Array.from({ length: 20 }, (_, index) => ({
+      id: `acceptance-discovery-${index}`,
+      name: `Acceptance Salon ${index + 1}`,
+      slug: `acceptance-salon-${index + 1}`,
+      address_city: "New York",
+      address_state: "NY",
+      borough: "Harlem",
+      cover_photo_url: null,
+      verification_status: "Verified",
+      rating_overall: 4.8,
+      review_count: 25 + index,
+      latitude: 40.8116 + index * 0.0001,
+      longitude: -73.9465,
+      starting_price: 100 + index,
+      services: [{ id: `acceptance-style-${index}`, name: "Knotless Braids" }],
+      distance_miles: 0.2 + index * 0.1,
+      total_count: 20,
+      sponsored: false,
+    }));
+    sessionStorage.setItem(
+      "girlz-culture-salon-search-v2",
+      JSON.stringify({
+        version: 2,
+        savedAt: now,
+        query: "salons near me",
+        filters: {
+          radiusMiles: 50,
+          minimumRating: 0,
+          maximumPrice: "",
+          date: "",
+          sort: "distance",
+          promotionOnly: false,
+        },
+        serviceId: "",
+        origin: { lat: 40.8116, lng: -73.9465 },
+        salons,
+        summary: "Restored search state",
+        locationLabel: "Harlem, NY",
+        view: "list",
+        scrollY: 500,
+      }),
+    );
+  });
+  await page.goto(
+    "/internal/acceptance/discovery-state?lat=40.8116&lng=-73.9465&location=Harlem%2C%20NY",
+  );
+  await expect(page.getByText("Near Harlem, NY", { exact: true })).toBeVisible();
+  await expect(page.getByText("Near Texas", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Restored search state", { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400);
+  await page.waitForTimeout(250);
+  expect(decisionSearchRequests).toBe(0);
 });
 
 test("functional public pages begin without the removed marketing introductions", async ({

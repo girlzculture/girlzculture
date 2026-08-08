@@ -42,6 +42,7 @@ export default function NavigationMenuManager() {
 
   useEffect(() => { const timer=window.setTimeout(() => void load(),0); return () => window.clearTimeout(timer); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const visible = useMemo(() => items.filter((item) => item.surface === surface).sort((a,b) => a.sort_order-b.sort_order), [items,surface]);
+  const footerGroupKeys = useMemo(() => Array.from(new Set(items.filter((item) => item.surface === "footer" && !item.archived_at).sort((a,b) => a.sort_order-b.sort_order).map((item) => item.group_key))), [items]);
   function select(item:Item) { setSelectedId(item.id); setForm({...item}); setMessage(""); }
   function create() { setSelectedId(""); setForm({...empty,surface,group_key:surface === "footer" ? "company" : "main",sort_order:(visible.at(-1)?.sort_order || 0)+10}); setMessage(""); }
 
@@ -91,6 +92,27 @@ export default function NavigationMenuManager() {
     finally { setBusy(false); }
   }
 
+  async function moveFooterGroup(groupKey:string,direction:-1|1) {
+    const index = footerGroupKeys.indexOf(groupKey);
+    const otherIndex = index + direction;
+    if (index < 0 || otherIndex < 0 || otherIndex >= footerGroupKeys.length) return;
+    const orderedGroups = [...footerGroupKeys];
+    [orderedGroups[index], orderedGroups[otherIndex]] = [orderedGroups[otherIndex], orderedGroups[index]];
+    setBusy(true); setMessage("");
+    try {
+      for (const [groupIndex, key] of orderedGroups.entries()) {
+        const groupItems = items.filter((item) => item.surface === "footer" && item.group_key === key && !item.archived_at).sort((a,b) => a.sort_order-b.sort_order);
+        for (const [itemIndex, item] of groupItems.entries()) {
+          const response = await fetch("/api/admin/engine/navigation", { method:"PATCH", headers:await authHeaders(true), body:JSON.stringify({...item,sort_order:(groupIndex+1)*1000+(itemIndex+1)*10,action:"update"}) });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error);
+        }
+      }
+      await load(selectedId); setMessage("Footer group order updated and verified.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to reorder footer groups."); }
+    finally { setBusy(false); }
+  }
+
   return (
     <section className="rounded-[15px] border border-plum/10 bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -98,6 +120,7 @@ export default function NavigationMenuManager() {
         <button type="button" onClick={create} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-4 text-xs font-bold text-white"><Plus size={15}/>Add item</button>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">{(Object.keys(surfaceNames) as Surface[]).map((key) => <button type="button" key={key} onClick={() => { setSurface(key); setSelectedId(""); setForm({...empty,surface:key,group_key:key === "footer" ? "company" : "main"}); }} className={`rounded-full px-3 py-2 text-[10px] font-bold ${surface === key ? "bg-plum text-white" : "bg-cream text-plum"}`}>{surfaceNames[key]}</button>)}</div>
+      {surface === "footer" ? <FooterStructureControls items={items} groupKeys={footerGroupKeys} busy={busy} moveGroup={moveFooterGroup}/> : null}
       <div className="mt-5 grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
         <div className="space-y-2">
           {loading ? <p className="text-xs text-ink/50">Loading navigation…</p> : visible.map((item,index) => <div key={item.id} className={`rounded-xl border p-3 ${selectedId === item.id ? "border-magenta bg-blush/20" : "border-plum/10"} ${item.archived_at ? "opacity-55" : ""}`}>
@@ -116,6 +139,22 @@ export default function NavigationMenuManager() {
       </div>
     </section>
   );
+}
+
+function FooterStructureControls({items,groupKeys,busy,moveGroup}:{items:Item[];groupKeys:string[];busy:boolean;moveGroup:(groupKey:string,direction:-1|1)=>Promise<void>}) {
+  const liveItems = items.filter((item) => item.surface === "footer" && item.is_enabled && !item.archived_at);
+  const groups = groupKeys.map((key) => ({ key, items:liveItems.filter((item) => item.group_key === key).sort((a,b)=>a.sort_order-b.sort_order) })).filter((group)=>group.items.length);
+  const legalItem = liveItems.find((item) => item.item_key === "legal-policies");
+  const linkGroups = groups.filter((group) => group.key !== "legal");
+  const mobileLinkGroups = linkGroups.filter((group) => ["company", "professionals", "support"].includes(group.key));
+  return <section className="mt-5 rounded-xl border border-plum/10 bg-cream/45 p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="font-serif text-xl text-plum">Footer group order & previews</h4><p className="mt-1 text-[10px] leading-4 text-ink/55">Move complete groups without changing link order. The compact mobile footer shows one Legal & Policies hub link.</p></div></div>
+    <div className="mt-3 flex flex-wrap gap-2">{groupKeys.map((key,index)=><div key={key} className="inline-flex items-center gap-1 rounded-lg border border-plum/10 bg-white p-1"><span className="px-2 text-[10px] font-bold capitalize text-plum">{key.replaceAll("_"," ")}</span><button type="button" aria-label={`Move ${key} group earlier`} disabled={busy||index===0} onClick={()=>void moveGroup(key,-1)} className="rounded border p-1 disabled:opacity-30"><ArrowUp size={12}/></button><button type="button" aria-label={`Move ${key} group later`} disabled={busy||index===groupKeys.length-1} onClick={()=>void moveGroup(key,1)} className="rounded border p-1 disabled:opacity-30"><ArrowDown size={12}/></button></div>)}</div>
+    <div className="mt-4 grid items-start gap-3 xl:grid-cols-[1.2fr_.8fr]">
+      <div className="rounded-xl bg-[#0083a6] p-4 text-white"><b className="text-[9px] uppercase tracking-[.14em] text-white/70">Desktop preview</b><div className="mt-3 grid gap-4 sm:grid-cols-3">{linkGroups.map((group)=><div key={group.key}><b className="text-[10px] uppercase tracking-[.08em]">{group.key.replaceAll("_"," ")}</b><ul className="mt-2 space-y-1 text-[9px] text-white/70">{group.items.map((item)=><li key={item.id}>{item.label}</li>)}</ul></div>)}</div></div>
+      <div className="rounded-xl bg-[#0083a6] p-4 text-white"><b className="text-[9px] uppercase tracking-[.14em] text-white/70">Mobile preview</b><div className="mt-3 divide-y divide-white/15">{mobileLinkGroups.map((group)=><div key={group.key} className="flex min-h-10 items-center justify-between text-[10px] font-bold uppercase"><span>{group.key.replaceAll("_"," ")}</span><span>+</span></div>)}{legalItem ? <div className="flex min-h-10 items-center justify-between text-[10px] font-bold uppercase"><span>{legalItem.label}</span><span>→</span></div> : null}</div></div>
+    </div>
+  </section>;
 }
 
 function Field({label,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
@@ -9,11 +9,27 @@ export type StyleCatalogItem = {
   name: string;
   category: string;
   categorySlug?: string;
+  styleId?: string;
+  styleSlug?: string;
   count: number;
   image: string;
   length?: string;
   maintenance?: string;
   price?: number;
+};
+
+const STYLE_STATE_KEY = "girlz-culture-style-catalog-v1";
+const STYLE_STATE_TTL_MS = 30 * 60_000;
+
+type StyleCatalogState = {
+  savedAt: number;
+  query: string;
+  category: string;
+  length: string;
+  maintenance: string;
+  price: string;
+  sort: string;
+  scrollY: number;
 };
 
 export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
@@ -23,8 +39,53 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
   const [maintenance, setMaintenance] = useState("Maintenance");
   const [price, setPrice] = useState("Price");
   const [sort, setSort] = useState("Popularity");
+  const restored = useRef(false);
   const chips = useMemo(() => [...items].sort((left, right) => right.count - left.count).slice(0, 5), [items]);
   const categories = useMemo(() => ["All categories", ...Array.from(new Set(items.map((item) => item.category))).sort()], [items]);
+
+  const persist = useCallback((scrollY = window.scrollY) => {
+    try {
+      const state: StyleCatalogState = {
+        savedAt: Date.now(), query, category, length, maintenance, price, sort, scrollY,
+      };
+      sessionStorage.setItem(STYLE_STATE_KEY, JSON.stringify(state));
+    } catch {
+      // Browser history still preserves the route when storage is unavailable.
+    }
+  }, [category, length, maintenance, price, query, sort]);
+
+  useEffect(() => {
+    if (restored.current) return;
+    try {
+      const state = JSON.parse(sessionStorage.getItem(STYLE_STATE_KEY) || "null") as StyleCatalogState | null;
+      if (!state || Date.now() - Number(state.savedAt || 0) > STYLE_STATE_TTL_MS) return;
+      let scrollFrame = 0;
+      const restoreFrame = window.requestAnimationFrame(() => {
+        restored.current = true;
+        setQuery(state.query || "");
+        setCategory(categories.includes(state.category) ? state.category : "All categories");
+        setLength(state.length || "Length");
+        setMaintenance(state.maintenance || "Maintenance");
+        setPrice(state.price || "Price");
+        setSort(state.sort || "Popularity");
+        scrollFrame = window.requestAnimationFrame(() => {
+          window.scrollTo({ top: Number(state.scrollY || 0), behavior: "auto" });
+        });
+      });
+      return () => {
+        window.cancelAnimationFrame(restoreFrame);
+        if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+      };
+    } catch {
+      // Ignore malformed or blocked session storage.
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    const save = () => persist();
+    window.addEventListener("pagehide", save);
+    return () => window.removeEventListener("pagehide", save);
+  }, [persist]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -67,7 +128,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
 
       <div className="mt-3 grid min-w-0 max-w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {filtered.map((item) => (
-          <Link key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group min-w-0 overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(13,17,20,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(13,17,20,0.12)]">
+          <Link onClick={() => persist()} key={`${item.categorySlug || item.category}-${item.name}`} href={`/salons?style=${encodeURIComponent(item.name)}&style_slug=${encodeURIComponent(item.styleSlug || item.name.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-"))}${item.styleId ? `&style_id=${encodeURIComponent(item.styleId)}` : ""}&category=${encodeURIComponent(item.categorySlug || item.category)}`} className="group min-w-0 overflow-hidden rounded-[12px] border border-plum/10 bg-blush/45 shadow-[0_6px_22px_rgba(13,17,20,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(13,17,20,0.12)]">
             {item.image ? <div className="aspect-[1.55/1] overflow-hidden bg-cream sm:aspect-[1.65/1]">
               <SafeImage src={item.image} fallbackSrc={item.image} alt={`${item.name} hairstyle`} rendition="thumbnail" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
             </div> : null}

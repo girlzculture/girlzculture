@@ -59,24 +59,30 @@ async function POSTHandler(
     const writtenReview = cleanText(body.written_review, 3000);
     const displayName = cleanText(body.display_name, 40);
     const reviewTitle = cleanText(body.review_title, 100);
-    if (!displayName || /\s/u.test(displayName) || !/^[\p{L}\p{M}'’-]+$/u.test(displayName))
-      return Response.json(
-        { error: "Enter your first name only, using letters, an apostrophe, or a hyphen." },
-        { status: 400 },
-      );
-    if (writtenReview.length < 10)
-      return Response.json({ error: "Write at least 10 characters about your experience." }, { status: 400 });
     const admin = getSupabaseAdmin();
     const moderation = await moderatePublicContent(admin, {
       name: displayName,
       title: reviewTitle,
       body: writtenReview,
     });
-    if (!moderation.allowed)
+    if (moderation.outcome === "block")
       return Response.json(
-        { error: "Please revise the name, title, or review to remove abusive, hateful, threatening, or unsafe language." },
+        {
+          error: `Please revise your review. "${moderation.matchedInput || moderation.matchedText || "unsafe language"}" appears to contain prohibited language. Your ratings and other entries have been kept.`,
+          field: moderation.field,
+          prohibited_phrase: moderation.matchedInput || moderation.matchedText,
+          code: "REVIEW_CONTENT_BLOCKED",
+        },
         { status: 422 },
       );
+    if (!displayName || /\s/u.test(displayName) || !/^[\p{L}\p{M}'\u2019-]+$/u.test(displayName))
+      return Response.json(
+        { error: "Enter your first name only, using letters, an apostrophe, or a hyphen." },
+        { status: 400 },
+      );
+    if (writtenReview.length > 0 && writtenReview.length < 10)
+      return Response.json({ error: "Write at least 10 characters, or leave the written review blank to submit a rating only." }, { status: 400 });
+    const contentPending = moderation.outcome === "review";
     const { data, error } = await admin.rpc("submit_verified_guest_review", {
       p_token_hash: reviewTokenHash(token),
       p_display_name: displayName,
@@ -89,6 +95,9 @@ async function POSTHandler(
       p_would_return: body.would_return !== false,
       p_written_review: writtenReview,
       p_result_photos: [],
+      p_content_moderation_status: contentPending ? "Pending" : "Clear",
+      p_pending_reason: contentPending ? moderation.reason || "provider-context-review" : null,
+      p_pending_source: contentPending ? moderation.source : null,
     });
     if (error) {
       if (/INVALID|EXPIRED|NOT_ELIGIBLE/i.test(error.message))
@@ -98,7 +107,14 @@ async function POSTHandler(
         );
       throw error;
     }
-    return Response.json({ review: data, state: "submitted" });
+    return Response.json({
+      review: data,
+      state: "submitted",
+      content_status: contentPending ? "pending" : "published",
+      message: contentPending
+        ? "Thank you for your feedback. Your written review is being checked before it is published."
+        : "Your verified review was submitted.",
+    });
   } catch (error) {
     noteOperationalFailure("Verified guest review submission failed", error);
     return publicErrorResponse(error, "Your review could not be submitted.");
@@ -116,7 +132,7 @@ export const GET = withOperationalMonitoring(
 );
 export const POST = withOperationalMonitoring(
   routeMonitoringProfile("/api/reviews/[token]", "POST", {
-    classification: "public-read-only",
+    classification: "provider-backed",
     feature: "verified-reviews",
     actorRole: "guest",
     safeMessage: "Your review could not be submitted.",

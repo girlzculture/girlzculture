@@ -81,7 +81,7 @@ export default async function ProductCheckoutPage({
           />
         </Suspense>
       </div>
-      <PublicFooter />
+      <PublicFooter reserveMobileNavigation />
       <CustomerBottomNav active="home" />
     </main>
   );

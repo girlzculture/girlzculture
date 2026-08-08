@@ -9,7 +9,7 @@ import {
 } from "../src/lib/localizationCore.ts";
 
 const representative = [
-  "Salon Owner Dashboard",
+  "Your Dashboard",
   "Overview",
   "My Page",
   "Styles & Pricing",

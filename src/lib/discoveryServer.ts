@@ -1,5 +1,9 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  canonicalDiscoveryResults,
+  type DiscoverySort,
+} from "@/lib/discoverySearchCore";
 import { normalizeRadius, validCoordinates, type Coordinates } from "@/lib/location";
 
 export type PublicSalonResult = {
@@ -25,17 +29,24 @@ export type DiscoveryQuery = {
   origin: Coordinates;
   radius?: number;
   style?: string;
+  /** Stable platform master-style identity. When present, SQL matches it exactly. */
+  masterStyleId?: string | null;
   minimumRating?: number | null;
   minimumPrice?: number | null;
   maximumPrice?: number | null;
-  sort?: "distance" | "rating" | "price_low" | "price_high";
-  limit?: number;
+  sort?: DiscoverySort;
+  /** `"all"` invokes the database's explicit no-cap server contract. */
+  limit?: number | "all";
   offset?: number;
 };
 
 export async function discoverNearbySalons(query: DiscoveryQuery) {
   if (!validCoordinates(query.origin)) return { salons: [] as PublicSalonResult[], total: 0 };
-  const limit = Math.max(1, Math.min(50, Math.round(query.limit || 20)));
+  const allResults = query.limit === "all";
+  const requestedLimit = typeof query.limit === "number" ? query.limit : 20;
+  const limit = allResults
+    ? 0
+    : Math.max(1, Math.min(50, Math.round(requestedLimit || 20)));
   const offset = Math.max(0, Math.round(query.offset || 0));
   const supabase = getSupabaseAdmin();
   let resolvedStyle = query.style?.trim() || null;
@@ -48,6 +59,7 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
     origin_longitude: query.origin.lng,
     radius_miles: normalizeRadius(query.radius),
     style_query: resolvedStyle,
+    master_style_filter: query.masterStyleId || null,
     minimum_rating: query.minimumRating ?? null,
     minimum_price: query.minimumPrice ?? null,
     maximum_price: query.maximumPrice ?? null,
@@ -56,6 +68,9 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
     result_offset: offset,
   });
   if (error) throw error;
-  const salons = (Array.isArray(data) ? data : []) as PublicSalonResult[];
+  const salons = canonicalDiscoveryResults(
+    (Array.isArray(data) ? data : []) as PublicSalonResult[],
+    query.sort || "distance",
+  );
   return { salons, total: Number(salons[0]?.total_count || 0) };
 }

@@ -69,6 +69,24 @@ function netlifyEnvironment() {
   return "unknown";
 }
 
+export function netlifyReleaseIdentity(environment = process.env) {
+  const candidates = [
+    ["GIRLZ_CULTURE_RELEASE_ID", environment.GIRLZ_CULTURE_RELEASE_ID],
+    ["COMMIT_REF", environment.COMMIT_REF],
+    ["DEPLOY_ID", environment.DEPLOY_ID],
+    ["BUILD_ID", environment.BUILD_ID],
+    ["DEPLOY_URL", environment.DEPLOY_URL],
+    ["DEPLOY_PRIME_URL", environment.DEPLOY_PRIME_URL],
+  ];
+  for (const [source, rawValue] of candidates) {
+    const value = String(rawValue || "").trim();
+    if (/^[a-z0-9][a-z0-9_.:/-]{5,300}$/i.test(value)) {
+      return { release: value, source, configured: true };
+    }
+  }
+  return { release: "release-id-missing", source: "missing", configured: false };
+}
+
 async function persist(record) {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -102,14 +120,11 @@ export async function monitoredNetlifyFailure({
   const technicalMessage = safeText(error instanceof Error ? error.message : error || "Unknown error");
   const route = request ? new URL(request.url).pathname : `/.netlify/functions/${action}`;
   const environment = netlifyEnvironment();
+  const releaseIdentity = netlifyReleaseIdentity();
   const release =
-    process.env.GIRLZ_CULTURE_RELEASE_ID ||
-    process.env.COMMIT_REF ||
-    process.env.DEPLOY_ID ||
-    process.env.BUILD_ID ||
-    (environment === "production"
-      ? "production-release-not-injected"
-      : "local");
+    releaseIdentity.configured || environment === "production"
+      ? releaseIdentity.release
+      : "local";
   const record = {
     reference,
     fingerprint: fingerprint(`${feature}|${action}|${technicalMessage.slice(0, 300)}`),
@@ -124,7 +139,13 @@ export async function monitoredNetlifyFailure({
     technical_message: technicalMessage,
     technical_stack: null,
     user_safe_message: safeMessage,
-    metadata: safeMetadata({ provider, function: action, ...metadata }),
+    metadata: safeMetadata({
+      provider,
+      function: action,
+      release_identity_source: releaseIdentity.source,
+      release_identity_configured: releaseIdentity.configured,
+      ...metadata,
+    }),
   };
   console.error("Netlify operation failed", record);
   await persist(record);

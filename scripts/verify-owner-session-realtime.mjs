@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { setTimeout as wait } from "node:timers/promises";
 import {
   ownerFallbackDelay,
@@ -12,21 +13,37 @@ class FakeChannel {
     this.handlers = [];
     this.statusCallback = null;
     this.subscribedAfterHandlers = false;
+    this.subscribed = false;
   }
 
   on(type, filter, callback) {
+    if (this.subscribed) {
+      throw new Error("A postgres_changes listener was added after subscribe().");
+    }
     this.handlers.push({ type, filter, callback });
     return this;
   }
 
   subscribe(callback) {
-    this.subscribedAfterHandlers = this.handlers.length === 2;
+    this.subscribedAfterHandlers = this.handlers.length === 3;
+    this.subscribed = true;
     this.statusCallback = callback;
     return this;
   }
 
   status(value) {
     this.statusCallback?.(value);
+  }
+
+  emit(table, event, payload = { new: { id: `${table}-${event}` } }) {
+    for (const handler of this.handlers) {
+      if (
+        handler.filter.table === table &&
+        handler.filter.event === event
+      ) {
+        handler.callback(payload);
+      }
+    }
   }
 }
 
@@ -55,11 +72,15 @@ class FakeClient {
 const client = new FakeClient();
 const states = [];
 let fallbackRefreshes = 0;
+let reviewRefreshes = 0;
 const cleanup = subscribeToOwnerUpdates({
   client,
   salonId: "4f879f80-3d68-4da2-8d31-b99bcfeea515",
   onNotification() {},
   onBooking() {},
+  onReviewStateChange() {
+    reviewRefreshes += 1;
+  },
   onConnectionState(state, status) {
     states.push([state, status || ""]);
   },
@@ -72,7 +93,27 @@ const cleanup = subscribeToOwnerUpdates({
 
 assert.equal(client.channels.length, 1);
 assert.equal(client.channels[0].subscribedAfterHandlers, true);
+assert.deepEqual(
+  client.channels[0].handlers.map(({ filter }) => [
+    filter.table,
+    filter.event,
+    filter.filter,
+  ]),
+  [
+    ["notifications", "INSERT", "salon_id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
+    ["bookings", "INSERT", "salon_id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
+    ["salons", "UPDATE", "id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
+  ],
+);
+client.channels[0].emit("salons", "UPDATE");
+assert.equal(reviewRefreshes, 1);
 client.channels[0].status("CHANNEL_ERROR");
+client.channels[0].emit("salons", "UPDATE");
+assert.equal(
+  reviewRefreshes,
+  1,
+  "A disconnected channel continued refreshing review state.",
+);
 await wait(30);
 assert.ok(fallbackRefreshes >= 1, "Polling fallback did not refresh the workspace.");
 assert.ok(client.channels.length >= 2, "Realtime did not reconnect after a channel error.");
@@ -89,6 +130,12 @@ assert.equal(
   "Polling continued after realtime recovered.",
 );
 await cleanup();
+reconnected.emit("salons", "UPDATE");
+assert.equal(
+  reviewRefreshes,
+  1,
+  "Cleanup left a review listener active.",
+);
 reconnected.status("CHANNEL_ERROR");
 await wait(20);
 assert.equal(
@@ -108,6 +155,7 @@ const cleanupTerminal = subscribeToOwnerUpdates({
   salonId: "aaaaaaaa-3d68-4da2-8d31-b99bcfeea515",
   onNotification() {},
   onBooking() {},
+  onReviewStateChange() {},
   onFallbackRefresh() {
     terminalFallbacks += 1;
     return "terminal";
@@ -125,6 +173,27 @@ assert.equal(
 );
 await cleanupTerminal();
 
+const ownerDashboardSource = fs.readFileSync(
+  "src/components/owner/OwnerDashboardApp.tsx",
+  "utf8",
+);
+const liveRefreshSource = ownerDashboardSource.match(
+  /const refreshLiveWorkspace = \(\) => \{[\s\S]*?removeRealtime = subscribeToOwnerUpdates/,
+)?.[0] || "";
+assert.ok(liveRefreshSource, "Owner live-workspace refresh wiring is missing.");
+assert.match(liveRefreshSource, /if \(refreshed\.salon\) setSalon\(refreshed\.salon\)/);
+assert.match(liveRefreshSource, /setReviews\(refreshedRecords\.reviews \|\| \[\]\)/);
+assert.match(ownerDashboardSource, /onReviewStateChange: refreshLiveWorkspace/);
+assert.match(ownerDashboardSource, /onFallbackRefresh: refreshLiveWorkspace/);
+
+const reviewMigration = fs.readFileSync(
+  "supabase/migrations/20260807220000_review_moderation_and_rating_sync.sql",
+  "utf8",
+);
+assert.match(reviewMigration, /alter publication supabase_realtime drop table public\.reviews/);
+assert.doesNotMatch(reviewMigration, /alter publication supabase_realtime add table public\.reviews/);
+assert.match(reviewMigration, /alter publication supabase_realtime add table public\.salons/);
+
 assert.equal(
   shouldPreserveSupabaseAuthResponse(
     "https://example.supabase.co/auth/v1/token?grant_type=refresh_token",
@@ -139,5 +208,5 @@ assert.equal(
 );
 
 console.log(
-  "Owner session/realtime verification passed: callbacks precede subscribe; reconnect and polling fallback recover; transient polling uses capped backoff; terminal auth stops polling/reconnect; cleanup stops work; and Auth responses stay unchanged.",
+  "Owner session/realtime verification passed: booking, notification, and salon-summary callbacks precede subscribe; the private review table is not subscribed directly; salon summary changes refresh review state; reconnect and full-workspace polling fallback recover; terminal auth and cleanup stop all work; and Auth responses stay unchanged.",
 );

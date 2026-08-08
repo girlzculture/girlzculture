@@ -1,30 +1,8 @@
 import Link from "next/link";
-import SafeImage from "@/components/site/SafeImage";
-import type { ContentCard, ContentSection } from "@/lib/content";
+import type { ContentSection } from "@/lib/content";
 import RichTextBody from "@/components/site/RichTextBody";
-
-function CardMedia({ card, homepage = false }: { card: ContentCard; homepage?: boolean }) {
-  const mediaClass = homepage ? "h-[126px] w-full bg-blush object-cover lg:h-[118px] 2xl:h-[132px]" : "aspect-[4/3] w-full bg-ink object-cover";
-  if (card.content_type === "video" && card.media_url) {
-    return <video src={card.media_url} controls playsInline preload="metadata" className={mediaClass} />;
-  }
-  if (card.media_url) {
-    return <SafeImage src={card.media_url} fallbackSrc="/images/hero-braids.jpg" alt={card.title || "Girlz Culture"} className={mediaClass} />;
-  }
-  return homepage ? <div className={mediaClass} /> : null;
-}
-
-function ContentCardView({ card, homepage = false }: { card: ContentCard; homepage?: boolean }) {
-  const content = <>
-    <CardMedia card={card} homepage={homepage} />
-    {card.title || card.body ? <div className={homepage ? "p-3" : "p-4"}>
-      {card.title ? <h3 className={`font-serif font-semibold text-plum ${homepage ? "text-[15px] leading-tight" : "text-xl"}`}>{card.title}</h3> : null}
-      {card.body ? <p className={homepage ? "mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60" : "mt-2 whitespace-pre-wrap text-sm leading-6 text-ink/65"}>{card.body}</p> : null}
-    </div> : null}
-  </>;
-  const classes = `block h-full overflow-hidden border border-plum/10 bg-white shadow-[0_8px_28px_rgba(13,17,20,.06)] ${homepage ? "rounded-[14px]" : "rounded-[16px]"}`;
-  return card.href ? <Link href={card.href} className={classes}>{content}</Link> : <article className={classes}>{content}</article>;
-}
+import AutoContentCarousel from "@/components/site/AutoContentCarousel";
+import PublicContentCard from "@/components/site/PublicContentCard";
 
 export default function PublicContentSections({ sections, className = "", variant = "default" }: { sections?: ContentSection[]; className?: string; variant?: "default" | "homepage" }) {
   const visible = (Array.isArray(sections) ? sections : []).filter((section) => section && section.is_visible !== false);
@@ -38,15 +16,19 @@ export default function PublicContentSections({ sections, className = "", varian
     if (variant === "homepage") return <section key={section.id || index} className="pb-4 pt-3 sm:pb-6">
       {section.title ? <h2 className="font-serif text-[22px] font-semibold leading-none tracking-[-0.025em] text-ink sm:text-[25px]">{section.title}</h2> : null}
       {section.body ? <p className="mt-2 text-[12px] text-ink/65">{section.body}</p> : null}
-      {cards.length ? <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">{cards.map((card, cardIndex) => <div key={`${card.id || "card"}-${cardIndex}`} className="w-[72vw] max-w-[280px] shrink-0 snap-start sm:w-auto sm:max-w-none"><ContentCardView card={card} homepage /></div>)}</div> : null}
+      {cards.length ? <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden">{cards.map((card, cardIndex) => <div key={`${card.id || "card"}-${cardIndex}`} className="w-[72vw] max-w-[280px] shrink-0 snap-start sm:w-auto sm:max-w-none"><PublicContentCard card={card} homepage /></div>)}</div> : null}
     </section>;
-    const carousel = type === "carousel" || type === "community_carousel";
-    const renderedCards = type === "community_carousel" && cards.length > 1 ? [...cards, ...cards] : cards;
+    if (type === "community_carousel") return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1660px] px-4 sm:px-8">
+      {section.title ? <h2 className="font-serif text-3xl font-semibold text-plum">{section.title}</h2> : null}
+      {section.body ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink/65">{section.body}</p> : null}
+      <AutoContentCarousel cards={cards} direction={section.scroll_direction === "reverse" ? "reverse" : "forward"} label={section.title}/>
+    </section>;
+    const carousel = type === "carousel";
     return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1660px] px-4 sm:px-8">
       {section.title ? <h2 className="font-serif text-3xl font-semibold text-plum">{section.title}</h2> : null}
       {section.body ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink/65">{section.body}</p> : null}
-      {cards.length ? <div className={`mt-4 ${carousel ? type === "community_carousel" ? "overflow-hidden" : "flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : `grid gap-4 ${Number(section.columns) === 2 ? "sm:grid-cols-2" : Number(section.columns) === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}`}>
-        <div className={type === "community_carousel" ? "cms-community-track flex w-max gap-4 pb-3" : "contents"}>{renderedCards.map((card, cardIndex) => <div key={`${card.id || "card"}-${cardIndex}`} className={carousel ? "w-[72vw] max-w-[340px] shrink-0" : "min-w-0"}><ContentCardView card={card} /></div>)}</div>
+      {cards.length ? <div className={`mt-4 ${carousel ? "flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : `grid gap-4 ${Number(section.columns) === 2 ? "sm:grid-cols-2" : Number(section.columns) === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}`}>
+        <div className="contents">{cards.map((card, cardIndex) => <div key={`${card.id || "card"}-${cardIndex}`} className={carousel ? "w-[72vw] max-w-[340px] shrink-0" : "min-w-0"}><PublicContentCard card={card} /></div>)}</div>
       </div> : null}
     </section>;
   })}</div>;

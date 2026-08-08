@@ -54,10 +54,18 @@ async function GETHandler(request: Request) {
     if (minimumPrice !== null && maximumPrice !== null && minimumPrice > maximumPrice) {
       return Response.json({ error: "Minimum price cannot be higher than maximum price." }, { status: 400 });
     }
+    const masterStyleId = cleanText(search.get("style_id"), 50) || null;
+    if (
+      masterStyleId &&
+      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(masterStyleId)
+    ) {
+      return Response.json({ error: "Choose a valid style." }, { status: 400 });
+    }
     const result = await discoverNearbySalons({
       origin,
       radius,
       style: cleanText(search.get("style"), 100),
+      masterStyleId,
       minimumRating,
       minimumPrice,
       maximumPrice,

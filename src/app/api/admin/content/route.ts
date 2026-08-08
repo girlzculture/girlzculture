@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
+import { isHomepagePromotionCardComplete } from "@/lib/homePromotionCore";
+import type { ContentCard } from "@/lib/content";
 
 const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "hero_position_x", "hero_position_y", "hero_zoom", "page_group", "sections", "labels", "seo_title", "seo_description", "status", "is_enabled"] as const;
 const postFields = ["id", "slug", "title", "excerpt", "content", "category", "cover_image_url", "author", "featured", "status", "published_at"] as const;
@@ -39,6 +41,15 @@ function sanitizeSections(value: unknown) {
       const card = rawCard && typeof rawCard === "object" ? rawCard as Record<string, unknown> : {};
       const requestedContentType = safeCardTypes.has(String(card.content_type)) ? String(card.content_type) : "image";
       const contentType = type === "promo_rail" && requestedContentType === "video" ? "image" : requestedContentType;
+      const sourceKind = ["upload", "video", "salon", "blog", "custom", "campaign"].includes(String(card.source_kind))
+        ? String(card.source_kind)
+        : contentType === "salon"
+          ? "salon"
+          : contentType === "video"
+            ? "video"
+            : contentType === "link"
+              ? "custom"
+              : "upload";
       const associationType = ["salon", "campaign"].includes(String(card.association_type)) ? String(card.association_type) : contentType === "salon" ? "salon" : "";
       const salonId = associationType === "salon" && /^[0-9a-f-]{36}$/i.test(text(card.salon_id, 50)) ? text(card.salon_id, 50) : "";
       const campaignId = associationType === "campaign" && /^[0-9a-f-]{36}$/i.test(text(card.campaign_id, 50)) ? text(card.campaign_id, 50) : "";
@@ -51,10 +62,10 @@ function sanitizeSections(value: unknown) {
       const validLongitude = targetLongitude !== null && Number.isFinite(targetLongitude) && targetLongitude >= -180 && targetLongitude <= 180;
       const priority = Math.max(0, Math.min(100, Number(card.priority ?? 50)));
       const rotationWeight = Math.max(0.1, Math.min(100, Number(card.rotation_weight ?? 1)));
-      return { id: text(card.id, 80), content_type: contentType, association_type: associationType, salon_id: salonId, campaign_id: campaignId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at), market_id: marketId, target_label: text(card.target_label, 120), target_latitude: validLatitude ? targetLatitude : null, target_longitude: validLongitude ? targetLongitude : null, radius_miles: radiusMiles, priority: Number.isFinite(priority) ? priority : 50, rotation_weight: Number.isFinite(rotationWeight) ? rotationWeight : 1, editorial_fallback: card.editorial_fallback === true };
+      return { id: text(card.id, 80), content_type: contentType, source_kind: sourceKind, association_type: associationType, salon_id: salonId, campaign_id: campaignId, title: text(card.title, 120), body: text(card.body, 1200), media_url: safeUrl(card.media_url), href: safeUrl(card.href), cta_label: text(card.cta_label, 60), alt_text: text(card.alt_text, 180), status, starts_at: safeDate(card.starts_at), ends_at: safeDate(card.ends_at), market_id: marketId, target_label: text(card.target_label, 120), target_latitude: validLatitude ? targetLatitude : null, target_longitude: validLongitude ? targetLongitude : null, radius_miles: radiusMiles, priority: Number.isFinite(priority) ? priority : 50, rotation_weight: Number.isFinite(rotationWeight) ? rotationWeight : 1, editorial_fallback: false };
     }) : [];
     const displayLimit = Math.max(1, Math.min(20, Math.round(Number(section.display_limit || 8))));
-    return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), display_limit: Number.isFinite(displayLimit) ? displayLimit : 8, cards };
+    return { id: text(section.id, 80), type, title: text(section.title, 140), body: text(section.body, 20000), is_visible: section.is_visible !== false, columns: [2,3,4].includes(Number(section.columns)) ? Number(section.columns) : 4, cta_label: text(section.cta_label, 80), cta_href: safeUrl(section.cta_href), display_limit: Number.isFinite(displayLimit) ? displayLimit : 8, scroll_direction: section.scroll_direction === "reverse" ? "reverse" : "forward", cards };
   });
 }
 
@@ -89,6 +100,11 @@ function validatePromotionCollection(sections: ReturnType<typeof sanitizeSection
     const identity = promotionIdentity(card);
     if (identities.has(identity)) rejectRequest("The same salon, campaign, or editorial promotion cannot appear twice in the homepage rail.");
     identities.add(identity);
+    if (card.status === "Active" && !isHomepagePromotionCardComplete(card as ContentCard)) {
+      rejectRequest(
+        `Active homepage promotion "${card.title || card.id}" needs a title, card text, image, destination, call-to-action label, and alternative text. Save it as Draft until every field is complete.`,
+      );
+    }
   }
 }
 
@@ -96,9 +112,7 @@ async function validatePromotionAssociations(
   admin: Awaited<ReturnType<typeof requireAdminPermission>>["admin"],
   sections: ReturnType<typeof sanitizeSections>,
 ) {
-  const cards = sections
-    .filter((section) => section.type === "promo_rail")
-    .flatMap((section) => section.cards);
+  const cards = sections.flatMap((section) => section.cards);
   for (const card of cards) {
     if (card.starts_at && card.ends_at && Date.parse(card.ends_at) <= Date.parse(card.starts_at)) {
       rejectRequest(`Promotion card "${card.title || card.id}" must end after it starts.`);
@@ -151,6 +165,8 @@ function revalidatePublishedContent() {
   revalidatePath("/", "layout");
   revalidatePath("/styles");
   revalidatePath("/blog");
+  revalidatePath("/about");
+  revalidatePath("/legal");
   revalidatePath("/salon/[slug]", "page");
 }
 
@@ -298,9 +314,9 @@ async function PUTHandler(request: Request) {
       const sections = sanitizeSections(payload.sections);
       if (payload.slug === "home") {
         const promotionRail = sections.find((section) => section.type === "promo_rail");
-        if (!promotionRail || promotionRail.cards.length < 8 || promotionRail.cards.length > 200) {
+        if (!promotionRail || promotionRail.cards.length > 200) {
           return Response.json(
-            { error: "The homepage promotion source pool must contain between 8 and 200 cards." },
+            { error: "The homepage promotion source pool can contain up to 200 saved cards. Empty positions use the approved editorial fallbacks." },
             { status: 400 },
           );
         }

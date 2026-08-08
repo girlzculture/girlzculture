@@ -7,6 +7,114 @@ export const DEFAULT_HOMEPAGE_PROMOTION_COUNT = 8;
 export const MAX_HOMEPAGE_PROMOTION_COUNT = 20;
 export const MAX_HOMEPAGE_PROMOTION_SOURCE_COUNT = 200;
 
+/**
+ * Built-in editorial cards are presentation fallbacks, not administrator
+ * records. Keeping the canonical collection in this client-safe core lets the
+ * public resolver and the Content Management preview use the same identities
+ * without ever writing these cards into the editor.
+ */
+export const HOMEPAGE_EDITORIAL_FALLBACKS: ContentCard[] = [
+  { id: "editorial-nearby", content_type: "image", title: "Find trusted salons nearby", body: "See verified beauty professionals close to you.", media_url: "/images/salon-warm.jpg", href: "/salons", cta_label: "Find a salon", alt_text: "Warm, modern beauty salon interior", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-knotless", content_type: "image", title: "Knotless braids, clear prices", body: "Compare real service details before you reserve.", media_url: "/images/braids-knotless.jpg", href: "/styles?style=knotless-braids", cta_label: "Browse knotless", alt_text: "Client wearing knotless braids", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-box", content_type: "image", title: "Explore box braids", body: "Choose a salon, stylist, length, and available time.", media_url: "/images/braids-box.jpg", href: "/styles?style=box-braids", cta_label: "Explore styles", alt_text: "Detailed box braid hairstyle", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-cornrows", content_type: "image", title: "Cornrow specialists", body: "Discover local professionals and verified client reviews.", media_url: "/images/braids-cornrows.jpg", href: "/styles?style=cornrows", cta_label: "See specialists", alt_text: "Client wearing neat cornrows", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-book", content_type: "image", title: "Reserve with confidence", body: "Choose an available appointment with clear pricing.", media_url: "/images/hero-braids.jpg", href: "/salons", cta_label: "Book now", alt_text: "Client with a finished braided hairstyle", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-how", content_type: "image", title: "How Girlz Culture works", body: "From discovery to a verified review, see every step.", media_url: "/images/salon-modern.jpg", href: "/how-it-works", cta_label: "How it works", alt_text: "Bright contemporary beauty salon", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-partner", content_type: "image", title: "Built for salon owners", body: "Manage services, availability, bookings, and your public page.", media_url: "/images/salon-blush.jpg", href: "/partner", cta_label: "Partner with us", alt_text: "Blush-toned salon interior", status: "Active", editorial_fallback: true, priority: 0 },
+  { id: "editorial-trust", content_type: "image", title: "Real work. Real reviews.", body: "Book from transparent salon profiles with verified feedback.", media_url: "/images/salon-dark.jpg", href: "/how-it-works", cta_label: "Safety and trust", alt_text: "Premium dark-toned salon interior", status: "Active", editorial_fallback: true, priority: 0 },
+];
+
+const HOMEPAGE_PROMOTION_MATERIAL_FIELDS: Array<keyof ContentCard> = [
+  "content_type",
+  "source_kind",
+  "association_type",
+  "salon_id",
+  "campaign_id",
+  "title",
+  "body",
+  "media_url",
+  "href",
+  "cta_label",
+  "alt_text",
+  "status",
+  "starts_at",
+  "ends_at",
+  "market_id",
+  "target_label",
+  "target_latitude",
+  "target_longitude",
+  "radius_miles",
+  "priority",
+  "rotation_weight",
+];
+
+function exactMaterialValue(value: unknown) {
+  return value == null ? "" : String(value).trim();
+}
+
+export function isCanonicalHomepageFallback(card: ContentCard) {
+  const canonical = HOMEPAGE_EDITORIAL_FALLBACKS.find(
+    (fallback) => fallback.id === card.id,
+  );
+  if (!canonical) return false;
+  return card.editorial_fallback === true && HOMEPAGE_PROMOTION_MATERIAL_FIELDS.every(
+    (field) => exactMaterialValue(card[field]) === exactMaterialValue(canonical[field]),
+  );
+}
+
+/**
+ * An Active homepage card is publishable only when it can render a complete,
+ * accessible call to action without SafeImage or button-label fallbacks.
+ * Draft and archived cards may remain incomplete while an editor is working.
+ */
+export function isHomepagePromotionCardComplete(card: {
+  title?: unknown;
+  body?: unknown;
+  media_url?: unknown;
+  href?: unknown;
+  cta_label?: unknown;
+  alt_text?: unknown;
+}) {
+  return [
+    card.title,
+    card.body,
+    card.media_url,
+    card.href,
+    card.cta_label,
+    card.alt_text,
+  ].every((value) => exactMaterialValue(value).length > 0);
+}
+
+export function homepagePromotionPreview(
+  cards: ContentCard[],
+  now: number,
+  requestedLimit = DEFAULT_HOMEPAGE_PROMOTION_COUNT,
+) {
+  const limit = Math.max(
+    1,
+    Math.min(MAX_HOMEPAGE_PROMOTION_COUNT, Math.round(requestedLimit || 8)),
+  );
+  const saved = uniquePromotionCards(
+    cards.filter((card) => !isCanonicalHomepageFallback(card)),
+  );
+  const eligible = saved.filter(
+    (card) =>
+      isPromotionCardActive(card, now) &&
+      isHomepagePromotionCardComplete(card),
+  );
+  const effectiveSaved = eligible.slice(0, limit);
+  const fallbackCount = Math.max(0, limit - effectiveSaved.length);
+  return {
+    saved,
+    eligible,
+    fallbackCount,
+    effective: uniquePromotionCards([
+      ...effectiveSaved,
+      ...HOMEPAGE_EDITORIAL_FALLBACKS,
+    ]).slice(0, limit),
+  };
+}
+
 function normalized(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
@@ -45,6 +153,19 @@ function targetCoordinates(card: ContentCard): Coordinates | null {
     lng: Number(card.target_longitude),
   };
   return validCoordinates(coordinates) ? coordinates : null;
+}
+
+/**
+ * Explicitly global editorial content has no market, coordinates, salon, or
+ * campaign association. This distinction matters while customer-location
+ * state is still loading: unresolved targeted cards must never flash first.
+ */
+export function isExplicitlyGlobalPromotionCard(card: ContentCard) {
+  return !targetCoordinates(card) &&
+    !card.market_id &&
+    !card.association_type &&
+    !card.salon_id &&
+    !card.campaign_id;
 }
 
 function boundedRotationWeight(card: ContentCard) {
@@ -135,16 +256,11 @@ export function selectLocalPromotionCards(input: {
     input.cards.filter((card) => isPromotionCardActive(card, input.now)),
   );
   const globalFallbacks = active.filter((card) => {
-    if (targetCoordinates(card)) return false;
-    const associated =
-      card.association_type === "salon" ||
-      card.association_type === "campaign" ||
-      Boolean(card.salon_id || card.campaign_id);
     // Existing administrator-authored image/GIF cards predate the
     // editorial_fallback flag. Treat every unassociated, untargeted card as a
     // global editorial card so a saved GIF cannot silently disappear after a
     // reload. Associated cards still require verified coordinates and radius.
-    return !associated;
+    return isExplicitlyGlobalPromotionCard(card);
   }).sort((left, right) => rank(left, right, input.now, input.customerLocation));
   if (!input.customerLocation || !validCoordinates(input.customerLocation)) {
     return globalFallbacks.slice(0, limit);

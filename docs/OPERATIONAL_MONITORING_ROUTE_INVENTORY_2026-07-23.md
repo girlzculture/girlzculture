@@ -71,7 +71,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/concierge/search` | POST | provider-backed | Covered |
 | `/api/commerce/pickup-cleanup` | POST | protected | Covered |
 | `/api/config` | GET | public/read-only | Covered |
-| `/api/customer/favorites` | POST, DELETE | protected | Covered |
+| `/api/customer/favorites` | POST, DELETE, GET | protected | Covered |
 | `/api/discovery/availability` | POST | expected-only | Covered |
 | `/api/discovery/decision-search` | POST | expected-only | Covered |
 | `/api/discovery/featured` | GET | public/read-only | Covered |
@@ -97,7 +97,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/promo/validate` | POST | expected-only | Covered |
 | `/api/promotions/salon` | GET | public/read-only | Covered |
 | `/api/push/subscription` | GET, POST, DELETE | provider-backed | Covered |
-| `/api/reviews/[token]` | GET, POST | public/read-only | Covered |
+| `/api/reviews/[token]` | GET, POST | public/read-only, provider-backed | Covered |
 | `/api/salon/application` | POST | provider-backed | Covered |
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
@@ -114,6 +114,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/salon/product-orders` | GET, POST | protected | Covered |
 | `/api/salon/records` | GET, POST | protected | Covered |
 | `/api/salon/records/save` | POST | protected | Covered |
+| `/api/salon/reviews/[id]/reply` | POST | protected | Covered |
 | `/api/salon/team` | GET, POST, PATCH, DELETE | protected | Covered |
 | `/api/salon/workspace` | GET | protected | Covered |
 | `/api/salons/[slug]/qr` | GET | public/read-only | Covered |

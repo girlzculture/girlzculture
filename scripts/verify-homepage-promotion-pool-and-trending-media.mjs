@@ -366,7 +366,11 @@ assert.match(mediaUploadServer, /animatedRenditionDimensions\(/);
 assert.match(server, /HOMEPAGE_EDITORIAL_FALLBACKS/);
 assert.match(
   server,
-  /uniquePromotionCards\(\[\.\.\.published, \.\.\.HOMEPAGE_EDITORIAL_FALLBACKS\]\)/,
+  /const completePublished = published\.filter\(isHomepagePromotionCardComplete\);/,
+);
+assert.match(
+  server,
+  /uniquePromotionCards\(\[[\s\S]*\.\.\.completePublished,[\s\S]*\.\.\.HOMEPAGE_EDITORIAL_FALLBACKS/,
 );
 assert.match(server, /MAX_HOMEPAGE_PROMOTION_SOURCE_COUNT/);
 assert.match(server, /resolve_homepage_promotion_targets/);
@@ -391,16 +395,16 @@ assert.match(server, /target\.target_type === "campaign"/);
 assert.match(contentManager, /expected_updated_at: page\.updated_at/);
 assert.match(contentManager, /_allow_card_count_change: true/);
 assert.match(contentManager, /Cards shown per customer/);
-assert.match(contentManager, /Add promotion to pool/);
+assert.match(contentManager, /Add saved promotion/);
 assert.match(contentManager, /Remove promotion card/);
-assert.match(contentManager, /National source pool/);
+assert.match(contentManager, /Saved source pool/);
 assert.match(contentManager, /Audience radius \(miles\)/);
 assert.match(contentManager, /\["salon", "campaign"\]/);
 assert.match(contentRoute, /CONTENT_REVISION_CONFLICT/);
 assert.match(contentRoute, /PROMOTION_COLLECTION_CONFLICT/);
 assert.match(contentRoute, /cannot reuse the same card ID/);
 assert.match(contentRoute, /cannot appear twice in the homepage rail/);
-assert.match(contentRoute, /must contain between 8 and 200 cards/);
+assert.match(contentRoute, /promotionRail\.cards\.length > 200/);
 assert.match(contentRoute, /display_limit/);
 
 assert.match(campaignManager, /let preparedSource = file/);

@@ -465,6 +465,14 @@ const defaultFooter: NavigationItem[] = [
     href: "/partner",
     sort_order: 10,
   },
+  {
+    surface: "footer",
+    group_key: "legal",
+    item_key: "legal-policies",
+    label: "Legal & Policies",
+    href: "/legal",
+    sort_order: 10,
+  },
 ];
 
 const footerGroupLabels: Record<string, { title: string; key: string }> = {
@@ -474,16 +482,24 @@ const footerGroupLabels: Record<string, { title: string; key: string }> = {
     title: "For Professionals",
     key: "footer.professionals",
   },
+  legal: { title: "Legal & Policies", key: "footer.legal" },
 };
 
-export async function PublicFooter() {
+export async function PublicFooter({
+  reserveMobileNavigation = false,
+}: {
+  reserveMobileNavigation?: boolean;
+} = {}) {
   const [legalLinks, footerItems, brandAssets] = await Promise.all([
     getVisibleLegalLinks(),
     getNavigationItems("footer", defaultFooter),
     getPublishedBrandAssets(),
   ]);
   const footerLogo = brandAssets.light_logo;
-  const legalColumns = [legalLinks.slice(0, 5), legalLinks.slice(5, 10)];
+  const legalColumns = [
+    legalLinks.filter((_, index) => index % 2 === 0),
+    legalLinks.filter((_, index) => index % 2 === 1),
+  ];
   const footerGroups = Array.from(
     new Set(footerItems.map((item) => item.group_key)),
   ).map((groupKey) => ({
@@ -494,9 +510,15 @@ export async function PublicFooter() {
     }),
     links: footerItems.filter((item) => item.group_key === groupKey),
   }));
+  const desktopGroups = footerGroups.filter((group) => group.groupKey !== "legal");
+  const mobileGroups = desktopGroups.filter((group) => ["company", "professionals", "support"].includes(group.groupKey));
+  // `getNavigationItems` already supplies defaults only when the navigation
+  // source is unavailable. Do not add a second fallback here: a missing legal
+  // item in an otherwise successful read means the founder disabled it.
+  const mobileLegalItem = footerItems.find((item) => item.item_key === "legal-policies");
   return (
     <footer className="gc-brand-footer overflow-x-clip text-white">
-      <div className="mx-auto grid w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
+      <div className="mx-auto hidden w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 md:grid lg:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] lg:px-10 xl:px-12 2xl:px-16">
         <div className="min-w-0">
           {footerLogo?.published_url ? (
             <img
@@ -514,7 +536,7 @@ export async function PublicFooter() {
             <Share2 aria-label="Social channels" size={17} />
           </div>
         </div>
-        {footerGroups.map((group) => (
+        {desktopGroups.map((group) => (
           <div key={group.groupKey} className="min-w-0">
             <h2 className="[overflow-wrap:anywhere] text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">
               <LocalizedText
@@ -586,6 +608,18 @@ export async function PublicFooter() {
             />
           </p>
         </div>
+      </div>
+      <div className={`mx-auto w-full max-w-[680px] px-4 pt-6 md:hidden ${reserveMobileNavigation ? "pb-[calc(7rem+env(safe-area-inset-bottom))]" : "pb-[calc(2rem+env(safe-area-inset-bottom))]"}`}>
+        <div className="flex items-center justify-between gap-4 border-b border-white/15 pb-5">
+          <div className="min-w-0">{footerLogo?.published_url ? <img src={footerLogo.published_url} alt={footerLogo.published_alt_text || "Girlz Culture"} className="h-9 w-auto max-w-[210px] object-contain object-left"/> : <div className="font-serif text-2xl font-bold">Girlz Culture</div>}</div>
+          <div className="flex shrink-0 gap-3 text-white/75"><Camera aria-label="Instagram" size={18}/><Share2 aria-label="Social channels" size={18}/></div>
+        </div>
+        <nav aria-label="Footer" className="divide-y divide-white/15">
+          {mobileGroups.map((group, index) => <details key={group.groupKey} open={index === 0} className="group py-1"><summary className="flex min-h-12 cursor-pointer list-none items-center justify-between text-xs font-bold uppercase tracking-[.08em] text-white/85 [&::-webkit-details-marker]:hidden"><LocalizedText messageKey={group.key} fallback={group.title}/><span aria-hidden="true" className="text-lg font-normal transition-transform group-open:rotate-45">+</span></summary><ul className="space-y-1 pb-3">{group.links.map((item) => <li key={item.item_key}><Link href={item.href} className="flex min-h-11 items-center text-sm text-white/70"><LocalizedText messageKey={item.translation_key || `navigation.${item.item_key}`} fallback={item.label}/>{item.show_new_badge ? <span className="ml-2 rounded-full bg-magenta px-2 py-0.5 text-[8px] font-bold uppercase text-white">New</span> : null}</Link></li>)}</ul></details>)}
+          {mobileLegalItem ? <Link href={mobileLegalItem.href} className="flex min-h-12 items-center justify-between text-xs font-bold uppercase tracking-[.08em] text-white/85"><span>{mobileLegalItem.label}</span><span aria-hidden="true">→</span></Link> : null}
+        </nav>
+        <section className="mt-5 rounded-[16px] border border-white/15 bg-white/5 p-4"><h2 className="font-serif text-xl font-semibold"><LocalizedText messageKey="footer.newsletter" fallback="Stay in the loop"/></h2><p className="mt-1 text-[11px] leading-5 text-white/65"><LocalizedText messageKey="footer.newsletter_help" fallback="Tips, new salons, and exclusive offers."/></p><NewsletterForm/></section>
+        <p className="mt-5 text-[10px] text-white/60">© {new Date().getFullYear()} Girlz Culture, Inc. <LocalizedText messageKey="footer.rights" fallback="All rights reserved."/></p>
       </div>
     </footer>
   );

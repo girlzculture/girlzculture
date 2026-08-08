@@ -5,10 +5,23 @@ import {
   discoverNearbySalons,
   type PublicSalonResult,
 } from "@/lib/discoveryServer";
+import {
+  boundedSearchNumber,
+  decisionSearchRadius,
+  stableMasterStyleMatch,
+} from "@/lib/discoverySearchCore";
+import {
+  collectDecisionSearchEnrichment,
+  decisionEffectivePrice,
+  groupDecisionSearchRowsBySalon,
+  resolveDecisionServiceIdentity,
+  selectBestDecisionPromotion,
+} from "@/lib/decisionSearchEnrichmentCore";
 import { validCoordinates, type Coordinates } from "@/lib/location";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type DecisionSearchFilters = {
+  serviceId?: string | null;
   radiusMiles?: number | null;
   minimumRating?: number | null;
   maximumPrice?: number | null;
@@ -70,8 +83,15 @@ type PromotionRow = {
   target_ids: string[] | null;
 };
 
+type BookingRow = {
+  id: string;
+  salon_id: string;
+  status: string;
+};
+
 type ParsedIntent = {
   service: CatalogService | null;
+  stableServiceId: string | null;
   radiusMiles: number;
   minimumRating: number | null;
   maximumPrice: number | null;
@@ -97,18 +117,6 @@ function containsPhrase(haystack: string, needle: string) {
   const normalizedNeedle = normalize(needle);
   if (!normalizedNeedle) return false;
   return ` ${haystack} `.includes(` ${normalizedNeedle} `);
-}
-
-function finiteNumber(
-  value: unknown,
-  fallback: number | null,
-  minimum: number,
-  maximum: number,
-) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? Math.max(minimum, Math.min(maximum, parsed))
-    : fallback;
 }
 
 function dateOnly(offsetDays = 0) {
@@ -185,19 +193,6 @@ function promotionApplies(promotion: PromotionRow, style: StyleRow | null) {
   return false;
 }
 
-function effectivePrice(
-  original: number | null,
-  promotion: PromotionRow | null,
-) {
-  if (original === null || !promotion) return original;
-  const value = Math.max(0, Number(promotion.discount_value || 0));
-  if (promotion.promotion_type === "percentage")
-    return Math.max(0, original * (1 - Math.min(100, value) / 100));
-  if (promotion.promotion_type === "fixed")
-    return Math.max(0, original - value);
-  return original;
-}
-
 async function catalog() {
   const admin = getSupabaseAdmin();
   const [styles, rules] = await Promise.all([
@@ -239,41 +234,6 @@ async function catalog() {
       aliases: [...new Set([String(style.name), ...aliases])],
     };
   });
-}
-
-function resolveService(query: string, services: CatalogService[]) {
-  const excluded = new Set([
-    "affordable",
-    "best",
-    "best rated",
-    "highest rated",
-    "salon",
-    "salons",
-    "salon near me",
-    "salons near me",
-    "beauty salon",
-    "hair salon",
-    "near me",
-  ]);
-  const candidates = services
-    .flatMap((service) =>
-      service.aliases.map((term) => ({
-        service,
-        term,
-        normalized: normalize(term),
-      })),
-    )
-    .filter(
-      (candidate) =>
-        !excluded.has(candidate.normalized) &&
-        containsPhrase(query, candidate.normalized),
-    )
-    .sort(
-      (left, right) =>
-        right.normalized.length - left.normalized.length ||
-        left.service.name.localeCompare(right.service.name),
-    );
-  return candidates[0]?.service || null;
 }
 
 async function resolveOrigin(
@@ -354,6 +314,11 @@ function parseIntent(
   filters: DecisionSearchFilters,
 ): ParsedIntent {
   const query = normalize(rawQuery);
+  const serviceIdentity = resolveDecisionServiceIdentity(
+    query,
+    services,
+    filters.serviceId,
+  );
   const affordableIntent =
     /\b(affordable|cheap|budget|lowest price|low cost)\b/.test(query);
   const bestIntent =
@@ -376,17 +341,25 @@ function parseIntent(
         ? "price_low"
         : "distance");
   const maximumPrice =
-    finiteNumber(filters.maximumPrice, null, 0, 100_000) ??
-    finiteNumber(budgetMatch?.[1], null, 0, 100_000);
+    boundedSearchNumber(filters.maximumPrice, null, 0, 100_000) ??
+    boundedSearchNumber(budgetMatch?.[1], null, 0, 100_000);
   const minimumRating =
-    finiteNumber(filters.minimumRating, null, 0, 5) ??
-    finiteNumber(ratingMatch?.[1], bestIntent ? 3.9 : null, 0, 5);
+    boundedSearchNumber(filters.minimumRating, null, 0, 5) ??
+    boundedSearchNumber(
+      ratingMatch?.[1],
+      bestIntent ? 3.9 : null,
+      0,
+      5,
+    );
   return {
-    service: resolveService(query, services),
-    radiusMiles:
-      finiteNumber(filters.radiusMiles, null, 1, 100) ??
-      finiteNumber(radiusMatch?.[1], 25, 1, 100) ??
-      25,
+    // A stable catalog identity is authoritative. If it no longer exists, do
+    // not reinterpret the display copy and accidentally return another style.
+    service: serviceIdentity.service,
+    stableServiceId: serviceIdentity.stableServiceId,
+    radiusMiles: decisionSearchRadius(
+      filters.radiusMiles,
+      radiusMatch?.[1],
+    ),
     minimumRating,
     maximumPrice,
     date: requestedDate(query, filters.date),
@@ -404,14 +377,18 @@ function relevantStyle(
   rows: StyleRow[],
   salonId: string,
   service: CatalogService | null,
+  stableServiceId: string | null,
 ) {
   const salonRows = rows.filter((row) => row.salon_id === salonId);
   if (!salonRows.length) return null;
+  if (stableServiceId) {
+    return stableMasterStyleMatch(salonRows, stableServiceId);
+  }
   if (service) {
     const exact = salonRows.find(
       (row) =>
         row.master_style_id === service.id ||
-        containsPhrase(normalize(row.name), normalize(service.name)),
+        normalize(row.name) === normalize(service.name),
     );
     if (exact) return exact;
   }
@@ -469,10 +446,14 @@ export async function runDecisionSearch(input: {
     origin: resolved.origin,
     radius: intent.radiusMiles,
     style: intent.service?.name || undefined,
+    masterStyleId: intent.stableServiceId,
     minimumRating: intent.minimumRating,
-    maximumPrice: intent.maximumPrice,
+    // Offers are loaded below and the customer's real post-promotion service
+    // price is authoritative. Filtering here would discard an otherwise
+    // eligible $100 service with a 25% offer from an "under $80" search.
+    maximumPrice: null,
     sort: intent.sort,
-    limit: 40,
+    limit: "all",
   });
   const ids = discovery.salons.map((salon) => salon.id);
   if (!ids.length) {
@@ -497,32 +478,50 @@ export async function runDecisionSearch(input: {
   const admin = getSupabaseAdmin();
   const now = new Date().toISOString();
   const [styleResult, promotionResult, bookingResult] = await Promise.all([
-    admin
-      .from("styles")
-      .select(
-        "id,salon_id,master_style_id,name,base_price,price_display_min,price_display_max",
-      )
-      .in("salon_id", ids)
-      .is("archived_at", null)
-      .eq("is_draft", false)
-      .limit(5_000),
-    admin
-      .from("salon_promotions")
-      .select(
-        "id,salon_id,title,discount_label,discount_value,promotion_type,target_scope,target_ids",
-      )
-      .in("salon_id", ids)
-      .eq("status", "Active")
-      .eq("is_active", true)
-      .is("archived_at", null)
-      .or(`starts_at.is.null,starts_at.lte.${now}`)
-      .or(`ends_at.is.null,ends_at.gte.${now}`)
-      .limit(1_000),
-    admin
-      .from("bookings")
-      .select("salon_id,status")
-      .in("salon_id", ids)
-      .limit(10_000),
+    collectDecisionSearchEnrichment<StyleRow>(
+      ids,
+      (salonIds, from, to) => {
+        let query = admin
+          .from("styles")
+          .select(
+            "id,salon_id,master_style_id,name,base_price,price_display_min,price_display_max",
+          )
+          .in("salon_id", salonIds)
+          .is("archived_at", null)
+          .eq("is_draft", false);
+        if (intent.stableServiceId) {
+          query = query.eq("master_style_id", intent.stableServiceId);
+        }
+        return query.order("id", { ascending: true }).range(from, to);
+      },
+    ),
+    collectDecisionSearchEnrichment<PromotionRow>(
+      ids,
+      (salonIds, from, to) =>
+        admin
+          .from("salon_promotions")
+          .select(
+            "id,salon_id,title,discount_label,discount_value,promotion_type,target_scope,target_ids",
+          )
+          .in("salon_id", salonIds)
+          .eq("status", "Active")
+          .eq("is_active", true)
+          .is("archived_at", null)
+          .or(`starts_at.is.null,starts_at.lte.${now}`)
+          .or(`ends_at.is.null,ends_at.gte.${now}`)
+          .order("id", { ascending: true })
+          .range(from, to),
+    ),
+    collectDecisionSearchEnrichment<BookingRow>(
+      ids,
+      (salonIds, from, to) =>
+        admin
+          .from("bookings")
+          .select("id,salon_id,status")
+          .in("salon_id", salonIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+    ),
   ]);
   if (styleResult.error) throw styleResult.error;
   if (promotionResult.error) throw promotionResult.error;
@@ -530,29 +529,39 @@ export async function runDecisionSearch(input: {
 
   const styles = (styleResult.data || []) as StyleRow[];
   const promotions = (promotionResult.data || []) as PromotionRow[];
-  const bookingRows = bookingResult.data || [];
+  const bookingRows = (bookingResult.data || []) as BookingRow[];
+  const stylesBySalon = groupDecisionSearchRowsBySalon(styles);
+  const promotionsBySalon = groupDecisionSearchRowsBySalon(promotions);
+  const bookingsBySalon = groupDecisionSearchRowsBySalon(bookingRows);
 
   const enriched = await Promise.all(
     discovery.salons.map(async (salon): Promise<DecisionSearchSalon | null> => {
-      const style = relevantStyle(styles, salon.id, intent.service);
-      const applicablePromotions = promotions.filter(
-        (promotion) =>
-          promotion.salon_id === salon.id &&
-          promotionApplies(promotion, style),
+      const style = relevantStyle(
+        stylesBySalon.get(salon.id) || [],
+        salon.id,
+        intent.service,
+        intent.stableServiceId,
       );
-      const promotion = applicablePromotions[0] || null;
-      if (intent.promotionOnly && !promotion) return null;
+      if (intent.stableServiceId && !style) return null;
+      const applicablePromotions = (
+        promotionsBySalon.get(salon.id) || []
+      ).filter(
+        (promotion) => promotionApplies(promotion, style),
+      );
       const originalPrice = displayedPrice(style);
-      const price = effectivePrice(originalPrice, promotion);
+      const promotion = selectBestDecisionPromotion(
+        originalPrice,
+        applicablePromotions,
+      );
+      if (intent.promotionOnly && !promotion) return null;
+      const price = decisionEffectivePrice(originalPrice, promotion);
       if (
         intent.maximumPrice !== null &&
         (price === null || price > intent.maximumPrice)
       )
         return null;
 
-      const related = bookingRows.filter(
-        (row) => String(row.salon_id) === salon.id,
-      );
+      const related = bookingsBySalon.get(salon.id) || [];
       const completed = related.filter(
         (row) => String(row.status).toLowerCase() === "completed",
       ).length;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CalendarDays, MapPin, ShieldCheck, Star } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
+import { formatDistanceMiles } from "@/lib/location";
 
 type ExtendedSalon = PublicSalonResult & {
   matched_service?: {
@@ -37,6 +38,7 @@ type Props = {
   selected?: boolean;
   onFocus?: (salonId: string) => void;
   onNavigate?: () => void;
+  mobileDistanceOnly?: boolean;
 };
 
 function money(value: number | null | undefined) {
@@ -55,6 +57,7 @@ export default function MarketplaceSalonCard({
   selected = false,
   onFocus,
   onNavigate,
+  mobileDistanceOnly = false,
 }: Props) {
   const verified = String(salon.verification_status || "")
     .toLowerCase()
@@ -67,16 +70,10 @@ export default function MarketplaceSalonCard({
   ]
     .filter(Boolean)
     .join(", ");
-  const distanceLabel = Number.isFinite(Number(salon.distance_miles))
-    ? `${
-        Number(salon.distance_miles) < 0.1
-          ? "Under 0.1"
-          : Number(salon.distance_miles).toFixed(1)
-      } mi away`
-    : "";
+  const distanceLabel = formatDistanceMiles(salon.distance_miles);
   const locationLabel = [area || "Location available on profile", distanceLabel]
     .filter(Boolean)
-    .join(" · ");
+    .join(" — ");
   const profileHref = `/salon/${salon.slug}`;
   const bookingQuery = new URLSearchParams();
   if (salon.matched_service?.id)
@@ -175,10 +172,21 @@ export default function MarketplaceSalonCard({
             <span
               data-no-translate="true"
               title={locationLabel}
-              className="block min-w-0 truncate whitespace-nowrap"
+              className={`min-w-0 truncate whitespace-nowrap ${
+                mobileDistanceOnly ? "hidden sm:block" : "block"
+              }`}
             >
               {locationLabel}
             </span>
+            {mobileDistanceOnly ? (
+              <span
+                data-no-translate="true"
+                title={distanceLabel}
+                className="block min-w-0 truncate whitespace-nowrap sm:hidden"
+              >
+                {distanceLabel}
+              </span>
+            ) : null}
           </p>
 
           <div

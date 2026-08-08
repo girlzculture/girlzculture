@@ -8,6 +8,7 @@ import {
   deterministicContentDecision,
   type ModerationDecision,
 } from "@/lib/contentModerationCore";
+import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
 
 type ModerationFeature = {
   is_enabled?: boolean;
@@ -41,16 +42,29 @@ export async function moderatePublicContent(
       .select("is_enabled,provider_key,model_key,timeout_ms,moderation_required")
       .eq("feature_key", "moderation_assist")
       .maybeSingle<ModerationFeature>();
-    if (error || !feature?.is_enabled || feature.moderation_required === false)
+    if (error) {
+      noteOperationalFailure(
+        "Review moderation configuration could not be read",
+        new Error("REVIEW_MODERATION_CONFIG_READ_FAILED"),
+      );
+      return deterministic;
+    }
+    if (!feature?.is_enabled || feature.moderation_required === false)
       return deterministic;
 
     const provider = String(feature.provider_key || "test");
+    if (provider !== "openai") return deterministic;
     if (
-      provider !== "openai" ||
       !approvedAiProviders().includes(provider) ||
       !approvedAiModels(provider).includes(String(feature.model_key || "")) ||
       !aiProviderConfigured(provider)
-    ) return deterministic;
+    ) {
+      noteOperationalFailure(
+        "Review moderation provider is not configured",
+        new Error("REVIEW_MODERATION_PROVIDER_NOT_CONFIGURED"),
+      );
+      return deterministic;
+    }
 
     const content = [
       input.name ? `Public first name: ${input.name}` : "",
@@ -75,14 +89,28 @@ export async function moderatePublicContent(
           input: content,
         }),
       });
-      if (!response.ok) return deterministic;
+      if (!response.ok) {
+        noteOperationalFailure(
+          "Review moderation provider returned an error",
+          new Error(`REVIEW_MODERATION_PROVIDER_HTTP_${response.status}`),
+        );
+        return deterministic;
+      }
       return providerFlagged(await response.json())
-        ? { allowed: false, reason: "abusive", source: "provider" }
-        : { allowed: true, source: "provider" };
+        ? { allowed: false, outcome: "review", reason: "unsafe", source: "provider" }
+        : { allowed: true, outcome: "allow", source: "provider" };
     } finally {
       clearTimeout(timeout);
     }
-  } catch {
+  } catch (error) {
+    noteOperationalFailure(
+      "Review moderation provider request failed",
+      new Error(
+        error instanceof Error && error.name === "AbortError"
+          ? "REVIEW_MODERATION_PROVIDER_TIMEOUT"
+          : "REVIEW_MODERATION_PROVIDER_FAILURE",
+      ),
+    );
     return deterministic;
   }
 }
