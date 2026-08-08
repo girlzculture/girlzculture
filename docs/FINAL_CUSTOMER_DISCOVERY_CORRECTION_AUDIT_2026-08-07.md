@@ -7,7 +7,7 @@ Scope: the founder's August 7 customer discovery, content, reviews, media, remin
 
 ## Outcome
 
-The repository implementation, focused verifiers, production build, isolated browser acceptance suites, and genuine clean-database migration replay pass. Multiple independent read-only reviews found reminder, enrichment, authorization, publication, and data-projection edge cases; every identified branch P1 was corrected and re-verified. The final independent audit found no remaining P0/P1 defect in the requested repository scope. The release is **not ready to launch** because Google Maps is still rejected in the real production site and launch-critical provider/authenticated workflows could not be exercised against a deployed preview with real test accounts and providers.
+The repository implementation, focused verifiers, production build, isolated browser acceptance suites, and genuine clean-database migration replay pass. Multiple independent read-only reviews found reminder, enrichment, authorization, publication, and data-projection edge cases; every identified branch P1 was corrected and re-verified. The final independent audit found no remaining P0/P1 defect in the requested repository scope. The release is **not ready to launch** because the connected Supabase Preview check is skipped and therefore the Netlify preview does not have the branch database contract, Google Maps is still rejected in the real production site, and launch-critical provider/authenticated workflows could not be exercised against a deployed preview with real test accounts and providers.
 
 ## Root causes and corrections
 
@@ -40,6 +40,8 @@ The repository implementation, focused verifiers, production build, isolated bro
   - Replaces the outer reminder claim with a bounded three-attempt lease/retry state machine aligned to the scheduled worker's due window; adds service-only failure recording and terminal correlation state.
 
 These files were **not** applied to production or any Supabase project. GitHub Actions applied all 123 repository migrations in chronological order to a genuinely empty disposable PostgreSQL 17 database, generated 1,000 unique booking references and 1,000 unique product references across concurrent sessions, and passed the final schema/function/RLS/grant assertions with 173 policies. The database was ephemeral and contained no production data. The production build completed against the existing schema when the unapplied navigation RPC was absent. Build-phase monitoring persistence is now disabled centrally so future static generation cannot write an Engine incident to an attached database.
+
+The Netlify draft preview itself deployed successfully, but its external `Supabase Preview` check is `skipping`. Consequently, the connected runtime has not received these migrations and the public discovery RPC contract is unavailable there. The smoke test retains this as a failure rather than substituting invented or empty success data.
 
 ## Verification evidence
 
@@ -86,10 +88,12 @@ These files were **not** applied to production or any Supabase project. GitHub A
 
 - **Real Google Maps provider:** `google-maps-provider.spec.ts` failed. The configured key was present, but Google rejected it with `GOOGLE_MAPS_AUTH_REJECTED`.
 - **Live production map:** read-only inspection of `https://girlzculture.com/salons?lat=40.8116&lng=-73.9465&location=Harlem%2C%20NY&radius=50` showed 25 nearby salons but the real map returned: `Google Maps loaded an invalid response. Verify that Maps JavaScript API is enabled for this key.` Live user-visible reference: `75c92d3c-d435-4448-bc87-afdfc28044cd`.
+- **Netlify deploy-preview smoke:** the preview rendered the homepage, How It Works, Salons, and `/api/config` with HTTP 200, but `/api/discovery/salons` and `/api/discovery/trending` returned sanitized JSON HTTP 500 responses because the associated Supabase Preview database deployment was skipped. Read-only follow-up references: `d559ef5f-2767-46df-8b57-e33ea5e9492f` and `16adb88a-9e91-482b-abd7-6071cef293f7`.
 - **Pre-existing desktop header density:** at 1366×768 and 1440×1000 the logo overlaps the first desktop navigation item. The branch does not modify the header, so Prompt 2 requires documenting it instead of silently expanding scope.
 
 ### BLOCKED
 
+- Connected Supabase deploy-preview execution: the repository's external `Supabase Preview` status is skipped, so no migrated preview database was available for the Netlify smoke test.
 - Real review-moderation provider: `OPENAI_API_KEY` is not available in this environment.
 - Real Cloudinary/video provider: Cloudinary credentials are not available in this environment.
 - Real booking-reminder scheduled function: the branch was not deployed and local `INTERNAL_API_SECRET`/Netlify deployment metadata are unavailable.
@@ -112,7 +116,8 @@ These files were **not** applied to production or any Supabase project. GitHub A
    - the exact Netlify deploy-preview host pattern used for acceptance
 3. If local provider acceptance is desired, temporarily allow `http://127.0.0.1:3104/*` on a non-production test key; do not weaken the production key.
 4. Ensure the Netlify scheduled-function environment provides `INTERNAL_API_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`), and Netlify's deploy URL/release metadata.
-5. Configure the review-moderation and Cloudinary test providers in the preview environment if those launch-critical paths are to be promoted from BLOCKED/AUTOMATED ONLY.
+5. Enable or repair the repository's connected Supabase Preview integration for PR #43, then allow the full migration chain to execute against that disposable preview branch. Do not point the preview at production as a workaround.
+6. Configure the review-moderation and Cloudinary test providers in the preview environment if those launch-critical paths are to be promoted from BLOCKED/AUTOMATED ONLY.
 
 ## Independent diff review
 
@@ -129,12 +134,13 @@ All paths are under `docs/screenshots/final-correction/`:
 
 ## Launch blockers in priority order
 
-1. **Provider integration:** production Google Maps key/API/referrer configuration is rejected.
-2. **Environment/provider integration:** real authenticated review, media, reminder, and role workflows have not been exercised on a deployed preview with test providers and test accounts.
-3. **Repository defect (pre-existing/out of branch scope):** desktop header logo/navigation overlap at 1366 and 1440 widths.
+1. **Database/migration issue:** the external Supabase Preview check is skipped, so the deployed PR preview lacks the branch schema and its discovery endpoints return HTTP 500.
+2. **Provider integration:** production Google Maps key/API/referrer configuration is rejected.
+3. **Environment/provider integration:** real authenticated review, media, reminder, and role workflows have not been exercised on a deployed preview with test providers and test accounts.
+4. **Repository defect (pre-existing/out of branch scope):** desktop header logo/navigation overlap at 1366 and 1440 widths.
 
 ## Production-safety statement
 
 No pull request was merged. No production migration was applied. No production deployment or provider configuration was changed. No payment was made. No customer, salon, booking, review, content, subscription, provider asset, or other business record was created, edited, archived, restored, or deleted.
 
-One operational exception was detected during verification: the local build inherited a production-linked `.env.local`; because the new navigation RPC was intentionally not migrated, static generation called the existing monitoring helper and created/updated one deduplicated Engine event (`e5766e31-9444-4b22-8347-2e954c629eb4`, fingerprint `gc-056b9584`, 109 occurrences at the time of read-only inspection). The event contains sanitized `public-content / load-navigation-items` metadata only. It was not deleted or altered after discovery. The central build-phase guard described above prevents future static builds from persisting Engine events while preserving runtime monitoring. The other production action was read-only browser inspection of the public `/salons` route.
+One operational exception was detected during verification: the local build inherited a production-linked `.env.local`; because the new navigation RPC was intentionally not migrated, static generation called the existing monitoring helper and created/updated one deduplicated Engine event (`e5766e31-9444-4b22-8347-2e954c629eb4`, fingerprint `gc-056b9584`, 109 occurrences at the time of read-only inspection). The event contains sanitized `public-content / load-navigation-items` metadata only. It was not deleted or altered after discovery. The central build-phase guard described above prevents future static builds from persisting Engine events while preserving runtime monitoring. The other production action was read-only browser inspection of the public `/salons` route; final verification also made read-only requests to the isolated Netlify deploy preview.
