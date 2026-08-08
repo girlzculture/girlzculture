@@ -241,10 +241,14 @@ assert.notEqual(
 );
 
 const wrongMimeFixture = await fixture(1200, 600, "#5b1a6b");
-await assert.rejects(
-  () =>
-    processor.inspectCanonicalMediaSource(wrongMimeFixture, "image/jpeg"),
-  /format does not match/i,
+const normalizedWrongMime = await processor.inspectCanonicalMediaSource(
+  wrongMimeFixture,
+  "image/jpeg",
+);
+assert.equal(
+  normalizedWrongMime.mimeType,
+  "image/png",
+  "decoded image bytes must override a stale browser MIME hint",
 );
 
 const transparentLogoBuffer = await sharp({

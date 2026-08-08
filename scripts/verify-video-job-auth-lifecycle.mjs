@@ -16,6 +16,10 @@ import {
 const platformErrorsSource = fs
   .readFileSync("src/lib/platformErrors.ts", "utf8")
   .replace(
+    'import { isStaticBuildPhase } from "@/lib/buildPhaseCore";',
+    "const isStaticBuildPhase = () => false;",
+  )
+  .replace(
     'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
     'const deploymentReleaseId = () => "verification";',
   );
