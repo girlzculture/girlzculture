@@ -22,6 +22,7 @@ const featuredProducts = read(
 const engineConfig = read("src/lib/engineConfigServer.ts");
 const layout = read("src/app/layout.tsx");
 const supabase = read("src/lib/supabase.ts");
+const adminData = read("src/app/api/admin/data/route.ts");
 const descriptionEditor = read(
   "src/components/owner/SalonDescriptionEditor.tsx",
 );
@@ -160,6 +161,23 @@ assert.match(
   /for \(const storage of \[window\.sessionStorage, window\.localStorage\]\)/,
 );
 
+assert.match(
+  adminData,
+  /bookings:\s*\n?\s*"id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status"/,
+);
+assert.doesNotMatch(
+  adminData,
+  /deposit_amount,deposit_status,payment_status/,
+  "Platform Admin Overview must not request the nonexistent bookings.payment_status column.",
+);
+assert.match(adminData, /noteOperationalFailure\("Admin data load failed", error\)/);
+assert.match(adminData, /throw error;/);
+assert.doesNotMatch(
+  adminData,
+  /Unable to load admin data[\s\S]*status:\s*403/,
+  "Unexpected database failures must not be mislabeled as permission denials.",
+);
+
 assert.match(descriptionEditor, /200 words/);
 assert.match(publicDescription, /const PREVIEW_WORDS = 50/);
 assert.match(publicDescription, /const MAX_WORDS = 200/);
@@ -177,5 +195,5 @@ assert.match(migration, /read_at=coalesce\(read_at,now\(\)\)/);
 assert.match(migration, /category='bookings'/);
 
 console.log(
-  "Verified one grounded salon search, a shared persisted location for List and Map, compact mobile controls, restored functional navigation, bounded homepage fallbacks, tab-isolated salon sessions, 200-word profile assistance, enhanced stylist fallback, and actionable-only booking badges.",
+  "Verified one grounded salon search, a shared persisted location for List and Map, compact mobile controls, restored functional navigation, bounded homepage fallbacks, tab-isolated salon sessions, a schema-safe Platform Admin Overview, 200-word profile assistance, enhanced stylist fallback, and actionable-only booking badges.",
 );
