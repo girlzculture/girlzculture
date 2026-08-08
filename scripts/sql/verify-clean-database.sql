@@ -25,7 +25,10 @@ begin
       raise exception 'RLS is not enabled on public.%', core_table;
     end if;
 
-    if not exists (
+    -- reviews is intentionally service-only: RLS with zero browser policies is
+    -- deny-by-default, and the detailed assertions below verify that anon and
+    -- authenticated retain no table privileges while service_role does.
+    if core_table <> 'reviews' and not exists (
       select 1
       from pg_policies
       where schemaname = 'public'

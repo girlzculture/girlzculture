@@ -422,6 +422,11 @@ assert.match(cleanDatabaseAssertions, /submit_salon_review_reply\(uuid,text,text
 assert.match(cleanDatabaseAssertions, /admin_moderate_review_reply\(uuid,text,text,uuid\)/);
 assert.match(cleanDatabaseAssertions, /claim_notification_delivery\(uuid,text,text,text,text,text\)/);
 assert.match(cleanDatabaseAssertions, /reviews_customer_insert/);
+assert.match(
+  cleanDatabaseAssertions,
+  /core_table <> 'reviews' and not exists/,
+  "the generic policy assertion must allow the explicitly verified service-only reviews table",
+);
 assert.match(cleanDatabaseAssertions, /Browser roles retain direct review SELECT access/);
 assert.match(cleanDatabaseAssertions, /reviews_admin_update/);
 assert.match(cleanDatabaseAssertions, /reviews_admin_delete/);
