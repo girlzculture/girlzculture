@@ -7,7 +7,7 @@ Scope: the founder's August 7 customer discovery, content, reviews, media, remin
 
 ## Outcome
 
-The repository implementation, focused verifiers, production build, and isolated browser acceptance suites pass. Multiple independent read-only reviews found reminder, enrichment, authorization, publication, and data-projection edge cases; every identified branch P1 was corrected and re-verified. The final independent audit found no remaining P0/P1 defect in the requested repository scope. The release is **not ready to launch** because a clean database was not available to execute the four migrations, Google Maps is still rejected in the real production site, and launch-critical provider/authenticated workflows could not be exercised against a deployed preview with real test accounts and providers.
+The repository implementation, focused verifiers, production build, isolated browser acceptance suites, and genuine clean-database migration replay pass. Multiple independent read-only reviews found reminder, enrichment, authorization, publication, and data-projection edge cases; every identified branch P1 was corrected and re-verified. The final independent audit found no remaining P0/P1 defect in the requested repository scope. The release is **not ready to launch** because Google Maps is still rejected in the real production site and launch-critical provider/authenticated workflows could not be exercised against a deployed preview with real test accounts and providers.
 
 ## Root causes and corrections
 
@@ -39,7 +39,7 @@ The repository implementation, focused verifiers, production build, and isolated
 - `20260807230000_booking_reminder_retry_semantics.sql`
   - Replaces the outer reminder claim with a bounded three-attempt lease/retry state machine aligned to the scheduled worker's due window; adds service-only failure recording and terminal correlation state.
 
-These files were **not** applied to production or any Supabase project. Migration ordering/static assertions pass, but `npm run verify:database-clean` is BLOCKED because `CLEAN_DATABASE_URL` is unavailable. The production build completed against the existing schema when the unapplied navigation RPC was absent. Build-phase monitoring persistence is now disabled centrally so future static generation cannot write an Engine incident to an attached database.
+These files were **not** applied to production or any Supabase project. GitHub Actions applied all 123 repository migrations in chronological order to a genuinely empty disposable PostgreSQL 17 database, generated 1,000 unique booking references and 1,000 unique product references across concurrent sessions, and passed the final schema/function/RLS/grant assertions with 173 policies. The database was ephemeral and contained no production data. The production build completed against the existing schema when the unapplied navigation RPC was absent. Build-phase monitoring persistence is now disabled centrally so future static generation cannot write an Engine incident to an attached database.
 
 ## Verification evidence
 
@@ -48,12 +48,16 @@ These files were **not** applied to production or any Supabase project. Migratio
 - `npx tsc --noEmit --pretty false`
 - `npm run lint` — zero errors; five pre-existing `no-img-element` warnings
 - `npm run build` — production build completed, 135 application routes after the provider harness was added
+- `npm run verify:database-clean` — all 123 migrations executed against empty PostgreSQL 17; concurrent reference and final RLS/policy assertions passed
 - `git diff --check`
 - Focused/source-behavior suites:
   - `verify:authoritative-discovery`
   - `verify:decision-search-enrichment`
   - `verify:content-presentation`
   - `verify:review-media-reminders`
+  - `verify:pilot-owner-search-and-mobile`
+  - `verify:media`
+  - `verify:video-job-auth`
   - `verify:migrations` (123 unique migrations; head `20260807230000`)
   - `verify:monitoring`
   - `verify:discovery`
@@ -86,7 +90,6 @@ These files were **not** applied to production or any Supabase project. Migratio
 
 ### BLOCKED
 
-- Clean empty-database execution: no disposable `CLEAN_DATABASE_URL`, local Supabase CLI, Docker, or local PostgreSQL was available.
 - Real review-moderation provider: `OPENAI_API_KEY` is not available in this environment.
 - Real Cloudinary/video provider: Cloudinary credentials are not available in this environment.
 - Real booking-reminder scheduled function: the branch was not deployed and local `INTERNAL_API_SECRET`/Netlify deployment metadata are unavailable.
@@ -109,8 +112,7 @@ These files were **not** applied to production or any Supabase project. Migratio
    - the exact Netlify deploy-preview host pattern used for acceptance
 3. If local provider acceptance is desired, temporarily allow `http://127.0.0.1:3104/*` on a non-production test key; do not weaken the production key.
 4. Ensure the Netlify scheduled-function environment provides `INTERNAL_API_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`), and Netlify's deploy URL/release metadata.
-5. Provide a disposable empty PostgreSQL URL as `CLEAN_DATABASE_URL` and run the full migration execution test before merge.
-6. Configure the review-moderation and Cloudinary test providers in the preview environment if those launch-critical paths are to be promoted from BLOCKED/AUTOMATED ONLY.
+5. Configure the review-moderation and Cloudinary test providers in the preview environment if those launch-critical paths are to be promoted from BLOCKED/AUTOMATED ONLY.
 
 ## Independent diff review
 
@@ -128,9 +130,8 @@ All paths are under `docs/screenshots/final-correction/`:
 ## Launch blockers in priority order
 
 1. **Provider integration:** production Google Maps key/API/referrer configuration is rejected.
-2. **Database/migration issue:** the full migration chain has not executed on a genuinely empty disposable database.
-3. **Environment/provider integration:** real authenticated review, media, reminder, and role workflows have not been exercised on a deployed preview with test providers and test accounts.
-4. **Repository defect (pre-existing/out of branch scope):** desktop header logo/navigation overlap at 1366 and 1440 widths.
+2. **Environment/provider integration:** real authenticated review, media, reminder, and role workflows have not been exercised on a deployed preview with test providers and test accounts.
+3. **Repository defect (pre-existing/out of branch scope):** desktop header logo/navigation overlap at 1366 and 1440 widths.
 
 ## Production-safety statement
 
