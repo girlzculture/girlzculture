@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Check,
@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { salonPublicPath } from "@/lib/salonVanity";
+import { getSupabaseForScope } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Props = {
   salonId: string;
@@ -46,6 +48,7 @@ export default function SalonProfileActions({
   const [favorite, setFavorite] = useState(false);
   const [shared, setShared] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [favoriteMessage, setFavoriteMessage] = useState("");
   const instagram = safeSocialUrl(instagramUrl);
   const tiktok = safeSocialUrl(tiktokUrl);
   const google = safeSocialUrl(googleBusinessUrl);
@@ -53,14 +56,47 @@ export default function SalonProfileActions({
   const publicPath = salonPublicPath(salonSlug, vanitySlug);
   const publicUrl = () => `${window.location.origin}${publicPath}`;
 
-  const toggleFavorite = () => {
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const client = getSupabaseForScope("customer");
+      const { data } = await client.auth.getSession();
+      if (!data.session) return;
+      const response = await fetch("/api/customer/favorites", {
+        credentials: "same-origin",
+        cache: "no-store",
+        redirect: "manual",
+        headers: { Accept: "application/json", Authorization: `Bearer ${data.session.access_token}` },
+      });
+      if (!response.ok || !active) return;
+      const body = await readApiResponse(response, "Unable to load saved salons.");
+      if (active) setFavorite(Array.isArray(body.salons) && body.salons.some((salon: { id?: string }) => salon.id === salonId));
+    })();
+    return () => { active = false; };
+  }, [salonId]);
+
+  const toggleFavorite = async () => {
+    setFavoriteMessage("");
     try {
-      const saved = JSON.parse(window.localStorage.getItem("girlz-culture-favorites") || "[]") as string[];
-      const next = saved.includes(salonId) ? saved.filter((id) => id !== salonId) : [...saved, salonId];
-      window.localStorage.setItem("girlz-culture-favorites", JSON.stringify(next));
-      setFavorite(next.includes(salonId));
-    } catch {
-      setFavorite((current) => !current);
+      const client = getSupabaseForScope("customer");
+      const { data } = await client.auth.getSession();
+      if (!data.session) {
+        setFavoriteMessage("Sign in with a customer account to save this salon.");
+        return;
+      }
+      const response = await fetch("/api/customer/favorites", {
+        method: favorite ? "DELETE" : "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        redirect: "manual",
+        headers: { Accept: "application/json", Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ salon_id: salonId }),
+      });
+      const body = await readApiResponse(response, "Unable to update saved salons.");
+      if (!response.ok) throw new Error(body.error || "Unable to update saved salons.");
+      setFavorite(Boolean(body.saved));
+    } catch (error) {
+      setFavoriteMessage(error instanceof Error ? error.message : "Unable to update saved salons.");
     }
   };
 
@@ -106,7 +142,7 @@ export default function SalonProfileActions({
       ) : null}
       <button
         type="button"
-        onClick={toggleFavorite}
+        onClick={() => void toggleFavorite()}
         aria-label={
           favorite ? "Remove salon from favorites" : "Add salon to favorites"
         }
@@ -115,6 +151,7 @@ export default function SalonProfileActions({
       >
         <Heart size={20} fill={favorite ? "currentColor" : "none"} />
       </button>
+      {favoriteMessage ? <p role="status" className="absolute right-0 top-14 z-20 w-64 rounded-lg border border-plum/10 bg-white p-3 text-[10px] leading-4 text-plum shadow-lg">{favoriteMessage} <a href={`/login?next=${encodeURIComponent(publicPath)}`} className="font-bold text-magenta">Sign in</a></p> : null}
       {showShare && vanitySlug ? (
         <section className="absolute right-0 top-14 z-30 w-[min(82vw,280px)] rounded-[14px] border border-plum/10 bg-white p-4 shadow-[0_18px_50px_rgba(13,17,20,.18)]">
           <div className="flex items-start justify-between gap-2">

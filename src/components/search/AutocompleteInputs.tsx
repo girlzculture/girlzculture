@@ -19,6 +19,7 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import {
   googleMapsIncidentMessage,
   runGoogleMapsLoadWithRetry,
+  waitForGoogleMapsSdkReady,
   type GoogleMapsLoadCode,
 } from "@/lib/googleMapsFailureCore";
 
@@ -26,6 +27,7 @@ export type { GoogleMapsLoadCode } from "@/lib/googleMapsFailureCore";
 
 let googleMapsPromise: Promise<void> | null = null;
 const GOOGLE_MAPS_SCRIPT_ID = "girlz-google-maps";
+const GOOGLE_MAPS_READY_CALLBACK = "__girlzCultureGoogleMapsReady";
 const GOOGLE_MAPS_LOAD_TIMEOUT_MS = 15_000;
 export const GOOGLE_MAPS_AUTH_FAILURE_EVENT =
   "girlz-culture:google-maps-auth-failure";
@@ -66,6 +68,7 @@ export function resetGoogleMapsLoader() {
   restoreGoogleMapsAuthHandler?.();
   restoreGoogleMapsAuthHandler = null;
   document.getElementById(GOOGLE_MAPS_SCRIPT_ID)?.remove();
+  delete (window as any)[GOOGLE_MAPS_READY_CALLBACK];
 }
 
 export function loadGoogleMaps() {
@@ -118,6 +121,9 @@ export function loadGoogleMaps() {
       window.clearTimeout(timeout);
       script.removeEventListener("load", loaded);
       script.removeEventListener("error", failed);
+      if ((window as any)[GOOGLE_MAPS_READY_CALLBACK] === loaded) {
+        delete (window as any)[GOOGLE_MAPS_READY_CALLBACK];
+      }
       if (error) {
         restoreAuthHandler();
         script.dataset.loadState = "failed";
@@ -128,16 +134,22 @@ export function loadGoogleMaps() {
       }
     };
     const loaded = () => {
-      if (!googleMapsReady()) {
+      void waitForGoogleMapsSdkReady({
+        isReady: googleMapsReady,
+        wait: (milliseconds) =>
+          new Promise((resolve) => window.setTimeout(resolve, milliseconds)),
+      }).then((ready) => {
+        if (ready) {
+          finish();
+          return;
+        }
         finish(
           new GoogleMapsLoadError(
             "GOOGLE_MAPS_SDK_INVALID",
             "Google Maps loaded an invalid response. Verify that Maps JavaScript API is enabled for this key.",
           ),
         );
-        return;
-      }
-      finish();
+      });
     };
     const failed = () =>
       finish(
@@ -179,11 +191,12 @@ export function loadGoogleMaps() {
     );
     restoreGoogleMapsAuthHandler = restoreAuthHandler;
     (window as any).gm_authFailure = authFailed;
+    (window as any)[GOOGLE_MAPS_READY_CALLBACK] = loaded;
     script.addEventListener("load", loaded, { once: true });
     script.addEventListener("error", failed, { once: true });
     if (!existing) {
       script.async = true;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&libraries=places,marker`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&libraries=places,marker&callback=${GOOGLE_MAPS_READY_CALLBACK}`;
       document.head.appendChild(script);
     } else if (googleMapsReady()) {
       loaded();

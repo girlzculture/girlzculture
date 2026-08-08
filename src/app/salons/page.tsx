@@ -18,6 +18,11 @@ function stringValue(value: string | string[] | undefined) {
   return typeof value === "string" ? value : "";
 }
 
+function numberValue(value: string | string[] | undefined, fallback: number) {
+  const parsed = Number(stringValue(value));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export default async function SalonsPage({
   searchParams,
 }: {
@@ -38,8 +43,24 @@ export default async function SalonsPage({
       : null;
   const initialQuery =
     stringValue(query.q) || stringValue(query.style);
+  const initialStyleId = stringValue(query.style_id);
   const location = stringValue(query.location);
   const radius = normalizeRadius(stringValue(query.radius));
+  const sort = new Set(["distance", "rating", "price_low", "price_high"]).has(
+    stringValue(query.sort),
+  )
+    ? (stringValue(query.sort) as "distance" | "rating" | "price_low" | "price_high")
+    : "distance";
+  const initialFilters = {
+    radiusMiles: radius,
+    minimumRating: Math.max(0, Math.min(5, numberValue(query.rating, 0))),
+    maximumPrice: stringValue(query.max_price),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(stringValue(query.date))
+      ? stringValue(query.date)
+      : "",
+    sort,
+    promotionOnly: stringValue(query.offers) === "true",
+  };
   let initial = {
     salons: [],
     total: 0,
@@ -51,7 +72,8 @@ export default async function SalonsPage({
         origin: validOrigin,
         radius,
         style: stringValue(query.style),
-        limit: 20,
+        masterStyleId: initialStyleId || null,
+        limit: "all",
       });
     } catch (error) {
       await capturePublicPageFailure(
@@ -79,8 +101,10 @@ export default async function SalonsPage({
           initialSalons={initial.salons}
           initialTotal={initial.total}
           initialQuery={initialQuery}
+          initialStyleId={initialStyleId}
           initialLocation={location}
           initialOrigin={validOrigin}
+          initialFilters={initialFilters}
         />
       </section>
       <TrustStrip />

@@ -350,7 +350,7 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     getEngineNumber("ai.concierge.default_radius", 50, 1, 100),
     getEngineNumber("ai.concierge.result_limit", 12, 1, 12),
   ]);
-  const discovery = await discoverNearbySalons({ origin: resolved.origin, radius: intent.radius_miles || defaultRadius, style: intent.style, minimumRating: intent.minimum_rating, maximumPrice: intent.maximum_price, sort: intent.sort, limit: resultLimit });
+  const discovery = await discoverNearbySalons({ origin: resolved.origin, radius: intent.radius_miles || defaultRadius, style: intent.style, minimumRating: intent.minimum_rating, maximumPrice: intent.maximum_price, sort: intent.sort, limit: "all" });
   const ids = discovery.salons.map((salon) => salon.id);
   const now = new Date().toISOString();
   const promotionResult = ids.length ? await admin.from("salon_promotions").select("id,salon_id,title,discount_label,starts_at,ends_at").in("salon_id", ids).eq("is_active", true).eq("status", "Active").is("archived_at", null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`) : { data: [], error: null };
@@ -387,5 +387,5 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     }
     return { ...salon, promotion, next_slot: nextSlot, deposit_amount: salon.starting_price === null ? null : Math.round(Number(salon.starting_price) * 10) / 100 };
   }));
-  return { mode, intent, clarification: null, salons: enriched.filter(Boolean) as ConciergeSalonResult[], safeError, warnings: warnings(), configuration: configuration(), latencyMs: Date.now() - started };
+  return { mode, intent, clarification: null, salons: (enriched.filter(Boolean) as ConciergeSalonResult[]).slice(0, resultLimit), safeError, warnings: warnings(), configuration: configuration(), latencyMs: Date.now() - started };
 }

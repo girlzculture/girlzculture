@@ -25,7 +25,10 @@ begin
       raise exception 'RLS is not enabled on public.%', core_table;
     end if;
 
-    if not exists (
+    -- reviews is intentionally service-only: RLS with zero browser policies is
+    -- deny-by-default, and the detailed assertions below verify that anon and
+    -- authenticated retain no table privileges while service_role does.
+    if core_table <> 'reviews' and not exists (
       select 1
       from pg_policies
       where schemaname = 'public'
@@ -343,10 +346,39 @@ begin
     raise exception 'Authorized public style projection or salon privacy is incorrect';
   end if;
 
+  if to_regprocedure(
+      'public.discover_nearby_salons_ranked(double precision,double precision,double precision,text,uuid,numeric,numeric,numeric,text,integer,integer)'
+    ) is null
+    or has_function_privilege(
+      'anon',
+      'public.discover_nearby_salons_ranked(double precision,double precision,double precision,text,uuid,numeric,numeric,numeric,text,integer,integer)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.discover_nearby_salons_ranked(double precision,double precision,double precision,text,uuid,numeric,numeric,numeric,text,integer,integer)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.discover_nearby_salons_ranked(double precision,double precision,double precision,text,uuid,numeric,numeric,numeric,text,integer,integer)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.distance_miles(double precision,double precision,double precision,double precision)',
+      'EXECUTE'
+    )
+  then
+    raise exception 'Server-only authoritative discovery function grants are unsafe';
+  end if;
+
   foreach relation_name in array array[
     'booking_review_links',
     'review_moderation_events',
     'review_dispute_events',
+    'review_content_moderation_queue',
+    'review_reply_moderation_queue',
     'salon_availability_override_audit',
     'salon_recovery_balances',
     'booking_financial_events',
@@ -384,29 +416,226 @@ begin
     raise exception 'Exactly-one-review-per-booking constraint is missing';
   end if;
 
+  if exists (
+      select 1 from pg_policies
+      where schemaname='public'
+        and tablename='reviews'
+        and policyname='reviews_customer_insert'
+    )
+    or has_table_privilege('anon','public.reviews','INSERT')
+    or has_table_privilege('authenticated','public.reviews','INSERT')
+    or has_function_privilege('anon','public.reply_to_review(uuid,text)','EXECUTE')
+    or has_function_privilege('authenticated','public.reply_to_review(uuid,text)','EXECUTE')
+  then
+    raise exception 'Direct review insert or legacy unmoderated reply access remains exposed';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname='public'
+      and tablename='reviews'
+      and cmd='SELECT'
+      and roles && array['public'::name,'anon'::name,'authenticated'::name]
+  ) then
+    raise exception 'Browser roles retain direct review SELECT access';
+  end if;
+
+  if exists (
+      select 1
+      from pg_policies
+      where schemaname='public'
+        and tablename='reviews'
+        and (
+          policyname in ('reviews_admin_update','reviews_admin_delete')
+          or (
+            cmd in ('UPDATE','DELETE')
+            and roles && array['public'::name,'anon'::name,'authenticated'::name]
+          )
+        )
+    )
+    or has_table_privilege('anon','public.reviews','UPDATE')
+    or has_table_privilege('anon','public.reviews','DELETE')
+    or has_table_privilege('authenticated','public.reviews','UPDATE')
+    or has_table_privilege('authenticated','public.reviews','DELETE')
+    or has_table_privilege('anon','public.reviews','SELECT')
+    or has_table_privilege('authenticated','public.reviews','SELECT')
+    or not has_table_privilege('service_role','public.reviews','SELECT')
+    or not has_table_privilege('service_role','public.reviews','INSERT')
+    or not has_table_privilege('service_role','public.reviews','UPDATE')
+    or not has_table_privilege('service_role','public.reviews','DELETE')
+  then
+    raise exception 'Review table privileges or direct browser moderation policies are unsafe';
+  end if;
+
+  if exists (
+      select 1 from pg_publication_tables
+      where pubname='supabase_realtime'
+        and schemaname='public'
+        and tablename='reviews'
+    )
+    or not exists (
+      select 1 from pg_publication_tables
+      where pubname='supabase_realtime'
+        and schemaname='public'
+        and tablename='salons'
+    )
+  then
+    raise exception 'Private review rows are published or salon-summary realtime is missing';
+  end if;
+
   if to_regprocedure(
-      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb,text,text,text)'
     ) is null
+    or to_regprocedure(
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
+    ) is not null
     or to_regprocedure(
       'public.submit_verified_guest_review(text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)'
     ) is not null
     or has_function_privilege(
       'anon',
-      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb,text,text,text)',
       'EXECUTE'
     )
     or has_function_privilege(
       'authenticated',
-      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb,text,text,text)',
       'EXECUTE'
     )
     or not has_function_privilege(
       'service_role',
-      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb)',
+      'public.submit_verified_guest_review(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb,text,text,text)',
       'EXECUTE'
     )
   then
     raise exception 'Verified guest-review function or grants are unsafe';
+  end if;
+
+  if to_regprocedure('public.admin_moderate_review_content(uuid,text,text,uuid)') is null
+    or to_regprocedure('public.submit_salon_review_reply(uuid,text,text,text,text,uuid)') is null
+    or to_regprocedure('public.admin_moderate_review_reply(uuid,text,text,uuid)') is null
+    or has_function_privilege('authenticated','public.admin_moderate_review_content(uuid,text,text,uuid)','EXECUTE')
+    or has_function_privilege('authenticated','public.submit_salon_review_reply(uuid,text,text,text,text,uuid)','EXECUTE')
+    or has_function_privilege('authenticated','public.admin_moderate_review_reply(uuid,text,text,uuid)','EXECUTE')
+    or not has_function_privilege('service_role','public.admin_moderate_review_content(uuid,text,text,uuid)','EXECUTE')
+    or not has_function_privilege('service_role','public.submit_salon_review_reply(uuid,text,text,text,text,uuid)','EXECUTE')
+    or not has_function_privilege('service_role','public.admin_moderate_review_reply(uuid,text,text,uuid)','EXECUTE')
+  then
+    raise exception 'Review content/reply moderation function grants are unsafe';
+  end if;
+
+  if exists (
+      select 1
+      from information_schema.columns
+      where table_schema='public'
+        and table_name='review_reply_moderation_queue'
+        and column_name='submitted_by'
+        and is_nullable<>'YES'
+    )
+    or not exists (
+      select 1
+      from pg_constraint constraint_row
+      join pg_class relation on relation.oid=constraint_row.conrelid
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='review_reply_moderation_queue'
+        and constraint_row.contype='f'
+        and constraint_row.conname='review_reply_moderation_queue_submitted_by_fkey'
+        and constraint_row.confdeltype='n'
+    )
+  then
+    raise exception 'Review reply moderation actor retention is not identity-deletion safe';
+  end if;
+
+  if to_regprocedure('public.claim_notification_delivery(uuid,text,text,text,text,text)') is null
+    or has_function_privilege('anon','public.claim_notification_delivery(uuid,text,text,text,text,text)','EXECUTE')
+    or has_function_privilege('authenticated','public.claim_notification_delivery(uuid,text,text,text,text,text)','EXECUTE')
+    or not has_function_privilege('service_role','public.claim_notification_delivery(uuid,text,text,text,text,text)','EXECUTE')
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='notification_delivery_log'
+        and column_name='deduplication_key'
+    )
+    or not exists (
+      select 1 from pg_indexes
+      where schemaname='public'
+        and tablename='notification_delivery_log'
+        and indexname='notification_delivery_deduplication_idx'
+        and indexdef like '%UNIQUE%'
+    )
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='notification_delivery_log'
+        and column_name='attempt_count'
+        and is_nullable='NO'
+    )
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='notification_delivery_log'
+        and column_name='lease_expires_at'
+    )
+  then
+    raise exception 'Notification delivery reservation or grants are unsafe';
+  end if;
+
+  if to_regprocedure('public.claim_booking_reminder(uuid,integer)') is null
+    or to_regprocedure('public.fail_booking_reminder_claim(uuid,integer,text)') is null
+    or has_function_privilege('anon','public.claim_booking_reminder(uuid,integer)','EXECUTE')
+    or has_function_privilege('authenticated','public.claim_booking_reminder(uuid,integer)','EXECUTE')
+    or has_function_privilege('anon','public.fail_booking_reminder_claim(uuid,integer,text)','EXECUTE')
+    or has_function_privilege('authenticated','public.fail_booking_reminder_claim(uuid,integer,text)','EXECUTE')
+    or not has_function_privilege('service_role','public.claim_booking_reminder(uuid,integer)','EXECUTE')
+    or not has_function_privilege('service_role','public.fail_booking_reminder_claim(uuid,integer,text)','EXECUTE')
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='booking_reminder_claims'
+        and column_name='attempt_count'
+        and is_nullable='NO'
+    )
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='booking_reminder_claims'
+        and column_name='lease_expires_at'
+    )
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='booking_reminder_claims'
+        and column_name='next_attempt_at'
+    )
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema='public'
+        and table_name='booking_reminder_claims'
+        and column_name='terminal_at'
+    )
+    or not exists (
+      select 1
+      from pg_constraint constraint_row
+      join pg_class relation on relation.oid=constraint_row.conrelid
+      join pg_namespace namespace on namespace.oid=relation.relnamespace
+      where namespace.nspname='public'
+        and relation.relname='booking_reminder_claims'
+        and constraint_row.conname='booking_reminder_claims_attempt_count_check'
+        and constraint_row.contype='c'
+    )
+    or pg_get_functiondef(
+      'public.claim_booking_reminder(uuid,integer)'::regprocedure
+    ) !~ 'claim[.]attempt_count[[:space:]]*<[[:space:]]*3'
+    or position(
+      'REMINDER_PERMANENT_FAILURE_REFERENCE:'
+      in pg_get_functiondef(
+        'public.fail_booking_reminder_claim(uuid,integer,text)'::regprocedure
+      )
+    )=0
+  then
+    raise exception 'Booking reminder retry lease, attempt bound, terminal state, or grants are unsafe';
   end if;
 
   if to_regprocedure('public.dispute_review(uuid,text)') is null
@@ -990,6 +1219,44 @@ begin
     ) = 0
   then
     raise exception 'Salon spreadsheet import function isolation or grants are unsafe';
+  end if;
+
+  if to_regprocedure('public.get_public_navigation_surface(text)') is null
+    or not has_function_privilege(
+      'anon',
+      'public.get_public_navigation_surface(text)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'authenticated',
+      'public.get_public_navigation_surface(text)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.get_public_navigation_surface(text)',
+      'EXECUTE'
+    )
+    or position(
+      '''configured'', count(*) > 0'
+      in lower(pg_get_functiondef(
+        'public.get_public_navigation_surface(text)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'item.is_enabled'
+      in lower(pg_get_functiondef(
+        'public.get_public_navigation_surface(text)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'item.archived_at is null'
+      in lower(pg_get_functiondef(
+        'public.get_public_navigation_surface(text)'::regprocedure
+      ))
+    ) = 0
+  then
+    raise exception 'Public navigation projection is missing or exposes disabled records';
   end if;
 end
 $$;

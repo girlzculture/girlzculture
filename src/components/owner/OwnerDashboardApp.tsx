@@ -31,7 +31,10 @@ import {
   ScopedApiError,
   scopedApiErrorMessage,
 } from "@/lib/scopedApiCore";
-import { subscribeToOwnerUpdates } from "@/lib/ownerRealtime";
+import {
+  subscribeToOwnerUpdates,
+  type OwnerFallbackOutcome,
+} from "@/lib/ownerRealtime";
 import BaseImageUpload from "@/components/ImageUpload";
 import SafeImage from "@/components/site/SafeImage";
 import NumericInput from "@/components/forms/NumericInput";
@@ -144,6 +147,13 @@ type Salon = Row & {
   address_needs_review?: boolean;
   formatted_address?: string;
 };
+type OwnerWorkspaceResponse = {
+  salon?: Salon;
+  records?: Record<string, Row[]>;
+  permissions?: Record<string, boolean> | null;
+  isTeamMember?: boolean;
+  error?: string;
+};
 
 const fallbackPhotos = [
   "/images/braids-cornrows.jpg",
@@ -221,13 +231,9 @@ export default function OwnerDashboardApp({
         return;
       }
       const api = await createAuthenticatedApiClient("salon");
-      const workspace = await api.request<{
-        salon?: Salon;
-        records?: Record<string, Row[]>;
-        permissions?: Record<string, boolean> | null;
-        isTeamMember?: boolean;
-        error?: string;
-      }>("/api/salon/workspace");
+      const workspace = await api.request<OwnerWorkspaceResponse>(
+        "/api/salon/workspace",
+      );
       const s = workspace.salon || null;
       if (!live) return;
       if (!s) {
@@ -304,6 +310,44 @@ export default function OwnerDashboardApp({
       setSelectedProduct(loadedProducts[0]?.id || null);
       setLoading(false);
 
+      let liveRefresh: Promise<OwnerFallbackOutcome> | null = null;
+      const refreshLiveWorkspace = () => {
+        if (liveRefresh) return liveRefresh;
+        liveRefresh = (async (): Promise<OwnerFallbackOutcome> => {
+          if (!live) return "terminal";
+          try {
+            const refreshed = await api.request<OwnerWorkspaceResponse>(
+              "/api/salon/workspace",
+            );
+            if (!live) return "terminal";
+            const refreshedRecords = refreshed.records || {};
+            if (refreshed.salon) setSalon(refreshed.salon);
+            setBookings(refreshedRecords.bookings || []);
+            setReviews(refreshedRecords.reviews || []);
+            setNotifications(refreshedRecords.notifications || []);
+            return "ready";
+          } catch (error) {
+            if (!live) return "terminal";
+            if (
+              error instanceof ScopedApiError &&
+              error.authenticationFailure
+            ) {
+              setRealtimeNotice(
+                scopedApiErrorMessage(
+                  error,
+                  "Your salon session has expired. Sign in again to resume live updates.",
+                ),
+              );
+              return "terminal";
+            }
+            return "transient";
+          }
+        })().finally(() => {
+          liveRefresh = null;
+        });
+        return liveRefresh;
+      };
+
       removeRealtime = subscribeToOwnerUpdates({
         client: supabase,
         salonId,
@@ -313,6 +357,7 @@ export default function OwnerDashboardApp({
         onBooking: (row) => {
           if (live) setBookings((current) => [row as Row, ...current]);
         },
+        onReviewStateChange: refreshLiveWorkspace,
         onConnectionState: (state, status) => {
           if (!live) return;
           if (state === "connected") {
@@ -349,33 +394,7 @@ export default function OwnerDashboardApp({
             );
           }
         },
-        onFallbackRefresh: async () => {
-          if (!live) return "terminal";
-          try {
-            const refreshed = await api.request<{
-              records?: Record<string, Row[]>;
-            }>("/api/salon/workspace");
-            if (!live) return;
-            const refreshedRecords = refreshed.records || {};
-            setBookings(refreshedRecords.bookings || []);
-            setNotifications(refreshedRecords.notifications || []);
-            return "ready";
-          } catch (error) {
-            if (
-              error instanceof ScopedApiError &&
-              error.authenticationFailure
-            ) {
-              setRealtimeNotice(
-                scopedApiErrorMessage(
-                  error,
-                  "Your salon session has expired. Sign in again to resume live updates.",
-                ),
-              );
-              return "terminal";
-            }
-            return "transient";
-          }
-        },
+        onFallbackRefresh: refreshLiveWorkspace,
       });
       if (!live && removeRealtime) await removeRealtime();
     }
@@ -1635,7 +1654,7 @@ function Overview({ c }: { c: Ctx }) {
   return (
     <>
       <Title
-        title="Salon Owner Dashboard"
+        title="Your Dashboard"
         subtitle="Run your business with confidence."
       />
       <SalonOpenStatusControl salon={c.salon} />

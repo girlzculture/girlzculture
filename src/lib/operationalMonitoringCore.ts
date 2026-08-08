@@ -21,7 +21,9 @@ export function classifyOperationalRoute(
     /\/api\/auth\/(?:login|password-reset|signup)|\/api\/(?:newsletter|support|promo\/validate)/.test(
       route,
     );
-  if (/^\/api\/reviews(?:\/|$)/.test(route)) return "public-read-only";
+  if (/^\/api\/reviews(?:\/|$)/.test(route)) {
+    return method === "POST" ? "provider-backed" : "public-read-only";
+  }
   if (providerBacked) return "provider-backed";
   if (protectedRoute) return "protected";
   if (expectedOnly) return "expected-only";

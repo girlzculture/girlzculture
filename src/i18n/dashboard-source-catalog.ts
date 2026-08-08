@@ -8,7 +8,7 @@ type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
   "Owner dashboard": "Panel de propietaria",
-  "Salon Owner Dashboard": "Panel de la propietaria del salón",
+  "Your Dashboard": "Tu panel",
   "Run your business with confidence.": "Dirige tu negocio con confianza.",
   "Overview": "Resumen",
   "My Page": "Mi página",
@@ -73,7 +73,7 @@ const es: SourceCatalog = {
 
 const fr: SourceCatalog = {
   "Owner dashboard": "Tableau de bord propriétaire",
-  "Salon Owner Dashboard": "Tableau de bord du salon",
+  "Your Dashboard": "Votre tableau de bord",
   "Run your business with confidence.": "Gérez votre activité en toute confiance.",
   "Overview": "Vue d’ensemble",
   "My Page": "Ma page",
@@ -138,7 +138,7 @@ const fr: SourceCatalog = {
 
 const wo: SourceCatalog = {
   "Owner dashboard": "Tablo liggéeyu boroom salon",
-  "Salon Owner Dashboard": "Tablo boroom salon",
+  "Your Dashboard": "Tablo boroomkaaga",
   "Run your business with confidence.": "Saytu sa liggéey ak kóolute.",
   "Overview": "Gis-gis bu gàtt",
   "My Page": "Sama xët",

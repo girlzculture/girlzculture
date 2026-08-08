@@ -317,8 +317,8 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /const uploadFiles: UploadFiles = \{ source: input\.source \}/,
-  "the browser must retain only the selected source file",
+  /const normalizedSource = await normalizeImageFile\(input\.source\)[\s\S]*?const uploadFiles: UploadFiles = \{ source: normalizedSource \}/,
+  "the browser must normalize byte-verified metadata while retaining one source file",
 );
 assert.match(
   serverSource,

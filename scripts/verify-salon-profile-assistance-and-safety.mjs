@@ -88,13 +88,19 @@ assert.match(reviewRoute, /name: displayName,[\s\S]*title: reviewTitle,[\s\S]*bo
 assert.match(migration, /new\.review_title is distinct from old\.review_title/);
 assert.match(migration, /p_review_title text/);
 assert.match(migration, /v_display_name ~ '\[\[:space:\]\[:digit:\]\[:cntrl:\]\]'/);
-assert.match(moderation, /catch \{[\s\S]*return deterministic/);
+assert.match(moderation, /catch\s*\([^)]*\)\s*\{[\s\S]*return deterministic/);
+assert.match(moderation, /REVIEW_MODERATION_PROVIDER_(?:TIMEOUT|FAILURE)/);
 const verifiedGuestReviewSignature =
-  /public\.submit_verified_guest_review\(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb\)/g;
+  /public\.submit_verified_guest_review\(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb,text,text,text\)/g;
 assert.equal(
   cleanDatabaseVerifier.match(verifiedGuestReviewSignature)?.length,
   4,
-  "clean-database verification must check the current review-title function and all three role grants",
+  "clean-database verification must check the current moderated review function and all three role grants",
+);
+assert.match(
+  cleanDatabaseVerifier,
+  /to_regprocedure\([\s\S]*submit_verified_guest_review\(text,text,text,integer,integer,integer,integer,integer,boolean,text,jsonb\)[\s\S]*\) is not null/,
+  "clean-database verification must reject the superseded unmoderated overload",
 );
 assert.match(
   cleanDatabaseVerifier,
@@ -102,7 +108,7 @@ assert.match(
   "clean-database verification must reject the obsolete overload",
 );
 
-assert.deepEqual(deterministicContentDecision({ name: "Ava", body: "The appointment was thoughtful and professional." }), { allowed: true, source: "deterministic" });
+assert.deepEqual(deterministicContentDecision({ name: "Ava", body: "The appointment was thoughtful and professional." }), { allowed: true, outcome: "allow", source: "deterministic" });
 assert.equal(deterministicContentDecision({ name: "bitch", body: "Ordinary review body." }).reason, "abusive");
 assert.equal(deterministicContentDecision({ title: "white power", body: "Ordinary review body." }).reason, "hate");
 assert.equal(deterministicContentDecision({ body: "I will hurt you after work." }).reason, "threat");

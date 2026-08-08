@@ -19,9 +19,9 @@ async function POSTHandler(
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 20).toLowerCase();
     const reason = cleanText(body.reason, 1_000);
-    if (!["hidden", "restored", "resolved"].includes(action)) {
+    if (!["hidden", "restored", "resolved", "approve_content", "reject_content", "approve_reply", "reject_reply"].includes(action)) {
       return Response.json(
-        { error: "Choose Hide, Restore, or Resolve." },
+        { error: "Choose Hide, Restore, Resolve, Approve content, or Reject content." },
         { status: 400 },
       );
     }
@@ -31,15 +31,30 @@ async function POSTHandler(
         { status: 400 },
       );
     }
-    const { data, error } = await admin.rpc("admin_moderate_review", {
-      target_review_id: id,
-      moderation_action: action,
-      moderation_reason: reason,
-      acting_admin_id: user.id,
-    });
+    const contentAction = action === "approve_content" || action === "reject_content";
+    const replyAction = action === "approve_reply" || action === "reject_reply";
+    const { data, error } = await admin.rpc(
+      replyAction
+        ? "admin_moderate_review_reply"
+        : contentAction
+          ? "admin_moderate_review_content"
+          : "admin_moderate_review",
+      {
+        target_review_id: id,
+        moderation_action: action,
+        moderation_reason: reason,
+        acting_admin_id: user.id,
+      },
+    );
     if (error) {
       if (/REVIEW_NOT_FOUND/i.test(error.message)) {
         return Response.json({ error: "Review not found." }, { status: 404 });
+      }
+      if (/QUEUE_NOT_FOUND/i.test(error.message)) {
+        return Response.json({ error: "No pending written content was found for this rating." }, { status: 404 });
+      }
+      if (/ALREADY_MODERATED/i.test(error.message)) {
+        return Response.json({ error: "This written content has already been moderated." }, { status: 409 });
       }
       if (/ACTION_INVALID|REASON_INVALID/i.test(error.message)) {
         return Response.json(

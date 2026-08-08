@@ -36,6 +36,25 @@ export function distanceMiles(a: Coordinates, b: Coordinates) {
   return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(Math.min(1, haversine)));
 }
 
+/**
+ * One customer-facing distance formatter for homepage cards, discovery,
+ * profiles and grounded concierge results. The database remains authoritative
+ * for discovery distance_miles; this only controls truthful presentation.
+ */
+export function formatDistanceMiles(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return "Distance unavailable";
+  }
+  const miles = Number(value);
+  if (!Number.isFinite(miles) || miles < 0) return "Distance unavailable";
+  if (miles < 0.1) return "Under 0.1 mile away";
+  const rounded = Math.round(miles * 10) / 10;
+  const amount = Number.isInteger(rounded)
+    ? rounded.toFixed(0)
+    : rounded.toFixed(1);
+  return `${amount} ${rounded === 1 ? "mile" : "miles"} away`;
+}
+
 export function boundingBox(origin: Coordinates, radiusMiles: number) {
   const safeRadius = Math.min(MAX_DISCOVERY_RADIUS_MILES, Math.max(1, radiusMiles));
   const latitudeDelta = safeRadius / 69.0;

@@ -116,7 +116,7 @@ export async function resolveBookingReviewLink(token: string) {
       admin
         .from("reviews")
         .select(
-          "id,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,created_at",
+          "id,display_name,review_title,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,moderation_status,dispute_status,created_at",
         )
         .eq("booking_id", booking.id)
         .maybeSingle(),
@@ -130,8 +130,14 @@ export async function resolveBookingReviewLink(token: string) {
       state: "used" as const,
       booking,
       salon,
-      review: existing,
-      message: "A verified review was already submitted for this booking.",
+      review:
+        existing.moderation_status === "Published" && existing.dispute_status !== "Removed"
+          ? existing
+          : undefined,
+      message:
+        existing.moderation_status === "Published" && existing.dispute_status !== "Removed"
+          ? "A verified review was already submitted for this booking."
+          : "A verified rating was submitted for this booking. Moderated review text is not displayed.",
     };
   const eligible =
     booking.status === "Completed" &&

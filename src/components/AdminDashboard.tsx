@@ -38,10 +38,10 @@ type Row = Record<string, any>;
 type DataState = {
   salons: Row[]; applications: Row[]; customers: Row[]; bookings: Row[]; reviews: Row[]; tickets: Row[];
   subscriptions: Row[]; complaints: Row[]; admins: Row[]; promotions: Row[]; posts: Row[]; settings: Row[]; billingEvents: Row[];
-  identityConflicts: Row[]; changeRequests: Row[]; reviewEvents: Row[];
+  identityConflicts: Row[]; changeRequests: Row[]; reviewEvents: Row[]; reviewModerationEvents: Row[]; reviewContentQueue: Row[]; reviewReplyQueue: Row[];
 };
 
-const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [], identityConflicts: [], changeRequests: [], reviewEvents: [] };
+const emptyData: DataState = { salons: [], applications: [], customers: [], bookings: [], reviews: [], tickets: [], subscriptions: [], complaints: [], admins: [], promotions: [], posts: [], settings: [], billingEvents: [], identityConflicts: [], changeRequests: [], reviewEvents: [], reviewModerationEvents: [], reviewContentQueue: [], reviewReplyQueue: [] };
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const navigation: Array<[AdminSection, string, typeof Home]> = [
   ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
@@ -91,7 +91,7 @@ export default function AdminDashboard({ section }: { section: AdminSection; pre
       salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
       bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
       subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
-      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events),
+      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events), reviewModerationEvents: rows(body.review_moderation_events), reviewContentQueue: rows(body.review_content_moderation_queue), reviewReplyQueue: rows(body.review_reply_moderation_queue),
     };
     setData(next);
     setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
@@ -189,7 +189,7 @@ function AdminSectionView({ section, data, selected, setSelected, decide, update
     salons: rows(data?.salons), applications: rows(data?.applications), customers: rows(data?.customers),
     bookings: rows(data?.bookings), reviews: rows(data?.reviews), tickets: rows(data?.tickets),
     subscriptions: rows(data?.subscriptions), complaints: rows(data?.complaints), admins: rows(data?.admins),
-    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents), identityConflicts: rows(data?.identityConflicts), changeRequests: rows(data?.changeRequests), reviewEvents: rows(data?.reviewEvents),
+    promotions: rows(data?.promotions), posts: rows(data?.posts), settings: rows(data?.settings), billingEvents: rows(data?.billingEvents), identityConflicts: rows(data?.identityConflicts), changeRequests: rows(data?.changeRequests), reviewEvents: rows(data?.reviewEvents), reviewModerationEvents: rows(data?.reviewModerationEvents), reviewContentQueue: rows(data?.reviewContentQueue), reviewReplyQueue: rows(data?.reviewReplyQueue),
   };
   const props = { ...safeData, selected, setSelected, decide, update, onCreated };
   switch (section) {
@@ -284,8 +284,9 @@ function ManualBooking({ salons, onCreated }: { salons: Row[]; onCreated: () => 
 function Quality(p: any) {
   const rated = p.salons.filter((salon: Row) => Number(salon.review_count || 0) > 0);
   const average = rated.length ? rated.reduce((sum: number, salon: Row) => sum + Number(salon.rating_overall || 0), 0) / rated.length : 0;
-  const lateness = p.reviews.filter((review: Row) => /late|wait|delay/i.test(review.written_review || ""));
-  const qualitySeries = dailySeries(p.reviews, "created_at", (review) => Number(review.rating_overall || 0));
+  const visibleReviews = p.reviews.filter((review: Row) => review.moderation_status === "Published" && review.dispute_status !== "Removed");
+  const lateness = visibleReviews.filter((review: Row) => /late|wait|delay/i.test(review.written_review || ""));
+  const qualitySeries = dailySeries(visibleReviews, "created_at", (review) => Number(review.rating_overall || 0));
   const setting=p.settings.find((item:Row)=>item.key==="quality_thresholds");
   const storedThreshold=Number(setting?.value?.salon_cancellation_rate_percent||10);
   const [threshold,setThreshold]=useState<number|"">(storedThreshold);
@@ -310,12 +311,12 @@ function Quality(p: any) {
   const ranked=[...metrics].filter((salon:Row)=>salon.qualityScore!==null).sort((left:Row,right:Row)=>Number(right.qualityScore)-Number(left.qualityScore));
   const flagged=metrics.filter((salon:Row)=>salon.flagged);
   async function saveThreshold(){if(threshold===""||threshold<1||threshold>100)return;await p.update("admin_settings","quality_thresholds",{value:{...(setting?.value||{}),salon_cancellation_rate_percent:threshold}})}
-  return <><div className="grid gap-4 sm:grid-cols-4"><Stat label="Platform Average Rating" value={average.toFixed(1)} /><Stat label="Cancellation Flags" value={flagged.length} /><Stat label="Active Complaints" value={p.complaints.filter((item: Row) => !/closed|resolved/i.test(item.status || "")).length} /><Stat label="Published Reviews" value={p.reviews.length} /></div><div className="mt-5 grid gap-5 lg:grid-cols-3"><Panel title="Best-Performing Partners">{ranked.length ? ranked.slice(0, 5).map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Quality ${Number(salon.qualityScore).toFixed(1)} · cancellations ${Number(salon.cancellationRate).toFixed(1)}%`} />) : <EmptyState title="No quality data" body="Composite scores begin after bookings or verified reviews are recorded." />}</Panel><Panel title="Salons Needing Attention">{flagged.length?flagged.map((salon:Row)=><Line key={salon.id} label={salon.name} meta={`${Number(salon.cancellationRate).toFixed(1)}% salon cancellations (${salon.salonCancellations}/${salon.totalBookings})`}/>):<EmptyState title="No cancellation flags" body={`No salon exceeds the current ${effectiveThreshold}% threshold.`}/>}</Panel><Panel title="Quality Threshold"><p className="text-xs leading-5 text-ink/60">Auto-flag salons when salon-initiated cancellations exceed this percentage of all bookings.</p><div className="mt-4 flex items-end gap-2"><label className="flex-1 text-[10px] font-bold">Cancellation rate %<NumericInput min={1} max={100} decimalPlaces={2} value={threshold} onValueChange={(value)=>setThreshold(value===""?"":Number(value))} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label><button disabled={threshold===""||threshold<1||threshold>100} onClick={()=>void saveThreshold()} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-40">Save</button></div><Line label="Lateness or long waits" meta={`${lateness.length} reviews`} /><Line label="On-time performance" meta={metrics.some((salon:Row)=>salon.onTimeRate!==null)?"Measured from recorded service start times":"Not measured yet"}/></Panel></div><div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_.8fr]"><DataChart title="Review Rating Activity" values={qualitySeries} empty="No review activity yet." /><Panel title="Cancellation Monitoring">{metrics.filter((salon:Row)=>salon.totalBookings>0).sort((a:Row,b:Row)=>Number(b.cancellationRate)-Number(a.cancellationRate)).slice(0,8).map((salon:Row)=><Line key={salon.id} label={salon.name} meta={`${Number(salon.cancellationRate).toFixed(1)}% · ${salon.salonCancellations} salon cancellations`}/>)}</Panel></div></>;
+  return <><div className="grid gap-4 sm:grid-cols-4"><Stat label="Platform Average Rating" value={average.toFixed(1)} /><Stat label="Cancellation Flags" value={flagged.length} /><Stat label="Active Complaints" value={p.complaints.filter((item: Row) => !/closed|resolved/i.test(item.status || "")).length} /><Stat label="Published Reviews" value={visibleReviews.length} /></div><div className="mt-5 grid gap-5 lg:grid-cols-3"><Panel title="Best-Performing Partners">{ranked.length ? ranked.slice(0, 5).map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Quality ${Number(salon.qualityScore).toFixed(1)} · cancellations ${Number(salon.cancellationRate).toFixed(1)}%`} />) : <EmptyState title="No quality data" body="Composite scores begin after bookings or verified reviews are recorded." />}</Panel><Panel title="Salons Needing Attention">{flagged.length?flagged.map((salon:Row)=><Line key={salon.id} label={salon.name} meta={`${Number(salon.cancellationRate).toFixed(1)}% salon cancellations (${salon.salonCancellations}/${salon.totalBookings})`}/>):<EmptyState title="No cancellation flags" body={`No salon exceeds the current ${effectiveThreshold}% threshold.`}/>}</Panel><Panel title="Quality Threshold"><p className="text-xs leading-5 text-ink/60">Auto-flag salons when salon-initiated cancellations exceed this percentage of all bookings.</p><div className="mt-4 flex items-end gap-2"><label className="flex-1 text-[10px] font-bold">Cancellation rate %<NumericInput min={1} max={100} decimalPlaces={2} value={threshold} onValueChange={(value)=>setThreshold(value===""?"":Number(value))} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label><button disabled={threshold===""||threshold<1||threshold>100} onClick={()=>void saveThreshold()} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-40">Save</button></div><Line label="Lateness or long waits" meta={`${lateness.length} reviews`} /><Line label="On-time performance" meta={metrics.some((salon:Row)=>salon.onTimeRate!==null)?"Measured from recorded service start times":"Not measured yet"}/></Panel></div><div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_.8fr]"><DataChart title="Review Rating Activity" values={qualitySeries} empty="No review activity yet." /><Panel title="Cancellation Monitoring">{metrics.filter((salon:Row)=>salon.totalBookings>0).sort((a:Row,b:Row)=>Number(b.cancellationRate)-Number(a.cancellationRate)).slice(0,8).map((salon:Row)=><Line key={salon.id} label={salon.name} meta={`${Number(salon.cancellationRate).toFixed(1)}% · ${salon.salonCancellations} salon cancellations`}/>)}</Panel></div></>;
 }
 
 function Reviews(p: any) {
   const [activeReview, setActiveReview] = useState<string | null>(null);
-  const [action, setAction] = useState<"hidden" | "restored" | "resolved">("resolved");
+  const [action, setAction] = useState<"hidden" | "restored" | "resolved" | "approve_content" | "reject_content" | "approve_reply" | "reject_reply">("resolved");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -365,7 +366,16 @@ function Reviews(p: any) {
         {p.reviews.length ? p.reviews.map((review: Row) => {
           const salon = p.salons.find((item: Row) => item.id === review.salon_id);
           const booking = p.bookings.find((item: Row) => item.id === review.booking_id);
-          const events = p.reviewEvents.filter((item: Row) => item.review_id === review.id);
+          const events = [
+            ...p.reviewEvents
+              .filter((item: Row) => item.review_id === review.id)
+              .map((item: Row) => ({ ...item, audit_source: "Dispute evidence" })),
+            ...p.reviewModerationEvents
+              .filter((item: Row) => item.review_id === review.id)
+              .map((item: Row) => ({ ...item, audit_source: "Moderation event" })),
+          ].sort((left: Row, right: Row) => new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime());
+          const contentQueue = p.reviewContentQueue.find((item: Row) => item.review_id === review.id);
+          const replyQueue = p.reviewReplyQueue.find((item: Row) => item.review_id === review.id);
           const disputed = review.dispute_status === "Disputed" || review.moderation_status === "Under review";
           return (
             <article key={review.id} className={`rounded-xl border p-4 ${disputed ? "border-red-200 bg-red-50/60" : "border-plum/10 bg-white"}`}>
@@ -382,6 +392,8 @@ function Reviews(p: any) {
                 <span className="inline-flex items-center gap-1 font-bold text-amber"><Star size={15} fill="currentColor" />{Number(review.rating_overall || 0).toFixed(1)}</span>
               </div>
               <p className="mt-3 text-sm leading-6">{review.written_review || "No written review"}</p>
+              {contentQueue ? <div className={`mt-3 rounded-lg border p-3 text-xs ${contentQueue.status === "Pending" ? "border-amber-300 bg-amber-50" : "border-plum/10 bg-cream"}`}><div className="flex flex-wrap items-center justify-between gap-2"><b>Written content moderation</b><Badge value={contentQueue.status} /></div><p className="mt-2"><b>Submitted name:</b> {contentQueue.submitted_display_name}</p>{contentQueue.submitted_review_title ? <p className="mt-1"><b>Submitted title:</b> {contentQueue.submitted_review_title}</p> : null}{contentQueue.submitted_written_review ? <p className="mt-1 whitespace-pre-wrap"><b>Submitted review:</b> {contentQueue.submitted_written_review}</p> : <p className="mt-1 text-ink/55">Rating only; no written review was submitted.</p>}{contentQueue.detection_reason ? <p className="mt-2 text-ink/55">Queued by contextual moderation: {contentQueue.detection_reason}</p> : null}</div> : null}
+              {replyQueue ? <div className={`mt-3 rounded-lg border p-3 text-xs ${replyQueue.status === "Pending" ? "border-amber-300 bg-amber-50" : "border-plum/10 bg-cream"}`}><div className="flex flex-wrap items-center justify-between gap-2"><b>Salon reply moderation</b><Badge value={replyQueue.status} /></div><p className="mt-2 whitespace-pre-wrap">{replyQueue.submitted_reply}</p>{replyQueue.detection_reason ? <p className="mt-2 text-ink/55">Queued by contextual moderation: {replyQueue.detection_reason}</p> : null}</div> : null}
               <div className="mt-4 grid gap-3 rounded-lg bg-cream p-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
                 <div><b>Booking evidence</b><p className="mt-1 text-ink/60">{booking ? bookingReference(booking) : "Booking unavailable"}</p></div>
                 <div><b>Appointment</b><p className="mt-1 text-ink/60">{booking ? dateTime(booking.appointment_datetime, salon?.time_zone) : "Unavailable"}</p></div>
@@ -392,19 +404,19 @@ function Reviews(p: any) {
               {events.length ? (
                 <details className="mt-3 text-xs">
                   <summary className="cursor-pointer font-bold text-plum">Audit history ({events.length})</summary>
-                  <div className="mt-2 space-y-2">{events.map((event: Row) => <p key={event.id} className="border-l-2 border-magenta pl-3"><b>{String(event.action || "").replace(/^./, (value: string) => value.toUpperCase())}</b> · {event.reason}<span className="block text-ink/50">{dateTime(event.created_at)}</span></p>)}</div>
+                  <div className="mt-2 space-y-2">{events.map((event: Row) => <p key={`${event.audit_source}-${event.id}`} className="border-l-2 border-magenta pl-3"><b>{String(event.action || "").replace(/^./, (value: string) => value.toUpperCase())}</b><span className="ml-2 rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold text-ink/55">{event.audit_source}</span>{event.reason ? <span className="mt-1 block text-ink/75">{event.reason}</span> : null}<span className="block text-ink/50">{event.actor_role ? `${String(event.actor_role).replaceAll("_", " ")} · ` : ""}{dateTime(event.created_at)}</span></p>)}</div>
                 </details>
               ) : null}
               <div className="mt-4">
                 {activeReview === review.id ? (
                   <form onSubmit={(event) => { event.preventDefault(); void moderate(String(review.id)); }} className="rounded-lg border border-magenta/20 bg-blush/30 p-3">
                     <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
-                      <label className="text-xs font-bold">Action<select value={action} onChange={(event) => setAction(event.target.value as typeof action)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal"><option value="resolved">Resolve and publish</option><option value="hidden">Hide under policy</option><option value="restored">Restore to public</option></select></label>
+                      <label className="text-xs font-bold">Action<select value={action} onChange={(event) => setAction(event.target.value as typeof action)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal">{contentQueue?.status === "Pending" ? <><option value="approve_content">Approve written content</option><option value="reject_content">Reject written content; keep rating</option></> : null}{replyQueue?.status === "Pending" ? <><option value="approve_reply">Approve salon reply</option><option value="reject_reply">Reject salon reply</option></> : null}<option value="resolved">Resolve and publish</option><option value="hidden">Hide under policy</option><option value="restored">Restore to public</option></select></label>
                       <label className="text-xs font-bold">Published moderation reason<textarea required minLength={10} maxLength={1000} rows={2} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal" placeholder="Explain the policy and evidence used for this decision." /></label>
                     </div>
                     <div className="mt-3 flex gap-2"><button disabled={saving} className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-50">{saving ? "Saving…" : "Save audited decision"}</button><button type="button" onClick={() => { setActiveReview(null); setReason(""); }} className="min-h-10 rounded-lg border border-plum/15 px-4 text-xs">Cancel</button></div>
                   </form>
-                ) : <button type="button" onClick={() => { setActiveReview(String(review.id)); setAction(disputed ? "resolved" : "hidden"); setReason(""); }} className="min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Review evidence & moderate</button>}
+                ) : <button type="button" onClick={() => { setActiveReview(String(review.id)); setAction(contentQueue?.status === "Pending" ? "approve_content" : replyQueue?.status === "Pending" ? "approve_reply" : disputed ? "resolved" : "hidden"); setReason(""); }} className="min-h-10 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Review evidence & moderate</button>}
               </div>
             </article>
           );

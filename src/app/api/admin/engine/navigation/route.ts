@@ -35,12 +35,13 @@ function revalidateNavigation() {
   revalidatePath("/", "layout");
   revalidatePath("/salons");
   revalidatePath("/styles");
+  revalidatePath("/legal");
 }
 
 async function GETHandler(request:Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
-    const { data, error } = await admin.from("navigation_items").select("*").order("surface").order("group_key").order("sort_order");
+    const { data, error } = await admin.from("navigation_items").select("*").order("surface").order("sort_order").order("group_key");
     if (error) throw error;
     return Response.json({ items:data || [] });
   } catch (error) {

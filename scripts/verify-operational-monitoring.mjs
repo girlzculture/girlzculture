@@ -15,7 +15,7 @@ function walk(directory) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 114, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 115, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -67,6 +67,10 @@ const core = await import(
 const platformErrorsSource = fs
   .readFileSync(path.join(root, "src", "lib", "platformErrors.ts"), "utf8")
   .replace(
+    'import { isStaticBuildPhase } from "@/lib/buildPhaseCore";',
+    "const isStaticBuildPhase = () => false;",
+  )
+  .replace(
     'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
     'const deploymentReleaseId = () => "verification";',
   );
@@ -109,9 +113,12 @@ for (const file of routeFiles) {
   assert.ok(evidence, `${route} has no structured inventory evidence.`);
   assert.deepEqual(evidence.methods, methods, `${route} method inventory is stale.`);
   const classifications = [...new Set(methods.map((method) => core.classifyOperationalRoute(route, method)))];
+  const inventoriedClassifications = evidence.classification
+    .split(",")
+    .map((value) => value.trim().replace("public/read-only", "public-read-only"));
   assert.deepEqual(
     classifications,
-    [evidence.classification.replace("public/read-only", "public-read-only")],
+    inventoriedClassifications,
     `${route} classification inventory is stale.`,
   );
 }

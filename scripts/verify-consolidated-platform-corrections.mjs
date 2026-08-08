@@ -5,6 +5,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 const salonStyles = read("src/components/SalonStyles.tsx");
 const headerSearch = read("src/components/search/HeaderStyleSearch.tsx");
+const beautyConcierge = read("src/components/public/BeautyConcierge.tsx");
 const marketplaceCard = read("src/components/public/MarketplaceSalonCard.tsx");
 const nearby = read("src/components/public/NearbySalonPlacement.tsx");
 const adminData = read("src/app/api/admin/data/route.ts");
@@ -20,12 +21,16 @@ assert.match(salonStyles, /useState<string \| null>\(null\)/);
 assert.doesNotMatch(salonStyles, /services\[1\]\?\.id/);
 
 assert.match(headerSearch, /placeholder="Search"/);
-assert.match(headerSearch, /\/api\/concierge\/search/);
-assert.match(headerSearch, /customerLocation\.location\?\.lat/);
+assert.match(headerSearch, /router\.push/);
+assert.match(headerSearch, /`\/salons\?\$\{params\.toString\(\)\}`/);
+assert.match(headerSearch, /customerLocation\.location\.lat/);
+assert.match(beautyConcierge, /\/api\/concierge\/search/);
+assert.match(beautyConcierge, /salon\.services\[0\]\?\.id/);
+assert.match(beautyConcierge, /query\.set\("style", salon\.services\[0\]\.id\)/);
 assert.doesNotMatch(headerSearch, /Search style/);
 assert.doesNotMatch(headerSearch, />AI</);
 
-assert.match(marketplaceCard, />View</);
+assert.match(marketplaceCard, />\s*View\s*<\/Link>/);
 assert.doesNotMatch(marketplaceCard, />View salon</i);
 assert.match(nearby, />View all →</);
 assert.doesNotMatch(nearby, /View all \{total\}/);

@@ -55,11 +55,10 @@ export async function inspectCanonicalMediaSource(
   if (!mimeType) {
     throw new Error("Upload a supported JPG, PNG, or animated GIF.");
   }
-  if (mimeType !== declaredMimeType) {
-    throw new Error(
-      "This image format does not match the selected file. Export it as JPG, PNG, or GIF and try again.",
-    );
-  }
+  // Browser MIME and filename extension are untrusted hints. Sharp's decoded
+  // format is authoritative for supported files, including renamed images and
+  // browsers that reported application/octet-stream.
+  void declaredMimeType;
   const dimensions =
     mimeType === "image/gif" && metadata.width && metadata.pageHeight
       ? { width: metadata.width, height: metadata.pageHeight }

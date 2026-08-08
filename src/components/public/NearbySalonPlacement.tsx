@@ -17,7 +17,16 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
   const [error, setError] = useState("");
   const carousel = useRef<HTMLDivElement>(null);
   const location = locationState.location;
-  const viewAllHref = useMemo(() => "/salons", []);
+  const viewAllHref = useMemo(() => {
+    if (!location || !validCoordinates(location)) return "/salons";
+    const query = new URLSearchParams({
+      lat: String(location.lat),
+      lng: String(location.lng),
+      location: location.label,
+      radius: String(locationState.radiusMiles),
+    });
+    return `/salons?${query.toString()}`;
+  }, [location, locationState.radiusMiles]);
 
   async function load(signal?: AbortSignal) {
     if (!location || !validCoordinates(location)) { setSalons([]); setTotal(0); return; }
@@ -53,7 +62,7 @@ export default function NearbySalonPlacement({ title = "Salons Near You", descri
       <div><h2 id="nearby-salons-heading" className="font-serif text-[23px] font-semibold text-ink sm:text-[28px]">{title}</h2>{description ? <p className="mt-1 text-xs text-ink/60">{description}</p> : null}</div>
       {salons.length && total ? <div className="flex items-center gap-2"><button type="button" aria-label="Previous nearby salons" onClick={()=>scroll(-1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowLeft size={16}/></button><button type="button" aria-label="Next nearby salons" onClick={()=>scroll(1)} className="hidden h-10 w-10 place-items-center rounded-full border border-plum/15 bg-white text-plum sm:grid"><ArrowRight size={16}/></button><Link href={viewAllHref} className="ml-1 text-[11px] font-bold text-magenta">View all →</Link></div> : null}
     </div>
-    {!locationState.ready ? <Skeletons/> : !location ? <div className="rounded-[15px] border border-plum/10 bg-white p-6 text-center"><h3 className="font-serif text-xl text-plum">Local salons are ready when you are</h3><p className="mt-1 text-xs leading-5 text-ink/65">We could not estimate your area. Choose a city, neighborhood, or ZIP in Find Salons.</p><Link href="/salons" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Choose a search location</Link></div> : error ? <div role="alert" className="rounded-[15px] border border-red-200 bg-white p-6 text-center"><p className="text-sm text-red-700">{error}</p><button onClick={() => void load()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-4 text-xs font-bold text-white"><RotateCcw size={14}/>Try again</button></div> : loading && !salons.length ? <Skeletons/> : salons.length ? <div ref={carousel} tabIndex={0} aria-label="Nearby salons carousel" className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">{salons.map((salon) => <MarketplaceSalonCard key={salon.id} salon={salon} variant="compact"/>)}</div> : <div className="rounded-[15px] border border-dashed border-plum/20 bg-white p-7 text-center"><h3 className="font-serif text-xl text-plum">No salons are nearby yet</h3><p className="mt-2 text-sm text-ink/60">Try another location or widen the distance on Find Salons.</p><Link href={viewAllHref} className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Open Find Salons</Link></div>}
+    {!locationState.ready ? <Skeletons/> : !location ? <div className="rounded-[15px] border border-plum/10 bg-white p-6 text-center"><h3 className="font-serif text-xl text-plum">Local salons are ready when you are</h3><p className="mt-1 text-xs leading-5 text-ink/65">We could not estimate your area. Choose a city, neighborhood, or ZIP in Find Salons.</p><Link href="/salons" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Choose a search location</Link></div> : error ? <div role="alert" className="rounded-[15px] border border-red-200 bg-white p-6 text-center"><p className="text-sm text-red-700">{error}</p><button onClick={() => void load()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-4 text-xs font-bold text-white"><RotateCcw size={14}/>Try again</button></div> : loading && !salons.length ? <Skeletons/> : salons.length ? <div ref={carousel} tabIndex={0} aria-label="Nearby salons carousel" className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">{salons.map((salon) => <MarketplaceSalonCard key={salon.id} salon={salon} variant="compact" mobileDistanceOnly/>)}</div> : <div className="rounded-[15px] border border-dashed border-plum/20 bg-white p-7 text-center"><h3 className="font-serif text-xl text-plum">No salons are nearby yet</h3><p className="mt-2 text-sm text-ink/60">Try another location or widen the distance on Find Salons.</p><Link href={viewAllHref} className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Open Find Salons</Link></div>}
   </section>;
 }
 

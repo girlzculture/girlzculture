@@ -58,7 +58,7 @@ type SearchResponse = {
   error?: string;
 };
 
-type Filters = {
+export type DiscoveryFilters = {
   radiusMiles: number;
   minimumRating: number;
   maximumPrice: string;
@@ -71,15 +71,19 @@ type Props = {
   initialSalons: PublicSalonResult[];
   initialTotal: number;
   initialQuery?: string;
+  initialStyleId?: string;
   initialLocation?: string;
   initialOrigin?: Coordinates | null;
+  initialFilters?: DiscoveryFilters;
 };
 
 type StoredState = {
-  version: 1;
+  version: 2;
   savedAt: number;
   query: string;
-  filters: Filters;
+  filters: DiscoveryFilters;
+  serviceId: string;
+  origin: Coordinates | null;
   salons: DecisionSalon[];
   summary: string;
   locationLabel: string;
@@ -89,7 +93,7 @@ type StoredState = {
 
 const STORAGE_KEY = "girlz-culture-salon-search-v2";
 const STORAGE_TTL_MS = 30 * 60_000;
-const defaultFilters: Filters = {
+const defaultFilters: DiscoveryFilters = {
   radiusMiles: DEFAULT_NEARBY_RADIUS_MILES,
   minimumRating: 0,
   maximumPrice: "",
@@ -108,6 +112,24 @@ function priceValue(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function sameCoordinates(
+  left: Coordinates | null | undefined,
+  right: Coordinates | null | undefined,
+) {
+  if (!left || !right) return !left && !right;
+  return Math.abs(left.lat - right.lat) < 0.000001 &&
+    Math.abs(left.lng - right.lng) < 0.000001;
+}
+
+function sameFilters(left: DiscoveryFilters, right: DiscoveryFilters) {
+  return left.radiusMiles === right.radiusMiles &&
+    left.minimumRating === right.minimumRating &&
+    left.maximumPrice === right.maximumPrice &&
+    left.date === right.date &&
+    left.sort === right.sort &&
+    left.promotionOnly === right.promotionOnly;
+}
+
 function storedState(): StoredState | null {
   try {
     const parsed = JSON.parse(
@@ -115,7 +137,7 @@ function storedState(): StoredState | null {
     ) as StoredState | null;
     if (
       !parsed ||
-      parsed.version !== 1 ||
+      parsed.version !== 2 ||
       Date.now() - Number(parsed.savedAt || 0) > STORAGE_TTL_MS ||
       !Array.isArray(parsed.salons)
     )
@@ -130,14 +152,24 @@ export default function SalonDiscovery({
   initialSalons,
   initialTotal,
   initialQuery = "",
+  initialStyleId = "",
   initialLocation = "",
   initialOrigin = null,
+  initialFilters = defaultFilters,
 }: Props) {
+  const startingFilters = useMemo(
+    () => ({
+      ...defaultFilters,
+      ...initialFilters,
+    }),
+    [initialFilters],
+  );
   const customerLocation = useCustomerLocation();
   const [query, setQuery] = useState(initialQuery);
   const [draftQuery, setDraftQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [draftFilters, setDraftFilters] = useState<Filters>(defaultFilters);
+  const [serviceId, setServiceId] = useState(initialStyleId);
+  const [filters, setFilters] = useState<DiscoveryFilters>(startingFilters);
+  const [draftFilters, setDraftFilters] = useState<DiscoveryFilters>(startingFilters);
   const [salons, setSalons] = useState<DecisionSalon[]>(
     asDecisionRows(initialSalons),
   );
@@ -156,15 +188,23 @@ export default function SalonDiscovery({
   const [locationBusy, setLocationBusy] = useState(false);
   const [error, setError] = useState("");
   const [selectedSalonId, setSelectedSalonId] = useState("");
+  const [scrollRestoreRevision, setScrollRestoreRevision] = useState(0);
   const requestController = useRef<AbortController | null>(null);
-  const restored = useRef(false);
   const restoredFromStorage = useRef(false);
+  const restorationChecked = useRef(false);
   const initialIntentHandled = useRef(false);
   const automaticNearbySearch = useRef(false);
   const pendingLocationSearch = useRef(false);
   const pendingScroll = useRef<number | null>(null);
 
   const origin = useMemo(() => {
+    if (
+      !ignoreInitialOrigin &&
+      initialOrigin &&
+      validCoordinates(initialOrigin)
+    ) {
+      return initialOrigin;
+    }
     if (
       customerLocation.location &&
       validCoordinates(customerLocation.location)
@@ -174,18 +214,19 @@ export default function SalonDiscovery({
         lng: customerLocation.location.lng,
       };
     }
-    return !ignoreInitialOrigin &&
-      initialOrigin &&
-      validCoordinates(initialOrigin)
-      ? initialOrigin
-      : null;
+    return null;
   }, [customerLocation.location, ignoreInitialOrigin, initialOrigin]);
 
-  const visibleLocation =
-    customerLocation.location?.label ||
-    locationLabel ||
-    initialLocation ||
-    (origin ? "Selected location" : "");
+  const usingInitialOrigin = Boolean(
+    !ignoreInitialOrigin &&
+      initialOrigin &&
+      validCoordinates(initialOrigin),
+  );
+  const visibleLocation = usingInitialOrigin
+    ? initialLocation || locationLabel || "Selected location"
+    : customerLocation.location?.label ||
+      locationLabel ||
+      (origin ? "Selected location" : "");
 
   const activeFilterCount = [
     filters.radiusMiles !== DEFAULT_NEARBY_RADIUS_MILES,
@@ -200,10 +241,12 @@ export default function SalonDiscovery({
     (scrollY = window.scrollY) => {
       try {
         const state: StoredState = {
-          version: 1,
+          version: 2,
           savedAt: Date.now(),
           query,
           filters,
+          serviceId,
+          origin,
           salons,
           summary,
           locationLabel: visibleLocation,
@@ -214,18 +257,41 @@ export default function SalonDiscovery({
       } catch {
         // Search remains usable when browser storage is unavailable.
       }
-    }, [filters, query, salons, summary, view, visibleLocation],
+    }, [filters, origin, query, salons, serviceId, summary, view, visibleLocation],
   );
 
   useEffect(() => {
-    if (restored.current) return;
-    restored.current = true;
+    if (restorationChecked.current) return;
+    restorationChecked.current = true;
     const state = storedState();
     if (!state) return;
-    const frame = window.requestAnimationFrame(() => {
-      restoredFromStorage.current = true;
+    const hasExplicitRequest = Boolean(
+      initialQuery ||
+      initialStyleId ||
+      initialLocation ||
+      initialOrigin ||
+      !sameFilters(startingFilters, defaultFilters)
+    );
+    if (
+      hasExplicitRequest &&
+      (state.query.trim().toLocaleLowerCase() !== initialQuery.trim().toLocaleLowerCase() ||
+        state.serviceId !== initialStyleId ||
+        !sameCoordinates(state.origin, initialOrigin) ||
+        !sameFilters(state.filters, startingFilters))
+    ) return;
+    // Set this guard before applying restored state. React runs the remaining
+    // mount effects in the same flush; without the synchronous guard,
+    // the initial/automatic search effects can start a request that overwrites
+    // the restored result set, URL and pending scroll position.
+    restoredFromStorage.current = true;
+    requestController.current?.abort();
+    // Defer the React updates while leaving the guards synchronous. A
+    // microtask is not cancelled by Strict Mode's development effect replay,
+    // so restoration remains deterministic in both dev and production.
+    queueMicrotask(() => {
       setQuery(state.query);
       setDraftQuery(state.query);
+      setServiceId(state.serviceId);
       setFilters(state.filters);
       setDraftFilters(state.filters);
       setSalons(state.salons);
@@ -233,9 +299,15 @@ export default function SalonDiscovery({
       setLocationLabel(state.locationLabel);
       setView(state.view);
       pendingScroll.current = state.scrollY;
+      setScrollRestoreRevision((revision) => revision + 1);
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [
+    initialLocation,
+    initialOrigin,
+    initialQuery,
+    initialStyleId,
+    startingFilters,
+  ]);
 
   useEffect(() => {
     if (pendingScroll.current === null) return;
@@ -251,7 +323,7 @@ export default function SalonDiscovery({
       window.cancelAnimationFrame(firstFrame);
       if (secondFrame) window.cancelAnimationFrame(secondFrame);
     };
-  }, [salons.length]);
+  }, [salons.length, scrollRestoreRevision]);
 
   useEffect(() => {
     const save = () => persist();
@@ -265,7 +337,7 @@ export default function SalonDiscovery({
   const runSearch = useCallback(
     async (
       nextQuery: string,
-      nextFilters: Filters,
+      nextFilters: DiscoveryFilters,
       options: { restoreScroll?: boolean } = {},
     ) => {
       const normalizedQuery = nextQuery.trim() || "salons near me";
@@ -286,6 +358,7 @@ export default function SalonDiscovery({
             latitude: origin?.lat,
             longitude: origin?.lng,
             filters: {
+              serviceId: serviceId || null,
               radiusMiles: nextFilters.radiusMiles,
               minimumRating: nextFilters.minimumRating || null,
               maximumPrice: priceValue(nextFilters.maximumPrice),
@@ -334,7 +407,8 @@ export default function SalonDiscovery({
         }
 
         const params = new URLSearchParams();
-        params.set("q", normalizedQuery);
+        params.set(serviceId ? "style" : "q", normalizedQuery);
+        if (serviceId) params.set("style_id", serviceId);
         if (origin) {
           params.set("lat", String(origin.lat));
           params.set("lng", String(origin.lng));
@@ -378,12 +452,13 @@ export default function SalonDiscovery({
       } finally {
         if (requestController.current === controller) setLoading(false);
       }
-    }, [customerLocation.location, initialLocation, origin, visibleLocation],
+    }, [customerLocation.location, initialLocation, origin, serviceId, visibleLocation],
   );
 
   useEffect(() => {
     if (
       initialIntentHandled.current ||
+      !restorationChecked.current ||
       restoredFromStorage.current ||
       !initialQuery.trim() ||
       !customerLocation.ready
@@ -396,6 +471,8 @@ export default function SalonDiscovery({
   useEffect(() => {
     if (
       automaticNearbySearch.current ||
+      !restorationChecked.current ||
+      restoredFromStorage.current ||
       initialSalons.length ||
       query.trim() ||
       !customerLocation.ready ||
@@ -489,7 +566,10 @@ export default function SalonDiscovery({
             <span className="sr-only">Search salons</span>
             <input
               value={draftQuery}
-              onChange={(event) => setDraftQuery(event.target.value)}
+              onChange={(event) => {
+                setDraftQuery(event.target.value);
+                setServiceId("");
+              }}
               placeholder="Search"
               maxLength={600}
               autoComplete="off"
@@ -577,8 +657,8 @@ export default function SalonDiscovery({
       ) : null}
 
       <section id="salon-results" className="scroll-mt-36 pt-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-serif text-[24px] font-semibold leading-none text-ink sm:text-[28px]">
               {origin ? "Salons Near You" : "Salons"}
             </h1>
@@ -586,7 +666,7 @@ export default function SalonDiscovery({
               Verified marketplace information only.
             </p>
           </div>
-          <div className="flex overflow-hidden rounded-[9px] border border-plum/15 bg-white text-[10px] font-bold">
+          <div className="flex shrink-0 overflow-hidden rounded-[9px] border border-plum/15 bg-white text-[10px] font-bold">
             <button
               type="button"
               aria-pressed={view === "list"}
@@ -635,7 +715,7 @@ export default function SalonDiscovery({
           )
         ) : salons.length ? (
           <div
-            className="mt-3 grid gap-3 lg:grid-cols-2"
+            className="mt-3 grid gap-3"
             onClickCapture={(event) => {
               if (
                 (event.target as HTMLElement).closest(
@@ -755,7 +835,7 @@ export default function SalonDiscovery({
                 onChange={(value) =>
                   setDraftFilters((current) => ({
                     ...current,
-                    sort: value as Filters["sort"],
+                    sort: value as DiscoveryFilters["sort"],
                   }))
                 }
                 options={[

@@ -43,11 +43,17 @@ assert.ok(
   ),
   "Search must use whole normalized phrases instead of prefix substrings.",
 );
-assert.match(decisionSearch, /"affordable"/);
-assert.match(decisionSearch, /"best rated"/);
 assert.match(
   decisionSearch,
-  /finiteNumber\(ratingMatch\?\.\[1\], bestIntent \? 3\.9 : null, 0, 5\)/,
+  /affordable\|cheap\|budget\|lowest price\|low cost/,
+);
+assert.match(
+  decisionSearch,
+  /best\|best rated\|highest rated\|top rated\|reliable/,
+);
+assert.match(
+  decisionSearch,
+  /boundedSearchNumber\(\s*ratingMatch\?\.\[1\],\s*bestIntent \? 3\.9 : null,\s*0,\s*5,\s*\)/,
 );
 assert.match(decisionSearch, /price_display_min/);
 assert.match(decisionSearch, /promotionApplies/);

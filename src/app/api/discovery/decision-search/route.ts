@@ -51,7 +51,18 @@ async function POSTHandler(request: Request) {
       "price_high",
     ]);
     const sort = cleanText(rawFilters.sort, 30);
+    const serviceId = cleanText(rawFilters.serviceId, 50) || null;
+    if (
+      serviceId &&
+      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(serviceId)
+    ) {
+      return Response.json(
+        { error: "Choose a valid style before searching." },
+        { status: 400 },
+      );
+    }
     const filters: DecisionSearchFilters = {
+      serviceId,
       radiusMiles: optionalNumber(rawFilters.radiusMiles),
       minimumRating: optionalNumber(rawFilters.minimumRating),
       maximumPrice: optionalNumber(rawFilters.maximumPrice),

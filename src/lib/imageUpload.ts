@@ -33,14 +33,61 @@ export const MIN_SAFE_SOURCE_EDGE_PX = 48;
 export const MIN_SAFE_SOURCE_PIXELS = 4_096;
 export const MAX_SOURCE_PIXELS = 40_000_000;
 
+export type SupportedImageMimeType = "image/jpeg" | "image/png" | "image/gif";
+
+export function detectSupportedImageMimeType(bytes: Uint8Array): SupportedImageMimeType | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value)) return "image/png";
+  if (bytes.length >= 6) {
+    const header = String.fromCharCode(...bytes.slice(0, 6));
+    if (header === "GIF87a" || header === "GIF89a") return "image/gif";
+  }
+  return null;
+}
+
+function canonicalImageExtension(mimeType: SupportedImageMimeType) {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/gif") return "gif";
+  return "jpg";
+}
+
+/**
+ * Browser MIME and filename extensions are hints only. The byte signature is
+ * authoritative, so renamed JPG/PNG files and generic browser MIME values are
+ * normalized before the prepare request and signed Storage upload.
+ */
+export async function normalizeImageFile(file: File) {
+  if (!file.size) throw new Error("This image is empty or damaged. Choose another file.");
+  const signature = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+  const mimeType = detectSupportedImageMimeType(signature);
+  if (!mimeType) {
+    const ascii = String.fromCharCode(...signature);
+    const knownUnsupported = ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP"
+      || ascii.startsWith("BM")
+      || ascii.includes("ftypheic")
+      || ascii.includes("ftypheif")
+      || ascii.includes("ftypavif")
+      || (signature[0] === 0x49 && signature[1] === 0x49 && signature[2] === 0x2a)
+      || (signature[0] === 0x4d && signature[1] === 0x4d && signature[3] === 0x2a);
+    throw new Error(knownUnsupported
+      ? "Upload a supported JPG, PNG, or animated GIF."
+      : "This image is damaged or cannot be read.");
+  }
+  const extension = canonicalImageExtension(mimeType);
+  const base = sanitizeFileName(file.name.replace(/\.[^.]+$/, "") || "image").replace(/\.+$/g, "") || "image";
+  const canonicalName = `${base}.${extension}`;
+  if (file.type === mimeType && file.name.toLowerCase().endsWith(`.${extension}`)) return file;
+  return new File([file], canonicalName, { type: mimeType, lastModified: file.lastModified });
+}
+
 export function isSupportedImageType(file: File) {
   return ["image/jpeg", "image/png", "image/gif"].includes(file.type);
 }
 
 export function getImageUploadError(file: File, profile: ImageUploadProfile = IMAGE_UPLOAD_PROFILES.gallery) {
-  const accepted = profile.acceptedMimeTypes || ["image/jpeg", "image/png"];
-  if (!isSupportedImageType(file) || !accepted.includes(file.type)) return profile.key === "content" ? "Upload a JPG, PNG, or animated GIF." : "Upload a JPG or PNG image.";
-  if (file.size > MAX_IMAGE_UPLOAD_BYTES) return "This original image is larger than 12 MB. Choose a smaller JPG or PNG.";
+  const accepted = profile.acceptedMimeTypes || ["image/jpeg", "image/png", "image/gif"];
+  if (!isSupportedImageType(file) || !accepted.includes(file.type)) return "Upload a JPG, PNG, or animated GIF.";
+  if (file.size > MAX_IMAGE_UPLOAD_BYTES) return "This original image is larger than 12 MB. Choose a smaller JPG, PNG, or GIF.";
   if (!file.size) return "This image is empty or damaged. Choose another file.";
   if (profile.maxBytes < 1) return "This media profile is not configured correctly. Contact support.";
   return null;

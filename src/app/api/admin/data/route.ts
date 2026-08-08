@@ -5,7 +5,7 @@ async function GETHandler(request: Request) {
   try {
     const section = new URL(request.url).searchParams.get("section") || "overview";
     const permission = section === "complaints" ? "support" : section === "engine" ? "settings" : section;
-    const { admin } = await requireAdminPermission(request, permission);
+    const { admin, adminUser } = await requireAdminPermission(request, permission);
     const allSources = [
       ["salons", "name", true], ["salon_applications", "submitted_at", true], ["customers", "created_at", true],
       ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
@@ -13,16 +13,53 @@ async function GETHandler(request: Request) {
       ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
       ["billing_events", "event_date", false], ["identity_conflict_queue", "email_normalized", false],
       ["subscription_change_requests", "requested_at", false], ["review_dispute_events", "created_at", true],
+      ["review_moderation_events", "created_at", true],
+      ["review_content_moderation_queue", "created_at", true],
+      ["review_reply_moderation_queue", "created_at", true],
     ] as const;
     const needed: Record<string, string[]> = {
-      overview: allSources.map(([table]) => table), submissions: ["salon_applications", "salons"], salons: [],
+      overview: [], submissions: ["salon_applications", "salons"], salons: [],
       customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
-      reviews: ["reviews", "salons", "bookings", "review_dispute_events"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
+      reviews: ["reviews", "salons", "bookings", "review_dispute_events", "review_moderation_events", "review_content_moderation_queue", "review_reply_moderation_queue"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
       content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
     };
-    const sources = allSources.filter(([table]) => (needed[section] || []).includes(table));
+    // Overview is an aggregate presentation, not an implicit permission to
+    // download every raw platform table. Include only the five datasets the
+    // current overview actually renders, and independently require that
+    // dataset's section permission. This prevents an Overview-only user from
+    // receiving customers, bookings, applications, or review rows they were
+    // never granted access to (and never exposes support, finance, identity,
+    // settings, or review-moderation queue records through Overview).
+    const overviewSourcePermissions: Record<string, string> = {
+      salons: "salons",
+      salon_applications: "submissions",
+      customers: "customers",
+      bookings: "bookings",
+      reviews: "reviews",
+    };
+    const overviewProjections: Record<string, string> = {
+      salons: "id,status,rating_overall,review_count",
+      salon_applications: "id,business_name,status,submitted_at",
+      customers: "id,created_at",
+      bookings: "id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status,payment_status",
+      reviews: "id,rating_overall,dispute_status,created_at",
+    };
+    const access = adminUser as {
+      is_super_admin?: boolean;
+      permissions?: Record<string, boolean>;
+    };
+    const requestedTables = section === "overview"
+      ? Object.entries(overviewSourcePermissions)
+          .filter(([, sourcePermission]) =>
+            Boolean(access.is_super_admin || access.permissions?.[sourcePermission]),
+          )
+          .map(([table]) => table)
+      : needed[section] || [];
+    const sources = allSources.filter(([table]) => requestedTables.includes(table));
     const results = await Promise.all(sources.map(async ([table, order, required]) => {
-      let query = admin.from(table).select("*");
+      let query = admin
+        .from(table)
+        .select(section === "overview" ? overviewProjections[table] : "*");
       if (table === "salons") query = query.is("deleted_at", null);
       const result = await query.order(order, { ascending: false }).limit(500);
       if (result.error && !required) {

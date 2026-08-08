@@ -129,7 +129,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
           {portfolio.length ? <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{portfolio.map((photo, index) => <div key={`${photo}-${index}`} className="relative aspect-[4/5] overflow-hidden rounded-[14px] bg-blush"><SafeImage src={photo} fallbackSrc={photo} alt={`${stylist.name || "Stylist"} portfolio ${index + 1}`} className="h-full w-full object-cover" /></div>)}</div> : <div className="mt-6 rounded-[14px] border border-dashed border-plum/15 bg-white/50 p-8 text-center text-[12px] text-ink/55">Portfolio photos have not been published yet.</div>}
         </section>
       </div>
-      <PublicFooter />
+      <PublicFooter reserveMobileNavigation />
       <CustomerBottomNav active="home" />
     </main>
   );

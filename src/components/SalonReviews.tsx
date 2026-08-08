@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Star, UserRound } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { salonSupabase as supabase } from "@/lib/supabase";
+import { getSessionForScope } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 type ReviewRecord = {
   id?: string;
@@ -41,6 +42,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
   const [replyText, setReplyText] = useState("");
   const [replySaving, setReplySaving] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [replyStatus, setReplyStatus] = useState<string | null>(null);
   const [localReviews, setLocalReviews] = useState(reviews);
 
   const averages = useMemo(() => {
@@ -73,16 +75,35 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
     }
     setReplySaving(true);
     setReplyError(null);
-    const { data: saved, error } = await supabase.rpc("reply_to_review", { target_review_id: reviewId, reply_text: replyText.trim() });
-    if (error || !saved) {
-      setReplyError(error?.message || "That reply could not be saved. Please make sure you are signed in to the correct salon.");
+    setReplyStatus(null);
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) throw new Error("Please sign in to the salon dashboard again.");
+      const response = await fetch(`/api/salon/reviews/${encodeURIComponent(reviewId)}/reply`, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        redirect: "manual",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reply: replyText.trim() }),
+      });
+      const body = await readApiResponse(response, "That reply could not be saved.");
+      if (!response.ok) throw new Error(body.error || "That reply could not be saved.");
+      if (body.content_status === "published") {
+        setLocalReviews((current) => current.map((review) => review.id === reviewId ? { ...review, salon_reply: replyText.trim() } : review));
+      }
+      setReplyStatus(String(body.message || "Reply saved."));
+      setActiveReply(null);
+      setReplyText("");
+    } catch (error) {
+      setReplyError(error instanceof Error ? error.message : "That reply could not be saved.");
+    } finally {
       setReplySaving(false);
-      return;
     }
-    setLocalReviews((current) => current.map((review) => review.id === reviewId ? { ...review, salon_reply: replyText.trim() } : review));
-    setActiveReply(null);
-    setReplyText("");
-    setReplySaving(false);
   };
 
   const showPrevious = () => setActiveIndex((current) => current === 0 ? Math.max(0, localReviews.length - 1) : current - 1);
@@ -124,6 +145,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
             {activeReview.review_title ? <h4 data-no-translate="true" className="mt-3 text-[12px] font-bold text-ink">{activeReview.review_title}</h4> : null}
             <p data-no-translate="true" className="mt-3 line-clamp-3 text-[11px] leading-[1.55] text-ink/75">{activeReview.written_review || "This verified client rated their completed appointment."}</p>
             {activeReview.result_photos?.length ? <div className="mt-3 flex gap-1.5">{activeReview.result_photos.slice(0, 4).map((photo, index) => <div key={`${photo}-${index}`} className="relative h-11 w-14 overflow-hidden rounded-[6px] bg-blush"><SafeImage src={photo} fallbackSrc={photo} alt={`Review result ${index + 1}`} className="h-full w-full object-cover" /></div>)}</div> : null}
+            {replyStatus ? <p role="status" className="mt-3 rounded-[8px] bg-emerald-50 p-2 text-[9px] text-emerald-800">{replyStatus}</p> : null}
             {activeReview.salon_reply ? <div className="mt-3 rounded-[8px] bg-blush/25 p-3 text-[10px] leading-4 text-ink/70"><strong className="text-plum">Salon reply:</strong> {activeReview.salon_reply}</div> : canReply ? <div className="mt-3">{activeReply === activeReview.id ? <><textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} rows={2} placeholder="Write a reply" className="w-full rounded-[8px] border border-plum/10 px-3 py-2 text-[10px] outline-none" /><div className="mt-2 flex gap-2"><button type="button" onClick={() => submitReply(activeReview.id || "")} disabled={replySaving} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">{replySaving ? "Saving…" : "Save reply"}</button><button type="button" onClick={() => { setActiveReply(null); setReplyText(""); }} className="rounded-full border border-magenta px-3 py-1.5 text-[9px] text-magenta">Cancel</button></div>{replyError ? <p className="mt-2 text-[9px] text-red-700">{replyError}</p> : null}</> : <button type="button" onClick={() => setActiveReply(activeReview.id || null)} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">Reply as salon</button>}</div> : null}
           </article>
         ) : <p className="grid min-h-28 place-items-center rounded-[12px] border border-dashed border-plum/15 text-[11px] text-ink/55">No reviews yet. Reviews from completed bookings will appear here automatically.</p>}

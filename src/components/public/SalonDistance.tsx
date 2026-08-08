@@ -1,7 +1,11 @@
 "use client";
 
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
-import { distanceMiles, validCoordinates } from "@/lib/location";
+import {
+  distanceMiles,
+  formatDistanceMiles,
+  validCoordinates,
+} from "@/lib/location";
 
 export default function SalonDistance({
   latitude,
@@ -15,16 +19,21 @@ export default function SalonDistance({
     lat: Number(latitude),
     lng: Number(longitude),
   };
-  if (!location || !validCoordinates(salon)) return null;
+  if (!location) return null;
+  if (!validCoordinates(salon)) {
+    return <span className="font-semibold text-ink/55">Distance unavailable</span>;
+  }
   const miles = distanceMiles(location, salon);
-  if (!Number.isFinite(miles)) return null;
+  if (!Number.isFinite(miles)) {
+    return <span className="font-semibold text-ink/55">Distance unavailable</span>;
+  }
   return (
     <span
       data-no-translate="true"
       title={`Distance from ${location.label}`}
       className="font-semibold text-plum"
     >
-      · {miles < 0.1 ? "Under 0.1" : miles.toFixed(1)} mi away
+      {formatDistanceMiles(miles)}
     </span>
   );
 }

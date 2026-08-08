@@ -47,7 +47,12 @@ export default function MobileCardsAcceptancePage() {
     <main className="min-h-screen bg-cream p-3 text-ink">
       <section aria-label="Compact salon card acceptance" className="flex gap-3 overflow-x-auto">
         {salons.map((salon) => (
-          <MarketplaceSalonCard key={salon.id} salon={salon} variant="compact" />
+          <MarketplaceSalonCard
+            key={salon.id}
+            salon={salon}
+            variant="compact"
+            mobileDistanceOnly
+          />
         ))}
       </section>
     </main>

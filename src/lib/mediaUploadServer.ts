@@ -333,7 +333,7 @@ function validateDescriptor(
   slot: MediaUploadSlot,
   profile: ImageUploadProfile,
 ) {
-  const accepted = profile.acceptedMimeTypes || ["image/jpeg", "image/png"];
+  const accepted = profile.acceptedMimeTypes || ["image/jpeg", "image/png", "image/gif"];
   if (!accepted.includes(value.mime_type)) {
     throw new Error("Upload a supported JPG, PNG, or animated GIF.");
   }
@@ -636,8 +636,6 @@ export async function verifyPreparedMediaObjects(
       profile,
       slot,
     );
-    const targetWidth = Number(target.width);
-    const targetHeight = Number(target.height);
     const transform =
       slot === "thumbnail"
         ? transforms.desktop
@@ -652,19 +650,11 @@ export async function verifyPreparedMediaObjects(
           maximumLongEdge: slot === "desktop" ? 960 : slot === "thumbnail" ? 480 : 720,
         })
       : preparedDimensions;
-    if (
-      targetWidth !== requiredDimensions.width ||
-      targetHeight !== requiredDimensions.height
-    ) {
-      throw new Error(
-        `The ${slot} derivative does not match its prepared profile.`,
-      );
-    }
     const rendition = await processor.createCanonicalMediaRendition({
       source,
       target: {
-        width: targetWidth,
-        height: targetHeight,
+        width: requiredDimensions.width,
+        height: requiredDimensions.height,
       },
       transform,
       quality: profile.quality,

@@ -50,6 +50,32 @@ export async function runGoogleMapsLoadWithRetry<T>({
   }
 }
 
+/**
+ * `loading=async` may fire the script load event before importLibrary is
+ * attached. Treat that short provider initialization window as pending, not as
+ * an invalid SDK response.
+ */
+export async function waitForGoogleMapsSdkReady({
+  isReady,
+  wait = (milliseconds) =>
+    new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds)),
+  timeoutMs = 3_000,
+  intervalMs = 50,
+}: {
+  isReady: () => boolean;
+  wait?: (milliseconds: number) => Promise<void>;
+  timeoutMs?: number;
+  intervalMs?: number;
+}) {
+  if (isReady()) return true;
+  const attempts = Math.max(1, Math.ceil(timeoutMs / Math.max(1, intervalMs)));
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    await wait(intervalMs);
+    if (isReady()) return true;
+  }
+  return false;
+}
+
 export function googleMapsIncidentMessage(
   providerMessage: string,
   reference: string | null,

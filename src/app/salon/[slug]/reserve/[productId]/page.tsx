@@ -164,7 +164,7 @@ export default async function PickupReservationPage({
           deadlineHours={Math.round(deadlineHours)}
         />
       </div>
-      <PublicFooter />
+      <PublicFooter reserveMobileNavigation />
       <CustomerBottomNav active="home" />
     </main>
   );

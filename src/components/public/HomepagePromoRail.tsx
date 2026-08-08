@@ -5,7 +5,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SafeImage from "@/components/site/SafeImage";
 import type { ContentCard } from "@/lib/content";
-import { selectLocalPromotionCards } from "@/lib/homePromotionCore";
+import {
+  isHomepagePromotionCardComplete,
+  selectLocalPromotionCards,
+} from "@/lib/homePromotionCore";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 
 const ACCEPTANCE_MODE =
@@ -36,7 +39,7 @@ export default function HomepagePromoRail({
   const visibleCards = useMemo(() => {
     const configuredLimit = Number(cards[0]?.display_limit || 8);
     return selectLocalPromotionCards({
-      cards,
+      cards: cards.filter(isHomepagePromotionCardComplete),
       now: currentTime,
       customerLocation: customerLocation.ready
         ? customerLocation.location

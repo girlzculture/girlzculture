@@ -23,22 +23,42 @@ jobs:
       PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
       PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
+      - name: Record optional preview-runtime status
+        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE != 'true' }}
+        shell: bash
+        run: |
+          {
+            echo "## Deploy Preview runtime acceptance — intentionally not executed"
+            echo
+            echo "The repository variable \`ENABLE_SUPABASE_PREVIEW_SMOKE\` is not set to \`true\`."
+            echo "This project is not using the disposable Supabase Preview integration, so a Supabase-backed Netlify preview cannot truthfully exercise discovery or trending data."
+            echo
+            echo "The required repository, clean-database, build, security, and responsive-browser checks remain separate and must still pass. Production runtime acceptance must be performed only after the protected production migration and the matching locked Netlify production deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Supabase-backed deploy-preview smoke intentionally skipped by repository policy."
+
       - uses: actions/checkout@v6
+        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
       - uses: actions/setup-node@v6
+        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
+        run: npm ci
       - name: Install Chromium
+        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         run: npx playwright install --with-deps chromium
       - name: Exercise the actual Netlify Deploy Preview
+        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         run: node scripts/run-deploy-preview-smoke.mjs
       - name: Capture redacted Supabase provider diagnostics
-        if: ${{ failure() }}
+        if: ${{ failure() && vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         continue-on-error: true
         run: node scripts/diagnose-deploy-preview-supabase.mjs
       - name: Upload deploy-preview screenshots and failure evidence
-        if: ${{ always() }}
+        if: ${{ always() && vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         uses: actions/upload-artifact@v5
         with:
           name: deploy-preview-evidence-${{ github.run_id }}-${{ github.run_attempt }}

@@ -22,6 +22,7 @@ import type {
   ImagePresetKey,
   ResponsiveImageTransforms,
 } from "@/lib/imageUpload";
+import { normalizeImageFile } from "@/lib/imageUpload";
 
 type UploadFiles = Partial<Record<MediaUploadSlot, File>>;
 
@@ -166,8 +167,9 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
       input.onProgress?.(78, "Resuming saved image confirmation");
     } else {
       input.onProgress?.(5, "Preparing original image");
+      const normalizedSource = await normalizeImageFile(input.source);
       const files = {
-        source: descriptor(input.source, input.sourceDimensions),
+        source: descriptor(normalizedSource, input.sourceDimensions),
       } as MediaPrepareRequest["files"];
       const request: MediaPrepareRequest = {
         bucket: input.bucket,
@@ -218,7 +220,7 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
       }
       uploadId = prepareBody.upload_id;
       prepareRequestId = prepareBody.request_id || "";
-      const uploadFiles: UploadFiles = { source: input.source };
+      const uploadFiles: UploadFiles = { source: normalizedSource };
       const total = Math.max(1, prepareBody.uploads.length);
       for (let index = 0; index < prepareBody.uploads.length; index += 1) {
         const prepared = prepareBody.uploads[index];

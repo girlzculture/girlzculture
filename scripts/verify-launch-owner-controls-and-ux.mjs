@@ -83,7 +83,7 @@ assert.match(promoCore, /distanceMiles/);
 assert.match(promoCore, /radius_miles/);
 assert.match(promoCore, /MAX_HOMEPAGE_PROMOTION_COUNT/);
 assert.match(promoApi, /location_markets/);
-assert.match(promoApi, /between 8 and 200 cards/);
+assert.match(promoApi, /promotionRail\.cards\.length > 200/);
 assert.match(promoApi, /display_limit/);
 assert.match(promoAdmin, /Audience market/);
 assert.match(promoAdmin, /Audience radius \(miles\)/);

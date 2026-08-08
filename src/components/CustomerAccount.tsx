@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Share2, ShoppingBag, Star, UserRound } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getSessionForScope, getSupabaseForScope } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import BookingInbox from "@/components/BookingInbox";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import { readApiResponse } from "@/lib/apiResponseClient";
+
+const supabase = getSupabaseForScope("customer");
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -49,17 +52,24 @@ export default function CustomerAccount() {
         router.replace("/login?next=/account");
         return;
       }
-      const [profileResult, bookingResult, favoriteResult, orderResult] = await Promise.all([
+      const session = await getSessionForScope("customer");
+      if (!session || session.user.id !== data.user.id) {
+        router.replace("/login?next=/account");
+        return;
+      }
+      const [profileResult, bookingResult, favoriteResponse, orderResult] = await Promise.all([
         supabase.from("customers").select("*").eq("id", data.user.id).maybeSingle(),
         supabase.from("bookings").select("*,salon:salons(name,slug,address_city,address_state,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
-        supabase.from("customer_favorites").select("salon:salons(*)").eq("customer_id", data.user.id).limit(50),
+        fetch("/api/customer/favorites", { credentials: "same-origin", cache: "no-store", redirect: "manual", headers: { Accept: "application/json", Authorization: `Bearer ${session.access_token}` } }),
         supabase.from("product_orders").select("*,salon:salons(name,slug,cover_photo_url),items:product_order_items(product_name,quantity,line_total,image_url)").eq("customer_id", data.user.id).order("created_at", { ascending: false }).limit(100),
       ]);
       if (!active) return;
       if (profileResult.error) setError(profileResult.error.message);
       setCustomer((profileResult.data || { id: data.user.id, name: data.user.user_metadata?.name || data.user.email?.split("@")[0], email: data.user.email, membership_tier: "Member" }) as Row);
       setBookings((bookingResult.data || []) as Row[]);
-      setFavorites((favoriteResult.data || []).map((item) => item.salon as unknown as Row).filter(Boolean));
+      const favoriteBody = await readApiResponse(favoriteResponse, "Unable to load your saved salons.");
+      if (!favoriteResponse.ok) throw new Error(favoriteBody.error || "Unable to load your saved salons.");
+      setFavorites((Array.isArray(favoriteBody.salons) ? favoriteBody.salons : []) as Row[]);
       setOrders((orderResult.data || []) as Row[]);
       setLoading(false);
     }).catch((loadError) => {

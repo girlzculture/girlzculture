@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, RotateCcw, Video } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import SafeCampaignVideo from "@/components/public/SafeCampaignVideo";
-import { validCoordinates } from "@/lib/location";
+import { formatDistanceMiles, validCoordinates } from "@/lib/location";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Trending = {
@@ -135,7 +135,7 @@ export default function TrendingVideoPlacement({
                 <div className="p-3">
                   <Link href={`/salon/${video.salon_slug}`} className="font-serif text-base font-semibold text-plum">{video.salon_name}</Link>
                   <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-ink/60">{video.description}</p>
-                  <p className="mt-2 text-[9px] text-ink/50">{video.distance_miles < 0.1 ? "Under 0.1" : Number(video.distance_miles).toFixed(1)} mi away</p>
+                  <p className="mt-2 text-[9px] text-ink/50">{formatDistanceMiles(video.distance_miles)}</p>
                 </div>
               </article>
             ))}

@@ -9,6 +9,7 @@ type StyleRow = {
   name?: string | null;
   category?: string | null;
   category_id?: string | null;
+  master_style_id?: string | null;
   service_category_name?: string | null;
   service_category_slug?: string | null;
   salon_id?: string | null;
@@ -39,6 +40,8 @@ export default async function StylesPage() {
       name,
       category,
       categorySlug,
+      styleId: raw.master_style_id || undefined,
+      styleSlug: name.toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
       count: 0,
       salons: new Set<string>(),
       image: raw.photos?.[0] || "",
@@ -46,6 +49,7 @@ export default async function StylesPage() {
       price: price > 0 ? price : undefined,
     };
     if (raw.salon_id) existing.salons.add(raw.salon_id);
+    if (!existing.styleId && raw.master_style_id) existing.styleId = raw.master_style_id;
     if (!existing.image && raw.photos?.[0]) existing.image = raw.photos[0];
     if ((!existing.price || price < existing.price) && price > 0) existing.price = price;
     grouped.set(key, existing);
@@ -69,7 +73,7 @@ export default async function StylesPage() {
         </div>
       </div>
     </section>
-    <PublicFooter />
+    <PublicFooter reserveMobileNavigation />
     <CustomerBottomNav active="search" />
   </main>;
 }

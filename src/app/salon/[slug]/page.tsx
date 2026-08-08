@@ -80,6 +80,7 @@ type StyleRecord = {
   material_options?: unknown;
   addons?: unknown;
   hair_included?: boolean | null;
+  included_items?: string[] | null;
   photos?: string[] | string | null;
 };
 
@@ -241,15 +242,15 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
   const now = new Date().toISOString();
   const [stylesResult, stylistsResult, reviewsResult, productsResult, promotionsResult] = await Promise.all([
-    supabase.from("styles").select("*").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
-    supabase.from("stylists").select("*").eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).is("archived_at", null).order("created_at", { ascending: true }),
-    supabase.from("reviews").select("*").eq("salon_id", salon.id).eq("moderation_status", "Published").is("archived_at", null).or("dispute_status.is.null,dispute_status.neq.Removed").order("created_at", { ascending: false }),
-    supabase.from("salon_products").select("*").eq("salon_id", salon.id).eq("is_visible", true).eq("product_status", "Active").is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("styles").select("id,service_group_id,master_style_id,name,price_display_min,price_display_max,duration_min_hours,duration_max_hours,base_price,size_options,length_options,addons,hair_included,included_items,photos").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
+    supabase.from("stylists").select("id,slug,name,specialties,bio,avatar_url,photos,years_experience").eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("reviews").select("id,display_name,review_title,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,result_photos,salon_reply,created_at").eq("salon_id", salon.id).eq("moderation_status", "Published").is("archived_at", null).or("dispute_status.is.null,dispute_status.neq.Removed").order("created_at", { ascending: false }),
+    supabase.from("salon_products").select("id,name,description,price,photo_url").eq("salon_id", salon.id).eq("is_visible", true).eq("product_status", "Active").is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order("created_at",{ascending:false}),
   ]);
 
   const styles = (stylesResult.data || []) as StyleRecord[];
-  const stylists = ((stylistsResult.data || []) as StylistRecord[]).filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
+  const stylists = (stylistsResult.data || []) as StylistRecord[];
   const products = (productsResult.data || []) as ProductRecord[];
   const promotions = ["Growth","Premium"].includes(String(salon.subscription_tier || "")) ? (promotionsResult.data || []) as SalonPromotion[] : [];
   const promotionCards = promotions.map((promotion) => {
@@ -286,7 +287,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const styleIds = styles.map((style) => style.id).filter((id): id is string => Boolean(id));
   const styleMaterialsByStyleId: Record<string, StyleMaterialRecord[]> = {};
   if (styleIds.length) {
-    const { data: materialsData } = await supabase.from("style_materials").select("*").in("style_id", styleIds);
+    const { data: materialsData } = await supabase.from("style_materials").select("id,style_id,name,price,longevity,quality_note").in("style_id", styleIds);
     for (const material of (materialsData || []) as StyleMaterialRecord[]) {
       if (!material.style_id) continue;
       styleMaterialsByStyleId[material.style_id] = [...(styleMaterialsByStyleId[material.style_id] || []), material];

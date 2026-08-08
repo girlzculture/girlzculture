@@ -78,8 +78,10 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(cards, /context\.set\("lat"|context\.set\("lng"/);
 assert.match(cards, /const profileHref = `\/salon\/\$\{salon\.slug\}`/);
-assert.doesNotMatch(nearbyPlacement, /new URLSearchParams\(\{ location:/);
-assert.match(nearbyPlacement, /useMemo\(\(\) => "\/salons", \[\]\)/);
+assert.match(nearbyPlacement, /lat: String\(location\.lat\)/);
+assert.match(nearbyPlacement, /lng: String\(location\.lng\)/);
+assert.match(nearbyPlacement, /location: location\.label/);
+assert.match(nearbyPlacement, /radius: String\(locationState\.radiusMiles\)/);
 assert.match(autocomplete, /router\.push\(item\.href\)/);
 assert.match(salonsPage, /latitude && longitude && validCoordinates\(origin\)/);
 assert.match(migration, /search\.location_retention_days/);

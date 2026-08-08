@@ -12,6 +12,10 @@ type OwnerRealtimeOptions = {
   salonId: string;
   onNotification: (row: RealtimeRow) => void;
   onBooking: (row: RealtimeRow) => void;
+  onReviewStateChange: () =>
+    | void
+    | OwnerFallbackOutcome
+    | Promise<void | OwnerFallbackOutcome>;
   onConnectionState?: (
     state: OwnerRealtimeConnectionState,
     status?: string,
@@ -42,6 +46,7 @@ export function subscribeToOwnerUpdates({
   salonId,
   onNotification,
   onBooking,
+  onReviewStateChange,
   onConnectionState,
   onFallbackRefresh,
   retryDelaysMs = DEFAULT_RETRY_DELAYS_MS,
@@ -153,6 +158,19 @@ export function subscribeToOwnerUpdates({
     );
     channel = nextChannel;
     onConnectionState?.("connecting");
+    const isCurrentConnection = () =>
+      !stopped &&
+      generation === connectionGeneration &&
+      channel === nextChannel;
+    const refreshReviewState = () => {
+      if (!isCurrentConnection()) return;
+      try {
+        void Promise.resolve(onReviewStateChange()).catch(() => undefined);
+      } catch {
+        // A refresh failure is recovered by the dashboard's next realtime
+        // event or by fallback polling if the channel later degrades.
+      }
+    };
 
     // Supabase requires every postgres_changes callback to be registered
     // before subscribe(). Keep subscribe as the final builder call.
@@ -164,7 +182,10 @@ export function subscribeToOwnerUpdates({
         table: "notifications",
         filter: `salon_id=eq.${salonId}`,
       },
-      (payload) => onNotification(payload.new as RealtimeRow),
+      (payload) => {
+        if (isCurrentConnection())
+          onNotification(payload.new as RealtimeRow);
+      },
     );
     nextChannel.on(
       "postgres_changes",
@@ -174,7 +195,23 @@ export function subscribeToOwnerUpdates({
         table: "bookings",
         filter: `salon_id=eq.${salonId}`,
       },
-      (payload) => onBooking(payload.new as RealtimeRow),
+      (payload) => {
+        if (isCurrentConnection()) onBooking(payload.new as RealtimeRow);
+      },
+    );
+    // Reviews are private server-rendered records and are intentionally not a
+    // browser Realtime source. Every insert/moderation/archive operation runs
+    // the review-summary trigger in the same transaction, and that resulting
+    // owner-readable salon UPDATE is the single safe refresh signal.
+    nextChannel.on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "salons",
+        filter: `id=eq.${salonId}`,
+      },
+      refreshReviewState,
     );
     nextChannel.subscribe((status) => {
       if (stopped || generation !== connectionGeneration) return;

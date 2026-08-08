@@ -22,6 +22,7 @@ import FeaturedProductPlacement from "@/components/public/FeaturedProductPlaceme
 import HomepagePromoRail from "@/components/public/HomepagePromoRail";
 import { resolvePublishedHomepagePromotions } from "@/lib/homepagePromotionServer";
 import { homepageSearchInsertIndex } from "@/lib/homepageSectionOrderingCore";
+import { HOMEPAGE_EDITORIAL_FALLBACKS } from "@/lib/homePromotionCore";
 
 type HomeSectionKey = "promo_rail" | "salons_near_you" | "featured_salons" | "featured_products" | "trending_now" | "trending_picks";
 type HomeSection = { section_key: HomeSectionKey; title: string; description: string | null; is_visible: boolean; sort_order: number };
@@ -34,17 +35,6 @@ const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { section_key: "featured_products", title: "Featured Products", description: "Reserve salon favorites for local pickup.", is_visible: true, sort_order: 5 },
   { section_key: "trending_now", title: "Trending Now", description: null, is_visible: false, sort_order: 6 },
 ];
-const DEFAULT_PROMOTION_CARDS: ContentCard[] = [
-  { id: "pilot-nearby", content_type: "image", title: "Find trusted salons nearby", body: "See verified braiding salons serving Harlem and the Bronx.", media_url: "/images/salon-warm.jpg", href: "/salons", cta_label: "Find a salon", alt_text: "Warm, modern braiding salon interior", status: "Active" },
-  { id: "pilot-knotless", content_type: "image", title: "Knotless braids, clear prices", body: "Compare real service details before you reserve.", media_url: "/images/braids-knotless.jpg", href: "/styles?style=knotless-braids", cta_label: "Browse knotless", alt_text: "Client wearing knotless braids", status: "Active" },
-  { id: "pilot-box", content_type: "image", title: "Explore box braids", body: "Choose a salon, stylist, length, and available time.", media_url: "/images/braids-box.jpg", href: "/styles?style=box-braids", cta_label: "Explore styles", alt_text: "Detailed box braid hairstyle", status: "Active" },
-  { id: "pilot-cornrows", content_type: "image", title: "Cornrow specialists", body: "Discover local professionals and verified client reviews.", media_url: "/images/braids-cornrows.jpg", href: "/styles?style=cornrows", cta_label: "See specialists", alt_text: "Client wearing neat cornrows", status: "Active" },
-  { id: "pilot-book", content_type: "image", title: "Reserve with confidence", body: "Secure an appointment with a clear reservation deposit.", media_url: "/images/hero-braids.jpg", href: "/salons", cta_label: "Book now", alt_text: "Client with a finished braided hairstyle", status: "Active" },
-  { id: "pilot-how", content_type: "image", title: "How Girlz Culture works", body: "From discovery to a verified review, see every step.", media_url: "/images/salon-modern.jpg", href: "/how-it-works", cta_label: "How it works", alt_text: "Bright contemporary beauty salon", status: "Active" },
-  { id: "pilot-partner", content_type: "image", title: "Built for salon owners", body: "Manage services, availability, bookings, and your public page.", media_url: "/images/salon-blush.jpg", href: "/partner", cta_label: "Partner with us", alt_text: "Blush-toned salon interior", status: "Active" },
-  { id: "pilot-trust", content_type: "image", title: "Real work. Real reviews.", body: "Book from transparent salon profiles with verified feedback.", media_url: "/images/salon-dark.jpg", href: "/safety", cta_label: "Safety and trust", alt_text: "Premium dark-toned salon interior", status: "Active" },
-];
-
 async function loadHomepageSections() {
   try {
     const { data, error } = await supabase
@@ -85,7 +75,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     };
   }).filter((section) => section.is_visible).sort((left, right) => left.sort_order - right.sort_order);
   const promoSection = homeContent.sections?.find((section) => section.type === "promo_rail" && section.is_visible !== false);
-  const configuredPromotionCards = promoSection?.cards?.length ? promoSection.cards : DEFAULT_PROMOTION_CARDS;
+  const configuredPromotionCards = promoSection?.cards?.length ? promoSection.cards : HOMEPAGE_EDITORIAL_FALLBACKS;
   const [promotionCards, cardCounts] = await Promise.all([
     resolvePublishedHomepagePromotions(
       configuredPromotionCards,
@@ -145,7 +135,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       </div>
 
       <TrustStrip />
-      <PublicFooter />
+      <PublicFooter reserveMobileNavigation />
       <CustomerBottomNav active="home" />
     </main>
   );
