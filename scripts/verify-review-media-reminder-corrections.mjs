@@ -439,6 +439,12 @@ assert.match(cleanDatabaseAssertions, /attempt_count/);
 assert.match(cleanDatabaseAssertions, /lease_expires_at/);
 assert.match(cleanDatabaseAssertions, /fail_booking_reminder_claim\(uuid,integer,text\)/);
 assert.match(cleanDatabaseAssertions, /booking_reminder_claims_attempt_count_check/);
+assert.ok(
+  cleanDatabaseAssertions.includes(
+    ") !~ 'claim[.]attempt_count[[:space:]]*<[[:space:]]*3'",
+  ),
+  "clean-database verification must accept equivalent reminder-bound whitespace",
+);
 
 const adminDataSource = fs.readFileSync("src/app/api/admin/data/route.ts", "utf8");
 assert.doesNotMatch(adminDataSource, /overview:\s*allSources\.map/);

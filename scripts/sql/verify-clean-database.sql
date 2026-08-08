@@ -625,12 +625,9 @@ begin
         and constraint_row.conname='booking_reminder_claims_attempt_count_check'
         and constraint_row.contype='c'
     )
-    or position(
-      'claim.attempt_count < 3'
-      in pg_get_functiondef(
-        'public.claim_booking_reminder(uuid,integer)'::regprocedure
-      )
-    )=0
+    or pg_get_functiondef(
+      'public.claim_booking_reminder(uuid,integer)'::regprocedure
+    ) !~ 'claim[.]attempt_count[[:space:]]*<[[:space:]]*3'
     or position(
       'REMINDER_PERMANENT_FAILURE_REFERENCE:'
       in pg_get_functiondef(
