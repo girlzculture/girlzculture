@@ -1,27 +1,79 @@
-import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import {
+  noteOperationalFailure,
+  routeMonitoringProfile,
+  withOperationalMonitoring,
+} from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
 async function GETHandler(request: Request) {
   try {
-    const section = new URL(request.url).searchParams.get("section") || "overview";
-    const permission = section === "complaints" ? "support" : section === "engine" ? "settings" : section;
-    const { admin, adminUser } = await requireAdminPermission(request, permission);
+    const section =
+      new URL(request.url).searchParams.get("section") || "overview";
+    const permission =
+      section === "complaints"
+        ? "support"
+        : section === "engine"
+          ? "settings"
+          : section;
+    const { admin, adminUser } = await requireAdminPermission(
+      request,
+      permission,
+    );
     const allSources = [
-      ["salons", "name", true], ["salon_applications", "submitted_at", true], ["customers", "created_at", true],
-      ["bookings", "appointment_datetime", true], ["reviews", "created_at", true], ["support_tickets", "created_at", true],
-      ["subscriptions", "updated_at", false], ["complaints_log", "created_at", false], ["admin_users", "email", false],
-      ["salon_promotions", "created_at", false], ["blog_posts", "updated_at", false], ["admin_settings", "updated_at", false],
-      ["billing_events", "event_date", false], ["identity_conflict_queue", "email_normalized", false],
-      ["subscription_change_requests", "requested_at", false], ["review_dispute_events", "created_at", true],
+      ["salons", "name", true],
+      ["salon_applications", "submitted_at", true],
+      ["customers", "created_at", true],
+      ["bookings", "appointment_datetime", true],
+      ["reviews", "created_at", true],
+      ["support_tickets", "created_at", true],
+      ["subscriptions", "updated_at", false],
+      ["complaints_log", "created_at", false],
+      ["admin_users", "email", false],
+      ["salon_promotions", "created_at", false],
+      ["blog_posts", "updated_at", false],
+      ["admin_settings", "updated_at", false],
+      ["billing_events", "event_date", false],
+      ["identity_conflict_queue", "email_normalized", false],
+      ["subscription_change_requests", "requested_at", false],
+      ["review_dispute_events", "created_at", true],
       ["review_moderation_events", "created_at", true],
       ["review_content_moderation_queue", "created_at", true],
       ["review_reply_moderation_queue", "created_at", true],
     ] as const;
     const needed: Record<string, string[]> = {
-      overview: [], submissions: ["salon_applications", "salons"], salons: [],
-      customers: ["customers", "bookings"], bookings: ["bookings", "salons"], quality: ["salons", "reviews", "complaints_log"],
-      reviews: ["reviews", "salons", "bookings", "review_dispute_events", "review_moderation_events", "review_content_moderation_queue", "review_reply_moderation_queue"], finance: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], marketing: ["salon_promotions", "blog_posts", "salons"],
-      content: [], support: ["support_tickets"], complaints: ["support_tickets"], subscriptions: ["subscriptions", "salons", "billing_events", "subscription_change_requests"], engine: [], settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
+      overview: [],
+      submissions: ["salon_applications", "salons"],
+      salons: [],
+      customers: ["customers", "bookings"],
+      bookings: ["bookings", "salons"],
+      quality: ["salons", "reviews", "complaints_log"],
+      reviews: [
+        "reviews",
+        "salons",
+        "bookings",
+        "review_dispute_events",
+        "review_moderation_events",
+        "review_content_moderation_queue",
+        "review_reply_moderation_queue",
+      ],
+      finance: [
+        "subscriptions",
+        "salons",
+        "billing_events",
+        "subscription_change_requests",
+      ],
+      marketing: ["salon_promotions", "blog_posts", "salons"],
+      content: [],
+      support: ["support_tickets"],
+      complaints: ["support_tickets"],
+      subscriptions: [
+        "subscriptions",
+        "salons",
+        "billing_events",
+        "subscription_change_requests",
+      ],
+      engine: [],
+      settings: ["admin_users", "admin_settings", "identity_conflict_queue"],
     };
     // Overview is an aggregate presentation, not an implicit permission to
     // download every raw platform table. Include only the five datasets the
@@ -41,36 +93,47 @@ async function GETHandler(request: Request) {
       salons: "id,status,rating_overall,review_count",
       salon_applications: "id,business_name,status,submitted_at",
       customers: "id,created_at",
-      bookings: "id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status,payment_status",
+      // bookings.payment_status does not exist. Deposit collection is tracked
+      // by deposit_status; payout and product-payment fields belong to their
+      // own finance records and must not be projected onto bookings.
+      bookings:
+        "id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status",
       reviews: "id,rating_overall,dispute_status,created_at",
     };
     const access = adminUser as {
       is_super_admin?: boolean;
       permissions?: Record<string, boolean>;
     };
-    const requestedTables = section === "overview"
-      ? Object.entries(overviewSourcePermissions)
-          .filter(([, sourcePermission]) =>
-            Boolean(access.is_super_admin || access.permissions?.[sourcePermission]),
-          )
-          .map(([table]) => table)
-      : needed[section] || [];
-    const sources = allSources.filter(([table]) => requestedTables.includes(table));
-    const results = await Promise.all(sources.map(async ([table, order, required]) => {
-      let query = admin
-        .from(table)
-        .select(section === "overview" ? overviewProjections[table] : "*");
-      if (table === "salons") query = query.is("deleted_at", null);
-      const result = await query.order(order, { ascending: false }).limit(500);
-      if (result.error && !required) {
-        noteOperationalFailure("Optional admin data source unavailable", {
-          table,
-          error: result.error,
-        });
-        return { data: [], error: null };
-      }
-      return result;
-    }));
+    const requestedTables =
+      section === "overview"
+        ? Object.entries(overviewSourcePermissions)
+            .filter(([, sourcePermission]) =>
+              Boolean(
+                access.is_super_admin || access.permissions?.[sourcePermission],
+              ),
+            )
+            .map(([table]) => table)
+        : needed[section] || [];
+    const sources = allSources.filter(([table]) =>
+      requestedTables.includes(table),
+    );
+    const results = await Promise.all(
+      sources.map(async ([table, order, required]) => {
+        let query = admin
+          .from(table)
+          .select(section === "overview" ? overviewProjections[table] : "*");
+        if (table === "salons") query = query.is("deleted_at", null);
+        const result = await query.order(order, { ascending: false }).limit(500);
+        if (result.error && !required) {
+          noteOperationalFailure("Optional admin data source unavailable", {
+            table,
+            error: result.error,
+          });
+          return { data: [], error: null };
+        }
+        return result;
+      }),
+    );
     // Keep the response shape stable for every section. Most admin routes only
     // fetch the tables they need, but every consumer can safely render an empty
     // state when another dataset is absent.
@@ -82,7 +145,7 @@ async function GETHandler(request: Request) {
       payload[sources[index][0]] = result.data || [];
     });
     const applications = Array.isArray(payload.salon_applications)
-      ? payload.salon_applications as Array<Record<string, unknown>>
+      ? (payload.salon_applications as Array<Record<string, unknown>>)
       : [];
     const salonById = new Map(
       (Array.isArray(payload.salons) ? payload.salons : []).map((salon) => [
@@ -94,24 +157,46 @@ async function GETHandler(request: Request) {
       const salon = salonById.get(String(application.salon_id || ""));
       application.marketplace_status = salon?.status || null;
       application.approval_status = application.status;
-      application.status = String(salon?.status || "").toLowerCase() === "offboarded"
-        ? "Offboarded"
-        : application.status;
+      application.status =
+        String(salon?.status || "").toLowerCase() === "offboarded"
+          ? "Offboarded"
+          : application.status;
     });
-    await Promise.all(applications.map(async (application) => {
-      const paths = Array.isArray(application.document_urls) ? application.document_urls.map(String) : [];
-      const signed = await Promise.all(paths.map(async (path) => {
-        if (/^https?:\/\//i.test(path)) return path;
-        const { data, error } = await admin.storage.from("application-documents").createSignedUrl(path, 3600);
-        if (error) { noteOperationalFailure("Application document signing failed", { applicationId: application.id, path, error }); return null; }
-        return data.signedUrl;
-      }));
-      application.document_urls = signed.filter(Boolean);
-    }));
+    await Promise.all(
+      applications.map(async (application) => {
+        const paths = Array.isArray(application.document_urls)
+          ? application.document_urls.map(String)
+          : [];
+        const signed = await Promise.all(
+          paths.map(async (path) => {
+            if (/^https?:\/\//i.test(path)) return path;
+            const { data, error } = await admin.storage
+              .from("application-documents")
+              .createSignedUrl(path, 3600);
+            if (error) {
+              noteOperationalFailure("Application document signing failed", {
+                applicationId: application.id,
+                path,
+                error,
+              });
+              return null;
+            }
+            return data.signedUrl;
+          }),
+        );
+        application.document_urls = signed.filter(Boolean);
+      }),
+    );
     return Response.json(payload);
   } catch (error) {
     noteOperationalFailure("Admin data load failed", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Unable to load admin data" }, { status: 403 });
+    // Let the shared monitoring wrapper preserve true 401/403 authorization
+    // responses while classifying database/schema failures as safe HTTP 500s.
+    // Returning every error as 403 made a broken query look like a login issue.
+    throw error;
   }
 }
-export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/admin/data", "GET"), GETHandler);
+export const GET = withOperationalMonitoring(
+  routeMonitoringProfile("/api/admin/data", "GET"),
+  GETHandler,
+);
