@@ -44,7 +44,8 @@ export default function HeaderStyleSearch() {
   return (
     <form
       onSubmit={submit}
-      className="w-full min-w-0 max-w-[154px] overflow-hidden rounded-[10px] border border-plum/15 bg-white px-2 min-[390px]:max-w-[184px] md:max-w-[250px] lg:max-w-[310px] xl:max-w-[350px]"
+      data-public-header-control="search"
+      className="w-full min-w-0 max-w-[154px] overflow-hidden rounded-[10px] border border-plum/15 bg-white px-2 min-[390px]:max-w-[184px] md:max-w-[250px] lg:max-w-[310px] xl:max-w-[350px] 2xl:max-w-[260px] min-[1700px]:max-w-[350px]"
     >
       <label className="flex min-h-10 min-w-0 items-center gap-1 min-[390px]:gap-2">
         <span className="sr-only">Search</span>

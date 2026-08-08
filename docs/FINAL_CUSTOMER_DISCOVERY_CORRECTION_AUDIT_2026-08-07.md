@@ -82,14 +82,15 @@ The Netlify draft preview itself deployed successfully, but its external `Supaba
   - `verify:consolidated-corrections`
 - Production-style isolated browser acceptance:
   - `final-correction-viewports.spec.ts`: 2/2 passed, including all eight required viewports. Its timeout is explicitly 120 seconds because one test deliberately visits all eight layouts.
-  - Combined Chromium run: 21 executed tests passed after the timeout correction; four device-project-only tests were intentionally skipped under the Chromium desktop project.
+  - `public-header-responsive.spec.ts`: 2/2 passed across Homepage, Browse Styles, Find Salons, How It Works, About Us, Blog, the deterministic salon profile, and Legal & Policies at 1366×768, 1440×1000, 1024×768, and 844×390. The suite checks viewport containment, header-zone and child containment, collision and wrap prevention, breakpoint presentation, search availability, and every responsive-menu control.
+  - Combined production-mode Chromium run: 57 tests passed and six device-project-only tests were intentionally skipped under the Chromium desktop project.
+- **Public header closure:** the shared header now retains the approved desktop presentation at wide widths and uses the existing full navigation menu below 1536px. The logo and search remain visible; public navigation, language, favorites, and account controls remain available in the collision-free menu. Independent visual review of all 32 route/viewport header captures and the open responsive-menu captures found no overlap, wrapping, clipping, or viewport escape.
 
 ### FAIL
 
 - **Real Google Maps provider:** `google-maps-provider.spec.ts` failed. The configured key was present, but Google rejected it with `GOOGLE_MAPS_AUTH_REJECTED`.
 - **Live production map:** read-only inspection of `https://girlzculture.com/salons?lat=40.8116&lng=-73.9465&location=Harlem%2C%20NY&radius=50` showed 25 nearby salons but the real map returned: `Google Maps loaded an invalid response. Verify that Maps JavaScript API is enabled for this key.` Live user-visible reference: `75c92d3c-d435-4448-bc87-afdfc28044cd`.
 - **Netlify deploy-preview smoke:** the preview rendered the homepage, How It Works, Salons, and `/api/config` with HTTP 200, but `/api/discovery/salons` and `/api/discovery/trending` returned sanitized JSON HTTP 500 responses because the associated Supabase Preview database deployment was skipped. Read-only follow-up references: `d559ef5f-2767-46df-8b57-e33ea5e9492f` and `16adb88a-9e91-482b-abd7-6071cef293f7`.
-- **Pre-existing desktop header density:** at 1366×768 and 1440×1000 the logo overlaps the first desktop navigation item. The branch does not modify the header, so Prompt 2 requires documenting it instead of silently expanding scope.
 
 ### BLOCKED
 
@@ -131,13 +132,13 @@ All paths are under `docs/screenshots/final-correction/`:
 - About: `about-mobile-390x844.png`, `about-read-more-mobile-390x844.png`
 - Footer/legal: `footer-mobile-390x844.png`, `legal-mobile-390x844.png`
 - Discovery/map: `discovery-mobile-390x844.png`, `map-summary-mobile-390x844.png`, `google-maps-live-production-blocked.jpg`
+- Header closure: `header-closure/` contains the shared header on all eight required routes at 1366×768, 1440×1000, 1024×768, and 844×390, plus open-menu evidence at every tested width.
 
 ## Launch blockers in priority order
 
 1. **Database/migration issue:** the external Supabase Preview check is skipped, so the deployed PR preview lacks the branch schema and its discovery endpoints return HTTP 500.
 2. **Provider integration:** production Google Maps key/API/referrer configuration is rejected.
 3. **Environment/provider integration:** real authenticated review, media, reminder, and role workflows have not been exercised on a deployed preview with test providers and test accounts.
-4. **Repository defect (pre-existing/out of branch scope):** desktop header logo/navigation overlap at 1366 and 1440 widths.
 
 ## Production-safety statement
 

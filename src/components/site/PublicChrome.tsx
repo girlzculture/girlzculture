@@ -155,18 +155,20 @@ export async function PublicHeader({
   return (
     <header
       role="banner"
+      data-public-header
       data-language-selector-host
-      className="gc-brand-header relative z-40 border-b border-plum/[0.08] backdrop-blur-xl"
+      className="gc-brand-header relative z-[90] border-b border-plum/[0.08] backdrop-blur-xl"
     >
-      <div className="mx-auto flex h-16 w-full max-w-[1760px] items-center gap-2 px-3 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
-        <div className="flex min-w-0 shrink-0 items-center gap-1">
+      <div data-public-header-layout className="mx-auto flex h-16 w-full max-w-[1760px] items-center gap-2 px-3 sm:px-6 lg:px-10 xl:px-12 2xl:px-10 min-[1700px]:px-16">
+        <div data-public-header-zone="brand" className="flex min-w-0 shrink-0 items-center gap-1">
           <MobilePublicMenu links={mobileItems} />
           <Wordmark compact />
         </div>
 
         <nav
           aria-label="Main navigation"
-          className="hidden min-w-0 flex-1 items-center justify-center gap-5 whitespace-nowrap text-[13px] font-semibold text-ink xl:flex 2xl:gap-8"
+          data-public-header-zone="navigation"
+          className="hidden min-w-0 flex-1 items-center justify-center gap-5 whitespace-nowrap text-[13px] font-semibold text-ink 2xl:flex min-[1700px]:gap-8"
         >
           {headerItems.map((item) => (
             <Link
@@ -193,27 +195,27 @@ export async function PublicHeader({
           ))}
         </nav>
 
-        <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
-          <div className="hidden xl:block">
+        <div data-public-header-zone="actions" className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+          <div className="hidden 2xl:block">
             <LanguageSelector compact />
           </div>
           <HeaderStyleSearch />
           <Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
-            className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta xl:inline-flex"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta 2xl:inline-flex"
           >
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
           </Link>
           <Link
             href="/login"
-            className="hidden min-h-11 items-center px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta xl:inline-flex"
+            className="hidden min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta 2xl:inline-flex"
           >
             <LocalizedText messageKey="nav.login" fallback="Log in" />
           </Link>
           <Link
             href="/login"
-            className="gc-brand-primary-action hidden min-h-11 items-center rounded-[10px] bg-magenta px-5 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 xl:inline-flex"
+            className="gc-brand-primary-action hidden min-h-11 items-center whitespace-nowrap rounded-[10px] bg-magenta px-4 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 2xl:inline-flex min-[1700px]:px-5"
           >
             <LocalizedText messageKey="nav.signup" fallback="Sign up" />
           </Link>

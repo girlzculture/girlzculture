@@ -58,6 +58,10 @@ const server = createServer((request, response) => {
   }
 
   if (url.pathname.startsWith("/rest/v1/rpc/") && method === "POST") {
+    if (url.pathname === "/rest/v1/rpc/is_salon_profile_public") {
+      json(response, 200, true);
+      return;
+    }
     json(response, 200, []);
     return;
   }
@@ -80,6 +84,49 @@ const server = createServer((request, response) => {
     const wantsSingle = String(request.headers.accept || "").includes(
       "application/vnd.pgrst.object+json",
     );
+    if (
+      url.pathname === "/rest/v1/salons" &&
+      url.searchParams.get("slug") === "eq.acceptance-salon"
+    ) {
+      const salon = {
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "Acceptance Salon",
+        slug: "acceptance-salon",
+        vanity_slug: null,
+        description: "A deterministic salon profile used only by the local responsive acceptance suite.",
+        description_ai_assisted: false,
+        stylist_section_fallback: { mode: "empty" },
+        address_street: "123 Acceptance Avenue",
+        address_line2: null,
+        address_city: "Brooklyn",
+        address_state: "NY",
+        address_zip: "11201",
+        latitude: 40.695,
+        longitude: -73.99,
+        hours: {},
+        languages: ["English"],
+        logo_url: null,
+        cover_photo_url: null,
+        gallery_photos: [],
+        verification_status: "Verified",
+        rating_overall: 4.9,
+        review_count: 12,
+        is_closed_override: false,
+        closed_override_date: null,
+        time_zone: "America/New_York",
+        status: "Active",
+        is_discoverable: true,
+        accepting_bookings: true,
+        subscription_tier: "Basic",
+        instagram_url: null,
+        tiktok_url: null,
+        google_business_url: null,
+      };
+      json(response, 200, wantsSingle ? salon : [salon], {
+        "content-range": "0-0/1",
+      });
+      return;
+    }
     json(response, 200, wantsSingle ? null : [], { "content-range": "0-0/0" });
     return;
   }
