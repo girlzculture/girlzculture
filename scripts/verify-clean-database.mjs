@@ -23,15 +23,50 @@ const supportWorkflowBody = supportWorkflowBlock.match(
 const unqualifiedBlockVariable = supportWorkflowBody.match(
   /(?<!support_workflow_verification\.)\bsupport_(?:actor|ticket)_id\b/,
 );
+const permissionScopedSupportActor =
+  /'\{"support":true,"complaints":true,"content":true\}'::jsonb,\s*'Active',\s*false/.test(
+    supportWorkflowBlock,
+  );
+const supportRollbackBlock = assertionSource.match(
+  /-- Force each audited mutation[\s\S]*?end support_workflow_rollback_verification\s*\r?\n\$\$;/,
+)?.[0];
+if (!supportRollbackBlock) {
+  console.error("The labeled support workflow rollback verification block is missing.");
+  process.exit(1);
+}
+const supportRollbackBody = supportRollbackBlock.match(
+  /\bbegin\s*\r?\n([\s\S]*)end support_workflow_rollback_verification/,
+)?.[1] || "";
+const unqualifiedRollbackVariable = supportRollbackBody.match(
+  /(?<!support_workflow_rollback_verification\.)\brollback_(?:actor|ticket)_id\b/,
+);
+const legacyRollbackVariableDeclaration = supportRollbackBlock.match(
+  /\b(?:actor_id|ticket_id)\s+constant\b/,
+);
 if (
   !supportWorkflowBlock.includes("#variable_conflict error") ||
   unqualifiedBlockVariable ||
+  !permissionScopedSupportActor ||
   !supportWorkflowBlock.includes("from public.support_tickets ticket") ||
   !supportWorkflowBlock.includes("from public.support_response_email_outbox outbox") ||
   !supportWorkflowBlock.includes("from public.record_management_events event")
 ) {
   console.error(
-    "Support workflow verification must use error-on-conflict mode, qualified block variables, and explicit table aliases.",
+    "Support workflow verification must use a permission-scoped non-super-admin fixture, error-on-conflict mode, qualified block variables, and explicit table aliases.",
+  );
+  process.exit(1);
+}
+if (
+  !supportRollbackBlock.includes("#variable_conflict error") ||
+  unqualifiedRollbackVariable ||
+  legacyRollbackVariableDeclaration ||
+  !supportRollbackBlock.includes("from public.content_pages content_page") ||
+  !supportRollbackBlock.includes("from public.service_categories category") ||
+  !supportRollbackBlock.includes("from public.support_tickets ticket") ||
+  !supportRollbackBlock.includes("from public.support_response_email_outbox outbox")
+) {
+  console.error(
+    "Support workflow rollback verification must use error-on-conflict mode, qualified block variables, and explicit table aliases.",
   );
   process.exit(1);
 }

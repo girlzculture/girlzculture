@@ -1700,10 +1700,22 @@ begin
     'Clean database support admin',
     'clean-support-assignment@example.test',
     'Admin',
-    '{"support":true,"complaints":true}'::jsonb,
+    '{"support":true,"complaints":true,"content":true}'::jsonb,
     'Active',
-    true
+    false
   );
+  if not exists (
+    select 1
+    from public.admin_users actor
+    where coalesce(actor.user_id,actor.id)=support_workflow_verification.support_actor_id
+      and actor.status='Active'
+      and not actor.is_super_admin
+      and coalesce((actor.permissions->>'support')::boolean,false)
+      and coalesce((actor.permissions->>'complaints')::boolean,false)
+      and coalesce((actor.permissions->>'content')::boolean,false)
+  ) then
+    raise exception 'Support workflow fixture must be an active permission-scoped administrator';
+  end if;
 
   perform public.admin_save_content_record(
     'page',
@@ -1895,10 +1907,14 @@ create trigger clean_database_reject_management_audit
 before insert on public.record_management_events
 for each row execute function public.clean_database_reject_management_audit();
 
+-- Force each audited mutation to fail and prove that its business record,
+-- outbox, and audit event still roll back as one transaction.
 do $$
+#variable_conflict error
+<<support_workflow_rollback_verification>>
 declare
-  actor_id constant uuid := '10000000-0000-4000-8000-000000000091';
-  ticket_id constant uuid := '10000000-0000-4000-8000-000000000092';
+  rollback_actor_id constant uuid := '10000000-0000-4000-8000-000000000091';
+  rollback_ticket_id constant uuid := '10000000-0000-4000-8000-000000000092';
   content_save_failed boolean := false;
   catalog_save_failed boolean := false;
   assignment_failed boolean := false;
@@ -1907,14 +1923,15 @@ begin
   begin
     perform public.admin_save_content_record(
       'page',
-      actor_id,
+      support_workflow_rollback_verification.rollback_actor_id,
       jsonb_build_object(
         'slug','clean-atomic-content',
         'title','This title must roll back'
       ),
       'save_draft',
-      (select updated_at from public.content_pages
-        where slug='clean-atomic-content')
+      (select content_page.updated_at
+        from public.content_pages content_page
+        where content_page.slug='clean-atomic-content')
     );
   exception when others then
     content_save_failed := true;
@@ -1923,8 +1940,9 @@ begin
     raise exception 'Forced content audit failure did not abort the save';
   end if;
   if not exists (
-    select 1 from public.content_pages
-    where slug='clean-atomic-content' and title='Clean atomic content'
+    select 1 from public.content_pages content_page
+    where content_page.slug='clean-atomic-content'
+      and content_page.title='Clean atomic content'
   ) then
     raise exception 'Content mutation survived a failed audit transaction';
   end if;
@@ -1932,10 +1950,10 @@ begin
   begin
     perform public.admin_save_content_catalog_record(
       'service_category',
-      actor_id,
+      support_workflow_rollback_verification.rollback_actor_id,
       jsonb_build_object(
-        'id',(select id from public.service_categories
-          where slug='clean-atomic-category'),
+        'id',(select category.id from public.service_categories category
+          where category.slug='clean-atomic-category'),
         'name','This catalog name must roll back',
         'slug','clean-atomic-category',
         'sort_order',99999,
@@ -1949,15 +1967,19 @@ begin
     raise exception 'Forced catalog audit failure did not abort the save';
   end if;
   if not exists (
-    select 1 from public.service_categories
-    where slug='clean-atomic-category' and name='Clean Atomic Category'
+    select 1 from public.service_categories category
+    where category.slug='clean-atomic-category'
+      and category.name='Clean Atomic Category'
   ) then
     raise exception 'Catalog mutation survived a failed audit transaction';
   end if;
 
   begin
     perform public.admin_assign_support_ticket(
-      ticket_id,actor_id,actor_id,'Urgent'
+      support_workflow_rollback_verification.rollback_ticket_id,
+      support_workflow_rollback_verification.rollback_actor_id,
+      support_workflow_rollback_verification.rollback_actor_id,
+      'Urgent'
     );
   exception when others then
     assignment_failed := true;
@@ -1966,18 +1988,20 @@ begin
     raise exception 'Forced support audit failure did not abort assignment';
   end if;
   if not exists (
-    select 1 from public.support_tickets
-    where id=ticket_id
-      and assigned_to is null
-      and assigned_at is null
-      and priority='Normal'
+    select 1 from public.support_tickets ticket
+    where ticket.id=support_workflow_rollback_verification.rollback_ticket_id
+      and ticket.assigned_to is null
+      and ticket.assigned_at is null
+      and ticket.priority='Normal'
   ) then
     raise exception 'Support assignment survived a failed audit transaction';
   end if;
 
   begin
     perform public.admin_respond_support_ticket(
-      ticket_id,actor_id,'This response must roll back','Closed',
+      support_workflow_rollback_verification.rollback_ticket_id,
+      support_workflow_rollback_verification.rollback_actor_id,
+      'This response must roll back','Closed',
       'clean-response-request-2'
     );
   exception when others then
@@ -1987,38 +2011,69 @@ begin
     raise exception 'Forced support response audit failure did not abort the response';
   end if;
   if not exists (
-    select 1 from public.support_tickets
-    where id=ticket_id and status='Resolved'
-      and admin_response='Clean response'
+    select 1 from public.support_tickets ticket
+    where ticket.id=support_workflow_rollback_verification.rollback_ticket_id
+      and ticket.status='Resolved'
+      and ticket.admin_response='Clean response'
   ) or exists (
-    select 1 from public.support_response_email_outbox
-    where idempotency_key='clean-response-request-2'
+    select 1 from public.support_response_email_outbox outbox
+    where outbox.idempotency_key='clean-response-request-2'
   ) then
     raise exception 'Support response or email outbox survived a failed audit transaction';
   end if;
-end
+end support_workflow_rollback_verification
 $$;
 
 drop trigger clean_database_reject_management_audit
   on public.record_management_events;
 drop function public.clean_database_reject_management_audit();
 
-delete from public.record_management_events
-where (record_type='support_ticket'
-    and record_id='10000000-0000-4000-8000-000000000092')
-  or (record_type='content_page' and record_id='clean-atomic-content')
-  or (record_type='service_category' and record_id=(
-    select id::text from public.service_categories
-    where slug='clean-atomic-category'
+delete from public.record_management_events as event
+where (event.record_type='support_ticket'
+    and event.record_id='10000000-0000-4000-8000-000000000092')
+  or (event.record_type='content_page' and event.record_id='clean-atomic-content')
+  or (event.record_type='service_category' and event.record_id=(
+    select category.id::text from public.service_categories as category
+    where category.slug='clean-atomic-category'
   ));
-delete from public.content_pages where slug='clean-atomic-content';
-delete from public.service_categories where slug='clean-atomic-category';
-delete from public.support_tickets
-where id='10000000-0000-4000-8000-000000000092';
-delete from public.admin_users
-where id='10000000-0000-4000-8000-000000000091';
-delete from auth.users
-where id='10000000-0000-4000-8000-000000000091';
+delete from public.content_pages as content_page
+where content_page.slug='clean-atomic-content';
+delete from public.service_categories as category
+where category.slug='clean-atomic-category';
+delete from public.support_tickets as ticket
+where ticket.id='10000000-0000-4000-8000-000000000092';
+delete from public.admin_users as actor
+where actor.id='10000000-0000-4000-8000-000000000091';
+delete from auth.users as auth_user
+where auth_user.id='10000000-0000-4000-8000-000000000091';
+do $$
+begin
+  if exists (
+    select 1 from public.admin_users actor
+    where actor.id='10000000-0000-4000-8000-000000000091'
+  ) or exists (
+    select 1 from auth.users auth_user
+    where auth_user.id='10000000-0000-4000-8000-000000000091'
+  ) or exists (
+    select 1 from public.support_tickets ticket
+    where ticket.id='10000000-0000-4000-8000-000000000092'
+  ) or exists (
+    select 1 from public.support_response_email_outbox outbox
+    where outbox.ticket_id='10000000-0000-4000-8000-000000000092'
+  ) or exists (
+    select 1 from public.content_pages content_page
+    where content_page.slug='clean-atomic-content'
+  ) or exists (
+    select 1 from public.service_categories category
+    where category.slug='clean-atomic-category'
+  ) or exists (
+    select 1 from public.record_management_events event
+    where event.acting_user_id='10000000-0000-4000-8000-000000000091'
+  ) then
+    raise exception 'Support workflow verification fixtures were not cleaned up';
+  end if;
+end
+$$;
 
 -- Application-document registry access is service-only, and its definer
 -- functions must use a fixed hardened search path.  These checks run against
