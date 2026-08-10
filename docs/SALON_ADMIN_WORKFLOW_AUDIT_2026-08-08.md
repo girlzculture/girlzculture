@@ -101,7 +101,7 @@ For production-style browser evidence, first run `node scripts/build-browser-acc
 2. Every-section mobile/tablet/desktop save, error, permission, and Back-context acceptance is not covered by the representative booking fixture.
 3. Stripe, email/notification, storage/CDN, and other provider operations require configured providers.
 4. Public salon-page projection after My Page, media, service, stylist, and product updates requires a second browser/incognito check.
-5. Publication identifiers and CI/preview URLs are not claimed in this local, uncommitted audit.
+5. Checkpoint commit `8be9fd3a841943c8165eadd796d87491a650ce76` is published in draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45); final CI/preview evidence remains pending or blocked as described above.
 
 ## Launch assessment
 

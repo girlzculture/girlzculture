@@ -302,6 +302,8 @@ for (const recordType of ["master_style", "service_category", "service_group", "
 assert.match(catalogAuditMigration, /insert into public\.record_management_events/);
 assert.match(catalogAuditMigration, /revoke all on function public\.admin_save_content_catalog_record[\s\S]*from public, anon, authenticated/);
 assert.match(catalogAuditMigration, /grant execute on function public\.admin_save_content_catalog_record[\s\S]*to service_role/);
+assert.match(catalogAuditMigration, /published_value='"20260809180000"'::jsonb/);
+assert.match(catalogAuditMigration, /where setting_key='integrations\.expected_migration'/);
 assert.match(cleanDatabaseRunner, /object-valued-sections/);
 assert.match(cleanDatabaseRunner, /Object-valued legacy About sections were not migrated safely/);
 const cleanDatabaseAssertions = read("scripts/sql/verify-clean-database.sql");

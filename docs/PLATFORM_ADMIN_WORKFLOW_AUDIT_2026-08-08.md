@@ -130,7 +130,7 @@ For production-style browser evidence, build the guarded acceptance bundle with 
 3. Stripe, email, media, OpenAI, and external health evidence require configured providers.
 4. Every-section mobile/tablet/desktop save, error, and Back-context acceptance is not covered by the representative fixture suite.
 5. True high-volume cursor pagination remains outstanding beyond the explicit landing boundary.
-6. Publication identifiers and CI/preview URLs are not claimed in this local, uncommitted audit.
+6. Checkpoint commit `8be9fd3a841943c8165eadd796d87491a650ce76` is published in draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45); final CI/preview evidence remains pending or blocked as described above.
 
 ## Launch assessment
 

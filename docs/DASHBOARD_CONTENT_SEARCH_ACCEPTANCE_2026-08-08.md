@@ -3,7 +3,7 @@
 Audit date: 2026-08-09  
 Branch: `agent/dashboard-content-search-workflows`  
 Production actions: none  
-Publication identifier: not claimed in this local, uncommitted evidence update
+Publication checkpoint: commit `8be9fd3a841943c8165eadd796d87491a650ce76`, draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45)
 
 This is an evidence audit, not a launch approval. It separates guarded fixture behavior, repository verifiers, configured authenticated persistence, provider behavior, and production publication. It does not turn a mocked API response, a source-string assertion, or a synthetic browser page into production evidence.
 
@@ -423,7 +423,8 @@ For production-style browser execution, run `node scripts/build-browser-acceptan
 | Before/after dashboard screenshots | No committed before-state images | BLOCKED |
 | Fresh public/header screenshots | Regenerated in the final production-build workflows | PASS |
 | Independent final screenshot/diff review | PASS for all 8 homepage sizes, all four open-menu closure views, About/Read more/footer/Legal/discovery/map, and representative admin/owner. The 1024 admin overlap was fixed and reverified | PASS |
-| Final commit SHA, draft PR, CI URLs | Not claimed because this documentation update is intentionally uncommitted | BLOCKED |
+| Checkpoint commit and draft PR | Commit `8be9fd3a841943c8165eadd796d87491a650ce76`; draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45) | PASS |
+| CI and deploy-preview evidence | Draft PR opened; final check/preview results are not yet available | BLOCKED |
 
 No merge, production migration, production deployment, provider configuration, production-data mutation, real payment, or customer communication was performed.
 
@@ -434,6 +435,6 @@ No merge, production migration, production deployment, provider configuration, p
 3. Perform real Content Management PNG and animated-GIF uploads, save/publish, hard refresh, and independent-browser public readback.
 4. Capture ten real search result/ranking/explanation examples against configured catalog, location, availability, promotion, and OpenAI runtime data.
 5. Exercise Stripe, storage/Cloudinary, notification/email, and Google Maps provider flows.
-6. Record commit, existing draft PR, CI, and preview identifiers only after repository publication; none are claimed by this uncommitted audit.
+6. Review draft PR #45 checks when they complete; configured preview/provider acceptance remains blocked until the required runtime exists.
 
 NOT READY FOR FOUNDER PRODUCTION ACCEPTANCE
