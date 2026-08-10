@@ -30,7 +30,7 @@ No Salon Admin persistence or provider-backed row is currently `PASS`.
 | Media and public-page editing could not prove public projection | Upload, crop, attachment, and public rendering cross storage, salon data, and CDN delivery boundaries | Cover, logo, gallery, and My Page editors retain focused routes and existing media/public projection APIs | Source/type evidence `AUTOMATED ONLY`; storage and second-browser readback `BLOCKED` |
 | Provider operations were visually mixed with ordinary data | Stripe payouts/subscription and communication delivery require external state not available to a local fixture | Provider status is kept in focused earnings, subscription, and message workflows and is not represented as locally accepted | Provider evidence explicitly `BLOCKED` |
 
-The independent P1 integrity closure covers three separate boundaries: atomic Content Management catalog plus immutable audit persistence through `admin_save_content_catalog_record`; compensated Salon Admin team PATCH across membership, both stylist-link directions, and audit; and compensated Platform Admin team PATCH across authorization row, canonical identity, Supabase Auth, and security audit. Each has a focused executable verifier; only the catalog RPC additionally has a real clean-database success and forced-audit-failure rollback contract, whose configured execution remains `BLOCKED` locally.
+The independent P1 integrity closure covers three separate boundaries: atomic Content Management catalog plus immutable audit persistence through `admin_save_content_catalog_record`; compensated Salon Admin team PATCH across membership, both stylist-link directions, and audit; and compensated Platform Admin team PATCH across authorization row, canonical identity, Supabase Auth, and security audit. Each has a focused executable verifier, and the PostgreSQL 17 clean replay passed the catalog RPC success and forced-audit-failure rollback contract. Configured authenticated save/readback remains `BLOCKED`.
 
 ## Required section-by-section workflow matrix
 
@@ -70,11 +70,11 @@ Stable committed screenshots under `docs/screenshots/dashboard-workflow/owner/` 
 
 Migration ordering passed for **130** files with head `20260809180000_atomic_content_catalog_audit.sql`. The seven workstream migrations cover content publication, support assignment, authoritative Platform Admin Overview metrics, record-quality/content targets, application-document upload integrity, search authorization/runtime hardening, and atomic Content Management catalog/audit persistence. No migration was applied to production. The new head is service-role-only and allowlists master styles, service categories, service groups, and service add-ons; each save and immutable management event commits or rolls back together.
 
-Migration `20260809160000_application_document_upload_integrity.sql` intentionally fails closed if a legacy application document path is malformed, outside its owning user folder, duplicated across applications, or otherwise ambiguous. Run `scripts/sql/preflight-application-document-upload-integrity.sql` before preview or production application. It contains two SELECT-only result sets, and both must be empty before applying migration `20260809160000`; any returned row requires reviewed, non-destructive reconciliation. Do not mark it applied or weaken the ownership validation. Clean-database execution is `BLOCKED` because `CLEAN_DATABASE_URL`, `psql`, Docker, and the Supabase CLI are unavailable locally.
+Migration `20260809160000_application_document_upload_integrity.sql` intentionally fails closed if a legacy application document path is malformed, outside its owning user folder, duplicated across applications, or otherwise ambiguous. Run `scripts/sql/preflight-application-document-upload-integrity.sql` before preview or production application. It contains two SELECT-only result sets, and both must be empty before applying migration `20260809160000`; any returned row requires reviewed, non-destructive reconciliation. Do not mark it applied or weaken the ownership validation. GitHub Actions run `31355202119` completed the PostgreSQL 17 clean replay of all 130 migrations and post-migration assertions; no production migration was applied, and the environment-specific preflight remains required.
 
 ## Verification commands and current result
 
-The final local production-build acceptance results are recorded below. There is no dedicated package script for this acceptance file; the exact command is listed below.
+The final local and GitHub automated production-build and clean-database acceptance results are recorded below. There is no dedicated package script for this acceptance file; the exact command is listed below.
 
 | Command | Current observed result | Classification |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ For production-style browser evidence, first run `node scripts/build-browser-acc
 2. Every-section mobile/tablet/desktop save, error, permission, and Back-context acceptance is not covered by the representative booking fixture.
 3. Stripe, email/notification, storage/CDN, and other provider operations require configured providers.
 4. Public salon-page projection after My Page, media, service, stylist, and product updates requires a second browser/incognito check.
-5. Checkpoint commit `8be9fd3a841943c8165eadd796d87491a650ce76` is published in draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45); final CI/preview evidence remains pending or blocked as described above.
+5. The current correction branch is published in draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45); GitHub PostgreSQL 17 verification, preview smoke, and Netlify deploy preview passed. Supabase Preview was skipped, and configured authenticated/provider acceptance remains blocked as described above.
 
 ## Launch assessment
 

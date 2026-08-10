@@ -177,7 +177,7 @@ The repository currently contains **130** SQL migrations. The current head is `2
 
 These are additive repository migrations. No production migration was applied. Migration `20260809160000_application_document_upload_integrity.sql` intentionally fails closed when a legacy application document path is duplicated, malformed, outside its owning user's folder, or otherwise cannot be assigned unambiguously. Before any preview or production application, run `scripts/sql/preflight-application-document-upload-integrity.sql`. It contains two SELECT-only result sets, and both must be empty before applying migration `20260809160000`. Any returned row requires reviewed, non-destructive reconciliation; do not mark the migration applied or weaken its ownership checks. Migration `20260809170000_search_authorization_and_runtime_hardening.sql` adds the service-only marketplace-visible salon resolver, grants service-role search alias resolution, and advances the Engine migration marker without rewriting salon or catalog data. Migration `20260809180000_atomic_content_catalog_audit.sql` adds the allowlisted, service-role-only `admin_save_content_catalog_record` RPC so master styles, service categories, service groups, and service add-ons commit together with their immutable management event or roll back together.
 
-Real clean-database execution remains `BLOCKED`: `CLEAN_DATABASE_URL` was not supplied, and `psql`, Docker, and the Supabase CLI are unavailable in this workspace. Migration ordering passed, but it is not a substitute for SQL execution. Older reports of 123 or 129 migrations, or 173 policies, do not describe this 130-migration head and must not be reused as current clean-database evidence.
+GitHub Actions run `31355202119` executed a genuine clean-database replay on PostgreSQL 17: all 130 migrations, the complete post-migration assertion suite, 1,000 concurrent booking-reference checks, and 1,000 concurrent product-reference checks passed. No production migration was applied. Older reports of 123 or 129 migrations, or 173 policies, do not describe this 130-migration head and must not be reused as current clean-database evidence.
 
 ## Tests and acceptance harnesses added or changed
 
@@ -374,7 +374,7 @@ docs/screenshots/final-correction/map-summary-mobile-390x844.png
 
 ## Verification commands and results
 
-The results below are the recorded final local outcomes. They do not elevate fixture, repository, or local production-build evidence into deployed production acceptance.
+The results below are the recorded final local and GitHub automated outcomes. They do not elevate fixture, repository, clean-database, or production-build evidence into deployed production acceptance.
 
 | Command | Current result | Classification |
 | --- | --- | --- |
@@ -423,18 +423,18 @@ For production-style browser execution, run `node scripts/build-browser-acceptan
 | Before/after dashboard screenshots | No committed before-state images | BLOCKED |
 | Fresh public/header screenshots | Regenerated in the final production-build workflows | PASS |
 | Independent final screenshot/diff review | PASS for all 8 homepage sizes, all four open-menu closure views, About/Read more/footer/Legal/discovery/map, and representative admin/owner. The 1024 admin overlap was fixed and reverified | PASS |
-| Checkpoint commit and draft PR | Commit `8be9fd3a841943c8165eadd796d87491a650ce76`; draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45) | PASS |
-| CI and deploy-preview evidence | Draft PR opened; final check/preview results are not yet available | BLOCKED |
+| Correction branch and draft PR | Current branch published to draft PR [#45](https://github.com/girlzculture/girlzculture/pull/45) | PASS |
+| CI and deploy-preview evidence | GitHub PostgreSQL 17 verification run `31355202119`, Netlify preview smoke, and Netlify deploy preview passed; Supabase Preview was skipped by the connected integration | PASS |
 
 No merge, production migration, production deployment, provider configuration, production-data mutation, real payment, or customer communication was performed.
 
 ## Remaining blockers
 
-1. Supply a disposable `CLEAN_DATABASE_URL` and execute all 130 migrations plus postconditions against an empty database. Local execution is blocked because `CLEAN_DATABASE_URL`, `psql`, Docker, and the Supabase CLI are unavailable. Before applying migration `20260809160000`, run the two SELECT-only result sets in `scripts/sql/preflight-application-document-upload-integrity.sql`; both must be empty. Any returned row requires reviewed, non-destructive reconciliation because the migration intentionally fails closed.
+1. Before any preview or production application of migration `20260809160000`, run the two SELECT-only result sets in `scripts/sql/preflight-application-document-upload-integrity.sql`; both must be empty. Any returned row requires reviewed, non-destructive reconciliation because the migration intentionally fails closed. The PostgreSQL 17 clean replay passed, but it does not replace this environment-specific preflight.
 2. Exercise Super Admin, limited Platform Admin, salon owner, and delegated team roles against a configured preview database.
 3. Perform real Content Management PNG and animated-GIF uploads, save/publish, hard refresh, and independent-browser public readback.
 4. Capture ten real search result/ranking/explanation examples against configured catalog, location, availability, promotion, and OpenAI runtime data.
 5. Exercise Stripe, storage/Cloudinary, notification/email, and Google Maps provider flows.
-6. Review draft PR #45 checks when they complete; configured preview/provider acceptance remains blocked until the required runtime exists.
+6. GitHub CI, preview smoke, and the Netlify deploy preview passed; configured authenticated/provider acceptance remains blocked until the required runtime exists.
 
 NOT READY FOR FOUNDER PRODUCTION ACCEPTANCE
