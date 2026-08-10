@@ -1680,21 +1680,23 @@ $$;
 -- Exercise support assignment as a real transaction, including the failure
 -- path that originally left the ticket changed after its audit write failed.
 do $$
+#variable_conflict error
+<<support_workflow_verification>>
 declare
-  actor_id constant uuid := '10000000-0000-4000-8000-000000000091';
-  ticket_id constant uuid := '10000000-0000-4000-8000-000000000092';
+  support_actor_id constant uuid := '10000000-0000-4000-8000-000000000091';
+  support_ticket_id constant uuid := '10000000-0000-4000-8000-000000000092';
 begin
   insert into auth.users(id,email,raw_user_meta_data)
   values (
-    actor_id,
+    support_workflow_verification.support_actor_id,
     'clean-support-assignment@example.test',
     '{"role":"admin"}'::jsonb
   );
   insert into public.admin_users(
     id,user_id,name,email,role,permissions,status,is_super_admin
   ) values (
-    actor_id,
-    actor_id,
+    support_workflow_verification.support_actor_id,
+    support_workflow_verification.support_actor_id,
     'Clean database support admin',
     'clean-support-assignment@example.test',
     'Admin',
@@ -1705,7 +1707,7 @@ begin
 
   perform public.admin_save_content_record(
     'page',
-    actor_id,
+    support_workflow_verification.support_actor_id,
     jsonb_build_object(
       'slug','clean-atomic-content',
       'title','Clean atomic content',
@@ -1719,18 +1721,20 @@ begin
     null
   );
   if not exists (
-    select 1 from public.content_pages
-    where slug='clean-atomic-content' and title='Clean atomic content'
+    select 1 from public.content_pages content_page
+    where content_page.slug='clean-atomic-content'
+      and content_page.title='Clean atomic content'
   ) or (
-    select count(*) from public.record_management_events
-    where record_type='content_page' and record_id='clean-atomic-content'
+    select count(*) from public.record_management_events event
+    where event.record_type='content_page'
+      and event.record_id='clean-atomic-content'
   ) <> 1 then
     raise exception 'Content save did not atomically persist its audit event';
   end if;
 
   perform public.admin_save_content_catalog_record(
     'service_category',
-    actor_id,
+    support_workflow_verification.support_actor_id,
     jsonb_build_object(
       'name','Clean Atomic Category',
       'slug','clean-atomic-category',
@@ -1740,8 +1744,9 @@ begin
     )
   );
   if not exists (
-    select 1 from public.service_categories
-    where slug='clean-atomic-category' and name='Clean Atomic Category'
+    select 1 from public.service_categories category
+    where category.slug='clean-atomic-category'
+      and category.name='Clean Atomic Category'
   ) or (
     select count(*) from public.record_management_events event
     join public.service_categories category
@@ -1756,7 +1761,7 @@ begin
     id,subject,message,status,priority,requester_name,requester_email
   )
   values (
-    ticket_id,
+    support_workflow_verification.support_ticket_id,
     'Clean database atomic assignment',
     'Disposable migration verification ticket.',
     'Open',
@@ -1766,99 +1771,116 @@ begin
   );
 
   perform public.admin_assign_support_ticket(
-    ticket_id,actor_id,actor_id,'High'
+    support_workflow_verification.support_ticket_id,
+    support_workflow_verification.support_actor_id,
+    support_workflow_verification.support_actor_id,
+    'High'
   );
   if not exists (
-    select 1 from public.support_tickets
-    where id=ticket_id
-      and assigned_to=actor_id
-      and assigned_at is not null
-      and priority='High'
+    select 1 from public.support_tickets ticket
+    where ticket.id=support_workflow_verification.support_ticket_id
+      and ticket.assigned_to=support_workflow_verification.support_actor_id
+      and ticket.assigned_at is not null
+      and ticket.priority='High'
   ) or (
-    select count(*) from public.record_management_events
-    where record_type='support_ticket' and record_id=ticket_id::text
+    select count(*) from public.record_management_events event
+    where event.record_type='support_ticket'
+      and event.record_id=support_workflow_verification.support_ticket_id::text
   ) <> 1 then
     raise exception 'Support assignment did not atomically persist its audit event';
   end if;
 
   perform public.admin_assign_support_ticket(
-    ticket_id,actor_id,null,'Normal'
+    support_workflow_verification.support_ticket_id,
+    support_workflow_verification.support_actor_id,
+    null,
+    'Normal'
   );
   if not exists (
-    select 1 from public.support_tickets
-    where id=ticket_id
-      and assigned_to is null
-      and assigned_at is null
-      and priority='Normal'
+    select 1 from public.support_tickets ticket
+    where ticket.id=support_workflow_verification.support_ticket_id
+      and ticket.assigned_to is null
+      and ticket.assigned_at is null
+      and ticket.priority='Normal'
   ) or (
-    select count(*) from public.record_management_events
-    where record_type='support_ticket' and record_id=ticket_id::text
+    select count(*) from public.record_management_events event
+    where event.record_type='support_ticket'
+      and event.record_id=support_workflow_verification.support_ticket_id::text
   ) <> 2 then
     raise exception 'Support unassignment did not clear ownership or retain its audit event';
   end if;
 
   perform public.admin_respond_support_ticket(
-    ticket_id,actor_id,'Clean response','Resolved','clean-response-request-1'
+    support_workflow_verification.support_ticket_id,
+    support_workflow_verification.support_actor_id,
+    'Clean response','Resolved','clean-response-request-1'
   );
   if not exists (
-    select 1 from public.support_tickets
-    where id=ticket_id and status='Resolved'
-      and admin_response='Clean response'
+    select 1 from public.support_tickets ticket
+    where ticket.id=support_workflow_verification.support_ticket_id
+      and ticket.status='Resolved'
+      and ticket.admin_response='Clean response'
   ) or not exists (
-    select 1 from public.support_response_email_outbox
-    where support_response_email_outbox.ticket_id=ticket_id
-      and support_response_email_outbox.idempotency_key='clean-response-request-1'
-      and support_response_email_outbox.delivery_status='Pending'
+    select 1 from public.support_response_email_outbox outbox
+    where outbox.ticket_id=support_workflow_verification.support_ticket_id
+      and outbox.idempotency_key='clean-response-request-1'
+      and outbox.delivery_status='Pending'
   ) or (
-    select count(*) from public.record_management_events
-    where record_type='support_ticket' and record_id=ticket_id::text
+    select count(*) from public.record_management_events event
+    where event.record_type='support_ticket'
+      and event.record_id=support_workflow_verification.support_ticket_id::text
   ) <> 3 then
     raise exception 'Support response, audit, or email outbox did not commit together';
   end if;
 
   perform public.admin_respond_support_ticket(
-    ticket_id,actor_id,'Clean response','Resolved','clean-response-request-1'
+    support_workflow_verification.support_ticket_id,
+    support_workflow_verification.support_actor_id,
+    'Clean response','Resolved','clean-response-request-1'
   );
   if (
-    select count(*) from public.support_response_email_outbox
-    where idempotency_key='clean-response-request-1'
+    select count(*) from public.support_response_email_outbox outbox
+    where outbox.idempotency_key='clean-response-request-1'
   ) <> 1 or (
-    select count(*) from public.record_management_events
-    where record_type='support_ticket' and record_id=ticket_id::text
+    select count(*) from public.record_management_events event
+    where event.record_type='support_ticket'
+      and event.record_id=support_workflow_verification.support_ticket_id::text
   ) <> 3 then
     raise exception 'Support response idempotency replay duplicated durable records';
   end if;
 
   perform public.admin_claim_support_response_email(
-    (select id from public.support_response_email_outbox
-      where idempotency_key='clean-response-request-1'),
-    actor_id
+    (select outbox.id from public.support_response_email_outbox outbox
+      where outbox.idempotency_key='clean-response-request-1'),
+    support_workflow_verification.support_actor_id
   );
   perform public.admin_complete_support_response_email(
-    (select id from public.support_response_email_outbox
-      where idempotency_key='clean-response-request-1'),
-    actor_id,'Failed',null,'TEST_PROVIDER_FAILURE'
+    (select outbox.id from public.support_response_email_outbox outbox
+      where outbox.idempotency_key='clean-response-request-1'),
+    support_workflow_verification.support_actor_id,
+    'Failed',null,'TEST_PROVIDER_FAILURE'
   );
   perform public.admin_claim_support_response_email(
-    (select id from public.support_response_email_outbox
-      where idempotency_key='clean-response-request-1'),
-    actor_id
+    (select outbox.id from public.support_response_email_outbox outbox
+      where outbox.idempotency_key='clean-response-request-1'),
+    support_workflow_verification.support_actor_id
   );
   perform public.admin_complete_support_response_email(
-    (select id from public.support_response_email_outbox
-      where idempotency_key='clean-response-request-1'),
-    actor_id,'Sent','clean-provider-message',null
+    (select outbox.id from public.support_response_email_outbox outbox
+      where outbox.idempotency_key='clean-response-request-1'),
+    support_workflow_verification.support_actor_id,
+    'Sent','clean-provider-message',null
   );
   if not exists (
-    select 1 from public.support_response_email_outbox
-    where idempotency_key='clean-response-request-1'
-      and delivery_status='Sent'
-      and attempt_count=2
-      and provider_message_id='clean-provider-message'
+    select 1 from public.support_response_email_outbox outbox
+    where outbox.idempotency_key='clean-response-request-1'
+      and outbox.delivery_status='Sent'
+      and outbox.attempt_count=2
+      and outbox.provider_message_id='clean-provider-message'
   ) then
     raise exception 'Support response email outbox could not be claimed and retried safely';
   end if;
-end
+end support_workflow_verification
 $$;
 
 create function public.clean_database_reject_management_audit()

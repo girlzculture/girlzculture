@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
@@ -8,6 +8,33 @@ const root = process.cwd();
 const migrationDirectory = path.join(root, "supabase", "migrations");
 const prerequisites = path.join(root, "scripts", "sql", "supabase-platform-prerequisites.sql");
 const assertions = path.join(root, "scripts", "sql", "verify-clean-database.sql");
+
+const assertionSource = readFileSync(assertions, "utf8");
+const supportWorkflowBlock = assertionSource.match(
+  /-- Exercise support assignment[\s\S]*?end support_workflow_verification\s*\r?\n\$\$;/,
+)?.[0];
+if (!supportWorkflowBlock) {
+  console.error("The labeled support workflow verification block is missing.");
+  process.exit(1);
+}
+const supportWorkflowBody = supportWorkflowBlock.match(
+  /\bbegin\s*\r?\n([\s\S]*)end support_workflow_verification/,
+)?.[1] || "";
+const unqualifiedBlockVariable = supportWorkflowBody.match(
+  /(?<!support_workflow_verification\.)\bsupport_(?:actor|ticket)_id\b/,
+);
+if (
+  !supportWorkflowBlock.includes("#variable_conflict error") ||
+  unqualifiedBlockVariable ||
+  !supportWorkflowBlock.includes("from public.support_tickets ticket") ||
+  !supportWorkflowBlock.includes("from public.support_response_email_outbox outbox") ||
+  !supportWorkflowBlock.includes("from public.record_management_events event")
+) {
+  console.error(
+    "Support workflow verification must use error-on-conflict mode, qualified block variables, and explicit table aliases.",
+  );
+  process.exit(1);
+}
 
 if (!databaseUrl) {
   console.error("CLEAN_DATABASE_URL must point to a disposable, empty PostgreSQL database.");
