@@ -83,7 +83,7 @@ The final local production-build acceptance results are recorded below. There is
 | Acceptance production build | PASS; recorded build generated 141 routes; current migration head is separately verified as `20260809180000` | AUTOMATED ONLY |
 | Normal production build after acceptance execution | PASS; 141 routes | AUTOMATED ONLY |
 | `npm run verify:migrations` | PASS; 130 ordered migrations, head `20260809180000` | AUTOMATED ONLY |
-| `npm run verify:database-clean` | BLOCKED: `CLEAN_DATABASE_URL`, `psql`, Docker, and the Supabase CLI are unavailable | BLOCKED |
+| `npm run verify:database-clean` | PASS in GitHub Actions PostgreSQL 17: all 130 migrations and complete post-migration assertions executed; 1,000 concurrent booking and 1,000 concurrent product reference checks passed | AUTOMATED ONLY |
 | Combined clean production-build admin/owner/public browser run | PASS; 74 passed / 5 skipped: 13 admin, 11 owner, and 50 runnable public cases across projects | AUTOMATED ONLY |
 | Exact final viewport/header/content closure run | PASS; 6/6 | AUTOMATED ONLY |
 | Focused verifier batch | PASS; 17/17 final focused verifiers | AUTOMATED ONLY |

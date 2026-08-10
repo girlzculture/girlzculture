@@ -98,7 +98,7 @@ Independent visual inspection passed for representative regenerated Platform Adm
 
 Migration ordering passed for **130** files with head `20260809180000_atomic_content_catalog_audit.sql`. The seven workstream migrations include content publication, support assignment, authoritative Overview metrics, record-quality/content destinations, application-document upload integrity, search authorization/runtime hardening, and atomic Content Management catalog/audit persistence. No migration was applied to production.
 
-Migration `20260809160000_application_document_upload_integrity.sql` intentionally fails closed if a legacy application document path is malformed, outside its owning user folder, duplicated across applications, or otherwise ambiguous. Run `scripts/sql/preflight-application-document-upload-integrity.sql` before preview or production application. It contains two SELECT-only result sets, and both must be empty before applying migration `20260809160000`; any returned row requires reviewed, non-destructive reconciliation. Do not mark it applied or relax the ownership rules. A genuine clean-database replay is currently `BLOCKED` because `CLEAN_DATABASE_URL`, `psql`, Docker, and the Supabase CLI are unavailable.
+Migration `20260809160000_application_document_upload_integrity.sql` intentionally fails closed if a legacy application document path is malformed, outside its owning user folder, duplicated across applications, or otherwise ambiguous. Run `scripts/sql/preflight-application-document-upload-integrity.sql` before preview or production application. It contains two SELECT-only result sets, and both must be empty before applying migration `20260809160000`; any returned row requires reviewed, non-destructive reconciliation. Do not mark it applied or relax the ownership rules. GitHub Actions PostgreSQL 17 completed a genuine clean-database replay of all 130 migrations and the complete post-migration assertion suite; this does not replace the required environment-specific production preflight.
 
 ## Verification commands and current result
 
@@ -111,7 +111,7 @@ Do not infer production acceptance from these commands. They are local automated
 | Acceptance production build | PASS; recorded build generated 141 routes; current migration head is separately verified as `20260809180000` | AUTOMATED ONLY |
 | Normal production build after acceptance execution | PASS; 141 routes | AUTOMATED ONLY |
 | `npm run verify:migrations` | PASS; 130 ordered migrations, head `20260809180000` | AUTOMATED ONLY |
-| `npm run verify:database-clean` | BLOCKED: `CLEAN_DATABASE_URL`, `psql`, Docker, and the Supabase CLI are unavailable | BLOCKED |
+| `npm run verify:database-clean` | PASS in GitHub Actions PostgreSQL 17: all 130 migrations and complete post-migration assertions executed; 1,000 concurrent booking and 1,000 concurrent product reference checks passed | AUTOMATED ONLY |
 | Combined clean production-build admin/owner/public browser run | PASS; 74 passed / 5 skipped: 13 admin, 11 owner, and 50 runnable public cases across projects | AUTOMATED ONLY |
 | Exact final viewport/header/content closure run | PASS; 6/6 | AUTOMATED ONLY |
 | Focused verifier batch | PASS; 17/17 final focused verifiers | AUTOMATED ONLY |
