@@ -2152,37 +2152,42 @@ $$;
 -- Supporting-document uploads must execute a durable prepare -> finalize ->
 -- attach lifecycle.  Filename/prefix checks alone are not authoritative.
 do $$
+#variable_conflict error
+<<application_document_lifecycle_verification>>
 declare
-  actor_id constant uuid := '10000000-0000-4000-8000-0000000000a1';
-  v_salon_id constant uuid := '10000000-0000-4000-8000-0000000000a2';
-  upload_id constant uuid := '10000000-0000-4000-8000-0000000000a3';
-  quality_style_id constant uuid := '10000000-0000-4000-8000-0000000000a4';
-  quality_booking_id constant uuid := '10000000-0000-4000-8000-0000000000a5';
-  quality_recent_complaint_id constant uuid := '10000000-0000-4000-8000-0000000000a6';
-  quality_historical_complaint_id constant uuid := '10000000-0000-4000-8000-0000000000a7';
-  prepared_path constant text := '10000000-0000-4000-8000-0000000000a1/documents/10000000-0000-4000-8000-0000000000a3-license.pdf';
-  rejected_unfinalized boolean := false;
-  rejected_quota boolean := false;
-  v_application_id uuid;
-  ordinal integer;
-  pending_id uuid;
-  pending_path text;
+  application_document_actor_id constant uuid := '10000000-0000-4000-8000-0000000000a1';
+  application_document_salon_id constant uuid := '10000000-0000-4000-8000-0000000000a2';
+  application_document_upload_id constant uuid := '10000000-0000-4000-8000-0000000000a3';
+  application_document_quality_style_id constant uuid := '10000000-0000-4000-8000-0000000000a4';
+  application_document_quality_booking_id constant uuid := '10000000-0000-4000-8000-0000000000a5';
+  application_document_recent_complaint_id constant uuid := '10000000-0000-4000-8000-0000000000a6';
+  application_document_historical_complaint_id constant uuid := '10000000-0000-4000-8000-0000000000a7';
+  application_document_prepared_path constant text := '10000000-0000-4000-8000-0000000000a1/documents/10000000-0000-4000-8000-0000000000a3-license.pdf';
+  application_document_rejected_unfinalized boolean := false;
+  application_document_rejected_quota boolean := false;
+  application_document_application_id uuid;
+  application_document_ordinal integer;
+  application_document_pending_id uuid;
+  application_document_pending_path text;
 begin
   insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data)
   values (
-    actor_id,'clean-application-docs@example.test','',now(),
+    application_document_lifecycle_verification.application_document_actor_id,
+    'clean-application-docs@example.test','',now(),
     '{"role":"salon_owner"}'::jsonb
   );
   insert into public.salons(id,user_id,name,slug,email,status)
   values (
-    v_salon_id,actor_id,'Clean Document Salon','clean-document-salon',
+    application_document_lifecycle_verification.application_document_salon_id,
+    application_document_lifecycle_verification.application_document_actor_id,
+    'Clean Document Salon','clean-document-salon',
     'clean-application-docs@example.test','Pending'
   );
 
   if exists (
     select 1
     from public.marketplace_visible_salon_ids(2000) visible
-    where visible.salon_id=v_salon_id
+    where visible.salon_id=application_document_lifecycle_verification.application_document_salon_id
   ) then
     raise exception 'Pending salon leaked through the marketplace-visible suggestion boundary';
   end if;
@@ -2192,7 +2197,9 @@ begin
     base_price,price_display_min,price_display_max
   )
   select
-    quality_style_id,v_salon_id,service_group.id,'Clean Quality Service',1,1,
+    application_document_lifecycle_verification.application_document_quality_style_id,
+    application_document_lifecycle_verification.application_document_salon_id,
+    service_group.id,'Clean Quality Service',1,1,
     100,100,100
   from public.service_groups service_group
   where service_group.is_active and service_group.archived_at is null
@@ -2207,7 +2214,10 @@ begin
     estimated_total,deposit_amount,balance_due,deposit_status,status,
     guest_name,guest_email
   ) values (
-    quality_booking_id,v_salon_id,quality_style_id,now()-interval '10 days',1,
+    application_document_lifecycle_verification.application_document_quality_booking_id,
+    application_document_lifecycle_verification.application_document_salon_id,
+    application_document_lifecycle_verification.application_document_quality_style_id,
+    now()-interval '10 days',1,
     100,10,90,'Paid','Completed','Quality Window Customer',
     'quality-window@example.test'
   );
@@ -2217,24 +2227,32 @@ begin
     verification_method,created_at
   ) values
     (
-      quality_recent_complaint_id,v_salon_id,quality_booking_id,
+      application_document_lifecycle_verification.application_document_recent_complaint_id,
+      application_document_lifecycle_verification.application_document_salon_id,
+      application_document_lifecycle_verification.application_document_quality_booking_id,
       'Quality verification','Recent unresolved verified complaint','Open',true,
       'admin_review',now()-interval '10 days'
     ),
     (
-      quality_historical_complaint_id,v_salon_id,quality_booking_id,
+      application_document_lifecycle_verification.application_document_historical_complaint_id,
+      application_document_lifecycle_verification.application_document_salon_id,
+      application_document_lifecycle_verification.application_document_quality_booking_id,
       'Quality verification','Historical unresolved verified complaint','Open',true,
       'admin_review',now()-interval '366 days'
     );
 
   perform public.prepare_application_document_upload(
-    upload_id,actor_id,v_salon_id,prepared_path,'license.pdf',
+    application_document_lifecycle_verification.application_document_upload_id,
+    application_document_lifecycle_verification.application_document_actor_id,
+    application_document_lifecycle_verification.application_document_salon_id,
+    application_document_lifecycle_verification.application_document_prepared_path,
+    'license.pdf',
     'application/pdf',512
   );
 
   begin
     perform public.submit_salon_application_atomic(
-      actor_id,
+      application_document_lifecycle_verification.application_document_actor_id,
       jsonb_build_object(
         'name','Clean Document Salon','slug','clean-document-salon',
         'owner_name','Clean Owner','email','clean-application-docs@example.test',
@@ -2250,21 +2268,27 @@ begin
         'business_type','Braiding Studio','selected_plan','Growth',
         'years_in_operation',2,'stylist_count',2,
         'photo_urls',jsonb_build_array(),
-        'document_urls',jsonb_build_array(prepared_path)
+        'document_urls',jsonb_build_array(
+          application_document_lifecycle_verification.application_document_prepared_path
+        )
       )
     );
   exception when sqlstate '22023' then
-    rejected_unfinalized := true;
+    application_document_lifecycle_verification.application_document_rejected_unfinalized := true;
   end;
-  if not rejected_unfinalized then
+  if not application_document_lifecycle_verification.application_document_rejected_unfinalized then
     raise exception 'Application accepted a document that was only prepared';
   end if;
 
   perform public.finalize_application_document_upload(
-    upload_id,actor_id,v_salon_id,prepared_path,'application/pdf',512
+    application_document_lifecycle_verification.application_document_upload_id,
+    application_document_lifecycle_verification.application_document_actor_id,
+    application_document_lifecycle_verification.application_document_salon_id,
+    application_document_lifecycle_verification.application_document_prepared_path,
+    'application/pdf',512
   );
   perform public.submit_salon_application_atomic(
-    actor_id,
+    application_document_lifecycle_verification.application_document_actor_id,
     jsonb_build_object(
       'name','Clean Document Salon','slug','clean-document-salon',
       'owner_name','Clean Owner','email','clean-application-docs@example.test',
@@ -2280,25 +2304,43 @@ begin
       'business_type','Braiding Studio','selected_plan','Growth',
       'years_in_operation',2,'stylist_count',2,
       'photo_urls',jsonb_build_array(),
-      'document_urls',jsonb_build_array(prepared_path)
+      'document_urls',jsonb_build_array(
+        application_document_lifecycle_verification.application_document_prepared_path
+      )
     )
   );
-  select application.id into v_application_id
+  select application.id
+  into application_document_lifecycle_verification.application_document_application_id
   from public.salon_applications application
-  where application.salon_id=v_salon_id;
+  where application.salon_id=application_document_lifecycle_verification.application_document_salon_id;
   if not exists (
-    select 1 from public.application_document_uploads
-    where id=upload_id and status='Attached'
-      and application_id=v_application_id and expires_at is null
+    select 1
+    from public.application_document_uploads document_upload
+    where document_upload.id=application_document_lifecycle_verification.application_document_upload_id
+      and document_upload.status='Attached'
+      and document_upload.application_id=application_document_lifecycle_verification.application_document_application_id
+      and document_upload.expires_at is null
   ) then
     raise exception 'Finalized application document was not atomically attached';
   end if;
 
-  for ordinal in 1..5 loop
-    pending_id := ('10000000-0000-4000-8000-' || lpad((200+ordinal)::text,12,'0'))::uuid;
-    pending_path := actor_id::text || '/documents/' || pending_id::text || '-pending.pdf';
+  for application_document_ordinal in 1..5 loop
+    application_document_lifecycle_verification.application_document_pending_id :=
+      (
+        '10000000-0000-4000-8000-' ||
+        lpad((200+application_document_lifecycle_verification.application_document_ordinal)::text,12,'0')
+      )::uuid;
+    application_document_lifecycle_verification.application_document_pending_path :=
+      application_document_lifecycle_verification.application_document_actor_id::text ||
+      '/documents/' ||
+      application_document_lifecycle_verification.application_document_pending_id::text ||
+      '-pending.pdf';
     perform public.prepare_application_document_upload(
-      pending_id,actor_id,v_salon_id,pending_path,'pending.pdf',
+      application_document_lifecycle_verification.application_document_pending_id,
+      application_document_lifecycle_verification.application_document_actor_id,
+      application_document_lifecycle_verification.application_document_salon_id,
+      application_document_lifecycle_verification.application_document_pending_path,
+      'pending.pdf',
       'application/pdf',512
     );
   end loop;
@@ -2325,7 +2367,7 @@ begin
   if not exists (
     select 1
     from public.salon_quality_metrics metric
-    where metric.salon_id=v_salon_id
+    where metric.salon_id=application_document_lifecycle_verification.application_document_salon_id
       and metric.measurement_window_end-metric.measurement_window_start=interval '365 days'
   ) then
     raise exception 'Salon quality metrics did not expose the authoritative 365-day window';
@@ -2333,60 +2375,96 @@ begin
   if not exists (
     select 1
     from public.salon_quality_metrics metric
-    where metric.salon_id=v_salon_id
+    where metric.salon_id=application_document_lifecycle_verification.application_document_salon_id
       and metric.active_complaints=1
   ) then
     raise exception 'Quality metrics did not limit unresolved verified complaints to the 365-day window';
   end if;
   begin
-    pending_id := '10000000-0000-4000-8000-000000000299';
-    pending_path := actor_id::text || '/documents/' || pending_id::text || '-over-quota.pdf';
+    application_document_lifecycle_verification.application_document_pending_id :=
+      '10000000-0000-4000-8000-000000000299';
+    application_document_lifecycle_verification.application_document_pending_path :=
+      application_document_lifecycle_verification.application_document_actor_id::text ||
+      '/documents/' ||
+      application_document_lifecycle_verification.application_document_pending_id::text ||
+      '-over-quota.pdf';
     perform public.prepare_application_document_upload(
-      pending_id,actor_id,v_salon_id,pending_path,'over-quota.pdf',
+      application_document_lifecycle_verification.application_document_pending_id,
+      application_document_lifecycle_verification.application_document_actor_id,
+      application_document_lifecycle_verification.application_document_salon_id,
+      application_document_lifecycle_verification.application_document_pending_path,
+      'over-quota.pdf',
       'application/pdf',512
     );
   exception when sqlstate '22023' then
-    rejected_quota := true;
+    application_document_lifecycle_verification.application_document_rejected_quota := true;
   end;
-  if not rejected_quota then
+  if not application_document_lifecycle_verification.application_document_rejected_quota then
     raise exception 'Application-document pending quota was not enforced';
   end if;
   if not public.abandon_application_document_upload(
-    '10000000-0000-4000-8000-000000000201',actor_id,v_salon_id
+    '10000000-0000-4000-8000-000000000201',
+    application_document_lifecycle_verification.application_document_actor_id,
+    application_document_lifecycle_verification.application_document_salon_id
   ) then
     raise exception 'Pending application document could not be abandoned';
   end if;
-  pending_id := '10000000-0000-4000-8000-000000000299';
-  pending_path := actor_id::text || '/documents/' || pending_id::text || '-after-remove.pdf';
+  application_document_lifecycle_verification.application_document_pending_id :=
+    '10000000-0000-4000-8000-000000000299';
+  application_document_lifecycle_verification.application_document_pending_path :=
+    application_document_lifecycle_verification.application_document_actor_id::text ||
+    '/documents/' ||
+    application_document_lifecycle_verification.application_document_pending_id::text ||
+    '-after-remove.pdf';
   perform public.prepare_application_document_upload(
-    pending_id,actor_id,v_salon_id,pending_path,'after-remove.pdf',
+    application_document_lifecycle_verification.application_document_pending_id,
+    application_document_lifecycle_verification.application_document_actor_id,
+    application_document_lifecycle_verification.application_document_salon_id,
+    application_document_lifecycle_verification.application_document_pending_path,
+    'after-remove.pdf',
     'application/pdf',512
   );
 
-  delete from public.salon_applications where id=v_application_id;
+  delete from public.salon_applications application
+  where application.id=application_document_lifecycle_verification.application_document_application_id;
   if not exists (
-    select 1 from public.application_document_uploads
-    where id=upload_id and status='Abandoned'
-      and application_id is null and expires_at<=now()
+    select 1
+    from public.application_document_uploads document_upload
+    where document_upload.id=application_document_lifecycle_verification.application_document_upload_id
+      and document_upload.status='Abandoned'
+      and document_upload.application_id is null
+      and document_upload.expires_at<=now()
   ) then
     raise exception 'Deleted application did not abandon its attached documents';
   end if;
 
-  delete from public.complaints_log
-  where id in (quality_recent_complaint_id,quality_historical_complaint_id);
-  delete from public.bookings where id=quality_booking_id;
-  delete from public.styles where id=quality_style_id;
-  delete from public.salons where id=v_salon_id;
-  delete from auth.users where id=actor_id;
+  delete from public.complaints_log complaint
+  where complaint.id in (
+    application_document_lifecycle_verification.application_document_recent_complaint_id,
+    application_document_lifecycle_verification.application_document_historical_complaint_id
+  );
+  delete from public.bookings booking
+  where booking.id=application_document_lifecycle_verification.application_document_quality_booking_id;
+  delete from public.styles style
+  where style.id=application_document_lifecycle_verification.application_document_quality_style_id;
+  delete from public.salons salon
+  where salon.id=application_document_lifecycle_verification.application_document_salon_id;
+  delete from auth.users auth_user
+  where auth_user.id=application_document_lifecycle_verification.application_document_actor_id;
   if not exists (
-    select 1 from public.application_document_uploads
-    where id=upload_id and status='Abandoned'
-      and application_id is null and user_id is null and salon_id is null
-      and storage_path=prepared_path and cleaned_at is null
+    select 1
+    from public.application_document_uploads document_upload
+    where document_upload.id=application_document_lifecycle_verification.application_document_upload_id
+      and document_upload.status='Abandoned'
+      and document_upload.application_id is null
+      and document_upload.user_id is null
+      and document_upload.salon_id is null
+      and document_upload.storage_path=application_document_lifecycle_verification.application_document_prepared_path
+      and document_upload.cleaned_at is null
   ) then
     raise exception 'Identity or salon deletion erased application-document cleanup evidence';
   end if;
-end
+end application_document_lifecycle_verification
 $$;
 
 select

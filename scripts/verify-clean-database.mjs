@@ -9,6 +9,32 @@ const migrationDirectory = path.join(root, "supabase", "migrations");
 const prerequisites = path.join(root, "scripts", "sql", "supabase-platform-prerequisites.sql");
 const assertions = path.join(root, "scripts", "sql", "verify-clean-database.sql");
 
+const prerequisiteSource = readFileSync(prerequisites, "utf8");
+const authUsersDefinition = prerequisiteSource.match(
+  /create table auth\.users\s*\(([\s\S]*?)\r?\n\);/,
+)?.[1];
+const requiredAuthUserColumns = [
+  "id",
+  "email",
+  "encrypted_password",
+  "email_confirmed_at",
+  "raw_user_meta_data",
+  "raw_app_meta_data",
+  "created_at",
+  "updated_at",
+];
+if (
+  !authUsersDefinition ||
+  requiredAuthUserColumns.some(
+    (column) => !new RegExp(`^\\s*${column}\\s+`, "m").test(authUsersDefinition),
+  )
+) {
+  console.error(
+    "The test-only auth.users prerequisite is missing a column required by the complete migration/assertion chain.",
+  );
+  process.exit(1);
+}
+
 const assertionSource = readFileSync(assertions, "utf8");
 const supportWorkflowBlock = assertionSource.match(
   /-- Exercise support assignment[\s\S]*?end support_workflow_verification\s*\r?\n\$\$;/,
@@ -71,6 +97,42 @@ if (
   process.exit(1);
 }
 
+const applicationDocumentBlock = assertionSource.match(
+  /-- Supporting-document uploads[\s\S]*?end application_document_lifecycle_verification\s*\r?\n\$\$;/,
+)?.[0];
+if (!applicationDocumentBlock) {
+  console.error("The labeled application-document lifecycle verification block is missing.");
+  process.exit(1);
+}
+const applicationDocumentDeclarations = applicationDocumentBlock.match(
+  /\bdeclare\s*\r?\n([\s\S]*?)\bbegin\b/,
+)?.[1] || "";
+const unsafeApplicationDocumentVariable = [
+  ...applicationDocumentDeclarations.matchAll(/^\s*([a-z][a-z0-9_]*)\s+/gm),
+]
+  .map((match) => match[1])
+  .find((variable) => !variable.startsWith("application_document_"));
+const unaliasedApplicationDocumentTable = applicationDocumentBlock.match(
+  /\b(?:from|delete from) public\.(?:application_document_uploads|salon_applications|complaints_log|bookings|styles|salons)\s*(?:\r?\n|where\b)/,
+);
+const unqualifiedApplicationDocumentColumn = applicationDocumentBlock.match(
+  /\b(?:where|and)\s+(?:id|status|application_id|expires_at|user_id|salon_id|storage_path|cleaned_at)\b/,
+);
+if (
+  !applicationDocumentBlock.includes("#variable_conflict error") ||
+  unsafeApplicationDocumentVariable ||
+  unaliasedApplicationDocumentTable ||
+  unqualifiedApplicationDocumentColumn ||
+  !applicationDocumentBlock.includes(
+    "from public.application_document_uploads document_upload",
+  )
+) {
+  console.error(
+    "Application-document lifecycle verification must use error-on-conflict mode, unambiguous fixture variables, and explicit table aliases.",
+  );
+  process.exit(1);
+}
+
 if (!databaseUrl) {
   console.error("CLEAN_DATABASE_URL must point to a disposable, empty PostgreSQL database.");
   process.exit(1);
@@ -109,6 +171,44 @@ if (Number(publicObjectCount) !== 0) {
 }
 
 runPsql(["--file", prerequisites], "Supabase platform prerequisite setup");
+
+const missingAuthUserColumns = runPsql(
+  [
+    "--tuples-only",
+    "--no-align",
+    "--command",
+    `
+      with required(column_name, data_type) as (
+        values
+          ('id', 'uuid'),
+          ('email', 'text'),
+          ('encrypted_password', 'character varying'),
+          ('email_confirmed_at', 'timestamp with time zone'),
+          ('raw_user_meta_data', 'jsonb'),
+          ('raw_app_meta_data', 'jsonb'),
+          ('created_at', 'timestamp with time zone'),
+          ('updated_at', 'timestamp with time zone')
+      )
+      select coalesce(string_agg(required.column_name, ',' order by required.column_name), '')
+      from required
+      where not exists (
+        select 1
+        from information_schema.columns as actual
+        where actual.table_schema='auth'
+          and actual.table_name='users'
+          and actual.column_name=required.column_name
+          and actual.data_type=required.data_type
+      );
+    `,
+  ],
+  "Supabase Auth prerequisite shape assertion",
+);
+if (missingAuthUserColumns) {
+  console.error(
+    `The test-only auth.users prerequisite has missing or incompatible columns: ${missingAuthUserColumns}.`,
+  );
+  process.exit(1);
+}
 
 const migrations = readdirSync(migrationDirectory)
   .filter((file) => /^\d{14}_[a-z0-9_]+\.sql$/.test(file))

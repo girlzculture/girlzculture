@@ -22,6 +22,11 @@ create schema extensions;
 create table auth.users (
   id uuid primary key default gen_random_uuid(),
   email text,
+  -- GoTrue-managed columns used by the clean-database lifecycle fixtures.
+  -- This remains a test-only structural stand-in; authentication behavior is
+  -- still provided by Supabase in deployed environments.
+  encrypted_password character varying(255),
+  email_confirmed_at timestamp with time zone,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
   raw_app_meta_data jsonb not null default '{}'::jsonb,
   created_at timestamp with time zone not null default now(),
