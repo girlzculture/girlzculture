@@ -8,5 +8,5 @@ export default async function OwnerDashboardSectionPage({ params, searchParams }
   const { section } = await params;
   const { booking = "" } = await searchParams;
   if (!sections.has(section as DashboardSection)) notFound();
-  return <OwnerDashboardApp section={section as DashboardSection} initialBookingId={booking} />;
+  return <OwnerDashboardApp section={section as DashboardSection} initialBookingId={booking} initialRecordId={booking} />;
 }

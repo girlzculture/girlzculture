@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import AboutIntro from "@/components/public/AboutIntro";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import PublicContentSections from "@/components/site/PublicContentSections";
@@ -31,6 +32,7 @@ export default async function About() {
       { id: "about-community-copy", type: "text", title: "Our Team. Our Community.", body: "We are building useful tools for clients and beauty professionals, shaped by the people who use them." },
     ],
   });
+  if (!page) notFound();
 
   const sections = (page.sections || []).filter((section) => section?.is_visible !== false);
   const carousels = sections.filter((section) => section.type === "community_carousel");
@@ -39,7 +41,24 @@ export default async function About() {
   const middleSource = findSection(sections, ["about-promo-carousel", "about-intro-carousel"]) || carousels[0];
   const namedLowerSource = findSection(sections, ["about-community-carousel", "community-carousel"]);
   const lowerSource = namedLowerSource && namedLowerSource !== middleSource ? namedLowerSource : carousels.find((section) => section !== middleSource);
-  const [resolvedMiddle, resolvedLower] = await Promise.all([publishedCarousel(middleSource), publishedCarousel(lowerSource)]);
+  // Each About carousel is a separate content-page record. A successful null
+  // read is authoritative (hidden, archived, or not yet due), so it must never
+  // fall back to the legacy parent section and accidentally become public.
+  const [carouselOnePage, carouselTwoPage] = await Promise.all([
+    getContentPage("about-carousel-one", {
+      slug: "about-carousel-one",
+      title: "Promotional Carousel One",
+      sections: middleSource ? [middleSource] : [],
+    }),
+    getContentPage("about-carousel-two", {
+      slug: "about-carousel-two",
+      title: "Promotional Carousel Two",
+      sections: lowerSource ? [lowerSource] : [],
+    }),
+  ]);
+  const independentMiddle = carouselOnePage?.sections?.find((section) => section.type === "community_carousel");
+  const independentLower = carouselTwoPage?.sections?.find((section) => section.type === "community_carousel");
+  const [resolvedMiddle, resolvedLower] = await Promise.all([publishedCarousel(independentMiddle), publishedCarousel(independentLower)]);
   const middleDirection: "forward" | "reverse" = resolvedMiddle?.scroll_direction === "forward" ? "forward" : "reverse";
   const oppositeDirection: "forward" | "reverse" = middleDirection === "forward" ? "reverse" : "forward";
   const middleCarousel = resolvedMiddle ? { ...resolvedMiddle, scroll_direction: middleDirection } : undefined;
@@ -71,8 +90,8 @@ export default async function About() {
 
     <AboutIntro title={String(story?.title || "Our Story")} preview={mobilePreview} body={storyBody} readMoreLabel={String(page.labels?.read_more_label || "Read more")}/>
     {middleCarousel ? <PublicContentSections sections={[middleCarousel]}/> : null}
-    {communityCopy ? <section className="mx-auto max-w-[1600px] px-4 pt-4 sm:px-8"><h2 className="font-serif text-3xl font-semibold text-plum">{communityCopy.title}</h2>{communityCopy.body ? <p className="mt-3 max-w-3xl text-sm leading-7 text-ink/70">{communityCopy.body}</p> : null}</section> : null}
     {lowerCarousel ? <PublicContentSections sections={[lowerCarousel]}/> : null}
+    {communityCopy ? <section className="mx-auto max-w-[1600px] px-4 pt-4 sm:px-8"><h2 className="font-serif text-3xl font-semibold text-plum">{communityCopy.title}</h2>{communityCopy.body ? <p className="mt-3 max-w-3xl text-sm leading-7 text-ink/70">{communityCopy.body}</p> : null}</section> : null}
     <PublicContentSections sections={additionalSections}/>
     <PublicFooter/>
   </main>;

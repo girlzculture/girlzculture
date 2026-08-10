@@ -190,6 +190,7 @@ export default function FeaturedSalonPlacement({
                 key={salon.id}
                 salon={salon}
                 variant={viewAll ? "grid" : "compact"}
+                surface="homepage"
               />
             ))}
           </div>

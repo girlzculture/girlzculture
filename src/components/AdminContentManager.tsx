@@ -2,7 +2,8 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Download, Eye, FileSpreadsheet, FileText, Monitor, Plus, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowLeft, ArrowUp, Download, Eye, FileSpreadsheet, FileText, Monitor, Plus, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
 import HeroImageFraming from "@/components/admin/HeroImageFraming";
 import { readApiResponse } from "@/lib/apiResponseClient";
@@ -10,7 +11,9 @@ import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { adminSupabase as supabase } from "@/lib/supabase";
 import NumericInput from "@/components/forms/NumericInput";
 import ActionToast from "@/components/ActionToast";
+import SafeImage from "@/components/site/SafeImage";
 import { homepagePromotionPreview } from "@/lib/homePromotionCore";
+import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
 
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
@@ -18,6 +21,7 @@ const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <Ba
 const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "legal"];
 const legalSlugs = ["terms", "privacy", "cookie-notice", "deposit-refund-policy", "salon-partner-agreement", "photo-content-consent", "message-monitoring-disclosure", "do-not-sell-or-share", "accessibility", "community-guidelines"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
+const sectionPageSlugs = new Set(["about-carousel-one", "about-carousel-two"]);
 const labelSlots: Record<string, Array<[string, string]>> = {
   home: [["home_intro_visible", "Desktop introduction visibility"], ["social_proof_heading", "Hero social proof heading"], ["social_proof_subheading", "Hero social proof detail"], ["social_proof_note", "Hero social proof note"], ["featured_products_subheading", "Featured Products subheading"], ["trending_now_subheading", "Trending Now subheading"]],
   "salon-profile": [["trust_label_1", "Salon trust label 1"], ["trust_label_2", "Salon trust label 2"], ["trust_label_3", "Salon trust label 3"]],
@@ -25,10 +29,158 @@ const labelSlots: Record<string, Array<[string, string]>> = {
   about: [["mobile_preview", "Compact mobile introduction"], ["read_more_label", "Mobile read-more label"]],
 };
 
+type PublicationSummary = {
+  saved_version?: string | null;
+  public_version?: string | null;
+  saved_card_count?: number;
+  public_card_count?: number;
+  fallback_count?: number;
+  display_limit?: number;
+  state?: string;
+  is_public?: boolean;
+};
+
+function resolvedPublicationUi(record: Row, summary: PublicationSummary = {}) {
+  const scheduledAt = Date.parse(String(record.scheduled_publish_at || ""));
+  const dueScheduled = Boolean(record.scheduled_payload)
+    && Number.isFinite(scheduledAt)
+    && scheduledAt <= Date.now()
+    && ["Published", "Scheduled"].includes(String(record.publication_state || ""));
+  const retainedPublished = Boolean(record.published_payload)
+    && record.publication_state === "Published";
+  const isPublic = summary.is_public ?? (
+    !record.archived_at
+    && record.is_enabled !== false
+    && (dueScheduled || retainedPublished)
+  );
+  const savedState = String(record.status || "Draft");
+  return {
+    isPublic,
+    label: summary.state || (isPublic
+      ? `${savedState} / Published version live`
+      : record.archived_at
+        ? "Archived / Not public"
+        : `${savedState} / Not public`),
+  };
+}
+
+function resolvedPublicSnapshot(record: Row): Row | null {
+  const scheduledAt = Date.parse(String(record.scheduled_publish_at || ""));
+  const dueScheduled = Boolean(record.scheduled_payload)
+    && Number.isFinite(scheduledAt)
+    && scheduledAt <= Date.now()
+    && ["Published", "Scheduled"].includes(String(record.publication_state || ""));
+  const candidate = dueScheduled
+    ? record.scheduled_payload
+    : record.publication_state === "Published"
+      ? record.published_payload
+      : null;
+  return candidate && typeof candidate === "object" && !Array.isArray(candidate)
+    ? candidate as Row
+    : null;
+}
+
+type ContentRecord =
+  | { kind: "page"; slug: string; editor?: string }
+  | { kind: "blog"; id: string }
+  | { kind: "unknown" };
+
+function parseContentRecord(recordId?: string): ContentRecord {
+  const value = String(recordId || "").trim();
+  if (!value) return { kind: "unknown" };
+  if (value.startsWith("blog-")) return { kind: "blog", id: value.slice(5) };
+  if (!value.startsWith("page-")) return { kind: "unknown" };
+  const [pageId, editor] = value.split("--", 2);
+  return { kind: "page", slug: pageId.slice(5), editor: editor || undefined };
+}
+
+function publicPageHref(slug: string) {
+  if (slug === "home") return "/";
+  if (sectionPageSlugs.has(slug)) return "/about";
+  if (slug === "salon-profile") return "/salons";
+  return `/${slug}`;
+}
+
+function adminContentHref(recordId?: string) {
+  return recordId ? `/admin/content/${recordId}` : "/admin/content";
+}
+
+function recordPage(
+  rows: Row[],
+  recordId?: string,
+) {
+  const record = parseContentRecord(recordId);
+  if (record.kind === "page") {
+    const independentSlug = record.slug === "about" && record.editor === "promotional-carousel-one"
+      ? "about-carousel-one"
+      : record.slug === "about" && record.editor === "promotional-carousel-two"
+        ? "about-carousel-two"
+        : record.slug;
+    const matched = rows.find((item) => item.slug === independentSlug) || null;
+    if (matched && record.slug === "about" && !record.editor) {
+      return {
+        ...matched,
+        _section_records: {
+          "promotional-carousel-one": rows.find((item) => item.slug === "about-carousel-one") || null,
+          "promotional-carousel-two": rows.find((item) => item.slug === "about-carousel-two") || null,
+        },
+      };
+    }
+    return matched ? ensureEditorSection(matched, record.editor) : null;
+  }
+  return rows.filter((item) => !hiddenSlugs.has(item.slug) && !sectionPageSlugs.has(item.slug))[0] || null;
+}
+
+function recordPost(rows: Row[], recordId?: string) {
+  const record = parseContentRecord(recordId);
+  if (record.kind !== "blog") return rows[0] || null;
+  if (record.id === "new") {
+    return { slug: "new-post", title: "New Blog Post", excerpt: "", content: "", category: "Braided Styles", status: "Draft", featured: false };
+  }
+  return rows.find((item) => String(item.id) === record.id || String(item.slug) === record.id) || null;
+}
+
+function ensureEditorSection(row: Row, editor?: string) {
+  if (!row || !editor) return row;
+  const sections = asRows(row.sections);
+  const needsHomePromo = row.slug === "home" && editor === "hero-promotion-carousel";
+  const needsHomeBanner = row.slug === "home" && editor === "announcement-banner";
+  const needsAboutOne = ["about", "about-carousel-one"].includes(String(row.slug)) && editor === "promotional-carousel-one";
+  const needsAboutTwo = ["about", "about-carousel-two"].includes(String(row.slug)) && editor === "promotional-carousel-two";
+  if (needsHomePromo && !sections.some((section) => section.type === "promo_rail")) {
+    return { ...row, sections: [{ id: "home-hero-promotion-carousel", type: "promo_rail", title: "", body: "", display_limit: 8, is_visible: true, cards: [] }, ...sections] };
+  }
+  if (needsHomeBanner && !sections.some((section) => section.type === "banner")) {
+    return { ...row, sections: [...sections, { id: "home-announcement-banner", type: "banner", title: "", body: "", cta_label: "", cta_href: "", is_visible: false, cards: [] }] };
+  }
+  if (needsAboutOne || needsAboutTwo) {
+    const carousels = sections.filter((section) => section.type === "community_carousel");
+    const independentRecord = sectionPageSlugs.has(String(row.slug));
+    const required = independentRecord ? 1 : needsAboutOne ? 1 : 2;
+    if (carousels.length >= required) return row;
+    const additions: Row[] = [];
+    for (let index = carousels.length; index < required; index += 1) {
+      additions.push({
+        id: needsAboutTwo && independentRecord ? "about-community-carousel" : index === 0 ? "about-promo-carousel" : "about-community-carousel",
+        type: "community_carousel",
+        title: needsAboutTwo && independentRecord ? "Our Community" : index === 0 ? "Community Spotlight" : "Our Community",
+        body: "",
+        is_visible: true,
+        scroll_direction: needsAboutTwo && independentRecord ? "forward" : index === 0 ? "reverse" : "forward",
+        cards: [],
+      });
+    }
+    return { ...row, sections: [...sections, ...additions] };
+  }
+  return row;
+}
+
 export default function AdminContentManager({
   acceptanceAccessToken,
+  initialRecordId,
 }: {
   acceptanceAccessToken?: string;
+  initialRecordId?: string;
 } = {}) {
   const [tab, setTab] = useState<"pages" | "legal" | "blog" | "styles">("pages");
   const [pages, setPages] = useState<Row[]>([]);
@@ -41,9 +193,11 @@ export default function AdminContentManager({
   const [serviceGroups, setServiceGroups] = useState<Row[]>([]);
   const [serviceAddons, setServiceAddons] = useState<Row[]>([]);
   const [linkTargets, setLinkTargets] = useState<Row[]>([]);
+  const [publicationByPage, setPublicationByPage] = useState<Record<string, PublicationSummary>>({});
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  useAdminListScrollRestoration(!loading);
 
   async function authHeaders() {
     if (acceptanceAccessToken) {
@@ -69,6 +223,7 @@ export default function AdminContentManager({
       const loadedGroups = asRows(body.serviceGroups);
       const loadedAddons = asRows(body.serviceAddons);
       const loadedTargets = asRows(body.linkTargets);
+      const loadedPublication = body.publicationByPage && typeof body.publicationByPage === "object" && !Array.isArray(body.publicationByPage) ? body.publicationByPage as Record<string, PublicationSummary> : {};
       setPages(loadedPages);
       setPosts(loadedPosts);
       setMasterStyles(loadedStyles);
@@ -76,13 +231,14 @@ export default function AdminContentManager({
       setServiceGroups(loadedGroups);
       setServiceAddons(loadedAddons);
       setLinkTargets(loadedTargets);
+      setPublicationByPage(loadedPublication);
       if (selectFirst) {
-        const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
-        setPage(visiblePages[0] || null);
-        setPost(loadedPosts[0] || null);
+        const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug) && !sectionPageSlugs.has(String(item.slug)));
+        setPage(recordPage(loadedPages, initialRecordId) || visiblePages[0] || null);
+        setPost(recordPost(loadedPosts, initialRecordId));
         setMasterStyle(loadedStyles[0] || null);
       }
-      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, serviceGroups: loadedGroups, serviceAddons: loadedAddons, linkTargets: loadedTargets };
+      return { pages: loadedPages, posts: loadedPosts, masterStyles: loadedStyles, serviceCategories: loadedCategories, serviceGroups: loadedGroups, serviceAddons: loadedAddons, linkTargets: loadedTargets, publicationByPage: loadedPublication };
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to load content");
       throw error;
@@ -100,41 +256,46 @@ export default function AdminContentManager({
         const body = await readApiResponse(response, "Unable to load content.");
         if (!response.ok || body.error) throw new Error(body.error || "Unable to load content");
         if (!active) return;
-        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedGroups = asRows(body.serviceGroups); const loadedAddons = asRows(body.serviceAddons); const loadedTargets = asRows(body.linkTargets);
-        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setServiceGroups(loadedGroups); setServiceAddons(loadedAddons); setLinkTargets(loadedTargets);
-        const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug));
-        setPage(visiblePages[0] || null); setPost(loadedPosts[0] || null); setMasterStyle(loadedStyles[0] || null);
+        const loadedPages = asRows(body.pages); const loadedPosts = asRows(body.posts); const loadedStyles = asRows(body.masterStyles); const loadedCategories = asRows(body.serviceCategories); const loadedGroups = asRows(body.serviceGroups); const loadedAddons = asRows(body.serviceAddons); const loadedTargets = asRows(body.linkTargets); const loadedPublication = body.publicationByPage && typeof body.publicationByPage === "object" && !Array.isArray(body.publicationByPage) ? body.publicationByPage as Record<string, PublicationSummary> : {};
+        setPages(loadedPages); setPosts(loadedPosts); setMasterStyles(loadedStyles); setServiceCategories(loadedCategories); setServiceGroups(loadedGroups); setServiceAddons(loadedAddons); setLinkTargets(loadedTargets); setPublicationByPage(loadedPublication);
+        const visiblePages = loadedPages.filter((item: Row) => !hiddenSlugs.has(item.slug) && !sectionPageSlugs.has(String(item.slug)));
+        setPage(recordPage(loadedPages, initialRecordId) || visiblePages[0] || null); setPost(recordPost(loadedPosts, initialRecordId)); setMasterStyle(loadedStyles[0] || null);
       } catch (error) {
         if (active) setNotice(error instanceof Error ? error.message : "Unable to load content");
       } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [acceptanceAccessToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [acceptanceAccessToken, initialRecordId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function savePage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!page) return;
     const form = new FormData(event.currentTarget);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const publicationAction = String(submitter?.value || form.get("publication_action") || "");
+    const formText = (name: string, fallback: unknown) =>
+      form.has(name) ? String(form.get(name) || "") : String(fallback || "");
     const sections = asRows(page.sections).map((section: Row, index: number) => ({
       ...section,
-      title: String(form.get(`section_title_${index}`) || ""),
-      body: String(form.get(`section_body_${index}`) || ""),
-      cta_label: String(form.get(`section_cta_label_${index}`) || section.cta_label || ""),
-      cta_href: String(form.get(`section_cta_href_${index}`) || section.cta_href || ""),
+      title: formText(`section_title_${index}`, section.title),
+      body: formText(`section_body_${index}`, section.body),
+      cta_label: formText(`section_cta_label_${index}`, section.cta_label),
+      cta_href: formText(`section_cta_href_${index}`, section.cta_href),
     }));
-    const labels = { ...(page.labels || {}), ...Object.fromEntries((labelSlots[page.slug] || []).map(([key]) => [key, String(form.get(`label_${key}`) || "").trim()])) };
+    const labels = { ...(page.labels || {}), ...Object.fromEntries((labelSlots[page.slug] || []).filter(([key]) => form.has(`label_${key}`)).map(([key]) => [key, String(form.get(`label_${key}`) || "").trim()])) };
     const payload = {
       ...page,
       expected_updated_at: page.updated_at || "",
-      title: form.get("title"), eyebrow: form.get("eyebrow"), hero_title: form.get("hero_title"),
-      hero_subtitle: form.get("hero_subtitle"), seo_title: form.get("seo_title"),
-      seo_description: form.get("seo_description"), status: form.get("status"), sections, labels,
+      title: formText("title", page.title), eyebrow: formText("eyebrow", page.eyebrow), hero_title: formText("hero_title", page.hero_title),
+      hero_subtitle: formText("hero_subtitle", page.hero_subtitle), seo_title: formText("seo_title", page.seo_title),
+      seo_description: formText("seo_description", page.seo_description), status: formText("status", page.status || "Draft"), sections, labels,
+      scheduled_publish_at: formText("scheduled_publish_at", page.scheduled_publish_at),
       hero_position_x: Number(page.hero_position_x ?? 50), hero_position_y: Number(page.hero_position_y ?? 50), hero_zoom: Number(page.hero_zoom ?? 1),
       updated_at: new Date().toISOString(),
     };
     setSaving(true); setNotice("");
     try {
-      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "page", payload }) });
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "page", payload, action: publicationAction || undefined }) });
       const body = await readApiResponse(response, "Page save failed.");
       if (!response.ok || body.error) throw new Error(body.error || "Page save failed");
       const data = body.data as Row | undefined;
@@ -144,9 +305,20 @@ export default function AdminContentManager({
       const reloaded = await loadContent(false);
       const persisted = reloaded.pages.find((row) => row.slug === data.slug);
       if (!persisted || persisted.updated_at !== data.updated_at) throw new Error("The page was sent but could not be verified after saving.");
+      const verifiedPublication = reloaded.publicationByPage[String(data.slug)];
+      if (verifiedPublication) {
+        setPublicationByPage((current) => ({ ...current, [String(data.slug)]: verifiedPublication }));
+      }
     setPage(data);
     setPages(rows => rows.some(row => row.slug === data.slug) ? rows.map(row => row.slug === data.slug ? data : row) : [...rows, data]);
-      setNotice("Page saved, verified in Supabase, and published content is updated.");
+      const persistedStatus = String(persisted.status || data.status || "Draft");
+      setNotice(persistedStatus === "Published"
+        ? "Page saved, verified in Supabase, published, and public caches were refreshed."
+        : persistedStatus === "Scheduled"
+          ? `Page saved and scheduled for ${displayTimestamp(persisted.scheduled_publish_at)}.`
+          : verifiedPublication?.public_version
+            ? `Page draft saved and verified in Supabase. The previously published version from ${displayTimestamp(verifiedPublication.public_version)} remains live.`
+            : `Page saved and verified in Supabase as ${persistedStatus}. It is not publicly visible.`);
     } catch (error) {
       setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Page save failed");
     } finally { setSaving(false); }
@@ -156,16 +328,19 @@ export default function AdminContentManager({
     event.preventDefault();
     if (!post) return;
     const form = new FormData(event.currentTarget);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const publicationAction = String(submitter?.value || form.get("publication_action") || "");
     const payload = {
       ...post,
+      expected_updated_at: post.updated_at || "",
       slug: form.get("slug"), title: form.get("title"), excerpt: form.get("excerpt"),
       category: form.get("category"), content: form.get("content"), status: form.get("status"),
-      featured: form.get("featured") === "on", published_at: post.published_at || new Date().toISOString(),
+      featured: form.get("featured") === "on", scheduled_publish_at: form.get("scheduled_publish_at") || post.scheduled_publish_at || null,
       updated_at: new Date().toISOString(),
     };
     setSaving(true); setNotice("");
     try {
-      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "post", payload }) });
+      const response = await fetch("/api/admin/content", { method: "PUT", headers: await authHeaders(), body: JSON.stringify({ type: "post", payload, action: publicationAction || undefined }) });
       const body = await readApiResponse(response, "Post save failed.");
       if (!response.ok || body.error) throw new Error(body.error || "Post save failed");
       const data = body.data as Row | undefined;
@@ -177,7 +352,14 @@ export default function AdminContentManager({
       if (!persisted || persisted.updated_at !== data.updated_at) throw new Error("The post was sent but could not be verified after saving.");
     setPost(data);
     setPosts(rows => rows.some(row => row.id === data.id) ? rows.map(row => row.id === data.id ? data : row) : [data, ...rows]);
-      setNotice("Blog post saved and verified in Supabase.");
+      const persistedStatus = String(persisted.status || data.status || "Draft");
+      setNotice(persistedStatus === "Published"
+        ? "Blog post published and verified in Supabase."
+        : persistedStatus === "Scheduled"
+          ? `Blog post saved and scheduled for ${displayTimestamp(persisted.scheduled_publish_at)}.`
+          : persisted.publication_state === "Published" && persisted.published_payload
+            ? "Blog post draft saved and verified. The previously published version remains live."
+            : `Blog post saved and verified as ${persistedStatus}. It is not publicly visible.`);
     } catch (error) {
       setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Post save failed");
     } finally { setSaving(false); }
@@ -228,6 +410,28 @@ export default function AdminContentManager({
 
   if (loading) return <div className="rounded-xl border border-plum/10 bg-white p-8 text-sm text-ink/60">Loading editable content…</div>;
 
+  if (!acceptanceAccessToken && !initialRecordId) {
+    return <ContentManagerLanding pages={pages} posts={posts} publicationByPage={publicationByPage} />;
+  }
+
+  if (initialRecordId) {
+    return <ContentRecordWorkspace
+      record={parseContentRecord(initialRecordId)}
+      page={page}
+      post={post}
+      setPage={setPage}
+      setPost={setPost}
+      savePage={savePage}
+      savePost={savePost}
+      removePost={removePost}
+      linkTargets={linkTargets}
+      publicationByPage={publicationByPage}
+      notice={notice}
+      saving={saving}
+      dismissNotice={() => setNotice("")}
+    />;
+  }
+
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -249,13 +453,242 @@ export default function AdminContentManager({
       ) : tab === "blog" ? (
         <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[280px_1fr]">
           <aside className="rounded-xl border border-plum/10 bg-white p-3">{posts.map(item => <button key={item.id} onClick={() => setPost(item)} className={`mb-1 w-full rounded-lg p-3 text-left ${post?.id === item.id ? "bg-blush" : ""}`}><b className="block text-xs text-plum">{item.title}</b><small>{item.status} · {item.category}</small></button>)}</aside>
-          {post ? <PostEditor key={post.id || "new"} post={post} setPost={setPost} save={savePost} remove={removePost} /> : null}
+          {post ? <PostEditor key={post.id || "new"} post={post} setPost={setPost} save={savePost} remove={removePost} saving={saving} /> : null}
         </div>
       ) : (
         <ServiceCatalogManager categories={serviceCategories} groups={serviceGroups} addons={serviceAddons} services={masterStyles} initialService={masterStyle} setInitialService={setMasterStyle} authHeaders={authHeaders} reload={loadContent} setNotice={setNotice} saving={saving} setSaving={setSaving} />
       )}
     </div>
   );
+}
+
+type ContentSectionDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  kind: "hero" | "section" | "additional" | "settings" | "system";
+  sectionType?: string;
+  sectionOccurrence?: number;
+  manageHref?: string;
+};
+
+const homeContentSections: ContentSectionDefinition[] = [
+  { id: "hero-promotion-carousel", title: "Hero Promotion Carousel", description: "Published promotion media, destinations, schedules, targeting, and display order.", kind: "section", sectionType: "promo_rail" },
+  { id: "salons-near-you", title: "Salons Near You", description: "Live location-aware salon ranking. Customer distance is calculated from the shared discovery engine.", kind: "system", manageHref: "/admin/salons" },
+  { id: "featured-salons", title: "Featured Salons", description: "Eligible paid and complimentary salon placements from Marketing & Promotions.", kind: "system", manageHref: "/admin/marketing" },
+  { id: "trending-picks", title: "Trending Picks", description: "Published trend placements linked to real styles and salon destinations.", kind: "system", manageHref: "/admin/marketing" },
+  { id: "featured-products", title: "Featured Products", description: "Visible in-salon products from eligible salon profiles.", kind: "system", manageHref: "/admin/marketing" },
+  { id: "announcement-banner", title: "Announcement Banner", description: "Optional homepage announcement with one clear destination.", kind: "section", sectionType: "banner" },
+  { id: "additional-content-sections", title: "Additional Content Sections", description: "Reorder and edit all other homepage editorial sections.", kind: "additional" },
+  { id: "page-settings", title: "Page Settings", description: "Publication status, visibility, SEO title, and search description.", kind: "settings" },
+];
+
+const aboutContentSections: ContentSectionDefinition[] = [
+  { id: "hero-introduction", title: "About Hero & Introduction", description: "About-page hero, introduction, imagery, and the mobile Read more copy.", kind: "hero" },
+  { id: "promotional-carousel-one", title: "Promotional Carousel One", description: "First automatic About carousel. It moves independently in the reverse direction.", kind: "section", sectionType: "community_carousel", sectionOccurrence: 0 },
+  { id: "promotional-carousel-two", title: "Promotional Carousel Two", description: "Second automatic About carousel. It moves independently in the forward direction.", kind: "section", sectionType: "community_carousel", sectionOccurrence: 1 },
+  { id: "additional-about-content", title: "Additional About Content", description: "The remaining About sections in their public display order.", kind: "additional" },
+  { id: "page-settings", title: "Page Settings", description: "Publication status, visibility, SEO title, and search description.", kind: "settings" },
+];
+
+const genericContentSections: ContentSectionDefinition[] = [
+  { id: "hero-introduction", title: "Hero & Introduction", description: "Page heading, introduction, and approved media.", kind: "hero" },
+  { id: "additional-content-sections", title: "Content Sections", description: "Visible editorial sections in public display order.", kind: "additional" },
+  { id: "page-settings", title: "Page Settings", description: "Publication status, visibility, SEO title, and search description.", kind: "settings" },
+];
+
+function pageDefinitions(slug: string) {
+  if (slug === "home") return homeContentSections;
+  if (slug === "about") return aboutContentSections;
+  if (slug === "about-carousel-one") return [aboutContentSections[1]];
+  if (slug === "about-carousel-two") return [aboutContentSections[2]];
+  return genericContentSections;
+}
+
+function displayTimestamp(value: unknown) {
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : "Not yet";
+}
+
+function sectionIndexFor(page: Row, definition: ContentSectionDefinition) {
+  if (!definition.sectionType) return -1;
+  const matching = asRows(page.sections)
+    .map((section, index) => ({ section, index }))
+    .filter(({ section }) => section.type === definition.sectionType);
+  const occurrence = sectionPageSlugs.has(String(page.slug)) ? 0 : definition.sectionOccurrence || 0;
+  return matching[occurrence]?.index ?? -1;
+}
+
+function contentSectionState(page: Row, definition: ContentSectionDefinition) {
+  const independent = page._section_records?.[definition.id] as Row | null | undefined;
+  if (independent) {
+    const section = asRows(independent.sections)[0];
+    const cards = asRows(section?.cards);
+    return {
+      visible: independent.is_enabled !== false && section?.is_visible !== false,
+      count: `${cards.length || (section ? 1 : 0)} item${cards.length === 1 ? "" : "s"}`,
+      state: String(independent.status || "Draft"),
+    };
+  }
+  const publication = String(page.status || "Draft");
+  if (definition.kind === "system") return { visible: page.is_enabled !== false, count: "Live source", state: publication };
+  if (definition.kind === "settings" || definition.kind === "hero") return { visible: page.is_enabled !== false, count: definition.kind === "hero" ? "1 hero" : "Page-wide", state: publication };
+  if (definition.kind === "additional") {
+    const excluded = page.slug === "home" ? new Set(["promo_rail", "banner"]) : page.slug === "about" ? new Set(["community_carousel"]) : new Set<string>();
+    const sections = asRows(page.sections).filter((section) => !excluded.has(String(section.type)));
+    return { visible: sections.some((section) => section.is_visible !== false), count: `${sections.length} item${sections.length === 1 ? "" : "s"}`, state: publication };
+  }
+  const index = sectionIndexFor(page, definition);
+  const section = index >= 0 ? asRows(page.sections)[index] : null;
+  const cards = asRows(section?.cards);
+  return { visible: Boolean(section) && section?.is_visible !== false, count: `${cards.length || (section ? 1 : 0)} item${cards.length === 1 ? "" : "s"}`, state: section ? publication : "Not configured" };
+}
+
+function ContentManagerLanding({ pages, posts, publicationByPage }: { pages: Row[]; posts: Row[]; publicationByPage: Record<string, PublicationSummary> }) {
+  const visiblePages = pages.filter((item) => !hiddenSlugs.has(String(item.slug)) && !sectionPageSlugs.has(String(item.slug)) && item.page_group !== "Legal");
+  const legalPages = pages.filter((item) => !hiddenSlugs.has(String(item.slug)) && item.page_group === "Legal");
+  const publishedPosts = posts.filter((item) => resolvedPublicationUi(item).isPublic).length;
+  return <div className="space-y-6" data-testid="content-manager-overview">
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-magenta">Public content</p><h2 className="mt-1 font-serif text-3xl text-plum">Content Management</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/60">Open one public page, then edit one section at a time. Saved and published state is shown before you enter an editor.</p></div>
+      <Link href={adminContentHref("blog-new")} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Plus size={15}/>New blog post</Link>
+    </header>
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {visiblePages.map((item) => {
+        const summary = publicationByPage[String(item.slug)] || {};
+        const publication = resolvedPublicationUi(item, summary);
+        return <article key={item.slug} className="rounded-2xl border border-plum/10 bg-white p-5 shadow-[0_12px_30px_rgba(45,15,50,.04)]">
+          <div className="flex items-start justify-between gap-4"><div><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${publication.isPublic ? "bg-green-100 text-green-800" : "bg-amber/20 text-plum"}`}>{publication.label}</span><h3 className="mt-3 font-serif text-2xl text-plum">{item.title || item.slug}</h3></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${publication.isPublic ? "bg-blush text-magenta" : "bg-red-50 text-red-700"}`}>{publication.isPublic ? "Public" : "Not public"}</span></div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-[10px] text-ink/55"><div><dt className="font-bold text-plum">Last saved</dt><dd className="mt-1">{displayTimestamp(summary.saved_version || item.updated_at)}</dd></div><div><dt className="font-bold text-plum">Last published</dt><dd className="mt-1">{displayTimestamp(summary.public_version)}</dd></div><div><dt className="font-bold text-plum">Sections</dt><dd className="mt-1">{asRows(item.sections).length}</dd></div><div><dt className="font-bold text-plum">Public cards</dt><dd className="mt-1">{summary.public_card_count ?? "—"}</dd></div></dl>
+          <div className="mt-5 flex gap-2"><Link href={adminContentHref(`page-${item.slug}`)} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg bg-plum px-4 text-xs font-bold text-white">Open page</Link><Link href={publicPageHref(String(item.slug))} target="_blank" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum"><Eye size={14}/>Preview</Link></div>
+        </article>;
+      })}
+    </section>
+    {legalPages.length ? <section className="rounded-2xl border border-plum/10 bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-serif text-2xl text-plum">Legal &amp; policies</h3><p className="mt-1 text-xs text-ink/55">Each legal page has the same explicit draft, schedule, publish, hide, and archive workflow.</p></div><Link href="/legal" target="_blank" className="text-xs font-bold text-magenta">Preview policies →</Link></div><div className="mt-4 grid gap-2 md:grid-cols-2">{legalPages.map((item) => { const publication = resolvedPublicationUi(item, publicationByPage[String(item.slug)] || {}); return <Link key={item.slug} href={adminContentHref(`page-${item.slug}`)} className="flex items-center justify-between gap-3 rounded-xl border border-plum/10 p-4 text-xs"><span><b className="block text-plum">{item.title || item.slug}</b><small className="mt-1 block text-ink/50">{publication.label}</small></span><span className="font-bold text-magenta">Edit</span></Link>; })}</div></section> : null}
+    <section className="rounded-2xl border border-plum/10 bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-serif text-2xl text-plum">Blog posts</h3><p className="mt-1 text-xs text-ink/55">{publishedPosts} public · {posts.length - publishedPosts} not public</p></div><Link href="/blog" target="_blank" className="text-xs font-bold text-magenta">Preview blog →</Link></div><div className="mt-4 grid gap-2 md:grid-cols-2">{posts.slice(0, 8).map((item) => { const publication = resolvedPublicationUi(item); return <Link key={item.id || item.slug} href={adminContentHref(`blog-${item.id || item.slug}`)} className="flex items-center justify-between gap-3 rounded-xl border border-plum/10 p-4 text-xs"><span><b className="block text-plum">{item.title}</b><small className="mt-1 block text-ink/50">{publication.label} · {item.category}</small></span><span className="font-bold text-magenta">Edit</span></Link>; })}</div></section>
+  </div>;
+}
+
+function ContentRecordWorkspace({ record, page, post, setPage, setPost, savePage, savePost, removePost, linkTargets, publicationByPage, notice, saving, dismissNotice }: {
+  record: ContentRecord;
+  page: Row | null;
+  post: Row | null;
+  setPage: React.Dispatch<React.SetStateAction<Row | null>>;
+  setPost: React.Dispatch<React.SetStateAction<Row | null>>;
+  savePage: (event: FormEvent<HTMLFormElement>) => void;
+  savePost: (event: FormEvent<HTMLFormElement>) => void;
+  removePost: () => void;
+  linkTargets: Row[];
+  publicationByPage: Record<string, PublicationSummary>;
+  notice: string;
+  saving: boolean;
+  dismissNotice: () => void;
+}) {
+  if (record.kind === "blog") return <div><WorkspaceHeader title={post?.id ? "Edit blog post" : "Create blog post"} publicHref={post?.slug && post.id ? `/blog/${post.slug}` : undefined}/><ActionToast message={notice} onDismiss={dismissNotice}/>{post ? <PostEditor post={post} setPost={setPost} save={savePost} remove={removePost} saving={saving}/> : <MissingRecord/>}</div>;
+  if (record.kind !== "page" || !page) return <MissingRecord/>;
+  const prepared = ensureEditorSection(page, record.editor);
+  const summary = publicationByPage[String(prepared.slug)] || {};
+  if (!record.editor) return <PageSectionOverview page={prepared} summary={summary} publicationByPage={publicationByPage}/>;
+  return <FocusedPageEditor page={prepared} parentSlug={record.slug} editorId={record.editor} setPage={setPage} save={savePage} linkTargets={linkTargets} summary={summary} notice={notice} saving={saving} dismissNotice={dismissNotice}/>;
+}
+
+function MissingRecord() {
+  return <div className="rounded-2xl border border-dashed border-plum/20 bg-white p-10 text-center"><h2 className="font-serif text-2xl text-plum">Content record unavailable</h2><p className="mt-2 text-sm text-ink/55">This record may have been removed or is outside your access.</p><Link href="/admin/content" className="mt-5 inline-flex rounded-lg bg-plum px-5 py-3 text-xs font-bold text-white">Back to Content Management</Link></div>;
+}
+
+function WorkspaceHeader({ title, publicHref, backHref = "/admin/content" }: { title: string; publicHref?: string; backHref?: string }) {
+  return <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><Link href={backHref} aria-label="Back to previous content workspace" className="rounded-lg border border-plum/15 bg-white p-2.5 text-plum"><ArrowLeft size={17}/></Link><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-magenta">Content Management</p><h2 className="font-serif text-3xl text-plum">{title}</h2></div></div>{publicHref ? <Link href={publicHref} target="_blank" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 bg-white px-4 text-xs font-bold text-plum"><Eye size={14}/>Preview live</Link> : null}</header>;
+}
+
+function PageSectionOverview({ page, summary, publicationByPage }: { page: Row; summary: PublicationSummary; publicationByPage: Record<string, PublicationSummary> }) {
+  return <div data-testid={`content-page-overview-${page.slug}`}><WorkspaceHeader title={page.title || page.slug} publicHref={publicPageHref(String(page.slug))}/><div className="mb-5 grid gap-3 rounded-2xl border border-plum/10 bg-white p-4 text-xs sm:grid-cols-4"><PublicationFact label="Saved version" value={displayTimestamp(summary.saved_version || page.updated_at)}/><PublicationFact label="Public version" value={displayTimestamp(summary.public_version)}/><PublicationFact label="Public cards" value={String(summary.public_card_count ?? "—")}/><PublicationFact label="Editorial fallback" value={String(summary.fallback_count ?? "—")}/></div><div className="space-y-3">{pageDefinitions(String(page.slug)).map((definition, index) => {
+    const independentSlug = definition.id === "promotional-carousel-one" ? "about-carousel-one" : definition.id === "promotional-carousel-two" ? "about-carousel-two" : "";
+    const record = independentSlug ? page._section_records?.[definition.id] || page : page;
+    const draftState = contentSectionState(record, definition);
+    const publicRecord = resolvedPublicSnapshot(record);
+    const publicState = publicRecord
+      ? contentSectionState(publicRecord, definition)
+      : { visible: false, count: "0 items", state: "Not published" };
+    const timestamps = independentSlug ? publicationByPage[independentSlug] || {} : summary;
+    const publication = resolvedPublicationUi(record, timestamps);
+    const sourceSections = asRows(record.sections);
+    const sectionIndex = sectionIndexFor(record, definition);
+    const relevantSection = sectionIndex >= 0 ? sourceSections[sectionIndex] : definition.kind === "additional" ? sourceSections.find((item) => !["promo_rail", "banner", "community_carousel"].includes(String(item.type))) : null;
+    const previewCard = asRows(relevantSection?.cards)[0];
+    const previewMedia = definition.kind === "hero" ? record.hero_image_url : previewCard?.media_url || relevantSection?.image_url;
+    const previewText = definition.kind === "hero" ? record.hero_title : relevantSection?.title || definition.description;
+    const publiclyVisible = publication.isPublic && publicState.visible;
+    return <article key={definition.id} className="grid gap-4 rounded-2xl border border-plum/10 bg-white p-5 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-center"><div><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-plum px-2 py-1 text-[9px] font-bold text-white">{index + 1}</span><h3 className="font-serif text-xl text-plum">{definition.title}</h3><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${publiclyVisible ? "bg-green-100 text-green-800" : "bg-red-50 text-red-700"}`}>Public: {publiclyVisible ? "Visible" : "Not visible"}</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${draftState.visible ? "bg-blush text-magenta" : "bg-amber/20 text-plum"}`}>Draft: {draftState.visible ? "Visible" : "Hidden"}</span></div><p className="mt-2 text-xs leading-5 text-ink/55">{definition.description}</p><p className="mt-3 text-[10px] text-ink/50">{publication.label} · Draft {draftState.count} · Public {publicState.count} · Fixed public position {index + 1}</p><dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[9px] text-ink/50"><div><dt className="inline font-bold text-plum">Last saved: </dt><dd className="inline">{displayTimestamp(timestamps.saved_version || record.updated_at)}</dd></div><div><dt className="inline font-bold text-plum">Last published: </dt><dd className="inline">{displayTimestamp(timestamps.public_version)}</dd></div></dl></div><div className="flex min-h-16 items-center gap-3 rounded-xl bg-cream/70 p-2">{previewMedia ? <SafeImage src={String(previewMedia)} fallbackSrc="/images/hero-braids.jpg" alt="" className="h-12 w-14 shrink-0 rounded-lg object-cover"/> : <span className="grid h-12 w-14 shrink-0 place-items-center rounded-lg bg-blush text-[9px] font-bold text-plum">Saved preview</span>}<p className="line-clamp-3 text-[10px] leading-4 text-ink/60">{String(previewText || "Saved database content")}</p></div><div className="flex flex-wrap gap-2"><Link href={adminContentHref(`page-${page.slug}--${definition.id}`)} className="inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-xs font-bold text-white">Edit</Link><Link href={publicPageHref(String(page.slug))} target="_blank" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum"><Eye size={14}/>Preview</Link></div></article>;
+  })}</div></div>;
+}
+
+function PublicationFact({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl bg-cream/70 p-3"><b className="block text-plum">{label}</b><span className="mt-1 block text-ink/55">{value}</span></div>;
+}
+
+function PublicationActions({ status, scheduledAt, saving, subject, hasPublicVersion = false }: { status: string; scheduledAt?: unknown; saving: boolean; subject: "Page" | "Blog post"; hasPublicVersion?: boolean }) {
+  const normalized = String(status || "Draft");
+  const archived = normalized === "Archived";
+  const publicOrScheduled = normalized === "Published" || normalized === "Scheduled" || hasPublicVersion;
+  return <div className="flex flex-1 flex-wrap items-end justify-end gap-2">
+    <label className="min-w-56 text-[10px] font-bold text-plum">Schedule date and time
+      <input name="scheduled_publish_at" type="datetime-local" defaultValue={String(scheduledAt || "").slice(0, 16)} className="mt-1 min-h-10 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal text-ink"/>
+    </label>
+    {archived ? <button type="submit" value="restore" disabled={saving} className="min-h-10 rounded-lg border border-plum/20 px-4 text-xs font-bold text-plum disabled:opacity-50">Restore as draft</button> : <button type="submit" value="save_draft" disabled={saving} className="min-h-10 rounded-lg border border-plum/20 px-4 text-xs font-bold text-plum disabled:opacity-50">Save draft</button>}
+    <button type="submit" value="schedule" disabled={saving || archived} className="min-h-10 rounded-lg border border-magenta/30 px-4 text-xs font-bold text-magenta disabled:opacity-40">Schedule</button>
+    <button type="submit" value="publish" disabled={saving || archived} className="min-h-10 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-40">{saving ? "Saving and verifying…" : `Publish ${subject.toLowerCase()}`}</button>
+    {publicOrScheduled ? <button type="submit" value="unpublish" disabled={saving} className="min-h-10 rounded-lg border border-amber/50 px-4 text-xs font-bold text-plum disabled:opacity-50">Unpublish</button> : null}
+    {!archived ? <button type="submit" value="archive" disabled={saving} className="min-h-10 rounded-lg border border-red-200 px-4 text-xs font-bold text-red-700 disabled:opacity-50">Archive</button> : null}
+  </div>;
+}
+
+function FocusedPageEditor({ page, parentSlug, editorId, setPage, save, linkTargets, summary, notice, saving, dismissNotice }: {
+  page: Row;
+  parentSlug: string;
+  editorId: string;
+  setPage: React.Dispatch<React.SetStateAction<Row | null>>;
+  save: (event: FormEvent<HTMLFormElement>) => void;
+  linkTargets: Row[];
+  summary: PublicationSummary;
+  notice: string;
+  saving: boolean;
+  dismissNotice: () => void;
+}) {
+  const definition = pageDefinitions(String(page.slug)).find((item) => item.id === editorId);
+  if (!definition) return <MissingRecord/>;
+  const publication = resolvedPublicationUi(page, summary);
+  const sectionIndex = sectionIndexFor(page, definition);
+  const sections = asRows(page.sections);
+  const excluded = page.slug === "home" ? new Set(["promo_rail", "banner"]) : page.slug === "about" ? new Set(["community_carousel"]) : new Set<string>();
+  const additionalIndexes = sections.map((section, index) => ({ section, index })).filter(({ section }) => !excluded.has(String(section.type))).map(({ index }) => index);
+  const updateSection = (index: number, next: Row) => setPage((current) => {
+    const currentSections = asRows(current?.sections);
+    const identity = String(next.id || "");
+    const existingIndex = identity
+      ? currentSections.findIndex((item) => String(item.id || "") === identity)
+      : index < currentSections.length
+        ? index
+        : -1;
+    if (existingIndex < 0) {
+      return { ...current, sections: [...currentSections, next] };
+    }
+    return {
+      ...current,
+      sections: currentSections.map((item, itemIndex) => itemIndex === existingIndex ? next : item),
+    };
+  });
+  const moveSection = (index: number, direction: -1 | 1) => setPage((current) => { const next = [...asRows(current?.sections)]; const target = index + direction; if (target < 0 || target >= next.length) return current; [next[index], next[target]] = [next[target], next[index]]; return { ...current, sections: next }; });
+  const parentHref = adminContentHref(`page-${parentSlug}`);
+  if (definition.kind === "system") return <div><WorkspaceHeader title={definition.title} publicHref="/" backHref={parentHref}/><section className="rounded-2xl border border-plum/10 bg-white p-6"><h3 className="font-serif text-2xl text-plum">Live database source</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/60">{definition.description} This section is not duplicated in page JSON; it reads eligible live records so edits remain consistent everywhere.</p><Link href={definition.manageHref || "/admin/content"} className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Open source manager</Link></section></div>;
+  return <div><WorkspaceHeader title={definition.title} publicHref={publicPageHref(String(page.slug))} backHref={parentHref}/><ActionToast message={notice} onDismiss={dismissNotice}/><form onSubmit={save} className="space-y-5" data-testid={`content-editor-${editorId}`}>
+    <section className="rounded-2xl border border-plum/10 bg-white p-5">
+      {definition.kind === "hero" ? <><div className="grid gap-4 lg:grid-cols-2"><Field required label="Page title" name="title" value={page.title}/><Field label="Eyebrow" name="eyebrow" value={page.eyebrow}/><div className="lg:col-span-2"><Field required label="Hero heading" name="hero_title" value={page.hero_title}/></div><div className="lg:col-span-2"><Area label="Hero introduction" name="hero_subtitle" value={page.hero_subtitle} rows={5}/></div><ImageUpload bucket="content-media" preset="content" value={page.hero_image_url} onChange={(value) => setPage((current) => ({ ...current, hero_image_url: value }))} label="Hero image" folder={String(page.slug)}/></div><HeroImageFraming imageUrl={page.hero_image_url} positionX={Number(page.hero_position_x ?? 50)} positionY={Number(page.hero_position_y ?? 50)} zoom={Number(page.hero_zoom ?? 1)} onChange={({ positionX, positionY, zoom }) => setPage((current) => ({ ...current, hero_position_x: positionX, hero_position_y: positionY, hero_zoom: zoom }))}/>{(labelSlots[page.slug] || []).length ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{(labelSlots[page.slug] || []).map(([key, label]) => <Field key={key} label={label} name={`label_${key}`} value={page.labels?.[key]}/>)}</div> : null}</> : null}
+      {definition.kind === "settings" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="SEO title" name="seo_title" value={page.seo_title}/><Field label="SEO description" name="seo_description" value={page.seo_description}/><div className="rounded-lg border border-plum/10 p-3 text-xs"><b className="text-plum">Current state: {String(page.status || "Draft")}</b><p className="mt-1 leading-5 text-ink/50">Visibility changes only through the publication actions below, so a draft cannot be mistaken for live content.</p></div><div className="rounded-lg border border-plum/10 p-3 text-xs"><b className="text-plum">Public visibility</b><p className="mt-1 leading-5 text-ink/50">{page.is_enabled !== false && ["Published", "Scheduled"].includes(String(page.status)) ? "Enabled when the publication date is due." : "Not visible on the public site."}</p></div></div> : null}
+      {definition.kind === "section" && sectionIndex >= 0 ? <SectionEditor section={sections[sectionIndex]} index={sectionIndex} sectionCount={sections.length} linkTargets={linkTargets} move={(direction) => moveSection(sectionIndex, direction)} update={(next) => updateSection(sectionIndex, next)} remove={() => undefined} allowRemove={false}/> : null}
+      {definition.kind === "additional" ? <div className="space-y-4">{additionalIndexes.map((index) => <SectionEditor key={sections[index].id || index} section={sections[index]} index={index} sectionCount={sections.length} linkTargets={linkTargets} move={(direction) => moveSection(index, direction)} update={(next) => updateSection(index, next)} remove={() => setPage((current) => ({ ...current, sections: asRows(current?.sections).filter((_, itemIndex) => itemIndex !== index) }))}/>)}<button type="button" onClick={() => setPage((current) => ({ ...current, sections: [...asRows(current?.sections), { id: crypto.randomUUID(), type: "card_grid", title: "New Section", body: "", is_visible: true, columns: 4, cards: [] }] }))} className="text-xs font-bold text-magenta">+ Add content section</button></div> : null}
+    </section>
+    <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-plum/10 bg-white/95 p-4 shadow-xl backdrop-blur"><div className="text-[10px] text-ink/55"><b className="block text-plum">Saved: {displayTimestamp(summary.saved_version || page.updated_at)}</b><span>Public: {displayTimestamp(summary.public_version)} · {summary.public_card_count ?? 0} source card{summary.public_card_count === 1 ? "" : "s"} · {summary.fallback_count ?? 0} fallback</span><strong className={`mt-1 block ${publication.isPublic ? "text-green-700" : "text-ink/45"}`}>{publication.label}</strong></div><PublicationActions status={String(page.status || "Draft")} scheduledAt={page.scheduled_publish_at} saving={saving} subject="Page" hasPublicVersion={publication.isPublic}/></div>
+  </form></div>;
 }
 
 type CatalogKind = "service_category" | "service_group" | "master_style" | "service_addon";
@@ -911,9 +1344,12 @@ function PageEditor({ page, setPage, save, linkTargets }: { page: Row; setPage: 
   </form>;
 }
 
-function PromotionRailPreview({ cards, displayLimit, addPromotionCard }: { cards: Row[]; displayLimit: number; addPromotionCard: () => void }) {
+function PromotionRailPreview({ cards, displayLimit, addPromotionCard, linkTargets }: { cards: Row[]; displayLimit: number; addPromotionCard: () => void; linkTargets: Row[] }) {
   const [previewTime] = useState(() => Date.now());
-  const preview = homepagePromotionPreview(cards, previewTime, displayLimit);
+  const availableSalonIds = new Set(linkTargets.filter((target) => target.type === "Salon").map((target) => String(target.id || "").toLowerCase()));
+  const availableCampaignIds = new Set(linkTargets.filter((target) => target.type === "Campaign").map((target) => String(target.id || "").toLowerCase()));
+  const availableDestinations = new Set(linkTargets.filter((target) => Boolean(target.href)).map((target) => String(target.href)));
+  const preview = homepagePromotionPreview(cards, previewTime, displayLimit, { availableSalonIds, availableCampaignIds, availableDestinations });
   return <section className="mt-4 rounded-lg border border-magenta/20 bg-white p-3" aria-label="Effective homepage promotion rail">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-xs text-ink/60"><b className="text-plum">Saved source pool: {preview.saved.length}</b><br/>{preview.eligible.length} currently eligible · {preview.fallbackCount} unused position{preview.fallbackCount === 1 ? "" : "s"} filled by editorial fallback.</p>
@@ -926,6 +1362,7 @@ function PromotionRailPreview({ cards, displayLimit, addPromotionCard }: { cards
         return <li key={`${card.id}-${position}`} className="rounded-lg border border-plum/10 bg-cream/60 p-2 text-[10px]"><span className={`rounded-full px-2 py-0.5 font-bold ${saved ? "bg-green-100 text-green-800" : "bg-amber/20 text-plum"}`}>{position + 1} · {saved ? "Saved" : "Fallback"}</span><b className="mt-2 line-clamp-2 block text-plum">{card.title || "Untitled card"}</b></li>;
       })}
     </ol>
+    {preview.diagnostics.length ? <div className="mt-4 border-t border-plum/10 pt-3"><b className="text-xs text-plum">Saved-card eligibility</b><ul className="mt-2 space-y-2">{preview.diagnostics.map(({ card, diagnostic }, index) => <li key={card.id || index} className="flex flex-wrap items-start justify-between gap-2 rounded-lg bg-cream/70 p-3 text-[10px]"><span><b className="block text-plum">{card.title || `Card ${index + 1}`}</b><span className="mt-1 block text-ink/55">{diagnostic.detail}</span></span><span className={`rounded-full px-2 py-1 font-bold ${diagnostic.eligible ? "bg-green-100 text-green-800" : "bg-red-50 text-red-700"}`}>{diagnostic.label}</span></li>)}</ul></div> : null}
   </section>;
 }
 
@@ -938,7 +1375,7 @@ function editorCardSourceKind(card: Row) {
   return "upload";
 }
 
-function SectionEditor({ section, index, sectionCount, linkTargets, update, remove, move }: { section: Row; index: number; sectionCount:number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void;move:(direction:-1|1)=>void }) {
+function SectionEditor({ section, index, sectionCount, linkTargets, update, remove, move, allowRemove = true }: { section: Row; index: number; sectionCount:number; linkTargets: Row[]; update: (section: Row) => void; remove: () => void;move:(direction:-1|1)=>void; allowRemove?: boolean }) {
   const type = String(section.type || "text");
   const cards = asRows(section.cards);
   const minimum = type === "promo_rail" ? 0 : 1;
@@ -979,17 +1416,17 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
         {type === "promo_rail" ? <label className="text-xs font-bold">Cards shown per customer<NumericInput integer min={1} max={20} value={String(section.display_limit || 8)} onValueChange={(value)=>update({ ...section, display_limit:value===""?8:Number(value) })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal" /><small className="mt-1 block font-normal text-ink/55">Each customer sees this many eligible cards from the larger location-aware promotion pool.</small></label> : null}
       </div>
       <div className="flex gap-1"><button type="button" aria-label={`Move section ${index+1} earlier`} onClick={()=>move(-1)} disabled={index===0} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label={`Move section ${index+1} later`} onClick={()=>move(1)} disabled={index===sectionCount-1} className="rounded-md border bg-white p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button></div><label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold"><input type="checkbox" checked={section.is_visible !== false} onChange={(event) => update({ ...section, is_visible: event.target.checked })} className="accent-magenta" />Published on page</label>
-      <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button>
+      {allowRemove ? <button type="button" onClick={remove} className="inline-flex items-center gap-1 text-xs font-bold text-red-600"><Trash2 size={14}/>Remove section</button> : null}
     </div>
     <Field label="Section heading" name={`section_title_${index}`} value={section.title} />
     <Area label="Section text" name={`section_body_${index}`} value={section.body} rows={4} />
     {type === "banner" ? <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Button label" name={`section_cta_label_${index}`} value={section.cta_label} /><Field label="Button destination" name={`section_cta_href_${index}`} value={section.cta_href} /></div> : null}
     {type === "card_grid" ? <label className="mt-3 block text-xs font-bold">Columns<select value={Number(section.columns || 4)} onChange={(event) => update({ ...section, columns: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label> : null}
     {type === "community_carousel" ? <label className="mt-3 block text-xs font-bold">Automatic scroll direction<select value={section.scroll_direction === "reverse" ? "reverse" : "forward"} onChange={(event) => update({ ...section, scroll_direction: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 bg-white p-3 font-normal"><option value="forward">Forward</option><option value="reverse">Reverse</option></select><small className="mt-1 block font-normal text-ink/55">Use opposite directions for the two About carousels.</small></label> : null}
-    {type === "promo_rail" ? <PromotionRailPreview cards={cards} displayLimit={Number(section.display_limit || 8)} addPromotionCard={addPromotionCard}/> : null}
+    {type === "promo_rail" ? <PromotionRailPreview cards={cards} displayLimit={Number(section.display_limit || 8)} addPromotionCard={addPromotionCard} linkTargets={linkTargets}/> : null}
     {cards.length ? <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">{cards.map((card, cardIndex) => <article key={card.id || cardIndex} className="self-start rounded-xl border border-plum/10 bg-white p-4">
       <div className="flex items-center justify-between gap-3"><b className="font-serif text-lg text-plum">Card {cardIndex + 1}</b><div className="flex gap-1"><button type="button" aria-label="Move card up" onClick={() => moveCard(cardIndex, -1)} disabled={cardIndex === 0} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowUp size={14}/></button><button type="button" aria-label="Move card down" onClick={() => moveCard(cardIndex, 1)} disabled={cardIndex === cards.length - 1} className="rounded-md border p-2 text-plum disabled:opacity-30"><ArrowDown size={14}/></button>{type === "promo_rail" ? <button type="button" aria-label={`Remove promotion card ${cardIndex + 1}`} onClick={() => removePromotionCard(cardIndex)} className="rounded-md border border-red-200 p-2 text-red-600"><Trash2 size={14}/></button> : null}</div></div>
-      <label className="mt-3 block text-xs font-bold">Card source<select value={editorCardSourceKind(card)} onChange={(event) => { const value=event.target.value;updateCard(cardIndex,{...card,source_kind:value,content_type:value==="video"?"video":value==="salon"?"salon":value==="custom"?"link":"image",association_type:value==="campaign"?"campaign":value==="salon"?"salon":"",salon_id:value==="salon"?card.salon_id||"":"",campaign_id:value==="campaign"?card.campaign_id||"":""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="upload">Upload image or GIF</option>{type !== "promo_rail" ? <option value="video">Video URL</option> : null}<option value="salon">Salon profile</option><option value="blog">Blog post</option><option value="custom">Custom destination</option>{type === "promo_rail" ? <option value="campaign">Featured campaign</option> : null}</select><small className="mt-1 block font-normal text-ink/55">Choose the source first. Only the fields needed for that source are shown below.</small></label>
+      <label className="mt-3 block text-xs font-bold">Card source<select value={editorCardSourceKind(card)} onChange={(event) => { const value=event.target.value;updateCard(cardIndex,{...card,source_kind:value,content_type:value==="video"?"video":value==="salon"?"salon":value==="custom"?"link":"image",association_type:value==="campaign"?"campaign":value==="salon"?"salon":"",salon_id:value==="salon"?card.salon_id||"":"",campaign_id:value==="campaign"?card.campaign_id||"":""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="upload">Upload image or GIF</option><option value="video">Video URL</option><option value="salon">Salon profile</option><option value="blog">Blog post</option><option value="custom">Custom destination</option>{type === "promo_rail" ? <option value="campaign">Featured campaign</option> : null}</select><small className="mt-1 block font-normal text-ink/55">Choose the source first. Only the fields needed for that source are shown below.</small></label>
       {editorCardSourceKind(card) === "salon" ? <label className="mt-3 block text-xs font-bold">Salon to feature<select required value={card.salon_id || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Salon" && item.id === event.target.value); updateCard(cardIndex, { ...card, salon_id: target?.id || "", title: target?.label || "", body: target?.body || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a live salon</option>{linkTargets.filter((target) => target.type === "Salon").map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">The card uses this salon’s name, cover photo, location, and public profile link.</small></label> : editorCardSourceKind(card) === "blog" ? <label className="mt-3 block text-xs font-bold">Blog post to feature<select required value={linkTargets.find((target) => target.type === "Blog" && target.href === card.href)?.href || ""} onChange={(event) => { const target = linkTargets.find((item) => item.type === "Blog" && item.href === event.target.value); updateCard(cardIndex, { ...card, title: target?.label || "", media_url: target?.media_url || "", href: target?.href || "" }); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose a published blog post</option>{linkTargets.filter((target) => target.type === "Blog").map((target) => <option key={target.id || target.href} value={target.href}>{target.label}</option>)}</select></label> : editorCardSourceKind(card) === "video" ? <label className="mt-3 block text-xs font-bold">Video URL<input value={card.media_url || ""} onChange={(event) => updateCard(cardIndex, { ...card, media_url: event.target.value })} placeholder="https://example.com/video.mp4" className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label> : editorCardSourceKind(card) === "campaign" ? null : <ImageUpload bucket="content-media" preset="content" value={card.media_url} onChange={(value) => updateCard(cardIndex, { ...card, media_url: typeof value === "string" ? value : "" })} label="Card image or GIF" folder={`${section.id || "section"}/card-${cardIndex + 1}`} />}
       {card.association_type === "campaign" ? <label className="mt-3 block text-xs font-bold">Campaign to feature<select required value={card.campaign_id || ""} onChange={(event) => { const target=linkTargets.find((item)=>item.type==="Campaign"&&item.id===event.target.value);updateCard(cardIndex,{...card,campaign_id:target?.id||"",salon_id:target?.salon_id||"",title:card.title||target?.label||"",body:card.body||target?.body||"",media_url:card.media_url||target?.media_url||"",href:target?.href||""}); }} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal"><option value="">Choose an eligible featured campaign</option>{linkTargets.filter((target)=>target.type==="Campaign").map((target)=><option key={target.id} value={target.id}>{target.label}</option>)}</select><small className="mt-1 block font-normal text-ink/55">Paid and authorized complimentary campaigns inside a valid schedule are selectable. Public eligibility is checked again on every request.</small></label> : null}
       <label className="mt-3 block text-xs font-bold">Card title<input value={card.title || ""} onChange={(event) => updateCard(cardIndex, { ...card, title: event.target.value })} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>
@@ -1012,8 +1449,9 @@ function SectionEditor({ section, index, sectionCount, linkTargets, update, remo
 
 function ContentPagePreview({page,mode}:{page:Row;mode:"desktop"|"tablet"|"mobile"}){const sections=asRows(page.sections).filter(section=>section.is_visible!==false);const width=mode==="mobile"?"max-w-[360px]":mode==="tablet"?"max-w-[820px]":"max-w-full";return <section className="mb-6 rounded-xl border border-dashed border-magenta/30 bg-cream p-4"><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-magenta"><Eye size={13}/>Unpublished draft preview · {mode}</p><div className={`mx-auto mt-3 overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${width}`}><div className="relative min-h-36 bg-[linear-gradient(120deg,#0D1114,#0083A6)] bg-cover bg-center p-6 text-white" style={page.hero_image_url?{backgroundImage:`linear-gradient(120deg,rgba(13,17,20,.88),rgba(0,131,166,.45)),url(${String(page.hero_image_url)})`}:undefined}><span className="text-[9px] font-bold uppercase tracking-[.16em] text-amber">{String(page.eyebrow||page.title||"Girlz Culture")}</span><h3 className="mt-2 font-serif text-3xl leading-none">{String(page.hero_title||page.title||"Untitled page")}</h3><p className="mt-3 max-w-xl text-xs leading-5 text-white/75">{String(page.hero_subtitle||"")}</p></div><div className="space-y-4 p-4">{sections.map((section,index)=><div key={section.id||index} className="rounded-lg bg-blush/25 p-4"><h4 className="font-serif text-xl text-plum">{String(section.title||`Section ${index+1}`)}</h4>{section.body?<p className="mt-2 text-[10px] leading-5 text-ink/60">{String(section.body).slice(0,260)}</p>:null}{asRows(section.cards).length?<div className={`mt-3 grid gap-2 ${mode==="mobile"?"grid-cols-2":mode==="tablet"?"grid-cols-3":"grid-cols-4"}`}>{asRows(section.cards).slice(0,mode==="mobile"?4:8).map((card,cardIndex)=><div key={card.id||cardIndex} className="min-h-24 overflow-hidden rounded-md border bg-white bg-cover bg-center p-2" style={card.media_url?{backgroundImage:`linear-gradient(rgba(255,255,255,.82),rgba(255,255,255,.94)),url(${String(card.media_url)})`}:undefined}><b className="text-[9px] text-plum">{String(card.title||`Card ${cardIndex+1}`)}</b><p className="mt-1 line-clamp-2 text-[8px] text-ink/60">{String(card.body||"")}</p></div>)}</div>:null}</div>)}{!sections.length?<p className="rounded-lg border border-dashed p-6 text-center text-xs text-ink/45">No visible sections in this draft.</p>:null}</div></div></section>}
 
-function PostEditor({ post, setPost, save, remove }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void }) {
-  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><label className="text-xs font-bold">Status<select name="status" defaultValue={post.status} className="mt-1 w-full rounded-lg border p-3"><option>Draft</option><option>Published</option></select></label></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" preset="content" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex gap-3"><button className="rounded-lg bg-magenta px-7 py-3 text-xs font-bold text-white">Save Post</button>{post.id ? <button type="button" onClick={remove} className="flex items-center gap-2 rounded-lg border border-red-300 px-5 py-3 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
+function PostEditor({ post, setPost, save, remove, saving }: { post: Row; setPost: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void; remove: () => void; saving: boolean }) {
+  const publication = resolvedPublicationUi(post);
+  return <form onSubmit={save} className="min-w-0 rounded-xl border border-plum/10 bg-white p-5"><div className="grid gap-4 sm:grid-cols-2"><Field required label="Title" name="title" value={post.title} /><Field required label="Slug" name="slug" value={post.slug} /><Field required label="Category" name="category" value={post.category} /><div className="rounded-lg border border-plum/10 p-3 text-xs"><b className="text-plum">{publication.label}</b><p className="mt-1 leading-5 text-ink/50">Use the explicit actions below to control public visibility.</p></div></div><Area label="Excerpt" name="excerpt" value={post.excerpt} rows={3} /><ImageUpload bucket="content-media" preset="content" value={post.cover_image_url} onChange={value => setPost(row => ({ ...row, cover_image_url: value }))} label="Cover image" folder="blog" /><Area label="Article content · use ### for headings" name="content" value={post.content} rows={16} /><label className="mt-3 flex gap-2 text-xs"><input type="checkbox" name="featured" defaultChecked={post.featured} />Feature this post</label><div className="mt-5 flex flex-wrap items-end gap-3"><PublicationActions status={String(post.status || "Draft")} scheduledAt={post.scheduled_publish_at} saving={saving} subject="Blog post" hasPublicVersion={publication.isPublic}/>{post.id ? <button type="button" onClick={remove} className="flex min-h-10 items-center gap-2 rounded-lg border border-red-300 px-5 text-xs text-red-600"><Trash2 size={15} />Delete</button> : null}</div></form>;
 }
 
 function Field({ label, name, value, required = false, type = "text", onChange }: { label: string; name: string; value?: string | number; required?: boolean; type?: string; onChange?: (value: string) => void }) { return <label className="block text-xs font-bold">{label}<input required={required} type={type} name={name} defaultValue={value ?? ""} onChange={onChange ? (event)=>onChange(event.target.value) : undefined} className="mt-1 w-full rounded-lg border border-plum/10 p-3 font-normal" /></label>; }

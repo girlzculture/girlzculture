@@ -26,6 +26,10 @@ import {
   retryTransientAuthOperation,
 } from "@/lib/authSessionCore";
 import { bookingReminderDueWindow, notificationDeliveryKey, runIsolatedReminderBatch, type ReminderStage } from "@/lib/bookingReminderCore";
+import {
+  isActiveSalonTeamMembership,
+  resolveSalonIdentityScope,
+} from "@/lib/salonAuthorizationCore";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -176,13 +180,38 @@ export async function requireSalonOwner(request: Request) {
   if (!token) throw new Error("Unauthorized");
   const admin = getSupabaseAdmin();
   const user = await verifiedAuthUser(admin, token);
-  const { data: ownedSalon, error: salonError } = await admin.from("salons").select("*").eq("user_id", user.id).limit(1).maybeSingle();
-  if (salonError) throw salonError;
-  if (ownedSalon) return { admin, user, salon: ownedSalon, teamMember: null, isOwner: true };
-  const { data: teamMember, error: teamError } = await admin.from("salon_team_members").select("*,salon:salons(*)").eq("user_id", user.id).in("status", ["Invited", "Active"]).limit(1).maybeSingle();
+  const { data: identity, error: identityError } = await admin
+    .from("platform_identities")
+    .select("email_normalized,primary_role,status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (identityError && identityError.code !== "PGRST205") throw identityError;
+  const identityScope = resolveSalonIdentityScope(identity, user.email);
+  if (!identityScope) throw new Error("Forbidden: this account is not authorized for the salon workspace.");
+
+  if (identityScope === "owner") {
+    const { data: ownedSalon, error: salonError } = await admin
+      .from("salons")
+      .select("*")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    if (salonError) throw salonError;
+    if (!ownedSalon) throw new Error("Forbidden: this salon-owner identity is not linked to a salon.");
+    return { admin, user, salon: ownedSalon, teamMember: null, isOwner: true };
+  }
+
+  const { data: teamMember, error: teamError } = await admin
+    .from("salon_team_members")
+    .select("*,salon:salons(*)")
+    .eq("user_id", user.id)
+    .eq("status", "Active")
+    .limit(1)
+    .maybeSingle();
   if (teamError) throw teamError;
-  if (!teamMember?.salon) throw new Error("Forbidden: this account is not linked to a salon.");
-  if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);
+  if (!teamMember?.salon || !isActiveSalonTeamMembership(teamMember.status)) {
+    throw new Error("Forbidden: this active salon-team identity is not linked to an active team membership.");
+  }
   return { admin, user, salon: teamMember.salon, teamMember, isOwner: false };
 }
 
@@ -213,12 +242,18 @@ export async function sendEmail(
   subject: string,
   html: string,
   category: TransactionalEmailCategory = "account",
-  options: { fromName?: string; replyTo?: string } = {},
+  options: { fromName?: string; replyTo?: string; idempotencyKey?: string } = {},
 ) {
   if (!process.env.RESEND_API_KEY || !to) return { skipped: true };
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.idempotencyKey
+        ? { "Idempotency-Key": options.idempotencyKey.slice(0, 256) }
+        : {}),
+    },
     body: JSON.stringify({
       from: senderFor(category, options.fromName),
       to,

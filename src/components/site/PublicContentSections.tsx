@@ -21,7 +21,7 @@ export default function PublicContentSections({ sections, className = "", varian
     if (type === "community_carousel") return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1660px] px-4 sm:px-8">
       {section.title ? <h2 className="font-serif text-3xl font-semibold text-plum">{section.title}</h2> : null}
       {section.body ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink/65">{section.body}</p> : null}
-      <AutoContentCarousel cards={cards} direction={section.scroll_direction === "reverse" ? "reverse" : "forward"} label={section.title}/>
+      <AutoContentCarousel cards={cards} direction={section.scroll_direction === "reverse" ? "reverse" : "forward"} label={section.title} sectionId={section.id}/>
     </section>;
     const carousel = type === "carousel";
     return <section key={section.id || index} className="mx-auto my-5 w-full max-w-[1660px] px-4 sm:px-8">

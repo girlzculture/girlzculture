@@ -12,10 +12,12 @@ export default function AdminBookingEditor({
   bookingId,
   close,
   saved,
+  embedded = false,
 }: {
   bookingId: string;
   close: () => void;
   saved: () => Promise<void>;
+  embedded?: boolean;
 }) {
   const [booking, setBooking] = useState<Row | null>(null);
   const [salon, setSalon] = useState<Row | null>(null);
@@ -113,6 +115,19 @@ export default function AdminBookingEditor({
               : "Booking updated by authorized admin intervention and the customer was notified.",
       );
       setBooking(body.booking);
+      const readbackResponse = await fetch(`/api/admin/bookings/${bookingId}`, {
+        headers: await headers(),
+        cache: "no-store",
+      });
+      const readback = await readbackResponse.json();
+      if (!readbackResponse.ok) {
+        throw new Error(readback.error || "The booking changed, but its audit trail could not be verified.");
+      }
+      setBooking(readback.booking);
+      setSalon(readback.salon);
+      setStyles(Array.isArray(readback.styles) ? readback.styles : []);
+      setStylists(Array.isArray(readback.stylists) ? readback.stylists : []);
+      setAudit(Array.isArray(readback.audit) ? readback.audit : []);
       await saved();
     } catch (error) {
       setMessage(
@@ -123,9 +138,10 @@ export default function AdminBookingEditor({
     }
   }
 
+  const Shell = embedded ? "section" : "aside";
   return (
-    <aside className="fixed inset-0 z-[80] overflow-y-auto bg-ink/35 p-3 backdrop-blur-sm sm:p-6">
-      <div className="ml-auto min-h-full w-full max-w-xl rounded-[18px] bg-cream p-5 shadow-2xl sm:p-7">
+    <Shell className={embedded ? "rounded-[18px] border border-plum/10 bg-white p-5 sm:p-7" : "fixed inset-0 z-[80] overflow-y-auto bg-ink/35 p-3 backdrop-blur-sm sm:p-6"}>
+      <div className={embedded ? "mx-auto w-full max-w-4xl" : "ml-auto min-h-full w-full max-w-xl rounded-[18px] bg-cream p-5 shadow-2xl sm:p-7"}>
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-wider text-magenta">
@@ -145,14 +161,14 @@ export default function AdminBookingEditor({
               </p>
             ) : null}
           </div>
-          <button
+          {!embedded ? <button
             type="button"
             onClick={close}
             className="rounded-full p-2 hover:bg-blush"
             aria-label="Close booking editor"
           >
             <X />
-          </button>
+          </button> : null}
         </div>
         {!booking ? (
           <p className="mt-8 text-sm">{message || "Loading booking..."}</p>
@@ -369,7 +385,7 @@ export default function AdminBookingEditor({
           )}
         </section>
       </div>
-    </aside>
+    </Shell>
   );
 }
 

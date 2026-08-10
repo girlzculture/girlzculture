@@ -123,9 +123,18 @@ assert.match(migration, /integrations\.expected_migration/);
 assert.match(migration, /notify pgrst,'reload schema'/);
 assert.match(migration, /to anon, authenticated, service_role/);
 assert.match(decisionSearch, /limit: "all"/);
-assert.match(decisionSearch, /masterStyleId: intent\.stableServiceId/);
-assert.match(decisionSearch, /if \(intent\.stableServiceId && !style\) return null/);
-assert.match(decisionSearch, /stableMasterStyleMatch\(salonRows, stableServiceId\)/);
+assert.match(decisionSearch, /candidate_set_truncated: false/);
+assert.match(decisionSearch, /mapDecisionSearchWithConcurrency/);
+assert.match(decisionSearch, /total_discovered_count/);
+assert.match(decisionSearch, /Radius\/eligibility is deliberately the first stage/);
+assert.doesNotMatch(decisionSearch, /masterStyleId: intent\.stableServiceId/);
+assert.match(
+  decisionSearch,
+  /\(intent\.stableServiceId \|\| intent\.serviceGroupId \|\| intent\.categoryId\)[\s\S]*candidateStyles\.length === 0/,
+);
+assert.match(decisionSearch, /rows\.filter\(\(row\) => row\.master_style_id === stableServiceId\)/);
+assert.match(decisionSearch, /evaluateDecisionStyleCandidates/);
+assert.match(decisionSearch, /selectDecisionStyleWithOpening/);
 assert.match(discovery, /result_limit: limit/);
 assert.match(discovery, /master_style_filter: query\.masterStyleId \|\| null/);
 assert.match(salonsPage, /limit: "all"/);
@@ -154,5 +163,5 @@ assert.match(nearby, /lat: String\(location\.lat\)/);
 assert.match(nearby, /radius: String\(locationState\.radiusMiles\)/);
 
 console.log(
-  "Authoritative discovery verification passed: absent-filter semantics, 50-mile defaults, uncapped deduplicated nearest-first results, exact distance copy, delayed Maps readiness, unified style identity/state and list/map route wiring are covered.",
+  "Authoritative discovery verification passed: absent-filter semantics, 50-mile defaults, bounded decision-search candidates and availability concurrency, separated result/discovery counts, exact distance copy, multi-service price/opening qualification, delayed Maps readiness, unified style identity/state and list/map route wiring are covered.",
 );

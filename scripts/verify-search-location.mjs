@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20260720140000_search_language_engine.sql");
+const hardeningMigration = read("supabase/migrations/20260809170000_search_authorization_and_runtime_hardening.sql");
 const suggestions = read("src/app/api/search/suggestions/route.ts");
+const discoveryServer = read("src/lib/discoveryServer.ts");
 const searchLanguage = read("src/lib/searchLanguage.ts");
 const composer = read("src/components/site/SearchComposer.tsx");
 const discovery = read("src/components/public/SalonDiscovery.tsx");
@@ -23,7 +25,13 @@ for (const behavior of [
 
 assert.match(suggestions, /Styles \/ Services/);
 assert.match(suggestions, /Categories/);
+assert.match(suggestions, /marketplace_visible_salon_ids/);
+assert.match(suggestions, /\.eq\("is_draft", false\)/);
+assert.match(hardeningMigration, /public\.is_marketplace_visible\(salon\.id\)/);
+assert.match(hardeningMigration, /resolve_search_service_query\(text\)[\s\S]*to service_role/);
+assert.match(discoveryServer, /if \(resolution\.error\) throw resolution\.error/);
 assert.match(suggestions, /createHash\("sha256"\)/);
+assert.match(suggestions, /if \(!term\) return Response\.json\(\{ suggestions: \[\], groups: \[\], no_result: false \}\)/);
 assert.doesNotMatch(suggestions, /raw_query|query_text/);
 assert.match(searchLanguage, /normalize\("NFKD"\)/);
 assert.match(searchLanguage, /editDistance/);

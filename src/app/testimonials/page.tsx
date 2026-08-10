@@ -1,4 +1,5 @@
 import { Quote } from "lucide-react";
+import { notFound } from "next/navigation";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { getContentPage } from "@/lib/content";
 import PublicContentSections from "@/components/site/PublicContentSections";
@@ -13,6 +14,7 @@ export default async function TestimonialsPage() {
     hero_subtitle: "Verified customer stories will be published here.",
     sections: [],
   });
+  if (!page) notFound();
   const testimonials = (page.sections || []).filter((section) => !section.type || section.type === "text");
   const customSections = (page.sections || []).filter((section) => section.type && section.type !== "text");
 

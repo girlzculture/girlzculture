@@ -1,6 +1,6 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
-import { assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayload, signInAndVerifyRole, verifyMfaChallenge, type LoginScope } from "@/lib/secureLoginServer";
+import { activateVerifiedSalonTeamInvitation, assertLoginNotLocked, LoginLockedError, recordLoginAttempt, sessionPayload, signInAndVerifyRole, verifyMfaChallenge, type LoginScope } from "@/lib/secureLoginServer";
 import { classifyExpectedSecureLoginFailure } from "@/lib/secureLoginCore";
 import { ADMIN_LOGIN_ERROR } from "@/lib/adminSecurityServer";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
@@ -38,6 +38,7 @@ async function POSTHandler(request: Request) {
       request,
       auth.user.id,
     );
+    await activateVerifiedSalonTeamInvitation(auth.user, role);
     await recordLoginAttempt(request, role, email, true);
     return Response.json({ session: sessionPayload(auth.session) });
   } catch (error) {

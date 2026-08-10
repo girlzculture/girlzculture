@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MailPlus, RefreshCw, ShieldCheck, ShieldOff, Trash2, UserPlus } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { US_PHONE_PATTERN } from "@/lib/validation";
@@ -10,12 +12,13 @@ type TeamUser = { id: string; name?: string; email: string; phone?: string; role
 type Stylist = { id: string; name: string };
 type AdminAction = "resend" | "suspend" | "revoke" | "reactivate";
 
-const adminPermissions = [["overview","Overview"],["submissions","Submissions"],["salons","Salons"],["customers","Customers"],["bookings","Bookings"],["quality","Quality & Performance"],["reviews","Reviews"],["finance","Payments & Finance"],["marketing","Marketing & Promotions"],["content","Content Management"],["support","Customer Support"],["subscriptions","Subscriptions"],["settings","Settings & Team"]] as const;
+const adminPermissions = [["overview","Overview"],["submissions","Submissions"],["salons","Salons"],["customers","Customers"],["bookings","Bookings"],["quality","Quality & Performance"],["reviews","Reviews"],["finance","Payments & Finance"],["marketing","Marketing & Promotions"],["content","Content Management"],["support","Customer Support"],["complaints","Complaints"],["subscriptions","Subscriptions"],["engine","The Engine"],["settings","Settings & Team"]] as const;
 // Subscription and billing are intentionally owner-only. Team permissions
 // control operational sections but never grant access to payment management.
 const salonPermissions = [["overview","Overview"],["my_page","My Page"],["photos","Photos"],["styles","Styles & Pricing"],["stylists","Stylists"],["products","Products"],["availability","Availability & Calendar"],["bookings","Bookings"],["reviews","Reviews"],["earnings","Earnings & Payouts"],["promotions","Promotions"],["settings","Settings & Team"]] as const;
 
-export default function TeamUserManager({ scope }: { scope: TeamScope }) {
+export default function TeamUserManager({ scope, initialUserId, showBackLink = true }: { scope: TeamScope; initialUserId?: string; showBackLink?: boolean }) {
+  const router = useRouter();
   const options = scope === "admin" ? adminPermissions : salonPermissions;
   const endpoint = `/api/${scope}/team`;
   const [users, setUsers] = useState<TeamUser[]>([]);
@@ -37,7 +40,11 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
       const response = await fetch(endpoint, { headers: await auth(), cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
-      setUsers(Array.isArray(body.users) ? body.users : []);
+      const nextUsers = Array.isArray(body.users) ? body.users : [];
+      setUsers(nextUsers);
+      if (initialUserId !== undefined && initialUserId !== "new") {
+        setSelected(nextUsers.find((user: TeamUser) => user.id === initialUserId) || null);
+      }
       setStylists(Array.isArray(body.stylists) ? body.stylists : []);
       setCanManage(Boolean(body.can_manage));
     } catch (error) {
@@ -45,7 +52,7 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
     } finally {
       setLoading(false);
     }
-  }, [auth, endpoint]);
+  }, [auth, endpoint, initialUserId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -66,9 +73,10 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setMessage(selected ? "User updated." : "User added and invitation sent. Access activates after verified sign-in.");
-      setSelected(null);
+      if (initialUserId === undefined) setSelected(null);
       formElement.reset();
       await load();
+      if (body.user?.id) router.replace(detailHref(scope, String(body.user.id)));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save user.");
     } finally {
@@ -85,6 +93,7 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
       setSelected(null);
       setMessage("User access removed.");
       await load();
+      router.push(teamHref(scope));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to remove user.");
     }
@@ -99,7 +108,7 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setMessage(action === "resend" ? "Invitation resent." : action === "reactivate" ? "Admin access reactivated." : `Admin access ${action === "suspend" ? "suspended" : "revoked"}.`);
-      setSelected(null);
+      if (initialUserId === undefined) setSelected(null);
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to update admin access.");
@@ -110,9 +119,11 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
   if (!canManage) return <ReadOnlyUsers users={users} />;
 
   const roleOptions = scope === "admin" ? ["Admin","Operations","Support","Finance","Content Editor"] : ["Manager","Front Desk","Stylist","Customer Service","Staff"];
-  return <div className="space-y-5">
-    <form key={selected?.id || "new"} onSubmit={submit} className="rounded-[14px] border border-plum/10 bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">{selected ? "Edit User" : "Add User"}</h2><p className="mt-1 text-sm leading-6 text-ink/65">{scope === "salon" ? "Enter the user details and choose every section they may access. Billing always remains with the salon owner." : "Company-domain admins are invitation-only. Choose every platform section they may access."}</p></div>{selected ? <button type="button" onClick={() => setSelected(null)} className="rounded-lg border border-plum/15 px-4 py-2 text-sm font-bold text-plum"><UserPlus size={16} className="mr-2 inline"/>Add another user</button> : null}</div>
+  const focused = initialUserId !== undefined;
+  const expectedExistingUser = focused && initialUserId !== "new";
+  if (expectedExistingUser && !selected) return <section className="rounded-[14px] border border-dashed border-plum/20 bg-white p-8 text-center"><h2 className="font-serif text-2xl text-plum">Team member unavailable</h2><p className="mt-2 text-sm text-ink/55">This member was removed or is outside your account.</p><Link href={teamHref(scope)} className="mt-4 inline-flex rounded-lg bg-magenta px-5 py-3 text-sm font-bold text-white">Back to authorized users</Link></section>;
+  const editor = <form key={selected?.id || "new"} onSubmit={submit} className="rounded-[14px] border border-plum/10 bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">{selected ? "Edit User" : "Add User"}</h2><p className="mt-1 text-sm leading-6 text-ink/65">{scope === "salon" ? "Enter the user details and choose every section they may access. Billing always remains with the salon owner." : "Company-domain admins are invitation-only. Choose every platform section they may access."}</p></div>{showBackLink ? <Link href={teamHref(scope)} className="rounded-lg border border-plum/15 px-4 py-2 text-sm font-bold text-plum">Back to authorized users</Link> : null}</div>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field name="name" label="Full name" defaultValue={selected?.name}/>
         <Field name="email" label={scope === "admin" ? "Company email" : "Email"} type="email" defaultValue={selected?.email} readOnly={Boolean(selected)}/>
@@ -124,24 +135,23 @@ export default function TeamUserManager({ scope }: { scope: TeamScope }) {
       <fieldset className="mt-5"><legend className="flex items-center gap-2 font-semibold text-plum"><ShieldCheck size={18}/>Section permissions</legend><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{options.map(([key,label]) => <label key={key} className="flex items-center gap-3 rounded-lg border border-plum/10 bg-cream/40 p-3 text-sm"><input name={`permission_${key}`} type="checkbox" defaultChecked={Boolean(selected?.permissions?.[key])} className="h-4 w-4 accent-magenta"/>{label}</label>)}</div></fieldset>
       {message ? <p role="status" className="mt-4 rounded-lg bg-blush/40 p-3 text-sm text-plum">{message}</p> : null}
       <button disabled={submitting} className="mt-5 rounded-lg bg-magenta px-7 py-3 font-bold text-white disabled:opacity-60">{submitting ? "Saving…" : selected ? "Update User" : "Add User"}</button>
-    </form>
+      {selected && !selected.is_super_admin ? <div className="mt-4 flex flex-wrap gap-2 border-t border-plum/10 pt-4">{scope === "admin" && selected.status === "Invited" ? <Action icon={MailPlus} label="Resend invitation" onClick={() => void adminAction(selected, "resend")}/> : null}{scope === "admin" && selected.status === "Active" ? <Action icon={ShieldOff} label="Suspend" onClick={() => void adminAction(selected, "suspend")}/> : null}{scope === "admin" && ["Inactive", "Suspended", "Revoked"].includes(selected.status || "") ? <Action icon={RefreshCw} label="Reactivate" onClick={() => void adminAction(selected, "reactivate")}/> : null}{scope === "admin" && selected.status !== "Revoked" ? <button type="button" onClick={() => void adminAction(selected, "revoke")} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Revoke</button> : null}<button type="button" onClick={() => void remove(selected)} className="flex items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700"><Trash2 size={15}/>Remove access</button></div> : null}
+    </form>;
+  if (focused) return editor;
+  return <div className="space-y-5">
     <section className="rounded-[14px] border border-plum/10 bg-white p-5">
-      <h2 className="font-serif text-2xl text-plum">Authorized Users</h2><p className="mt-1 text-sm text-ink/60">New users appear here immediately after they are added.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Authorized Users</h2><p className="mt-1 text-sm text-ink/60">Open one member to manage details and permissions in a focused workspace.</p></div><Link href={detailHref(scope, "new")} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-sm font-bold text-white"><UserPlus size={16} className="mr-2"/>Add User</Link></div>
       {message ? <p role="status" className="mt-4 rounded-lg bg-blush/40 p-3 text-sm text-plum">{message}</p> : null}
-      <div className="mt-4 divide-y divide-plum/10">{users.map((user) => <div key={user.id} className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center">
+      <div className="mt-4 divide-y divide-plum/10">{users.map((user) => <Link href={detailHref(scope, user.id)} key={user.id} className="flex flex-col justify-between gap-3 py-4 transition hover:bg-blush/15 sm:flex-row sm:items-center">
         <span><b className="block">{user.name || user.email}</b><small className="mt-1 block text-sm text-ink/65">{user.email} · {user.phone || "No phone"} · {user.role || "Staff"}</small></span>
-        <span className="flex flex-wrap items-center gap-2"><Status user={user}/>{!user.is_super_admin ? <>
-          {scope === "admin" && user.status === "Invited" ? <Action icon={MailPlus} label="Resend" onClick={() => void adminAction(user, "resend")}/> : null}
-          {scope === "admin" && user.status === "Active" ? <Action icon={ShieldOff} label="Suspend" onClick={() => void adminAction(user, "suspend")}/> : null}
-          {scope === "admin" && ["Inactive", "Suspended", "Revoked"].includes(user.status || "") ? <Action icon={RefreshCw} label="Reactivate" onClick={() => void adminAction(user, "reactivate")}/> : null}
-          {scope === "admin" && user.status !== "Revoked" ? <button type="button" onClick={() => void adminAction(user, "revoke")} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Revoke</button> : null}
-          <button type="button" onClick={() => setSelected(user)} className="rounded-lg border border-plum/15 px-3 py-2 text-xs font-bold text-plum">Edit</button>
-          <button type="button" onClick={() => void remove(user)} className="flex items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700"><Trash2 size={15}/>Remove</button>
-        </> : null}</span>
-      </div>)}{!users.length ? <p className="py-8 text-center text-sm text-ink/60">No additional users have been added.</p> : null}</div>
+        <span className="flex flex-wrap items-center gap-2"><Status user={user}/><span className="text-xs font-bold text-magenta">Open member →</span></span>
+      </Link>)}{!users.length ? <p className="py-8 text-center text-sm text-ink/60">No additional users have been added.</p> : null}</div>
     </section>
   </div>;
 }
+
+function teamHref(scope: TeamScope) { return scope === "admin" ? "/admin/settings/team" : "/salon/dashboard/settings/team"; }
+function detailHref(scope: TeamScope, id: string) { return scope === "admin" ? `/admin/settings/member-${encodeURIComponent(id)}` : `/salon/dashboard/settings/member-${encodeURIComponent(id)}`; }
 
 function ReadOnlyUsers({ users }: { users: TeamUser[] }) {
   return <section className="rounded-[14px] border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Authorized Users</h2><p className="mt-1 text-sm leading-6 text-ink/65">Team invitations and permission changes are restricted to the account owner or a Super Admin.</p><div className="mt-4 divide-y divide-plum/10">{users.map((user) => <div key={user.id} className="flex items-center justify-between gap-4 py-4"><span><b className="block">{user.name || user.email}</b><small className="mt-1 block text-sm text-ink/65">{user.email} · {user.phone || "No phone"} · {user.role || "Staff"}</small></span><Status user={user}/></div>)}{!users.length ? <p className="py-8 text-center text-sm text-ink/60">No authorized users yet.</p> : null}</div></section>;

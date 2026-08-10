@@ -64,7 +64,7 @@ async function recordAudit(
 async function GETHandler(request: Request) {
   let admin;
   try {
-    const context = await requireAdminPermission(request, "settings");
+    const context = await requireAdminPermission(request, "engine");
     admin = context.admin;
     const [assets, versions] = await Promise.all([
       admin.from("platform_brand_assets").select("*").order("display_name"),
@@ -98,7 +98,7 @@ async function POSTHandler(request: Request) {
   let admin;
   let assetKey: string | null = null;
   try {
-    const context = await requireAdminPermission(request, "settings");
+    const context = await requireAdminPermission(request, "engine");
     admin = context.admin;
     const form = await request.formData();
     assetKey = cleanText(form.get("asset_key"), 40);
@@ -239,7 +239,7 @@ async function PATCHHandler(request: Request) {
   let admin;
   let assetKey: string | null = null;
   try {
-    const context = await requireAdminPermission(request, "settings");
+    const context = await requireAdminPermission(request, "engine");
     admin = context.admin;
     const body = await request.json() as Record<string, unknown>;
     assetKey = cleanText(body.asset_key, 40);

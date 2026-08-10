@@ -7,6 +7,7 @@ const login = read("src/lib/secureLoginServer.ts");
 const start = read("src/app/api/auth/login/start/route.ts");
 const team = read("src/app/api/admin/team/route.ts");
 const adminData = read("src/app/api/admin/data/route.ts");
+const adminDataProjectionCore = read("src/lib/adminDataProjectionCore.ts");
 const migration = read(
   "supabase/migrations/20260720110000_admin_identity_security.sql",
 );
@@ -64,10 +65,11 @@ const checks = [
   ],
   [
     "admin overview requests only schema-backed booking fields",
-    adminData.includes(
+    adminData.includes("ADMIN_OVERVIEW_PROJECTIONS") &&
+      adminDataProjectionCore.includes(
       '"id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status"',
-    ) &&
-      !adminData.includes(
+      ) &&
+      !adminDataProjectionCore.includes(
         "deposit_amount,deposit_status,payment_status",
       ),
   ],

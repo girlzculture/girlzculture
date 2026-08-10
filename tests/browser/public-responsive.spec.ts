@@ -121,6 +121,50 @@ test("homepage promotion rail advances through all eight cards and loops without
   expect(overflow).toBe(false);
 });
 
+test("focused homepage promotion rail resumes automatically without requiring blur", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the shared focus timer contract.");
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "girlz-culture-mobile-location-prompt-v1",
+      JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
+    );
+  });
+  await page.goto("/");
+  const region = page.getByRole("region", {
+    name: "Featured Girlz Culture promotions",
+  });
+  const rail = region.getByLabel("Promotional cards. Swipe to browse.");
+  await expect(region).toHaveAttribute("data-auto-state", "running");
+  await rail.focus();
+  await expect(region).toHaveAttribute("data-auto-state", "paused");
+  const focusedIndex = await region.getAttribute("data-current-index");
+  await expect
+    .poll(() => region.getAttribute("data-auto-state"), { timeout: 3_500 })
+    .toBe("running");
+  await expect
+    .poll(() => region.getAttribute("data-current-index"), { timeout: 3_500 })
+    .not.toBe(focusedIndex);
+});
+
+test("promotion schedule boundaries take effect without a page refresh", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the shared schedule clock.");
+  await page.goto("/internal/acceptance/content-promotion");
+  const fixture = page.getByTestId("promotion-schedule-boundary");
+  await expect(fixture.getByText("Schedule baseline card", { exact: true })).toBeVisible();
+  await expect(fixture.getByText("Schedule boundary card", { exact: true })).toHaveCount(0);
+  await expect
+    .poll(() => fixture.getByText("Schedule boundary card", { exact: true }).count(), { timeout: 4_000 })
+    .toBe(1);
+  await expect
+    .poll(() => fixture.getByText("Schedule boundary card", { exact: true }).count(), { timeout: 5_000 })
+    .toBe(0);
+  await expect(fixture.getByText("Schedule baseline card", { exact: true })).toBeVisible();
+});
+
 test("homepage removes the intro and keeps mobile/tablet focused on promotions and salons", async ({
   page,
 }) => {
@@ -551,9 +595,14 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
       },
     ],
     status: "Published",
+    publication_state: "Published",
+    is_enabled: true,
+    published_at: "2026-07-27T10:00:00.000Z" as string | null,
+    published_payload: null as unknown,
     updated_at: "2026-07-27T10:00:00.000Z",
   };
   let publishedPayload: typeof savedPage | null = null;
+  let publicationAction = "";
   const linkTargets = [
     {
       type: "Salon",
@@ -583,9 +632,16 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
     if (route.request().method() === "PUT") {
       const requestBody = route.request().postDataJSON() as {
         payload: typeof savedPage;
+        action?: string;
       };
+      publicationAction = String(requestBody.action || "");
       savedPage = {
         ...requestBody.payload,
+        status: publicationAction === "publish" ? "Published" : "Draft",
+        publication_state: publicationAction === "publish" ? "Published" : "Hidden",
+        is_enabled: publicationAction === "publish",
+        published_at: publicationAction === "publish" ? "2026-07-27T12:00:00.000Z" : null,
+        published_payload: publicationAction === "publish" ? requestBody.payload : null,
         updated_at: "2026-07-27T12:00:00.000Z",
       };
       publishedPayload = savedPage;
@@ -607,6 +663,17 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
         serviceGroups: [],
         serviceAddons: [],
         linkTargets,
+        publicationByPage: {
+          home: {
+            saved_version: savedPage.updated_at,
+            public_version: savedPage.publication_state === "Published" ? savedPage.published_at : null,
+            saved_card_count: savedPage.sections[0].cards.length,
+            public_card_count: savedPage.publication_state === "Published" ? savedPage.sections[0].cards.length : 0,
+            fallback_count: 0,
+            display_limit: 8,
+            state: savedPage.publication_state === "Published" ? "Published / Published version live" : "Draft",
+          },
+        },
       }),
     });
   });
@@ -614,7 +681,7 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
   await page.goto("/internal/acceptance/content-promotion");
   const publicRail = page.getByRole("region", {
     name: "Featured Girlz Culture promotions",
-  });
+  }).first();
   await expect(publicRail.locator("[data-promotion-card]")).toHaveCount(8);
   await expect(publicRail).not.toContainText("Expired card must stay hidden");
   await expect(publicRail).not.toContainText("Draft card must stay hidden");
@@ -636,7 +703,7 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
   );
 
   await expect(
-    page.getByRole("heading", { name: "Page composition" }),
+    page.getByRole("heading", { name: "Hero Promotion Carousel" }),
   ).toBeVisible();
   const sources = page.getByLabel("Card source");
   await expect(sources).toHaveCount(8);
@@ -663,10 +730,11 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
   await ends.nth(2).fill("2026-08-27T12:00");
   await alternatives.nth(2).fill("Client wearing an edited braid style");
 
-  await page.getByRole("button", { name: "Save Page" }).click();
+  await page.getByRole("button", { name: "Publish page" }).click();
   await expect(page.getByRole("status")).toContainText(
-    "Page saved, verified in Supabase",
+    "Page saved, verified in Supabase, published",
   );
+  expect(publicationAction).toBe("publish");
   expect(publishedPayload).not.toBeNull();
   const persistedPayload = publishedPayload as typeof savedPage | null;
   if (!persistedPayload) throw new Error("The card publication payload was not captured.");
@@ -694,6 +762,182 @@ test("promotion cards edit, publish, reload, schedule, render GIFs, and keep eli
   await expect(page.getByLabel("Card title").nth(2)).toHaveValue(
     "Edited launch card",
   );
+});
+
+test("homepage promotion composition preserves saved priority and mobile salon privacy", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers deterministic promotion composition.");
+  await page.setViewportSize({ width: 390, height: 1_000 });
+  await page.route("**/api/admin/content", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ pages: [], posts: [], masterStyles: [], serviceCategories: [], serviceGroups: [], serviceAddons: [], linkTargets: [], publicationByPage: {} }),
+    });
+  });
+  await page.goto("/internal/acceptance/content-promotion");
+
+  const six = page.getByTestId("promotion-composition-six");
+  await expect(six).toHaveAttribute("data-saved-count", "6");
+  await expect(six).toHaveAttribute("data-fallback-count", "2");
+  const sixIds = String(await six.getAttribute("data-effective-ids")).split(",");
+  expect(sixIds.slice(0, 6)).toEqual(["gif-card", "active-2", "active-3", "active-4", "active-5", "active-6"]);
+  expect(sixIds.slice(6)).toEqual(["editorial-nearby", "editorial-knotless"]);
+
+  const eight = page.getByTestId("promotion-composition-eight");
+  await expect(eight).toHaveAttribute("data-saved-count", "8");
+  await expect(eight).toHaveAttribute("data-fallback-count", "0");
+  expect(String(await eight.getAttribute("data-effective-ids")).split(",")).toEqual([
+    "gif-card", "active-2", "active-3", "active-4", "active-5", "active-6", "active-7", "active-8",
+  ]);
+
+  const salonPromotion = page.locator("[data-promotion-card]").filter({ hasText: "Paid campaign destination" });
+  await expect(salonPromotion.getByText("Distance unavailable", { exact: true })).toBeVisible();
+  await expect(salonPromotion.getByText("Scheduled promotional content.", { exact: true })).toHaveCount(0);
+});
+
+test("a future scheduled-only page keeps its queued snapshot and unpublish control after Save draft", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers resolved publication controls.");
+  const scheduledAt = "2099-08-20T15:00:00.000Z";
+  let action = "";
+  let scheduledPage = {
+    id: "home-page",
+    slug: "home",
+    title: "Homepage",
+    hero_title: "Queued homepage",
+    hero_subtitle: "This draft is not the queued snapshot.",
+    sections: [{ id: "promo-section", type: "promo_rail", title: "Featured", is_visible: true, cards: [] }],
+    status: "Scheduled",
+    publication_state: "Scheduled",
+    is_enabled: true,
+    published_at: null,
+    published_payload: null,
+    scheduled_publish_at: scheduledAt,
+    scheduled_payload: { slug: "home", title: "Queued public snapshot", status: "Published", sections: [] },
+    updated_at: "2026-08-08T10:00:00.000Z",
+  };
+  const responseBody = () => ({
+    pages: [scheduledPage],
+    posts: [],
+    masterStyles: [],
+    serviceCategories: [],
+    serviceGroups: [],
+    serviceAddons: [],
+    linkTargets: [],
+    publicationByPage: {
+      home: {
+        saved_version: scheduledPage.updated_at,
+        public_version: null,
+        public_card_count: 0,
+        fallback_count: 8,
+        is_public: false,
+        state: `Scheduled / Queued for ${scheduledAt}`,
+      },
+    },
+  });
+  await page.route("**/api/admin/content", async (route) => {
+    if (route.request().method() === "PUT") {
+      const requestBody = route.request().postDataJSON() as { action?: string; payload: typeof scheduledPage };
+      action = String(requestBody.action || "");
+      scheduledPage = {
+        ...requestBody.payload,
+        status: "Scheduled",
+        publication_state: "Scheduled",
+        is_enabled: true,
+        published_at: null,
+        published_payload: null,
+        scheduled_publish_at: scheduledAt,
+        scheduled_payload: scheduledPage.scheduled_payload,
+        updated_at: "2026-08-08T11:00:00.000Z",
+      };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: scheduledPage }) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(responseBody()) });
+  });
+
+  await page.goto("/internal/acceptance/content-promotion");
+  await expect(page.getByText(`Scheduled / Queued for ${scheduledAt}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Unpublish" })).toBeVisible();
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect.poll(() => action).toBe("save_draft");
+  await expect(page.getByRole("button", { name: "Unpublish" })).toBeVisible();
+  expect(scheduledPage.scheduled_publish_at).toBe(scheduledAt);
+  expect(scheduledPage.scheduled_payload).not.toBeNull();
+});
+
+test("About carousels move independently, resume after stationary focus or hover, and expose mobile Read more", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser covers the independent About interactions.");
+  await page.setViewportSize({ width: 390, height: 1_200 });
+  await page.route("**/api/admin/content", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ pages: [], posts: [], masterStyles: [], serviceCategories: [], serviceGroups: [], serviceAddons: [], linkTargets: [], publicationByPage: {} }),
+    });
+  });
+  await page.goto("/internal/acceptance/content-promotion");
+  const reverse = page.getByRole("region", { name: "About carousel one" });
+  const forward = page.getByRole("region", { name: "About carousel two" });
+  await reverse.scrollIntoViewIfNeeded();
+  await forward.scrollIntoViewIfNeeded();
+  await expect(reverse).toHaveAttribute("data-carousel-direction", "reverse");
+  await expect(forward).toHaveAttribute("data-carousel-direction", "forward");
+  await expect(reverse).toHaveAttribute("data-auto-state", "running");
+  await expect(forward).toHaveAttribute("data-auto-state", "running");
+  await expect.poll(async () => `${await reverse.getAttribute("data-current-index")},${await forward.getAttribute("data-current-index")}`, { timeout: 4_000 }).toBe("2,1");
+
+  const reverseViewport = reverse.locator('[tabindex="0"]');
+  await reverseViewport.hover();
+  await expect(reverse).toHaveAttribute("data-auto-state", "paused");
+  const pausedIndex = await reverse.getAttribute("data-current-index");
+  await expect.poll(() => reverse.getAttribute("data-auto-state"), { timeout: 2_500 }).toBe("running");
+  await expect.poll(async () => await reverse.getAttribute("data-current-index"), { timeout: 2_500 }).not.toBe(pausedIndex);
+
+  const forwardViewport = forward.locator('[tabindex="0"]');
+  await forwardViewport.focus();
+  await expect(forward).toHaveAttribute("data-auto-state", "paused");
+  const focusedIndex = await forward.getAttribute("data-current-index");
+  await expect.poll(() => forward.getAttribute("data-auto-state"), { timeout: 2_500 }).toBe("running");
+  await expect.poll(async () => await forward.getAttribute("data-current-index"), { timeout: 2_500 }).not.toBe(focusedIndex);
+
+  await page.getByRole("button", { name: "Read more" }).click();
+  const dialog = page.getByRole("dialog", { name: "Our Story" });
+  await expect(dialog).toContainText("This complete story remains available");
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test("the ten required searches resolve deterministically and a real service fixture honors promotions and openings", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser executes the shared deterministic parser.");
+  await page.goto("/internal/acceptance/decision-search");
+  const intent = async (index: number) => JSON.parse(String(await page.getByTestId(`decision-query-${index}`).getAttribute("data-intent")));
+
+  expect(await intent(1)).toMatchObject({ stableServiceId: null, sort: "distance", semanticPhrase: null });
+  expect(await intent(2)).toMatchObject({ stableServiceId: "service-boho" });
+  expect(await intent(3)).toMatchObject({ stableServiceId: "service-box" });
+  expect(await intent(4)).toMatchObject({ stableServiceId: null, affordableIntent: true, sort: "price_low" });
+  expect(await intent(5)).toMatchObject({ stableServiceId: "service-knotless", affordableIntent: true, sort: "price_low" });
+  expect(await intent(6)).toMatchObject({ categoryId: "category-braiding", minimumRating: 3.9, sort: "rating" });
+  expect(await intent(7)).toMatchObject({ stableServiceId: "service-dominican", semanticPhrase: null });
+  await expect(page.getByTestId("decision-query-7")).toHaveAttribute("data-location", "Bronx");
+  expect(await intent(8)).toMatchObject({ maximumPrice: 80, date: "2026-08-08" });
+  expect(await intent(9)).toMatchObject({ categoryId: "category-natural", radiusMiles: 5, minimumRating: 3.9, sort: "rating" });
+  expect(await intent(10)).toMatchObject({ stableServiceId: "service-knotless", maximumPrice: 150, date: "2026-08-08" });
+  const fixture = page.getByTestId("decision-service-fixture");
+  await expect(fixture).toHaveAttribute(
+    "data-selected-service",
+    "discounted-with-opening",
+  );
+  await expect(fixture).toHaveAttribute("data-selected-price", "75");
+  await expect(fixture).toHaveAttribute("data-opening-date", "2026-08-08");
 });
 
 test("first relevant visit requests location once and reuses it across discovery pages", async ({

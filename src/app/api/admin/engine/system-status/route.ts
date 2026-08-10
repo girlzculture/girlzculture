@@ -378,7 +378,7 @@ function providerSpecs(
 
 async function GETHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "settings");
+    const { admin } = await requireAdminPermission(request, "engine");
     const [
       engineResult,
       storageResult,
@@ -571,7 +571,7 @@ async function testIntegration(
 }
 
 async function POSTHandler(request: Request) {
-  const context = await requireAdminPermission(request, "settings");
+  const context = await requireAdminPermission(request, "engine");
   const body = (await request.json()) as { key?: unknown };
   const key = String(body.key || "").trim();
   if (!/^[a-z][a-z0-9_]{1,49}$/.test(key))

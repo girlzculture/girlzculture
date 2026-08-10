@@ -5,7 +5,7 @@ import { aiProviderConfigured, approvedAiModels, approvedAiProviders, runAiSandb
 
 async function GETHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "settings");
+    const { admin } = await requireAdminPermission(request, "engine");
     const month = new Date(); month.setUTCDate(1); month.setUTCHours(0, 0, 0, 0);
     const [{ data: features, error }, { data: prompts }, { data: usage }, { data: drafts }, { data: kill }] = await Promise.all([
       admin.from("ai_automation_features").select("*").order("display_name"),
@@ -25,7 +25,7 @@ async function GETHandler(request: Request) {
 
 async function PATCHHandler(request: Request) {
   try {
-    const { admin, user } = await requireAdminPermission(request, "settings");
+    const { admin, user } = await requireAdminPermission(request, "engine");
     const body = await request.json() as Record<string, unknown>;
     const featureKey = cleanText(body.feature_key, 120);
     const { data: existing, error: loadError } = await admin.from("ai_automation_features").select("*").eq("feature_key", featureKey).single();
@@ -53,7 +53,7 @@ async function PATCHHandler(request: Request) {
 
 async function POSTHandler(request: Request) {
   try {
-    const { admin, user } = await requireAdminPermission(request, "settings");
+    const { admin, user } = await requireAdminPermission(request, "engine");
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 40);
     if (action !== "sandbox") throw new Error("Choose a supported AI Engine action.");

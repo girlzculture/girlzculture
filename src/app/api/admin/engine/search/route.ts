@@ -11,7 +11,7 @@ function stringList(value: unknown) {
 
 async function GETHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "settings");
+    const { admin } = await requireAdminPermission(request, "engine");
     const [settings, rules, services, categories, zeroResults] = await Promise.all([
       admin.from("search_engine_settings").select("*").eq("id", true).single(),
       admin.from("search_language_rules").select("*").order("target_type").order("canonical_term"),
@@ -35,7 +35,7 @@ async function GETHandler(request: Request) {
 
 async function PATCHHandler(request: Request) {
   try {
-    const { admin, user } = await requireAdminPermission(request, "settings");
+    const { admin, user } = await requireAdminPermission(request, "engine");
     const body = await request.json() as Record<string, unknown>;
     if (body.settings && typeof body.settings === "object") {
       const input = body.settings as Record<string, unknown>;

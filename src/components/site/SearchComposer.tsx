@@ -12,7 +12,6 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
   const [locationText, setLocationText] = useState("");
   const [resolved, setResolved] = useState<CustomerLocation | null>(null);
   const [editingLocation, setEditingLocation] = useState(false);
-  const [searching, setSearching] = useState(false);
   const customerLocation = useCustomerLocation();
   const router = useRouter();
   const effectiveLocation = resolved || (!editingLocation ? customerLocation.location : null);
@@ -41,11 +40,14 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
     setLocationText("");
     await customerLocation.useDeviceLocation();
   }
-  function destination(interpretedStyle?: string) {
+  function destination() {
     const selectedLocation = effectiveLocation;
     const query = new URLSearchParams();
-    const selectedStyle = interpretedStyle?.trim() || style.trim();
-    if (selectedStyle) query.set("style", selectedStyle);
+    const customerQuery = style.trim();
+    // Preserve every customer constraint for the shared deterministic search.
+    // Replacing the query with one AI-extracted style used to discard budget,
+    // date, rating, promotion, and distance language.
+    if (customerQuery) query.set("q", customerQuery);
     if (selectedLocation) {
       query.set("lat", String(selectedLocation.lat));
       query.set("lng", String(selectedLocation.lng));
@@ -54,51 +56,8 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
     return query.size ? `/salons?${query}` : "/salons";
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (searching) return;
-    const prompt = [style.trim(), effectiveLocation?.label]
-      .filter(Boolean)
-      .join(" near ");
-    if (prompt.length < 3) {
-      router.push(destination());
-      return;
-    }
-    setSearching(true);
-    try {
-      const response = await fetch("/api/concierge/search", {
-        method: "POST",
-        credentials: "same-origin",
-        redirect: "manual",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-Requested-With": "girlz-culture-home-search",
-        },
-        body: JSON.stringify({
-          prompt,
-          latitude: effectiveLocation?.lat,
-          longitude: effectiveLocation?.lng,
-          website: "",
-        }),
-      });
-      const contentType = response.headers.get("content-type") || "";
-      if (
-        response.ok &&
-        contentType.toLowerCase().includes("application/json")
-      ) {
-        const body = (await response.json()) as {
-          intent?: { style?: string | null };
-        };
-        router.push(destination(body.intent?.style || undefined));
-        return;
-      }
-    } catch {
-      // The standard database search remains available when assisted
-      // interpretation or its provider is temporarily unavailable.
-    } finally {
-      setSearching(false);
-    }
     router.push(destination());
   }
 
@@ -120,7 +79,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
         <button type="button" onClick={() => void requestDeviceLocation()} className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-[10px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><LocateFixed size={13}/>Use my location</button>
         {customerLocation.permissionError ? <p role="alert" className="mt-1 text-[10px] text-red-700">{customerLocation.permissionError}</p> : null}
       </div>
-      <button type="submit" disabled={searching} className="min-h-11 rounded-[10px] bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-wait disabled:opacity-70">{searching ? "Searching…" : "Search"}</button>
+      <button type="submit" className="min-h-11 rounded-[10px] bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover">Search</button>
     </div>
   </form>;
 }

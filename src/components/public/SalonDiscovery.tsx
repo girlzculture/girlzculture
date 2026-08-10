@@ -29,6 +29,7 @@ type DecisionSalon = PublicSalonResult & {
     name: string;
     price: number | null;
     original_price: number | null;
+    maximum_displayed_price: number | null;
   } | null;
   promotion?: {
     id: string;
@@ -55,8 +56,23 @@ type SearchResponse = {
   question?: string | null;
   needs_location?: boolean;
   location_label?: string | null;
+  empty_reason?: SearchEmptyReason | null;
+  partial_search?: boolean;
+  warning?: string | null;
   error?: string;
 };
+
+type SearchEmptyReason =
+  | "location_required"
+  | "location_unresolved"
+  | "no_salons_in_radius"
+  | "service_unavailable_nearby"
+  | "rating_unavailable"
+  | "budget_unavailable"
+  | "opening_unavailable"
+  | "promotion_unavailable"
+  | "technical_search_failure"
+  | "no_exact_match";
 
 export type DiscoveryFilters = {
   radiusMiles: number;
@@ -178,6 +194,7 @@ export default function SalonDiscovery({
       ? `${initialTotal} ${initialTotal === 1 ? "salon" : "salons"} nearby.`
       : "",
   );
+  const [searchWarning, setSearchWarning] = useState("");
   const [locationLabel, setLocationLabel] = useState(initialLocation);
   const [locationText, setLocationText] = useState("");
   const [locationEditorOpen, setLocationEditorOpen] = useState(!initialOrigin);
@@ -187,6 +204,7 @@ export default function SalonDiscovery({
   const [loading, setLoading] = useState(false);
   const [locationBusy, setLocationBusy] = useState(false);
   const [error, setError] = useState("");
+  const [emptyReason, setEmptyReason] = useState<SearchEmptyReason | null>(null);
   const [selectedSalonId, setSelectedSalonId] = useState("");
   const [scrollRestoreRevision, setScrollRestoreRevision] = useState(0);
   const requestController = useRef<AbortController | null>(null);
@@ -346,6 +364,7 @@ export default function SalonDiscovery({
       requestController.current = controller;
       setLoading(true);
       setError("");
+      setSearchWarning("");
       try {
         const response = await fetch("/api/discovery/decision-search", {
           method: "POST",
@@ -384,12 +403,14 @@ export default function SalonDiscovery({
         setFilters(nextFilters);
         setDraftFilters(nextFilters);
         setSalons(rows);
+        setEmptyReason(rows.length ? null : body.empty_reason || "no_exact_match");
         setSummary(
           body.summary ||
             (rows.length
               ? `${rows.length} matching salons found.`
               : "No matching salons were found."),
         );
+        setSearchWarning(body.warning || "");
         setLocationLabel(
           body.location_label ||
             customerLocation.location?.label ||
@@ -449,6 +470,8 @@ export default function SalonDiscovery({
             ? requestError.message
             : "Search could not be completed.",
         );
+        setSearchWarning("");
+        setEmptyReason(null);
       } finally {
         if (requestController.current === controller) setLoading(false);
       }
@@ -525,6 +548,7 @@ export default function SalonDiscovery({
   async function requestDeviceLocation() {
     setLocationBusy(true);
     setError("");
+    setEmptyReason(null);
     pendingLocationSearch.current = true;
     setIgnoreInitialOrigin(true);
     try {
@@ -551,6 +575,7 @@ export default function SalonDiscovery({
     setLocationEditorOpen(true);
     setSalons([]);
     setSummary("");
+    setSearchWarning("");
     setError("");
     setView("list");
   }
@@ -647,6 +672,11 @@ export default function SalonDiscovery({
           {summary}
         </div>
       ) : null}
+      {searchWarning ? (
+        <div role="status" className="mt-2 rounded-[9px] border border-amber/40 bg-amber/10 px-3 py-2 text-[11px] font-semibold leading-5 text-plum">
+          {searchWarning}
+        </div>
+      ) : null}
       {error ? (
         <div
           role="alert"
@@ -711,7 +741,7 @@ export default function SalonDiscovery({
               />
             </div>
           ) : (
-            <EmptyState />
+            <EmptyState reason={emptyReason} />
           )
         ) : salons.length ? (
           <div
@@ -737,7 +767,7 @@ export default function SalonDiscovery({
             ))}
           </div>
         ) : (
-          <EmptyState />
+          <EmptyState reason={emptyReason} />
         )}
       </section>
 
@@ -931,14 +961,57 @@ function FilterSelect({
   );
 }
 
-function EmptyState() {
+function EmptyState({ reason }: { reason: SearchEmptyReason | null }) {
+  const copy: Record<SearchEmptyReason, { title: string; body: string }> = {
+    location_required: {
+      title: "Choose a search area",
+      body: "Add a city, neighborhood, or ZIP, or use your current location.",
+    },
+    location_unresolved: {
+      title: "Check the location you entered",
+      body: "We could not match that city or ZIP. Choose a supported suggestion or correct the location before searching again.",
+    },
+    no_salons_in_radius: {
+      title: "No salons inside this distance",
+      body: "Widen the distance or choose another location.",
+    },
+    service_unavailable_nearby: {
+      title: "That service is not available nearby yet",
+      body: "Try a wider distance or browse related services without changing the service you requested.",
+    },
+    rating_unavailable: {
+      title: "No salons meet that rating nearby",
+      body: "Try a wider distance or a lower minimum rating.",
+    },
+    budget_unavailable: {
+      title: "No matching service is inside that budget",
+      body: "Raise the budget, widen the distance, or check current salon offers.",
+    },
+    opening_unavailable: {
+      title: "No matching opening on that date",
+      body: "Choose another day or remove the time requirement.",
+    },
+    promotion_unavailable: {
+      title: "No active offer matches this search",
+      body: "Remove the offers-only filter or try another service.",
+    },
+    technical_search_failure: {
+      title: "Availability could not be verified",
+      body: "Nearby service matches exist, but the live calendar check did not complete. Try again; no opening has been guessed.",
+    },
+    no_exact_match: {
+      title: "No exact marketplace match",
+      body: "Try a wider distance or remove one requirement.",
+    },
+  };
+  const message = copy[reason || "no_exact_match"];
   return (
     <div className="mt-3 rounded-[14px] border border-dashed border-plum/20 bg-white p-7 text-center">
       <h2 className="font-serif text-xl font-semibold text-plum">
-        No matching salons
+        {message.title}
       </h2>
       <p className="mx-auto mt-2 max-w-lg text-[12px] leading-6 text-ink/65">
-        Try a wider distance, a higher budget, fewer requirements, or another location.
+        {message.body}
       </p>
       <Link
         href="/styles"

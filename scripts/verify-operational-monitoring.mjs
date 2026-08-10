@@ -14,8 +14,12 @@ function walk(directory) {
   });
 }
 
+function regexEscape(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 115, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 121, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -33,7 +37,9 @@ for (const file of routeFiles) {
   assert.match(source, /from "@\/lib\/operationalMonitoring"/, `${route} does not import shared monitoring.`);
   for (const method of wrappedMethods) {
     assert.ok(
-      source.includes(`routeMonitoringProfile("${route}", "${method}"`),
+      new RegExp(
+        `routeMonitoringProfile\\(\\s*["']${regexEscape(route)}["']\\s*,\\s*["']${method}["']`,
+      ).test(source),
       `${method} ${route} has stale or incorrect route evidence.`,
     );
   }

@@ -12,6 +12,9 @@ const CANONICAL_DESKTOP_FILE =
  * Canonical uploaded images use the same UUID and file name for each generated
  * device slot. Restrict derivation to that exact file shape so ordinary URLs
  * containing the word "desktop" are never rewritten.
+ * Animated GIF uploads deliberately do not match: they have one canonical
+ * animation URL and must never be pointed at static renditions that do not
+ * exist.
  *
  * New server-generated renditions use the neutral `.img` suffix because the
  * response Content-Type (not the source extension) truthfully identifies a

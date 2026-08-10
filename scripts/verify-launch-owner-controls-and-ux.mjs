@@ -21,6 +21,9 @@ const map = read("src/components/search/GoogleSalonMap.tsx");
 const promo = read("src/components/public/HomepagePromoRail.tsx");
 const promoCore = read("src/lib/homePromotionCore.ts");
 const promoApi = read("src/app/api/admin/content/route.ts");
+const contentTargetsMigration = read(
+  "supabase/migrations/20260809150000_admin_record_quality_and_content_targets.sql",
+);
 const promoAdmin = read("src/components/AdminContentManager.tsx");
 const actionToast = read("src/components/ActionToast.tsx");
 
@@ -82,7 +85,15 @@ assert.match(promo, /selectLocalPromotionCards/);
 assert.match(promoCore, /distanceMiles/);
 assert.match(promoCore, /radius_miles/);
 assert.match(promoCore, /MAX_HOMEPAGE_PROMOTION_COUNT/);
-assert.match(promoApi, /location_markets/);
+assert.match(promoApi, /admin\.rpc\("admin_content_link_targets"/);
+assert.match(
+  contentTargetsMigration,
+  /create or replace function public\.admin_content_link_targets[\s\S]*from public\.location_markets market/,
+);
+assert.match(
+  contentTargetsMigration,
+  /revoke all on function public\.admin_content_link_targets[\s\S]*grant execute on function public\.admin_content_link_targets[\s\S]*to service_role/,
+);
 assert.match(promoApi, /promotionRail\.cards\.length > 200/);
 assert.match(promoApi, /display_limit/);
 assert.match(promoAdmin, /Audience market/);

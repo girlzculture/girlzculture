@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ChevronDown,
-  ChevronUp,
+  ArrowLeft,
   CircleDollarSign,
   Download,
   FileClock,
@@ -11,6 +10,7 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
+import Link from "next/link";
 import {
   classifyBillingTransaction,
   filterBookingTransactions,
@@ -26,6 +26,7 @@ import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import { US_STATES } from "@/lib/usStates";
 import { formatZonedDateTime } from "@/lib/dateTime";
+import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
 
 type FinanceData = {
   booking_transactions: FinanceRow[];
@@ -90,7 +91,13 @@ function values(rows: FinanceRow[], key: string) {
     .map((value) => [value, value] as const);
 }
 
-export default function AdminFinanceDashboard() {
+export default function AdminFinanceDashboard({
+  initialTransactionKey,
+  returnTo = "/admin/finance",
+}: {
+  initialTransactionKey?: string;
+  returnTo?: string;
+} = {}) {
   const [data, setData] = useState<FinanceData>(empty);
   const [tab, setTab] = useState<Tab>("Transactions");
   const [busy, setBusy] = useState(true);
@@ -110,6 +117,7 @@ export default function AdminFinanceDashboard() {
     payoutStatus: "all",
     mode: "all",
   });
+  useAdminListScrollRestoration(!busy && !initialTransactionKey);
 
   const load = useCallback(async (salonId = "") => {
     setBusy(true);
@@ -166,13 +174,28 @@ export default function AdminFinanceDashboard() {
     }
   }, []);
   useEffect(() => {
-    const salonId = new URLSearchParams(window.location.search)
+    const search = new URLSearchParams(window.location.search);
+    const salonId = search
       .get("salon")
       ?.trim() || "";
     const timer = window.setTimeout(() => {
+      const requestedTab = search.get("tab") as Tab | null;
+      if (requestedTab && tabs.includes(requestedTab)) setTab(requestedTab);
+      setTransactionSearch(search.get("q") || "");
+      setTransactionType(search.get("type") || "all");
+      setFilters((current) => ({
+        ...current,
+        from: search.get("from") || "",
+        to: search.get("to") || "",
+        state: search.get("state") || "all",
+        city: search.get("city") || "all",
+        salon: salonId || "all",
+        paymentStatus: search.get("payment_status") || "all",
+        payoutStatus: search.get("payout_status") || "all",
+        mode: search.get("mode") || "all",
+      }));
       if (salonId) {
         setSelectedSalonId(salonId);
-        setFilters((current) => ({ ...current, salon: salonId }));
       }
       void load(salonId);
     }, 0);
@@ -399,6 +422,22 @@ export default function AdminFinanceDashboard() {
   const selectedSalon = selectedSalonId
     ? data.salons.find((salon) => String(salon.id) === selectedSalonId)
     : null;
+  const financeReturnPath = useMemo(() => {
+    const query = new URLSearchParams();
+    if (tab !== "Transactions") query.set("tab", tab);
+    if (transactionSearch) query.set("q", transactionSearch);
+    if (transactionType !== "all") query.set("type", transactionType);
+    if (filters.from) query.set("from", filters.from);
+    if (filters.to) query.set("to", filters.to);
+    if (filters.state !== "all") query.set("state", filters.state);
+    if (filters.city !== "all") query.set("city", filters.city);
+    if (filters.salon !== "all") query.set("salon", filters.salon);
+    if (filters.paymentStatus !== "all") query.set("payment_status", filters.paymentStatus);
+    if (filters.payoutStatus !== "all") query.set("payout_status", filters.payoutStatus);
+    if (filters.mode !== "all") query.set("mode", filters.mode);
+    const suffix = query.toString();
+    return suffix ? `/admin/finance?${suffix}` : "/admin/finance";
+  }, [filters, tab, transactionSearch, transactionType]);
 
   function exportCsv() {
     const blob = new Blob([financeCsv(filtered, data.admin_time_zone)], {
@@ -538,6 +577,14 @@ export default function AdminFinanceDashboard() {
         </button>
       </div>
     );
+  }
+
+  if (initialTransactionKey) {
+    const focused = unifiedTransactions.find((row) => row.transaction_key === initialTransactionKey);
+    return <div data-admin-finance-detail className="space-y-5">
+      <Link href={returnTo} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 bg-white px-4 text-xs font-bold text-plum"><ArrowLeft size={16}/>Back to filtered transactions</Link>
+      {focused ? <section className="rounded-2xl border border-plum/10 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-magenta">{focused.transaction_type}</p><h2 className="mt-1 font-serif text-3xl text-plum">{String(focused.public_reference || "Transaction detail")}</h2><p className="mt-1 text-xs text-ink/55">Recorded {when(focused.date, data.admin_time_zone)}</p></div><Status value={focused.payment_status}/></div><TransactionDetails row={focused} timeZone={data.admin_time_zone}/></section> : <section className="rounded-2xl border border-dashed border-plum/20 bg-white p-8 text-center"><h2 className="font-serif text-2xl text-plum">Transaction unavailable</h2><p className="mt-2 text-sm text-ink/55">The transaction was removed, is outside your permissions, or no longer matches this salon scope.</p></section>}
+    </div>;
   }
 
   return (
@@ -733,6 +780,7 @@ export default function AdminFinanceDashboard() {
           <UnifiedTransactionLedger
             rows={unifiedTransactions}
             timeZone={data.admin_time_zone}
+            returnPath={financeReturnPath}
           />
         </>
       ) : null}
@@ -899,11 +947,12 @@ export default function AdminFinanceDashboard() {
 function UnifiedTransactionLedger({
   rows,
   timeZone,
+  returnPath,
 }: {
   rows: UnifiedTransaction[];
   timeZone: string;
+  returnPath: string;
 }) {
-  const [expanded, setExpanded] = useState("");
   return (
     <section className="rounded-2xl border border-plum/10 bg-white">
       <div className="border-b border-plum/10 px-5 py-4">
@@ -917,9 +966,7 @@ function UnifiedTransactionLedger({
 
       <div className="space-y-3 p-3 lg:hidden">
         {rows.length ? (
-          rows.map((row) => {
-            const open = expanded === row.transaction_key;
-            return (
+          rows.map((row) => (
               <article
                 key={row.transaction_key}
                 className="rounded-xl border border-plum/10 p-4"
@@ -955,20 +1002,14 @@ function UnifiedTransactionLedger({
                     <Status value={row.payment_status} />
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setExpanded(open ? "" : row.transaction_key)}
+                <Link
+                  href={`/admin/finance/${encodeURIComponent(String(row.transaction_key))}?return=${encodeURIComponent(returnPath)}`}
                   className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-plum/15 text-xs font-bold text-plum"
                 >
-                  {open ? "Hide details" : "View details"}
-                  {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                </button>
-                {open ? (
-                  <TransactionDetails row={row} timeZone={timeZone} />
-                ) : null}
+                  Open transaction details
+                </Link>
               </article>
-            );
-          })
+            ))
         ) : (
           <div className="p-8 text-center text-xs text-ink/50">
             <FileClock className="mx-auto mb-2 text-magenta" />
@@ -1001,20 +1042,14 @@ function UnifiedTransactionLedger({
           </thead>
           <tbody>
             {rows.length ? (
-              rows.map((row) => {
-                const open = expanded === row.transaction_key;
-                return (
+              rows.map((row) => (
                   <TransactionRows
                     key={row.transaction_key}
                     row={row}
-                    open={open}
                     timeZone={timeZone}
-                    onToggle={() =>
-                      setExpanded(open ? "" : row.transaction_key)
-                    }
+                    returnPath={returnPath}
                   />
-                );
-              })
+                ))
             ) : (
               <EmptyRow
                 columns={10}
@@ -1030,17 +1065,14 @@ function UnifiedTransactionLedger({
 
 function TransactionRows({
   row,
-  open,
   timeZone,
-  onToggle,
+  returnPath,
 }: {
   row: UnifiedTransaction;
-  open: boolean;
   timeZone: string;
-  onToggle: () => void;
+  returnPath: string;
 }) {
   return (
-    <>
       <tr className="border-b border-plum/10 align-top">
         <Td>
           {when(row.date, timeZone)}
@@ -1060,25 +1092,14 @@ function TransactionRows({
           <Status value={row.payout_status} />
         </Td>
         <Td>
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={open}
+          <Link
+            href={`/admin/finance/${encodeURIComponent(String(row.transaction_key))}?return=${encodeURIComponent(returnPath)}`}
             className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-plum/15 px-3 text-[10px] font-bold text-plum"
           >
             Details
-            {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          </Link>
         </Td>
       </tr>
-      {open ? (
-        <tr className="border-b border-plum/10 bg-cream/45">
-          <td colSpan={10} className="p-4">
-            <TransactionDetails row={row} timeZone={timeZone} />
-          </td>
-        </tr>
-      ) : null}
-    </>
   );
 }
 
