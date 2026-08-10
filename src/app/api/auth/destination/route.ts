@@ -1,6 +1,7 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { canonicalIdentityForUser } from "@/lib/identityServer";
+import { resolveSalonIdentityScope } from "@/lib/salonAuthorizationCore";
 
 async function POSTHandler(request: Request) {
   try {
@@ -25,6 +26,9 @@ async function POSTHandler(request: Request) {
     }
     if (adminUser) return Response.json({ path: "/admin", role: "admin", permissions: adminUser.permissions || {}, is_super_admin: Boolean(adminUser.is_super_admin), roleConflict: false });
     if (salon) {
+      if (resolveSalonIdentityScope(identity, user.email) !== "owner") {
+        return Response.json({ path: "/login", role: "review_required", error: "You do not have permission to access this account until its role is reviewed." }, { status: 403 });
+      }
       let path = "/salon/dashboard";
       if (salon.status?.toLowerCase() === "pending") {
         const { data: application } = await admin.from("salon_applications").select("id").eq("salon_id", salon.id).maybeSingle();
@@ -33,7 +37,9 @@ async function POSTHandler(request: Request) {
       return Response.json({ path, role: "salon_owner", salon_status: salon.status });
     }
     if (teamMember) {
-      if (teamMember.status === "Invited") await admin.from("salon_team_members").update({ status: "Active", activated_at: new Date().toISOString() }).eq("id", teamMember.id);
+      if (teamMember.status !== "Active" || resolveSalonIdentityScope(identity, user.email) !== "team") {
+        return Response.json({ path: "/login", role: "invited", error: "Your salon team access must be activated before you can sign in." }, { status: 403 });
+      }
       const [{ data: parentSubscription, error: subscriptionError }, { data: parentSalon, error: parentSalonError }] = await Promise.all([
         admin.from("subscriptions").select("*").eq("salon_id", teamMember.salon_id).limit(1).maybeSingle(),
         admin.from("salons").select("subscription_status,subscription_tier").eq("id", teamMember.salon_id).maybeSingle(),

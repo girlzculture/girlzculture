@@ -10,6 +10,7 @@ import {
   selectLocalPromotionCards,
 } from "@/lib/homePromotionCore";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
+import { distanceMiles, formatDistanceMiles, validCoordinates, type CustomerLocation } from "@/lib/location";
 
 const ACCEPTANCE_MODE =
   process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS === "true";
@@ -34,8 +35,8 @@ export default function HomepagePromoRail({
   const [railVisible, setRailVisible] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [currentTime, setCurrentTime] = useState(() => Date.parse(now));
   const customerLocation = useCustomerLocation();
-  const currentTime = Date.parse(now);
   const visibleCards = useMemo(() => {
     const configuredLimit = Number(cards[0]?.display_limit || 8);
     return selectLocalPromotionCards({
@@ -116,6 +117,18 @@ export default function HomepagePromoRail({
     };
   }, []);
 
+  // Schedule boundaries must take effect while the homepage remains open.
+  // A server-render timestamp alone can leave a newly started or expired card
+  // visible until a full reload. Keep this lightweight clock independent from
+  // the carousel advance timer so pause/reduced-motion behavior is unchanged.
+  useEffect(() => {
+    const interval = window.setInterval(
+      () => setCurrentTime(Date.now()),
+      ACCEPTANCE_MODE ? 150 : 15_000,
+    );
+    return () => window.clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const rail = railRef.current;
     if (!rail) return;
@@ -175,7 +188,10 @@ export default function HomepagePromoRail({
         ref={railRef}
         tabIndex={0}
         aria-label="Promotional cards. Swipe to browse."
-        onFocus={() => setInteractionPaused(true)}
+        // Focus is an interaction signal, not a permanent ownership lock.
+        // Resume automatically even when a keyboard user leaves focus inside
+        // the rail, otherwise auto-advance can remain paused indefinitely.
+        onFocus={pauseForInteraction}
         onBlur={pauseForInteraction}
         onPointerDown={(event) => {
           pointerStart.current = { x: event.clientX, y: event.clientY };
@@ -233,6 +249,8 @@ export default function HomepagePromoRail({
           <PromotionCard
             key={card.id || `${card.title}-${index}`}
             card={card}
+            customerLocation={customerLocation.location}
+            reducedMotion={reducedMotion}
             onNavigate={(event) => {
               if (dragged.current) {
                 event.preventDefault();
@@ -269,28 +287,53 @@ export default function HomepagePromoRail({
 
 function PromotionCard({
   card,
+  customerLocation,
+  reducedMotion,
   onNavigate,
 }: {
   card: ContentCard;
+  customerLocation: CustomerLocation | null;
+  reducedMotion: boolean;
   onNavigate: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 }) {
+  const representsSalon = ["salon", "campaign"].includes(String(card.association_type || "")) || Boolean(card.salon_id || card.campaign_id) || /^\/salon\//.test(String(card.href || ""));
+  const target = { lat: Number(card.target_latitude), lng: Number(card.target_longitude) };
+  const mobileDistance = customerLocation && validCoordinates(customerLocation) && validCoordinates(target)
+    ? formatDistanceMiles(distanceMiles(customerLocation, target))
+    : "Distance unavailable";
   return (
     <article
       data-promotion-card
       data-media-kind={
-        /\.gif(?:$|[?#])/i.test(card.media_url || "")
+        card.content_type === "video" || /\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(card.media_url || "")
+          ? "video"
+          : /\.gif(?:$|[?#])/i.test(card.media_url || "")
           ? "animated-gif"
           : "image"
       }
       className="gc-promotion-card relative aspect-[16/9] w-[74vw] min-w-[240px] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[16px] bg-charcoal shadow-[0_10px_24px_rgba(13,17,20,.13)] sm:w-[52vw] sm:max-w-[430px] md:w-[45vw] lg:aspect-[2/1] lg:w-[31vw] lg:max-w-[470px] xl:w-[28vw]"
     >
-      <SafeImage
-        src={card.media_url}
-        fallbackSrc="/images/hero-braids.jpg"
-        alt={card.alt_text || card.title || "Girlz Culture promotion"}
-        draggable={false}
-        className="absolute inset-0 h-full w-full select-none object-cover"
-      />
+      {card.content_type === "video" || /\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(card.media_url || "") ? (
+        <video
+          src={card.media_url}
+          aria-label={card.alt_text || card.title || "Girlz Culture promotion"}
+          autoPlay={!reducedMotion}
+          muted
+          loop={!reducedMotion}
+          playsInline
+          controls={reducedMotion}
+          preload="metadata"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <SafeImage
+          src={card.media_url}
+          fallbackSrc="/images/hero-braids.jpg"
+          alt={card.alt_text || card.title || "Girlz Culture promotion"}
+          draggable={false}
+          className="absolute inset-0 h-full w-full select-none object-cover"
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/20 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4">
         {card.title ? (
@@ -298,9 +341,9 @@ function PromotionCard({
             {card.title}
           </h2>
         ) : null}
-        {card.body ? (
+        {card.body || representsSalon ? (
           <p className="mt-2 line-clamp-2 text-[10px] leading-4 text-white/85 sm:text-[11px]">
-            {card.body}
+            {representsSalon ? <><span className="sm:hidden">{mobileDistance}</span>{card.body ? <span className="hidden sm:inline">{card.body}</span> : null}</> : card.body}
           </p>
         ) : null}
         {card.href ? (

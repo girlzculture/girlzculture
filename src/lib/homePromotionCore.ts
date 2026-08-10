@@ -1,7 +1,39 @@
 import type { ContentCard } from "@/lib/content";
 import { distanceMiles, validCoordinates } from "@/lib/location";
+import { isPromotionCardActive } from "./promotionScheduleCore";
+
+export { isPromotionCardActive } from "./promotionScheduleCore";
 
 type Coordinates = { lat: number; lng: number };
+
+export type HomepagePromotionDiagnosticCode =
+  | "published"
+  | "draft"
+  | "hidden"
+  | "inactive"
+  | "missing_media"
+  | "staged_media_unattached"
+  | "missing_destination"
+  | "unavailable_link"
+  | "future_schedule"
+  | "expired"
+  | "outside_targeting"
+  | "invalid_targeting"
+  | "failed_publication";
+
+export type HomepagePromotionDiagnostic = {
+  code: HomepagePromotionDiagnosticCode;
+  label: string;
+  eligible: boolean;
+  detail: string;
+};
+
+export type HomepagePromotionDiagnosticOptions = {
+  availableSalonIds?: Set<string>;
+  availableCampaignIds?: Set<string>;
+  availableDestinations?: Set<string>;
+  previewLocation?: Coordinates | null;
+};
 
 export const DEFAULT_HOMEPAGE_PROMOTION_COUNT = 8;
 export const MAX_HOMEPAGE_PROMOTION_COUNT = 20;
@@ -65,6 +97,10 @@ export function isCanonicalHomepageFallback(card: ContentCard) {
 /**
  * An Active homepage card is publishable only when it can render a complete,
  * accessible call to action without SafeImage or button-label fallbacks.
+ * Descriptive copy is deliberately optional: salon/campaign cards replace it
+ * with privacy-safe distance on mobile, and older published cards may not have
+ * supplied copy. The title, media, destination, CTA label, and image alt text
+ * remain mandatory.
  * Draft and archived cards may remain incomplete while an editor is working.
  */
 export function isHomepagePromotionCardComplete(card: {
@@ -77,7 +113,6 @@ export function isHomepagePromotionCardComplete(card: {
 }) {
   return [
     card.title,
-    card.body,
     card.media_url,
     card.href,
     card.cta_label,
@@ -89,6 +124,7 @@ export function homepagePromotionPreview(
   cards: ContentCard[],
   now: number,
   requestedLimit = DEFAULT_HOMEPAGE_PROMOTION_COUNT,
+  options: HomepagePromotionDiagnosticOptions = {},
 ) {
   const limit = Math.max(
     1,
@@ -97,21 +133,138 @@ export function homepagePromotionPreview(
   const saved = uniquePromotionCards(
     cards.filter((card) => !isCanonicalHomepageFallback(card)),
   );
-  const eligible = saved.filter(
-    (card) =>
-      isPromotionCardActive(card, now) &&
-      isHomepagePromotionCardComplete(card),
-  );
+  const diagnostics = saved.map((card) => ({
+    card,
+    diagnostic: homepagePromotionDiagnostic(card, now, options),
+  }));
+  const eligible = diagnostics
+    .filter((item) => item.diagnostic.eligible)
+    .map((item) => item.card);
   const effectiveSaved = eligible.slice(0, limit);
   const fallbackCount = Math.max(0, limit - effectiveSaved.length);
   return {
     saved,
     eligible,
+    diagnostics,
     fallbackCount,
     effective: uniquePromotionCards([
       ...effectiveSaved,
       ...HOMEPAGE_EDITORIAL_FALLBACKS,
     ]).slice(0, limit),
+  };
+}
+function validDestination(value: unknown) {
+  const href = String(value || "").trim();
+  if (!href) return false;
+  if (href.startsWith("/")) return !href.startsWith("//");
+  try {
+    return new URL(href).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+/**
+ * Explains exactly why one saved promotion is or is not eligible. The public
+ * selector and the editor preview share this function, so a fallback can no
+ * longer silently hide a broken administrator card.
+ */
+export function homepagePromotionDiagnostic(
+  card: ContentCard,
+  now: number,
+  options: HomepagePromotionDiagnosticOptions = {},
+): HomepagePromotionDiagnostic {
+  const loose = card as ContentCard & {
+    is_visible?: boolean;
+    is_active?: boolean;
+    media_state?: string;
+    upload_state?: string;
+    publication_error?: string;
+  };
+  if ((card.status || "Active") === "Draft") {
+    return { code: "draft", label: "Draft", eligible: false, detail: "This card is saved as a draft." };
+  }
+  if (loose.is_visible === false) {
+    return { code: "hidden", label: "Hidden", eligible: false, detail: "Visibility is turned off." };
+  }
+  if ((card.status || "Active") === "Archived" || loose.is_active === false) {
+    return { code: "inactive", label: "Inactive", eligible: false, detail: "This card is archived or inactive." };
+  }
+  const mediaState = String(loose.media_state || loose.upload_state || "").toLowerCase();
+  if (mediaState === "staged" && !String(card.media_url || "").trim()) {
+    return { code: "staged_media_unattached", label: "Staged media not attached", eligible: false, detail: "The upload finished, but this card has not been saved with that media." };
+  }
+  if (!String(card.media_url || "").trim()) {
+    return { code: "missing_media", label: "Missing media", eligible: false, detail: "Add an image, animated GIF, or supported video URL." };
+  }
+  if (!String(card.href || "").trim()) {
+    return { code: "missing_destination", label: "Missing destination", eligible: false, detail: "Choose a salon, blog post, page, or custom destination." };
+  }
+  if (!validDestination(card.href)) {
+    return { code: "unavailable_link", label: "Unavailable link", eligible: false, detail: "Use a valid internal path or HTTPS destination." };
+  }
+  const startsAt = card.starts_at ? Date.parse(card.starts_at) : 0;
+  const endsAt = card.ends_at ? Date.parse(card.ends_at) : 0;
+  if ((card.starts_at && !startsAt) || (card.ends_at && !endsAt) || (startsAt && endsAt && endsAt <= startsAt)) {
+    return { code: "failed_publication", label: "Failed publication", eligible: false, detail: "Correct the promotion schedule before publishing." };
+  }
+  if (startsAt && startsAt > now) {
+    return { code: "future_schedule", label: "Future schedule", eligible: false, detail: `Scheduled for ${new Date(startsAt).toLocaleString()}.` };
+  }
+  if (endsAt && endsAt <= now) {
+    return { code: "expired", label: "Expired", eligible: false, detail: `Ended ${new Date(endsAt).toLocaleString()}.` };
+  }
+  const association = card.association_type || (card.campaign_id ? "campaign" : card.salon_id ? "salon" : undefined);
+  if (association === "salon") {
+    const id = String(card.salon_id || "").toLowerCase();
+    if (!id || (options.availableSalonIds && !options.availableSalonIds.has(id))) {
+      return { code: "unavailable_link", label: "Unavailable salon", eligible: false, detail: "The selected salon is not currently eligible for public placement." };
+    }
+  }
+  if (association === "campaign") {
+    const id = String(card.campaign_id || "").toLowerCase();
+    if (!id || (options.availableCampaignIds && !options.availableCampaignIds.has(id))) {
+      return { code: "unavailable_link", label: "Unavailable campaign", eligible: false, detail: "The campaign is paused, expired, or not authorized for public placement." };
+    }
+  }
+  if (
+    card.source_kind === "blog" &&
+    options.availableDestinations &&
+    !options.availableDestinations.has(String(card.href || "").trim())
+  ) {
+    return { code: "unavailable_link", label: "Unavailable blog post", eligible: false, detail: "The linked blog post is not currently published." };
+  }
+  const hasTargeting = Boolean(card.market_id || card.target_label || card.target_latitude != null || card.target_longitude != null);
+  const target = targetCoordinates(card);
+  const configured = Number(card.radius_miles || 25);
+  if (hasTargeting && (!target || !Number.isFinite(configured) || configured < 1 || configured > 250)) {
+    return { code: "invalid_targeting", label: "Invalid radius or region", eligible: false, detail: "Choose a valid market center and a radius from 1 to 250 miles." };
+  }
+  if (
+    target &&
+    options.previewLocation &&
+    validCoordinates(options.previewLocation) &&
+    distanceMiles(options.previewLocation, target) > configuredRadius(card)
+  ) {
+    return { code: "outside_targeting", label: "Outside targeting", eligible: false, detail: "This preview location is outside the configured audience radius." };
+  }
+  if (!isHomepagePromotionCardComplete(card)) {
+    const missing = [
+      ["title", card.title],
+      ["call-to-action label", card.cta_label],
+      ["alternative text", card.alt_text],
+    ].filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
+    return { code: "failed_publication", label: "Failed publication", eligible: false, detail: `Complete ${missing.join(", ") || "the required fields"}.` };
+  }
+  if (loose.publication_error) {
+    return { code: "failed_publication", label: "Failed publication", eligible: false, detail: "The last publication attempt failed. Save again after correcting the card." };
+  }
+  return {
+    code: "published",
+    label: target ? "Published · location targeted" : "Published",
+    eligible: true,
+    detail: target
+      ? `Eligible for visitors within ${configuredRadius(card)} miles of ${card.target_label || "the selected market"}.`
+      : "Eligible and ordered ahead of editorial fallbacks.",
   };
 }
 
@@ -168,76 +321,13 @@ export function isExplicitlyGlobalPromotionCard(card: ContentCard) {
     !card.campaign_id;
 }
 
-function boundedRotationWeight(card: ContentCard) {
-  const weight = Number(card.rotation_weight ?? 1);
-  return Number.isFinite(weight) ? Math.max(0.1, Math.min(100, weight)) : 1;
-}
-
-function configuredPriority(card: ContentCard) {
-  const priority = Number(card.priority ?? 50);
-  return Number.isFinite(priority) ? Math.max(0, Math.min(100, priority)) : 50;
-}
-
 /**
- * FNV-1a gives the browser and server the same inexpensive 32-bit value. The
- * hour and coarse location are part of the seed, so a rail is stable during a
- * visit while higher-weight cards receive proportionally more first-place
- * opportunities as the rotation bucket changes.
- */
-function deterministicUnitInterval(value: string) {
-  let hash = 2_166_136_261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16_777_619);
-  }
-  return ((hash >>> 0) + 1) / 4_294_967_297;
-}
-
-export function promotionRotationScore(
-  card: ContentCard,
-  now: number,
-  location?: Coordinates | null,
-) {
-  const hourBucket = Math.floor(now / 3_600_000);
-  const locationBucket =
-    location && validCoordinates(location)
-      ? `${location.lat.toFixed(2)}:${location.lng.toFixed(2)}`
-      : "global";
-  const unit = deterministicUnitInterval(
-    `${promotionCardIdentity(card)}:${hourBucket}:${locationBucket}`,
-  );
-  // Exponential-race ordering is deterministic for a seed and gives a card's
-  // configured weight a real proportional effect (lower score ranks first).
-  return -Math.log(unit) / boundedRotationWeight(card);
-}
-
-function rank(
-  left: ContentCard,
-  right: ContentCard,
-  now: number,
-  location?: Coordinates | null,
-) {
-  const priority = configuredPriority(right) - configuredPriority(left);
-  if (priority) return priority;
-  const weightedRotation =
-    promotionRotationScore(left, now, location) -
-    promotionRotationScore(right, now, location);
-  if (weightedRotation) return weightedRotation;
-  if (!location || !validCoordinates(location)) {
-    return promotionCardIdentity(left).localeCompare(promotionCardIdentity(right));
-  }
-  const leftTarget = targetCoordinates(left);
-  const rightTarget = targetCoordinates(right);
-  const leftDistance = leftTarget ? distanceMiles(location, leftTarget) : Number.POSITIVE_INFINITY;
-  const rightDistance = rightTarget ? distanceMiles(location, rightTarget) : Number.POSITIVE_INFINITY;
-  if (leftDistance !== rightDistance) return leftDistance - rightDistance;
-  return promotionCardIdentity(left).localeCompare(promotionCardIdentity(right));
-}
-
-/**
- * Selects a complete, distinct local promotion pool. Cards with coordinates
- * are never shown outside their administrator-controlled radius. Empty local
- * positions are filled only by explicitly global editorial fallback cards.
+ * Selects a complete, distinct local promotion pool without re-ranking the
+ * administrator's saved sequence. The content editor's array order is the
+ * publication contract: eligible saved cards keep that order, while the
+ * canonical editorial collection may fill only positions left genuinely
+ * vacant after location/schedule filtering. Cards with coordinates are never
+ * shown outside their administrator-controlled radius.
  */
 export function selectLocalPromotionCards(input: {
   cards: ContentCard[];
@@ -255,33 +345,29 @@ export function selectLocalPromotionCards(input: {
   const active = uniquePromotionCards(
     input.cards.filter((card) => isPromotionCardActive(card, input.now)),
   );
-  const globalFallbacks = active.filter((card) => {
-    // Existing administrator-authored image/GIF cards predate the
-    // editorial_fallback flag. Treat every unassociated, untargeted card as a
-    // global editorial card so a saved GIF cannot silently disappear after a
-    // reload. Associated cards still require verified coordinates and radius.
-    return isExplicitlyGlobalPromotionCard(card);
-  }).sort((left, right) => rank(left, right, input.now, input.customerLocation));
-  if (!input.customerLocation || !validCoordinates(input.customerLocation)) {
-    return globalFallbacks.slice(0, limit);
-  }
-  const local = active
-    .filter((card) => {
-      const target = targetCoordinates(card);
+  const configured = active.filter(
+    (card) => !isCanonicalHomepageFallback(card),
+  );
+  const canonicalFallbacks = active.filter(isCanonicalHomepageFallback);
+  const hasLocation = Boolean(
+    input.customerLocation && validCoordinates(input.customerLocation),
+  );
+  const eligibleConfigured = configured.filter((card) => {
+    const target = targetCoordinates(card);
+    if (target) {
       return Boolean(
-        target &&
-          distanceMiles(input.customerLocation!, target!) <= configuredRadius(card),
+        hasLocation &&
+          distanceMiles(input.customerLocation!, target) <= configuredRadius(card),
       );
-    })
-    .sort((left, right) =>
-      rank(left, right, input.now, input.customerLocation!),
-    );
-  return uniquePromotionCards([...local, ...globalFallbacks]).slice(0, limit);
-}
-
-export function isPromotionCardActive(card: ContentCard, now: number) {
-  if ((card.status || "Active") !== "Active") return false;
-  const startsAt = card.starts_at ? Date.parse(card.starts_at) : 0;
-  const endsAt = card.ends_at ? Date.parse(card.ends_at) : 0;
-  return (!startsAt || startsAt <= now) && (!endsAt || endsAt > now);
+    }
+    // Existing administrator-authored image/GIF cards may predate association
+    // fields. They remain valid global saved cards, while an unresolved
+    // targeted/associated record must never flash before location is known.
+    return isExplicitlyGlobalPromotionCard(card);
+  });
+  const vacancies = Math.max(0, limit - eligibleConfigured.length);
+  return uniquePromotionCards([
+    ...eligibleConfigured.slice(0, limit),
+    ...canonicalFallbacks.slice(0, vacancies),
+  ]).slice(0, limit);
 }

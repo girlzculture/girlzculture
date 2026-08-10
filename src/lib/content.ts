@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_noStore as noStore } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
@@ -63,8 +64,12 @@ export type ContentPage = {
   sections?: ContentSection[];
   labels?: Record<string, string>;
   is_enabled?: boolean;
+  status?: "Draft" | "Published" | "Scheduled" | "Hidden" | "Archived";
+  scheduled_publish_at?: string | null;
+  published_at?: string | null;
+  archived_at?: string | null;
 };
-export type BlogPost = { id?: string; slug: string; title: string; excerpt?: string; content: string; category: string; cover_image_url?: string; author?: string; featured?: boolean; published_at?: string };
+export type BlogPost = { id?: string; slug: string; title: string; excerpt?: string; content: string; category: string; cover_image_url?: string; author?: string; featured?: boolean; status?: "Draft" | "Published" | "Scheduled" | "Hidden" | "Archived"; scheduled_publish_at?: string | null; published_at?: string; archived_at?: string | null };
 export type NavigationItem = { id?:string;surface:"header"|"mobile_menu"|"mobile_bottom"|"footer";group_key:string;item_key:string;label:string;translation_key?:string|null;href:string;sort_order:number;is_enabled?:boolean;show_new_badge?:boolean;archived_at?:string|null };
 // Kept as an empty compatibility export while older routes transition away from fallbacks.
 export const fallbackPosts: BlogPost[] = [];
@@ -109,17 +114,28 @@ export const LEGAL_LINKS = [
   ["Community Guidelines", "/community-guidelines", "community-guidelines"],
 ] as const;
 
-export async function getContentPage(slug: string, fallback: ContentPage) {
+/**
+ * Load the anonymous, resolved publication snapshot for a content page.
+ *
+ * A successful `null` response is authoritative: the record is missing,
+ * hidden, archived, or not due yet, so callers must not resurrect fallback
+ * copy. The fallback is reserved for an actual Supabase/read failure so a
+ * transient provider outage does not take an otherwise published route down.
+ */
+function resolvedContentPage(value: unknown): ContentPage | null {
+  if (value === null) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("The public content provider returned an invalid page snapshot.");
+  }
+  return value as ContentPage;
+}
+
+export async function getContentPage(slug: string, fallback: ContentPage): Promise<ContentPage | null> {
+  noStore();
   try {
-    const { data, error } = await supabase
-      .from("content_pages")
-      .select("*")
-      .eq("slug", slug)
-      .eq("status", "Published")
-      .abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS))
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("get_public_content_page", { p_slug: slug }).abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS));
     if (error) throw error;
-    return (data as ContentPage | null) || fallback;
+    return resolvedContentPage(data);
   } catch (error) {
     await reportPublicContentFailure(
       error,
@@ -132,17 +148,11 @@ export async function getContentPage(slug: string, fallback: ContentPage) {
 }
 
 export async function getPublishedContentPage(slug: string) {
+  noStore();
   try {
-    const { data, error } = await supabase
-      .from("content_pages")
-      .select("*")
-      .eq("slug", slug)
-      .eq("status", "Published")
-      .eq("is_enabled", true)
-      .abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS))
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("get_public_content_page", { p_slug: slug }).abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS));
     if (error) throw error;
-    return data as ContentPage | null;
+    return resolvedContentPage(data);
   } catch (error) {
     await reportPublicContentFailure(
       error,
@@ -155,17 +165,14 @@ export async function getPublishedContentPage(slug: string) {
 }
 
 export async function getVisibleLegalLinks() {
-  const slugs = new Set(LEGAL_LINKS.map(([, , slug]) => slug));
-  const { data, error } = await supabase
-    .from("content_pages")
-    .select("slug,title,page_group")
-    .eq("status", "Published")
-    .eq("is_enabled", true);
+  noStore();
+  const slugs = new Set<string>(LEGAL_LINKS.map(([, , slug]) => slug));
+  const { data, error } = await supabase.rpc("get_public_content_pages").abortSignal(AbortSignal.timeout(PUBLIC_CONTENT_READ_TIMEOUT_MS));
   if (error) {
     await reportPublicContentFailure(error, "load-visible-legal-links", "content_page");
     return [];
   }
-  const legalRows = (data || []).filter(
+  const legalRows = ((data || []) as ContentPage[]).filter(
     (row) => row.slug !== "legal" && (slugs.has(row.slug) || row.page_group === "Legal"),
   );
   const visible = new Map(legalRows.map((row) => [row.slug, row.title]));
@@ -193,8 +200,9 @@ export async function getNavigationItems(surface:NavigationItem["surface"],fallb
 }
 
 export async function getBlogPosts() {
+  noStore();
   try {
-    const { data, error } = await supabase.from("blog_posts").select("*").eq("status", "Published").is("archived_at", null).order("featured", { ascending: false }).order("published_at", { ascending: false }).abortSignal(AbortSignal.timeout(7_000));
+    const { data, error } = await supabase.rpc("get_public_blog_posts").abortSignal(AbortSignal.timeout(7_000));
     if (error) await reportPublicContentFailure(error, "load-blog-post-list", "blog_post");
     return (data || []) as BlogPost[];
   } catch (error) {
@@ -204,8 +212,9 @@ export async function getBlogPosts() {
 }
 
 export async function getBlogPost(slug: string) {
+  noStore();
   try {
-    const { data, error } = await supabase.from("blog_posts").select("*").eq("slug", slug).eq("status", "Published").is("archived_at", null).abortSignal(AbortSignal.timeout(7_000)).maybeSingle();
+    const { data, error } = await supabase.rpc("get_public_blog_post", { p_slug: slug }).abortSignal(AbortSignal.timeout(7_000));
     if (error) await reportPublicContentFailure(error, "load-blog-post", "blog_post", slug);
     return data as BlogPost | null;
   } catch (error) {

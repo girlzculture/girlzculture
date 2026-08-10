@@ -9,13 +9,15 @@ const statuses = new Set(["Open", "Investigating", "Resolved", "Ignored"]);
 async function GETHandler(request: Request) {
   let admin;
   try {
-    const context = await requireAdminPermission(request, "settings");
+    const context = await requireAdminPermission(request, "engine");
     admin = context.admin;
     const params = new URL(request.url).searchParams;
     const status = cleanText(params.get("status"), 30);
     const severity = cleanText(params.get("severity"), 20);
     const feature = cleanText(params.get("feature"), 120);
     const search = cleanText(params.get("q"), 120);
+    const requestedEventId = cleanText(params.get("id"), 60);
+    const eventId = /^[0-9a-f-]{36}$/i.test(requestedEventId) ? requestedEventId : "";
     const searchReference = /^[0-9a-f-]{36}$/i.test(search) ? search : "";
     let occurrenceEventId = "";
     if (searchReference) {
@@ -26,6 +28,7 @@ async function GETHandler(request: Request) {
     const page = Math.max(1, Number(params.get("page") || 1));
     const pageSize = Math.max(10, Math.min(100, Number(params.get("page_size") || 30)));
     let query = admin.from("platform_error_events").select("id,reference,fingerprint,severity,status,environment,release,route,action,feature,actor_role,salon_id,technical_message,technical_stack,user_safe_message,metadata,occurrence_count,first_occurred_at,last_occurred_at,assigned_to,admin_notes,resolved_at,created_at,updated_at", { count: "exact" });
+    if (eventId) query = query.eq("id", eventId);
     if (statuses.has(status)) query = query.eq("status", status);
     if (["critical", "high", "medium", "low"].includes(severity)) query = query.eq("severity", severity);
     if (feature) query = query.eq("feature", feature);
@@ -79,7 +82,7 @@ async function GETHandler(request: Request) {
 async function PATCHHandler(request: Request) {
   let admin;
   try {
-    const { admin: client, user } = await requireAdminPermission(request, "settings");
+    const { admin: client, user } = await requireAdminPermission(request, "engine");
     admin = client;
     const body = await request.json() as Record<string, unknown>;
     const id = cleanText(body.id, 60);

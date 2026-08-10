@@ -1,32 +1,64 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { pollVideoJobUntilReady } from "../src/lib/videoJobPollingCore.ts";
 
 const read = (path) => readFileSync(path, "utf8");
+const moduleDataUrl = (source, aliases = new Map()) => {
+  const rewriteAliases = (context) => {
+    const visit = (node) => {
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
+        && node.moduleSpecifier
+        && ts.isStringLiteral(node.moduleSpecifier)
+      ) {
+        const replacement = aliases.get(node.moduleSpecifier.text);
+        if (replacement && ts.isImportDeclaration(node)) {
+          return ts.factory.updateImportDeclaration(
+            node,
+            node.modifiers,
+            node.importClause,
+            ts.factory.createStringLiteral(replacement),
+            node.attributes,
+          );
+        }
+        if (replacement && ts.isExportDeclaration(node)) {
+          return ts.factory.updateExportDeclaration(
+            node,
+            node.modifiers,
+            node.isTypeOnly,
+            node.exportClause,
+            ts.factory.createStringLiteral(replacement),
+            node.attributes,
+          );
+        }
+      }
+      return ts.visitEachChild(node, visit, context);
+    };
+    return (sourceFile) => ts.visitNode(sourceFile, visit);
+  };
+
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ESNext,
+    },
+    transformers: aliases.size > 0 ? { before: [rewriteAliases] } : undefined,
+  }).outputText;
+  return `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`;
+};
+
+const promotionScheduleCoreUrl = moduleDataUrl(read("src/lib/promotionScheduleCore.ts"));
+const coreDependencies = new Map([
+  ["@/lib/location", moduleDataUrl(read("src/lib/location.ts"))],
+  ["@/lib/promotionScheduleCore", promotionScheduleCoreUrl],
+  ["./promotionScheduleCore", promotionScheduleCoreUrl],
+]);
 const coreSource = read("src/lib/homePromotionCore.ts");
-const locationUrl = pathToFileURL(`${process.cwd()}/src/lib/location.ts`).href;
-const compiledCore = ts.transpileModule(coreSource, {
-  compilerOptions: {
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.ESNext,
-  },
-}).outputText.replace('from "@/lib/location"', `from "${locationUrl}"`);
-const core = await import(
-  `data:text/javascript;base64,${Buffer.from(compiledCore).toString("base64")}`
-);
+const core = await import(moduleDataUrl(coreSource, coreDependencies));
 
 const now = Date.parse("2026-08-04T18:00:00.000Z");
-const fallbacks = Array.from({ length: 8 }, (_, index) => ({
-  id: `fallback-${index + 1}`,
-  association_type: undefined,
-  editorial_fallback: true,
-  title: `Editorial ${index + 1}`,
-  href: `/editorial-${index + 1}`,
-  media_url: `/images/editorial-${index + 1}.jpg`,
-  status: "Active",
-}));
+const fallbacks = core.HOMEPAGE_EDITORIAL_FALLBACKS.map((card) => ({ ...card }));
 const nyHigh = {
   id: "ny-high",
   association_type: "salon",
@@ -96,10 +128,10 @@ const nySelection = core.selectLocalPromotionCards({
 assert.equal(nySelection.length, 8);
 assert.equal(
   nySelection[0].id,
-  "ny-high",
-  "priority must rank the eligible local card first",
+  "ny-low",
+  "the first eligible administrator card must retain its configured position",
 );
-assert.equal(nySelection[1].id, "ny-low");
+assert.equal(nySelection[1].id, "ny-high");
 assert(
   !nySelection.some((card) => card.id === "texas"),
   "distant salons must never leak into a local pool",
@@ -140,35 +172,39 @@ assert.deepEqual(
   "the same hour and location seed must produce a stable promotion order",
 );
 
-const highWeight = {
-  id: "weighted-high",
-  href: "/weighted-high",
-  media_url: "/images/weighted-high.jpg",
+const configuredFirst = {
+  id: "configured-first",
+  href: "/configured-first",
+  media_url: "/images/configured-first.jpg",
   status: "Active",
-  priority: 50,
-  rotation_weight: 20,
+  priority: 1,
+  rotation_weight: 0.1,
 };
-const lowWeight = {
-  id: "weighted-low",
-  href: "/weighted-low",
-  media_url: "/images/weighted-low.jpg",
+const configuredSecond = {
+  id: "configured-second",
+  href: "/configured-second",
+  media_url: "/images/configured-second.jpg",
   status: "Active",
-  priority: 50,
-  rotation_weight: 1,
+  priority: 100,
+  rotation_weight: 100,
 };
-let highWeightFirst = 0;
 for (let hour = 0; hour < 240; hour += 1) {
   const selected = core.selectLocalPromotionCards({
-    cards: [highWeight, lowWeight],
+    cards: [configuredFirst, configuredSecond, ...fallbacks],
     now: hour * 3_600_000,
-    limit: 1,
+    limit: 4,
   });
-  if (selected[0]?.id === highWeight.id) highWeightFirst += 1;
+  assert.deepEqual(
+    selected.slice(0, 2).map((card) => card.id),
+    [configuredFirst.id, configuredSecond.id],
+    "saved administrator order must not be randomized or reprioritized at render time",
+  );
+  assert.equal(
+    selected.filter(core.isCanonicalHomepageFallback).length,
+    2,
+    "canonical editorial cards must fill only the two genuine vacancies",
+  );
 }
-assert(
-  highWeightFirst > 190,
-  `rotation weight must materially affect deterministic selection; high-weight card won only ${highWeightFirst}/240 buckets`,
-);
 
 const gif = {
   id: "animated-editorial",
@@ -331,6 +367,8 @@ assert.match(rail, /ChevronLeft/);
 assert.match(rail, /ChevronRight/);
 assert.match(rail, /aria-label="Previous promotion"/);
 assert.match(rail, /aria-label="Next promotion"/);
+assert.match(rail, /setCurrentTime\(Date\.now\(\)\)/);
+assert.match(rail, /ACCEPTANCE_MODE \? 150 : 15_000/);
 assert.match(
   rail,
   /aspect-\[16\/9\]/,
@@ -541,5 +579,5 @@ assert.doesNotMatch(
 assert.match(migration, /20260804190000/);
 
 console.log(
-  "Verified one-call bulk association resolution, deterministic weighted rotation, a 200-card nationwide source pool with distinct radius-governed 1–20 per-visitor selection, animated GIF preservation, collection concurrency protection, restored responsive promotion cards, functional desktop arrows, and the upload → processing job → Ready → save → reload Trending Picks contract.",
+  "Verified one-call bulk association resolution, deterministic administrator order with fallback-only vacancy filling, a 200-card nationwide source pool with distinct radius-governed 1-20 per-visitor selection, animated GIF preservation, collection concurrency protection, restored responsive promotion cards, functional desktop arrows, and the upload-to-processing-to-Ready-to-save-to-reload Trending Picks contract.",
 );

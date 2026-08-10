@@ -5,9 +5,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Check, FileUp, LockKeyhole } from "lucide-react";
 import {
+  getValidSessionForScope,
   getSessionForScope,
+  reportClientOperationalFailure,
   salonSupabase as supabase,
 } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
+import {
+  APPLICATION_DOCUMENT_MAXIMUM_BYTES,
+  APPLICATION_DOCUMENT_MAXIMUM_COUNT,
+  APPLICATION_DOCUMENT_MIME_TYPES,
+} from "@/lib/applicationDocumentUploadCore";
 import { normalizePlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
@@ -42,17 +50,210 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
 
   async function uploadDocuments(files: FileList | null) {
     if (!files || !userId) return;
-    setUploadingDocs(true); setMessage("");
-    const urls:string[] = [];
-    for (const file of Array.from(files).slice(0,5)) {
-      if (!["application/pdf","image/jpeg","image/png"].includes(file.type)) { setMessage(`${file.name} must be a PDF, JPG, or PNG.`); continue; }
-      if (file.size > 10*1024*1024) { setMessage(`${file.name} is larger than 10 MB.`); continue; }
-      const path = `${userId}/documents/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"-")}`;
-      const {error} = await supabase.storage.from("application-documents").upload(path,file,{contentType:file.type,upsert:false});
-      if (error) { setMessage(error.message); continue; }
-      urls.push(path);
+    const capacity = APPLICATION_DOCUMENT_MAXIMUM_COUNT - documents.length;
+    if (capacity <= 0) {
+      setMessage("You can upload up to five supporting documents.");
+      return;
     }
-    setDocuments((current) => [...current,...urls]); setUploadingDocs(false);
+    setUploadingDocs(true);
+    setMessage("");
+    const uploadedPaths: string[] = [];
+    const failures: string[] = [];
+    try {
+      const session = await getValidSessionForScope("salon");
+      if (!session) {
+        setMessage("Your session has expired. Please sign in again.");
+        return;
+      }
+      const selectedFiles = Array.from(files).slice(0, capacity);
+      if (files.length > capacity) {
+        failures.push("Only the first available document slots were uploaded.");
+      }
+      for (const file of selectedFiles) {
+        if (
+          !APPLICATION_DOCUMENT_MIME_TYPES.includes(
+            file.type as (typeof APPLICATION_DOCUMENT_MIME_TYPES)[number],
+          )
+        ) {
+          failures.push(`${file.name} must be a PDF, JPG, or PNG.`);
+          continue;
+        }
+        if (file.size <= 0) {
+          failures.push(`${file.name} is empty.`);
+          continue;
+        }
+        if (file.size > APPLICATION_DOCUMENT_MAXIMUM_BYTES) {
+          failures.push(`${file.name} is larger than 10 MB.`);
+          continue;
+        }
+        let preparedPath = "";
+        try {
+          const descriptor = {
+            file_name: file.name,
+            mime_type: file.type,
+            size_bytes: file.size,
+          };
+          const prepareResponse = await fetch(
+            "/api/salon/application/documents/prepare",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(descriptor),
+              cache: "no-store",
+              credentials: "same-origin",
+            },
+          );
+          const prepareBody = await readApiResponse(
+            prepareResponse,
+            "The supporting-document upload could not be prepared.",
+          );
+          const uploadId = String(prepareBody.upload_id || "");
+          const bucket = String(prepareBody.bucket || "");
+          const path = String(prepareBody.path || "");
+          const token = String(prepareBody.token || "");
+          if (
+            !prepareResponse.ok ||
+            !uploadId ||
+            !bucket ||
+            !path ||
+            !token
+          ) {
+            throw new Error(
+              String(
+                prepareBody.error ||
+                  "The supporting-document upload could not be prepared.",
+              ),
+            );
+          }
+          preparedPath = path;
+          const transfer = await supabase.storage
+            .from(bucket)
+            .uploadToSignedUrl(path, token, file, {
+              contentType: file.type,
+              cacheControl: "3600",
+            });
+          if (transfer.error) {
+            const status = Number(
+              (transfer.error as unknown as { statusCode?: number })
+                .statusCode || 500,
+            );
+            const report = await reportClientOperationalFailure({
+              status,
+              code: "SIGNED_APPLICATION_DOCUMENT_UPLOAD_FAILED",
+              operation: `application-document-upload:${uploadId}`,
+              provider: "supabase",
+              authorization: `Bearer ${session.access_token}`,
+              dedupeScope: `application-document:${uploadId}`,
+            });
+            throw new Error(report.message);
+          }
+          const finalizeResponse = await fetch(
+            "/api/salon/application/documents/finalize",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                ...descriptor,
+                upload_id: uploadId,
+                path,
+              }),
+              cache: "no-store",
+              credentials: "same-origin",
+            },
+          );
+          const finalizeBody = await readApiResponse(
+            finalizeResponse,
+            "The supporting document uploaded, but could not be verified.",
+          );
+          if (!finalizeResponse.ok || finalizeBody.uploaded !== true) {
+            throw new Error(
+              String(
+                finalizeBody.error ||
+                  "The supporting document uploaded, but could not be verified.",
+              ),
+            );
+          }
+          uploadedPaths.push(String(finalizeBody.path || path));
+        } catch (error) {
+          if (preparedPath) {
+            // Release the durable pending-upload quota immediately. Storage
+            // removal remains the bounded cleanup job's responsibility, so a
+            // second provider failure cannot hide the original upload error.
+            try {
+              await fetch("/api/salon/application/documents/abandon", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ path: preparedPath }),
+                cache: "no-store",
+                credentials: "same-origin",
+              });
+            } catch {
+              // The scheduled cleanup still expires this upload safely.
+            }
+          }
+          failures.push(
+            error instanceof Error
+              ? error.message
+              : "A supporting document could not be uploaded.",
+          );
+        }
+      }
+      if (uploadedPaths.length) {
+        setDocuments((current) => [...current, ...uploadedPaths]);
+      }
+      if (failures.length) setMessage(failures.join(" "));
+    } finally {
+      setUploadingDocs(false);
+    }
+  }
+
+  async function removeDocument(path: string) {
+    setMessage("");
+    try {
+      const session = await getValidSessionForScope("salon");
+      if (!session) {
+        setMessage("Your session has expired. Please sign in again.");
+        return;
+      }
+      const response = await fetch(
+        "/api/salon/application/documents/abandon",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ path }),
+          cache: "no-store",
+          credentials: "same-origin",
+        },
+      );
+      const body = await readApiResponse(
+        response,
+        "The supporting document could not be removed.",
+      );
+      if (!response.ok || body.abandoned !== true) {
+        throw new Error(
+          String(body.error || "The supporting document could not be removed."),
+        );
+      }
+      setDocuments((rows) => rows.filter((item) => item !== path));
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "The supporting document could not be removed.",
+      );
+    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -67,7 +268,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
       const session = await getSessionForScope("salon");
       if (!session) throw new Error("Your session has expired. Please sign in again.");
       const response = await fetch("/api/salon/application", { method:"POST", headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`}, body:JSON.stringify({...form,selected_plan:selectedPlan,website:"",logo_url:null,photo_urls:[],document_urls:documents,consent_authorized:checks[0],consent_terms:checks[1],consent_photos:checks[2]}) });
-      const body = await response.json();
+      const body = await readApiResponse(response, "Unable to submit application");
       if (!response.ok) throw new Error(body.error || "Unable to submit application");
       router.push("/salon/application-submitted");
     } catch (error) {
@@ -100,7 +301,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
     </div>
 
     <section className="mt-7 rounded-[14px] border border-plum/10 bg-blush/25 p-5"><h2 className="font-serif text-xl text-plum">Photos are added after approval</h2><p className="mt-1 text-xs leading-5 text-ink/65">You will add and crop your logo, cover image, and gallery in the setup dashboard. Your salon will not become marketplace-visible until all required media is complete.</p></section>
-    <section className="mt-6 rounded-[14px] border border-dashed border-plum/25 bg-blush/20 p-5"><div className="flex items-center gap-3"><FileUp className="text-magenta"/><div><h2 className="font-semibold text-plum">Licenses & supporting documents</h2><p className="text-xs text-ink/55">Private PDF, JPG, or PNG · up to 10 MB each</p></div></div><input type="file" multiple accept="application/pdf,image/jpeg,image/png" onChange={(event)=>void uploadDocuments(event.target.files)} className="mt-4 block w-full text-sm"/>{uploadingDocs?<p className="mt-2 text-xs text-magenta">Uploading documents…</p>:null}<ul className="mt-3 space-y-1 text-xs">{documents.map((path,index)=><li key={path} className="flex justify-between"><span className="text-plum">Private document {index+1} uploaded</span><button type="button" onClick={()=>setDocuments((rows)=>rows.filter((item)=>item!==path))}>Remove</button></li>)}</ul></section>
+    <section className="mt-6 rounded-[14px] border border-dashed border-plum/25 bg-blush/20 p-5"><div className="flex items-center gap-3"><FileUp className="text-magenta"/><div><h2 className="font-semibold text-plum">Licenses & supporting documents</h2><p className="text-xs text-ink/55">Private PDF, JPG, or PNG · up to 10 MB each</p></div></div><input type="file" multiple accept="application/pdf,image/jpeg,image/png" onChange={(event)=>void uploadDocuments(event.target.files)} className="mt-4 block w-full text-sm"/>{uploadingDocs?<p className="mt-2 text-xs text-magenta">Uploading documents…</p>:null}<ul className="mt-3 space-y-1 text-xs">{documents.map((path,index)=><li key={path} className="flex justify-between"><span className="text-plum">Private document {index+1} uploaded</span><button type="button" onClick={()=>void removeDocument(path)} className="font-semibold text-magenta">Remove</button></li>)}</ul></section>
     <div className="mt-6 space-y-3">{["I confirm the information is accurate and I’m authorized to represent this business.","I agree to the Terms of Service and Partner Agreement.","I confirm I have permission and rights for any photos I upload now or during setup."].map((label,index)=><label key={label} className="flex gap-3 text-sm"><input required type="checkbox" checked={checks[index]} onChange={(event)=>setChecks((current)=>current.map((value,itemIndex)=>itemIndex===index?event.target.checked:value))} className="accent-magenta"/>{label}</label>)}</div>
     {message?<p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p>:null}
     <button disabled={saving} className="mt-6 w-full rounded-[8px] bg-magenta py-3.5 font-bold text-white disabled:opacity-60">{saving?"Submitting…":"Submit Application"}</button><p className="mt-4 flex items-center justify-center gap-2 text-[11px] text-ink/50"><LockKeyhole size={13}/>Your information is secure and will never be shared.</p>

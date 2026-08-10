@@ -216,7 +216,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     const value = incomingQuery[key];
     if (typeof value === "string" && value.length <= 160) bookingContext.set(key, value);
   }
-  const pageContent = await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} });
+  const pageContent = (await getContentPage("salon-profile", { slug: "salon-profile", title: "Salon profile", labels: {} }))
+    || { slug: "salon-profile", title: "Salon profile", labels: {} };
   const { data: salon, error: salonError } = await supabase
     .from("salons")
     .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")

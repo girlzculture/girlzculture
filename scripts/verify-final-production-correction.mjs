@@ -96,7 +96,11 @@ for (const column of [
 ]) {
   assert.ok(finance.includes(`"${column}"`), `Finance column is missing: ${column}`);
 }
-assert.match(finance, /lg:hidden[\s\S]*View details/);
+assert.match(
+  finance,
+  /lg:hidden[\s\S]*Open transaction details/,
+  "Mobile finance cards must link to the focused transaction detail route.",
+);
 assert.match(finance, /rows=\{unifiedTransactions\}/);
 assert.match(finance, /function TransactionRows[\s\S]*rows\.map/);
 

@@ -5,6 +5,8 @@ const read = (path) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const decisionSearch = read("src/lib/decisionSearchServer.ts");
+const decisionIntent = read("src/lib/decisionSearchIntentCore.ts");
+const decisionEnrichment = read("src/lib/decisionSearchEnrichmentCore.ts");
 const discovery = read("src/components/public/SalonDiscovery.tsx");
 const salonPage = read("src/app/salons/page.tsx");
 const salonCard = read("src/components/public/MarketplaceSalonCard.tsx");
@@ -23,6 +25,7 @@ const engineConfig = read("src/lib/engineConfigServer.ts");
 const layout = read("src/app/layout.tsx");
 const supabase = read("src/lib/supabase.ts");
 const adminData = read("src/app/api/admin/data/route.ts");
+const adminDataProjection = read("src/lib/adminDataProjectionCore.ts");
 const descriptionEditor = read(
   "src/components/owner/SalonDescriptionEditor.tsx",
 );
@@ -37,27 +40,25 @@ const migration = read(
   "supabase/migrations/20260807020000_authoritative_submission_lifecycle.sql",
 );
 
-assert.match(decisionSearch, /function containsPhrase/);
+assert.match(decisionEnrichment, /function containsDecisionSearchPhrase/);
 assert.ok(
-  decisionSearch.includes(
-    "return ` ${haystack} `.includes(` ${normalizedNeedle} `);",
-  ),
+  decisionEnrichment.includes(".includes("),
   "Search must use whole normalized phrases instead of prefix substrings.",
 );
 assert.match(
-  decisionSearch,
+  decisionIntent,
   /affordable\|cheap\|budget\|lowest price\|low cost/,
 );
 assert.match(
-  decisionSearch,
-  /best\|best rated\|highest rated\|top rated\|reliable/,
+  decisionIntent,
+  /best\|best rated\|highest rated\|top rated\|highly rated\|reliable/,
 );
 assert.match(
-  decisionSearch,
-  /boundedSearchNumber\(\s*ratingMatch\?\.\[1\],\s*bestIntent \? 3\.9 : null,\s*0,\s*5,\s*\)/,
+  decisionIntent,
+  /boundedSearchNumber\(\s*ratingMatch\?\.\[1\],\s*bestIntent \? 3\.9 : null,\s*0,\s*5\s*\)/,
 );
 assert.match(decisionSearch, /price_display_min/);
-assert.match(decisionSearch, /promotionApplies/);
+assert.match(decisionEnrichment, /decisionPromotionPriceForStyle/);
 assert.match(decisionSearch, /completed_appointments/);
 assert.match(decisionSearch, /cancellation_rate_percent/);
 assert.match(decisionSearch, /bookingAvailability/);
@@ -162,11 +163,11 @@ assert.match(
 );
 
 assert.match(
-  adminData,
+  adminDataProjection,
   /bookings:\s*\n?\s*"id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status"/,
 );
 assert.doesNotMatch(
-  adminData,
+  adminDataProjection,
   /deposit_amount,deposit_status,payment_status/,
   "Platform Admin Overview must not request the nonexistent bookings.payment_status column.",
 );

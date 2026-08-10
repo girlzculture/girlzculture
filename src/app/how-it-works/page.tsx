@@ -1,4 +1,5 @@
 import { BadgeCheck, CalendarClock, CreditCard, Search, ShieldCheck, Star, Tags, UserRoundCheck } from "lucide-react";
+import { notFound } from "next/navigation";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { getContentPage } from "@/lib/content";
 import PublicContentSections from "@/components/site/PublicContentSections";
@@ -24,6 +25,7 @@ const fallbackFaqs = [
 
 export default async function HowItWorksPage() {
   const content = await getContentPage("how-it-works", { slug: "how-it-works", title: "How It Works", hero_title: "Book with clear steps and real confirmation.", hero_subtitle: "Find, compare, book, and receive confirmation without guesswork.", sections: fallbackFaqs });
+  if (!content) notFound();
   const faqs = content.sections?.filter((section) => (!section.type || section.type === "text") && section.title && section.body) || fallbackFaqs;
   const customSections = content.sections?.filter((section) => section.type && section.type !== "text") || [];
   return <main className="min-h-screen bg-cream pb-20 text-ink md:pb-0"><PublicHeader active="how"/>

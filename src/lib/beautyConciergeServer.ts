@@ -1,7 +1,7 @@
 import "server-only";
 
-import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
-import { discoverNearbySalons, type PublicSalonResult } from "@/lib/discoveryServer";
+import type { PublicSalonResult } from "@/lib/discoveryServer";
+import { runDecisionSearch } from "@/lib/decisionSearchServer";
 import { validCoordinates, type Coordinates } from "@/lib/location";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEngineNumber } from "@/lib/engineConfigServer";
@@ -241,12 +241,6 @@ async function resolveStyleAndLocation(prompt: string, intent: ConciergeIntent, 
   return { origin: salon ? { lat: Number(salon.latitude), lng: Number(salon.longitude) } : null, intent };
 }
 
-function timeMatches(value: string, period: ConciergeIntent["time_period"]) {
-  if (period === "any") return true;
-  const hour = Number(value.split(":")[0]);
-  return period === "morning" ? hour < 12 : period === "afternoon" ? hour >= 12 && hour < 17 : hour >= 17;
-}
-
 export async function runBeautyConcierge(input: { prompt: string; language: string; origin: Coordinates | null; request?: Request }) {
   const admin = getSupabaseAdmin();
   const started = Date.now();
@@ -350,42 +344,38 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     getEngineNumber("ai.concierge.default_radius", 50, 1, 100),
     getEngineNumber("ai.concierge.result_limit", 12, 1, 12),
   ]);
-  const discovery = await discoverNearbySalons({ origin: resolved.origin, radius: intent.radius_miles || defaultRadius, style: intent.style, minimumRating: intent.minimum_rating, maximumPrice: intent.maximum_price, sort: intent.sort, limit: "all" });
-  const ids = discovery.salons.map((salon) => salon.id);
-  const now = new Date().toISOString();
-  const promotionResult = ids.length ? await admin.from("salon_promotions").select("id,salon_id,title,discount_label,starts_at,ends_at").in("salon_id", ids).eq("is_active", true).eq("status", "Active").is("archived_at", null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`) : { data: [], error: null };
-  if (promotionResult.error) throw promotionResult.error;
-  const promotions = promotionResult.data || [];
-  const promotionMap = new Map((promotions || []).map((row) => [String(row.salon_id), { id: String(row.id), title: String(row.title), label: row.discount_label ? String(row.discount_label) : null }]));
-  const enriched = await Promise.all(discovery.salons.map(async (salon): Promise<ConciergeSalonResult | null> => {
-    const promotion = promotionMap.get(salon.id) || null;
-    if (intent.promotion_only && !promotion) return null;
-    let nextSlot: ConciergeSalonResult["next_slot"] = null;
-    if (intent.date && salon.services[0]?.id) {
-      try {
-        const availability = await bookingAvailability({ salonId: salon.id, styleId: salon.services[0].id, date: intent.date });
-        const slot = availability.slots.find((candidate) => timeMatches(candidate.value, intent.time_period));
-        if (slot) nextSlot = { date: intent.date, value: slot.value, label: slot.label };
-      } catch (error) {
-        nextSlot = null;
-        warningReferences.push(await capturePlatformError({
-          request: input.request,
-          admin,
-          error,
-          feature: "ai_concierge",
-          action: "resolve_salon_availability",
-          actorRole: "public",
-          salonId: salon.id,
-          recordType: "salon",
-          recordId: salon.id,
-          provider: "booking-availability",
-          safeMessage: "One salon's live availability could not be checked.",
-          severity: "medium",
-        }));
-      }
-      if (intent.availability_required && !nextSlot) return null;
-    }
-    return { ...salon, promotion, next_slot: nextSlot, deposit_amount: salon.starting_price === null ? null : Math.round(Number(salon.starting_price) * 10) / 100 };
+  const decision = await runDecisionSearch({
+    query: [input.prompt, intent.style, intent.location].filter(Boolean).join(" "),
+    origin: resolved.origin,
+    filters: {
+      radiusMiles: intent.radius_miles || defaultRadius,
+      minimumRating: intent.minimum_rating,
+      maximumPrice: intent.maximum_price,
+      date: intent.date,
+      sort: intent.sort,
+      promotionOnly: intent.promotion_only,
+    },
+  });
+  const salons: ConciergeSalonResult[] = decision.salons.slice(0, resultLimit).map((salon) => ({
+    ...salon,
+    next_slot: salon.next_slot
+      ? { date: salon.next_slot.date, value: salon.next_slot.value, label: salon.next_slot.label }
+      : null,
+    deposit_amount: salon.starting_price === null
+      ? null
+      : Math.round(Number(salon.starting_price) * 10) / 100,
   }));
-  return { mode, intent, clarification: null, salons: (enriched.filter(Boolean) as ConciergeSalonResult[]).slice(0, resultLimit), safeError, warnings: warnings(), configuration: configuration(), latencyMs: Date.now() - started };
+  return {
+    mode,
+    intent,
+    clarification: null,
+    salons,
+    summary: decision.summary,
+    empty_reason: decision.empty_reason,
+    evidence: "evidence" in decision ? decision.evidence : undefined,
+    safeError,
+    warnings: warnings(),
+    configuration: configuration(),
+    latencyMs: Date.now() - started,
+  };
 }

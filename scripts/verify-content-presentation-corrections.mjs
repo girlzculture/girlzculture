@@ -1,15 +1,57 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
 const read = (path) => readFileSync(path, "utf8");
+const moduleDataUrl = (source, aliases = new Map()) => {
+  const rewriteAliases = (context) => {
+    const visit = (node) => {
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
+        && node.moduleSpecifier
+        && ts.isStringLiteral(node.moduleSpecifier)
+      ) {
+        const replacement = aliases.get(node.moduleSpecifier.text);
+        if (replacement && ts.isImportDeclaration(node)) {
+          return ts.factory.updateImportDeclaration(
+            node,
+            node.modifiers,
+            node.importClause,
+            ts.factory.createStringLiteral(replacement),
+            node.attributes,
+          );
+        }
+        if (replacement && ts.isExportDeclaration(node)) {
+          return ts.factory.updateExportDeclaration(
+            node,
+            node.modifiers,
+            node.isTypeOnly,
+            node.exportClause,
+            ts.factory.createStringLiteral(replacement),
+            node.attributes,
+          );
+        }
+      }
+      return ts.visitEachChild(node, visit, context);
+    };
+    return (sourceFile) => ts.visitNode(sourceFile, visit);
+  };
+
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    transformers: aliases.size > 0 ? { before: [rewriteAliases] } : undefined,
+  }).outputText;
+  return `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`;
+};
+
+const promotionScheduleCoreUrl = moduleDataUrl(read("src/lib/promotionScheduleCore.ts"));
+const coreDependencies = new Map([
+  ["@/lib/location", moduleDataUrl(read("src/lib/location.ts"))],
+  ["@/lib/promotionScheduleCore", promotionScheduleCoreUrl],
+  ["./promotionScheduleCore", promotionScheduleCoreUrl],
+]);
 const coreSource = read("src/lib/homePromotionCore.ts");
-const locationUrl = pathToFileURL(`${process.cwd()}/src/lib/location.ts`).href;
-const compiledCore = ts.transpileModule(coreSource, {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
-}).outputText.replace('from "@/lib/location"', `from "${locationUrl}"`);
-const core = await import(`data:text/javascript;base64,${Buffer.from(compiledCore).toString("base64")}`);
+const core = await import(moduleDataUrl(coreSource, coreDependencies));
 const navigationCoreSource = read("src/lib/navigationVisibilityCore.ts");
 const compiledNavigationCore = ts.transpileModule(navigationCoreSource, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
@@ -20,6 +62,11 @@ const compiledBuildPhaseCore = ts.transpileModule(buildPhaseCoreSource, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
 const buildPhaseCore = await import(`data:text/javascript;base64,${Buffer.from(compiledBuildPhaseCore).toString("base64")}`);
+const publicationCoreSource = read("src/lib/contentPublicationCore.ts");
+const compiledPublicationCore = ts.transpileModule(publicationCoreSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+}).outputText;
+const publicationCore = await import(`data:text/javascript;base64,${Buffer.from(compiledPublicationCore).toString("base64")}`);
 
 assert.equal(buildPhaseCore.isStaticBuildPhase({ NEXT_PHASE: "phase-production-build" }), true);
 assert.equal(buildPhaseCore.isStaticBuildPhase({ npm_lifecycle_event: "build" }), true);
@@ -27,6 +74,42 @@ assert.equal(buildPhaseCore.isStaticBuildPhase({ NEXT_PHASE: "phase-production-s
 assert.equal(buildPhaseCore.isStaticBuildPhase({ npm_lifecycle_event: "start" }), false);
 
 const now = Date.parse("2026-08-07T18:00:00Z");
+const publishedA = { title: "Published A" };
+const scheduledB = { title: "Scheduled B" };
+const dueSchedule = {
+  publication_state: "Published",
+  published_payload: publishedA,
+  published_at: "2026-08-06T12:00:00.000Z",
+  scheduled_payload: scheduledB,
+  scheduled_publish_at: "2026-08-07T12:00:00.000Z",
+  is_enabled: true,
+};
+assert.deepEqual(
+  publicationCore.retainedPublishedVersion(dueSchedule, now),
+  {
+    payload: scheduledB,
+    publishedAt: "2026-08-07T12:00:00.000Z",
+    source: "scheduled",
+  },
+  "a due scheduled snapshot must become the retained public version before scheduling its replacement",
+);
+assert.deepEqual(
+  publicationCore.retainedPublishedVersion({
+    ...dueSchedule,
+    scheduled_publish_at: "2026-08-08T12:00:00.000Z",
+  }, now),
+  {
+    payload: publishedA,
+    publishedAt: "2026-08-06T12:00:00.000Z",
+    source: "published",
+  },
+  "a future scheduled snapshot must leave the current published snapshot live",
+);
+assert.equal(
+  publicationCore.retainedPublishedVersion({ ...dueSchedule, is_enabled: false }, now),
+  null,
+  "hidden content must not be promoted as a retained public version",
+);
 const saved = Array.from({ length: 8 }, (_, index) => ({
   id: `saved-${index + 1}`,
   content_type: "image",
@@ -101,13 +184,23 @@ const promotionServer = read("src/lib/homepagePromotionServer.ts");
 const homepageRail = read("src/components/public/HomepagePromoRail.tsx");
 const navigationAdmin = read("src/components/admin/NavigationMenuManager.tsx");
 const migration = read("supabase/migrations/20260807210000_content_presentation_and_mobile_legal.sql");
+const publicationMigration = read("supabase/migrations/20260808120000_content_publication_workflow.sql");
+const catalogAuditMigration = read("supabase/migrations/20260809180000_atomic_content_catalog_audit.sql");
+const cleanDatabaseRunner = read("scripts/verify-clean-database.mjs");
+const recordLifecycleApi = read("src/app/api/admin/records/route.ts");
 
 assert.doesNotMatch(about, /Transparency[\s\S]*Celebrating Braiding Culture/);
 assert.match(about, /AboutIntro/);
 assert.match(about, /about-promo-carousel/);
 assert.match(about, /resolvePublishedContentCards/);
+assert.match(about, /getContentPage\("about-carousel-one"/);
+assert.match(about, /getContentPage\("about-carousel-two"/);
+assert.doesNotMatch(about, /independentMiddle[^\n]*\|\| middleSource/);
 assert.match(carousel, /prefers-reduced-motion/);
-assert.match(carousel, /onPointerDown=\{pause\}/);
+assert.match(carousel, /onPointerDown=\{pauseForPointerInteraction\}/);
+assert.match(carousel, /onWheel=\{pauseForWheelInteraction\}/);
+assert.match(carousel, /onFocusCapture=\{\(\) => pause\(\)\}/);
+assert.doesNotMatch(carousel, /hovered\.current|focused\.current/);
 assert.match(carousel, /uniquePromotionCards/);
 assert.match(carousel, /if \(!ready\) return unique\.filter\(isExplicitlyGlobalPromotionCard\)/);
 assert.doesNotMatch(carousel, /\.\.\.cards\s*,\s*\.\.\.cards/);
@@ -117,6 +210,9 @@ assert.match(footer, /\{mobileLegalItem \? <Link/);
 assert.doesNotMatch(footer, /mobileLegalItem[^\n]*\|\| defaultFooter/);
 assert.match(footer, /env\(safe-area-inset-bottom\)/);
 assert.match(admin, /Saved source pool/);
+assert.match(admin, /function resolvedPublicSnapshot/);
+assert.match(admin, /Public: \{publiclyVisible \? "Visible" : "Not visible"\}/);
+assert.match(admin, /Draft: \{draftState\.visible \? "Visible" : "Hidden"\}/);
 assert.match(navigationAdmin, /Footer group order & previews/);
 assert.match(admin, /grid items-start gap-4 xl:grid-cols-2/);
 assert.match(admin, /additionalLegalSlugs/);
@@ -125,11 +221,24 @@ assert.match(content, /rpc\("get_public_navigation_surface"/);
 assert.match(content, /payload\?\.configured !== true/);
 assert.doesNotMatch(content, /from\("navigation_items"\)/);
 assert.match(content, /Array\.isArray\(payload\.items\)/);
+assert.match(content, /function resolvedContentPage\(value: unknown\)/);
+assert.match(content, /Array\.isArray\(value\)/);
+assert.match(content, /return resolvedContentPage\(data\)/);
+assert.doesNotMatch(content, /\(data as ContentPage \| null\) \|\| fallback/);
 assert.match(platformErrors, /context\.admin && !isStaticBuildPhase\(\)/);
 assert.match(contentApi, /Active homepage promotion/);
 assert.match(contentApi, /isHomepagePromotionCardComplete/);
+assert.match(contentApi, /expected_updated_at/);
+assert.match(contentApi, /verifyPublicProjection/);
+assert.match(contentApi, /Saved page public-projection verification failed/);
+assert.match(contentApi, /Saved blog public-projection verification failed/);
+assert.match(contentApi, /noteOperationalFailure\([\s\S]*verificationError/);
+assert.match(publicationMigration, /Draft saved/);
+assert.match(contentApi, /dueScheduledIsPublic/);
 assert.match(promotionServer, /published\.filter\(isHomepagePromotionCardComplete\)/);
 assert.match(homepageRail, /cards: cards\.filter\(isHomepagePromotionCardComplete\)/);
+assert.match(homepageRail, /onFocus=\{pauseForInteraction\}/);
+assert.doesNotMatch(homepageRail, /onFocus=\{\(\) => setInteractionPaused\(true\)\}/);
 assert.match(migration, /continue;/);
 assert.match(migration, /editorial_fallback\":false/);
 for (const field of ["body", "cta_label", "alt_text", "status", "starts_at", "ends_at", "priority"]) {
@@ -148,6 +257,58 @@ assert.match(migration, /'configured', count\(\*\) > 0/);
 assert.match(migration, /filter \(where item\.is_enabled and item\.archived_at is null\)/);
 assert.match(migration, /revoke all on function public\.get_public_navigation_surface\(text\) from public/);
 assert.match(migration, /grant execute on function public\.get_public_navigation_surface\(text\) to anon, authenticated, service_role/);
+assert.match(publicationMigration, /content_pages_archive_publication_guard/);
+assert.match(publicationMigration, /blog_posts_archive_publication_guard/);
+assert.match(publicationMigration, /new\.publication_state := 'Archived'/);
+assert.match(publicationMigration, /new\.scheduled_payload := null/);
+assert.match(publicationMigration, /jsonb_typeof\(parent\.sections\) = 'array'/);
+assert.match(publicationMigration, /grant execute on function public\.get_public_content_page\(text\) to anon, authenticated, service_role/);
+assert.doesNotMatch(publicationMigration, /\(resolved\.payload ->> 'published_at'\)::timestamptz/);
+assert.doesNotMatch(publicationMigration, /\(resolved\.payload ->> 'featured'\)::boolean/);
+assert.match(recordLifecycleApi, /publication_state: "Archived"/);
+assert.match(recordLifecycleApi, /publication_state: "Hidden"/);
+assert.match(recordLifecycleApi, /admin\.rpc\("admin_save_content_record"/);
+const contentLifecycleBranch = recordLifecycleApi.match(
+  /if \(\s*\(type === "content_page" \|\| type === "blog_post"\)[\s\S]*?\n\s*}\s*\n\s*if \(action === "restore"\)/,
+)?.[0];
+assert.ok(
+  contentLifecycleBranch,
+  "Content archive/restore lifecycle branch was not found.",
+);
+assert.doesNotMatch(
+  contentLifecycleBranch,
+  /\.from\(resource\.table\)|record_management_events/,
+  "Content archive/restore must stay inside the atomic content RPC rather than direct table/audit writes.",
+);
+assert.match(contentApi, /retainedPublishedVersion\(current\)/);
+assert.match(contentApi, /published_payload: retainedPublicVersion\.payload/);
+assert.match(contentApi, /admin\.rpc\("admin_save_content_record"/);
+assert.doesNotMatch(contentApi, /\.from\("content_pages"\)\.upsert/);
+assert.doesNotMatch(contentApi, /\.from\("blog_posts"\)\.upsert/);
+assert.match(publicationMigration, /create or replace function public\.admin_save_content_record/);
+assert.match(publicationMigration, /CONTENT_REVISION_CONFLICT/);
+assert.match(publicationMigration, /insert into public\.record_management_events/);
+assert.match(publicationMigration, /revoke all on function public\.admin_save_content_record[\s\S]*from public, anon, authenticated/);
+assert.match(publicationMigration, /grant execute on function public\.admin_save_content_record[\s\S]*to service_role/);
+assert.match(contentApi, /admin\.rpc\("admin_save_content_catalog_record"/);
+assert.doesNotMatch(contentApi, /auditContentChange/);
+assert.doesNotMatch(contentApi, /admin\.from\("master_styles"\)\.update/);
+assert.doesNotMatch(contentApi, /admin\.from\("service_categories"\)\.update/);
+assert.doesNotMatch(contentApi, /admin\.from\(table\)\.(?:insert|update)/);
+assert.match(catalogAuditMigration, /create or replace function public\.admin_save_content_catalog_record/);
+for (const recordType of ["master_style", "service_category", "service_group", "service_addon"]) {
+  assert.match(catalogAuditMigration, new RegExp(`'${recordType}'`));
+}
+assert.match(catalogAuditMigration, /insert into public\.record_management_events/);
+assert.match(catalogAuditMigration, /revoke all on function public\.admin_save_content_catalog_record[\s\S]*from public, anon, authenticated/);
+assert.match(catalogAuditMigration, /grant execute on function public\.admin_save_content_catalog_record[\s\S]*to service_role/);
+assert.match(cleanDatabaseRunner, /object-valued-sections/);
+assert.match(cleanDatabaseRunner, /Object-valued legacy About sections were not migrated safely/);
+const cleanDatabaseAssertions = read("scripts/sql/verify-clean-database.sql");
+assert.match(cleanDatabaseAssertions, /Content save did not atomically persist its audit event/);
+assert.match(cleanDatabaseAssertions, /Content mutation survived a failed audit transaction/);
+assert.match(cleanDatabaseAssertions, /Catalog save did not atomically persist its audit event/);
+assert.match(cleanDatabaseAssertions, /Catalog mutation survived a failed audit transaction/);
 
 const homepage = read("src/app/page.tsx");
 assert.match(homepage, /HOMEPAGE_EDITORIAL_FALLBACKS/);

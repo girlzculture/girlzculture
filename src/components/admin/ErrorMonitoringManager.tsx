@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, RefreshCw, Search } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
+import { useAdminQueryParam } from "@/components/admin/useAdminListContext";
 
 type Row = Record<string, any>;
 
@@ -17,16 +18,22 @@ async function authHeaders(json = false) {
   };
 }
 
-export default function ErrorMonitoringManager() {
+export default function ErrorMonitoringManager({
+  initialEventId,
+  routeMode = false,
+}: {
+  initialEventId?: string;
+  routeMode?: boolean;
+} = {}) {
   const [events, setEvents] = useState<Row[]>([]);
   const [rules, setRules] = useState<Row[]>([]);
   const [trend, setTrend] = useState<Row[]>([]);
   const [assignees, setAssignees] = useState<Row[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
-  const [status, setStatus] = useState("Open");
-  const [severity, setSeverity] = useState("");
-  const [feature, setFeature] = useState("");
-  const [query, setQuery] = useState("");
+  const [status, setStatus] = useAdminQueryParam("status", "Open");
+  const [severity, setSeverity] = useAdminQueryParam("severity", "");
+  const [feature, setFeature] = useAdminQueryParam("feature", "");
+  const [query, setQuery] = useAdminQueryParam("q", "");
   const [selected, setSelected] = useState<Row | null>(null);
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
@@ -38,10 +45,10 @@ export default function ErrorMonitoringManager() {
     setNotice("");
     try {
       const params = new URLSearchParams({
-        status,
+        ...(initialEventId ? { id: initialEventId } : { status }),
         ...(severity ? { severity } : {}),
         ...(feature ? { feature } : {}),
-        ...(query.trim() ? { q: query.trim() } : {}),
+        ...(!initialEventId && query.trim() ? { q: query.trim() } : {}),
       });
       const response = await fetch(`/api/admin/engine/errors?${params}`, {
         headers: await authHeaders(),
@@ -55,7 +62,12 @@ export default function ErrorMonitoringManager() {
       setTrend(Array.isArray(body.trend) ? body.trend : []);
       setAssignees(Array.isArray(body.assignees) ? body.assignees : []);
       setFeatures(Array.isArray(body.features) ? body.features : []);
-      if (selected) {
+      if (initialEventId) {
+        const requested = nextEvents.find((row: Row) => String(row.id) === initialEventId) || null;
+        setSelected(requested);
+        setAssignedTo(String(requested?.assigned_to || ""));
+        setNotes(String(requested?.admin_notes || ""));
+      } else if (selected && !routeMode) {
         const refreshed = nextEvents.find((row: Row) => row.id === selected.id) || null;
         setSelected(refreshed);
         setAssignedTo(String(refreshed?.assigned_to || ""));
@@ -72,8 +84,21 @@ export default function ErrorMonitoringManager() {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [feature, severity, status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const incidentReturnPath = useMemo(() => {
+    const params = new URLSearchParams();
+    if (status !== "Open") params.set("status", status);
+    if (severity) params.set("severity", severity);
+    if (feature) params.set("feature", feature);
+    if (query.trim()) params.set("q", query.trim());
+    const suffix = params.toString();
+    return suffix ? `/admin/engine/incidents?${suffix}` : "/admin/engine/incidents";
+  }, [feature, query, severity, status]);
 
   function selectEvent(event: Row) {
+    if (routeMode) {
+      window.location.assign(`/admin/engine/incident-${encodeURIComponent(String(event.id))}?return=${encodeURIComponent(incidentReturnPath)}`);
+      return;
+    }
     setSelected(event);
     setNotes(String(event.admin_notes || ""));
     setAssignedTo(String(event.assigned_to || ""));
@@ -146,8 +171,8 @@ export default function ErrorMonitoringManager() {
     </div>
 
     {notice ? <p role="status" className="rounded-lg bg-blush/55 p-3 text-xs text-plum">{notice}</p> : null}
-    <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]">
-      <div className="max-h-[600px] space-y-2 overflow-y-auto">
+    <div className={`grid gap-4 ${routeMode ? "" : "xl:grid-cols-[.9fr_1.1fr]"}`}>
+      <div className={`${routeMode && selected ? "hidden" : ""} max-h-[600px] space-y-2 overflow-y-auto`}>
         {events.map((event) => <button key={event.id} type="button" onClick={() => selectEvent(event)} className={`w-full rounded-xl border p-4 text-left ${selected?.id === event.id ? "border-magenta bg-blush/30" : "border-plum/10"}`}><div className="flex items-center justify-between gap-3"><b className="text-xs text-plum">{event.presentation?.title || "Platform operation needs attention"}</b><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${event.severity === "critical" ? "bg-red-100 text-red-800" : event.severity === "high" ? "bg-amber-100 text-amber-800" : "bg-blush text-plum"}`}>{event.severity}</span></div><p className="mt-2 line-clamp-2 text-xs text-ink/65">{event.presentation?.explanation || event.user_safe_message || "An operation needs review."}</p><p className="mt-2 text-[9px] text-ink/45">{event.occurrence_count} occurrence{event.occurrence_count === 1 ? "" : "s"} · {event.affected_business_count || 0} affected business{event.affected_business_count === 1 ? "" : "es"} · last seen {new Date(event.last_occurred_at).toLocaleString()}</p></button>)}
         {!loading && !events.length ? <p className="rounded-xl border border-dashed border-plum/15 p-8 text-center text-xs text-ink/50">No events match these filters.</p> : null}
         {loading ? <p className="p-6 text-center text-xs text-ink/50">Loading monitored errors…</p> : null}
@@ -163,7 +188,7 @@ export default function ErrorMonitoringManager() {
         <label className="mt-4 block text-xs font-bold">Assigned admin<select value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="mt-1 w-full rounded-lg border p-3 font-normal"><option value="">Unassigned</option>{assignees.map((admin) => <option key={admin.id} value={admin.id}>{admin.name}{admin.email && admin.email !== admin.name ? ` · ${admin.email}` : ""}</option>)}</select></label>
         <label className="mt-4 block text-xs font-bold">Admin notes<textarea value={notes} onChange={(event) => setNotes(event.target.value.slice(0, 4000))} rows={5} className="mt-1 w-full rounded-lg border p-3 font-normal"/></label>
         <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void update("Investigating")} className="rounded-lg border border-amber-300 px-3 py-2 text-[10px] font-bold text-amber-800">Investigating</button><button type="button" onClick={() => void update("Resolved")} className="inline-flex items-center gap-1 rounded-lg bg-green-700 px-3 py-2 text-[10px] font-bold text-white"><CheckCircle2 size={13}/>Resolved</button><button type="button" onClick={() => void update("Ignored")} className="rounded-lg border px-3 py-2 text-[10px] font-bold">Ignore</button><button type="button" onClick={() => void update("Open")} className="rounded-lg border border-magenta px-3 py-2 text-[10px] font-bold text-magenta">Reopen</button></div>
-      </article> : <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-plum/15 text-xs text-ink/50">Select an event to review its impact and recommended action.</div>}
+      </article> : routeMode ? null : <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-plum/15 text-xs text-ink/50">Select an event to review its impact and recommended action.</div>}
     </div>
 
     <div className="rounded-xl border border-plum/10 p-3"><p className="text-[10px] font-bold uppercase text-ink/50">Alert thresholds</p><div className="mt-2 flex flex-wrap gap-3">{rules.map((rule) => <span key={rule.id} className="rounded-full bg-blush/50 px-3 py-2 text-[10px] text-plum">{rule.severity}: {rule.occurrence_threshold} in {rule.window_minutes} min · {rule.is_enabled ? "enabled" : "disabled"}</span>)}</div></div>

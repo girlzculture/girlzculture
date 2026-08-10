@@ -7,6 +7,10 @@ import { randomUUID } from "node:crypto";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { assertRecentHighRiskVerification } from "@/lib/identityDeletionServer";
+import {
+  isClearlyExpectedMessage,
+  isPermissionDenialMessage,
+} from "@/lib/operationalMonitoringCore";
 
 type Resource = {
   table: string;
@@ -430,17 +434,12 @@ function ownerConfirmation(type: string, row: Record<string, unknown>) {
   return "";
 }
 
-function friendlyFailure(error: unknown, requestId: string) {
+function friendlyFailure(error: unknown) {
   const message =
     error instanceof Error ? error.message : "The record could not be changed.";
-  if (
-    /still used|must be archived|retained|cannot|Choose|permission|not found|reason|reassign|test salon|test[- ]data|offboard|Super Admin|already|maintenance|deployment environment|permanent deletion|confirm|restore/i.test(
-      message,
-    )
-  )
-    return message;
-  noteOperationalFailure("Managed record operation failed", { requestId, error });
-  return `The operation could not be completed safely. Nothing was changed. Reference ${requestId}.`;
+  return isClearlyExpectedMessage(message) || isPermissionDenialMessage(message)
+    ? message
+    : null;
 }
 
 async function GETHandler(request: Request) {
@@ -537,7 +536,6 @@ async function GETHandler(request: Request) {
 }
 
 async function POSTHandler(request: Request) {
-  const requestId = randomUUID();
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const type = cleanText(body.resource, 60);
@@ -714,6 +712,48 @@ async function POSTHandler(request: Request) {
 
     const dependencies = await dependencyPlan(admin, resource, id);
     let after: Record<string, unknown> | null = null;
+    if (
+      (type === "content_page" || type === "blog_post") &&
+      (action === "archive" || action === "restore")
+    ) {
+      const isPage = type === "content_page";
+      const recordPatch = action === "restore"
+        ? {
+            ...row,
+            archived_at: null,
+            status: "Draft",
+            publication_state: "Hidden",
+            scheduled_publish_at: null,
+            scheduled_payload: null,
+            ...(isPage ? { is_enabled: false } : { featured: false }),
+          }
+        : {
+            ...row,
+            status: "Archived",
+            publication_state: "Archived",
+            scheduled_publish_at: null,
+            scheduled_payload: null,
+            archived_at: new Date().toISOString(),
+            ...(isPage ? { is_enabled: false } : { featured: false }),
+          };
+      const transition = await admin.rpc("admin_save_content_record", {
+        p_record_type: isPage ? "page" : "post",
+        p_actor_user_id: user.id,
+        p_record: recordPatch,
+        p_action: action,
+        p_expected_updated_at: row.updated_at || null,
+      });
+      if (transition.error) throw transition.error;
+      return Response.json({
+        result: {
+          ok: true,
+          action,
+          label: record.label,
+          record: (transition.data as { record?: unknown } | null)?.record || null,
+        },
+        dependencies,
+      });
+    }
     if (action === "restore") {
       const key = resource.table === "content_pages" ? "slug" : "id";
       const withoutArchiveColumn = [
@@ -737,9 +777,23 @@ async function POSTHandler(request: Request) {
       )
         patch = { ...patch, is_active: true };
       else if (resource.table === "content_pages")
-        patch = { ...patch, is_enabled: true, status: "Draft" };
+        patch = {
+          ...patch,
+          is_enabled: false,
+          status: "Draft",
+          publication_state: "Hidden",
+          scheduled_publish_at: null,
+          scheduled_payload: null,
+        };
       else if (resource.table === "blog_posts")
-        patch = { ...patch, status: "Draft", featured: false };
+        patch = {
+          ...patch,
+          status: "Draft",
+          featured: false,
+          publication_state: "Hidden",
+          scheduled_publish_at: null,
+          scheduled_payload: null,
+        };
       else if (resource.table === "salon_products")
         patch = { ...patch, is_visible: false };
       else if (resource.table === "salon_promotions")
@@ -762,7 +816,7 @@ async function POSTHandler(request: Request) {
         .single();
       if (result.error) throw result.error;
       after = result.data;
-      await admin.from("record_management_events").insert({
+      const audit = await admin.from("record_management_events").insert({
         record_type: type,
         record_id: id,
         record_label: record.label,
@@ -774,6 +828,15 @@ async function POSTHandler(request: Request) {
         acting_user_id: user.id,
         acting_scope: "platform_admin",
       });
+      if (audit.error) {
+        noteOperationalFailure("Managed record audit write failed", {
+          recordType: type,
+          recordId: id,
+          action: "restore",
+          error: audit.error,
+        });
+        throw audit.error;
+      }
       return Response.json({
         result: { ok: true, action, label: record.label },
         dependencies,
@@ -816,7 +879,7 @@ async function POSTHandler(request: Request) {
         const result = await admin.from(resource.table).delete().eq("id", id);
         if (result.error) throw result.error;
       }
-      await admin.from("record_management_events").insert({
+      const audit = await admin.from("record_management_events").insert({
         record_type: type,
         record_id: id,
         record_label: record.label,
@@ -828,6 +891,15 @@ async function POSTHandler(request: Request) {
         acting_user_id: user.id,
         acting_scope: "platform_admin",
       });
+      if (audit.error) {
+        noteOperationalFailure("Managed record audit write failed", {
+          recordType: type,
+          recordId: id,
+          action,
+          error: audit.error,
+        });
+        throw audit.error;
+      }
       return Response.json({
         result: { ok: true, action, label: record.label },
         dependencies,
@@ -1028,7 +1100,7 @@ async function POSTHandler(request: Request) {
       throw new Error("This record uses a dedicated workflow and was not changed.");
     }
 
-    await admin.from("record_management_events").insert({
+      const audit = await admin.from("record_management_events").insert({
       record_type: type,
       record_id: id,
       record_label: record.label,
@@ -1045,17 +1117,36 @@ async function POSTHandler(request: Request) {
       after_values: after,
       reason,
       acting_user_id: user.id,
-      acting_scope: "platform_admin",
-    });
+        acting_scope: "platform_admin",
+      });
+      if (audit.error) {
+        noteOperationalFailure("Managed record audit write failed", {
+          recordType: type,
+          recordId: id,
+          action,
+          error: audit.error,
+        });
+        throw audit.error;
+      }
     return Response.json({
       result: { ok: true, action, label: record.label },
       dependencies,
     });
   } catch (error) {
-    const message = friendlyFailure(error, requestId);
+    const message = friendlyFailure(error);
+    if (!message) {
+      noteOperationalFailure("Managed record operation failed", error);
+      throw error;
+    }
     return Response.json(
       { error: message },
-      { status: /not found/i.test(message) ? 404 : 409 },
+      {
+        status: isPermissionDenialMessage(message)
+          ? 403
+          : /not found/i.test(message)
+            ? 404
+            : 409,
+      },
     );
   }
 }

@@ -217,7 +217,13 @@ function Field({
   );
 }
 
-export default function AdminSubmissionDetail({ id }: { id: string }) {
+export default function AdminSubmissionDetail({
+  id,
+  returnTo = "/admin/submissions",
+}: {
+  id: string;
+  returnTo?: string;
+}) {
   const [application, setApplication] = useState<Application | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -309,7 +315,7 @@ export default function AdminSubmissionDetail({ id }: { id: string }) {
       await submissionAction(action, values);
       if (["delete_application", "delete_salon"].includes(action)) {
         notifyOtherTabs();
-        window.location.assign("/admin/submissions");
+        window.location.assign(returnTo);
         return;
       }
       await load();
@@ -434,7 +440,7 @@ export default function AdminSubmissionDetail({ id }: { id: string }) {
       <div className="grid min-h-screen place-items-center bg-cream p-5 text-center">
         <div className="rounded-[14px] bg-white p-8">
           <p>{message || "Application not found."}</p>
-          <Link href="/admin/submissions" className="mt-4 inline-flex font-bold text-magenta">
+          <Link href={returnTo} className="mt-4 inline-flex font-bold text-magenta">
             Back to submissions
           </Link>
         </div>
@@ -453,7 +459,7 @@ export default function AdminSubmissionDetail({ id }: { id: string }) {
     <main className="min-h-screen bg-cream px-3 py-4 text-ink sm:px-6 lg:px-10">
       <RoleSessionBoundary scope="admin" />
       <div className="mx-auto max-w-[1450px]">
-        <Link href="/admin/submissions" className="inline-flex min-h-10 items-center font-bold text-magenta">
+        <Link href={returnTo} className="inline-flex min-h-10 items-center font-bold text-magenta">
           Back to submissions
         </Link>
 

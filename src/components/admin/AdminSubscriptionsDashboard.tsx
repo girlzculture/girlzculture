@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import Link from "next/link";
 import { Download } from "lucide-react";
+import { useAdminQueryParam } from "@/components/admin/useAdminListContext";
 
 type Row = Record<string, unknown>;
 
@@ -66,11 +68,11 @@ export default function AdminSubscriptionsDashboard({ salons, subscriptions, bil
   billingEvents: Row[];
   changeRequests: Row[];
 }) {
-  const [stateFilter, setStateFilter] = useState("all");
-  const [planFilter, setPlanFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [stateFilter, setStateFilter] = useAdminQueryParam("state", "all");
+  const [planFilter, setPlanFilter] = useAdminQueryParam("plan", "all");
+  const [statusFilter, setStatusFilter] = useAdminQueryParam("status", "all");
+  const [fromDate, setFromDate] = useAdminQueryParam("from", "");
+  const [toDate, setToDate] = useAdminQueryParam("to", "");
   const salonById = useMemo(() => new Map(salons.map((salon) => [text(salon.id), salon])), [salons]);
   const states = useMemo(() => [...new Set(salons.map((salon) => text(salon.address_state || salon.state)).filter(Boolean))].sort(), [salons]);
   const statuses = useMemo(() => [...new Set(subscriptions.map((subscription) => normalizedStatus(subscription.status)))].sort(), [subscriptions]);
@@ -136,6 +138,14 @@ export default function AdminSubscriptionsDashboard({ salons, subscriptions, bil
       text(subscription.stripe_subscription_id),
     ];
   });
+  const returnParams = new URLSearchParams({
+    ...(stateFilter !== "all" ? { state: stateFilter } : {}),
+    ...(planFilter !== "all" ? { plan: planFilter } : {}),
+    ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+    ...(fromDate ? { from: fromDate } : {}),
+    ...(toDate ? { to: toDate } : {}),
+  });
+  const returnPath = `/admin/subscriptions${returnParams.size ? `?${returnParams}` : ""}`;
 
   return <div className="space-y-5">
     <section className="rounded-[14px] border border-plum/10 bg-white p-4">
@@ -164,12 +174,14 @@ export default function AdminSubscriptionsDashboard({ salons, subscriptions, bil
 
     <section className="overflow-hidden rounded-[14px] border border-plum/10 bg-white">
       <div className="border-b border-plum/10 p-4"><h2 className="font-serif text-xl font-semibold text-plum">Plans by state</h2></div>
-      <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-blush/25"><tr>{["State", "Basic", "Growth", "Premium", "Total"].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead><tbody>{matrix.length ? matrix.map(([state, values]) => <tr key={state} className="border-t border-plum/10"><td className="px-4 py-3 font-bold">{state}</td><td className="px-4 py-3">{values.Basic}</td><td className="px-4 py-3">{values.Growth}</td><td className="px-4 py-3">{values.Premium}</td><td className="px-4 py-3 font-bold">{values.Total}</td></tr>) : <tr><td colSpan={5} className="px-4 py-10 text-center text-ink/50">No subscription records match these filters.</td></tr>}</tbody></table></div>
+      <div className="divide-y divide-plum/10 md:hidden">{matrix.length ? matrix.map(([state, values]) => <article key={state} className="p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-serif text-lg text-plum">{state}</h3><b className="text-sm text-magenta">{values.Total} total</b></div><dl className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">{(["Basic", "Growth", "Premium"] as const).map((plan) => <div key={plan} className="rounded-lg bg-cream p-2"><dt className="text-[9px] font-bold uppercase tracking-wide text-ink/50">{plan}</dt><dd className="mt-1 font-serif text-lg text-plum">{values[plan]}</dd></div>)}</dl></article>) : <p className="p-8 text-center text-sm text-ink/50">No subscription records match these filters.</p>}</div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-blush/25"><tr>{["State", "Basic", "Growth", "Premium", "Total"].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead><tbody>{matrix.length ? matrix.map(([state, values]) => <tr key={state} className="border-t border-plum/10"><td className="px-4 py-3 font-bold">{state}</td><td className="px-4 py-3">{values.Basic}</td><td className="px-4 py-3">{values.Growth}</td><td className="px-4 py-3">{values.Premium}</td><td className="px-4 py-3 font-bold">{values.Total}</td></tr>) : <tr><td colSpan={5} className="px-4 py-10 text-center text-ink/50">No subscription records match these filters.</td></tr>}</tbody></table></div>
     </section>
 
-    <section className="overflow-hidden rounded-[14px] border border-plum/10 bg-white">
+    <section data-admin-record-landing className="overflow-hidden rounded-[14px] border border-plum/10 bg-white">
       <div className="border-b border-plum/10 p-4"><h2 className="font-serif text-xl font-semibold text-plum">Subscription records</h2></div>
-      <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs"><thead className="bg-blush/25"><tr>{["Salon", "State", "Plan", "Status", "Monthly value", "Current period", "Scheduled action"].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead><tbody>{filteredSubscriptions.length ? filteredSubscriptions.map((subscription) => { const salon = salonById.get(text(subscription.salon_id)); const plan = normalizedPlan(subscription.tier || salon?.subscription_tier); return <tr key={text(subscription.id)} className="border-t border-plum/10 align-top"><td className="px-4 py-3 font-bold">{text(salon?.name) || "Salon unavailable"}</td><td className="px-4 py-3">{text(salon?.address_state || salon?.state) || "Not recorded"}</td><td className="px-4 py-3">{plan}</td><td className="px-4 py-3">{displayStatus(subscription.status)}</td><td className="px-4 py-3">{money(PLAN_PRICES[plan] || 0)}</td><td className="px-4 py-3">{text(subscription.current_period_start).slice(0, 10) || "—"} – {text(subscription.current_period_end).slice(0, 10) || "—"}</td><td className="px-4 py-3">{Boolean(subscription.cancel_at_period_end) ? "Cancellation scheduled" : text(subscription.scheduled_tier) ? `Change to ${text(subscription.scheduled_tier)}` : "None"}</td></tr>; }) : <tr><td colSpan={7} className="px-4 py-10 text-center text-ink/50">No subscription records match these filters.</td></tr>}</tbody></table></div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[960px] text-left text-xs"><thead className="bg-blush/25"><tr>{["Salon", "State", "Plan", "Status", "Monthly value", "Current period", "Scheduled action", "Record"].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead><tbody>{filteredSubscriptions.length ? filteredSubscriptions.map((subscription) => { const salon = salonById.get(text(subscription.salon_id)); const plan = normalizedPlan(subscription.tier || salon?.subscription_tier); return <tr key={text(subscription.id)} className="border-t border-plum/10 align-top"><td className="px-4 py-3 font-bold">{text(salon?.name) || "Salon unavailable"}</td><td className="px-4 py-3">{text(salon?.address_state || salon?.state) || "Not recorded"}</td><td className="px-4 py-3">{plan}</td><td className="px-4 py-3">{displayStatus(subscription.status)}</td><td className="px-4 py-3">{money(PLAN_PRICES[plan] || 0)}</td><td className="px-4 py-3">{text(subscription.current_period_start).slice(0, 10) || "—"} – {text(subscription.current_period_end).slice(0, 10) || "—"}</td><td className="px-4 py-3">{Boolean(subscription.cancel_at_period_end) ? "Cancellation scheduled" : text(subscription.scheduled_tier) ? `Change to ${text(subscription.scheduled_tier)}` : "None"}</td><td className="px-4 py-3"><Link href={`/admin/subscriptions/${text(subscription.id)}?return=${encodeURIComponent(returnPath)}`} className="font-bold text-magenta">Open</Link></td></tr>; }) : <tr><td colSpan={8} className="px-4 py-10 text-center text-ink/50">No subscription records match these filters.</td></tr>}</tbody></table></div>
+      <div className="divide-y divide-plum/10 md:hidden">{filteredSubscriptions.length ? filteredSubscriptions.map((subscription) => { const salon = salonById.get(text(subscription.salon_id)); const plan = normalizedPlan(subscription.tier || salon?.subscription_tier); return <Link key={text(subscription.id)} href={`/admin/subscriptions/${text(subscription.id)}?return=${encodeURIComponent(returnPath)}`} className="block p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-serif text-lg text-plum">{text(salon?.name) || "Salon unavailable"}</h3><p className="mt-1 text-xs text-ink/55">{text(salon?.address_state || salon?.state) || "State not recorded"}</p></div><span className="rounded-full bg-blush px-2 py-1 text-[9px] font-bold text-magenta">{displayStatus(subscription.status)}</span></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs"><span>{plan} · {money(PLAN_PRICES[plan] || 0)}</span><span className="text-right">{Boolean(subscription.cancel_at_period_end) ? "Cancellation scheduled" : text(subscription.scheduled_tier) ? `Change to ${text(subscription.scheduled_tier)}` : "No scheduled action"}</span></div><span className="mt-3 inline-flex text-xs font-bold text-magenta">Open subscription record →</span></Link>; }) : <p className="p-8 text-center text-sm text-ink/50">No subscription records match these filters.</p>}</div>
     </section>
 
     {changeRequests.length ? <p className="text-xs text-ink/55">{changeRequests.length} plan-change request{changeRequests.length === 1 ? "" : "s"} are retained for detailed billing reconciliation.</p> : null}

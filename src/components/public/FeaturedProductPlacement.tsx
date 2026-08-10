@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin, PackageCheck, Tag } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
+import SalonDistance from "@/components/public/SalonDistance";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 import {
@@ -37,7 +38,7 @@ async function loadFeaturedProducts(maxCards: number) {
     const placements = await admin
       .from("homepage_product_placements")
       .select(
-        "id,sort_order,product:salon_products(id,salon_id,name,description,price,sale_price,photo_url,images,inventory_quantity,track_inventory,pickup_enabled,product_status,is_visible,archived_at,salon:salons(id,name,slug,status,is_discoverable,subscription_status,address_city,address_state))",
+        "id,sort_order,product:salon_products(id,salon_id,name,description,price,sale_price,photo_url,images,inventory_quantity,track_inventory,pickup_enabled,product_status,is_visible,archived_at,salon:salons(id,name,slug,status,is_discoverable,subscription_status,address_city,address_state,latitude,longitude))",
       )
       .in("status", ["Active", "Scheduled"])
       .lte("starts_at", now)
@@ -191,9 +192,12 @@ export default async function FeaturedProductPlacement({
                     </p>
                     <p className="mt-1 flex items-center gap-1 text-[10px] text-ink/55">
                       <MapPin size={11} />
-                      {[salon.address_city, salon.address_state]
-                        .filter(Boolean)
-                        .join(", ") || "Local salon pickup"}
+                      <span className="sm:hidden"><SalonDistance latitude={salon.latitude as number | null} longitude={salon.longitude as number | null}/></span>
+                      <span className="hidden sm:inline">
+                        {[salon.address_city, salon.address_state]
+                          .filter(Boolean)
+                          .join(", ") || "Local salon pickup"}
+                      </span>
                     </p>
                     <div className="mt-3 flex items-end justify-between gap-3">
                       <div>

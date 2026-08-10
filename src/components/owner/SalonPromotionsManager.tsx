@@ -1,8 +1,11 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Archive, Eye, Pause, Pencil, Play, Plus, Tag } from "lucide-react";
 import NumericInput from "@/components/forms/NumericInput";
+import { OwnerDetailHeader } from "@/components/owner/OwnerWorkflowUi";
 
 type Row = Record<string, unknown> & { id?: string };
 type Props = {
@@ -12,6 +15,7 @@ type Props = {
   setPromotions: React.Dispatch<React.SetStateAction<Row[]>>;
   saveRecord: (table: string, values: Record<string, unknown>, id?: string) => Promise<Row | null>;
   removeRecord: (table: string, id: string, setter: React.Dispatch<React.SetStateAction<Row[]>>) => Promise<void>;
+  recordId?: string;
 };
 
 const inputClass = "mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta";
@@ -19,10 +23,14 @@ const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Ne
 const localDateTime = (value: unknown) => value ? new Date(String(value)).toISOString().slice(0, 16) : "";
 const values = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
 
-export default function SalonPromotionsManager({ promotions, styles, products, setPromotions, saveRecord, removeRecord }: Props) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [scope, setScope] = useState("salon");
-  const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
+export default function SalonPromotionsManager({ promotions, styles, products, setPromotions, saveRecord, removeRecord, recordId = "" }: Props) {
+  const router = useRouter();
+  const routedPromotion = recordId && recordId !== "new"
+    ? promotions.find((promotion) => promotion.id === recordId) || null
+    : null;
+  const [editingId, setEditingId] = useState<string | null>(recordId && recordId !== "new" ? recordId : null);
+  const [scope, setScope] = useState(() => String(routedPromotion?.target_scope || "salon"));
+  const [selectedTargets, setSelectedTargets] = useState<string[]>(() => values(routedPromotion?.target_ids));
   const editing = promotions.find((promotion) => promotion.id === editingId) || null;
   const ordered = useMemo(() => [...promotions].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))), [promotions]);
   const serviceGroups = useMemo(() => uniqueTargets(styles, "service_group_id", "category"), [styles]);
@@ -38,7 +46,7 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
     setEditingId(row?.id || null);
     setScope(String(row?.target_scope || "salon"));
     setSelectedTargets(values(row?.target_ids));
-    window.setTimeout(() => document.getElementById("promotion-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 20);
+    router.push(`/salon/dashboard/promotions/${row?.id || "new"}`);
   }
 
   function setTarget(id: string) {
@@ -79,7 +87,8 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
     }, editing?.id);
     if (!saved) return;
     setPromotions((current) => editing ? current.map((row) => row.id === editing.id ? saved : row) : [saved, ...current]);
-    startEdit(null);
+    setEditingId(saved.id || null);
+    if (saved.id) router.replace(`/salon/dashboard/promotions/${saved.id}`);
     event.currentTarget.reset();
   }
 
@@ -89,12 +98,17 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
   }
 
   return <>
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    {!recordId ? <div className="flex flex-wrap items-end justify-between gap-3">
       <div><h1 className="font-serif text-4xl font-semibold text-plum">Promotions</h1><p className="mt-2 text-sm text-ink/60">Create offers customers can see and safely apply to eligible bookings.</p></div>
-      <button type="button" onClick={() => startEdit(null)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white"><Plus size={16}/>New promotion</button>
-    </div>
+      <Link href="/salon/dashboard/promotions/new" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white"><Plus size={16}/>New promotion</Link>
+    </div> : <OwnerDetailHeader
+      title={editing ? `Edit ${String(editing.public_headline || editing.title || "promotion")}` : "Create promotion"}
+      subtitle="Keep targeting, eligibility, dates, terms, and publication status together."
+      fallbackHref="/salon/dashboard/promotions"
+      status={editing ? String(editing.status || "Draft") : "New promotion"}
+    />}
 
-    <section id="promotion-editor" className="mt-5 rounded-[15px] border border-plum/10 bg-white p-5">
+    {recordId ? <section id="promotion-editor" className="mt-5 rounded-[15px] border border-plum/10 bg-white p-5">
       <div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">{editing ? "Edit promotion" : "Create a deal or offer"}</h2><p className="mt-1 text-xs text-ink/55">Draft offers stay private. Only active offers inside their date window appear publicly.</p></div><Tag className="text-magenta"/></div>
       <form key={editing?.id || "new"} onSubmit={submit} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Label text="Internal title"><input required name="title" defaultValue={String(editing?.title || "")} placeholder="Summer knotless special" className={inputClass}/></Label>
@@ -114,11 +128,13 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
         <label className="md:col-span-2 xl:col-span-4"><span className="text-[10px] font-bold">Description</span><textarea name="description" rows={3} defaultValue={String(editing?.description || "")} className={`${inputClass} py-3`}/></label>
         {targets.length ? <fieldset className="rounded-lg border border-plum/10 p-3 md:col-span-2 xl:col-span-4"><legend className="px-2 text-[10px] font-bold">Eligible targets</legend><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{targets.map((target) => <label key={target.id} className="flex items-center gap-2 rounded-lg bg-cream p-3 text-xs"><input type="checkbox" checked={selectedTargets.includes(target.id)} onChange={() => setTarget(target.id)} className="accent-magenta"/>{target.label}</label>)}</div></fieldset> : null}
         <label className="flex items-center gap-2 text-xs md:col-span-2"><input name="new_customers_only" type="checkbox" defaultChecked={(editing?.restrictions as Row | undefined)?.new_customers_only === true} className="accent-magenta"/>New customers only</label>
-        <div className="flex gap-2 md:col-span-2 xl:col-span-4"><button className="min-h-11 flex-1 rounded-lg bg-magenta px-5 text-xs font-bold text-white">{editing ? "Save promotion" : "Create promotion"}</button>{editing ? <button type="button" onClick={() => startEdit(null)} className="min-h-11 rounded-lg border border-plum/15 px-5 text-xs font-bold">Cancel</button> : null}</div>
+        <div className="flex gap-2 md:col-span-2 xl:col-span-4"><button className="min-h-11 flex-1 rounded-lg bg-magenta px-5 text-xs font-bold text-white">{editing ? "Save promotion" : "Create promotion"}</button>{editing ? <button type="button" onClick={() => router.push("/salon/dashboard/promotions")} className="min-h-11 rounded-lg border border-plum/15 px-5 text-xs font-bold">Cancel</button> : null}</div>
       </form>
-    </section>
+    </section> : null}
 
+    <div className={recordId ? "hidden" : "block"}>
     <section className="mt-5 rounded-[15px] border border-plum/10 bg-white p-5"><h2 className="font-serif text-2xl text-plum">Saved promotions</h2><div className="mt-4 grid gap-3 lg:grid-cols-2">{ordered.map((promotion) => <article key={promotion.id} className="rounded-[12px] border border-plum/10 p-4"><div className="flex items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-serif text-xl text-plum">{String(promotion.public_headline || promotion.title || "Promotion")}</h3><Status value={String(promotion.status || (promotion.is_active ? "Active" : "Draft"))}/></div><p className="mt-2 text-xs text-ink/60">{String(promotion.discount_label || "Special offer")} · {scopeLabel(String(promotion.target_scope || "salon"))}</p><p className="mt-1 text-[10px] text-ink/45">{dateText(promotion.starts_at)} – {dateText(promotion.ends_at)} · {String(promotion.timezone || timeZone)}</p></div><Eye size={17} className="text-magenta"/></div><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => startEdit(promotion)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta"><Pencil size={13}/>Edit</button>{promotion.status === "Active" ? <button type="button" onClick={() => void changeStatus(promotion, "Paused")} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-plum/15 px-3 text-[10px] font-bold"><Pause size={13}/>Pause</button> : <button type="button" onClick={() => void changeStatus(promotion, "Active")} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-plum px-3 text-[10px] font-bold text-white"><Play size={13}/>Activate</button>}<button type="button" onClick={() => promotion.id && void removeRecord("salon_promotions", promotion.id, setPromotions)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-[10px] font-bold text-red-700"><Archive size={13}/>Archive / remove</button></div></article>)}{!ordered.length ? <p className="rounded-lg bg-cream p-8 text-center text-xs text-ink/55 lg:col-span-2">No promotions yet. Create a draft, preview it, then activate it when ready.</p> : null}</div></section>
+    </div>
   </>;
 }
 

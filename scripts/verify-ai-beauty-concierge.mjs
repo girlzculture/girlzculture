@@ -5,6 +5,7 @@ import ts from "typescript";
 
 const serverPath = "src/lib/beautyConciergeServer.ts";
 const serverSource = fs.readFileSync(serverPath, "utf8");
+const decisionSearchSource = fs.readFileSync("src/lib/decisionSearchServer.ts", "utf8");
 const routeSource = fs.readFileSync("src/app/api/concierge/search/route.ts", "utf8");
 const uiSource = fs.readFileSync("src/components/public/BeautyConcierge.tsx", "utf8");
 const managerSource = fs.readFileSync("src/components/admin/AiAutomationManager.tsx", "utf8");
@@ -58,8 +59,9 @@ for (const token of [
   'https://api.openai.com/v1/responses',
   'type: "json_schema"',
   'strict: true',
-  'discoverNearbySalons',
-  'bookingAvailability',
+  'runDecisionSearch',
+  'promotionOnly: intent.promotion_only',
+  'maximumPrice: intent.maximum_price',
   'approvedAiModels("openai")',
   'estimated_cost_cents',
   'fallback',
@@ -75,6 +77,9 @@ assert.match(managerSource, /Not Configured/);
 assert.match(managerSource, /featureConfigurationState/);
 assert.match(serverSource, /not_configured/);
 assert.match(serverSource, /provider_failure/);
+assert.match(decisionSearchSource, /evaluateDecisionStyleCandidates/);
+assert.match(decisionSearchSource, /selectDecisionStyleWithOpening/);
+assert.match(decisionSearchSource, /bookingAvailability/);
 assert.ok(migration.includes("ai_prompt_versions"), "The governed prompt version must be auditable.");
 assert.ok(migration.includes("false,"), "The provider-backed concierge must deploy disabled by default.");
 

@@ -18,7 +18,19 @@ const reservationActions: Record<string, string[]> = {
   "Ready for pickup": ["Collected", "Canceled", "Not collected"],
 };
 
-export default function SalonProductOrders() {
+export default function SalonProductOrders({
+  mode = "operations",
+  fromDate = "",
+  toDate = "",
+  onFromDateChange,
+  onToDateChange,
+}: {
+  mode?: "operations" | "finance";
+  fromDate?: string;
+  toDate?: string;
+  onFromDateChange?: (value: string) => void;
+  onToDateChange?: (value: string) => void;
+}) {
   const [orders, setOrders] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -70,6 +82,29 @@ export default function SalonProductOrders() {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  const visibleOrders = orders.filter((order) => {
+    const date = String(order.created_at || "").slice(0, 10);
+    return (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
+  });
+  const paidSales = visibleOrders
+    .filter((order) => ["Paid", "Succeeded"].includes(String(order.payment_status || "")))
+    .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+  const refunds = visibleOrders.reduce(
+    (sum, order) =>
+      sum +
+      (Array.isArray(order.refunds)
+        ? (order.refunds as Row[]).reduce(
+            (refundSum, refund) =>
+              refundSum +
+              (String(refund.status || "") === "Succeeded"
+                ? Number(refund.amount || 0)
+                : 0),
+            0,
+          )
+        : 0),
+    0,
+  );
 
   async function advance(order: Row, status: string) {
     if (
@@ -129,10 +164,12 @@ export default function SalonProductOrders() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-charcoal">
-            Pickup Reservations
+            {mode === "finance" ? "Product sales ledger" : "Pickup Reservations"}
           </h2>
           <p className="mt-1 text-xs text-charcoal/60">
-            Prepare reserved products, notify customers, and record collection.
+            {mode === "finance"
+              ? "Paid orders, refunds, fulfillment, and authoritative order references."
+              : "Prepare reserved products, notify customers, and record collection."}
           </p>
         </div>
         <button
@@ -152,8 +189,16 @@ export default function SalonProductOrders() {
           {message}
         </p>
       ) : null}
+      {mode === "finance" ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Orders</span><b className="mt-1 block text-xl text-charcoal">{visibleOrders.length}</b></div>
+          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Paid product sales</span><b className="mt-1 block text-xl text-charcoal">${paidSales.toFixed(2)}</b></div>
+          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Succeeded refunds</span><b className="mt-1 block text-xl text-charcoal">${refunds.toFixed(2)}</b></div>
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-light-gray p-3"><label className="text-[9px] font-bold text-charcoal/60">From<input aria-label="Product sales start date" type="date" value={fromDate} onChange={(event)=>onFromDateChange?.(event.target.value)} className="mt-1 min-h-9 w-full rounded-lg border border-mist bg-white px-2 text-[10px] font-normal"/></label><label className="text-[9px] font-bold text-charcoal/60">To<input aria-label="Product sales end date" type="date" value={toDate} onChange={(event)=>onToDateChange?.(event.target.value)} className="mt-1 min-h-9 w-full rounded-lg border border-mist bg-white px-2 text-[10px] font-normal"/></label></div>
+        </div>
+      ) : null}
       <div className="mt-4 space-y-3">
-        {orders.map((order) => {
+        {visibleOrders.map((order) => {
           const items = Array.isArray(order.items)
             ? (order.items as Row[])
             : [];
@@ -264,9 +309,9 @@ export default function SalonProductOrders() {
             </article>
           );
         })}
-        {!loading && !orders.length ? (
+        {!loading && !visibleOrders.length ? (
           <p className="py-8 text-center text-sm text-charcoal/50">
-            No pickup reservations yet.
+            {fromDate || toDate ? "No product orders match this date range." : "No product orders yet."}
           </p>
         ) : null}
       </div>

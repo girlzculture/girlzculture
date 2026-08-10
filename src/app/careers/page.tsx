@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Heart, ShieldCheck, TrendingUp, UsersRound } from "lucide-react";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import SafeImage from "@/components/site/SafeImage";
@@ -15,6 +16,7 @@ export default async function Careers() {
     hero_image_url: "/images/hero-braids.jpg",
     sections: [],
   });
+  if (!page) notFound();
   const benefits = [
     [Heart, "Purpose-Driven", "Elevate beauty professionals and celebrate our culture."],
     [UsersRound, "Inclusive Culture", "Every voice at the table."],

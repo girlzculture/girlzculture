@@ -1,7 +1,14 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
-import { requireAdminPermission } from "@/lib/supabaseAdmin";
+import { requireAdminPermission as requireGrantedAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { assertRecentHighRiskVerification } from "@/lib/identityDeletionServer";
+
+// Engine access is an independent least-privilege grant. The compact route
+// still passes its historical label at each call site, so normalize it here.
+const requireAdminPermission = (request: Request, legacyPermission: string) => {
+  void legacyPermission;
+  return requireGrantedAdminPermission(request, "engine");
+};
 
 type Setting = Record<string, unknown> & { setting_key:string; value_type:string; validation?:Record<string,unknown>; impact_level:string; version:number; is_secret_status:boolean };
 const serverEnvironment=()=>{const value=process.env.CONTEXT||process.env.NODE_ENV||"development";return value==="production"?"production":value.includes("preview")||value==="branch-deploy"?"preview":"development"};

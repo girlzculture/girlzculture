@@ -280,6 +280,27 @@ async function POSTHandler(request: Request) {
       confirmation_email_sent: !("skipped" in receipt && receipt.skipped),
     });
   } catch (error) {
+    const record =
+      error && typeof error === "object"
+        ? (error as Record<string, unknown>)
+        : {};
+    if (
+      String(record.code || "") === "22023" &&
+      /supporting document|supporting-document/i.test(
+        String(record.message || ""),
+      )
+    ) {
+      return Response.json(
+        {
+          error:
+            "Upload and verify every supporting document before submitting.",
+        },
+        {
+          status: 409,
+          headers: { "Cache-Control": "private, no-store" },
+        },
+      );
+    }
     noteOperationalFailure("Salon application submission failed", error);
     return errorResponse(error, "Unable to submit application");
   }

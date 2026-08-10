@@ -17,14 +17,26 @@ async function contextFor(request: Request, id: string) {
   const context = await requireAdminPermission(request, "bookings");
   const { data: booking, error } = await context.admin.from("bookings").select("*").eq("id", id).single();
   if (error || !booking) throw new Error("Booking not found.");
-  const [{ data: salon }, { data: styles }, { data: stylists }, { data: audit }] = await Promise.all([
+  const [salonResult, stylesResult, stylistsResult, auditResult] = await Promise.all([
     context.admin.from("salons").select("id,name,time_zone,email,phone,user_id").eq("id", booking.salon_id).single(),
     context.admin.from("styles").select("id,name,duration_min_hours,buffer_minutes").eq("salon_id", booking.salon_id).order("name"),
     context.admin.from("stylists").select("id,name").eq("salon_id", booking.salon_id).eq("is_active", true).order("name"),
     context.admin.from("booking_audit_log").select("id,action,reason,actor_role,created_at").eq("booking_id", id).order("created_at", { ascending: false }).limit(25),
   ]);
+  if (salonResult.error) throw salonResult.error;
+  if (stylesResult.error) throw stylesResult.error;
+  if (stylistsResult.error) throw stylistsResult.error;
+  if (auditResult.error) throw auditResult.error;
+  const salon = salonResult.data;
   if (!salon) throw new Error("Booking salon not found.");
-  return { ...context, booking, salon, styles: styles || [], stylists: stylists || [], audit: audit || [] };
+  return {
+    ...context,
+    booking,
+    salon,
+    styles: stylesResult.data || [],
+    stylists: stylistsResult.data || [],
+    audit: auditResult.data || [],
+  };
 }
 
 async function GETHandler(request: Request, route: { params: Promise<{ id: string }> }) {
@@ -88,7 +100,15 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
     }
     if (!Object.keys(patch).length) throw new Error("No booking changes were submitted.");
     const { data: updated, error } = await ctx.admin.from("bookings").update(patch).eq("id", id).select("*").single(); if (error) throw error;
-    await ctx.admin.from("booking_audit_log").insert({ booking_id: id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: auditAction, reason: `Admin intervention: ${reason}`, before_data: ctx.booking, after_data: updated });
+    const { error: auditError } = await ctx.admin.from("booking_audit_log").insert({ booking_id: id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: auditAction, reason: `Admin intervention: ${reason}`, before_data: ctx.booking, after_data: updated });
+    if (auditError) {
+      noteOperationalFailure("Admin booking audit write failed", {
+        bookingId: id,
+        action: auditAction,
+        error: auditError,
+      });
+      throw auditError;
+    }
     const when = formatZonedDateTime(
       updated.appointment_datetime,
       salonTimeZone(ctx.salon.time_zone),
@@ -152,8 +172,26 @@ async function cancelBooking(
     deposit_status:refund.refundStatus==="Succeeded"?"Refunded":refund.refundStatus==="Pending"?"Refund pending":booking.deposit_status,
   };
   const { data: cancelled, error } = await ctx.admin.from("bookings").update(patch).eq("id", booking.id).select("*").single(); if (error) throw error;
-  await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "cancelled", reason:input.internalReason, before_data: booking, after_data: cancelled });
-  if (refund.refundId) await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "refunded", reason: `Stripe refund ${refund.refundStatus.toLowerCase()} after provider acceptance. Internal reason: ${input.internalReason}`, before_data: booking, after_data: cancelled });
+  const { error: cancellationAuditError } = await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "cancelled", reason:input.internalReason, before_data: booking, after_data: cancelled });
+  if (cancellationAuditError) {
+    noteOperationalFailure("Admin booking cancellation audit write failed", {
+      bookingId: booking.id,
+      action: "cancelled",
+      error: cancellationAuditError,
+    });
+    throw cancellationAuditError;
+  }
+  if (refund.refundId) {
+    const { error: refundAuditError } = await ctx.admin.from("booking_audit_log").insert({ booking_id: booking.id, actor_user_id: ctx.user.id, actor_role: String((ctx.adminUser as { role?: string }).role || "Admin"), action: "refunded", reason: `Stripe refund ${refund.refundStatus.toLowerCase()} after provider acceptance. Internal reason: ${input.internalReason}`, before_data: booking, after_data: cancelled });
+    if (refundAuditError) {
+      noteOperationalFailure("Admin booking refund audit write failed", {
+        bookingId: booking.id,
+        action: "refunded",
+        error: refundAuditError,
+      });
+      throw refundAuditError;
+    }
+  }
   const customerMessage = `Your booking at ${ctx.salon.name} was cancelled. Reason: ${input.customerReason}.`;
   const salonMessage = `${String(booking.guest_name || "A customer's")} booking was cancelled by platform support. Internal reason: ${input.internalReason}.`;
   const inApp = [{ user_id: ctx.salon.user_id, salon_id: ctx.salon.id, booking_id: booking.id, title: "Booking cancelled by platform support", body: salonMessage, action_url: `/salon/dashboard/bookings?booking=${booking.id}`, delivery_status: "delivered" }];

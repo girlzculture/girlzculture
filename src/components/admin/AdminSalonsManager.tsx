@@ -18,6 +18,7 @@ import { getSessionForScope } from "@/lib/supabase";
 import { US_STATES } from "@/lib/usStates";
 import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
 import type { CustomerLocation } from "@/lib/location";
+import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
 
 type Row = Record<string, any>;
 type Summary = {
@@ -78,8 +79,8 @@ export default function AdminSalonsManager() {
   const [direction, setDirection] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedId, setSelectedId] = useState("");
   const [urlHydrated, setUrlHydrated] = useState(false);
+  useAdminListScrollRestoration(urlHydrated && !loading);
   const requestSequence = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
 
@@ -225,6 +226,33 @@ export default function AdminSalonsManager() {
     setSort("name");
     setDirection("asc");
     setPage(1);
+  }
+
+  function detailHref(id: string) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (state) params.set("state", state);
+    if (market) params.set("market", market);
+    if (status) params.set("status", status);
+    if (plan) params.set("plan", plan);
+    if (rating) params.set("rating", rating);
+    if (addressReview) params.set("address_review", addressReview);
+    if (setup) params.set("setup", setup);
+    if (subscriptionEligibility)
+      params.set("subscription_eligibility", subscriptionEligibility);
+    if (discoverability) params.set("discoverability", discoverability);
+    if (radius && center) {
+      params.set("radius", radius);
+      params.set("lat", String(center.lat));
+      params.set("lng", String(center.lng));
+      params.set("center", center.label || centerText);
+    }
+    if (page !== 1) params.set("page", String(page));
+    if (pageSize !== 25) params.set("page_size", String(pageSize));
+    if (sort !== "name") params.set("sort", sort);
+    if (direction !== "asc") params.set("direction", direction);
+    const listPath = `/admin/salons${params.size ? `?${params}` : ""}`;
+    return `/admin/salons/${id}?return=${encodeURIComponent(listPath)}`;
   }
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const activeFilterChips = [
@@ -683,12 +711,12 @@ export default function AdminSalonsManager() {
                   </td>
                   <td className="px-4 py-3">{salon.review_count || 0}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setSelectedId(salon.id)}
+                    <Link
+                      href={detailHref(String(salon.id))}
                       className="rounded-lg border border-magenta px-3 py-2 font-bold text-magenta"
                     >
                       View details
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -771,12 +799,12 @@ export default function AdminSalonsManager() {
                   </b>
                 </span>
               </div>
-              <button
-                onClick={() => setSelectedId(salon.id)}
+              <Link
+                href={detailHref(String(salon.id))}
                 className="mt-3 min-h-11 w-full rounded-lg border border-magenta font-bold text-magenta"
               >
                 View details
-              </button>
+              </Link>
             </article>
           ))}
           {!salons.length && !loading ? (
@@ -822,13 +850,6 @@ export default function AdminSalonsManager() {
           </div>
         </div>
       </section>
-      {selectedId ? (
-        <SalonDetail
-          salonId={selectedId}
-          close={() => setSelectedId("")}
-          refreshed={load}
-        />
-      ) : null}
     </div>
   );
 }
@@ -873,14 +894,16 @@ function StatusBadge({ value }: { value: string }) {
   );
 }
 
-function SalonDetail({
+export function AdminSalonDetail({
   salonId,
-  close,
-  refreshed,
+  close = () => undefined,
+  refreshed = async () => undefined,
+  embedded = false,
 }: {
   salonId: string;
-  close: () => void;
-  refreshed: () => Promise<void>;
+  close?: () => void;
+  refreshed?: () => Promise<void>;
+  embedded?: boolean;
 }) {
   const [data, setData] = useState<Row | null>(null);
   const [error, setError] = useState("");
@@ -917,6 +940,7 @@ function SalonDetail({
     return () => window.clearTimeout(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salonId]);
   useEffect(() => {
+    if (embedded) return;
     const previous = document.activeElement as HTMLElement | null;
     const root = dialogRef.current;
     const selector =
@@ -951,7 +975,7 @@ function SalonDetail({
       document.removeEventListener("keydown", keydown);
       previous?.focus();
     };
-  }, [close]);
+  }, [close, embedded]);
   async function statusAction(nextStatus: string) {
     const current = String(data?.salon?.status || "");
     const impacts: Record<string, string> = {
@@ -1095,15 +1119,15 @@ function SalonDetail({
   return (
     <div
       ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
+      role={embedded ? undefined : "dialog"}
+      aria-modal={embedded ? undefined : "true"}
       aria-labelledby="salon-detail-title"
-      className="fixed inset-0 z-[80] bg-ink/45 p-3 backdrop-blur-sm"
+      className={embedded ? "rounded-[18px] border border-plum/10 bg-cream" : "fixed inset-0 z-[80] bg-ink/45 p-3 backdrop-blur-sm"}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
+        if (!embedded && event.target === event.currentTarget) close();
       }}
     >
-      <section className="ml-auto h-full w-full max-w-2xl overflow-y-auto rounded-[18px] bg-cream shadow-2xl">
+      <section className={embedded ? "mx-auto w-full max-w-5xl" : "ml-auto h-full w-full max-w-2xl overflow-y-auto rounded-[18px] bg-cream shadow-2xl"}>
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-plum/10 bg-white p-5">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-magenta">
@@ -1113,14 +1137,14 @@ function SalonDetail({
               {salon?.name || "Loading salon…"}
             </h2>
           </div>
-          <button
+          {!embedded ? <button
             type="button"
             onClick={close}
             aria-label="Close salon details"
             className="grid min-h-11 min-w-11 place-items-center rounded-full hover:bg-blush"
           >
             <X />
-          </button>
+          </button> : null}
         </header>
         <div className="space-y-4 p-5">
           {error ? (

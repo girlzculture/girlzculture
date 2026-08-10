@@ -19,7 +19,9 @@ export default function SalonDistance({
     lat: Number(latitude),
     lng: Number(longitude),
   };
-  if (!location) return null;
+  if (!location) {
+    return <span className="font-semibold text-ink/55">Distance unavailable</span>;
+  }
   if (!validCoordinates(salon)) {
     return <span className="font-semibold text-ink/55">Distance unavailable</span>;
   }

@@ -59,7 +59,74 @@ if (!expectedMigration) {
 
 for (const [index, migration] of migrations.entries()) {
   process.stdout.write(`[${index + 1}/${migrations.length}] ${migration}\n`);
+  if (migration === "20260808120000_content_publication_workflow.sql") {
+    runPsql(
+      [
+        "--command",
+        `
+          create schema clean_migration_fixture;
+          create table clean_migration_fixture.content_page_sections(
+            slug text primary key,
+            sections jsonb not null
+          );
+          insert into clean_migration_fixture.content_page_sections(slug,sections)
+          select slug,sections from public.content_pages where slug='about';
+          do $$
+          begin
+            if not exists(
+              select 1 from clean_migration_fixture.content_page_sections
+              where slug='about'
+            ) then
+              raise exception 'Legacy About content fixture could not be prepared';
+            end if;
+          end
+          $$;
+          update public.content_pages
+          set sections='{"legacy":"object-valued-sections"}'::jsonb
+          where slug='about';
+        `,
+      ],
+      "Legacy object-valued content fixture setup",
+    );
+  }
   runPsql(["--file", path.join(migrationDirectory, migration)], migration);
+  if (migration === "20260808120000_content_publication_workflow.sql") {
+    runPsql(
+      [
+        "--command",
+        `
+          do $$
+          begin
+            if (
+              select count(*)
+              from public.content_pages
+              where slug in ('about-carousel-one','about-carousel-two')
+                and sections='[]'::jsonb
+            ) <> 2 then
+              raise exception 'Object-valued legacy About sections were not migrated safely';
+            end if;
+          end
+          $$;
+          update public.content_pages page
+          set sections=backup.sections,
+              published_payload=case
+                when jsonb_typeof(page.published_payload)='object'
+                  then jsonb_set(
+                    page.published_payload,
+                    '{sections}',
+                    backup.sections,
+                    true
+                  )
+                else page.published_payload
+              end
+          from clean_migration_fixture.content_page_sections backup
+          where page.slug=backup.slug;
+          drop schema clean_migration_fixture cascade;
+        `,
+      ],
+      "Legacy object-valued content fixture assertion",
+    );
+  }
 }
 
 const referenceWorkers = Array.from({ length: 4 }, (_, worker) =>

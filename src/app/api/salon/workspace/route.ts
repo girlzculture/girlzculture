@@ -32,19 +32,66 @@ async function GETHandler(request: Request) {
     const permissions = (context.teamMember?.permissions || {}) as Record<string, boolean>;
     const entries = await Promise.all((Object.keys(TABLE_ACCESS) as WorkspaceKey[]).map(async (table) => {
       const permission = TABLE_ACCESS[table];
-      const allowed = context.isOwner ? true : Boolean(permission && permissions[permission]);
+      // A subscription belongs to the salon, not to an individual login. Team
+      // members need the salon's safe status/tier summary so the dashboard can
+      // honor the already-active parent subscription. Billing history and
+      // provider identifiers remain owner-only.
+      const allowed = table === "subscriptions"
+        ? true
+        : context.isOwner
+          ? true
+          : Boolean(permission && permissions[permission]);
       if (!allowed) return [table, []] as const;
+      if (table === "reviews") {
+        // The owner workspace must retain the lifecycle state of reviews that
+        // Platform Admin hid or resolved. Public review queries remain limited
+        // to Published/non-Removed rows; this protected projection intentionally
+        // returns only salon-safe moderation evidence.
+        const reviewResult = await context.admin
+          .from("reviews")
+          .select(
+            "id,booking_id,salon_id,stylist_id,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,review_title,result_photos,salon_reply,display_name,dispute_status,dispute_reason,disputed_at,moderation_status,moderation_reason,moderated_at,created_at",
+          )
+          .eq("salon_id", context.salon.id)
+          .order("created_at", { ascending: false });
+        if (reviewResult.error) throw reviewResult.error;
+        const reviewIds = (reviewResult.data || []).map((review) => review.id);
+        if (!reviewIds.length) return [table, []] as const;
+        const [moderationResult, disputeResult] = await Promise.all([
+          context.admin
+            .from("review_moderation_events")
+            .select("id,review_id,action,actor_role,reason,created_at")
+            .in("review_id", reviewIds)
+            .order("created_at", { ascending: false }),
+          context.admin
+            .from("review_dispute_events")
+            .select("id,review_id,action,actor_role,reason,created_at")
+            .in("review_id", reviewIds)
+            .order("created_at", { ascending: false }),
+        ]);
+        if (moderationResult.error) throw moderationResult.error;
+        if (disputeResult.error) throw disputeResult.error;
+        const reviews = (reviewResult.data || []).map((review) => ({
+          ...review,
+          moderation_events: (moderationResult.data || []).filter(
+            (event) => event.review_id === review.id,
+          ),
+          dispute_events: (disputeResult.data || []).filter(
+            (event) => event.review_id === review.id,
+          ),
+        }));
+        return [table, reviews] as const;
+      }
       let query = context.admin
         .from(table)
-        .select("*")
+        .select(
+          table === "subscriptions" && !context.isOwner
+            ? "id,salon_id,tier,status,current_period_end"
+            : "*",
+        )
         .eq("salon_id", context.salon.id);
       if (ARCHIVED_RECORD_TABLES.has(table)) {
         query = query.is("archived_at", null);
-      }
-      if (table === "reviews") {
-        query = query
-          .eq("moderation_status", "Published")
-          .or("dispute_status.is.null,dispute_status.neq.Removed");
       }
       const result = await query.order("created_at", { ascending: false });
       if (result.error) throw result.error;

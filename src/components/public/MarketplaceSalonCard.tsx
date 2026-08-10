@@ -39,6 +39,7 @@ type Props = {
   onFocus?: (salonId: string) => void;
   onNavigate?: () => void;
   mobileDistanceOnly?: boolean;
+  surface?: "default" | "homepage";
 };
 
 function money(value: number | null | undefined) {
@@ -58,6 +59,7 @@ export default function MarketplaceSalonCard({
   onFocus,
   onNavigate,
   mobileDistanceOnly = false,
+  surface = "default",
 }: Props) {
   const verified = String(salon.verification_status || "")
     .toLowerCase()
@@ -70,7 +72,10 @@ export default function MarketplaceSalonCard({
   ]
     .filter(Boolean)
     .join(", ");
-  const distanceLabel = formatDistanceMiles(salon.distance_miles);
+  const distanceLabel = formatDistanceMiles(salon.distance_miles) ||
+    "Distance unavailable";
+  const distanceOnlyOnMobile =
+    mobileDistanceOnly || surface === "homepage";
   const locationLabel = [area || "Location available on profile", distanceLabel]
     .filter(Boolean)
     .join(" — ");
@@ -173,12 +178,12 @@ export default function MarketplaceSalonCard({
               data-no-translate="true"
               title={locationLabel}
               className={`min-w-0 truncate whitespace-nowrap ${
-                mobileDistanceOnly ? "hidden sm:block" : "block"
+                distanceOnlyOnMobile ? "hidden sm:block" : "block"
               }`}
             >
               {locationLabel}
             </span>
-            {mobileDistanceOnly ? (
+            {distanceOnlyOnMobile ? (
               <span
                 data-no-translate="true"
                 title={distanceLabel}

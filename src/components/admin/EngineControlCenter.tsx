@@ -144,14 +144,17 @@ function previewDestination(setting: Setting) {
   return "";
 }
 
-export default function EngineControlCenter() {
+export default function EngineControlCenter({ initialRecordId }: { initialRecordId?: string } = {}) {
+  const initialSettingId = initialRecordId?.startsWith("setting-") ? initialRecordId.slice("setting-".length) : "";
+  const initialCategory = initialRecordId?.startsWith("category-") ? initialRecordId.slice("category-".length) : "overview";
+  const isSettingRoute = Boolean(initialSettingId);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [history, setHistory] = useState<Version[]>([]);
   const [environmentStatus, setEnvironmentStatus] = useState<
     EnvironmentStatus[]
   >([]);
   const [environment, setEnvironment] = useState("development");
-  const [category, setCategory] = useState("overview");
+  const [category, setCategory] = useState(initialCategory);
   const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -194,7 +197,7 @@ export default function EngineControlCenter() {
       );
       setEnvironment(String(body.environment || "development"));
       const id =
-        preferred ||
+        preferred || initialSettingId ||
         selectedId ||
         rows.find((row: Setting) =>
           ENGINE_SECTIONS.find((section) => section.id === category)
@@ -204,7 +207,11 @@ export default function EngineControlCenter() {
         "";
       setSelectedId(id);
       const row = rows.find((item: Setting) => item.id === id);
-      if (row) setEditor(editorText(row));
+      if (row) {
+        const section = ENGINE_SECTIONS.find((item) => item.categories.includes(row.category));
+        if (section) setCategory(section.id);
+        setEditor(editorText(row));
+      }
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -216,7 +223,7 @@ export default function EngineControlCenter() {
     }
   }
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
+    const timer = window.setTimeout(() => void load(initialSettingId), 0);
     return () => window.clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = settings.find((row) => row.id === selectedId) || null;
@@ -352,6 +359,11 @@ export default function EngineControlCenter() {
     );
   }
   function choose(row: Setting) {
+    if (initialRecordId && !isSettingRoute) {
+      const context = `/admin/engine/category-${encodeURIComponent(category)}`;
+      window.location.assign(`/admin/engine/setting-${encodeURIComponent(String(row.id))}?return=${encodeURIComponent(context)}`);
+      return;
+    }
     if (row.id !== selectedId && !canLeaveDraft()) return;
     const section = ENGINE_SECTIONS.find((item) =>
       item.categories.includes(row.category),
@@ -589,7 +601,7 @@ export default function EngineControlCenter() {
   const impactHigh = selected ? highImpact.has(selected.impact_level) : false;
   return (
     <div className="space-y-5">
-      <section className="rounded-[18px] border border-teal/20 bg-[linear-gradient(125deg,#0D1114,#0083A6)] p-5 text-white shadow-[0_18px_55px_rgba(13,17,20,.12)] sm:p-7">
+      <section className={`${isSettingRoute ? "hidden" : ""} rounded-[18px] border border-teal/20 bg-[linear-gradient(125deg,#0D1114,#0083A6)] p-5 text-white shadow-[0_18px_55px_rgba(13,17,20,.12)] sm:p-7`}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex gap-3">
             <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/10">
@@ -715,8 +727,8 @@ export default function EngineControlCenter() {
           </div>
         </section>
       ) : null}
-      <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="rounded-[15px] border border-plum/10 bg-white p-3">
+      <div className={`grid gap-5 ${isSettingRoute ? "" : "xl:grid-cols-[280px_minmax(0,1fr)]"}`}>
+        <aside className={`${isSettingRoute ? "hidden" : ""} rounded-[15px] border border-plum/10 bg-white p-3`}>
           <div ref={searchRoot} className="relative">
             <label className="flex min-h-11 items-center gap-2 rounded-lg border border-plum/15 px-3 focus-within:border-teal">
               <Search size={15} />
@@ -843,7 +855,7 @@ export default function EngineControlCenter() {
           </nav>
         </aside>
         <main className="min-w-0 space-y-4">
-          <div className="rounded-[15px] border border-plum/10 bg-white p-5">
+          <div className={`${isSettingRoute ? "hidden" : ""} rounded-[15px] border border-plum/10 bg-white p-5`}>
             <nav
               aria-label="Breadcrumb"
               className="text-[10px] font-bold text-ink/45"
@@ -1060,24 +1072,24 @@ export default function EngineControlCenter() {
               ) : null}
             </section>
           ) : null}
-          {category === "overview" ? (
+          {!isSettingRoute && category === "overview" ? (
             <EngineOverview
               settings={settings}
               environmentStatus={environmentStatus}
               onNavigate={chooseCategory}
             />
           ) : null}
-          {category === "salon_operations" ? <SalonLifecycleSettings /> : null}
-          {category === "brand_design" ? <><BrandAppearanceManager /><MediaRulesSettings /></> : null}
-          {category === "locations" ? <SearchLanguageSettings /> : null}
-          {category === "languages" ? (
+          {!isSettingRoute && category === "salon_operations" ? <SalonLifecycleSettings /> : null}
+          {!isSettingRoute && category === "brand_design" ? <><BrandAppearanceManager /><MediaRulesSettings /></> : null}
+          {!isSettingRoute && category === "locations" ? <SearchLanguageSettings /> : null}
+          {!isSettingRoute && category === "languages" ? (
             <TranslationManager />
           ) : null}
-          {category === "pages_navigation" ? <NavigationMenuManager /> : null}
-          {category === "notifications" ? <NotificationTemplateManager /> : null}
-          {category === "ai" ? <AiAutomationManager /> : null}
-          {category === "integrations" ? <SystemStatusManager /> : null}
-          {category === "system_health" ? (
+          {!isSettingRoute && category === "pages_navigation" ? <NavigationMenuManager /> : null}
+          {!isSettingRoute && category === "notifications" ? <NotificationTemplateManager /> : null}
+          {!isSettingRoute && category === "ai" ? <AiAutomationManager /> : null}
+          {!isSettingRoute && category === "integrations" ? <SystemStatusManager /> : null}
+          {!isSettingRoute && category === "system_health" ? (
             <>
               <div id="operational-errors" className="scroll-mt-24">
                 <ErrorMonitoringManager />
@@ -1087,9 +1099,9 @@ export default function EngineControlCenter() {
               </div>
             </>
           ) : null}
-          {category === "data_management" ? <TestDataManager /> : null}
-          {category === "help" ? <FounderHandbook /> : null}
-          {selectedCategory?.links?.length ? (
+          {!isSettingRoute && category === "data_management" ? <TestDataManager /> : null}
+          {!isSettingRoute && category === "help" ? <FounderHandbook /> : null}
+          {!isSettingRoute && selectedCategory?.links?.length ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
               <h3 className="font-serif text-xl text-plum">
                 Connected management workspaces
@@ -1114,10 +1126,10 @@ export default function EngineControlCenter() {
               </div>
             </section>
           ) : null}
-          {showsRecordLifecycle ? (
+          {!isSettingRoute && showsRecordLifecycle ? (
             <RecordLifecycleManager />
           ) : null}
-          {category === "data_management" ? (
+          {!isSettingRoute && category === "data_management" ? (
             <section className="rounded-[15px] border border-plum/10 bg-white p-5">
               <div className="flex items-center gap-2">
                 <History className="text-magenta" />

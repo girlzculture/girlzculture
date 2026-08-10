@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { CalendarDays, CreditCard, Heart, Search, ShieldCheck, UsersRound } from "lucide-react";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { getContentPage } from "@/lib/content";
@@ -13,6 +14,7 @@ const benefits = [
 
 export default async function PartnerPage() {
   const content = await getContentPage("partner", { slug: "partner", title: "Partner with us", labels: {} });
+  if (!content) notFound();
   const photoLabels = [content.labels?.stat_label_1, content.labels?.stat_label_2, content.labels?.stat_label_3].filter(Boolean) as string[];
   return <main className="min-h-screen overflow-x-hidden bg-cream text-ink"><PublicHeader/>
     <section className="mx-auto grid w-full max-w-[1760px] items-center gap-5 overflow-hidden px-4 pb-6 pt-5 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(0,.9fr)] md:gap-8 md:py-10 lg:px-16"><div className="min-w-0"><h1 className="max-w-3xl font-serif text-[clamp(2.35rem,9vw,4.25rem)] font-semibold leading-[.96] text-plum">{content.hero_title || "Grow Your Business with Girlz Culture"}</h1>{content.hero_subtitle ? <p className="mt-4 max-w-xl text-sm leading-6 text-ink/70 sm:text-lg sm:leading-8">{content.hero_subtitle}</p> : null}<div className="mt-5 flex flex-wrap gap-3"><Link href="/salon/signup" className="rounded-[9px] bg-magenta px-6 py-3 text-center text-sm font-bold text-white">Join Now</Link><a href="#how" className="px-4 py-3 text-center text-sm font-bold text-magenta">See How It Works</a></div></div><div className="relative min-h-[245px] min-w-0 overflow-hidden rounded-[20px] bg-blush sm:min-h-[420px]"><SafeImage src={content.hero_image_url} fallbackSrc="/images/hero-braids.jpg" alt="Girlz Culture salon partner" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: `${Number(content.hero_position_x ?? 50)}% ${Number(content.hero_position_y ?? 30)}%`, transform: `scale(${Number(content.hero_zoom ?? 1)})` }}/>{photoLabels.length ? <div className="absolute inset-x-3 bottom-3 grid gap-2 rounded-[14px] bg-white/90 p-3 backdrop-blur sm:inset-x-6 sm:grid-cols-3">{photoLabels.map(label => <p key={label} className="text-center text-[10px] font-semibold leading-4 text-plum">{label}</p>)}</div> : null}</div></section>

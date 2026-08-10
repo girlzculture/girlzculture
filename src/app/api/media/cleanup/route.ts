@@ -38,6 +38,12 @@ type ExpiredUploadSession = {
   expected_objects: unknown;
 };
 
+type ExpiredApplicationDocument = {
+  id: string;
+  storage_path: string;
+  status: "Prepared" | "Finalized" | "Abandoned" | "Expired";
+};
+
 type VideoCleanupJob = {
   id: string;
   source_bucket: string;
@@ -73,6 +79,7 @@ async function POSTHandler(request: Request) {
   const loadFailures = {
     staged_images: 0,
     expired_image_uploads: 0,
+    expired_application_documents: 0,
     video_sources: 0,
   };
   const failures = createBoundedCleanupFailureReporter(
@@ -191,6 +198,53 @@ async function POSTHandler(request: Request) {
       (error) => failures.record("expired-image-uploads", error),
     );
 
+    const expiredApplicationDocuments = await loadBatch<ExpiredApplicationDocument>(
+      "expired-application-documents",
+      "expired_application_documents",
+      async () => {
+        const result = await admin
+          .from("application_document_uploads")
+          .select("id,storage_path,status")
+          .in("status", ["Prepared", "Finalized", "Abandoned", "Expired"])
+          .is("cleaned_at", null)
+          .lt("expires_at", new Date().toISOString())
+          .order("expires_at")
+          .limit(CLEANUP_BATCH_LIMIT);
+        return {
+          data: (result.data || []) as ExpiredApplicationDocument[],
+          error: result.error,
+        };
+      },
+    );
+
+    const applicationDocuments = await runIsolatedCleanupBatch(
+      expiredApplicationDocuments,
+      async (upload) => {
+        const removal = await admin.storage
+          .from("application-documents")
+          .remove([upload.storage_path]);
+        if (removal.error) throw removal.error;
+        const archived = await admin
+          .from("application_document_uploads")
+          .update({
+            status:
+              upload.status === "Prepared" || upload.status === "Finalized"
+                ? "Expired"
+                : upload.status,
+            expired_at:
+              upload.status === "Prepared" || upload.status === "Finalized"
+                ? new Date().toISOString()
+                : undefined,
+            cleaned_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", upload.id)
+          .is("cleaned_at", null);
+        if (archived.error) throw archived.error;
+      },
+      (error) => failures.record("expired-application-documents", error),
+    );
+
     const videoJobs = await loadBatch<VideoCleanupJob>(
       "video-sources",
       "video_sources",
@@ -261,7 +315,10 @@ async function POSTHandler(request: Request) {
       0,
     );
     const failedItemTotal =
-      stagedImages.failed + expiredImageUploads.failed + videoSources.failed;
+      stagedImages.failed +
+      expiredImageUploads.failed +
+      applicationDocuments.failed +
+      videoSources.failed;
     const failureSummary = failures.summary();
     const partialFailure = loadFailureTotal + failedItemTotal > 0;
 
@@ -272,6 +329,9 @@ async function POSTHandler(request: Request) {
       expired_image_uploads_examined: expiredImageUploads.attempted,
       expired_image_uploads_cleaned: expiredImageUploads.succeeded,
       expired_image_uploads_failed: expiredImageUploads.failed,
+      expired_application_documents_examined: applicationDocuments.attempted,
+      expired_application_documents_cleaned: applicationDocuments.succeeded,
+      expired_application_documents_failed: applicationDocuments.failed,
       video_sources_examined: videoSources.attempted,
       video_sources_cleaned: videoSources.succeeded,
       video_sources_failed: videoSources.failed,
@@ -285,6 +345,7 @@ async function POSTHandler(request: Request) {
       remaining_batch_possible:
         assets.length === CLEANUP_BATCH_LIMIT ||
         expiredSessions.length === CLEANUP_BATCH_LIMIT ||
+        expiredApplicationDocuments.length === CLEANUP_BATCH_LIMIT ||
         videoJobs.length === CLEANUP_BATCH_LIMIT ||
         partialFailure,
     });

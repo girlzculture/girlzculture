@@ -58,7 +58,7 @@ export default function MobileRecordEditor({
 
   return (
     <div
-      className={`${open ? "fixed inset-0 z-[70] block overflow-y-auto bg-cream px-3 pb-28 pt-[max(12px,env(safe-area-inset-top))]" : "hidden"} lg:static lg:z-auto lg:block lg:overflow-visible lg:bg-transparent lg:p-0`}
+      className={open ? "fixed inset-0 z-[70] block overflow-y-auto bg-cream px-3 pb-28 pt-[max(12px,env(safe-area-inset-top))] lg:static lg:z-auto lg:overflow-visible lg:bg-transparent lg:p-0" : "hidden"}
       role={open ? "dialog" : undefined}
       aria-modal={open ? "true" : undefined}
       aria-label={open ? title : undefined}

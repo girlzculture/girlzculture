@@ -47,7 +47,7 @@ function sanitize(value: unknown) {
 
 async function GETHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "settings");
+    const { admin } = await requireAdminPermission(request, "engine");
     const { data, error } = await admin.from("admin_settings").select("value,updated_at").eq("key", "salon_lifecycle").single();
     if (error) throw error;
     return Response.json({ config: data.value, updated_at: data.updated_at }, { headers: { "Cache-Control": "private, no-store" } });
@@ -59,7 +59,7 @@ async function GETHandler(request: Request) {
 
 async function PATCHHandler(request: Request) {
   try {
-    const { admin } = await requireAdminPermission(request, "settings");
+    const { admin } = await requireAdminPermission(request, "engine");
     const config = sanitize(await request.json());
     const { error } = await admin.from("admin_settings").upsert({ key: "salon_lifecycle", value: config, updated_at: new Date().toISOString() });
     if (error) throw error;

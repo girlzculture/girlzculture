@@ -38,9 +38,22 @@ async function waitForFixture() {
   throw new Error("The browser acceptance Supabase fixture did not become ready.");
 }
 
-const fixture = run(process.execPath, [
-  "scripts/start-acceptance-supabase-fixture.mjs",
-]);
+async function fixtureIsReady() {
+  try {
+    const response = await fetch(`${fixtureURL}/health`, {
+      signal: AbortSignal.timeout(1_000),
+    });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    return payload?.fixture === "girlz-culture-browser-acceptance";
+  } catch {
+    return false;
+  }
+}
+
+const fixture = (await fixtureIsReady())
+  ? null
+  : run(process.execPath, ["scripts/start-acceptance-supabase-fixture.mjs"]);
 
 let exitCode = 1;
 try {
@@ -53,11 +66,13 @@ try {
     build.once("exit", (code) => resolve(code ?? 1));
   });
 } finally {
-  fixture.kill("SIGTERM");
-  await Promise.race([
-    new Promise((resolve) => fixture.once("exit", resolve)),
-    new Promise((resolve) => setTimeout(resolve, 2_000)),
-  ]);
+  if (fixture) {
+    fixture.kill("SIGTERM");
+    await Promise.race([
+      new Promise((resolve) => fixture.once("exit", resolve)),
+      new Promise((resolve) => setTimeout(resolve, 2_000)),
+    ]);
+  }
 }
 
 process.exitCode = exitCode;

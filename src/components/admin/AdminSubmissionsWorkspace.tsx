@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
+import {
+  rememberAdminListScroll,
+  useAdminListScrollRestoration,
+  useAdminQueryParam,
+} from "@/components/admin/useAdminListContext";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import { getSessionForScope } from "@/lib/supabase";
 
@@ -73,15 +78,16 @@ function readableDate(value: string | null | undefined) {
 }
 
 export default function AdminSubmissionsWorkspace() {
-  const [view, setView] = useState<"active" | "archived">("active");
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [viewParam, setViewParam] = useAdminQueryParam("view", "active");
+  const view: "active" | "archived" = viewParam === "archived" ? "archived" : "active";
+  const [query, setQuery] = useAdminQueryParam("q", "");
   const [applications, setApplications] = useState<SubmissionRow[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState("");
+  useAdminListScrollRestoration(!loading);
 
   const load = useCallback(
     async (options: { append?: boolean; cursor?: string | null } = {}) => {
@@ -93,7 +99,7 @@ export default function AdminSubmissionsWorkspace() {
         const session = await getSessionForScope("admin");
         if (!session) throw new Error("Admin sign-in required.");
         const params = new URLSearchParams({ view, limit: "25" });
-        if (submittedQuery) params.set("q", submittedQuery);
+        if (query) params.set("q", query);
         if (options.cursor) params.set("cursor", options.cursor);
         const response = await fetch(`/api/admin/submissions?${params}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
@@ -128,13 +134,13 @@ export default function AdminSubmissionsWorkspace() {
         setLoadingMore(false);
       }
     },
-    [submittedQuery, view],
+    [query, view],
   );
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
+    const timer = window.setTimeout(() => void load(), query ? 250 : 0);
     return () => window.clearTimeout(timer);
-  }, [load]);
+  }, [load, query]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -145,8 +151,13 @@ export default function AdminSubmissionsWorkspace() {
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmittedQuery(query.trim());
+    setQuery(query.trim());
   }
+
+  const returnParams = new URLSearchParams();
+  if (query) returnParams.set("q", query);
+  if (view !== "active") returnParams.set("view", view);
+  const returnPath = `/admin/submissions${returnParams.size ? `?${returnParams.toString()}` : ""}`;
 
   return (
     <main className="min-h-screen bg-cream px-3 py-4 text-ink sm:px-6 lg:px-10">
@@ -190,7 +201,7 @@ export default function AdminSubmissionsWorkspace() {
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setView("active")}
+              onClick={() => setViewParam("active")}
               aria-pressed={view === "active"}
               className={`min-h-10 rounded-[8px] px-4 text-sm font-bold ${
                 view === "active"
@@ -202,7 +213,7 @@ export default function AdminSubmissionsWorkspace() {
             </button>
             <button
               type="button"
-              onClick={() => setView("archived")}
+              onClick={() => setViewParam("archived")}
               aria-pressed={view === "archived"}
               className={`min-h-10 rounded-[8px] px-4 text-sm font-bold ${
                 view === "archived"
@@ -233,7 +244,7 @@ export default function AdminSubmissionsWorkspace() {
             Loading submissions…
           </div>
         ) : applications.length ? (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3" onClickCapture={rememberAdminListScroll}>
             {applications.map((application) => {
               const salon = currentSalon(application);
               const currentAddress = salon
@@ -292,7 +303,7 @@ export default function AdminSubmissionsWorkspace() {
                       </p>
                     </div>
                     <Link
-                      href={`/admin/submissions/${application.id}`}
+                      href={`/admin/submissions/${application.id}?return=${encodeURIComponent(returnPath)}`}
                       className="inline-flex min-h-11 items-center justify-center rounded-[9px] bg-magenta px-5 text-sm font-bold text-white"
                     >
                       Manage record

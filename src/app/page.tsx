@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarDays, Heart, Search } from "lucide-react";
 import { Fragment } from "react";
+import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 import SearchComposer from "@/components/site/SearchComposer";
@@ -63,6 +64,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] }),
     loadHomepageSections(),
   ]);
+  if (!homeContent) notFound();
   const sectionOverrides = new Map(sectionData.map((section) => [section.section_key, section]));
   const homepageSections = DEFAULT_HOME_SECTIONS.map((section) => {
     const override = sectionOverrides.get(section.section_key);

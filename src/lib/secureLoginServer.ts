@@ -4,6 +4,7 @@ import { clientAddress, cleanEmail } from "@/lib/requestSecurity";
 import { getSupabaseAdmin, sendEmail, sendSms } from "@/lib/supabaseAdmin";
 import { canonicalIdentityForUser, identityRoleToLoginScope } from "@/lib/identityServer";
 import { adminMfaPolicy, assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
+import { salonTeamInvitationActivationId } from "@/lib/salonAuthorizationCore";
 
 export type LoginScope = "customer" | "salon" | "admin";
 const MAX_FAILURES = 5;
@@ -184,6 +185,48 @@ export async function verifyMfaChallenge(
   const { data: consumed, error: consumeError } = await admin.from("auth_mfa_challenges").update({ used_at: new Date().toISOString() }).eq("id", challengeId).is("used_at", null).select("id").maybeSingle();
   if (consumeError || !consumed) throw new Error("This verification code has already been used.");
   if (role === "admin") await recordAdminSecurityEvent("mfa_challenge_verified", challenge.user_id, "Succeeded");
+}
+
+/**
+ * Accept a salon-team invitation only after the user has completed the full
+ * password + MFA login ceremony. Workspace authorization itself continues to
+ * require an Active membership; this is the single, verified transition from
+ * Invited to Active rather than a side effect of an ordinary destination
+ * lookup.
+ */
+export async function activateVerifiedSalonTeamInvitation(
+  user: User,
+  role: LoginScope,
+) {
+  if (role !== "salon") return;
+  const identity = await canonicalIdentityForUser(user.id);
+  const normalizedEmail = user.email?.trim().toLowerCase() || "";
+  if (identity?.primary_role !== "salon_team") return;
+
+  const admin = getSupabaseAdmin();
+  const { data: memberships, error: membershipError } = await admin
+    .from("salon_team_members")
+    .select("id,status")
+    .eq("user_id", user.id)
+    .in("status", ["Invited", "Active"])
+    .limit(2);
+  if (membershipError) throw membershipError;
+  const membershipId = salonTeamInvitationActivationId(
+    identity,
+    normalizedEmail,
+    memberships || [],
+  );
+  if (!membershipId) return;
+  const { data: activated, error: activationError } = await admin
+    .from("salon_team_members")
+    .update({ status: "Active", activated_at: new Date().toISOString() })
+    .eq("id", membershipId)
+    .eq("user_id", user.id)
+    .eq("status", "Invited")
+    .select("id")
+    .maybeSingle();
+  if (activationError) throw activationError;
+  if (!activated) throw new Error("This account requires administrator review.");
 }
 
 export function sessionPayload(session: Session) {

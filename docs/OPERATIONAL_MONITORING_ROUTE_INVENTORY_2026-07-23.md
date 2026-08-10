@@ -40,9 +40,11 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/inbox-counts` | GET | protected | Covered |
 | `/api/admin/marketing` | GET, POST | protected | Covered |
 | `/api/admin/media/video-jobs` | GET, POST | provider-backed | Covered |
+| `/api/admin/overview-metrics` | GET | protected | Covered |
 | `/api/admin/preferences/time-zone` | GET, PATCH | protected | Covered |
 | `/api/admin/promo-codes` | GET, POST, PATCH | protected | Covered |
 | `/api/admin/records` | GET, POST | protected | Covered |
+| `/api/admin/quality/thresholds` | PATCH | protected | Covered |
 | `/api/admin/reviews/[id]/moderate` | POST | protected | Covered |
 | `/api/admin/salons/[id]` | GET, POST | protected | Covered |
 | `/api/admin/salons/reconcile` | GET, POST | protected | Covered |
@@ -50,6 +52,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/submissions/[id]/decision` | POST | provider-backed | Covered |
 | `/api/admin/submissions/[id]` | GET, POST | provider-backed | Covered |
 | `/api/admin/submissions` | GET | provider-backed | Covered |
+| `/api/admin/support/[id]/assignment` | PATCH | provider-backed | Covered |
 | `/api/admin/support/[id]/read` | PATCH | provider-backed | Covered |
 | `/api/admin/support/[id]/respond` | POST | provider-backed | Covered |
 | `/api/admin/team` | GET, POST, PATCH, DELETE | provider-backed | Covered |
@@ -99,6 +102,9 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/push/subscription` | GET, POST, DELETE | provider-backed | Covered |
 | `/api/reviews/[token]` | GET, POST | public/read-only, provider-backed | Covered |
 | `/api/salon/application` | POST | provider-backed | Covered |
+| `/api/salon/application/documents/abandon` | POST | provider-backed | Covered |
+| `/api/salon/application/documents/finalize` | POST | provider-backed | Covered |
+| `/api/salon/application/documents/prepare` | POST | provider-backed | Covered |
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
 | `/api/salon/bookings/[id]/reschedule` | GET, POST | provider-backed | Covered |
