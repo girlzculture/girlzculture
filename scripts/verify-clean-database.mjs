@@ -124,6 +124,10 @@ if (
   unaliasedApplicationDocumentTable ||
   unqualifiedApplicationDocumentColumn ||
   !applicationDocumentBlock.includes(
+    "while application_document_lifecycle_verification.application_document_ordinal <= 5 loop",
+  ) ||
+  applicationDocumentBlock.includes("for application_document_ordinal in") ||
+  !applicationDocumentBlock.includes(
     "from public.application_document_uploads document_upload",
   )
 ) {

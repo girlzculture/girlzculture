@@ -2324,7 +2324,8 @@ begin
     raise exception 'Finalized application document was not atomically attached';
   end if;
 
-  for application_document_ordinal in 1..5 loop
+  application_document_lifecycle_verification.application_document_ordinal := 1;
+  while application_document_lifecycle_verification.application_document_ordinal <= 5 loop
     application_document_lifecycle_verification.application_document_pending_id :=
       (
         '10000000-0000-4000-8000-' ||
@@ -2343,6 +2344,8 @@ begin
       'pending.pdf',
       'application/pdf',512
     );
+    application_document_lifecycle_verification.application_document_ordinal :=
+      application_document_lifecycle_verification.application_document_ordinal + 1;
   end loop;
 
   if to_regclass('public.salon_quality_metrics') is null then
