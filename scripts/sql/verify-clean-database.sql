@@ -2446,6 +2446,9 @@ begin
     application_document_lifecycle_verification.application_document_recent_complaint_id,
     application_document_lifecycle_verification.application_document_historical_complaint_id
   );
+  delete from public.booking_financial_events financial_event
+  where financial_event.booking_id=
+    application_document_lifecycle_verification.application_document_quality_booking_id;
   delete from public.bookings booking
   where booking.id=application_document_lifecycle_verification.application_document_quality_booking_id;
   delete from public.styles style
@@ -2454,6 +2457,14 @@ begin
   where salon.id=application_document_lifecycle_verification.application_document_salon_id;
   delete from auth.users auth_user
   where auth_user.id=application_document_lifecycle_verification.application_document_actor_id;
+  if exists (
+    select 1
+    from public.booking_financial_events financial_event
+    where financial_event.booking_id=
+      application_document_lifecycle_verification.application_document_quality_booking_id
+  ) then
+    raise exception 'Application-document quality fixture left financial audit rows behind';
+  end if;
   if not exists (
     select 1
     from public.application_document_uploads document_upload

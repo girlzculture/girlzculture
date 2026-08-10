@@ -128,6 +128,9 @@ if (
   ) ||
   applicationDocumentBlock.includes("for application_document_ordinal in") ||
   !applicationDocumentBlock.includes(
+    "delete from public.booking_financial_events financial_event",
+  ) ||
+  !applicationDocumentBlock.includes(
     "from public.application_document_uploads document_upload",
   )
 ) {
