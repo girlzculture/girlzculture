@@ -12,7 +12,9 @@ import { sortCatalogRecords } from "@/lib/catalogOrdering";
 type Row = Record<string, any>;
 type CatalogKind = "service_category" | "service_group" | "master_style" | "service_addon";
 type CatalogView = "active" | "archived" | "all";
-const CONFIG: Array<{ kind: CatalogKind; label: string; singular: string; dataKey: string }> = [
+type CatalogDataKey = "serviceCategories" | "serviceGroups" | "masterStyles" | "serviceAddons";
+type CatalogData = Record<CatalogDataKey, Row[]>;
+const CONFIG: Array<{ kind: CatalogKind; label: string; singular: string; dataKey: CatalogDataKey }> = [
   { kind: "service_category", label: "Categories", singular: "Category", dataKey: "serviceCategories" },
   { kind: "service_group", label: "Service Groups", singular: "Service Group", dataKey: "serviceGroups" },
   { kind: "master_style", label: "Service Names", singular: "Service Name", dataKey: "masterStyles" },
@@ -27,7 +29,7 @@ function blank(kind: CatalogKind, categories: Row[], groups: Row[]): Row {
 }
 
 export default function AdminServiceCatalogWorkspace() {
-  const [data, setData] = useState<Record<string, Row[]>>({ serviceCategories: [], serviceGroups: [], masterStyles: [], serviceAddons: [] });
+  const [data, setData] = useState<CatalogData>({ serviceCategories: [], serviceGroups: [], masterStyles: [], serviceAddons: [] });
   const [kind, setKind] = useState<CatalogKind>("service_category");
   const [view, setView] = useState<CatalogView>("active");
   const [query, setQuery] = useState("");
@@ -48,11 +50,11 @@ export default function AdminServiceCatalogWorkspace() {
     if (!session) throw new Error("Admin sign-in required.");
     return { Authorization: `Bearer ${session.access_token}`, ...(json ? { "Content-Type": "application/json" } : {}) };
   }
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<CatalogData> => {
     const response = await fetch("/api/admin/content", { headers: await headers(false), cache: "no-store" });
     const body = await readApiResponse(response, "Unable to load the service catalog.");
     if (!response.ok) throw new Error(body.error || "Unable to load the service catalog.");
-    const next = { serviceCategories: rows(body.serviceCategories), serviceGroups: rows(body.serviceGroups), masterStyles: rows(body.masterStyles), serviceAddons: rows(body.serviceAddons) };
+    const next: CatalogData = { serviceCategories: rows(body.serviceCategories), serviceGroups: rows(body.serviceGroups), masterStyles: rows(body.masterStyles), serviceAddons: rows(body.serviceAddons) };
     setData(next); return next;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { let active = true; void (async () => { try { const loaded = await load(); if (!active) return; const first = visibleRows(loaded.serviceCategories, "active")[0] || null; setSelected(first); setDraft(first ? { ...first } : null); } catch (error) { if (active) setNotice(error instanceof Error ? error.message : "Unable to load the service catalog."); } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [load]);
@@ -67,7 +69,7 @@ export default function AdminServiceCatalogWorkspace() {
   async function save() {
     if (!draft) return;
     setSaving(true); setNotice("");
-    try { const response = await fetch("/api/admin/content", { method: "PUT", headers: await headers(), body: JSON.stringify({ type: kind, payload: draft }) }); const body = await readApiResponse(response, "Catalog save failed."); if (!response.ok) throw new Error(body.error || "Catalog save failed."); const loaded = await load(); const config = CONFIG.find((item) => item.kind === kind)!; const persisted = rows(loaded[config.dataKey]).find((item) => String(item.id) === String(body.data?.id)); if (!persisted) throw new Error("The catalog record was saved but could not be verified after reload."); setSelected(persisted); setDraft({ ...persisted }); setNotice(`${currentConfig.singular} saved and verified after reload.`); } catch (error) { setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Save failed."); } finally { setSaving(false); }
+    try { const response = await fetch("/api/admin/content", { method: "PUT", headers: await headers(), body: JSON.stringify({ type: kind, payload: draft }) }); const body = await readApiResponse(response, "Catalog save failed."); if (!response.ok) throw new Error(body.error || "Catalog save failed."); const loaded = await load(); const config = CONFIG.find((item) => item.kind === kind)!; const savedRecord = body.data && typeof body.data === "object" && !Array.isArray(body.data) ? body.data as Row : null; const persisted = loaded[config.dataKey].find((item) => String(item.id) === String(savedRecord?.id || "")); if (!persisted) throw new Error("The catalog record was saved but could not be verified after reload."); setSelected(persisted); setDraft({ ...persisted }); setNotice(`${currentConfig.singular} saved and verified after reload.`); } catch (error) { setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Save failed."); } finally { setSaving(false); }
   }
   async function managedAction(action: "archive" | "restore" | "delete") {
     if (!selected?.id) return;
@@ -77,7 +79,7 @@ export default function AdminServiceCatalogWorkspace() {
     const warning = action === "delete" ? `Permanently delete ${selected.name}? ${dependencyCount} dependent record${dependencyCount === 1 ? "" : "s"} were found. Protected dependencies will block deletion.` : `${action === "archive" ? "Archive" : "Restore"} ${selected.name}?`;
     if (!window.confirm(warning)) return;
     setSaving(true); setNotice("");
-    try { const response = await fetch("/api/admin/records", { method: "POST", headers: await headers(), body: JSON.stringify({ resource: kind, id: selected.id, action, reason, confirmation: selected.name }) }); const body = await readApiResponse(response, `${action} failed.`); if (!response.ok) throw new Error(body.error || `${action} failed.`); const loaded = await load(); const config = CONFIG.find((item) => item.kind === kind)!; const nextRows = rows(loaded[config.dataKey]); const refreshed = nextRows.find((item) => String(item.id) === String(selected.id)) || null; const next = action === "delete" ? visibleRows(nextRows, view)[0] || null : refreshed; setSelected(next); setDraft(next ? { ...next } : null); setDependency(null); setNotice(`${currentConfig.singular} ${action} completed and verified after reload.`); } catch (error) { setNotice(error instanceof Error ? `${action} failed: ${error.message}` : `${action} failed.`); } finally { setSaving(false); }
+    try { const response = await fetch("/api/admin/records", { method: "POST", headers: await headers(), body: JSON.stringify({ resource: kind, id: selected.id, action, reason, confirmation: selected.name }) }); const body = await readApiResponse(response, `${action} failed.`); if (!response.ok) throw new Error(body.error || `${action} failed.`); const loaded = await load(); const config = CONFIG.find((item) => item.kind === kind)!; const nextRows = loaded[config.dataKey]; const refreshed = nextRows.find((item) => String(item.id) === String(selected.id)) || null; const next = action === "delete" ? visibleRows(nextRows, view)[0] || null : refreshed; setSelected(next); setDraft(next ? { ...next } : null); setDependency(null); setNotice(`${currentConfig.singular} ${action} completed and verified after reload.`); } catch (error) { setNotice(error instanceof Error ? `${action} failed: ${error.message}` : `${action} failed.`); } finally { setSaving(false); }
   }
   async function download(mode: "template" | "export") {
     setSaving(true);
