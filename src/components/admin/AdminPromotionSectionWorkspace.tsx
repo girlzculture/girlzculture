@@ -23,8 +23,16 @@ import {
 } from "@/lib/contentSlotCore";
 import type { ContentCard, ContentSection } from "@/lib/content";
 
-const asRows = (value: unknown): any[] => Array.isArray(value) ? value : [];
+type Row = Record<string, any>;
+const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 type WorkspaceConfig = { slug: "home" | "about-carousel-one" | "about-carousel-two"; parentSlug: "home" | "about"; sectionId: string; title: string; publicHref: string; slot: "hero" | "about-one" | "about-two" };
+type ContentApiResponse = {
+  error?: string;
+  pages?: Row[];
+  linkTargets?: Row[];
+  publicationByPage?: Partial<Record<WorkspaceConfig["slug"], Row>>;
+  public?: Row | null;
+};
 function configFor(recordId: string): WorkspaceConfig | null {
   if (recordId === "page-home--hero-promotion-carousel") return { slug: "home", parentSlug: "home", sectionId: HOME_HERO_SECTION_ID, title: "Hero Promotion Carousel", publicHref: "/", slot: "hero" };
   if (recordId === "page-about--promotional-carousel-one") return { slug: "about-carousel-one", parentSlug: "about", sectionId: ABOUT_CAROUSEL_ONE_ID, title: "Promotional Carousel One", publicHref: "/about", slot: "about-one" };
@@ -49,62 +57,65 @@ function cardIssue(card: ContentCard) {
 
 export default function AdminPromotionSectionWorkspace({ recordId }: { recordId: string }) {
   const config = useMemo(() => configFor(recordId), [recordId]);
-  const [page, setPage] = useState<any | null>(null);
+  const [page, setPage] = useState<Row | null>(null);
   const [section, setSection] = useState<ManagedContentSection | null>(null);
   const [layout, setLayout] = useState<HeroPresentationLayout>("promo_rail");
-  const [linkTargets, setLinkTargets] = useState<any[]>([]);
-  const [publication, setPublication] = useState<any>({});
+  const [linkTargets, setLinkTargets] = useState<Row[]>([]);
+  const [publication, setPublication] = useState<Row>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const load = useCallback(async () => {
-    if (!config) return;
+    const workspaceConfig = config;
+    if (!workspaceConfig) return;
     const session = await getSessionForScope("admin");
     if (!session) throw new Error("Admin sign-in required.");
     const response = await fetch("/api/admin/content", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
-    const body = await readApiResponse(response, "Unable to load content.");
+    const body = await readApiResponse(response, "Unable to load content.") as ContentApiResponse;
     if (!response.ok) throw new Error(body.error || "Unable to load content.");
     const pages = asRows(body.pages);
-    const loadedPage = pages.find((item) => item.slug === config.slug) || null;
+    const loadedPage = pages.find((item) => String(item.slug || "") === workspaceConfig.slug) || null;
     if (!loadedPage) throw new Error("This content record is unavailable.");
     let source: ContentSection | null = null;
-    if (config.slot === "hero") {
+    if (workspaceConfig.slot === "hero") {
       source = findHomeHeroSection(loadedPage.sections);
       setSection(canonicalHomeHeroSection(source));
       setLayout(heroPresentationLayout(source));
     } else {
-      const slot = config.slot === "about-one" ? "one" : "two";
+      const slot = workspaceConfig.slot === "about-one" ? "one" : "two";
       source = findAboutCarouselSection(loadedPage.sections, slot);
       if (!source || !asRows(source.cards).length) {
-        const parent = pages.find((item) => item.slug === "about");
+        const parent = pages.find((item) => String(item.slug || "") === "about");
         const legacy = findAboutCarouselSection(parent?.sections, slot);
         if (legacy && asRows(legacy.cards).length) source = legacy;
       }
-      const prepared = aboutSection(source, config);
-      if (config.slot === "about-one" && !asRows(prepared.cards).length) prepared.cards = ABOUT_CAROUSEL_ONE_EDITORIAL_FALLBACKS;
+      const prepared = aboutSection(source, workspaceConfig);
+      if (workspaceConfig.slot === "about-one" && !asRows(prepared.cards).length) prepared.cards = ABOUT_CAROUSEL_ONE_EDITORIAL_FALLBACKS;
       setSection(prepared);
       setLayout("community_carousel");
     }
     setPage(loadedPage);
     setLinkTargets(asRows(body.linkTargets));
-    setPublication(body.publicationByPage?.[config.slug] || {});
+    setPublication(body.publicationByPage?.[workspaceConfig.slug] || {});
   }, [config]);
   useEffect(() => { let active = true; void (async () => { try { await load(); } catch (error) { if (active) setNotice(error instanceof Error ? error.message : "Unable to load content."); } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [load]);
   if (!config) return null;
   function updateCard(index: number, next: ContentCard) { setSection((current) => current ? { ...current, cards: asRows(current.cards).map((card, cardIndex) => cardIndex === index ? next : card) } : current); }
   function moveCard(index: number, direction: -1 | 1) { setSection((current) => { if (!current) return current; const cards = [...asRows(current.cards)]; const target = index + direction; if (target < 0 || target >= cards.length) return current; [cards[index], cards[target]] = [cards[target], cards[index]]; return { ...current, cards }; }); }
   async function save(action: "save_draft" | "publish" | "unpublish") {
-    if (!page || !section) return;
+    const workspaceConfig = config;
+    if (!workspaceConfig || !page || !section) return;
     setSaving(true); setNotice("");
     try {
       const session = await getSessionForScope("admin");
       if (!session) throw new Error("Your admin session has expired.");
-      const payloadSection: ManagedContentSection = { ...section, id: config.sectionId, type: config.slot === "hero" ? "promo_rail" : "community_carousel", presentation_layout: config.slot === "hero" ? layout : undefined };
-      const response = await fetch("/admin/content-sections", { method: "PUT", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ slug: config.slug, section: payloadSection, action, expected_updated_at: page.updated_at }) });
-      const body = await readApiResponse(response, "This content section could not be saved.");
+      const payloadSection: ManagedContentSection = { ...section, id: workspaceConfig.sectionId, type: workspaceConfig.slot === "hero" ? "promo_rail" : "community_carousel", presentation_layout: workspaceConfig.slot === "hero" ? layout : undefined };
+      const response = await fetch("/admin/content-sections", { method: "PUT", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ slug: workspaceConfig.slug, section: payloadSection, action, expected_updated_at: page.updated_at }) });
+      const body = await readApiResponse(response, "This content section could not be saved.") as ContentApiResponse;
       if (!response.ok) throw new Error(body.error || "This content section could not be saved.");
       await load();
-      const publicCards = asRows(asRows(body.public?.sections).find((candidate) => String(candidate.id || "") === config.sectionId)?.cards);
+      const publicSection = asRows(body.public?.sections).find((candidate) => String(candidate.id || "") === workspaceConfig.sectionId);
+      const publicCards = asRows(publicSection?.cards);
       setNotice(action === "publish" ? `Published and verified. ${publicCards.length} saved card${publicCards.length === 1 ? "" : "s"} reached the public snapshot.` : action === "unpublish" ? "The section is unpublished and no longer public." : "Draft saved and verified. Any previously published version remains live.");
     } catch (error) { setNotice(error instanceof Error ? `Save failed: ${error.message}` : "Save failed."); } finally { setSaving(false); }
   }
