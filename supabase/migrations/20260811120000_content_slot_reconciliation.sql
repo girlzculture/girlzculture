@@ -74,4 +74,12 @@ from parent where child.slug = 'about-carousel-two';
 comment on function public.normalize_home_hero_sections(jsonb) is 'Preserves the authored hero section while separating stable slot identity from presentation layout.';
 comment on function public.reconcile_about_child_sections(jsonb,jsonb,text,text) is 'Keeps newer child cards, otherwise recovers legacy About carousel cards without publishing a hidden child.';
 
+update public.engine_settings
+set published_value='"20260811120000"'::jsonb,
+    draft_value='"20260811120000"'::jsonb,
+    updated_at=now()
+where setting_key='integrations.expected_migration';
+
+notify pgrst, 'reload schema';
+
 commit;
