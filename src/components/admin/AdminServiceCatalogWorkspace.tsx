@@ -57,14 +57,14 @@ export default function AdminServiceCatalogWorkspace() {
     if (!response.ok) throw new Error(body.error || "Unable to load the service catalog.");
     const next: CatalogData = { serviceCategories: rows(body.serviceCategories), serviceGroups: rows(body.serviceGroups), masterStyles: rows(body.masterStyles), serviceAddons: rows(body.serviceAddons) };
     setData(next); return next;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => { let active = true; void (async () => { try { const loaded = await load(); if (!active) return; const first = visibleRows(loaded.serviceCategories, "active")[0] || null; setSelected(first); setDraft(first ? { ...first } : null); } catch (error) { if (active) setNotice(error instanceof Error ? error.message : "Unable to load the service catalog."); } finally { if (active) setLoading(false); } })(); return () => { active = false; }; }, [load]);
   useEffect(() => {
     let active = true;
-    if (!selected?.id) { setDependency(null); return; }
+    if (!selected?.id) return;
     void (async () => { try { const response = await fetch(`/api/admin/records?resource=${encodeURIComponent(kind)}&id=${encodeURIComponent(String(selected.id))}`, { headers: await headers(false), cache: "no-store" }); const body = await readApiResponse(response, "Unable to inspect dependencies."); if (!response.ok) throw new Error(body.error || "Unable to inspect dependencies."); if (active) setDependency(body as Row); } catch (error) { if (active) setDependency({ error: error instanceof Error ? error.message : "Dependency preview unavailable." }); } })();
     return () => { active = false; };
-  }, [kind, selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [kind, selected?.id]);
   function choose(next: Row | null) { setSelected(next); setDraft(next ? { ...next } : blank(kind, data.serviceCategories, data.serviceGroups)); setDependency(null); }
   function switchKind(next: CatalogKind) { setKind(next); setQuery(""); setView("active"); const config = CONFIG.find((item) => item.kind === next)!; const first = visibleRows(data[config.dataKey] || [], "active")[0] || null; setSelected(first); setDraft(first ? { ...first } : null); setDependency(null); }
   async function save() {
