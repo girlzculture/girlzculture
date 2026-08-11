@@ -26,23 +26,39 @@ export function searchTokens(value: unknown, stopWords: string[] = []) {
   return normalizeSearchText(value).split(" ").filter((token) => token && !stops.has(token));
 }
 
+/** Damerau-Levenshtein distance, including one adjacent transposition. */
 export function editDistance(left: string, right: string) {
   if (left === right) return 0;
   if (!left.length) return right.length;
   if (!right.length) return left.length;
-  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-    const current = [leftIndex];
-    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
-      current[rightIndex] = Math.min(
-        current[rightIndex - 1] + 1,
-        previous[rightIndex] + 1,
-        previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+  const matrix = Array.from({ length: left.length + 1 }, () =>
+    Array<number>(right.length + 1).fill(0),
+  );
+  for (let row = 0; row <= left.length; row += 1) matrix[row][0] = row;
+  for (let column = 0; column <= right.length; column += 1)
+    matrix[0][column] = column;
+  for (let row = 1; row <= left.length; row += 1) {
+    for (let column = 1; column <= right.length; column += 1) {
+      matrix[row][column] = Math.min(
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column] + 1,
+        matrix[row - 1][column - 1] +
+          (left[row - 1] === right[column - 1] ? 0 : 1),
       );
+      if (
+        row > 1 &&
+        column > 1 &&
+        left[row - 1] === right[column - 2] &&
+        left[row - 2] === right[column - 1]
+      ) {
+        matrix[row][column] = Math.min(
+          matrix[row][column],
+          matrix[row - 2][column - 2] + 1,
+        );
+      }
     }
-    previous = current;
   }
-  return previous[right.length];
+  return matrix[left.length][right.length];
 }
 
 export function deterministicSearchScore({

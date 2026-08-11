@@ -16,33 +16,18 @@ export default function HeaderStyleSearch() {
     const value = query.trim();
     if (value) params.set("q", value);
     if (customerLocation.location) {
-      params.set(
-        "lat",
-        String(customerLocation.location.lat),
-      );
-      params.set(
-        "lng",
-        String(customerLocation.location.lng),
-      );
-      params.set(
-        "location",
-        customerLocation.location.label,
-      );
+      params.set("lat", String(customerLocation.location.lat));
+      params.set("lng", String(customerLocation.location.lng));
+      params.set("location", customerLocation.location.label);
     }
-    router.push(
-      params.size
-        ? `/salons?${params.toString()}`
-        : "/salons",
-    );
+    router.push(params.size ? `/salons?${params.toString()}` : "/salons");
   }
 
-  // Find Salons owns the one unified search field on that route. Keeping the
-  // global header search there would recreate the duplicate-search problem and
-  // can force the mobile header wider than the viewport at increased text size.
   if (pathname === "/salons") return null;
 
   return (
     <form
+      role="search"
       onSubmit={submit}
       data-public-header-control="search"
       className="w-full min-w-0 max-w-[154px] overflow-hidden rounded-[10px] border border-plum/15 bg-white px-2 min-[390px]:max-w-[184px] md:max-w-[250px] lg:max-w-[310px] xl:max-w-[350px] 2xl:max-w-[260px] min-[1700px]:max-w-[350px]"
@@ -50,6 +35,8 @@ export default function HeaderStyleSearch() {
       <label className="flex min-h-10 min-w-0 items-center gap-1 min-[390px]:gap-2">
         <span className="sr-only">Search</span>
         <input
+          type="search"
+          inputMode="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search"

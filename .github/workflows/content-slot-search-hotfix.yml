@@ -1,0 +1,39 @@
+name: Content slot and search hotfix
+
+on:
+  pull_request:
+    paths:
+      - "src/app/page.tsx"
+      - "src/app/about/page.tsx"
+      - "src/app/admin/content/**"
+      - "src/app/admin/content-sections/**"
+      - "src/app/api/discovery/decision-search/**"
+      - "src/components/admin/AdminPromotionSectionWorkspace.tsx"
+      - "src/components/admin/AdminServiceCatalogWorkspace.tsx"
+      - "src/components/NativeSearchKeyboardBridge.tsx"
+      - "src/components/site/SearchComposer.tsx"
+      - "src/components/search/HeaderStyleSearch.tsx"
+      - "src/app/layout.tsx"
+      - "src/components/site/PublicContentSections.tsx"
+      - "src/lib/catalogFuzzySearchCore.ts"
+      - "src/lib/contentSlotCore.ts"
+      - "src/lib/searchLanguage.ts"
+      - "supabase/migrations/20260811120000_content_slot_reconciliation.sql"
+      - "scripts/verify-content-slot-search-hotfix.mjs"
+      - ".github/workflows/content-slot-search-hotfix.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/verify-content-slot-search-hotfix.mjs
+      - run: npx tsc --noEmit
+      - run: npm run lint

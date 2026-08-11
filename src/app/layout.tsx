@@ -10,6 +10,7 @@ import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
 import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBridge";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
+import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
@@ -110,6 +111,7 @@ export default async function RootLayout({
           <CustomerLocationProvider>{children}</CustomerLocationProvider>
           <DocumentLocalizationBridge />
           <InlineFormValidation />
+          <NativeSearchKeyboardBridge />
           <PwaRegistration />
         </LocaleProvider>
       </body>
