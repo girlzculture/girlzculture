@@ -1,4 +1,5 @@
 import {
+  noteOperationalFailure,
   routeMonitoringProfile,
   withOperationalMonitoring,
 } from "@/lib/operationalMonitoring";
@@ -12,6 +13,12 @@ import {
   enforceRateLimit,
   rejectBot,
 } from "@/lib/requestSecurity";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  resolveCatalogCorrection,
+  type CatalogCorrection,
+  type CatalogCorrectionCandidate,
+} from "@/lib/catalogFuzzySearchCore";
 
 export const runtime = "nodejs";
 
@@ -19,6 +26,56 @@ function optionalNumber(value: unknown) {
   if (value === "" || value === null || value === undefined) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+const safeArray = (value: unknown) =>
+  Array.isArray(value)
+    ? value.map(String).map((item) => item.trim()).filter(Boolean)
+    : [];
+
+async function catalogCorrection(query: string): Promise<CatalogCorrection | null> {
+  try {
+    const admin = getSupabaseAdmin();
+    const [stylesResult, rulesResult] = await Promise.all([
+      admin
+        .from("master_styles")
+        .select("id,name")
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .limit(2_000),
+      admin
+        .from("search_language_rules")
+        .select("target_id,canonical_term,aliases,keywords,common_phrases,misspellings")
+        .eq("target_type", "service")
+        .eq("is_active", true)
+        .limit(2_000),
+    ]);
+    if (stylesResult.error) throw stylesResult.error;
+    if (rulesResult.error) throw rulesResult.error;
+    const rules = new Map(
+      (rulesResult.data || []).map((rule) => [String(rule.target_id), rule]),
+    );
+    const candidates: CatalogCorrectionCandidate[] = (stylesResult.data || []).map(
+      (style) => {
+        const rule = rules.get(String(style.id));
+        return {
+          id: String(style.id),
+          name: String(style.name),
+          terms: [
+            String(rule?.canonical_term || ""),
+            ...safeArray(rule?.aliases),
+            ...safeArray(rule?.keywords),
+            ...safeArray(rule?.common_phrases),
+            ...safeArray(rule?.misspellings),
+          ].filter(Boolean),
+        };
+      },
+    );
+    return resolveCatalogCorrection(query, candidates);
+  } catch (error) {
+    noteOperationalFailure("Catalog typo correction lookup failed", error);
+    return null;
+  }
 }
 
 async function POSTHandler(request: Request) {
@@ -57,7 +114,7 @@ async function POSTHandler(request: Request) {
     "price_high",
   ]);
   const sort = cleanText(rawFilters.sort, 30);
-  const serviceId = cleanText(rawFilters.serviceId, 50) || null;
+  let serviceId = cleanText(rawFilters.serviceId, 50) || null;
   if (
     serviceId &&
     !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(serviceId)
@@ -67,6 +124,8 @@ async function POSTHandler(request: Request) {
       { status: 400 },
     );
   }
+  const correction = serviceId ? null : await catalogCorrection(query);
+  if (correction) serviceId = correction.serviceId;
   const filters: DecisionSearchFilters = {
     serviceId,
     radiusMiles: optionalNumber(rawFilters.radiusMiles),
@@ -85,12 +144,29 @@ async function POSTHandler(request: Request) {
     origin: validCoordinates(coordinates) ? coordinates : null,
     filters,
   });
-  return Response.json(result, {
-    headers: {
-      "Cache-Control": "private, no-store",
-      Vary: "Cookie",
+  const corrected = Boolean(correction && !correction.exact);
+  const correctionMessage = corrected
+    ? `Showing results for ${correction?.serviceName}.`
+    : "";
+  return Response.json(
+    {
+      ...result,
+      summary: correctionMessage
+        ? `${correctionMessage} ${String(result.summary || "")}`.trim()
+        : result.summary,
+      original_query: query,
+      resolved_query: correction?.resolvedQuery || query,
+      corrected_terms: correction?.correctedTerms || [],
+      correction_confidence: correction?.confidence || null,
+      stable_service_id: serviceId,
     },
-  });
+    {
+      headers: {
+        "Cache-Control": "private, no-store",
+        Vary: "Cookie",
+      },
+    },
+  );
 }
 
 export const POST = withOperationalMonitoring(
