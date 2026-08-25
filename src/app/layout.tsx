@@ -12,6 +12,7 @@ import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBr
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
 import PublicContentLiveRefresh from "@/components/PublicContentLiveRefresh";
+import OwnerDashboardResponsiveBridge from "@/components/owner/OwnerDashboardResponsiveBridge";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
@@ -113,6 +114,7 @@ export default async function RootLayout({
             {children}
             <PublicContentLiveRefresh />
           </CustomerLocationProvider>
+          <OwnerDashboardResponsiveBridge />
           <DocumentLocalizationBridge />
           <InlineFormValidation />
           <NativeSearchKeyboardBridge />
