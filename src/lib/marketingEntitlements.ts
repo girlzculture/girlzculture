@@ -20,7 +20,7 @@ export async function verifyMarketingEntitlement(args: {
   salonId: string;
   placement: Placement;
   startsAt: string;
-  endsAt: string;
+  endsAt?: string | null;
 }) {
   const { admin, source, reference, salonId, placement, startsAt, endsAt } = args;
   if (!source || !reference) return null;
@@ -29,7 +29,9 @@ export async function verifyMarketingEntitlement(args: {
     const result = await admin.from("marketing_entitlements").select("amount_minor,currency,status,valid_from,valid_until").eq("source", source).eq("external_reference", reference).eq("salon_id", salonId).eq("placement_type", placement).maybeSingle();
     if (result.error) throw result.error;
     const credit = result.data;
-    if (!credit || credit.status !== "Credited" || new Date(credit.valid_from) > new Date(startsAt) || (credit.valid_until && new Date(credit.valid_until) < new Date(endsAt))) rejectRequest("Choose a verified platform credit that covers the full campaign period.");
+    if (!credit || credit.status !== "Credited" || new Date(credit.valid_from) > new Date(startsAt)) rejectRequest("Choose a verified platform credit that covers this campaign.");
+    if (!endsAt && credit.valid_until) rejectRequest("An indefinite campaign requires an indefinite platform credit.");
+    if (endsAt && credit.valid_until && new Date(credit.valid_until) < new Date(endsAt)) rejectRequest("Choose a verified platform credit that covers the full campaign period.");
     return { amountMinor: Number(credit.amount_minor || 0), currency: String(credit.currency || "usd") };
   }
 
@@ -54,6 +56,7 @@ export async function verifyMarketingEntitlement(args: {
 
   if (evidence.metadata?.salon_id !== salonId || evidence.metadata?.placement_type !== expectedKind) rejectRequest("This Stripe payment is not assigned to this salon and placement type.");
   if (evidence.metadata?.campaign_valid_from && new Date(evidence.metadata.campaign_valid_from) > new Date(startsAt)) rejectRequest("The Stripe evidence starts after this campaign begins.");
-  if (evidence.metadata?.campaign_valid_until && new Date(evidence.metadata.campaign_valid_until) < new Date(endsAt)) rejectRequest("The Stripe evidence does not cover the full campaign period.");
+  if (!endsAt && evidence.metadata?.campaign_valid_until) rejectRequest("An indefinite campaign requires Stripe evidence without a campaign end date.");
+  if (endsAt && evidence.metadata?.campaign_valid_until && new Date(evidence.metadata.campaign_valid_until) < new Date(endsAt)) rejectRequest("The Stripe evidence does not cover the full campaign period.");
   return { amountMinor: Number(evidence.amount_received || evidence.amount_paid || 0), currency: String(evidence.currency || "usd") };
 }
