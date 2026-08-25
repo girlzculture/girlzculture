@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { BellRing, CheckCircle2, Download, RefreshCw, ShieldAlert } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 
@@ -31,6 +32,7 @@ export default function PushSetup({
   compact?: boolean;
   onReady?: (ready: boolean) => void;
 }) {
+  const pathname = usePathname();
   const [installed, setInstalled] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -39,6 +41,8 @@ export default function PushSetup({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const ready = installed && configured && permission === "granted";
+  const dashboardOverview = pathname === "/salon/dashboard";
+  const hideRepeatedSalonCard = scope === "salon" && compact && pathname.startsWith("/salon/dashboard") && !dashboardOverview;
 
   const refreshStatus = useCallback(async () => {
     const hasSupport = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -124,10 +128,13 @@ export default function PushSetup({
     }
   }
 
+  if (hideRepeatedSalonCard) {
+    return <span data-owner-device-alerts-hidden className="hidden" aria-hidden="true" />;
+  }
   if (ready && compact) return null;
 
   return (
-    <section className={`rounded-[16px] border p-5 ${ready ? "border-emerald-200 bg-emerald-50" : "border-amber/40 bg-amber/10"}`} aria-live="polite">
+    <section data-owner-device-alerts className={`rounded-[16px] border p-5 ${ready ? "border-emerald-200 bg-emerald-50" : "border-amber/40 bg-amber/10"}`} aria-live="polite">
       <div className="flex items-start gap-3">
         <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${ready ? "bg-emerald-100 text-emerald-700" : "bg-white text-magenta"}`}>
           {ready ? <CheckCircle2 size={20} /> : <ShieldAlert size={20} />}
