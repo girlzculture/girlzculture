@@ -19,6 +19,7 @@ import { US_STATES } from "@/lib/usStates";
 import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
 import type { CustomerLocation } from "@/lib/location";
 import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
+import AdminSalon360Sections from "@/components/admin/AdminSalon360Sections";
 
 type Row = Record<string, any>;
 type Summary = {
@@ -1176,6 +1177,7 @@ export function AdminSalonDetail({
                   }
                 />
               </section>
+              <AdminSalon360Sections data={data} />
               {data.lifecycle ? (
                 <section className="rounded-[13px] border border-plum/10 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">

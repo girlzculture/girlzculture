@@ -116,11 +116,16 @@ export default function OwnerDashboardShell({
   }, []);
 
   useEffect(() => {
-    void refreshActionableBookingCount();
+    const initialRefresh = window.setTimeout(
+      () => void refreshActionableBookingCount(),
+      0,
+    );
     const refresh = () => void refreshActionableBookingCount();
     window.addEventListener("gc:owner-booking-update", refresh);
-    return () =>
+    return () => {
+      window.clearTimeout(initialRefresh);
       window.removeEventListener("gc:owner-booking-update", refresh);
+    };
   }, [refreshActionableBookingCount]);
 
   const canAccess = (id: string) =>

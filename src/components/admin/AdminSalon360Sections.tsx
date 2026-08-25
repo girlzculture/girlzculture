@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, FileText, MapPin } from "lucide-react";
 import { formatZonedDateTime } from "@/lib/dateTime";
@@ -103,10 +103,8 @@ export default function AdminSalon360Sections({ data }: { data: Salon360Data }) 
   const management = Array.isArray(data.management_events)
     ? data.management_events
     : [];
-  const owner = useMemo(
-    () => team.find((member) => /owner/i.test(text(member.role))) || team[0],
-    [team],
-  );
+  const owner =
+    team.find((member) => /owner/i.test(text(member.role))) || team[0];
   const originalOwnerName = value(
     application.owner_name,
     application.applicant_name,
