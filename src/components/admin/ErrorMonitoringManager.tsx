@@ -3,11 +3,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, RefreshCw, Search } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { useAdminQueryParam } from "@/components/admin/useAdminListContext";
 
 type Row = Record<string, any>;
+type ExportFormat = "csv" | "json";
 
 async function authHeaders(json = false) {
   const session = await getSessionForScope("admin");
@@ -39,18 +40,24 @@ export default function ErrorMonitoringManager({
   const [assignedTo, setAssignedTo] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [exporting, setExporting] = useState<ExportFormat | "">("");
+
+  function currentFilters() {
+    const params = new URLSearchParams();
+    if (initialEventId) params.set("id", initialEventId);
+    else if (status) params.set("status", status);
+    if (severity) params.set("severity", severity);
+    if (feature) params.set("feature", feature);
+    if (!initialEventId && query.trim()) params.set("q", query.trim());
+    return params;
+  }
 
   async function load() {
     setLoading(true);
     setNotice("");
     try {
-      const params = new URLSearchParams({
-        ...(initialEventId ? { id: initialEventId } : { status }),
-        ...(severity ? { severity } : {}),
-        ...(feature ? { feature } : {}),
-        ...(!initialEventId && query.trim() ? { q: query.trim() } : {}),
-      });
-      const response = await fetch(`/api/admin/engine/errors?${params}`, {
+      const response = await fetch(`/api/admin/engine/errors?${currentFilters()}`, {
         headers: await authHeaders(),
         cache: "no-store",
       });
@@ -58,6 +65,7 @@ export default function ErrorMonitoringManager({
       if (!response.ok) throw new Error(body.error || "Unable to load error monitoring.");
       const nextEvents = Array.isArray(body.events) ? body.events : [];
       setEvents(nextEvents);
+      setTotal(Number(body.total || nextEvents.length));
       setRules(Array.isArray(body.rules) ? body.rules : []);
       setTrend(Array.isArray(body.trend) ? body.trend : []);
       setAssignees(Array.isArray(body.assignees) ? body.assignees : []);
@@ -86,7 +94,7 @@ export default function ErrorMonitoringManager({
   }, [feature, severity, status]); // eslint-disable-line react-hooks/exhaustive-deps
   const incidentReturnPath = useMemo(() => {
     const params = new URLSearchParams();
-    if (status !== "Open") params.set("status", status);
+    if (status && status !== "Open") params.set("status", status);
     if (severity) params.set("severity", severity);
     if (feature) params.set("feature", feature);
     if (query.trim()) params.set("q", query.trim());
@@ -102,6 +110,46 @@ export default function ErrorMonitoringManager({
     setSelected(event);
     setNotes(String(event.admin_notes || ""));
     setAssignedTo(String(event.assigned_to || ""));
+  }
+
+  async function exportEvents(format: ExportFormat) {
+    if (exporting) return;
+    setExporting(format);
+    setNotice("");
+    try {
+      const params = currentFilters();
+      params.set("export", format);
+      const response = await fetch(`/api/admin/engine/errors?${params}`, {
+        headers: await authHeaders(),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Unable to export monitored incidents.");
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const suppliedName = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+      const filename = suppliedName || `girlz-culture-incidents-${new Date().toISOString().slice(0, 10)}.${format}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      const exportedCount = Number(response.headers.get("x-export-count") || 0);
+      const matchingCount = Number(response.headers.get("x-export-total") || exportedCount);
+      const truncated = response.headers.get("x-export-truncated") === "true";
+      setNotice(truncated
+        ? `Exported the first ${exportedCount.toLocaleString()} of ${matchingCount.toLocaleString()} matching incidents. Narrow the filters to export the remainder.`
+        : `Exported ${exportedCount.toLocaleString()} matching incident${exportedCount === 1 ? "" : "s"} as ${format.toUpperCase()}.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to export monitored incidents.");
+    } finally {
+      setExporting("");
+    }
   }
 
   async function update(nextStatus: string) {
@@ -155,20 +203,25 @@ export default function ErrorMonitoringManager({
 
   return <section className="space-y-4 rounded-[15px] border border-plum/10 bg-white p-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><div className="flex items-center gap-2"><AlertTriangle className="text-magenta" size={21}/><h2 className="font-serif text-2xl text-plum">Operational Monitoring</h2></div><p className="mt-1 text-xs text-ink/55">Platform failures are grouped by cause and explained in plain language. Ordinary validation is excluded.</p></div>
-      <button type="button" onClick={() => void load()} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum"><RefreshCw size={14}/>Refresh</button>
+      <div><div className="flex items-center gap-2"><AlertTriangle className="text-magenta" size={21}/><h2 className="font-serif text-2xl text-plum">Operational Monitoring</h2></div><p className="mt-1 text-xs text-ink/55">Platform failures are grouped by cause and explained in plain language. Ordinary validation is excluded.</p><p className="mt-1 text-[10px] text-ink/45">Exports include every incident matching the current filters, not only the records visible on this page.</p></div>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={Boolean(exporting)} onClick={() => void exportEvents("csv")} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum disabled:cursor-wait disabled:opacity-60"><Download size={14}/>{exporting === "csv" ? "Exporting…" : "Export CSV"}</button>
+        <button type="button" disabled={Boolean(exporting)} onClick={() => void exportEvents("json")} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum disabled:cursor-wait disabled:opacity-60"><Download size={14}/>{exporting === "json" ? "Exporting…" : "Export JSON"}</button>
+        <button type="button" onClick={() => void load()} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum"><RefreshCw size={14}/>Refresh</button>
+      </div>
     </div>
 
     <div className="grid gap-3 sm:grid-cols-4">{["critical", "high", "medium", "low"].map((level) => <div key={level} className="rounded-xl border border-plum/10 bg-cream/45 p-3"><p className="text-[10px] font-bold uppercase text-ink/50">{level} · 14 days</p><p className="mt-1 font-serif text-2xl text-plum">{totals[level] || 0}</p></div>)}</div>
     <div className="rounded-xl border border-plum/10 bg-cream/35 p-3"><p className="text-[10px] font-bold uppercase text-ink/50">Occurrences by day · last 14 days</p><div className="mt-3 grid h-24 grid-cols-[repeat(14,minmax(0,1fr))] items-end gap-1" aria-label="Fourteen-day error occurrence trend">{dailyTrend.map((day) => <div key={day.key} title={`${day.label}: ${day.count}`} className="group flex h-full items-end"><span className="w-full rounded-t bg-magenta/70 transition-colors group-hover:bg-magenta" style={{ height: `${Math.max(day.count ? 8 : 2, (day.count / trendMaximum) * 100)}%` }}><span className="sr-only">{day.label}: {day.count}</span></span></div>)}</div></div>
 
     <div className="grid gap-3 md:grid-cols-[140px_140px_180px_1fr_auto]">
-      <select aria-label="Error status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-10 rounded-lg border px-3 text-xs"><option>Open</option><option>Investigating</option><option>Resolved</option><option>Ignored</option></select>
+      <select aria-label="Error status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-10 rounded-lg border px-3 text-xs"><option value="">All statuses</option><option>Open</option><option>Investigating</option><option>Resolved</option><option>Ignored</option></select>
       <select aria-label="Error severity" value={severity} onChange={(event) => setSeverity(event.target.value)} className="min-h-10 rounded-lg border px-3 text-xs"><option value="">All severity</option><option>critical</option><option>high</option><option>medium</option><option>low</option></select>
       <select aria-label="Affected feature" value={feature} onChange={(event) => setFeature(event.target.value)} className="min-h-10 rounded-lg border px-3 text-xs"><option value="">All features</option>{features.map((item) => <option key={item}>{item}</option>)}</select>
       <label className="flex min-h-10 items-center gap-2 rounded-lg border px-3"><Search size={14}/><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void load(); }} placeholder="Reference, route, or action" className="min-w-0 flex-1 text-xs outline-none"/></label>
       <button type="button" onClick={() => void load()} className="rounded-lg bg-magenta px-5 text-xs font-bold text-white">Search</button>
     </div>
+    <p className="text-[10px] text-ink/45">Showing {events.length.toLocaleString()} of {total.toLocaleString()} matching incident{total === 1 ? "" : "s"}.</p>
 
     {notice ? <p role="status" className="rounded-lg bg-blush/55 p-3 text-xs text-plum">{notice}</p> : null}
     <div className={`grid gap-4 ${routeMode ? "" : "xl:grid-cols-[.9fr_1.1fr]"}`}>
