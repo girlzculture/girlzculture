@@ -54,9 +54,23 @@ const api = fs.readFileSync(
   "src/app/api/admin/engine/errors/route.ts",
   "utf8",
 );
-assert.match(api, /platform_error_affected_businesses/);
-assert.match(api, /operationalErrorPresentation\(row\)/);
-assert.match(api, /affected_business_count/);
+for (const requirement of [
+  /platform_error_affected_businesses/,
+  /operationalErrorPresentation\(row\)/,
+  /affected_business_count/,
+  /params\.get\("export"\)/,
+  /MAX_EXPORT_ROWS = 10_000/,
+  /Content-Disposition/,
+  /text\/csv; charset=utf-8/,
+  /X-Export-Truncated/,
+  /function csvCell/,
+  /\^\[=\+\\-@\]/,
+]) {
+  assert.match(api, requirement);
+}
+assert.match(api, /requestedExport === "csv" \|\| requestedExport === "json"/);
+assert.match(api, /exportRows\.push/);
+assert.match(api, /affected_businesses: businesses/);
 
 const ui = fs.readFileSync(
   "src/components/admin/ErrorMonitoringManager.tsx",
@@ -69,6 +83,12 @@ for (const requirement of [
   /<details className="mt-4 rounded-lg bg-ink/,
   /<summary className="cursor-pointer font-bold">Technical details<\/summary>/,
   /affected_business_count/,
+  /Export CSV/,
+  /Export JSON/,
+  /All statuses/,
+  /URL\.createObjectURL/,
+  /x-export-truncated/,
+  /Exports include every incident matching the current filters/,
 ]) {
   assert.match(ui, requirement);
 }
@@ -76,10 +96,14 @@ assert.ok(
   ui.indexOf("presentation?.title") < ui.indexOf("technical_message"),
   "Plain-language presentation must appear before collapsed technical details.",
 );
+assert.ok(
+  ui.indexOf("Export CSV") < ui.indexOf("Alert thresholds"),
+  "Incident exports must be available from the primary monitoring workspace.",
+);
 
 const dashboard = fs.readFileSync("src/components/AdminDashboard.tsx", "utf8");
 assert.match(dashboard, /notificationCounts\.errors/);
 
 console.log(
-  "Operational monitoring usability verification passed: live-update, Maps, booking, and payment failures receive distinct plain-language impact/action guidance; affected-business context, grouped counts, collapsed technical details, high-severity badges, and immutable promotion deletion snapshots are covered.",
+  "Operational monitoring usability verification passed: live-update, Maps, booking, and payment failures receive distinct plain-language impact/action guidance; affected-business context, grouped counts, collapsed technical details, high-severity badges, secure filtered CSV/JSON exports, and immutable promotion deletion snapshots are covered.",
 );
