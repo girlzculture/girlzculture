@@ -75,7 +75,6 @@ export default function OwnerRealtimeAlertBridge() {
               detail.body ||
               "A customer completed a booking. Open Girlz Culture for details.",
             tag: key,
-            renotify: true,
             icon: "/pwa-icon-192.png",
           });
         } catch {
