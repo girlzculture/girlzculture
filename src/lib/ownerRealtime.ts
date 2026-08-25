@@ -30,6 +30,11 @@ type OwnerRealtimeOptions = {
 
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 15_000, 30_000];
 
+function dispatchOwnerEvent(name: string, detail: RealtimeRow) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 export function ownerFallbackDelay(
   pollingIntervalMs: number,
   attempt: number,
@@ -55,6 +60,7 @@ export function subscribeToOwnerUpdates({
   let channel: RealtimeChannel | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let pollingTimer: ReturnType<typeof setTimeout> | null = null;
+  let healthyPollTimer: ReturnType<typeof setTimeout> | null = null;
   let retryAttempt = 0;
   let pollingAttempt = 0;
   let stopped = false;
@@ -70,6 +76,21 @@ export function subscribeToOwnerUpdates({
     if (pollingTimer) clearTimeout(pollingTimer);
     pollingTimer = null;
     pollingAttempt = 0;
+  };
+  const stopHealthyPolling = () => {
+    if (healthyPollTimer) clearTimeout(healthyPollTimer);
+    healthyPollTimer = null;
+  };
+  const scheduleHealthyPoll = () => {
+    stopHealthyPolling();
+    if (stopped || terminalAuthFailure || !onFallbackRefresh) return;
+    healthyPollTimer = setTimeout(() => {
+      healthyPollTimer = null;
+      if (stopped || terminalAuthFailure) return;
+      void Promise.resolve(onFallbackRefresh())
+        .catch(() => undefined)
+        .finally(scheduleHealthyPoll);
+    }, Math.max(15_000, pollingIntervalMs));
   };
   const schedulePolling = (delay: number) => {
     if (
@@ -90,6 +111,7 @@ export function subscribeToOwnerUpdates({
             terminalAuthFailure = true;
             clearRetry();
             stopPolling();
+            stopHealthyPolling();
             const current = channel;
             if (current) void removeCurrentChannel(current);
             return;
@@ -119,8 +141,7 @@ export function subscribeToOwnerUpdates({
     try {
       await client.removeChannel(expected);
     } catch {
-      // A disconnected transport may also reject channel removal. The local
-      // reference is already cleared, so reconnect can continue safely.
+      // A disconnected transport may also reject channel removal.
     }
   };
   const scheduleReconnect = () => {
@@ -145,8 +166,16 @@ export function subscribeToOwnerUpdates({
       degraded = true;
       onConnectionState?.("degraded", status);
     }
+    stopHealthyPolling();
     startPolling();
     void removeCurrentChannel(failedChannel).finally(scheduleReconnect);
+  };
+  const refreshWorkspace = () => {
+    try {
+      void Promise.resolve(onReviewStateChange()).catch(() => undefined);
+    } catch {
+      // A later event or fallback poll retries the refresh.
+    }
   };
   const connect = () => {
     if (stopped || terminalAuthFailure) return;
@@ -162,18 +191,7 @@ export function subscribeToOwnerUpdates({
       !stopped &&
       generation === connectionGeneration &&
       channel === nextChannel;
-    const refreshReviewState = () => {
-      if (!isCurrentConnection()) return;
-      try {
-        void Promise.resolve(onReviewStateChange()).catch(() => undefined);
-      } catch {
-        // A refresh failure is recovered by the dashboard's next realtime
-        // event or by fallback polling if the channel later degrades.
-      }
-    };
 
-    // Supabase requires every postgres_changes callback to be registered
-    // before subscribe(). Keep subscribe as the final builder call.
     nextChannel.on(
       "postgres_changes",
       {
@@ -183,8 +201,17 @@ export function subscribeToOwnerUpdates({
         filter: `salon_id=eq.${salonId}`,
       },
       (payload) => {
-        if (isCurrentConnection())
-          onNotification(payload.new as RealtimeRow);
+        if (!isCurrentConnection()) return;
+        const row = payload.new as RealtimeRow;
+        onNotification(row);
+        dispatchOwnerEvent("gc:owner-notification", {
+          ...row,
+          bookingId: row.booking_id,
+          actionUrl: row.booking_id
+            ? `/salon/dashboard/bookings/${row.booking_id}`
+            : "/salon/dashboard/bookings",
+        });
+        refreshWorkspace();
       },
     );
     nextChannel.on(
@@ -196,13 +223,48 @@ export function subscribeToOwnerUpdates({
         filter: `salon_id=eq.${salonId}`,
       },
       (payload) => {
-        if (isCurrentConnection()) onBooking(payload.new as RealtimeRow);
+        if (!isCurrentConnection()) return;
+        const row = payload.new as RealtimeRow;
+        onBooking(row);
+        dispatchOwnerEvent("gc:owner-booking-update", {
+          ...row,
+          bookingId: row.id,
+          title: "New booking received",
+          body: "A customer completed a booking. The appointment list is updating now.",
+          actionUrl: row.id
+            ? `/salon/dashboard/bookings/${row.id}`
+            : "/salon/dashboard/bookings",
+          eventType: "INSERT",
+        });
+        refreshWorkspace();
       },
     );
-    // Reviews are private server-rendered records and are intentionally not a
-    // browser Realtime source. Every insert/moderation/archive operation runs
-    // the review-summary trigger in the same transaction, and that resulting
-    // owner-readable salon UPDATE is the single safe refresh signal.
+    for (const event of ["UPDATE", "DELETE"] as const) {
+      nextChannel.on(
+        "postgres_changes",
+        {
+          event,
+          schema: "public",
+          table: "bookings",
+          filter: `salon_id=eq.${salonId}`,
+        },
+        (payload) => {
+          if (!isCurrentConnection()) return;
+          const row = (payload.new || payload.old || {}) as RealtimeRow;
+          dispatchOwnerEvent("gc:owner-booking-update", {
+            ...row,
+            bookingId: row.id,
+            title: "Booking updated",
+            body: "A booking status or appointment detail changed.",
+            actionUrl: row.id
+              ? `/salon/dashboard/bookings/${row.id}`
+              : "/salon/dashboard/bookings",
+            eventType: event,
+          });
+          refreshWorkspace();
+        },
+      );
+    }
     nextChannel.on(
       "postgres_changes",
       {
@@ -211,7 +273,9 @@ export function subscribeToOwnerUpdates({
         table: "salons",
         filter: `id=eq.${salonId}`,
       },
-      refreshReviewState,
+      () => {
+        if (isCurrentConnection()) refreshWorkspace();
+      },
     );
     nextChannel.subscribe((status) => {
       if (stopped || generation !== connectionGeneration) return;
@@ -219,6 +283,7 @@ export function subscribeToOwnerUpdates({
         retryAttempt = 0;
         degraded = false;
         stopPolling();
+        scheduleHealthyPoll();
         onConnectionState?.("connected", status);
         return;
       }
@@ -240,13 +305,14 @@ export function subscribeToOwnerUpdates({
     connectionGeneration += 1;
     clearRetry();
     stopPolling();
+    stopHealthyPolling();
     const current = channel;
     channel = null;
     if (current) {
       try {
         await client.removeChannel(current);
       } catch {
-        // Cleanup must remain idempotent even while the transport is offline.
+        // Cleanup remains idempotent while transport is offline.
       }
     }
   };

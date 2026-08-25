@@ -1,0 +1,38 @@
+name: Final launch mobile and realtime corrections
+
+on:
+  pull_request:
+    paths:
+      - "src/app/about/**"
+      - "src/app/layout.tsx"
+      - "src/app/admin/content-sections/**"
+      - "src/app/api/salon/actionable-booking-count/**"
+      - "src/components/PublicContentLiveRefresh.tsx"
+      - "src/components/owner/OwnerDashboardShell.tsx"
+      - "src/components/owner/OwnerRealtimeAlertBridge.tsx"
+      - "src/components/site/AutoContentCarousel.tsx"
+      - "src/components/site/PublicContentCard.tsx"
+      - "src/components/site/PublicContentSections.tsx"
+      - "src/lib/homePromotionCore.ts"
+      - "src/lib/ownerRealtime.ts"
+      - "supabase/migrations/20260825120000_public_content_realtime_and_booking_badges.sql"
+      - "scripts/verify-final-launch-mobile-realtime-admin-corrections.mjs"
+      - ".github/workflows/final-launch-mobile-realtime-admin-corrections.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/verify-final-launch-mobile-realtime-admin-corrections.mjs
+      - run: npm run verify:migrations
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
