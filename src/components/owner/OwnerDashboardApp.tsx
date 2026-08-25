@@ -98,6 +98,10 @@ import {
   OwnerDetailHeader,
   OwnerSectionCard,
 } from "@/components/owner/OwnerWorkflowUi";
+import BookingCheckInExceptionForm, {
+  type CheckInExceptionAnswer,
+  type CheckInExceptionRequirement,
+} from "@/components/owner/BookingCheckInExceptionForm";
 
 type Row = Record<string, unknown> & {
   id?: string;
@@ -3524,6 +3528,8 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [proposalSummary, setProposalSummary] = useState<Row | null>(null);
   const [confirmCompletion, setConfirmCompletion] = useState(false);
+  const [checkInException, setCheckInException] =
+    useState<CheckInExceptionRequirement | null>(null);
   function contextQuery(next: { group?: BookingGroup; status?: string; query?: string } = {}) {
     const nextGroup = next.group ?? group;
     const nextStatus = next.status ?? filter;
@@ -3668,6 +3674,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   }, [rescheduleDate, selectedId]);
   async function serviceAction(
     action: "check_in" | "start" | "complete",
+    exception?: CheckInExceptionAnswer,
   ) {
     if (!selected?.id) return;
     setBusy(true);
@@ -3685,13 +3692,45 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           body: JSON.stringify({
             action,
             confirmed: action === "complete" ? confirmCompletion : undefined,
+            reason_code: exception?.reason_code,
+            reason_detail: exception?.reason_detail,
+            attested: exception?.attested,
           }),
         },
       );
       const body = (await response.json()) as {
         error?: string;
+        code?: string;
         booking?: Row;
+        requires_exception?: boolean;
+        exception_kind?: "early" | "late";
+        scheduled_at?: string;
+        attempted_at?: string;
+        offset_minutes?: number;
+        standard_window?: { opens_at: string; closes_at: string };
+        reasons?: Array<{ value: string; label: string }>;
       };
+      if (response.status === 428 && body.requires_exception) {
+        if (
+          !body.exception_kind ||
+          !body.scheduled_at ||
+          !body.attempted_at ||
+          !body.standard_window ||
+          !Array.isArray(body.reasons)
+        ) {
+          throw new Error("The check-in reason workflow could not be loaded.");
+        }
+        setCheckInException({
+          exception_kind: body.exception_kind,
+          scheduled_at: body.scheduled_at,
+          attempted_at: body.attempted_at,
+          offset_minutes: Number(body.offset_minutes || 0),
+          standard_window: body.standard_window,
+          reasons: body.reasons,
+        });
+        c.setNotice(body.error || "Choose the reason for this check-in.");
+        return;
+      }
       if (!response.ok || !body.booking) {
         throw new Error(
           body.error || "The service status could not be updated.",
@@ -3702,6 +3741,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           booking.id === selected.id ? (body.booking as Row) : booking,
         ),
       );
+      setCheckInException(null);
       setConfirmCompletion(false);
       c.setNotice(
         action === "check_in"
@@ -4079,13 +4119,30 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                       Confirmed → Checked in / Ready → In progress → Completed
                     </p>
                     {String(selected.status).toLowerCase() === "confirmed" ? (
-                      <button
-                        disabled={busy}
-                        onClick={() => void serviceAction("check_in")}
-                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
-                      >
-                        Check in customer
-                      </button>
+                      <>
+                        {!checkInException ? (
+                          <button
+                            disabled={busy}
+                            onClick={() => void serviceAction("check_in")}
+                            className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                          >
+                            Check in customer
+                          </button>
+                        ) : null}
+                        {checkInException ? (
+                          <BookingCheckInExceptionForm
+                            requirement={checkInException}
+                            timeZone={String(
+                              c.salon.time_zone || "America/New_York",
+                            )}
+                            busy={busy}
+                            onCancel={() => setCheckInException(null)}
+                            onSubmit={(answer) =>
+                              serviceAction("check_in", answer)
+                            }
+                          />
+                        ) : null}
+                      </>
                     ) : null}
                     {String(selected.status).toLowerCase() === "ready" ? (
                       <button
