@@ -10,6 +10,12 @@ const MAX_EXPORT_ROWS = 10_000;
 const EXPORT_BATCH_SIZE = 500;
 
 type ErrorRow = Record<string, unknown>;
+type EnrichedExportRow = ErrorRow & {
+  presentation: ReturnType<typeof operationalErrorPresentation>;
+  affected_business_count: number;
+  affected_businesses: ErrorRow[];
+  assigned_admin: string;
+};
 
 function csvCell(value: unknown) {
   let text = value == null
@@ -110,7 +116,7 @@ async function GETHandler(request: Request) {
         if (row.id) assigneeById.set(String(row.id), label);
         if (row.user_id) assigneeById.set(String(row.user_id), label);
       }
-      const enriched = exportRows.map((row) => {
+      const enriched: EnrichedExportRow[] = exportRows.map((row): EnrichedExportRow => {
         const businesses = affectedByEvent.get(String(row.id || "")) || [];
         return {
           ...row,
@@ -170,8 +176,8 @@ async function GETHandler(request: Request) {
         "Metadata",
       ];
       const rows = enriched.map((row) => {
-        const presentation = row.presentation as ReturnType<typeof operationalErrorPresentation>;
-        const businesses = (row.affected_businesses as ErrorRow[]).map((item) => {
+        const presentation = row.presentation;
+        const businesses = row.affected_businesses.map((item) => {
           const salon = relatedSalon(item.salon);
           const location = [salon?.address_city, salon?.address_state, salon?.address_zip].filter(Boolean).join(" ");
           return `${String(salon?.name || item.salon_id || "Salon")}${location ? ` (${location})` : ""} · ${Number(item.occurrence_count || 0)} occurrence(s)`;
