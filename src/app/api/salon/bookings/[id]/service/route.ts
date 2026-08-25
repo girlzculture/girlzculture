@@ -12,6 +12,26 @@ import { capturePlatformError } from "@/lib/platformErrors";
 import { requireSalonPermission, sendEmail } from "@/lib/supabaseAdmin";
 import { issueBookingReviewLink } from "@/lib/reviewAccessServer";
 
+const EARLY_REASONS = [
+  ["customer_arrived_early", "Customer arrived earlier than scheduled"],
+  ["customer_requested_earlier_by_phone", "Customer requested an earlier time by phone"],
+  ["customer_requested_earlier_by_message", "Customer requested an earlier time by text or message"],
+  ["salon_and_customer_agreed_earlier", "Salon and customer agreed to an earlier time"],
+  ["customer_arrived_as_walk_in", "Customer arrived as a walk-in after making the booking"],
+  ["appointment_changed_outside_platform", "Appointment time was changed outside the platform"],
+  ["other", "Other"],
+] as const;
+const LATE_REASONS = [
+  ["customer_arrived_late", "Customer arrived late"],
+  ["salon_running_behind", "Salon was running behind schedule"],
+  ["salon_and_customer_agreed_later", "Customer and salon agreed to begin later"],
+  ["appointment_changed_outside_platform", "Appointment time was changed outside the platform"],
+  ["service_completed_check_in_not_recorded", "Service already took place, but check-in was not recorded"],
+  ["technical_problem", "Technical problem prevented check-in"],
+  ["staff_forgot_check_in", "Staff forgot to record check-in"],
+  ["other", "Other"],
+] as const;
+
 class ServiceActionError extends Error {
   constructor(
     message: string,
@@ -42,7 +62,7 @@ async function POSTHandler(
     const { data: booking, error: bookingError } = await context.admin
       .from("bookings")
       .select(
-        "id,salon_id,stylist_id,status,guest_name,guest_email,customer_id,public_reference,confirmation_code",
+        "id,salon_id,stylist_id,status,guest_name,guest_email,customer_id,public_reference,confirmation_code,appointment_datetime,checked_in_at,service_started_at,service_completed_at",
       )
       .eq("id", id)
       .eq("salon_id", context.salon.id)
@@ -58,8 +78,47 @@ async function POSTHandler(
         403,
       );
     }
+
+    const reasonCode = cleanText(body.reason_code, 80).toLowerCase();
+    const reasonDetail = cleanText(body.reason_detail, 500);
+    const attested = body.attested === true;
+    if (action === "check_in") {
+      const scheduled = new Date(String(booking.appointment_datetime || ""));
+      if (Number.isNaN(scheduled.getTime()))
+        throw new ServiceActionError("This appointment time is invalid.", 409);
+      const offsetMinutes = Math.floor(
+        (Date.now() - scheduled.getTime()) / 60_000,
+      );
+      const exceptionKind =
+        offsetMinutes < -30 ? "early" : offsetMinutes > 60 ? "late" : null;
+      if (exceptionKind && (!reasonCode || !attested)) {
+        return Response.json(
+          {
+            error:
+              exceptionKind === "early"
+                ? "Select why the customer is being checked in early and confirm the information is accurate."
+                : "Select why the customer is being checked in late and confirm the information is accurate.",
+            code: "CHECK_IN_EXCEPTION_REQUIRED",
+            requires_exception: true,
+            exception_kind: exceptionKind,
+            scheduled_at: scheduled.toISOString(),
+            attempted_at: new Date().toISOString(),
+            offset_minutes: offsetMinutes,
+            standard_window: {
+              opens_at: new Date(scheduled.getTime() - 30 * 60_000).toISOString(),
+              closes_at: new Date(scheduled.getTime() + 60 * 60_000).toISOString(),
+            },
+            reasons: (exceptionKind === "early" ? EARLY_REASONS : LATE_REASONS).map(
+              ([value, label]) => ({ value, label }),
+            ),
+          },
+          { status: 428 },
+        );
+      }
+    }
+
     const { data: updated, error: transitionError } = await context.admin.rpc(
-      "transition_booking_service",
+      "transition_booking_service_v2",
       {
         p_booking_id: booking.id,
         p_salon_id: context.salon.id,
@@ -68,14 +127,32 @@ async function POSTHandler(
           ? "Salon owner"
           : String(context.teamMember?.role || "Salon team"),
         p_action: action,
-        p_reason:
-          action === "complete"
-            ? "Salon confirmed that the scheduled service was completed."
-            : null,
+        p_reason_code: reasonCode || null,
+        p_reason_detail: reasonDetail || null,
+        p_attested: attested,
         p_target_status: null,
+        p_time_zone: String(
+          (context.salon as { time_zone?: unknown }).time_zone ||
+            "America/New_York",
+        ),
       },
     );
     if (transitionError) {
+      if (/EARLY_CHECK_IN_REASON_REQUIRED/i.test(transitionError.message))
+        throw new ServiceActionError(
+          "Select a valid early check-in reason and confirm the information is accurate.",
+          422,
+        );
+      if (/LATE_CHECK_IN_REASON_REQUIRED/i.test(transitionError.message))
+        throw new ServiceActionError(
+          "Select a valid late check-in reason and confirm the information is accurate.",
+          422,
+        );
+      if (/CHECK_IN_OTHER_DETAIL_REQUIRED/i.test(transitionError.message))
+        throw new ServiceActionError(
+          "Add a short explanation when Other is selected.",
+          422,
+        );
       const safe =
         action === "check_in"
           ? "This booking is not ready for check-in."
