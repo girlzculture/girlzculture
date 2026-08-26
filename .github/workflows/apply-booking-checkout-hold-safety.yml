@@ -1,6 +1,7 @@
 name: Apply booking checkout hold safety
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - agent/final-launch-mobile-realtime-admin-corrections
@@ -14,6 +15,7 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
