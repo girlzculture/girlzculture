@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const FALLBACK_REFRESH_MS = 90_000;
+const ACCEPTANCE_MODE =
+  process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS === "true";
 
 export default function PublicContentLiveRefresh() {
   const router = useRouter();
@@ -13,7 +15,17 @@ export default function PublicContentLiveRefresh() {
   const lastVersion = useRef(new Map<string, number>());
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname.startsWith("/salon/dashboard")) return;
+    // The acceptance harness uses a read-only HTTP fixture rather than a
+    // Supabase Realtime server. Subscribing there creates a blocked WebSocket
+    // and can refresh the test DOM while controls are being exercised. Real
+    // preview and production deployments continue to use the subscription.
+    if (
+      ACCEPTANCE_MODE ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/salon/dashboard")
+    )
+      return;
+
     let stopped = false;
     const scheduleRefresh = () => {
       if (stopped || refreshTimer.current !== null) return;
