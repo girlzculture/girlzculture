@@ -44,6 +44,14 @@ alter table public.featured_campaign_audit
   add column if not exists placement_basis_snapshot text,
   add column if not exists deleted_at timestamptz;
 
+-- Historical audit rows predate the snapshot columns. Runtime audit records are
+-- intentionally immutable, so suspend only the named immutability trigger for
+-- this transactional backfill and restore it immediately afterward. If any
+-- later statement fails, PostgreSQL rolls the trigger change back with the
+-- migration.
+drop trigger if exists featured_campaign_audit_immutable
+  on public.featured_campaign_audit;
+
 update public.featured_campaign_audit audit
 set campaign_id_snapshot = coalesce(audit.campaign_id_snapshot, audit.campaign_id),
     salon_id_snapshot = coalesce(
@@ -52,6 +60,10 @@ set campaign_id_snapshot = coalesce(audit.campaign_id_snapshot, audit.campaign_i
       nullif(audit.new_values ->> 'salon_id', '')::uuid,
       nullif(audit.previous_values ->> 'salon_id', '')::uuid
     ),
+    salon_name_snapshot = coalesce(
+      audit.salon_name_snapshot,
+      salon.name
+    ),
     placement_basis_snapshot = coalesce(
       audit.placement_basis_snapshot,
       campaign.placement_basis,
@@ -59,7 +71,18 @@ set campaign_id_snapshot = coalesce(audit.campaign_id_snapshot, audit.campaign_i
       audit.previous_values ->> 'placement_basis'
     )
 from public.featured_salon_campaigns campaign
-where campaign.id = audit.campaign_id;
+left join public.salons salon on salon.id = campaign.salon_id
+where campaign.id = audit.campaign_id
+  and (
+    audit.campaign_id_snapshot is null
+    or audit.salon_id_snapshot is null
+    or audit.salon_name_snapshot is null
+    or audit.placement_basis_snapshot is null
+  );
+
+create trigger featured_campaign_audit_immutable
+before update or delete on public.featured_campaign_audit
+for each row execute function public.prevent_featured_audit_mutation();
 
 -- The audit keeps the campaign UUID as evidence after a Super Admin deletes the
 -- operational campaign. A restrictive foreign key would prevent that cleanup.

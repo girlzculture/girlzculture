@@ -1,0 +1,40 @@
+name: Verify populated Featured Salon audit migration
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20260825140000_featured_campaign_owner_controls.sql"
+      - "scripts/verify-featured-audit-backfill-database.mjs"
+      - ".github/workflows/verify-featured-audit-backfill.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-populated-audit-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: featured_audit_migration
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d featured_audit_migration"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      FEATURED_AUDIT_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/featured_audit_migration
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Reproduce the populated immutable-audit migration path
+        run: node scripts/verify-featured-audit-backfill-database.mjs
