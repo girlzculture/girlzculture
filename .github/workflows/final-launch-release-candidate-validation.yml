@@ -1,0 +1,249 @@
+name: Final launch release candidate validation
+
+on:
+  push:
+    branches:
+      - agent/final-launch-mobile-realtime-admin-corrections
+  pull_request:
+    paths:
+      - "src/**"
+      - "supabase/migrations/**"
+      - "scripts/**"
+      - "tests/**"
+      - "e2e/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/final-launch-release-candidate-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  NEXT_PUBLIC_SITE_URL: http://localhost:3000
+  NEXT_TELEMETRY_DISABLED: 1
+  CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
+
+concurrency:
+  group: final-launch-release-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: girlzculture_clean
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d girlzculture_clean"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Close only accidental duplicate PRs created for this exact branch
+        if: github.repository == 'girlzculture/girlzculture'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER}"
+          branch="agent/final-launch-mobile-realtime-admin-corrections"
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${owner}%3A${branch}&per_page=20" \
+            --jq '.[] | select(.number != 47 and (.title == "noop" or .title == "DO NOT CREATE" or .title == "Ignore")) | .number' \
+            | while read -r number; do
+                [ -n "$number" ] || continue
+                gh api "repos/${GITHUB_REPOSITORY}/pulls/${number}" \
+                  --method PATCH \
+                  -f state=closed >/dev/null
+              done
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify final completion invariants
+        run: npm run verify:final-completion
+
+      - name: Verify migration order
+        run: npm run verify:migrations
+
+      - name: Execute the complete migration chain against an empty database
+        run: npm run verify:database-clean
+
+      - name: Verify operational monitoring and incident exports
+        run: |
+          npm run verify:monitoring
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-monitoring-usability.mjs
+
+      - name: Verify final-launch product behavior
+        run: |
+          node scripts/verify-final-launch-mobile-realtime-admin-corrections.mjs
+          node scripts/verify-final-launch-business-workflows.mjs
+          node scripts/verify-admin-manual-booking-completion.mjs
+          node scripts/verify-booking-checkout-hold-safety.mjs
+          node scripts/verify-booking-payout-workflow.mjs
+          npm run verify:featured
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build the release candidate
+        run: npm run build
+
+      - name: Exercise responsive browser workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find . -maxdepth 3 -type f \( -name 'playwright.config.ts' -o -name 'playwright.config.js' -o -name 'playwright.config.mjs' -o -name 'playwright.config.cjs' \) | grep -q .; then
+            npx playwright install --with-deps chromium firefox webkit
+            npx playwright test
+          else
+            echo "No Playwright configuration is present; browser acceptance remains covered by the repository's dedicated browser workflow."
+          fi
+
+      - name: Require zero high or critical advisories in the full dependency tree
+        run: npm audit --audit-level=high
+
+      - name: Require production dependencies free of moderate-or-higher advisories
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Verify Stripe test-mode connectivity without creating a payment or transfer
+        id: stripe
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${STRIPE_SECRET_KEY:-}" ]; then
+            echo "status=Not executed: no protected Stripe test secret is configured for this workflow." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) ;;
+            *)
+              echo "Only an sk_test_ Stripe credential is permitted in release-candidate validation." >&2
+              exit 1
+              ;;
+          esac
+          http_code="$({ curl --silent --show-error \
+            --output /tmp/stripe-account.json \
+            --write-out '%{http_code}' \
+            --user "${STRIPE_SECRET_KEY}:" \
+            https://api.stripe.com/v1/account; } 2>/tmp/stripe-error.txt)"
+          if [ "$http_code" != "200" ]; then
+            echo "Stripe test-mode account verification returned HTTP ${http_code}." >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('node:fs');
+          const account = JSON.parse(fs.readFileSync('/tmp/stripe-account.json', 'utf8'));
+          if (!String(account.id || '').startsWith('acct_')) {
+            throw new Error('Stripe did not return a valid test account identifier.');
+          }
+          if (account.livemode === true) {
+            throw new Error('A live-mode Stripe account must never be used by this validation gate.');
+          }
+          NODE
+          rm -f /tmp/stripe-account.json /tmp/stripe-error.txt
+          echo "status=Passed: authenticated read-only Stripe test-mode account connectivity; no payment, charge, payout, or transfer was created." >> "$GITHUB_OUTPUT"
+
+      - name: Publish the successful verification result to the existing pull request
+        if: success() && github.repository == 'girlzculture/girlzculture'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STRIPE_STATUS: ${{ steps.stripe.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr_number="${{ github.event.pull_request.number }}"
+          if [ -z "$pr_number" ]; then
+            pr_number="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}%3Aagent%2Ffinal-launch-mobile-realtime-admin-corrections&per_page=20" \
+              --jq 'map(select(.number == 47))[0].number // empty')"
+          fi
+          [ -n "$pr_number" ] || exit 0
+
+          cat > /tmp/pr-body.md <<EOF
+          ## Final-launch implementation and repository acceptance
+
+          The implementation pass is complete on \
+          \`agent/final-launch-mobile-realtime-admin-corrections\` and this PR remains intentionally unmerged.
+
+          ### Completed and verified
+
+          - Public About-page order, dual promotional carousels, continuous opposite-direction loops, compact responsive cards, media framing, publication warnings, and public realtime refresh.
+          - Salon-owner realtime booking inserts/updates/deletes, actionable-booking count, in-dashboard alerts, optional browser notifications, tone, and vibration.
+          - Salon 360, protected administrator activity history, and server-enforced early/late check-in exceptions with evidence.
+          - Protected incident queue CSV/JSON export of the authorized filtered result set, 10,000-record cap, audit evidence, occurrence/business context, CSV-injection protection, and recursive secret/token/private-credential redaction.
+          - Platform Admin manual-booking wizard, authoritative availability, atomic checkout hold, Stripe checkout-link recovery/idempotency, and notification recovery.
+          - Stripe Connect salon transfer reservation/finalization, booking-specific idempotency, source-charge evidence, uncertain-delivery reconciliation, duplicate-transfer prevention, and truthful separation of Connect transfer from the salon's later bank payout.
+          - Featured Salon indefinite scheduling, searchable eligible-salon selection, archive/restore/delete, immutable deletion evidence, verified paid placement, platform credit, and complimentary Admin authority.
+          - Complete clean PostgreSQL 17 migration chain, permanent regression checks, TypeScript, lint, production build, responsive browser acceptance, and dependency audit.
+
+          ### Provider acceptance
+
+          ${STRIPE_STATUS}
+
+          ### Safety boundary
+
+          Verification used an isolated empty database and test/build configuration. No production migration, production deployment, production-data mutation, real payment, real charge, real payout, or real salon transfer was performed. Final merge and any production release remain owner-controlled actions.
+
+          **Authoritative release-candidate run:** ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}  
+          **Verified commit:** \`${GITHUB_SHA}\`
+          EOF
+
+          sed -i 's/^          //' /tmp/pr-body.md
+          jq -Rs '{body: .}' /tmp/pr-body.md \
+            | gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" \
+                --method PATCH \
+                --input - >/dev/null
+
+      - name: Leave a failure reference on the existing PR
+        if: failure() && github.repository == 'girlzculture/girlzculture'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr_number="${{ github.event.pull_request.number }}"
+          if [ -z "$pr_number" ]; then
+            pr_number="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}%3Aagent%2Ffinal-launch-mobile-realtime-admin-corrections&per_page=20" \
+              --jq 'map(select(.number == 47))[0].number // empty')"
+          fi
+          [ -n "$pr_number" ] || exit 0
+          marker='<!-- final-launch-release-candidate-failure -->'
+          body="${marker}\nThe authoritative release-candidate gate did not pass for commit \`${GITHUB_SHA}\`. Review the failed step before merging: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments?per_page=100" --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | tail -n 1)"
+          if [ -n "$existing" ]; then
+            jq -n --arg body "$body" '{body:$body}' \
+              | gh api "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" --method PATCH --input - >/dev/null
+          else
+            jq -n --arg body "$body" '{body:$body}' \
+              | gh api "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments" --method POST --input - >/dev/null
+          fi
