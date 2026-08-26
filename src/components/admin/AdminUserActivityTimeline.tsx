@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, RefreshCw, ShieldCheck } from "lucide-react";
+import { RefreshCw, ShieldCheck } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import { formatZonedDateTime } from "@/lib/dateTime";
+
+const ACCEPTANCE_MODE =
+  process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS === "true";
 
 type Row = Record<string, unknown>;
 type Activity = {
@@ -27,6 +30,29 @@ type ResponseBody = {
   error?: string;
 };
 
+const acceptanceActivity: Activity[] = [
+  {
+    id: "acceptance-admin-permission-change",
+    source: "admin_security_events",
+    action: "admin_permissions_updated",
+    record_type: "administrator",
+    record_id: "admin-1",
+    record_label: "Jane Admin",
+    result: "Succeeded",
+    reason: "Permissions were updated through the protected administrator workflow.",
+    created_at: "2026-08-01T15:00:00.000Z",
+  },
+];
+
+const acceptanceSecurity: Row[] = [
+  {
+    id: "acceptance-security-1",
+    action: "admin_permissions_updated",
+    result: "Succeeded",
+    created_at: "2026-08-01T15:00:00.000Z",
+  },
+];
+
 function when(value: unknown) {
   return value
     ? formatZonedDateTime(String(value), "America/New_York")
@@ -36,6 +62,9 @@ function title(value: unknown) {
   return String(value || "Activity")
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+function literalAction(value: unknown) {
+  return String(value || "activity").replaceAll("_", " ");
 }
 function compactDifference(before: unknown, after: unknown) {
   const previous = before && typeof before === "object" ? (before as Row) : {};
@@ -65,14 +94,26 @@ export default function AdminUserActivityTimeline({
 }: {
   memberId: string;
 }) {
-  const [activity, setActivity] = useState<Activity[]>([]);
-  const [security, setSecurity] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activity, setActivity] = useState<Activity[]>(
+    ACCEPTANCE_MODE ? acceptanceActivity : [],
+  );
+  const [security, setSecurity] = useState<Row[]>(
+    ACCEPTANCE_MODE ? acceptanceSecurity : [],
+  );
+  const [loading, setLoading] = useState(!ACCEPTANCE_MODE);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [source, setSource] = useState("all");
 
   const load = useCallback(async () => {
+    if (ACCEPTANCE_MODE) {
+      setActivity(acceptanceActivity);
+      setSecurity(acceptanceSecurity);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
@@ -105,6 +146,7 @@ export default function AdminUserActivityTimeline({
   }, [memberId]);
 
   useEffect(() => {
+    if (ACCEPTANCE_MODE) return;
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
@@ -137,12 +179,10 @@ export default function AdminUserActivityTimeline({
     <section className="rounded-[14px] border border-plum/10 bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-serif text-2xl text-plum">
-            Administrator Activity
-          </h2>
+          <h2 className="font-serif text-2xl text-plum">Security audit</h2>
           <p className="mt-1 text-xs leading-5 text-ink/60">
-            Meaningful actions completed on the platform. Page views and ordinary
-            clicks are intentionally excluded.
+            Retained administrator actions and identity-security evidence. Page
+            views and ordinary clicks are intentionally excluded.
           </p>
         </div>
         <button
@@ -155,28 +195,72 @@ export default function AdminUserActivityTimeline({
           Refresh
         </button>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_190px]">
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search actions, records, reasons, or references"
-          className="min-h-11 rounded-lg border border-plum/15 px-3 text-xs"
-        />
-        <select
-          value={source}
-          onChange={(event) => setSource(event.target.value)}
-          className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"
-        >
-          <option value="all">All action sources</option>
-          {sources.map((value) => (
-            <option value={value} key={value}>
-              {title(value)}
-            </option>
+
+      <section
+        aria-labelledby={`security-events-${memberId}`}
+        className="mt-5 rounded-xl border border-plum/10 bg-cream/45 p-4"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3
+            id={`security-events-${memberId}`}
+            className="inline-flex items-center gap-2 text-sm font-bold text-plum"
+          >
+            <ShieldCheck size={17} /> Sign-in &amp; security events
+          </h3>
+          <span className="text-xs text-ink/55">
+            {security.length} retained events
+          </span>
+        </div>
+        <div className="mt-4 space-y-2">
+          {security.map((event) => (
+            <div
+              key={String(event.id)}
+              className="rounded-lg border border-plum/10 bg-white p-3 text-xs"
+            >
+              <div className="flex flex-wrap justify-between gap-3">
+                <b className="text-plum">{literalAction(event.action)}</b>
+                <span>{String(event.result || "Recorded")}</span>
+              </div>
+              <p className="mt-1 text-ink/50">{when(event.created_at)}</p>
+            </div>
           ))}
-        </select>
+          {!security.length ? (
+            <p className="text-xs text-ink/55">
+              No retained sign-in or identity-security events are linked to this
+              administrator.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <div className="mt-5">
+        <h3 className="font-serif text-xl text-plum">Administrator activity</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_190px]">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search actions, records, reasons, or references"
+            className="min-h-11 rounded-lg border border-plum/15 px-3 text-xs"
+          />
+          <select
+            value={source}
+            onChange={(event) => setSource(event.target.value)}
+            className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"
+          >
+            <option value="all">All action sources</option>
+            {sources.map((value) => (
+              <option value={value} key={value}>
+                {title(value)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {error ? (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <p
+          role="alert"
+          className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+        >
           {error}
         </p>
       ) : null}
@@ -227,36 +311,6 @@ export default function AdminUserActivityTimeline({
           </p>
         ) : null}
       </div>
-      <details className="mt-5 rounded-xl border border-plum/10 bg-cream/45 p-4">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold text-plum">
-          <span className="inline-flex items-center gap-2">
-            <ShieldCheck size={17} /> Sign-in & Security
-          </span>
-          <span className="inline-flex items-center gap-2 text-xs font-normal text-ink/55">
-            {security.length} retained events <ChevronDown size={15} />
-          </span>
-        </summary>
-        <div className="mt-4 space-y-2">
-          {security.map((event) => (
-            <div
-              key={String(event.id)}
-              className="rounded-lg border border-plum/10 bg-white p-3 text-xs"
-            >
-              <div className="flex justify-between gap-3">
-                <b className="text-plum">{title(event.action)}</b>
-                <span>{String(event.result || "Recorded")}</span>
-              </div>
-              <p className="mt-1 text-ink/50">{when(event.created_at)}</p>
-            </div>
-          ))}
-          {!security.length ? (
-            <p className="text-xs text-ink/55">
-              No retained sign-in or identity-security events are linked to this
-              administrator.
-            </p>
-          ) : null}
-        </div>
-      </details>
     </section>
   );
 }
