@@ -103,6 +103,14 @@ async function GETHandler(request: Request) {
 async function POSTHandler(request: Request) {
   let adminForFailure: Awaited<ReturnType<typeof requireAdminPermission>>["admin"] | undefined;
   let reservedIntentId = "";
+  let reservedSalonId = "";
+  let reservedTotal = 0;
+  let reservedDeposit = 0;
+  let reservedBalance = 0;
+  let checkoutSessionCreated = false;
+  let checkoutSessionId = "";
+  let checkoutSessionUrl = "";
+  let checkoutExpiresAt = "";
   try {
     enforceRateLimit(request, "admin-manual-booking", 30, 10 * 60_000);
     const { admin, user } = await requireAdminPermission(request, "bookings");
@@ -250,30 +258,53 @@ async function POSTHandler(request: Request) {
         throw reservation.error || new Error("The secure appointment hold could not be created.");
       }
       reservedIntentId = String(reservation.data);
-      const session = await stripeRequest<{ id: string; url: string }>("/checkout/sessions", {
-        mode: "payment",
-        expires_at: Math.floor(Date.now() / 1000) + 35 * 60,
-        "line_items[0][price_data][currency]": "usd",
-        "line_items[0][price_data][unit_amount]": Math.round(calculatedDeposit * 100),
-        "line_items[0][price_data][product_data][name]": `${salon.name} reservation deposit`,
-        "line_items[0][quantity]": 1,
-        customer_email: guestEmail,
-        success_url: `${siteUrl(request)}/salon/${salon.slug}/book?booking_session={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl(request)}/salon/${salon.slug}/book?payment=cancelled`,
-        "metadata[booking_intent_id]": reservedIntentId,
-        "metadata[type]": "booking_deposit",
-        "metadata[salon_id]": salonId,
-        "metadata[created_by_admin]": user.id,
-        "payment_intent_data[description]": `${depositPercentage}% reservation deposit for ${style.name || "salon service"}`,
-      });
-      if (!session?.id || !session?.url) throw new Error("Stripe did not return a secure checkout link. No payment was taken.");
+      reservedSalonId = salonId;
+      reservedTotal = total;
+      reservedDeposit = calculatedDeposit;
+      reservedBalance = Math.round((total - calculatedDeposit) * 100) / 100;
+      const checkoutExpiresAtSeconds = Math.floor(Date.now() / 1000) + 35 * 60;
+      checkoutExpiresAt = new Date(checkoutExpiresAtSeconds * 1000).toISOString();
+      const session = await stripeRequest<{ id: string; url: string }>(
+        "/checkout/sessions",
+        {
+          mode: "payment",
+          expires_at: checkoutExpiresAtSeconds,
+          "line_items[0][price_data][currency]": "usd",
+          "line_items[0][price_data][unit_amount]": Math.round(calculatedDeposit * 100),
+          "line_items[0][price_data][product_data][name]": `${salon.name} reservation deposit`,
+          "line_items[0][quantity]": 1,
+          customer_email: guestEmail,
+          success_url: `${siteUrl(request)}/salon/${salon.slug}/book?booking_session={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${siteUrl(request)}/salon/${salon.slug}/book?payment=cancelled`,
+          "metadata[booking_intent_id]": reservedIntentId,
+          "metadata[type]": "booking_deposit",
+          "metadata[salon_id]": salonId,
+          "metadata[created_by_admin]": user.id,
+          "payment_intent_data[description]": `${depositPercentage}% reservation deposit for ${style.name || "salon service"}`,
+        },
+        { idempotencyKey: `gc-admin-booking-checkout:${reservedIntentId}` },
+      );
+      if (!session?.id || !session?.url) {
+        throw new Error("Stripe did not return a secure checkout link. No payment was taken.");
+      }
+      checkoutSessionCreated = true;
+      checkoutSessionId = session.id;
+      checkoutSessionUrl = session.url;
       const updatedIntent = await admin
         .from("booking_checkout_intents")
-        .update({ stripe_checkout_session_id: session.id })
+        .update({
+          stripe_checkout_session_id: checkoutSessionId,
+          expires_at: checkoutExpiresAt,
+        })
         .eq("id", reservedIntentId)
-        .eq("status", "Pending");
-      if (updatedIntent.error) throw updatedIntent.error;
+        .eq("status", "Pending")
+        .select("id")
+        .maybeSingle();
+      if (updatedIntent.error || !updatedIntent.data) {
+        throw updatedIntent.error || new Error("The secure payment link could not be attached to its appointment hold.");
+      }
 
+      const deliveryWarnings: string[] = [];
       const deliveryWarnings: string[] = [];
       try {
         const appointmentText = new Intl.DateTimeFormat("en-US", {
@@ -331,28 +362,54 @@ async function POSTHandler(request: Request) {
           deliveryWarnings.push(`Text message was not delivered. Reference ${reference}.`);
         }
       }
-      const audit = await admin.from("record_management_events").insert({
-        record_type: "booking_checkout_intent",
-        record_id: reservedIntentId,
-        record_label: `${guestName} · ${salon.name}`,
-        action: "Created",
-        dependency_summary: { salon_id: salonId, style_id: styleId, stylist_id: stylistId },
-        after_values: { payment_method: "send_link", deposit_amount: calculatedDeposit, appointment_datetime: appointment.toISOString(), stripe_checkout_session_id: session.id },
-        reason: "Platform Admin prepared an appointment and generated a secure customer deposit link.",
-        acting_user_id: user.id,
-        acting_scope: "platform_admin",
-      });
-      if (audit.error) throw audit.error;
+      try {
+        const audit = await admin.from("record_management_events").insert({
+          record_type: "booking_checkout_intent",
+          record_id: reservedIntentId,
+          record_label: `${guestName} · ${salon.name}`,
+          action: "Created",
+          dependency_summary: { salon_id: salonId, style_id: styleId, stylist_id: stylistId },
+          after_values: {
+            payment_method: "send_link",
+            deposit_amount: calculatedDeposit,
+            appointment_datetime: appointment.toISOString(),
+            stripe_checkout_session_id: checkoutSessionId,
+          },
+          reason: "Platform Admin prepared an appointment and generated a secure customer deposit link.",
+          acting_user_id: user.id,
+          acting_scope: "platform_admin",
+        });
+        if (audit.error) throw audit.error;
+      } catch (auditError) {
+        const reference = await capturePlatformError({
+          request,
+          admin,
+          error: auditError,
+          feature: "admin-bookings",
+          action: "audit-deposit-link",
+          actorRole: "admin",
+          actorId: user.id,
+          salonId,
+          recordType: "booking_checkout_intent",
+          recordId: reservedIntentId,
+          provider: "supabase",
+          safeMessage: "The secure payment link remains valid, but its administrative audit entry needs attention.",
+        });
+        deliveryWarnings.push(
+          `The payment link remains valid, but its administrative audit entry needs attention. Reference ${reference}.`,
+        );
+      }
+      return Response.json({
       return Response.json({
         ok: true,
         state: "Awaiting customer payment",
-        payment_link: session.url,
+        payment_link: checkoutSessionUrl,
         booking_intent_id: reservedIntentId,
-        checkout_session_id: session.id,
-        expires_at: new Date(Date.now() + 35 * 60_000).toISOString(),
-        total,
-        deposit: calculatedDeposit,
-        balance_due: Math.round((total - calculatedDeposit) * 100) / 100,
+        checkout_session_id: checkoutSessionId,
+        expires_at: checkoutExpiresAt,
+        total: reservedTotal,
+        deposit: reservedDeposit,
+        balance_due: reservedBalance,
         warnings: deliveryWarnings,
       });
     }
@@ -439,6 +496,80 @@ async function POSTHandler(request: Request) {
         : null,
     });
   } catch (error) {
+    const deliveryUncertain =
+      (error as { deliveryUncertain?: boolean }).deliveryUncertain === true;
+
+    if (reservedIntentId && adminForFailure && (checkoutSessionCreated || deliveryUncertain)) {
+      let reference: string | null = null;
+      try {
+        reference = await capturePlatformError({
+          request,
+          admin: adminForFailure,
+          error,
+          feature: "admin-bookings",
+          action: checkoutSessionCreated
+            ? "reconcile-created-deposit-link"
+            : "reconcile-uncertain-deposit-link",
+          actorRole: "admin",
+          salonId: reservedSalonId || null,
+          recordType: "booking_checkout_intent",
+          recordId: reservedIntentId,
+          provider: "stripe",
+          safeMessage: checkoutSessionCreated
+            ? "The secure payment link exists and the appointment hold remains active, but local follow-up needs attention."
+            : "Stripe may have received the checkout request, so the appointment hold remains active until the outcome is reconciled.",
+        });
+      } catch (monitoringError) {
+        noteOperationalFailure("Admin booking reconciliation monitoring failed", monitoringError);
+      }
+
+      if (checkoutSessionCreated) {
+        const warnings = [
+          reference
+            ? `The secure payment link remains valid and its appointment hold remains active, but local follow-up needs attention. Reference ${reference}. Do not create another link.`
+            : "The secure payment link remains valid and its appointment hold remains active, but local follow-up needs attention. Do not create another link.",
+        ];
+        const retry = await adminForFailure
+          .from("booking_checkout_intents")
+          .update({
+            stripe_checkout_session_id: checkoutSessionId,
+            expires_at: checkoutExpiresAt || undefined,
+          })
+          .eq("id", reservedIntentId)
+          .eq("status", "Pending");
+        if (retry.error) {
+          warnings.push(
+            "The link could not be reattached to its local record. Keep this incident open until Stripe payment or expiration is confirmed.",
+          );
+        }
+        return Response.json({
+          ok: true,
+          state: "Awaiting customer payment",
+          payment_link: checkoutSessionUrl,
+          booking_intent_id: reservedIntentId,
+          checkout_session_id: checkoutSessionId,
+          expires_at: checkoutExpiresAt,
+          total: reservedTotal,
+          deposit: reservedDeposit,
+          balance_due: reservedBalance,
+          warnings,
+          reconciliation_required: true,
+        });
+      }
+
+      return Response.json(
+        {
+          error: reference
+            ? `Stripe did not confirm whether the payment link was created. The appointment hold remains active. Do not create another link until reference ${reference} is reviewed or the hold expires.`
+            : "Stripe did not confirm whether the payment link was created. The appointment hold remains active. Do not create another link until the incident is reviewed or the hold expires.",
+          reference,
+          booking_intent_id: reservedIntentId,
+          reconciliation_required: true,
+        },
+        { status: 502, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+
     if (reservedIntentId && adminForFailure) {
       await adminForFailure
         .from("booking_checkout_intents")
