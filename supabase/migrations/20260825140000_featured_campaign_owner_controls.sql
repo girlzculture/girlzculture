@@ -94,7 +94,7 @@ declare
   existing public.featured_salon_campaigns%rowtype;
   saved public.featured_salon_campaigns%rowtype;
   entitlement_row public.marketing_entitlements%rowtype;
-  entitlement_id uuid;
+  v_entitlement_id uuid;
   campaign_id uuid;
   normalized_status text;
   normalized_basis text;
@@ -142,7 +142,7 @@ begin
     if existing.salon_id <> p_salon_id then raise exception 'A campaign salon cannot be replaced.'; end if;
     if existing.status = 'Archived' then raise exception 'Restore this campaign before editing it.'; end if;
     campaign_id := existing.id;
-    entitlement_id := existing.entitlement_id;
+    v_entitlement_id := existing.entitlement_id;
     before_values := to_jsonb(existing);
   end if;
 
@@ -157,15 +157,15 @@ begin
   end if;
 
   if normalized_basis = 'complimentary_admin' then
-    entitlement_id := null;
+    v_entitlement_id := null;
   elsif normalized_basis = 'platform_credit' then
-    if entitlement_id is not null then
+    if v_entitlement_id is not null then
       select * into entitlement_row
       from public.marketing_entitlements
-      where id = entitlement_id;
-      if not found or entitlement_row.source <> 'platform_credit' then entitlement_id := null; end if;
+      where id = v_entitlement_id;
+      if not found or entitlement_row.source <> 'platform_credit' then v_entitlement_id := null; end if;
     end if;
-    if entitlement_id is null then
+    if v_entitlement_id is null then
       generated_reference := 'pc_' || replace(gen_random_uuid()::text, '-', '');
       insert into public.marketing_entitlements(
         placement_type,
@@ -189,7 +189,7 @@ begin
         p_starts_at,
         p_ends_at,
         p_actor_user_id
-      ) returning id into entitlement_id;
+      ) returning id into v_entitlement_id;
     else
       update public.marketing_entitlements
       set status = 'Credited',
@@ -197,7 +197,7 @@ begin
           valid_from = p_starts_at,
           valid_until = p_ends_at,
           updated_at = now()
-      where id = entitlement_id;
+      where id = v_entitlement_id;
     end if;
   else
     if p_entitlement_source is not null or p_entitlement_reference is not null then
@@ -230,14 +230,14 @@ begin
       )
       on conflict (source, external_reference) do update
       set updated_at = now()
-      returning id into entitlement_id;
+      returning id into v_entitlement_id;
     end if;
     if normalized_status in ('Scheduled','Active') and (
-      entitlement_id is null
+      v_entitlement_id is null
       or not exists (
         select 1
         from public.marketing_entitlements entitlement
-        where entitlement.id = entitlement_id
+        where entitlement.id = v_entitlement_id
           and entitlement.salon_id = p_salon_id
           and entitlement.placement_type = 'Featured Salon'
           and entitlement.source in ('stripe_payment','verified_invoice')
@@ -281,7 +281,7 @@ begin
       updated_by
     ) values (
       p_salon_id,
-      entitlement_id,
+      v_entitlement_id,
       normalized_basis,
       case when normalized_basis = 'complimentary_admin' then null else null end,
       case when normalized_basis = 'complimentary_admin' then p_actor_user_id else null end,
@@ -301,7 +301,7 @@ begin
     campaign_id := saved.id;
   else
     update public.featured_salon_campaigns
-    set entitlement_id = entitlement_id,
+    set entitlement_id = v_entitlement_id,
         placement_basis = normalized_basis,
         complimentary_reason = null,
         complimentary_approved_by = case when normalized_basis = 'complimentary_admin' then p_actor_user_id else null end,
