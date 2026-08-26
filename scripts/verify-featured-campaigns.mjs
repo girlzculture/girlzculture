@@ -27,12 +27,14 @@ assert.match(ownerControls,/normalized_action = 'delete'/);
 assert.match(ownerControls,/campaign_id_snapshot/);
 assert.match(ownerControls,/salon_name_snapshot/);
 assert.match(ownerControls,/ends_at is null or campaign\.ends_at>now\(\)/);
+assert.match(ownerControls,/drop function if exists public\.resolve_homepage_promotion_target\(text, uuid\)/);
 assert.match(ambiguityFix,/#variable_conflict error/);
 assert.match(ambiguityFix,/v_entitlement_id/);
 assert.doesNotMatch(ambiguityFix,/set entitlement_id = entitlement_id/);
 assert.match(ambiguityFix,/published_value='"20260825141000"'/);
 assert.match(entitlement,/endsAt\?: string \| null/);
-assert.match(entitlement,/An indefinite campaign requires an indefinite platform credit/);
+assert.match(entitlement,/if \(!endsAt && credit\.valid_until\)/);
+assert.match(entitlement,/if \(!endsAt && evidence\.metadata\?\.campaign_valid_until\)/);
 assert.match(publicApi,/limit > 50/);
 assert.match(adminApi,/requireAdminPermission\(request, "marketing"\)/);
 assert.match(adminApi,/expire_featured_campaigns/);
@@ -41,6 +43,9 @@ assert.match(adminApi,/admin_manage_featured_campaign/);
 assert.match(adminApi,/revalidatePath\("\/"\)/);
 assert.match(adminApi,/placementBasis === "paid"/);
 assert.match(adminApi,/indefinite/);
+assert.match(adminApi,/const mode = cleanText\(params\.get\("mode"\), 30\)/);
+assert.match(adminApi,/if \(mode === "salons"\)/);
+assert.match(adminApi,/order\("name"/);
 assert.match(complimentaryMigration,/placement_basis/);
 assert.match(placement,/Featured/);
 assert.doesNotMatch(placement,/Sponsored/);
@@ -49,14 +54,16 @@ assert.match(home,/homepage\.featured_card_count/);
 assert.match(placement,/Own a business\? Get featured here/);
 assert.doesNotMatch(placement,/subscription_tier|Premium|Growth|Basic/);
 for (const requirement of [
-  /New placement/,
+  /Create Featured Salon campaign/,
+  /Create campaign/,
+  /Eligible salon/,
+  /mode=salons/,
   /Until I change it/,
   /Platform credit/,
   /Complimentary Admin placement/,
   /Archive/,
   /Restore as draft/,
   /Delete permanently/,
-  /Alphabetical searchable list/,
   /No reference or internal reason is required/,
 ]) assert.match(admin,requirement);
 assert.match(home,/FeaturedSalonPlacement/);
