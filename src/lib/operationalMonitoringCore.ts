@@ -9,8 +9,11 @@ export function classifyOperationalRoute(
   route: string,
   method: string,
 ): MonitoringClassification {
+  if (/^\/api\/admin\/team\/\[id\]\/activity$/.test(route)) {
+    return "protected";
+  }
   const providerBacked =
-    /(?:stripe|media|messages|reminders|concierge|application|support|complaints|password-reset|engine\/(?:ai|notifications)|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|admin\/finance\/product-refund|admin\/homepage-products|salon\/bookings|guest\/bookings|\/api\/pickup(?:\/|$))/.test(
+    /(?:stripe|media|messages|reminders|concierge|application|support|complaints|password-reset|engine\/(?:ai|notifications)|geocode|push|monitor\/client-provider|admin\/data|admin\/team|admin\/submissions|admin\/finance\/(?:payout|product-refund)|admin\/homepage-products|salon\/bookings|guest\/bookings|\/api\/pickup(?:\/|$))/.test(
       route,
     );
   const protectedRoute =
