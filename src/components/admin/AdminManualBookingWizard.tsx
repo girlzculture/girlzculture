@@ -229,7 +229,7 @@ export default function AdminManualBookingWizard({
           ? `Secure payment link created. ${body.warnings.join(" ")}`
           : "Secure Stripe payment link created and delivery attempted. The booking will appear automatically after payment succeeds.");
       } else {
-        setNotice(`Booking ${String(body.public_reference || body.booking?.public_reference || "record")} was created and read back successfully.`);
+        setNotice(`Booking ${String(body.public_reference || createdBooking?.public_reference || "record")} was created and read back successfully.`);
         await onCreated();
       }
     } catch (error) {
@@ -307,7 +307,7 @@ export default function AdminManualBookingWizard({
           <div><dt className="text-white/55">Customer</dt><dd className="mt-1 font-bold">{guestName || "Not selected"}</dd></div>
           <div><dt className="text-white/55">Salon</dt><dd className="mt-1 font-bold">{selectedSalonName}</dd></div>
           <div><dt className="text-white/55">Service</dt><dd className="mt-1 font-bold">{styleName(selectedStyle)}</dd></div>
-          <div><dt className="text-white/55">Stylist</dt><dd className="mt-1 font-bold">{stylistName(selectedStylist || (selectedSlot ? { name: selectedSlot.stylistName || selectedSlot.stylist_name } : null))}</dd></div>
+          <div><dt className="text-white/55">Stylist</dt><dd className="mt-1 font-bold">{stylistName(selectedStylist || (selectedSlot ? { name: String(selectedSlot.stylistName || selectedSlot.stylist_name || "Any available stylist") } : null))}</dd></div>
           <div><dt className="text-white/55">Appointment</dt><dd className="mt-1 font-bold">{date && selectedSlot ? `${date} · ${String(selectedSlot.label || selectedSlot.value || "")}` : "Not selected"}</dd></div>
           <div><dt className="text-white/55">Service total</dt><dd className="mt-1 font-bold">{money(servicePrice)}</dd></div>
           <div><dt className="text-white/55">Standard deposit</dt><dd className="mt-1 font-bold">{depositPercentage}% · {money(calculatedDeposit)}</dd></div>
