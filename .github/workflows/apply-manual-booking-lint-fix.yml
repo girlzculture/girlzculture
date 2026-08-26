@@ -1,0 +1,37 @@
+name: Apply manual booking lint correction
+
+on:
+  push:
+    branches:
+      - agent/final-launch-mobile-realtime-admin-corrections
+    paths:
+      - "scripts/apply-manual-booking-lint-fix.mjs"
+      - ".github/workflows/apply-manual-booking-lint-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/final-launch-mobile-realtime-admin-corrections
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/apply-manual-booking-lint-fix.mjs
+      - name: Commit manual booking lint correction
+        run: |
+          if git diff --quiet; then
+            echo "Manual booking lint correction is already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/admin/AdminManualBookingWizard.tsx src/components/admin/AdminSalonPayoutAction.tsx src/app/api/admin/bookings/route.ts
+          git diff --cached --check
+          git commit -m "fix: stabilize manual booking state transitions"
+          git push origin HEAD:agent/final-launch-mobile-realtime-admin-corrections
