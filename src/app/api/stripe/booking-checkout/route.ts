@@ -760,7 +760,6 @@ async function POSTHandler(request: Request) {
       reconciliation_required: sessionWarnings.length > 0,
     });
   } catch (error) {
-  } catch (error) {
     const deliveryUncertain =
       (error as { deliveryUncertain?: boolean }).deliveryUncertain === true;
     if ((checkoutSessionCreated || deliveryUncertain) && intentId) {

@@ -305,7 +305,6 @@ async function POSTHandler(request: Request) {
       }
 
       const deliveryWarnings: string[] = [];
-      const deliveryWarnings: string[] = [];
       try {
         const appointmentText = new Intl.DateTimeFormat("en-US", {
           dateStyle: "full",
@@ -399,7 +398,6 @@ async function POSTHandler(request: Request) {
           `The payment link remains valid, but its administrative audit entry needs attention. Reference ${reference}.`,
         );
       }
-      return Response.json({
       return Response.json({
         ok: true,
         state: "Awaiting customer payment",
