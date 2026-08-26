@@ -39,7 +39,7 @@ for (const pattern of [/alter column ends_at drop not null/,/status in \('Draft'
 assert.match(featuredFix,/#variable_conflict error/);
 assert.match(featuredFix,/v_entitlement_id/);
 assert.doesNotMatch(featuredFix,/set entitlement_id = entitlement_id/);
-for (const pattern of [/admin_save_featured_campaign_v2/,/admin_manage_featured_campaign/,/indefinite/,/revalidatePath\("\/"\)/,/params\.get\("mode"\) === "salons"/]) assert.match(featuredApi, pattern);
+for (const pattern of [/admin_save_featured_campaign_v2/,/admin_manage_featured_campaign/,/indefinite/,/revalidatePath\("\/"\)/,/const mode = cleanText\(params\.get\("mode"\), 30\)/,/if \(mode === "salons"\)/]) assert.match(featuredApi, pattern);
 for (const pattern of [/Until I change it/,/Platform credit/,/Complimentary Admin placement/,/Archive/,/Restore as draft/,/Delete permanently/,/Alphabetical searchable list/]) assert.match(featuredUi, pattern);
 assert.doesNotMatch(featuredUi,/Internal reason required/);
 
