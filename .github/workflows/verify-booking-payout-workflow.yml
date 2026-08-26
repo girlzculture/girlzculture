@@ -3,20 +3,22 @@ name: Verify booking payout workflow
 on:
   pull_request:
     paths:
-      - "src/app/api/admin/finance/booking-payout/route.ts"
+      - "src/app/api/admin/finance/payout/route.ts"
+      - "src/components/admin/AdminSalonPayoutAction.tsx"
       - "src/components/admin/AdminSalonPayoutWorkspace.tsx"
       - "src/components/admin/AdminFinanceDashboard.tsx"
-      - "supabase/migrations/20260825150000_booking_payout_workflow.sql"
+      - "supabase/migrations/20260825150000_stripe_connect_booking_payouts.sql"
       - "scripts/verify-booking-payout-workflow.mjs"
       - ".github/workflows/verify-booking-payout-workflow.yml"
   push:
     branches:
       - agent/final-launch-mobile-realtime-admin-corrections
     paths:
-      - "src/app/api/admin/finance/booking-payout/route.ts"
+      - "src/app/api/admin/finance/payout/route.ts"
+      - "src/components/admin/AdminSalonPayoutAction.tsx"
       - "src/components/admin/AdminSalonPayoutWorkspace.tsx"
       - "src/components/admin/AdminFinanceDashboard.tsx"
-      - "supabase/migrations/20260825150000_booking_payout_workflow.sql"
+      - "supabase/migrations/20260825150000_stripe_connect_booking_payouts.sql"
       - "scripts/verify-booking-payout-workflow.mjs"
       - ".github/workflows/verify-booking-payout-workflow.yml"
 
