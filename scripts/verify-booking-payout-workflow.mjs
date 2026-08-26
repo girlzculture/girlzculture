@@ -55,6 +55,8 @@ for (const requirement of [
   /source_transaction: reservedChargeId/,
   /transfer_group: transferGroup/,
   /idempotencyKey/,
+  /UserSafeRequestError/,
+  /error instanceof UserSafeRequestError/,
   /const deliveryUncertain = Boolean/,
   /p_outcome: deliveryUncertain \? "uncertain" : "failed"/,
   /Do not create a new payout/,
@@ -63,6 +65,10 @@ for (const requirement of [
 ]) {
   assert.match(route, requirement);
 }
+assert.match(
+  route,
+  /error instanceof UserSafeRequestError[\s\S]*?return monitoredRouteFailure\([\s\S]*?const deliveryUncertain = Boolean/,
+);
 
 for (const requirement of [
   /Pay Salon/,
@@ -95,5 +101,5 @@ assert.match(finance, /transaction_type === "Booking deposit"/);
 assert.match(finance, /onChanged=\{\(\) => load\(selectedSalonId\)\}/);
 
 console.log(
-  "Booking payout workflow verification passed: one authoritative provider route now backs both finance views, with verified source-charge resolution, mode isolation, database reservation, stable Stripe idempotency, uncertain-delivery reconciliation, truthful transfer/bank-payout stages, and audited attempt history.",
+  "Booking payout workflow verification passed: one authoritative provider route now backs both finance views, with expected validation/auth responses preserved, verified source-charge resolution, mode isolation, database reservation, stable Stripe idempotency, uncertain-delivery reconciliation, truthful transfer/bank-payout stages, and audited attempt history.",
 );

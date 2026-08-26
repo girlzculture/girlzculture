@@ -3,6 +3,7 @@ import {
   capturePlatformError,
   monitoredRouteFailure,
   rejectRequest,
+  UserSafeRequestError,
 } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
@@ -383,6 +384,25 @@ async function POSTHandler(request: Request) {
         "The verified amount was transferred to the salon's connected Stripe balance. The salon's bank payout remains governed by its Stripe payout schedule.",
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (
+      error instanceof UserSafeRequestError ||
+      /^(Unauthorized|Forbidden(?::|$))/i.test(message)
+    ) {
+      return monitoredRouteFailure({
+        request,
+        admin: monitoringAdmin,
+        error,
+        feature: "finance-payouts",
+        action: "transfer-booking-funds",
+        actorRole: "admin",
+        recordType: "booking",
+        recordId: bookingId || null,
+        provider: "stripe",
+        safeMessage: "The salon transfer could not be completed.",
+      });
+    }
+
     const deliveryUncertain = Boolean(
       stripeTransferId ||
         (error as { deliveryUncertain?: boolean }).deliveryUncertain === true,
