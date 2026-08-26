@@ -512,8 +512,8 @@ as $$
       coalesce(s.rating_overall,0)::numeric rating_overall,coalesce(s.review_count,0)::integer review_count,s.latitude,s.longitude,
       campaign.id campaign_id,campaign.priority,campaign.rotation_weight,campaign.radius_miles,
       public.distance_miles(origin_latitude,origin_longitude,s.latitude,s.longitude) distance_miles,
-      (select min(style.price_display_min) from public.styles style where style.salon_id=s.id and coalesce(style.is_active,true)) starting_price,
-      coalesce((select jsonb_agg(jsonb_build_object('id',style.id,'name',style.name) order by style.name) from public.styles style where style.salon_id=s.id and coalesce(style.is_active,true)),'[]'::jsonb) services
+      (select min(style.price_display_min) from public.styles style where style.salon_id=s.id and style.archived_at is null) starting_price,
+      coalesce((select jsonb_agg(jsonb_build_object('id',style.id,'name',style.name) order by style.name) from public.styles style where style.salon_id=s.id and style.archived_at is null),'[]'::jsonb) services
     from public.featured_salon_campaigns campaign
     left join public.marketing_entitlements entitlement
       on entitlement.id=campaign.entitlement_id and entitlement.salon_id=campaign.salon_id
