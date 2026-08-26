@@ -27,6 +27,7 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import { US_STATES } from "@/lib/usStates";
 import { formatZonedDateTime } from "@/lib/dateTime";
 import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
+import AdminSalonPayoutWorkspace from "@/components/admin/AdminSalonPayoutWorkspace";
 import AdminSalonPayoutAction from "@/components/admin/AdminSalonPayoutAction";
 
 type FinanceData = {
@@ -884,7 +885,14 @@ export default function AdminFinanceDashboard({
               note="Includes upcoming records so their deposits reconcile in this ledger."
             />
           </div>
-          <BookingLedger
+
+          {tab === "Salon Payouts" ? (
+            <AdminSalonPayoutWorkspace
+              rows={filtered}
+              onChanged={() => load(selectedSalonId)}
+            />
+          ) : null}
+<BookingLedger
             rows={filtered}
             payoutView={tab === "Salon Payouts"}
             timeZone={data.admin_time_zone}
