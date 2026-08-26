@@ -1,0 +1,63 @@
+name: Fix PR47 manual booking types
+
+on:
+  push:
+    branches:
+      - agent/final-launch-mobile-realtime-admin-corrections
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/final-launch-mobile-realtime-admin-corrections
+          fetch-depth: 0
+      - name: Apply focused TypeScript corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/admin/AdminManualBookingWizard.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''      const body = await readApiResponse(response, "Unable to prepare this booking.");
+          if (!response.ok) throw new Error(String(body.error || "Unable to prepare this booking."));
+          setResult(body as Row);'''
+          new = '''      const body = await readApiResponse(response, "Unable to prepare this booking.") as Row;
+          if (!response.ok) throw new Error(String(body.error || "Unable to prepare this booking."));
+          const createdBooking = body.booking && typeof body.booking === "object"
+            ? body.booking as Row
+            : null;
+          setResult(body);'''
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          old = '''        setNotice(`Booking ${String(body.public_reference || body.booking?.public_reference || "record")} was created and read back successfully.`);'''
+          new = '''        setNotice(`Booking ${String(body.public_reference || createdBooking?.public_reference || "record")} was created and read back successfully.`);'''
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          old = '''{stylistName(selectedStylist || (selectedSlot ? { name: selectedSlot.stylistName || selectedSlot.stylist_name } : null))}'''
+          new = '''{stylistName(selectedStylist || (selectedSlot ? { name: String(selectedSlot.stylistName || selectedSlot.stylist_name || "Any available stylist") } : null))}'''
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit correction
+        run: |
+          if git diff --quiet; then
+            echo "Type corrections are already present."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/admin/AdminManualBookingWizard.tsx
+          git commit -m "fix: type manual booking response data"
+          git push origin HEAD:agent/final-launch-mobile-realtime-admin-corrections
