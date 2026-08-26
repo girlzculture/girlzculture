@@ -61,8 +61,12 @@ assert.doesNotMatch(
   /set entitlement_id = entitlement_id/,
   "The migration must not contain an ambiguous self-assignment.",
 );
-assert.match(entitlement, /endsAt: string \| null/);
-assert.match(entitlement, /Finite Stripe evidence cannot fund an indefinite campaign/);
+assert.match(entitlement, /endsAt\??: string \| null/);
+assert.match(entitlement, /if \(!endsAt && credit\.valid_until\)/);
+assert.match(
+  entitlement,
+  /if \(!endsAt && evidence\.metadata\?\.campaign_valid_until\)/,
+);
 
 console.log(
   "Featured Salon owner controls verification passed: compact searchable selection, indefinite scheduling, lifecycle controls, automatic platform credit, complimentary Admin authority, immutable deletion evidence, and public refresh wiring are present.",
