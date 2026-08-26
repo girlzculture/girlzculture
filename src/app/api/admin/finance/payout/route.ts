@@ -383,6 +383,10 @@ async function POSTHandler(request: Request) {
         "The verified amount was transferred to the salon's connected Stripe balance. The salon's bank payout remains governed by its Stripe payout schedule.",
     });
   } catch (error) {
+    const deliveryUncertain = Boolean(
+      stripeTransferId ||
+        (error as { deliveryUncertain?: boolean }).deliveryUncertain === true,
+    );
     const reference = monitoringAdmin
       ? await capturePlatformError({
           request,
@@ -404,9 +408,9 @@ async function POSTHandler(request: Request) {
         await monitoringAdmin.rpc("admin_finalize_booking_payout", {
           p_actor_user_id: actorId,
           p_attempt_id: attemptId,
-          p_outcome: stripeTransferId ? "uncertain" : "failed",
+          p_outcome: deliveryUncertain ? "uncertain" : "failed",
           p_stripe_transfer_id: stripeTransferId || null,
-          p_provider_status: stripeTransferId
+          p_provider_status: deliveryUncertain
             ? "reconciliation_required"
             : "failed",
           p_failure_reference: reference,
@@ -430,16 +434,20 @@ async function POSTHandler(request: Request) {
 
     return Response.json(
       {
-        error: stripeTransferId
-          ? reference
-            ? `Stripe returned transfer ${stripeTransferId}, but the local payout record needs reconciliation. Do not create a new payout. Review reference ${reference}.`
-            : `Stripe returned transfer ${stripeTransferId}, but the local payout record needs reconciliation. Do not create a new payout.`
+        error: deliveryUncertain
+          ? stripeTransferId
+            ? reference
+              ? `Stripe returned transfer ${stripeTransferId}, but the local payout record needs reconciliation. Do not create a new payout. Review reference ${reference}.`
+              : `Stripe returned transfer ${stripeTransferId}, but the local payout record needs reconciliation. Do not create a new payout.`
+            : reference
+              ? `Stripe transfer submission may have reached the provider, but confirmation was not received. Do not create a new payout. Review reference ${reference}.`
+              : "Stripe transfer submission may have reached the provider, but confirmation was not received. Do not create a new payout."
           : reference
             ? `The salon transfer was not completed. Review reference ${reference} before retrying.`
             : "The salon transfer was not completed.",
         reference,
         transfer_id: stripeTransferId || null,
-        reconciliation_required: Boolean(stripeTransferId),
+        reconciliation_required: deliveryUncertain,
       },
       { status: 502, headers: { "Cache-Control": "private, no-store" } },
     );
