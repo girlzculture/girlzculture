@@ -26,27 +26,29 @@ jobs:
           path = Path('src/components/admin/AdminManualBookingWizard.tsx')
           text = path.read_text(encoding='utf-8')
 
-          old = '''      const body = await readApiResponse(response, "Unable to prepare this booking.");
-          if (!response.ok) throw new Error(String(body.error || "Unable to prepare this booking."));
-          setResult(body as Row);'''
-          new = '''      const body = await readApiResponse(response, "Unable to prepare this booking.") as Row;
-          if (!response.ok) throw new Error(String(body.error || "Unable to prepare this booking."));
-          const createdBooking = body.booking && typeof body.booking === "object"
-            ? body.booking as Row
-            : null;
-          setResult(body);'''
-          if old in text:
-              text = text.replace(old, new, 1)
-
-          old = '''        setNotice(`Booking ${String(body.public_reference || body.booking?.public_reference || "record")} was created and read back successfully.`);'''
-          new = '''        setNotice(`Booking ${String(body.public_reference || createdBooking?.public_reference || "record")} was created and read back successfully.`);'''
-          if old in text:
-              text = text.replace(old, new, 1)
-
-          old = '''{stylistName(selectedStylist || (selectedSlot ? { name: selectedSlot.stylistName || selectedSlot.stylist_name } : null))}'''
-          new = '''{stylistName(selectedStylist || (selectedSlot ? { name: String(selectedSlot.stylistName || selectedSlot.stylist_name || "Any available stylist") } : null))}'''
-          if old in text:
-              text = text.replace(old, new, 1)
+          text = text.replace(
+              '      const body = await readApiResponse(response, "Unable to prepare this booking.");',
+              '      const body = await readApiResponse(response, "Unable to prepare this booking.") as Row;',
+              1,
+          )
+          text = text.replace(
+              '      setResult(body as Row);',
+              '      const createdBooking = body.booking && typeof body.booking === "object"\n'
+              '        ? body.booking as Row\n'
+              '        : null;\n'
+              '      setResult(body);',
+              1,
+          )
+          text = text.replace(
+              'body.booking?.public_reference',
+              'createdBooking?.public_reference',
+              1,
+          )
+          text = text.replace(
+              '{ name: selectedSlot.stylistName || selectedSlot.stylist_name }',
+              '{ name: String(selectedSlot.stylistName || selectedSlot.stylist_name || "Any available stylist") }',
+              1,
+          )
 
           path.write_text(text, encoding='utf-8')
           PY
@@ -59,5 +61,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/components/admin/AdminManualBookingWizard.tsx
-          git commit -m "fix: type manual booking response data"
+          git commit -m "fix: complete manual booking response typing"
           git push origin HEAD:agent/final-launch-mobile-realtime-admin-corrections
