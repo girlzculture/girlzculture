@@ -15,6 +15,8 @@ const entitlement=read("src/lib/marketingEntitlements.ts");
 assert.match(migration,/marketing_entitlements/);
 assert.match(migration,/featured_campaigns_no_overlap/);
 assert.match(migration,/discover_featured_salons/);
+assert.match(migration,/create trigger featured_campaign_audit_immutable/);
+assert.match(migration,/prevent_featured_audit_mutation/);
 assert.match(ownerControls,/alter column ends_at drop not null/);
 assert.match(ownerControls,/coalesce\(ends_at, 'infinity'::timestamptz\)/);
 assert.match(ownerControls,/status in \('Draft','Scheduled','Active','Paused','Expired','Archived'\)/);
@@ -26,6 +28,23 @@ assert.match(ownerControls,/normalized_action = 'restore'/);
 assert.match(ownerControls,/normalized_action = 'delete'/);
 assert.match(ownerControls,/campaign_id_snapshot/);
 assert.match(ownerControls,/salon_name_snapshot/);
+assert.match(ownerControls,/salon_name_snapshot = coalesce/);
+assert.match(ownerControls,/left join public\.salons salon on salon\.id = campaign\.salon_id/);
+const immutableTriggerDrop = ownerControls.indexOf(
+  "drop trigger if exists featured_campaign_audit_immutable",
+);
+const historicalAuditBackfill = ownerControls.indexOf(
+  "update public.featured_campaign_audit audit",
+);
+const immutableTriggerRestore = ownerControls.indexOf(
+  "create trigger featured_campaign_audit_immutable",
+);
+assert.ok(
+  immutableTriggerDrop >= 0 &&
+    immutableTriggerDrop < historicalAuditBackfill &&
+    historicalAuditBackfill < immutableTriggerRestore,
+  "The historical Featured Salon audit snapshot backfill must suspend only the named immutable trigger and restore it before the migration continues.",
+);
 assert.match(ownerControls,/ends_at is null or campaign\.ends_at>now\(\)/);
 assert.match(ownerControls,/drop function if exists public\.resolve_homepage_promotion_target\(text, uuid\)/);
 assert.match(ambiguityFix,/#variable_conflict error/);
@@ -67,4 +86,4 @@ for (const requirement of [
   /No reference or internal reason is required/,
 ]) assert.match(admin,requirement);
 assert.match(home,/FeaturedSalonPlacement/);
-console.log("Featured Salon campaign verification passed: indefinite windows, searchable salon selection, platform credit and complimentary authority, archive/restore/delete, immutable deletion evidence, and public revalidation are covered.");
+console.log("Featured Salon campaign verification passed: indefinite windows, searchable salon selection, platform credit and complimentary authority, archive/restore/delete, immutable deletion evidence, a transaction-safe historical audit backfill, and public revalidation are covered.");
