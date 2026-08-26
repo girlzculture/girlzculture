@@ -1,0 +1,149 @@
+name: Finalize PR47 completion
+
+on:
+  push:
+    branches:
+      - agent/final-launch-mobile-realtime-admin-corrections
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr47-completion-finalizer
+  cancel-in-progress: false
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  NEXT_PUBLIC_SITE_URL: http://localhost:3000
+  NEXT_TELEMETRY_DISABLED: 1
+  CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: girlzculture_clean
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d girlzculture_clean"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Consolidate permanent fixes and remove repair automation
+        run: node scripts/finalize-pr47-completion-20260826.mjs
+
+      - name: Commit cleanup before verification
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: consolidate PR47 completion and remove repair automation"
+            git push origin HEAD:agent/final-launch-mobile-realtime-admin-corrections
+          fi
+
+      - name: Apply non-breaking dependency security updates
+        run: npm audit fix --package-lock-only --ignore-scripts || true
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify final completion invariants
+        run: npm run verify:final-completion
+
+      - name: Verify migration order
+        run: npm run verify:migrations
+
+      - name: Execute all migrations against a clean database
+        run: npm run verify:database-clean
+
+      - name: Verify operational monitoring
+        run: npm run verify:monitoring
+
+      - name: Verify incident usability and export safety
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-monitoring-usability.mjs
+
+      - name: Verify final-launch mobile and realtime behavior
+        run: node scripts/verify-final-launch-mobile-realtime-admin-corrections.mjs
+
+      - name: Verify final-launch business workflows
+        run: node scripts/verify-final-launch-business-workflows.mjs
+
+      - name: Verify administrator manual booking
+        run: node scripts/verify-admin-manual-booking-completion.mjs
+
+      - name: Verify booking checkout hold safety
+        run: node scripts/verify-booking-checkout-hold-safety.mjs
+
+      - name: Verify booking payout workflow
+        run: node scripts/verify-booking-payout-workflow.mjs
+
+      - name: Verify Featured Salon controls
+        run: npm run verify:featured
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build release candidate
+        run: npm run build
+
+      - name: Require zero high or critical dependency vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Require production dependencies free of moderate-or-higher advisories
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Capture dependency audit evidence
+        if: success()
+        run: |
+          npm audit --json > /tmp/audit-full.json || true
+          npm audit --omit=dev --json > /tmp/audit-production.json || true
+          node <<'NODE'
+          const fs = require('node:fs');
+          const readAudit = (file) => {
+            try {
+              return JSON.parse(fs.readFileSync(file, 'utf8')).metadata?.vulnerabilities || {};
+            } catch {
+              return {};
+            }
+          };
+          const full = readAudit('/tmp/audit-full.json');
+          const production = readAudit('/tmp/audit-production.json');
+          const render = (value) => ['info','low','moderate','high','critical','total']
+            .map((key) => `${key}: ${Number(value[key] || 0)}`)
+            .join(', ');
+          const report = `# PR #47 final completion verification\n\nVerified on 2026-08-26 against branch \`agent/final-launch-mobile-realtime-admin-corrections\`.\n\n## Completed gates\n\n- One authoritative incident export path with CSV and JSON output, filtered-result export, a 10,000-record cap, export auditing, CSV-injection protection, and recursive secret/token/private-credential redaction.\n- Platform Admin manual booking and Stripe checkout-link regression verification.\n- Stripe Connect salon transfer reservation/finalization, idempotency, uncertain-delivery reconciliation, and truthful bank-payout status verification.\n- Featured Salon indefinite campaigns, searchable salon selection, archive/restore/delete, paid evidence, platform credit, and complimentary Admin authority verification.\n- About-page carousel, public realtime refresh, owner booking alerts and actionable badge, Salon 360, Admin activity timeline, and check-in exception regression verification.\n- All database migrations applied successfully from an empty PostgreSQL 17 database.\n- TypeScript, lint, production build, operational monitoring, and final completion invariants passed.\n- Temporary one-off repair workflows, generators, and duplicate incident-export route were removed.\n\n## Dependency audit\n\n- Full dependency tree — ${render(full)}.\n- Production dependency tree — ${render(production)}.\n- The completion gate requires zero high/critical advisories across the full tree and zero moderate-or-higher advisories in production dependencies.\n\n## Safety boundary\n\nThis verification used an isolated clean database and build-time placeholder public configuration. It did not merge the pull request, run production migrations, deploy production, create a real payment, transfer real funds, or mutate production data. Provider-account acceptance remains limited to whatever test credentials are configured in the repository's protected CI environment.\n`;
+          fs.writeFileSync('docs/PR47_FINAL_COMPLETION_VERIFICATION_2026-08-26.md', report);
+          NODE
+
+      - name: Commit verified dependency lock and completion report
+        if: success()
+        run: |
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "test: record PR47 final completion verification"
+            git pull --rebase origin agent/final-launch-mobile-realtime-admin-corrections
+            git push origin HEAD:agent/final-launch-mobile-realtime-admin-corrections
+          fi
