@@ -8,6 +8,8 @@ const statuses = new Set(["Open", "Investigating", "Resolved", "Ignored"]);
 const eventSelect = "id,reference,fingerprint,severity,status,environment,release,route,action,feature,actor_role,salon_id,technical_message,technical_stack,user_safe_message,metadata,occurrence_count,first_occurred_at,last_occurred_at,assigned_to,admin_notes,resolved_at,created_at,updated_at";
 const MAX_EXPORT_ROWS = 10_000;
 const EXPORT_BATCH_SIZE = 500;
+const secretKey = /(?:authorization|cookie|token|secret|password|api[_-]?key|service[_-]?role|private[_-]?key|client[_-]?secret|webhook[_-]?secret)/i;
+const secretValue = /(?:Bearer\s+[A-Za-z0-9._~+\/-]+=*|sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,})/g;
 
 type ErrorRow = Record<string, unknown>;
 type EnrichedExportRow = ErrorRow & {
@@ -17,13 +19,33 @@ type EnrichedExportRow = ErrorRow & {
   assigned_admin: string;
 };
 
+function sanitize(value: unknown, depth = 0): unknown {
+  if (depth > 8) return "[depth limited]";
+  if (typeof value === "string") return value.replace(secretValue, "[redacted]");
+  if (Array.isArray(value)) {
+    return value.slice(0, 500).map((item) => sanitize(item, depth + 1));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .slice(0, 500)
+        .map(([key, item]) => [
+          key,
+          secretKey.test(key) ? "[redacted]" : sanitize(item, depth + 1),
+        ]),
+    );
+  }
+  return value;
+}
+
 function csvCell(value: unknown) {
-  let text = value == null
+  const safeValue = sanitize(value);
+  let text = safeValue == null
     ? ""
-    : typeof value === "string"
-      ? value
-      : JSON.stringify(value);
-  text = text.replace(/\r\n?/g, "\n");
+    : typeof safeValue === "string"
+      ? safeValue
+      : JSON.stringify(safeValue);
+  text = text.replace(secretValue, "[redacted]").replace(/\r\n?/g, "\n");
   if (/^[=+\-@]/.test(text.trimStart())) text = `'${text}`;
   return `"${text.replace(/"/g, '""')}"`;
 }
@@ -117,16 +139,39 @@ async function GETHandler(request: Request) {
         if (row.user_id) assigneeById.set(String(row.user_id), label);
       }
       const enriched: EnrichedExportRow[] = exportRows.map((row): EnrichedExportRow => {
+        const safeRow = sanitize(row) as ErrorRow;
         const businesses = affectedByEvent.get(String(row.id || "")) || [];
+        const safeBusinesses = sanitize(businesses) as ErrorRow[];
         return {
-          ...row,
-          presentation: operationalErrorPresentation(row),
-          affected_business_count: businesses.length,
-          affected_businesses: businesses,
+          ...safeRow,
+          presentation: operationalErrorPresentation(safeRow),
+          affected_business_count: safeBusinesses.length,
+          affected_businesses: safeBusinesses,
           assigned_admin: assigneeById.get(String(row.assigned_to || "")) || "",
         };
       });
       const truncated = matchingCount > MAX_EXPORT_ROWS;
+      const exportAuditReference = crypto.randomUUID();
+      const exportAudit = await admin.from("record_management_events").insert({
+        record_type: "platform_error_export",
+        record_id: exportAuditReference,
+        record_label: `Incident queue ${exportFormat.toUpperCase()} export`,
+        action: "Created",
+        dependency_summary: {
+          format: exportFormat,
+          status: statuses.has(status) ? status : null,
+          severity: severity || null,
+          feature: feature || null,
+          event_id: eventId || null,
+          exported_count: enriched.length,
+          matching_count: matchingCount,
+          truncated,
+        },
+        reason: "Platform Admin exported authorized incident evidence.",
+        acting_user_id: context.user.id,
+        acting_scope: "platform_admin",
+      });
+      if (exportAudit.error) throw exportAudit.error;
       const commonHeaders = {
         "Cache-Control": "private, no-store",
         "Content-Disposition": `attachment; filename="${exportFilename(exportFormat)}"`,
@@ -134,11 +179,13 @@ async function GETHandler(request: Request) {
         "X-Export-Count": String(enriched.length),
         "X-Export-Total": String(matchingCount),
         "X-Export-Truncated": String(truncated),
+        "X-Export-Audit-Reference": exportAuditReference,
       };
 
       if (exportFormat === "json") {
         return Response.json({
           exported_at: new Date().toISOString(),
+          export_reference: exportAuditReference,
           filters: { status: statuses.has(status) ? status : null, severity: severity || null, feature: feature || null, query: search || null, event_id: eventId || null },
           count: enriched.length,
           total_matching: matchingCount,

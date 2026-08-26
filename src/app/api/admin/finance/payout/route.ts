@@ -1,4 +1,4 @@
-import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
+import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
   capturePlatformError,
   monitoredRouteFailure,
@@ -420,15 +420,10 @@ async function POSTHandler(request: Request) {
               : "PAYOUT_FAILED",
         });
       } catch (reconciliationError) {
-        console.error("Payout reconciliation persistence failed", {
-          bookingId,
-          attemptId,
-          transferId: stripeTransferId || null,
-          message:
-            reconciliationError instanceof Error
-              ? reconciliationError.message.slice(0, 300)
-              : "Unknown reconciliation failure",
-        });
+        noteOperationalFailure(
+          "Payout reconciliation persistence failed",
+          reconciliationError,
+        );
       }
     }
 

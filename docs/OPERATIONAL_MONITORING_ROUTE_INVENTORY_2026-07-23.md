@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-08-26. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -33,6 +33,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/engine/translations` | GET, PATCH | protected | Covered |
 | `/api/admin/featured-campaigns` | GET, POST | protected | Covered |
 | `/api/admin/finance` | GET | protected | Covered |
+| `/api/admin/finance/payout` | GET, POST | provider-backed | Covered |
 | `/api/admin/finance/product-refund` | POST | provider-backed | Covered |
 | `/api/admin/homepage-products` | GET, POST | provider-backed | Covered |
 | `/api/admin/identity-conflicts` | GET, PATCH | protected | Covered |
@@ -56,6 +57,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/admin/support/[id]/read` | PATCH | provider-backed | Covered |
 | `/api/admin/support/[id]/respond` | POST | provider-backed | Covered |
 | `/api/admin/team` | GET, POST, PATCH, DELETE | provider-backed | Covered |
+| `/api/admin/team/[id]/activity` | GET | protected | Covered |
 | `/api/admin/test-data` | GET, POST | protected | Covered |
 | `/api/admin/trending-campaigns` | GET, POST | protected | Covered |
 | `/api/admin/verify` | POST | protected | Covered |
@@ -101,6 +103,7 @@ Updated: 2026-08-07. This inventory is enforced by `scripts/verify-operational-m
 | `/api/promotions/salon` | GET | public/read-only | Covered |
 | `/api/push/subscription` | GET, POST, DELETE | provider-backed | Covered |
 | `/api/reviews/[token]` | GET, POST | public/read-only, provider-backed | Covered |
+| `/api/salon/actionable-booking-count` | GET | protected | Covered |
 | `/api/salon/application` | POST | provider-backed | Covered |
 | `/api/salon/application/documents/abandon` | POST | provider-backed | Covered |
 | `/api/salon/application/documents/finalize` | POST | provider-backed | Covered |
