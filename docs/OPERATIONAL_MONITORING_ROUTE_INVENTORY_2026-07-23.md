@@ -16,7 +16,7 @@ Updated: 2026-08-26. This inventory is enforced by `scripts/verify-operational-m
 | Route | Methods | Classification | Coverage |
 |---|---|---|---|
 | `/api/admin/bookings/[id]` | GET, PATCH | protected | Covered |
-| `/api/admin/bookings` | POST | protected | Covered |
+| `/api/admin/bookings` | GET, POST | protected | Covered |
 | `/api/admin/catalog-spreadsheet` | GET, POST | protected | Covered |
 | `/api/admin/content` | GET, PUT, DELETE | protected | Covered |
 | `/api/admin/data` | GET | provider-backed | Covered |
