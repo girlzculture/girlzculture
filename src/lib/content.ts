@@ -6,6 +6,9 @@ import { capturePlatformError } from "@/lib/platformErrors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const PUBLIC_CONTENT_READ_TIMEOUT_MS = 2_500;
+const ACCEPTANCE_MODE =
+  process.env.GIRLZ_CULTURE_ACCEPTANCE_MODE === "true" ||
+  process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS === "true";
 
 export type ContentCard = {
   id?: string;
@@ -80,6 +83,11 @@ async function reportPublicContentFailure(
   recordType: string,
   recordId?: string,
 ) {
+  // Browser acceptance deliberately uses a small read-only provider fixture.
+  // Its unsupported reads must exercise the public fallback without creating
+  // false production incidents or triggering unrelated provider calls.
+  if (ACCEPTANCE_MODE) return;
+
   let admin;
   try {
     admin = getSupabaseAdmin();
