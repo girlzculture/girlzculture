@@ -27,6 +27,8 @@ import { readApiResponse } from "@/lib/apiResponseClient";
 import { US_STATES } from "@/lib/usStates";
 import { formatZonedDateTime } from "@/lib/dateTime";
 import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
+import AdminSalonPayoutWorkspace from "@/components/admin/AdminSalonPayoutWorkspace";
+import AdminSalonPayoutAction from "@/components/admin/AdminSalonPayoutAction";
 
 type FinanceData = {
   booking_transactions: FinanceRow[];
@@ -583,7 +585,7 @@ export default function AdminFinanceDashboard({
     const focused = unifiedTransactions.find((row) => row.transaction_key === initialTransactionKey);
     return <div data-admin-finance-detail className="space-y-5">
       <Link href={returnTo} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 bg-white px-4 text-xs font-bold text-plum"><ArrowLeft size={16}/>Back to filtered transactions</Link>
-      {focused ? <section className="rounded-2xl border border-plum/10 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-magenta">{focused.transaction_type}</p><h2 className="mt-1 font-serif text-3xl text-plum">{String(focused.public_reference || "Transaction detail")}</h2><p className="mt-1 text-xs text-ink/55">Recorded {when(focused.date, data.admin_time_zone)}</p></div><Status value={focused.payment_status}/></div><TransactionDetails row={focused} timeZone={data.admin_time_zone}/></section> : <section className="rounded-2xl border border-dashed border-plum/20 bg-white p-8 text-center"><h2 className="font-serif text-2xl text-plum">Transaction unavailable</h2><p className="mt-2 text-sm text-ink/55">The transaction was removed, is outside your permissions, or no longer matches this salon scope.</p></section>}
+      {focused ? <section className="rounded-2xl border border-plum/10 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-magenta">{focused.transaction_type}</p><h2 className="mt-1 font-serif text-3xl text-plum">{String(focused.public_reference || "Transaction detail")}</h2><p className="mt-1 text-xs text-ink/55">Recorded {when(focused.date, data.admin_time_zone)}</p></div><Status value={focused.payment_status}/></div><TransactionDetails row={focused} timeZone={data.admin_time_zone}/>{focused.transaction_type === "Booking deposit" && focused.booking_id ? <AdminSalonPayoutAction bookingId={String(focused.booking_id)} onChanged={() => load(selectedSalonId)}/> : null}</section> : <section className="rounded-2xl border border-dashed border-plum/20 bg-white p-8 text-center"><h2 className="font-serif text-2xl text-plum">Transaction unavailable</h2><p className="mt-2 text-sm text-ink/55">The transaction was removed, is outside your permissions, or no longer matches this salon scope.</p></section>}
     </div>;
   }
 
@@ -883,7 +885,14 @@ export default function AdminFinanceDashboard({
               note="Includes upcoming records so their deposits reconcile in this ledger."
             />
           </div>
-          <BookingLedger
+
+          {tab === "Salon Payouts" ? (
+            <AdminSalonPayoutWorkspace
+              rows={filtered}
+              onChanged={() => load(selectedSalonId)}
+            />
+          ) : null}
+<BookingLedger
             rows={filtered}
             payoutView={tab === "Salon Payouts"}
             timeZone={data.admin_time_zone}

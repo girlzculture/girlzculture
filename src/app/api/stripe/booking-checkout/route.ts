@@ -25,6 +25,9 @@ async function POSTHandler(request: Request) {
   let intentId = "";
   let commerceIntentId = "";
   let salonPromotionRedemptionId = "";
+  let checkoutSessionCreated = false;
+  let checkoutSessionId = "";
+  let checkoutSessionUrl = "";
   try {
     enforceRateLimit(request, "booking-checkout", 8, 10 * 60_000);
     const body = await request.json() as Record<string, unknown>;
@@ -597,60 +600,152 @@ async function POSTHandler(request: Request) {
       });
     }
 
-    const session = await stripeRequest<{ id: string; url: string }>("/checkout/sessions", {
-      mode: "payment",
-      expires_at: Math.floor(Date.now() / 1000) + 35 * 60,
-      "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][unit_amount]": Math.round(
-        (commerceIntentId ? combinedCharge : originalDeposit) * 100,
-      ),
-      "line_items[0][price_data][product_data][name]": commerceIntentId
-        ? `${salon.name} products and appointment deposit`
-        : `${salon.name} reservation deposit`,
-      "line_items[0][quantity]": 1,
-      customer_email: guestEmail,
-      success_url: commerceIntentId
-        ? `${siteUrl(request)}/salon/${salon.slug}/book?commerce_session={CHECKOUT_SESSION_ID}`
-        : `${siteUrl(request)}/salon/${salon.slug}/book?booking_session={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl(request)}/salon/${salon.slug}/book?payment=cancelled`,
-      "metadata[booking_intent_id]": intentId,
-      "metadata[commerce_intent_id]": commerceIntentId,
-      "metadata[type]": commerceIntentId
-        ? "combined_checkout"
-        : "booking_deposit",
-      "metadata[salon_id]": salonId,
-      "metadata[connected_account_id]": connectedAccount,
-      "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
-      "metadata[promo_code]": promoReservation?.code || "",
-      "metadata[salon_promotion_redemption_id]": salonPromotionRedemptionId,
-      "payment_intent_data[description]": commerceIntentId
-        ? `Products and ${depositPercentage}% reservation deposit for ${style.name}`
-        : `${depositPercentage}% reservation deposit for ${style.name}`,
-      allow_promotion_codes: commerceIntentId ? false : !promoReservation,
-      ...(!commerceIntentId && promoReservation?.stripe_coupon_id
-        ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id }
-        : {}),
-      ...(connectedAccount
-        ? {
-            "payment_intent_data[transfer_data][destination]":
-              connectedAccount,
-          }
-        : {}),
-    });
-    if (!session?.id || !session?.url) throw new Error("Stripe did not return a checkout session. No payment was taken.");
-    const { error: sessionError } = await admin.from("booking_checkout_intents").update({ stripe_checkout_session_id: session.id }).eq("id", intentId);
-    if (sessionError) throw sessionError;
+    const checkoutExpiresAtSeconds = Math.floor(Date.now() / 1000) + 35 * 60;
+    const checkoutExpiresAt = new Date(checkoutExpiresAtSeconds * 1000).toISOString();
+    const session = await stripeRequest<{ id: string; url: string }>(
+      "/checkout/sessions",
+      {
+        mode: "payment",
+        expires_at: checkoutExpiresAtSeconds,
+        "line_items[0][price_data][currency]": "usd",
+        "line_items[0][price_data][unit_amount]": Math.round(
+          (commerceIntentId ? combinedCharge : originalDeposit) * 100,
+        ),
+        "line_items[0][price_data][product_data][name]": commerceIntentId
+          ? `${salon.name} products and appointment deposit`
+          : `${salon.name} reservation deposit`,
+        "line_items[0][quantity]": 1,
+        customer_email: guestEmail,
+        success_url: commerceIntentId
+          ? `${siteUrl(request)}/salon/${salon.slug}/book?commerce_session={CHECKOUT_SESSION_ID}`
+          : `${siteUrl(request)}/salon/${salon.slug}/book?booking_session={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl(request)}/salon/${salon.slug}/book?payment=cancelled`,
+        "metadata[booking_intent_id]": intentId,
+        "metadata[commerce_intent_id]": commerceIntentId,
+        "metadata[type]": commerceIntentId
+          ? "combined_checkout"
+          : "booking_deposit",
+        "metadata[salon_id]": salonId,
+        "metadata[connected_account_id]": connectedAccount,
+        "metadata[promo_redemption_id]": promoReservation?.redemption_id || "",
+        "metadata[promo_code]": promoReservation?.code || "",
+        "metadata[salon_promotion_redemption_id]": salonPromotionRedemptionId,
+        "payment_intent_data[description]": commerceIntentId
+          ? `Products and ${depositPercentage}% reservation deposit for ${style.name}`
+          : `${depositPercentage}% reservation deposit for ${style.name}`,
+        allow_promotion_codes: commerceIntentId ? false : !promoReservation,
+        ...(!commerceIntentId && promoReservation?.stripe_coupon_id
+          ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id }
+          : {}),
+        ...(connectedAccount
+          ? {
+              "payment_intent_data[transfer_data][destination]":
+                connectedAccount,
+            }
+          : {}),
+      },
+      {
+        idempotencyKey: `gc-booking-checkout:${commerceIntentId || intentId}`,
+      },
+    );
+    if (!session?.id || !session?.url) {
+      throw new Error("Stripe did not return a checkout session. No payment was taken.");
+    }
+    checkoutSessionCreated = true;
+    checkoutSessionId = session.id;
+    checkoutSessionUrl = session.url;
+    const sessionWarnings: string[] = [];
+
+    const bookingSession = await admin
+      .from("booking_checkout_intents")
+      .update({
+        stripe_checkout_session_id: checkoutSessionId,
+        expires_at: checkoutExpiresAt,
+      })
+      .eq("id", intentId)
+      .eq("status", "Pending")
+      .select("id")
+      .maybeSingle();
+    if (bookingSession.error || !bookingSession.data) {
+      const reference = await capturePlatformError({
+        request,
+        admin,
+        error: bookingSession.error || new Error("BOOKING_SESSION_LINK_MISSING"),
+        feature: "booking-checkout",
+        action: "attach-stripe-session-to-booking-hold",
+        actorRole: customerId ? "customer" : "guest",
+        actorId: customerId,
+        salonId,
+        recordType: "booking_checkout_intent",
+        recordId: intentId,
+        provider: "supabase",
+        safeMessage: "The secure checkout link remains valid and its appointment hold remains active, but local session evidence needs attention.",
+      });
+      sessionWarnings.push(
+        `The checkout link remains valid, but local session evidence needs attention. Reference ${reference}. Do not create another checkout.`,
+      );
+    }
+
     if (commerceIntentId) {
       const commerceSession = await admin
         .from("commerce_checkout_intents")
-        .update({ stripe_checkout_session_id: session.id })
+        .update({
+          stripe_checkout_session_id: checkoutSessionId,
+          expires_at: checkoutExpiresAt,
+        })
         .eq("id", commerceIntentId)
-        .eq("status", "Pending");
-      if (commerceSession.error) throw commerceSession.error;
+        .eq("status", "Pending")
+        .select("id")
+        .maybeSingle();
+      if (commerceSession.error || !commerceSession.data) {
+        const reference = await capturePlatformError({
+          request,
+          admin,
+          error: commerceSession.error || new Error("COMMERCE_SESSION_LINK_MISSING"),
+          feature: "booking-checkout",
+          action: "attach-stripe-session-to-commerce-hold",
+          actorRole: customerId ? "customer" : "guest",
+          actorId: customerId,
+          salonId,
+          recordType: "commerce_checkout_intent",
+          recordId: commerceIntentId,
+          provider: "supabase",
+          safeMessage: "The secure checkout link remains valid and its product holds remain active, but local session evidence needs attention.",
+        });
+        sessionWarnings.push(
+          `The product hold remains active, but local session evidence needs attention. Reference ${reference}.`,
+        );
+      }
     }
-    if (promoReservation?.redemption_id) await admin.from("promo_code_redemptions").update({ stripe_checkout_session_id: session.id }).eq("id", promoReservation.redemption_id);
+
+    if (promoReservation?.redemption_id) {
+      const promoSession = await admin
+        .from("promo_code_redemptions")
+        .update({ stripe_checkout_session_id: checkoutSessionId })
+        .eq("id", promoReservation.redemption_id);
+      if (promoSession.error) {
+        const reference = await capturePlatformError({
+          request,
+          admin,
+          error: promoSession.error,
+          feature: "booking-checkout",
+          action: "attach-stripe-session-to-promo-hold",
+          actorRole: customerId ? "customer" : "guest",
+          actorId: customerId,
+          salonId,
+          recordType: "promo_code_redemption",
+          recordId: promoReservation.redemption_id,
+          provider: "supabase",
+          safeMessage: "The checkout link remains valid, but promotion-session evidence needs attention.",
+        });
+        sessionWarnings.push(
+          `The promotion remains reserved, but its session evidence needs attention. Reference ${reference}.`,
+        );
+      }
+    }
+
     return Response.json({
-      url: session.url,
+      url: checkoutSessionUrl,
       deposit,
       originalDeposit,
       discount,
@@ -661,8 +756,62 @@ async function POSTHandler(request: Request) {
         : 0,
       combined: Boolean(commerceIntentId),
       testMode: true,
+      warnings: sessionWarnings,
+      reconciliation_required: sessionWarnings.length > 0,
     });
   } catch (error) {
+    const deliveryUncertain =
+      (error as { deliveryUncertain?: boolean }).deliveryUncertain === true;
+    if ((checkoutSessionCreated || deliveryUncertain) && intentId) {
+      let reference: string | null = null;
+      try {
+        reference = await capturePlatformError({
+          request,
+          admin,
+          error,
+          feature: "booking-checkout",
+          action: checkoutSessionCreated
+            ? "reconcile-created-checkout-session"
+            : "reconcile-uncertain-checkout-session",
+          actorRole: "guest",
+          salonId: null,
+          recordType: commerceIntentId
+            ? "commerce_checkout_intent"
+            : "booking_checkout_intent",
+          recordId: commerceIntentId || intentId,
+          provider: "stripe",
+          safeMessage: checkoutSessionCreated
+            ? "The secure checkout link exists and all holds remain active, but local follow-up needs attention."
+            : "Stripe may have received the checkout request, so all holds remain active until the outcome is reconciled.",
+        });
+      } catch (monitoringError) {
+        noteOperationalFailure("Checkout reconciliation monitoring failed", monitoringError);
+      }
+
+      if (checkoutSessionCreated) {
+        return Response.json({
+          url: checkoutSessionUrl,
+          warning: reference
+            ? `The secure checkout link remains valid and all holds remain active, but local follow-up needs attention. Reference ${reference}. Do not create another checkout.`
+            : "The secure checkout link remains valid and all holds remain active, but local follow-up needs attention. Do not create another checkout.",
+          reconciliation_required: true,
+        });
+      }
+
+      return Response.json(
+        {
+          error: reference
+            ? `Stripe did not confirm whether checkout was created. The appointment and product holds remain active. Do not create another checkout until reference ${reference} is reviewed or the holds expire.`
+            : "Stripe did not confirm whether checkout was created. The appointment and product holds remain active. Do not create another checkout until the incident is reviewed or the holds expire.",
+          reference,
+          booking_intent_id: intentId,
+          commerce_intent_id: commerceIntentId || null,
+          reconciliation_required: true,
+        },
+        { status: 502, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+
     if (commerceIntentId)
       await admin.rpc("release_combined_checkout", {
         p_commerce_intent_id: commerceIntentId,
@@ -673,7 +822,11 @@ async function POSTHandler(request: Request) {
         .from("booking_checkout_intents")
         .update({ status: "Failed" })
         .eq("id", intentId);
-    if (salonPromotionRedemptionId) await admin.rpc("cancel_salon_promotion_reservation", { p_redemption_id: salonPromotionRedemptionId });
+    if (salonPromotionRedemptionId) {
+      await admin.rpc("cancel_salon_promotion_reservation", {
+        p_redemption_id: salonPromotionRedemptionId,
+      });
+    }
     noteOperationalFailure("Booking checkout failed", error);
     return errorResponse(error, "Unable to start secure checkout.");
   }

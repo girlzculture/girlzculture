@@ -11,6 +11,8 @@ import type { CSSProperties } from "react";
 import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBridge";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
+import PublicContentLiveRefresh from "@/components/PublicContentLiveRefresh";
+import OwnerDashboardResponsiveBridge from "@/components/owner/OwnerDashboardResponsiveBridge";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
@@ -108,7 +110,11 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <LocaleProvider initialLocale={locale}>
-          <CustomerLocationProvider>{children}</CustomerLocationProvider>
+          <CustomerLocationProvider>
+            {children}
+            <PublicContentLiveRefresh />
+          </CustomerLocationProvider>
+          <OwnerDashboardResponsiveBridge />
           <DocumentLocalizationBridge />
           <InlineFormValidation />
           <NativeSearchKeyboardBridge />

@@ -39,12 +39,6 @@ export const DEFAULT_HOMEPAGE_PROMOTION_COUNT = 8;
 export const MAX_HOMEPAGE_PROMOTION_COUNT = 20;
 export const MAX_HOMEPAGE_PROMOTION_SOURCE_COUNT = 200;
 
-/**
- * Built-in editorial cards are presentation fallbacks, not administrator
- * records. Keeping the canonical collection in this client-safe core lets the
- * public resolver and the Content Management preview use the same identities
- * without ever writing these cards into the editor.
- */
 export const HOMEPAGE_EDITORIAL_FALLBACKS: ContentCard[] = [
   { id: "editorial-nearby", content_type: "image", title: "Find trusted salons nearby", body: "See verified beauty professionals close to you.", media_url: "/images/salon-warm.jpg", href: "/salons", cta_label: "Find a salon", alt_text: "Warm, modern beauty salon interior", status: "Active", editorial_fallback: true, priority: 0 },
   { id: "editorial-knotless", content_type: "image", title: "Knotless braids, clear prices", body: "Compare real service details before you reserve.", media_url: "/images/braids-knotless.jpg", href: "/styles?style=knotless-braids", cta_label: "Browse knotless", alt_text: "Client wearing knotless braids", status: "Active", editorial_fallback: true, priority: 0 },
@@ -57,27 +51,10 @@ export const HOMEPAGE_EDITORIAL_FALLBACKS: ContentCard[] = [
 ];
 
 const HOMEPAGE_PROMOTION_MATERIAL_FIELDS: Array<keyof ContentCard> = [
-  "content_type",
-  "source_kind",
-  "association_type",
-  "salon_id",
-  "campaign_id",
-  "title",
-  "body",
-  "media_url",
-  "href",
-  "cta_label",
-  "alt_text",
-  "status",
-  "starts_at",
-  "ends_at",
-  "market_id",
-  "target_label",
-  "target_latitude",
-  "target_longitude",
-  "radius_miles",
-  "priority",
-  "rotation_weight",
+  "content_type", "source_kind", "association_type", "salon_id", "campaign_id",
+  "title", "body", "media_url", "href", "cta_label", "alt_text", "status",
+  "starts_at", "ends_at", "market_id", "target_label", "target_latitude",
+  "target_longitude", "radius_miles", "priority", "rotation_weight",
 ];
 
 function exactMaterialValue(value: unknown) {
@@ -95,13 +72,10 @@ export function isCanonicalHomepageFallback(card: ContentCard) {
 }
 
 /**
- * An Active homepage card is publishable only when it can render a complete,
- * accessible call to action without SafeImage or button-label fallbacks.
- * Descriptive copy is deliberately optional: salon/campaign cards replace it
- * with privacy-safe distance on mobile, and older published cards may not have
- * supplied copy. The title, media, destination, CTA label, and image alt text
- * remain mandatory.
- * Draft and archived cards may remain incomplete while an editor is working.
+ * A Super Admin may publish a media-only, copy-only, or informational card.
+ * Missing marketing copy, CTA, destination, and alt text are presentation
+ * warnings rather than authority blockers. A truly empty card is the only
+ * incomplete card because it cannot present anything to a customer.
  */
 export function isHomepagePromotionCardComplete(card: {
   title?: unknown;
@@ -111,13 +85,9 @@ export function isHomepagePromotionCardComplete(card: {
   cta_label?: unknown;
   alt_text?: unknown;
 }) {
-  return [
-    card.title,
-    card.media_url,
-    card.href,
-    card.cta_label,
-    card.alt_text,
-  ].every((value) => exactMaterialValue(value).length > 0);
+  return [card.title, card.body, card.media_url].some(
+    (value) => exactMaterialValue(value).length > 0,
+  );
 }
 
 export function homepagePromotionPreview(
@@ -153,9 +123,10 @@ export function homepagePromotionPreview(
     ]).slice(0, limit),
   };
 }
+
 function validDestination(value: unknown) {
   const href = String(value || "").trim();
-  if (!href) return false;
+  if (!href) return true;
   if (href.startsWith("/")) return !href.startsWith("//");
   try {
     return new URL(href).protocol === "https:";
@@ -163,11 +134,7 @@ function validDestination(value: unknown) {
     return false;
   }
 }
-/**
- * Explains exactly why one saved promotion is or is not eligible. The public
- * selector and the editor preview share this function, so a fallback can no
- * longer silently hide a broken administrator card.
- */
+
 export function homepagePromotionDiagnostic(
   card: ContentCard,
   now: number,
@@ -190,16 +157,27 @@ export function homepagePromotionDiagnostic(
     return { code: "inactive", label: "Inactive", eligible: false, detail: "This card is archived or inactive." };
   }
   const mediaState = String(loose.media_state || loose.upload_state || "").toLowerCase();
-  if (mediaState === "staged" && !String(card.media_url || "").trim()) {
-    return { code: "staged_media_unattached", label: "Staged media not attached", eligible: false, detail: "The upload finished, but this card has not been saved with that media." };
+  if (
+    mediaState === "staged" &&
+    !String(card.media_url || "").trim() &&
+    !String(card.title || card.body || "").trim()
+  ) {
+    return {
+      code: "staged_media_unattached",
+      label: "Staged media not attached",
+      eligible: false,
+      detail: "The upload finished, but the empty card has not been saved with that media.",
+    };
   }
-  if (!String(card.media_url || "").trim()) {
-    return { code: "missing_media", label: "Missing media", eligible: false, detail: "Add an image, animated GIF, or supported video URL." };
+  if (!isHomepagePromotionCardComplete(card)) {
+    return {
+      code: "missing_media",
+      label: "Empty card",
+      eligible: false,
+      detail: "Add media, a title, or description before showing this card.",
+    };
   }
-  if (!String(card.href || "").trim()) {
-    return { code: "missing_destination", label: "Missing destination", eligible: false, detail: "Choose a salon, blog post, page, or custom destination." };
-  }
-  if (!validDestination(card.href)) {
+  if (card.href && !validDestination(card.href)) {
     return { code: "unavailable_link", label: "Unavailable link", eligible: false, detail: "Use a valid internal path or HTTPS destination." };
   }
   const startsAt = card.starts_at ? Date.parse(card.starts_at) : 0;
@@ -228,8 +206,9 @@ export function homepagePromotionDiagnostic(
   }
   if (
     card.source_kind === "blog" &&
+    card.href &&
     options.availableDestinations &&
-    !options.availableDestinations.has(String(card.href || "").trim())
+    !options.availableDestinations.has(String(card.href).trim())
   ) {
     return { code: "unavailable_link", label: "Unavailable blog post", eligible: false, detail: "The linked blog post is not currently published." };
   }
@@ -247,24 +226,24 @@ export function homepagePromotionDiagnostic(
   ) {
     return { code: "outside_targeting", label: "Outside targeting", eligible: false, detail: "This preview location is outside the configured audience radius." };
   }
-  if (!isHomepagePromotionCardComplete(card)) {
-    const missing = [
-      ["title", card.title],
-      ["call-to-action label", card.cta_label],
-      ["alternative text", card.alt_text],
-    ].filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
-    return { code: "failed_publication", label: "Failed publication", eligible: false, detail: `Complete ${missing.join(", ") || "the required fields"}.` };
-  }
   if (loose.publication_error) {
     return { code: "failed_publication", label: "Failed publication", eligible: false, detail: "The last publication attempt failed. Save again after correcting the card." };
   }
+  const optionalWarnings = [
+    !card.media_url ? "no media" : "",
+    !card.title ? "no title" : "",
+    !card.body ? "no description" : "",
+    !card.href ? "non-clickable" : "",
+    !card.cta_label ? "no CTA label" : "",
+    !card.alt_text && card.media_url ? "derived/decorative alt text" : "",
+  ].filter(Boolean);
   return {
     code: "published",
     label: target ? "Published · location targeted" : "Published",
     eligible: true,
     detail: target
-      ? `Eligible for visitors within ${configuredRadius(card)} miles of ${card.target_label || "the selected market"}.`
-      : "Eligible and ordered ahead of editorial fallbacks.",
+      ? `Eligible within ${configuredRadius(card)} miles of ${card.target_label || "the selected market"}.${optionalWarnings.length ? ` Optional warnings: ${optionalWarnings.join(", ")}.` : ""}`
+      : `Eligible and ordered ahead of editorial fallbacks.${optionalWarnings.length ? ` Optional warnings: ${optionalWarnings.join(", ")}.` : ""}`,
   };
 }
 
@@ -308,11 +287,6 @@ function targetCoordinates(card: ContentCard): Coordinates | null {
   return validCoordinates(coordinates) ? coordinates : null;
 }
 
-/**
- * Explicitly global editorial content has no market, coordinates, salon, or
- * campaign association. This distinction matters while customer-location
- * state is still loading: unresolved targeted cards must never flash first.
- */
 export function isExplicitlyGlobalPromotionCard(card: ContentCard) {
   return !targetCoordinates(card) &&
     !card.market_id &&
@@ -321,14 +295,6 @@ export function isExplicitlyGlobalPromotionCard(card: ContentCard) {
     !card.campaign_id;
 }
 
-/**
- * Selects a complete, distinct local promotion pool without re-ranking the
- * administrator's saved sequence. The content editor's array order is the
- * publication contract: eligible saved cards keep that order, while the
- * canonical editorial collection may fill only positions left genuinely
- * vacant after location/schedule filtering. Cards with coordinates are never
- * shown outside their administrator-controlled radius.
- */
 export function selectLocalPromotionCards(input: {
   cards: ContentCard[];
   now: number;
@@ -360,9 +326,6 @@ export function selectLocalPromotionCards(input: {
           distanceMiles(input.customerLocation!, target) <= configuredRadius(card),
       );
     }
-    // Existing administrator-authored image/GIF cards may predate association
-    // fields. They remain valid global saved cards, while an unresolved
-    // targeted/associated record must never flash before location is known.
     return isExplicitlyGlobalPromotionCard(card);
   });
   const vacancies = Math.max(0, limit - eligibleConfigured.length);

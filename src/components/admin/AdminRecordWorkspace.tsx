@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Star } from "lucide-react";
 import AdminBookingEditor from "@/components/admin/AdminBookingEditor";
+import AdminManualBookingWizard from "@/components/admin/AdminManualBookingWizard";
 import AdminFeaturedCampaigns from "@/components/admin/AdminFeaturedCampaigns";
 import AdminFeaturedProducts from "@/components/admin/AdminFeaturedProducts";
 import AdminHomepageMarketing from "@/components/admin/AdminHomepageMarketing";
@@ -12,6 +13,7 @@ import AdminPromoCodes from "@/components/admin/AdminPromoCodes";
 import AdminFinanceDashboard from "@/components/admin/AdminFinanceDashboard";
 import { AdminSalonDetail } from "@/components/admin/AdminSalonsManager";
 import AdminTimeZonePreference from "@/components/admin/AdminTimeZonePreference";
+import AdminUserActivityTimeline from "@/components/admin/AdminUserActivityTimeline";
 import AdminTrendingCampaigns from "@/components/admin/AdminTrendingCampaigns";
 import EngineControlCenter from "@/components/admin/EngineControlCenter";
 import ErrorMonitoringManager from "@/components/admin/ErrorMonitoringManager";
@@ -191,40 +193,48 @@ function SettingsEditor({ recordId, data }: { recordId: string; data: AdminRecor
   return <Missing label="Settings workspace"/>;
 }
 
-function AdminMemberDetail({ member, data }: { member?: Row; data: AdminRecordData }) {
+function AdminMemberDetail({ member }: { member?: Row; data: AdminRecordData }) {
   if (!member) return <Missing label="Administrator"/>;
-  const identityId = String(member.user_id || member.id || "");
-  const events = data.adminSecurityEvents.filter((row) => row.target_user_id === identityId || row.actor_user_id === identityId).sort((left, right) => new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime());
-  const permissions = Object.entries(member.permissions && typeof member.permissions === "object" ? member.permissions : {}).filter(([, allowed]) => Boolean(allowed)).map(([key]) => key.replaceAll("_", " "));
-  return <div className="grid gap-5 xl:grid-cols-[1fr_.8fr]">
-    <Card title={member.name || member.email || "Administrator"}><DetailGrid values={[["Role", member.is_super_admin ? "Super Admin" : member.role || "Admin"],["Status", member.status || "Invited"],["Email", member.email],["Phone", member.phone || "Not recorded"],["Invited", date(member.invited_at || member.created_at)],["Activated", date(member.activated_at)]]}/><div className="mt-4 rounded-xl bg-cream p-4"><b className="text-xs text-plum">Assigned sections</b><div className="mt-2 flex flex-wrap gap-2">{member.is_super_admin ? <span className="rounded-full bg-blush px-3 py-1.5 text-xs font-bold text-plum">All platform sections</span> : permissions.map((permission) => <span key={permission} className="rounded-full bg-blush px-3 py-1.5 text-xs font-bold text-plum">{permission}</span>)}{!member.is_super_admin && !permissions.length ? <span className="text-xs text-ink/55">No active section permissions.</span> : null}</div></div><Link href="/admin/settings/team" className="mt-4 inline-flex rounded-lg bg-magenta px-4 py-2 text-xs font-bold text-white">Manage invitation, status, and permissions</Link></Card>
-    <Card title="Security audit"><div className="space-y-3">{events.slice(0,20).map((event) => <div key={event.id} className="rounded-xl border border-plum/10 p-3 text-xs"><div className="flex justify-between gap-3"><b className="text-plum">{String(event.action || "Security event").replaceAll("_", " ")}</b><span>{event.result || "Recorded"}</span></div><p className="mt-1 text-ink/50">{dateTime(event.created_at)}</p></div>)}{!events.length ? <p className="text-sm leading-6 text-ink/55">No retained invitation, permission, suspension, or identity-security event is linked to this administrator.</p> : null}</div><p className="mt-4 border-t border-plum/10 pt-4 text-xs leading-5 text-ink/55">Secrets and provider credentials are never displayed here. Integration readiness remains in The Engine and deployment configuration.</p></Card>
+  const permissions = Object.entries(
+    member.permissions && typeof member.permissions === "object"
+      ? member.permissions
+      : {},
+  )
+    .filter(([, allowed]) => Boolean(allowed))
+    .map(([key]) => key.replaceAll("_", " "));
+  return <div className="grid gap-5 xl:grid-cols-[.85fr_1.35fr]">
+    <Card title={member.name || member.email || "Administrator"}>
+      <DetailGrid values={[
+        ["Role", member.is_super_admin ? "Super Admin" : member.role || "Admin"],
+        ["Status", member.status || "Invited"],
+        ["Email", member.email],
+        ["Phone", member.phone || "Not recorded"],
+        ["Invited", date(member.invited_at || member.created_at)],
+        ["Activated", date(member.activated_at)],
+      ]}/>
+      <div className="mt-4 rounded-xl bg-cream p-4">
+        <b className="text-xs text-plum">Assigned sections</b>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {member.is_super_admin ? (
+            <span className="rounded-full bg-blush px-3 py-1.5 text-xs font-bold text-plum">All platform sections</span>
+          ) : permissions.map((permission) => (
+            <span key={permission} className="rounded-full bg-blush px-3 py-1.5 text-xs font-bold text-plum">{permission}</span>
+          ))}
+          {!member.is_super_admin && !permissions.length ? (
+            <span className="text-xs text-ink/55">No active section permissions.</span>
+          ) : null}
+        </div>
+      </div>
+      <Link href="/admin/settings/team" className="mt-4 inline-flex rounded-lg bg-magenta px-4 py-2 text-xs font-bold text-white">
+        Manage invitation, status, and permissions
+      </Link>
+    </Card>
+    <AdminUserActivityTimeline memberId={String(member.id)} />
   </div>;
 }
 
 function ManualBooking({ salons, onCreated }: { salons: Row[]; onCreated: () => Promise<void> }) {
-  const [message, setMessage] = useState("");
-  const [saving, setSaving] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    setSaving(true);
-    setMessage("");
-    try {
-      const form = new FormData(formElement);
-      const session = await getSessionForScope("admin");
-      if (!session) throw new Error("Your admin session has expired.");
-      const response = await fetch("/api/admin/bookings", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ salon_id: form.get("salon"), guest_name: form.get("name"), guest_email: form.get("email"), guest_phone: form.get("phone"), appointment_local: form.get("date") }) });
-      const body = await readApiResponse(response, "Unable to create booking.");
-      if (!response.ok) throw new Error(body.error || "Unable to create booking.");
-      setMessage(`Booking ${String(body.public_reference || "").trim() || "record"} was created and read back successfully.`);
-      formElement.reset();
-      await onCreated();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to create booking.");
-    } finally { setSaving(false); }
-  }
-  return <Card title="Create booking manually"><form onSubmit={submit} className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-bold">Salon<select name="salon" required className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal"><option value="">Choose salon</option>{salons.map((salon) => <option value={salon.id} key={salon.id}>{salon.name}</option>)}</select></label><Field name="name" label="Customer name"/><Field name="email" label="Customer email" type="email"/><Field name="phone" label="US phone" type="tel"/><Field name="date" label="Appointment date and time" type="datetime-local"/><div className="sm:col-span-2">{message ? <p role="status" className="mb-3 rounded-lg bg-blush/40 p-3 text-sm text-plum">{message}</p> : null}<button disabled={saving} className="min-h-11 rounded-lg bg-magenta px-6 text-sm font-bold text-white disabled:opacity-50">{saving ? "Creating…" : "Create booking"}</button></div></form></Card>;
+  return <AdminManualBookingWizard salons={salons} onCreated={onCreated}/>;
 }
 
 function Field({ name, label, type = "text" }: { name: string; label: string; type?: string }) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -29,6 +29,9 @@ import DashboardNotificationCenter, {
   type DashboardNotification,
 } from "@/components/notifications/DashboardNotificationCenter";
 import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
+import OwnerRealtimeAlertBridge from "@/components/owner/OwnerRealtimeAlertBridge";
+import { getSessionForScope } from "@/lib/supabase";
+import { readApiResponse } from "@/lib/apiResponseClient";
 
 export type DashboardSection =
   | "overview"
@@ -86,10 +89,45 @@ export default function OwnerDashboardShell({
   const [notificationCounts, setNotificationCounts] = useState<
     Record<string, number>
   >({});
+  const [actionableBookingCount, setActionableBookingCount] = useState<
+    number | null
+  >(null);
   const handleNotificationCounts = useCallback(
     (counts: Record<string, number>) => setNotificationCounts(counts),
     [],
   );
+  const refreshActionableBookingCount = useCallback(async () => {
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session) return;
+      const response = await fetch("/api/salon/actionable-booking-count", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+      const body = (await readApiResponse(
+        response,
+        "Unable to load the actionable booking count.",
+      )) as { count?: number; error?: string };
+      if (!response.ok) return;
+      setActionableBookingCount(Math.max(0, Number(body.count || 0)));
+    } catch {
+      // Notification-derived count remains as a temporary fallback.
+    }
+  }, []);
+
+  useEffect(() => {
+    const initialRefresh = window.setTimeout(
+      () => void refreshActionableBookingCount(),
+      0,
+    );
+    const refresh = () => void refreshActionableBookingCount();
+    window.addEventListener("gc:owner-booking-update", refresh);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.removeEventListener("gc:owner-booking-update", refresh);
+    };
+  }, [refreshActionableBookingCount]);
+
   const canAccess = (id: string) =>
     access === null ||
     (id !== "subscription" &&
@@ -109,7 +147,11 @@ export default function OwnerDashboardShell({
   ).filter(([id]) => canAccess(id));
   const navBadge = (id: string) =>
     id === "bookings"
-      ? Number(notificationCounts.bookings || 0)
+      ? Number(
+          actionableBookingCount === null
+            ? notificationCounts.bookings || 0
+            : actionableBookingCount,
+        )
       : id === "messages"
         ? Number(notificationCounts.messages || 0)
         : id === "earnings" || id === "subscription"
@@ -122,6 +164,7 @@ export default function OwnerDashboardShell({
   return (
     <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
       <RoleSessionBoundary scope="salon" />
+      <OwnerRealtimeAlertBridge />
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] overflow-y-auto bg-charcoal px-4 py-5 text-white lg:block">
         <Link
           href={homeHref}
@@ -234,10 +277,14 @@ export default function OwnerDashboardShell({
             <span className="hidden max-w-44 truncate text-xs font-semibold sm:block">
               {salonName}
             </span>
-            <ChevronDown aria-hidden="true" size={16} className="hidden sm:block" />
+            <ChevronDown
+              aria-hidden="true"
+              size={16}
+              className="hidden sm:block"
+            />
           </div>
         </header>
-        <main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">
+        <main className="min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">
           {children}
         </main>
       </div>

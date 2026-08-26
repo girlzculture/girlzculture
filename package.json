@@ -11,6 +11,7 @@
     "test:browser": "playwright test",
     "test:media-browser": "playwright test tests/browser/media-upload-regression.spec.ts --project=chromium",
     "test:google-maps-provider": "playwright test tests/browser/google-maps-provider.spec.ts --project=chromium",
+    "verify:final-completion": "node scripts/verify-final-completion.mjs",
     "verify:billing": "node scripts/verify-subscription-finance.mjs",
     "verify:production-foundation": "node scripts/verify-service-worker-csp.mjs",
     "verify:location": "node scripts/verify-location-foundation.mjs",

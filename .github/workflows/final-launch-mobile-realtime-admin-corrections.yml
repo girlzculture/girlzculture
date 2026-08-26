@@ -1,0 +1,71 @@
+name: Final launch mobile and realtime corrections
+
+on:
+  pull_request:
+    paths:
+      - "src/app/about/**"
+      - "src/app/layout.tsx"
+      - "src/app/admin/content-sections/**"
+      - "src/app/api/admin/bookings/**"
+      - "src/app/api/admin/engine/errors/**"
+      - "src/app/api/admin/featured-campaigns/**"
+      - "src/app/api/admin/finance/payout/**"
+      - "src/app/api/salon/actionable-booking-count/**"
+      - "src/components/PublicContentLiveRefresh.tsx"
+      - "src/components/admin/AdminFeaturedCampaigns.tsx"
+      - "src/components/admin/AdminFinanceDashboard.tsx"
+      - "src/components/admin/AdminManualBookingWizard.tsx"
+      - "src/components/admin/AdminRecordWorkspace.tsx"
+      - "src/components/admin/AdminSalonPayoutAction.tsx"
+      - "src/components/admin/ErrorMonitoringManager.tsx"
+      - "src/components/notifications/PushSetup.tsx"
+      - "src/components/owner/OwnerDashboardResponsiveBridge.tsx"
+      - "src/components/owner/OwnerDashboardShell.tsx"
+      - "src/components/owner/OwnerRealtimeAlertBridge.tsx"
+      - "src/components/owner/OwnerSetupGuideLink.tsx"
+      - "src/components/site/AutoContentCarousel.tsx"
+      - "src/components/site/PublicContentCard.tsx"
+      - "src/components/site/PublicContentSections.tsx"
+      - "src/lib/homePromotionCore.ts"
+      - "src/lib/marketingEntitlements.ts"
+      - "src/lib/ownerRealtime.ts"
+      - "supabase/migrations/20260825120000_public_content_realtime_and_booking_badges.sql"
+      - "supabase/migrations/20260825130000_booking_check_in_exception_workflow.sql"
+      - "supabase/migrations/20260825140000_featured_campaign_owner_controls.sql"
+      - "supabase/migrations/20260825141000_fix_featured_campaign_owner_controls.sql"
+      - "supabase/migrations/20260825150000_stripe_connect_booking_payouts.sql"
+      - "scripts/verify-final-launch-mobile-realtime-admin-corrections.mjs"
+      - "scripts/verify-final-launch-business-workflows.mjs"
+      - "scripts/verify-monitoring-usability.mjs"
+      - ".github/workflows/final-launch-mobile-realtime-admin-corrections.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      # Pull-request builds cannot access protected production secrets. These
+      # nonfunctional values only allow Next.js to evaluate the client module.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/verify-final-launch-mobile-realtime-admin-corrections.mjs
+      - run: node scripts/verify-final-launch-business-workflows.mjs
+      - run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-monitoring-usability.mjs
+      - run: npm run verify:featured
+      - run: npm run verify:migrations
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
