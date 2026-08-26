@@ -18,10 +18,12 @@ function paid(value: unknown) {
 }
 
 function terminalPayout(row: FinanceRow) {
-  return Boolean(row.stripe_transfer_id) ||
+  return (
+    Boolean(row.stripe_transfer_id) ||
     /transferred to salon|paid to bank|refunded|not required|transfer reversed/i.test(
       String(row.payout_status || ""),
-    );
+    )
+  );
 }
 
 function payoutBlocked(row: FinanceRow) {
@@ -54,7 +56,7 @@ export default function AdminSalonPayoutWorkspace({
         .filter(
           (row) =>
             Number(row.net_amount_owed_salon || 0) > 0 ||
-            /awaiting payout|ready to pay|processing|failed|transferred/i.test(
+            /awaiting payout|ready to pay|processing|failed|transferred|reconciliation/i.test(
               String(row.payout_status || ""),
             ),
         )
@@ -69,36 +71,50 @@ export default function AdminSalonPayoutWorkspace({
   async function release(row: FinanceRow) {
     const bookingId = String(row.booking_id || "");
     if (!bookingId || busy) return;
+    const amount = Number(row.net_amount_owed_salon || 0);
+    const confirmed = window.confirm(
+      `Release ${money(amount)} for ${String(
+        row.public_reference || bookingId,
+      )} to ${String(
+        row.salon || "this salon",
+      )}'s connected Stripe account? Stripe will handle the later bank payout on that account's schedule.`,
+    );
+    if (!confirmed) return;
+
     setBusy(bookingId);
     setMessages((current) => ({ ...current, [bookingId]: "" }));
     try {
       const session = await getSessionForScope("admin");
       if (!session) throw new Error("Your admin session has expired.");
-      const response = await fetch("/api/admin/finance/booking-payout", {
+      const response = await fetch("/api/admin/finance/payout", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
         },
         cache: "no-store",
-        body: JSON.stringify({ booking_id: bookingId }),
+        body: JSON.stringify({ booking_id: bookingId, confirm: true }),
       });
       const body = (await readApiResponse(
         response,
         "The salon transfer could not be completed.",
       )) as {
         error?: string;
+        message?: string;
         transfer?: { id?: string; amount?: number; status?: string };
-        already_transferred?: boolean;
-        bank_payout?: string;
+        reconciliation_required?: boolean;
       };
       if (!response.ok) {
         throw new Error(body.error || "The salon transfer could not be completed.");
       }
-      const message = body.already_transferred
-        ? "Stripe transfer evidence was already present and has been reconciled."
-        : `Released ${money(body.transfer?.amount)} to the salon's connected Stripe account. Stripe will handle the bank payout on that account's schedule.`;
-      setMessages((current) => ({ ...current, [bookingId]: message }));
+      setMessages((current) => ({
+        ...current,
+        [bookingId]:
+          body.message ||
+          `Released ${money(
+            body.transfer?.amount,
+          )} to the salon's connected Stripe account. Stripe will handle the bank payout on that account's schedule.`,
+      }));
       await onChanged();
     } catch (error) {
       setMessages((current) => ({
@@ -140,7 +156,12 @@ export default function AdminSalonPayoutWorkspace({
           const bookingId = String(row.booking_id || "");
           const transferred = terminalPayout(row);
           const blocked = payoutBlocked(row);
-          const processing = busy === bookingId || /processing/i.test(String(row.payout_status || ""));
+          const requiresReconciliation = /reconciliation/i.test(
+            String(row.payout_status || row.transfer_status || ""),
+          );
+          const processing =
+            busy === bookingId ||
+            /processing/i.test(String(row.payout_status || ""));
           return (
             <article
               key={bookingId || String(row.public_reference)}
@@ -182,7 +203,11 @@ export default function AdminSalonPayoutWorkspace({
                     Transfer evidence
                   </dt>
                   <dd className="mt-1 break-all text-[11px] text-ink/65">
-                    {String(row.stripe_transfer_id || row.transfer_status || "Not transferred")}
+                    {String(
+                      row.stripe_transfer_id ||
+                        row.transfer_status ||
+                        "Not transferred",
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -198,11 +223,19 @@ export default function AdminSalonPayoutWorkspace({
 
               <button
                 type="button"
-                disabled={processing || transferred || blocked || !bookingId}
+                disabled={
+                  processing ||
+                  transferred ||
+                  blocked ||
+                  requiresReconciliation ||
+                  !bookingId
+                }
                 onClick={() => void release(row)}
                 className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-ink/25"
               >
-                {processing ? (
+                {requiresReconciliation ? (
+                  "Reconcile existing transfer first"
+                ) : processing ? (
                   <>
                     <RefreshCw className="animate-spin" size={15} />
                     Processing transfer…
