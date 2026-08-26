@@ -1,0 +1,36 @@
+name: Diagnose PR47 build
+
+on:
+  push:
+    branches:
+      - agent/final-launch-mobile-realtime-admin-corrections
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:9
+      SUPABASE_URL: http://127.0.0.1:9
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: diagnostic-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: diagnostic-service-placeholder
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+      GIRLZ_CULTURE_RELEASE_ID: pr47-diagnostic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npx tsc --noEmit --pretty false
+      - name: ESLint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
