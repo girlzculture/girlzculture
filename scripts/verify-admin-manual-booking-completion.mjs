@@ -19,6 +19,10 @@ const recordWorkspace = readFileSync(
   "src/components/admin/AdminRecordWorkspace.tsx",
   "utf8",
 );
+const manualWizard = readFileSync(
+  "src/components/admin/AdminManualBookingWizard.tsx",
+  "utf8",
+);
 
 for (const requirement of [
   /manual booking/i,
@@ -26,7 +30,6 @@ for (const requirement of [
   /stylist/i,
   /availability|available time/i,
   /appointment_local|appointment date/i,
-  /send.{0,20}payment.{0,20}link/i,
   /waive.{0,20}deposit|override.{0,20}(?:deposit|payment)/i,
   /checkout\/sessions|Stripe Checkout/i,
   /sendEmail|email.*payment link/i,
@@ -35,6 +38,15 @@ for (const requirement of [
 ]) {
   assert.match(combined, requirement);
 }
+
+// Validate the actual customer-facing Stripe-deposit workflow rather than a
+// single marketing phrase. The UI intentionally names the provider and the
+// deposit purpose, while the response contract returns the secure link.
+assert.match(manualWizard, /Send Stripe deposit link/i);
+assert.match(manualWizard, /payment_method:\s*paymentMethod/);
+assert.match(manualWizard, /body\.payment_link/);
+assert.match(manualWizard, /Secure Stripe payment link created/i);
+assert.match(manualWizard, /navigator\.clipboard\.writeText\(link\)/);
 
 assert.doesNotMatch(
   legacyRoute,
