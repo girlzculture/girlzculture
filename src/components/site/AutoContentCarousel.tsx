@@ -36,7 +36,7 @@ export default function AutoContentCarousel({
   const [paused, setPaused] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [documentVisible, setDocumentVisible] = useState(true);
-  const [carouselVisible, setCarouselVisible] = useState(false);
+  const [carouselVisible, setCarouselVisible] = useState(ACCEPTANCE_MODE);
   const [selectionTime] = useState(() => Date.now());
   const { location, ready } = useCustomerLocation();
 
@@ -244,6 +244,7 @@ export default function AutoContentCarousel({
       <div
         ref={viewportRef}
         tabIndex={0}
+        onPointerEnter={() => pause()}
         onPointerDown={() => pause(false)}
         onPointerUp={() => pause()}
         onPointerCancel={() => pause()}
