@@ -554,6 +554,12 @@ as $$
   limit greatest(1,least(50,result_limit)) offset greatest(0,result_offset)
 $$;
 
+-- The earlier promotion migration defines this function with a different
+-- RETURNS TABLE shape. PostgreSQL cannot replace an existing function when
+-- only its OUT columns change, so drop that exact signature before recreating
+-- it transactionally below.
+drop function if exists public.resolve_homepage_promotion_target(text, uuid);
+
 create or replace function public.resolve_homepage_promotion_target(
   p_target_type text,
   p_target_id uuid
