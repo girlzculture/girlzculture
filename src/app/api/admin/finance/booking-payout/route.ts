@@ -573,8 +573,6 @@ async function POSTHandler(request: Request) {
       feature: "booking-payouts",
       action: "release_to_connected_account",
       actorRole: "admin",
-      recordType: "booking",
-      recordId: bookingId || null,
       safeMessage:
         "The salon transfer was not completed. Review the payment, refund, connected-account, and Stripe balance evidence before retrying.",
     });
