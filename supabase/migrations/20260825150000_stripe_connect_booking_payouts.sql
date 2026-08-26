@@ -34,7 +34,13 @@ create table if not exists public.salon_payout_attempts (
   completed_at timestamptz,
   updated_at timestamptz not null default now(),
   unique (booking_id, attempt_number),
-  check (status <> 'Transferred' or stripe_transfer_id ~ '^tr_[A-Za-z0-9]+$')
+  check (
+    status <> 'Transferred'
+    or (
+      stripe_transfer_id is not null
+      and stripe_transfer_id ~ '^tr_[A-Za-z0-9]+$'
+    )
+  )
 );
 
 create unique index if not exists salon_payout_one_processing_per_booking_idx
@@ -63,6 +69,11 @@ create policy salon_payout_attempts_salon_read
 
 revoke all on table public.salon_payout_attempts from anon, authenticated;
 grant select on table public.salon_payout_attempts to authenticated;
+
+-- This branch previously carried a two-argument draft overload. It was never
+-- a production contract; remove it so a preview that saw an earlier PR head
+-- cannot retain an ambiguous callable function.
+drop function if exists public.admin_reserve_booking_payout(uuid, uuid);
 
 create or replace function public.admin_reserve_booking_payout(
   p_actor_user_id uuid,
