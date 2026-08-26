@@ -7,7 +7,6 @@ import { deliverBookingNotifications, requireAdminPermission, sendEmail, sendSms
 import { getEngineNumber } from "@/lib/engineConfigServer";
 import { siteUrl, stripeRequest } from "@/lib/stripeServer";
 
-type Row = Record<string, unknown>;
 const PAYMENT_METHODS = new Set([
   "send_link",
   "waive",

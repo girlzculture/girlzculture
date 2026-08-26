@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Check, Clipboard, CreditCard, Mail, Scissors, Search, UserRound, UsersRound } from "lucide-react";
-import SafeImage from "@/components/site/SafeImage";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
@@ -82,6 +81,41 @@ export default function AdminManualBookingWizard({
   const calculatedDeposit = Math.round(servicePrice * depositPercentage) / 100;
   const selectedSalonName = String(salon?.name || salons.find((row) => String(row.id) === salonId)?.name || "Salon");
 
+  function changeSalon(nextSalonId: string) {
+    setSalonId(nextSalonId);
+    setSalon(null);
+    setStyles([]);
+    setStylists([]);
+    setStyleId("");
+    setStylistId("");
+    setDate("");
+    setSlots([]);
+    setSlotKey("");
+    setLoadingOptions(false);
+    setLoadingSlots(false);
+    setNotice("");
+  }
+
+  function changeCustomerQuery(nextQuery: string) {
+    setCustomerQuery(nextQuery);
+    setCustomerId("");
+    setCustomers([]);
+  }
+
+  function changeGuestEmail(nextEmail: string) {
+    setGuestEmail(nextEmail);
+    setSlots([]);
+    setSlotKey("");
+    setLoadingSlots(false);
+  }
+
+  function changeDate(nextDate: string) {
+    setDate(nextDate);
+    setSlots([]);
+    setSlotKey("");
+    setLoadingSlots(false);
+  }
+
   useEffect(() => {
     fetch("/api/config?keys=booking.deposit_percentage", { cache: "no-store" })
       .then((response) => response.json())
@@ -93,49 +127,41 @@ export default function AdminManualBookingWizard({
   }, []);
 
   useEffect(() => {
-    if (!salonId) {
-      setSalon(null);
-      setStyles([]);
-      setStylists([]);
-      setStyleId("");
-      setStylistId("");
-      setDate("");
-      setSlots([]);
-      setSlotKey("");
-      return;
-    }
+    if (!salonId) return;
     let live = true;
-    setLoadingOptions(true);
-    setNotice("");
-    adminHeaders()
-      .then((headers) => fetch(`/api/admin/bookings?salon_id=${encodeURIComponent(salonId)}`, { headers, cache: "no-store" }))
-      .then(async (response) => {
-        const body = await readApiResponse(response, "Unable to load this salon's booking options.");
-        if (!response.ok) throw new Error(String(body.error || "Unable to load booking options."));
-        return body as { salon?: Row; styles?: Row[]; stylists?: Row[] };
-      })
-      .then((body) => {
-        if (!live) return;
-        setSalon(body.salon || null);
-        setStyles(Array.isArray(body.styles) ? body.styles : []);
-        setStylists(Array.isArray(body.stylists) ? body.stylists : []);
-        setStyleId("");
-        setStylistId("");
-        setDate("");
-        setSlots([]);
-        setSlotKey("");
-      })
-      .catch((error) => live && setNotice(error instanceof Error ? error.message : "Unable to load booking options."))
-      .finally(() => live && setLoadingOptions(false));
-    return () => { live = false; };
+    const timer = window.setTimeout(() => {
+      if (!live) return;
+      setLoadingOptions(true);
+      setNotice("");
+      adminHeaders()
+        .then((headers) => fetch(`/api/admin/bookings?salon_id=${encodeURIComponent(salonId)}`, { headers, cache: "no-store" }))
+        .then(async (response) => {
+          const body = await readApiResponse(response, "Unable to load this salon's booking options.");
+          if (!response.ok) throw new Error(String(body.error || "Unable to load booking options."));
+          return body as { salon?: Row; styles?: Row[]; stylists?: Row[] };
+        })
+        .then((body) => {
+          if (!live) return;
+          setSalon(body.salon || null);
+          setStyles(Array.isArray(body.styles) ? body.styles : []);
+          setStylists(Array.isArray(body.stylists) ? body.stylists : []);
+        })
+        .catch((error) => {
+          if (live) setNotice(error instanceof Error ? error.message : "Unable to load booking options.");
+        })
+        .finally(() => {
+          if (live) setLoadingOptions(false);
+        });
+    }, 0);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
   }, [salonId]);
 
   useEffect(() => {
     const query = customerQuery.trim();
-    if (query.length < 2) {
-      setCustomers([]);
-      return;
-    }
+    if (customerId || query.length < 2) return;
     let live = true;
     const timer = window.setTimeout(() => {
       adminHeaders()
@@ -149,34 +175,40 @@ export default function AdminManualBookingWizard({
         .catch(() => live && setCustomers([]));
     }, 250);
     return () => { live = false; window.clearTimeout(timer); };
-  }, [customerQuery]);
+  }, [customerId, customerQuery]);
 
   useEffect(() => {
-    if (!salonId || !styleId || !date) {
-      setSlots([]);
-      setSlotKey("");
-      return;
-    }
+    if (!salonId || !styleId || !date) return;
     let live = true;
-    setLoadingSlots(true);
-    setNotice("");
-    const params = new URLSearchParams({ salon_id: salonId, style_id: styleId, date });
-    if (guestEmail) params.set("guest_email", guestEmail);
-    adminHeaders()
-      .then((headers) => fetch(`/api/admin/bookings?${params}`, { headers, cache: "no-store" }))
-      .then(async (response) => {
-        const body = await readApiResponse(response, "Unable to load available appointment times.");
-        if (!response.ok) throw new Error(String(body.error || "Unable to load appointment times."));
-        return body as { slots?: Row[] };
-      })
-      .then((body) => {
-        if (!live) return;
-        setSlots(Array.isArray(body.slots) ? body.slots : []);
-        setSlotKey("");
-      })
-      .catch((error) => live && setNotice(error instanceof Error ? error.message : "Unable to load appointment times."))
-      .finally(() => live && setLoadingSlots(false));
-    return () => { live = false; };
+    const timer = window.setTimeout(() => {
+      if (!live) return;
+      setLoadingSlots(true);
+      setNotice("");
+      const params = new URLSearchParams({ salon_id: salonId, style_id: styleId, date });
+      if (guestEmail) params.set("guest_email", guestEmail);
+      adminHeaders()
+        .then((headers) => fetch(`/api/admin/bookings?${params}`, { headers, cache: "no-store" }))
+        .then(async (response) => {
+          const body = await readApiResponse(response, "Unable to load available appointment times.");
+          if (!response.ok) throw new Error(String(body.error || "Unable to load appointment times."));
+          return body as { slots?: Row[] };
+        })
+        .then((body) => {
+          if (!live) return;
+          setSlots(Array.isArray(body.slots) ? body.slots : []);
+          setSlotKey("");
+        })
+        .catch((error) => {
+          if (live) setNotice(error instanceof Error ? error.message : "Unable to load appointment times.");
+        })
+        .finally(() => {
+          if (live) setLoadingSlots(false);
+        });
+    }, 0);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
   }, [date, guestEmail, salonId, styleId]);
 
   function chooseCustomer(customer: Row) {
@@ -186,6 +218,9 @@ export default function AdminManualBookingWizard({
     setGuestPhone(String(customer.phone || ""));
     setCustomerQuery(String(customer.name || customer.email || ""));
     setCustomers([]);
+    setSlots([]);
+    setSlotKey("");
+    setLoadingSlots(false);
   }
 
   async function submit() {
@@ -263,11 +298,11 @@ export default function AdminManualBookingWizard({
         <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-blush text-magenta"><UserRound size={17}/></span><div><p className="text-[10px] font-bold uppercase text-ink/45">Step 1</p><h2 className="font-serif text-xl text-plum">Customer</h2></div></div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <label className="relative text-xs font-bold md:col-span-3">Find an existing customer (optional)
-            <span className="mt-1 flex min-h-11 items-center gap-2 rounded-lg border border-plum/15 px-3"><Search size={15}/><input value={customerQuery} onChange={(event) => { setCustomerQuery(event.target.value); setCustomerId(""); }} placeholder="Name, email, or phone" className="min-w-0 flex-1 font-normal outline-none"/></span>
+            <span className="mt-1 flex min-h-11 items-center gap-2 rounded-lg border border-plum/15 px-3"><Search size={15}/><input value={customerQuery} onChange={(event) => changeCustomerQuery(event.target.value)} placeholder="Name, email, or phone" className="min-w-0 flex-1 font-normal outline-none"/></span>
             {customers.length ? <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-plum/10 bg-white p-2 shadow-xl">{customers.map((customer) => <button key={String(customer.id)} type="button" onClick={() => chooseCustomer(customer)} className="block w-full rounded-lg p-3 text-left hover:bg-blush/30"><b className="text-plum">{String(customer.name || "Customer")}</b><span className="mt-1 block font-normal text-ink/55">{String(customer.email || "No email")} · {String(customer.phone || "No phone")}</span></button>)}</div> : null}
           </label>
           <label className="text-xs font-bold">Customer name<input value={guestName} onChange={(event) => setGuestName(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal"/></label>
-          <label className="text-xs font-bold">Customer email<input type="email" value={guestEmail} onChange={(event) => setGuestEmail(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal"/></label>
+          <label className="text-xs font-bold">Customer email<input type="email" value={guestEmail} onChange={(event) => changeGuestEmail(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal"/></label>
           <label className="text-xs font-bold">US phone<input type="tel" value={guestPhone} onChange={(event) => setGuestPhone(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal"/></label>
         </div>
       </section>
@@ -275,8 +310,8 @@ export default function AdminManualBookingWizard({
       <section className="rounded-2xl border border-plum/10 bg-white p-5">
         <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-blush text-magenta"><Scissors size={17}/></span><div><p className="text-[10px] font-bold uppercase text-ink/45">Step 2</p><h2 className="font-serif text-xl text-plum">Salon and service</h2></div></div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <label className="text-xs font-bold">Salon<select value={salonId} onChange={(event) => setSalonId(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal"><option value="">Choose salon</option>{[...salons].sort((a,b)=>String(a.name || "").localeCompare(String(b.name || ""))).map((item)=><option key={String(item.id)} value={String(item.id)}>{String(item.name || "Salon")}</option>)}</select></label>
-          <label className="text-xs font-bold">Service<select disabled={!salonId || loadingOptions} value={styleId} onChange={(event) => { setStyleId(event.target.value); setDate(""); setSlotKey(""); }} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal disabled:opacity-50"><option value="">{loadingOptions ? "Loading services…" : "Choose service"}</option>{styles.map((item)=><option key={String(item.id)} value={String(item.id)}>{styleName(item)} · {money(item.base_price || item.price_display_min)}</option>)}</select></label>
+          <label className="text-xs font-bold">Salon<select value={salonId} onChange={(event) => changeSalon(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal"><option value="">Choose salon</option>{[...salons].sort((a,b)=>String(a.name || "").localeCompare(String(b.name || ""))).map((item)=><option key={String(item.id)} value={String(item.id)}>{String(item.name || "Salon")}</option>)}</select></label>
+          <label className="text-xs font-bold">Service<select disabled={!salonId || loadingOptions} value={styleId} onChange={(event) => { setStyleId(event.target.value); setDate(""); setSlots([]); setSlotKey(""); setLoadingSlots(false); }} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal disabled:opacity-50"><option value="">{loadingOptions ? "Loading services…" : "Choose service"}</option>{styles.map((item)=><option key={String(item.id)} value={String(item.id)}>{styleName(item)} · {money(item.base_price || item.price_display_min)}</option>)}</select></label>
         </div>
       </section>
 
@@ -284,7 +319,7 @@ export default function AdminManualBookingWizard({
         <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-blush text-magenta"><UsersRound size={17}/></span><div><p className="text-[10px] font-bold uppercase text-ink/45">Step 3</p><h2 className="font-serif text-xl text-plum">Stylist and verified time</h2></div></div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="text-xs font-bold">Stylist<select disabled={!styleId} value={stylistId} onChange={(event) => { setStylistId(event.target.value); setSlotKey(""); }} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 font-normal disabled:opacity-50"><option value="">Any available stylist</option>{stylists.map((item)=><option key={String(item.id)} value={String(item.id)}>{stylistName(item)}</option>)}</select></label>
-          <label className="text-xs font-bold">Appointment date<input type="date" min={new Date().toISOString().slice(0,10)} disabled={!styleId} value={date} onChange={(event) => setDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal disabled:opacity-50"/></label>
+          <label className="text-xs font-bold">Appointment date<input type="date" min={new Date().toISOString().slice(0,10)} disabled={!styleId} value={date} onChange={(event) => changeDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 font-normal disabled:opacity-50"/></label>
         </div>
         <div className="mt-4">
           <p className="text-xs font-bold">Available appointment times</p>
