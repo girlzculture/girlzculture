@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   routeMonitoringProfile,
@@ -62,7 +63,9 @@ function parsedDate(value: unknown, label: string, required = true) {
   const text = cleanText(value, 50);
   if (!text && !required) return null;
   const timestamp = Date.parse(text);
-  if (!text || !Number.isFinite(timestamp)) rejectRequest(`Choose a valid ${label}.`);
+  if (!text || !Number.isFinite(timestamp)) {
+    rejectRequest(`Choose a valid ${label}.`);
+  }
   return new Date(timestamp).toISOString();
 }
 
@@ -108,7 +111,9 @@ async function GETHandler(request: Request) {
         .not("longitude", "is", null)
         .order("name", { ascending: true })
         .range(from, from + pageSize - 1);
-      if (q) query = query.ilike("name", `%${q.replace(/[%_,()]/g, "")}%`);
+      if (q) {
+        query = query.ilike("name", `%${q.replace(/[%_,()]/g, "")}%`);
+      }
       const result = await query;
       if (result.error) throw result.error;
       return Response.json(
@@ -180,6 +185,7 @@ async function POSTHandler(request: Request) {
         .select()
         .single();
       if (result.error) throw result.error;
+      revalidatePath("/");
       return Response.json({ settings: result.data });
     }
 
@@ -198,6 +204,7 @@ async function POSTHandler(request: Request) {
         p_optional_note: optionalNote,
       });
       if (result.error) throw result.error;
+      revalidatePath("/");
       return Response.json({ ok: true, campaign: result.data });
     }
 
@@ -242,7 +249,9 @@ async function POSTHandler(request: Request) {
             true,
           );
 
-    if (campaignId && !UUID.test(campaignId)) rejectRequest("Campaign ID is invalid.");
+    if (campaignId && !UUID.test(campaignId)) {
+      rejectRequest("Campaign ID is invalid.");
+    }
     if (!UUID.test(salonId)) rejectRequest("Choose an eligible salon.");
     if (!STATUSES.has(status) || status === "Archived") {
       rejectRequest("Choose Draft, Scheduled, Active, Paused, or Expired.");
@@ -297,6 +306,7 @@ async function POSTHandler(request: Request) {
       p_optional_note: optionalNote,
     });
     if (result.error) throw result.error;
+    revalidatePath("/");
     return Response.json({
       ok: true,
       campaign_id: result.data,
