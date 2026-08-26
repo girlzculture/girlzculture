@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AboutStoryDialog from "@/components/public/AboutStoryDialog";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import PublicContentSections from "@/components/site/PublicContentSections";
 import SafeImage from "@/components/site/SafeImage";
@@ -39,7 +40,15 @@ export default async function About() {
     hero_subtitle:
       "Girlz Culture connects you with skilled beauty professionals serving your community.",
     hero_image_url: "/images/hero-braids.jpg",
-    sections: [],
+    labels: { read_more_label: "Read more" },
+    sections: [
+      {
+        id: "about-story",
+        type: "text",
+        title: "Our Story",
+        body: "Girlz Culture was created to make it easier to discover skilled beauty professionals, compare clear service information, and book with confidence. We are building practical tools that help clients make informed choices while helping salons reach, serve, and retain more customers.",
+      },
+    ],
   });
   if (!page) notFound();
 
@@ -157,6 +166,8 @@ export default async function About() {
         }
       : undefined;
   const additionalSections = additionalPage?.sections || [];
+  const storyTitle = String(story?.title || "Our Story");
+  const storyBody = String(story?.body || page.hero_subtitle || "");
 
   return (
     <main className="min-h-screen bg-white text-ink">
@@ -181,6 +192,12 @@ export default async function About() {
             <p className="mt-3 line-clamp-4 max-w-xl text-[11px] leading-4 text-white/80 md:mt-5 md:line-clamp-none md:text-sm md:leading-6">
               {page.hero_subtitle}
             </p>
+            <AboutStoryDialog
+              title={storyTitle}
+              body={storyBody}
+              label={String(page.labels?.read_more_label || "Read more")}
+              className="mt-2 inline-flex min-h-10 items-center text-[11px] font-bold text-amber underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber md:mt-3 md:text-sm"
+            />
             <div className="mt-4 flex flex-col gap-2 md:mt-6 md:flex-row md:gap-3">
               <Link
                 href="/salons"
