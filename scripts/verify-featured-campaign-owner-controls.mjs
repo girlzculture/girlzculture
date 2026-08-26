@@ -19,13 +19,15 @@ for (const requirement of [
   /statusTabs/,
   /mode=salons/,
   /Published customer pages receive the change automatically/,
+  /do not require an[\s\S]*internal reason/i,
+  /label="Internal note \(optional\)" name="internal_note"/,
 ]) {
   assert.match(ui, requirement);
 }
 assert.doesNotMatch(
   ui,
-  /internal reason.*required|required.*internal reason/i,
-  "Platform-credit and complimentary placements must not require an internal reason.",
+  /name="internal_note"[^>]*\brequired\b/,
+  "Platform-credit and complimentary placements must keep the internal note optional.",
 );
 
 for (const requirement of [
@@ -36,6 +38,7 @@ for (const requirement of [
   /complimentary_admin/,
   /page_size/,
   /order\("name"/,
+  /revalidatePath\("\/"\)/,
 ]) {
   assert.match(route, requirement);
 }
@@ -49,6 +52,7 @@ for (const requirement of [
   /campaign_id_snapshot/,
   /deleted_at/,
   /Until I change it|infinity|ends_at is null/i,
+  /drop function if exists public\.resolve_homepage_promotion_target\(text, uuid\)/,
 ]) {
   assert.match(migration, requirement);
 }
