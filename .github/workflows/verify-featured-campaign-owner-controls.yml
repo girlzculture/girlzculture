@@ -1,0 +1,40 @@
+name: Verify Featured Salon owner controls
+
+on:
+  pull_request:
+    paths:
+      - "src/components/admin/AdminFeaturedCampaigns.tsx"
+      - "src/app/api/admin/featured-campaigns/route.ts"
+      - "src/lib/marketingEntitlements.ts"
+      - "supabase/migrations/20260825140000_featured_campaign_owner_controls.sql"
+      - "scripts/verify-featured-campaign-owner-controls.mjs"
+      - ".github/workflows/verify-featured-campaign-owner-controls.yml"
+  push:
+    branches:
+      - agent/final-launch-mobile-realtime-admin-corrections
+    paths:
+      - "src/components/admin/AdminFeaturedCampaigns.tsx"
+      - "src/app/api/admin/featured-campaigns/route.ts"
+      - "src/lib/marketingEntitlements.ts"
+      - "supabase/migrations/20260825140000_featured_campaign_owner_controls.sql"
+      - "scripts/verify-featured-campaign-owner-controls.mjs"
+      - ".github/workflows/verify-featured-campaign-owner-controls.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/verify-featured-campaign-owner-controls.mjs
+      - run: npm run verify:migrations
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
