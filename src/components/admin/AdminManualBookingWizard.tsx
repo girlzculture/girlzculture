@@ -221,9 +221,12 @@ export default function AdminManualBookingWizard({
           payment_method: paymentMethod,
         }),
       });
-      const body = await readApiResponse(response, "Unable to prepare this booking.");
+      const body = await readApiResponse(response, "Unable to prepare this booking.") as Row;
       if (!response.ok) throw new Error(String(body.error || "Unable to prepare this booking."));
-      setResult(body as Row);
+      const createdBooking = body.booking && typeof body.booking === "object"
+        ? body.booking as Row
+        : null;
+      setResult(body);
       if (body.payment_link) {
         setNotice(Array.isArray(body.warnings) && body.warnings.length
           ? `Secure payment link created. ${body.warnings.join(" ")}`
