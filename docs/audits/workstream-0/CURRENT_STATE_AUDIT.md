@@ -123,7 +123,7 @@ The matrix remains pinned to application baseline `52af829ae8934a6607c32e1372c55
 1. Every row retains a unique `Requirement_ID` and carries it in behavior, evidence, action and verification text.
 2. Positive implementation claims cite existing paths and direct source-line excerpts.
 3. `Complete and correct` requires a directly relevant named verifier or browser test.
-4. `WS01-001` through `WS01-016` use manual requirement-by-requirement source and test review; no keyword-overlap score or term-count gate is accepted as proof for those rows.
+4. `WS01-001` through `WS01-018` use manual requirement-by-requirement source and test review; no keyword-overlap score or term-count gate is accepted as proof for those rows.
 5. `Missing` rows use negative search evidence; adjacent files are related only.
 6. `Unsafe` rows identify a traceable risk basis.
 7. Routes and database objects are derived only from real route files and source/SQL declarations.
@@ -141,24 +141,25 @@ The matrix remains pinned to application baseline `52af829ae8934a6607c32e1372c55
 | Unique Verification_Method narratives | 620 |
 | Tracked text sources indexed | 780 |
 | Structural/path validation issues | 0 |
-| Rows recalibrated from the first audit classification | 0 |
+| Classification changes during the earlier automated evidence-hardening pass | 0 |
+| Classification changes during the complete eighteen-row manual Workstream 1 review | 5 |
 
-The recalibration is intentionally conservative: a source file or a passing neighboring test is not sufficient by itself to classify a compound requirement as complete.
+The earlier automated evidence-hardening pass changed no classifications. The later requirement-by-requirement manual Workstream 1 review changed five; the two values describe different passes and are reported separately. Both passes were intentionally conservative: a source file or a passing neighboring test is not sufficient by itself to classify a compound requirement as complete.
 
-### Manual semantic review of `WS01-001` through `WS01-016` — 2026-08-28
+### Manual semantic review of `WS01-001` through `WS01-018` — 2026-08-28
 
-The sixteen authorized readability, theme-consistency and accessibility rows were manually retraced through the actual CSS, components, route surfaces, package graph, Playwright suites, verifier scripts and GitHub Actions workflows. Their prior salon-lifecycle, moderation, storage and payment citations were unrelated to the visual requirements and have been removed. Every replacement citation now identifies the exact selector, token, component, test, package or negative search that proves or limits that row.
+All eighteen readability, theme-consistency and accessibility rows were manually retraced through the actual CSS, components, route surfaces, package graph, Playwright suites, verifier scripts and GitHub Actions workflows. Their prior salon-lifecycle, moderation, storage and payment citations were unrelated to the visual requirements and have been removed. Every replacement citation now identifies the exact selector, token, component, test, package or negative search that proves or limits that row.
 
-The review found a real global readability foundation: charcoal body/control text, a muted-color floor, minimum small-text sizing, explicit placeholder styling, a global focus-visible outline, widespread native disabled attributes, responsive screenshots and keyboard/focus tests. It also found material limits: disabled-state presentation is locally composed, important content sometimes uses muted treatments, one `text-slate-600` bypass remains, the color verifier misses Tailwind/inline/HSL text-color forms and is not invoked directly by CI, and no comprehensive automated accessibility or computed-contrast runner exists. A manual `npm run verify:design-system` run also failed on the current source literal `rgba(45,15,50,.04)` in `AdminContentManager.tsx`, proving that the scanner executes but that the audited baseline is not clean.
+The review found a real global readability foundation: charcoal body/control text, a muted-color floor, minimum small-text sizing, explicit placeholder styling, a global focus-visible outline, widespread native disabled attributes, responsive screenshots and keyboard/focus tests. It also found material limits: disabled-state presentation is locally composed, important content sometimes uses muted treatments, one `text-slate-600` bypass remains, the color verifier misses Tailwind/inline/HSL text-color forms and is not invoked directly by CI, and no comprehensive automated accessibility or computed-contrast runner exists. `WS01-017` and `WS01-018` additionally confirmed that ordinary footer/legal/newsletter copy uses `text-white/45` through `/70` on teal; direct alpha-composited checks are approximately 2.03:1–2.93:1 and the committed mobile footer screenshot visibly shows the pale copy. A manual `npm run verify:design-system` run also failed on the current source literal `rgba(45,15,50,.04)` in `AdminContentManager.tsx`, proving that the scanner executes but that the audited baseline is not clean.
 
-The matrix contains eighteen IDs beginning with `WS01-`, although the locked review scope authorized exactly `WS01-001` through `WS01-016`. To preserve the scope lock, `WS01-017` and `WS01-018` were not edited and remain preliminary machine-assisted rows. Workstreams 2–18 also remain a preliminary machine-assisted requirements index pending their own scoped semantic reviews.
+The matrix contains eighteen IDs beginning with `WS01-`; all eighteen now have direct manual semantic source/test review. Workstreams 2–18 remain a preliminary machine-assisted requirements index pending their own scoped semantic reviews.
 
-| Classification | Authorized 16 before | Authorized 16 after | All 18 `WS01` before | All 18 `WS01` after |
-|---|---:|---:|---:|---:|
-| Complete but weak | 3 | 4 | 3 | 4 |
-| Partially implemented | 13 | 12 | 15 | 14 |
+| Classification | All 18 before manual review | After `WS01-001`–`WS01-016` | Final after `WS01-017`–`WS01-018` |
+|---|---:|---:|---:|
+| Complete but weak | 3 | 4 | 4 |
+| Partially implemented | 15 | 14 | 14 |
 
-Classification changes were evidence-driven: `WS01-001` and `WS01-013` moved to **Complete but weak** because a real global placeholder/entered-text distinction exists but lacks computed tests and complete select coverage; `WS01-009` moved to **Complete but weak** because a real failing source scanner exists but misses utility/inline/HSL forms and direct CI execution; `WS01-010` and `WS01-011` moved to **Partially implemented** because current responsive, screenshot, keyboard and focus tests do not directly prove every required visual context, validation/error readability or computed focus/contrast state. These changes increase the overall Complete-but-weak count by one and reduce Partially-implemented by one; all other classifications are unchanged.
+Classification changes were evidence-driven: `WS01-001` and `WS01-013` moved to **Complete but weak** because a real global placeholder/entered-text distinction exists but lacks computed tests and complete select coverage; `WS01-009` moved to **Complete but weak** because a real failing source scanner exists but misses utility/inline/HSL forms and direct CI execution; `WS01-010` and `WS01-011` moved to **Partially implemented** because current responsive, screenshot, keyboard and focus tests do not directly prove every required visual context, validation/error readability or computed focus/contrast state. `WS01-017` and `WS01-018` remained **Partially implemented**: substantial global protections exist, but the universal readability statement and the absence of faint component-default copy are disproved or unproven by the footer contrast failure, local opacity/bypass styles and missing computed/authenticated acceptance. Across all eighteen rows, these five changes increase the overall Complete-but-weak count by one and reduce Partially-implemented by one; all other classifications are unchanged.
 
 ## Prior coding-chat changes identified
 
@@ -369,7 +370,7 @@ Product commerce, broad subscription billing and self-service advertising have a
 - CI browser acceptance used a local acceptance Supabase fixture.
 - Historical docs were not treated as current runtime proof.
 - GitHub code-search counts and monitoring inventory disagree by one API route; this requires local generated inventory reconciliation.
-- `WS01-001` through `WS01-016` received manual semantic source/test review. `WS01-017`, `WS01-018` and Workstreams 2–18 remain preliminary machine-assisted evidence pending scoped manual review; classifications and business-risk decisions still require founder and domain-specialist review before implementation.
+- All eighteen `WS01-*` rows received manual semantic source/test review. Workstreams 2–18 remain preliminary machine-assisted evidence pending scoped manual review; classifications and business-risk decisions still require founder and domain-specialist review before implementation.
 
 ## Deliverables
 
