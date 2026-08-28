@@ -447,3 +447,11 @@ Useful current or historical documents include:
 - migration/release documentation.
 
 Historical reports must be read with their commit/date because counts and completion claims have changed.
+
+## Audit source snapshot and evidence index
+
+The hardening pass indexed 780 tracked source, configuration and test files while excluding dependencies, build output, temporary audit workflows and the audit documents themselves.
+
+Candidate search results were not treated as proof. Paths had to exist; positive evidence had to pass a two-term semantic gate; direct evidence includes line excerpts; routes and database objects come from real declarations; and missing capabilities use negative evidence.
+
+The temporary export and hardening workflows are removed before the final audit commit.

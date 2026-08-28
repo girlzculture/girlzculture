@@ -429,3 +429,9 @@ The acceptance harness is a fixture. Reproduce in provider-backed staging and in
 ### Netlify build succeeds but production data fails
 
 Check the exact deploy commit, production migration state, environment name/URL pair and provider configuration. Roll back or forward-fix according to the approved runbook.
+
+## Audit-matrix validation procedure
+
+A reviewer should parse the CSV with `utf-8-sig`, assert 620 rows and 21 required columns, require unique IDs and the seven approved classifications, resolve every cited path, reject audit self-citation, require the semantic gate for positive rows, require a direct test for `Complete and correct`, require negative evidence for `Missing`, require risk evidence for `Unsafe`, and compare the PR with `main` to confirm that only six audit files remain.
+
+This validates the audit documents; it does not replace authenticated, provider-backed, financial, accessibility or production acceptance.

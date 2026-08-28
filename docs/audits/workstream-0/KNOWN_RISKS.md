@@ -423,3 +423,13 @@ The risk register below separates launch blockers from later scaling dependencie
 - ADS-001
 - sponsored/editorial policy, inventory/capacity and payment approval
 - attribution/reporting foundation
+
+## Audit-evidence risk and mitigation
+
+### R-AUDIT-001 — Generic or mismatched evidence can create false confidence
+
+**Initial condition:** Some first-pass rows reused broad workstream references or selected files/tests that did not directly establish the exact requirement.
+
+**Mitigation:** All 620 rows were regenerated; paths are existence-checked; positive claims require line evidence and semantic relevance; missing rows use negative evidence; complete rows require a direct test; self-citation is rejected; and the final diff is limited to six documents.
+
+**Residual risk:** Human review is still required for product policy, legal sufficiency, financial architecture and launch readiness.

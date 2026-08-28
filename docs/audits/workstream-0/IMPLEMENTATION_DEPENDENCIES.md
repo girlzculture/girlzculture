@@ -316,3 +316,7 @@ The repository should follow the handoff sequence:
 - Tax/legal decisions precede product commerce.
 - Attribution precedes ROAS and campaign-performance claims.
 - Consent/preference foundation precedes WhatsApp and marketing messaging.
+
+## Audit-review dependency before remediation
+
+The hardened matrix is an evidence map, not automatic authorization to implement. Founder and domain owners must review unsafe, duplicated, missing and partial rows; specialists must review payments, tax, privacy, accessibility and legal rows; and engineering must re-trace cited symbols if `main` advances beyond `52af829ae8934a6607c32e1372c55d9f846d2d1b`. Implementation issues must link to the stable `Requirement_ID`.

@@ -112,6 +112,39 @@ Only the root `AGENTS.md` was found. No applicable nested `AGENTS.md` was identi
 7. Recorded exact paths, objects, routes, tests and dependencies in `FEATURE_GAP_MATRIX.csv`.
 8. Did not fix findings during Workstream 0.
 
+## Evidence-integrity hardening — 2026-08-28
+
+A correction pass was performed after review found that some original matrix rows cited workstream-level or machine-selected references that were too broad, weakly related, or unrelated to the exact requirement. Those references were not retained as proof.
+
+The matrix remains pinned to application baseline `52af829ae8934a6607c32e1372c55d9f846d2d1b`. The temporary source-export and hardening workflows are audit tooling only and are removed from the final pull-request diff.
+
+### Row-level evidence rules
+
+1. Every row retains a unique `Requirement_ID` and carries it in behavior, evidence, action and verification text.
+2. Positive implementation claims cite existing paths and direct source-line excerpts.
+3. `Complete and correct` requires a directly relevant named verifier or browser test.
+4. Positive classifications pass a semantic gate: a cited implementation file matches at least two requirement terms.
+5. `Missing` rows use negative search evidence; adjacent files are related only.
+6. `Unsafe` rows identify a traceable risk basis.
+7. Routes and database objects are derived only from real route files and source/SQL declarations.
+8. Audit documents cannot cite themselves as product evidence.
+
+### Hardening validation
+
+| Check | Result |
+|---|---:|
+| Matrix rows | 620 |
+| Required columns | 21 |
+| Unique requirement IDs | 620 |
+| Unique Current_Behavior narratives | 620 |
+| Unique Evidence narratives | 620 |
+| Unique Verification_Method narratives | 620 |
+| Tracked text sources indexed | 780 |
+| Structural/path validation issues | 0 |
+| Rows recalibrated from the first audit classification | 0 |
+
+The recalibration is intentionally conservative: a source file or a passing neighboring test is not sufficient by itself to classify a compound requirement as complete.
+
 ## Prior coding-chat changes identified
 
 ### PR #46 content/search pass
@@ -319,7 +352,7 @@ Product commerce, broad subscription billing and self-service advertising have a
 - CI browser acceptance used a local acceptance Supabase fixture.
 - Historical docs were not treated as current runtime proof.
 - GitHub code-search counts and monitoring inventory disagree by one API route; this requires local generated inventory reconciliation.
-- The feature matrix is evidence-backed but must be reviewed by the founder and domain specialists before implementation decisions.
+- The feature matrix passed structural, path-existence and semantic-evidence gates, but classifications and business-risk decisions still require founder and domain-specialist review before implementation.
 
 ## Deliverables
 
