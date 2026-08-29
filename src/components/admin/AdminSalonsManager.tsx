@@ -547,7 +547,7 @@ export default function AdminSalonsManager() {
           </button>
         </div>
         {activeFilterChips.length ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
+          <div role="group" className="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
             <span className="text-[10px] font-bold uppercase tracking-wide text-ink/50">
               Active filters
             </span>
@@ -570,7 +570,7 @@ export default function AdminSalonsManager() {
         {radius && !center ? (
           <p
             role="alert"
-            className="mt-3 flex items-center gap-2 text-xs text-red-700"
+            className="mt-3 flex items-center gap-2 text-xs gc-text-danger"
           >
             <AlertTriangle size={15} />
             Choose a radius center before distance filtering can run.
@@ -582,7 +582,7 @@ export default function AdminSalonsManager() {
           role="alert"
           className="rounded-[14px] border border-red-200 bg-white p-6 text-center"
         >
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm gc-text-danger">{error}</p>
           <button
             onClick={() => void load()}
             className="mt-3 inline-flex items-center gap-2 rounded-lg bg-magenta px-4 py-2 text-xs font-bold text-white"
@@ -680,7 +680,7 @@ export default function AdminSalonsManager() {
                       </small>
                     ) : null}
                     {salon.address_needs_review ? (
-                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold text-amber-800">
+                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold gc-text-warning">
                         <AlertTriangle size={11} />
                         Needs review
                       </span>
@@ -834,7 +834,7 @@ export default function AdminSalonsManager() {
             <button
               disabled={loading || page <= 1}
               onClick={() => setPage((value) => Math.max(1, value - 1))}
-              className="grid min-h-10 min-w-10 place-items-center rounded border disabled:opacity-40"
+              className="grid min-h-10 min-w-10 place-items-center rounded border gc-disabled-control"
             >
               <ChevronLeft size={16} />
             </button>
@@ -844,7 +844,7 @@ export default function AdminSalonsManager() {
             <button
               disabled={loading || page >= pages}
               onClick={() => setPage((value) => Math.min(pages, value + 1))}
-              className="grid min-h-10 min-w-10 place-items-center rounded border disabled:opacity-40"
+              className="grid min-h-10 min-w-10 place-items-center rounded border gc-disabled-control"
             >
               <ChevronRight size={16} />
             </button>
@@ -882,10 +882,10 @@ function Filter({
 function StatusBadge({ value }: { value: string }) {
   const status = String(value || "Pending");
   const classes = /active/i.test(status)
-    ? "bg-emerald-50 text-emerald-800"
+    ? "bg-emerald-50 gc-text-success"
     : /suspend|offboard/i.test(status)
-      ? "bg-red-50 text-red-700"
-      : "bg-amber/15 text-amber-800";
+      ? "bg-red-50 gc-text-danger"
+      : "bg-amber/15 gc-text-warning";
   return (
     <span
       className={`ml-auto inline-flex rounded-full px-2.5 py-1 text-[9px] font-bold ${classes}`}
@@ -1151,7 +1151,7 @@ export function AdminSalonDetail({
           {error ? (
             <p
               role="alert"
-              className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+              className="rounded-lg bg-red-50 p-3 text-sm gc-text-danger"
             >
               {error}
             </p>
@@ -1199,7 +1199,7 @@ export function AdminSalonDetail({
                       .map(([key, check]) => (
                         <div key={key} className="flex items-center justify-between gap-3 rounded-lg bg-cream/70 px-3 py-2 text-xs">
                           <span>{check.label || key}</span>
-                          <b className={check.passed ? "text-emerald-700" : "text-red-700"}>
+                          <b className={check.passed ? "gc-text-success" : "gc-text-danger"}>
                             {check.passed ? "Passed" : "Missing"}
                           </b>
                         </div>
@@ -1236,14 +1236,14 @@ export function AdminSalonDetail({
                   · {salon.geocode_status || "pending"}
                 </p>
                 {salon.geocode_failure_reason ? (
-                  <p className="mt-2 rounded-lg bg-coral/10 p-3 text-xs text-[#795516]">
+                  <p className="mt-2 rounded-lg bg-coral/10 p-3 text-xs gc-text-warning">
                     Internal review note: {salon.geocode_failure_reason}
                   </p>
                 ) : null}
                 <button
                   disabled={busy === "geocode"}
                   onClick={() => void retryGeocode()}
-                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta disabled:opacity-50"
+                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta gc-disabled-control"
                 >
                   <LocateFixed size={14} />
                   {busy === "geocode" ? "Verifying…" : "Retry geocoding"}
@@ -1264,13 +1264,13 @@ export function AdminSalonDetail({
                         disabled={Boolean(busy) || (value === "Active" && data.lifecycle?.all_required_complete !== true)}
                         onClick={() => void statusAction(value)}
                         key={value}
-                        className={`min-h-10 rounded-lg px-4 text-xs font-bold disabled:opacity-40 ${["Suspended", "Offboarded"].includes(value) ? "border border-red-400 text-red-700" : "bg-plum text-white"}`}
+                        className={`min-h-10 rounded-lg px-4 text-xs font-bold gc-disabled-control ${["Suspended", "Offboarded"].includes(value) ? "border border-red-400 gc-text-danger" : "bg-plum text-white"}`}
                       >
                         Set {value}
                       </button>
                     ))}
                 </div>
-                {salon.status === "Offboarded" ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50/60 p-3"><b className="text-xs text-red-800">Archive or permanently remove test data</b><p className="mt-1 text-[10px] leading-4 text-red-700">Offboarding is the safe archive action and preserves bookings, finance, reviews, and audit history. Permanent deletion is available only for a record explicitly registered as test data after its dependency preview is reviewed.</p><Link href="/admin/engine?category=data_management" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-400 px-4 text-xs font-bold text-red-700">Open protected test-data deletion</Link></div> : null}
+                {salon.status === "Offboarded" ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50/60 p-3"><b className="text-xs gc-text-danger">Archive or permanently remove test data</b><p className="mt-1 text-[10px] leading-4 gc-text-danger">Offboarding is the safe archive action and preserves bookings, finance, reviews, and audit history. Permanent deletion is available only for a record explicitly registered as test data after its dependency preview is reviewed.</p><Link href="/admin/engine?category=data_management" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-400 px-4 text-xs font-bold gc-text-danger">Open protected test-data deletion</Link></div> : null}
               </section>
               <section className="rounded-[13px] border border-plum/10 bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1349,7 +1349,7 @@ export function AdminSalonDetail({
                           type="button"
                           disabled={Boolean(busy)}
                           onClick={() => void reviewVanity("approve")}
-                          className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-45"
+                          className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white gc-disabled-control"
                         >
                           {busy === "vanity-approve"
                             ? "Approving…"
@@ -1359,7 +1359,7 @@ export function AdminSalonDetail({
                           type="button"
                           disabled={Boolean(busy)}
                           onClick={() => void reviewVanity("reject")}
-                          className="min-h-10 rounded-lg border border-red-400 px-4 text-xs font-bold text-red-700 disabled:opacity-45"
+                          className="min-h-10 rounded-lg border border-red-400 px-4 text-xs font-bold gc-text-danger gc-disabled-control"
                         >
                           {busy === "vanity-reject" ? "Rejecting…" : "Reject"}
                         </button>

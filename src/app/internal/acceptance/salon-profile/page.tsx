@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescription";
 import SalonRatingSummary from "@/components/public/SalonRatingSummary";
 import SalonStyles from "@/components/SalonStyles";
@@ -8,6 +9,8 @@ const description = Array.from(
 ).join(" ");
 
 export default function SalonProfileAcceptancePage() {
+  if (process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS !== "true") notFound();
+
   return (
     <main className="mx-auto min-h-screen max-w-4xl bg-cream p-6 text-ink">
       <h1 className="font-serif text-3xl">Salon profile acceptance</h1>

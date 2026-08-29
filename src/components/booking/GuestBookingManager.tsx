@@ -281,7 +281,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
                 onClick={() =>
                   void act("accept_reschedule", String(pendingProposal.id))
                 }
-                className="min-h-11 rounded-xl bg-magenta px-5 text-sm font-bold text-white disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-magenta px-5 text-sm font-bold text-white gc-disabled-control"
               >
                 Accept selected time
               </button>
@@ -291,7 +291,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
                 onClick={() =>
                   void act("decline_reschedule", String(pendingProposal.id))
                 }
-                className="min-h-11 rounded-xl border border-magenta px-5 text-sm font-bold text-magenta disabled:opacity-50"
+                className="min-h-11 rounded-xl border border-magenta px-5 text-sm font-bold text-magenta gc-disabled-control"
               >
                 Decline proposal
               </button>
@@ -333,7 +333,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
                   void act("cancel");
                 }
               }}
-              className="mt-4 min-h-11 rounded-xl border border-magenta px-5 text-sm font-bold text-magenta disabled:opacity-50"
+              className="mt-4 min-h-11 rounded-xl border border-magenta px-5 text-sm font-bold text-magenta gc-disabled-control"
             >
               Cancel booking
             </button>
@@ -349,7 +349,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
           <h2 className="mt-2 font-serif text-3xl">
             {String(data.salon.name)}
           </h2>
-          <p className="mt-4 flex gap-2 text-sm leading-6 text-white/75">
+          <p className="mt-4 flex gap-2 text-sm leading-6 gc-text-on-dark-muted">
             <MapPin className="shrink-0" size={18} /> {address}
           </p>
           <div className="mt-5 grid gap-2 text-sm">

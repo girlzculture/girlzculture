@@ -183,7 +183,7 @@ export default function AdminSalonPayoutWorkspace({
 
               <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg bg-white p-3">
-                  <dt className="text-[9px] font-bold uppercase text-ink/45">
+                  <dt className="text-[9px] font-bold uppercase gc-text-secondary">
                     Deposit
                   </dt>
                   <dd className="mt-1 font-bold text-plum">

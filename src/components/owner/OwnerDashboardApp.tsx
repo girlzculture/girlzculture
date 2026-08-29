@@ -786,10 +786,10 @@ export default function OwnerDashboardApp({
           role="alert"
           className="mb-4 rounded-[14px] border border-red-200 bg-red-50 p-4"
         >
-          <b className="font-serif text-lg text-red-800">
+          <b className="font-serif text-lg gc-text-danger">
             This salon is suspended
           </b>
-          <p className="mt-1 text-xs leading-5 text-red-700">
+          <p className="mt-1 text-xs leading-5 gc-text-danger">
             Your dashboard and records remain available, but the public profile
             is hidden and new bookings are disabled. Contact platform support
             for status details.
@@ -1233,7 +1233,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
               type="button"
               disabled={Boolean(busy)}
               onClick={() => void confirmUpgrade()}
-              className="rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
+              className="rounded-lg bg-magenta px-5 py-3 text-xs font-bold text-white gc-disabled-control"
             >
               {busy === "confirm-upgrade"
                 ? "Confirming with Stripe…"
@@ -1392,7 +1392,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                     { plan: name },
                   )
                 }
-                className={`mt-6 min-h-11 w-full rounded-[8px] text-xs font-bold disabled:opacity-60 ${current ? "border border-green-500 text-green-700" : "bg-magenta text-white"}`}
+                className={`mt-6 min-h-11 w-full rounded-[8px] text-xs font-bold gc-disabled-control ${current ? "border border-green-500 gc-text-success" : "bg-magenta text-white"}`}
               >
                 {current
                   ? "Current active plan"
@@ -1484,7 +1484,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 <td className="pr-3">
                   <b>{String(event.event_type || "Billing event")}</b>
                   {event.failure_reason ? (
-                    <span className="block text-red-700">
+                    <span className="block gc-text-danger">
                       {String(event.failure_reason)}
                     </span>
                   ) : null}
@@ -1652,7 +1652,7 @@ function Overview({ c }: { c: Ctx }) {
       />
       <SalonOpenStatusControl salon={c.salon} />
       {cancellationRate > c.cancellationThreshold ? (
-        <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 p-4 text-xs text-red-800">
+        <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 p-4 text-xs gc-text-danger">
           <b>
             Your salon cancellation rate is above {c.cancellationThreshold}%.
           </b>
@@ -2606,7 +2606,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           }
         }}
       /> : null}
-      {!recordId ? <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+      {!recordId ? <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs gc-text-link">
         <Info size={16} className="shrink-0" aria-hidden="true" />
         <span>
           Published products can be purchased securely for pickup or shipping.
@@ -2647,7 +2647,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   {product.sale_price !== null &&
                   product.sale_price !== undefined ? (
                     <>
-                      <span className="mr-1 text-[10px] text-ink/40 line-through">
+                      <span className="mr-1 text-[10px] gc-text-secondary line-through">
                         ${Number(product.price || 0).toFixed(2)}
                       </span>
                       <span className="text-magenta">
@@ -2664,7 +2664,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     ? ` · ${Number(product.inventory_quantity || 0)} in stock`
                     : " · stock not tracked"}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1 text-[8px] font-bold"><span className={`rounded-full px-2 py-1 ${product.pickup_enabled ? "bg-emerald-100 text-emerald-800" : "bg-cream text-ink/45"}`}>{product.pickup_enabled ? "Pickup" : "No pickup"}</span><span className={`rounded-full px-2 py-1 ${product.shipping_enabled ? "bg-blue-100 text-blue-800" : "bg-cream text-ink/45"}`}>{product.shipping_enabled ? "Shipping" : "No shipping"}</span>{hasPromotion(product) ? <span className="rounded-full bg-blush px-2 py-1 text-magenta">Promotion</span> : null}</div>
+                <div className="mt-2 flex flex-wrap gap-1 text-[8px] font-bold"><span className={`rounded-full px-2 py-1 ${product.pickup_enabled ? "bg-emerald-100 gc-text-success" : "bg-cream gc-text-disabled"}`}>{product.pickup_enabled ? "Pickup" : "No pickup"}</span><span className={`rounded-full px-2 py-1 ${product.shipping_enabled ? "bg-blue-100 gc-text-link" : "bg-cream gc-text-disabled"}`}>{product.shipping_enabled ? "Shipping" : "No shipping"}</span>{hasPromotion(product) ? <span className="rounded-full bg-blush px-2 py-1 text-magenta">Promotion</span> : null}</div>
               </div>
             </button>
           ))}
@@ -2839,7 +2839,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   c.setSelectedProduct(null);
                   router.push(productListHref);
                 }}
-                className="min-h-11 w-full rounded-[8px] border border-red-200 text-xs font-bold text-red-700"
+                className="min-h-11 w-full rounded-[8px] border border-red-200 text-xs font-bold gc-text-danger"
               >
                 Archive product
               </button>
@@ -3078,7 +3078,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   if (!workspace) {
     return <>
       <OwnerDetailHeader title={booking ? "Calendar appointment" : blockout ? "Availability override" : "Availability details"} subtitle={booking ? `Booking #${bookingReference(booking)}` : blockout ? `Blocked until ${dateText(blockout.ends_at, timeZone)}` : "This record could not be found."} fallbackHref="/salon/dashboard/availability" status={booking ? String(booking.status || "Confirmed") : blockout ? (blockout.released_at ? "Released" : "Active override") : "Unavailable"}/>
-      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Customer</b>{String(booking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Appointment</b>{dateText(booking.appointment_datetime, timeZone)}<br/>{styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Window</b>{dateText(blockout.starts_at, timeZone)} – {dateText(blockout.ends_at, timeZone)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
+      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b>{String(booking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone)}<br/>{styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone)} – {dateText(blockout.ends_at, timeZone)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
     </>;
   }
 
@@ -3103,7 +3103,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <button
             disabled={Boolean(busy)}
             onClick={() => void block("salon_today")}
-            className="min-h-11 rounded-[8px] bg-plum px-5 text-xs font-bold text-white disabled:opacity-60"
+            className="min-h-11 rounded-[8px] bg-plum px-5 text-xs font-bold text-white gc-disabled-control"
           >
             Mark salon full today
           </button>
@@ -3119,7 +3119,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               <button
                 disabled={Boolean(busy)}
                 onClick={() => void block("salon_until")}
-                className="rounded-r-[8px] bg-magenta px-4 text-white disabled:opacity-60"
+                className="rounded-r-[8px] bg-magenta px-4 text-white gc-disabled-control"
               >
                 Block
               </button>
@@ -3136,7 +3136,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
             </div>
             <div className="flex items-center overflow-hidden rounded-[9px] border border-plum/15 bg-white">
               <button type="button" aria-label="Previous week" onClick={() => setWeekOffset((value) => value - 1)} className="grid min-h-11 min-w-11 place-items-center border-r border-plum/10 text-plum"><ChevronLeft size={17}/></button>
-              <button type="button" onClick={() => setWeekOffset(0)} disabled={weekOffset === 0} className="min-h-11 px-4 text-xs font-bold text-magenta disabled:text-ink/35">Today</button>
+              <button type="button" onClick={() => setWeekOffset(0)} disabled={weekOffset === 0} className="min-h-11 px-4 text-xs font-bold text-magenta gc-disabled-control">Today</button>
               <button type="button" aria-label="Next week" onClick={() => setWeekOffset((value) => value + 1)} className="grid min-h-11 min-w-11 place-items-center border-l border-plum/10 text-plum"><ChevronRight size={17}/></button>
             </div>
           </div>
@@ -3406,15 +3406,15 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
             </div>
             {activeStylist ? (
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <button disabled={Boolean(busy)} onClick={() => void block("stylist_three_hours", activeStylist.id)} className="min-h-11 rounded-[8px] bg-plum px-3 text-xs font-bold text-white disabled:opacity-60">
+                <button disabled={Boolean(busy)} onClick={() => void block("stylist_three_hours", activeStylist.id)} className="min-h-11 rounded-[8px] bg-plum px-3 text-xs font-bold text-white gc-disabled-control">
                   Block next 3 hours
                 </button>
-                <button disabled={Boolean(busy)} onClick={() => void block("stylist_today", activeStylist.id)} className="min-h-11 rounded-[8px] bg-magenta px-3 text-xs font-bold text-white disabled:opacity-60">
+                <button disabled={Boolean(busy)} onClick={() => void block("stylist_today", activeStylist.id)} className="min-h-11 rounded-[8px] bg-magenta px-3 text-xs font-bold text-white gc-disabled-control">
                   Unavailable today
                 </button>
                 <div className="flex">
                   <input type="time" value={until} onChange={(event) => setUntil(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-l-[8px] border border-plum/15 px-2" />
-                  <button disabled={Boolean(busy)} onClick={() => void block("stylist_until", activeStylist.id)} className="rounded-r-[8px] border border-magenta px-3 text-[10px] font-bold text-magenta disabled:opacity-60">
+                  <button disabled={Boolean(busy)} onClick={() => void block("stylist_until", activeStylist.id)} className="rounded-r-[8px] border border-magenta px-3 text-[10px] font-bold text-magenta gc-disabled-control">
                     Until
                   </button>
                 </div>
@@ -3456,7 +3456,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           </Panel>
         </div> : null}
       </div>
-      {calendarBooking ? <div className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/55 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarBooking(null); }}><section role="dialog" aria-modal="true" aria-labelledby="calendar-booking-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[16px] bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><h2 id="calendar-booking-title" className="font-serif text-2xl text-plum">Appointment details</h2><p className="mt-1 text-[10px] text-ink/50">#{bookingReference(calendarBooking)}</p></div><button type="button" autoFocus aria-label="Close appointment details" onClick={() => setCalendarBooking(null)} className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/10 text-plum"><X size={18}/></button></div><div className="mt-5 space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Customer</b>{String(calendarBooking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Appointment</b>{dateText(calendarBooking.appointment_datetime, timeZone)}<br/>{styleName(c, calendarBooking.style_id)} · {stylistName(c, calendarBooking.stylist_id)}</p><p><b className="block text-[10px] uppercase tracking-wide text-ink/45">Status</b><Status value={String(calendarBooking.status || "Confirmed")}/></p><div className="grid grid-cols-2 gap-3 rounded-[10px] bg-cream p-3 text-xs"><p>Deposit paid<b className="mt-1 block text-green-700">${Number(calendarBooking.deposit_amount || 0).toFixed(2)}</b></p><p>Balance due<b className="mt-1 block text-magenta">${Number(calendarBooking.balance_due || 0).toFixed(2)}</b></p></div><Link href={`/salon/dashboard/bookings/${encodeURIComponent(String(calendarBooking.id || ""))}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-[9px] bg-magenta text-xs font-bold text-white">Open booking</Link></div></section></div> : null}
+      {calendarBooking ? <div className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/55 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarBooking(null); }}><section role="dialog" aria-modal="true" aria-labelledby="calendar-booking-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[16px] bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><h2 id="calendar-booking-title" className="font-serif text-2xl text-plum">Appointment details</h2><p className="mt-1 text-[10px] text-ink/50">#{bookingReference(calendarBooking)}</p></div><button type="button" autoFocus aria-label="Close appointment details" onClick={() => setCalendarBooking(null)} className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/10 text-plum"><X size={18}/></button></div><div className="mt-5 space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b>{String(calendarBooking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(calendarBooking.appointment_datetime, timeZone)}<br/>{styleName(c, calendarBooking.style_id)} · {stylistName(c, calendarBooking.stylist_id)}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Status</b><Status value={String(calendarBooking.status || "Confirmed")}/></p><div className="grid grid-cols-2 gap-3 rounded-[10px] bg-cream p-3 text-xs"><p>Deposit paid<b className="mt-1 block gc-text-success">${Number(calendarBooking.deposit_amount || 0).toFixed(2)}</b></p><p>Balance due<b className="mt-1 block text-magenta">${Number(calendarBooking.balance_due || 0).toFixed(2)}</b></p></div><Link href={`/salon/dashboard/bookings/${encodeURIComponent(String(calendarBooking.id || ""))}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-[9px] bg-magenta text-xs font-bold text-white">Open booking</Link></div></section></div> : null}
     </>
   );
 }
@@ -3927,7 +3927,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
             </button>
           ) : null}
         </form>
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Booking workflow groups">
+        <div role="group" className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Booking workflow groups">
           {BOOKING_GROUPS.map((item) => (
             <button
               key={item}
@@ -3936,7 +3936,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               onClick={() => router.replace(`/salon/dashboard/bookings${contextQuery({ group: item, status: "All" })}`, { scroll: false })}
               className={`min-h-10 shrink-0 rounded-[8px] px-4 text-xs font-semibold ${group === item ? "bg-plum text-white" : "border border-plum/10 bg-white text-plum"}`}
             >
-              {item} <span className="ml-1 opacity-70">{groupCounts[item]}</span>
+              {item} <span className={`ml-1 ${group === item ? "gc-text-on-dark-muted" : "gc-text-secondary"}`}>{groupCounts[item]}</span>
             </button>
           ))}
         </div>
@@ -3986,7 +3986,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 <div className="mt-3 flex justify-between text-xs">
                   <span>
                     Deposit{" "}
-                    <b className="text-green-700">
+                    <b className="gc-text-success">
                       ${Number(booking.deposit_amount || 0).toFixed(2)}
                     </b>
                   </span>
@@ -4036,7 +4036,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   <td className="px-3">
                     {dateText(booking.appointment_datetime, c.salon.time_zone)}
                   </td>
-                  <td className="px-3 text-green-700">
+                  <td className="px-3 gc-text-success">
                     ${Number(booking.deposit_amount || 0).toFixed(2)}
                   </td>
                   <td className="px-3 text-magenta">
@@ -4098,7 +4098,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </p>
                 <p className="flex justify-between">
                   <span>Deposit paid</span>
-                  <b className="text-green-700">
+                  <b className="gc-text-success">
                     ${Number(selected.deposit_amount || 0).toFixed(2)}
                   </b>
                 </p>
@@ -4124,7 +4124,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                           <button
                             disabled={busy}
                             onClick={() => void serviceAction("check_in")}
-                            className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                            className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white gc-disabled-control"
                           >
                             Check in customer
                           </button>
@@ -4148,7 +4148,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                       <button
                         disabled={busy}
                         onClick={() => void serviceAction("start")}
-                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                        className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white gc-disabled-control"
                       >
                         Start service
                       </button>
@@ -4172,7 +4172,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                         <button
                           disabled={busy || !confirmCompletion}
                           onClick={() => void serviceAction("complete")}
-                          className="mt-2 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-50"
+                          className="mt-2 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white gc-disabled-control"
                         >
                           Complete service
                         </button>
@@ -4318,7 +4318,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                         !selectedRescheduleSlots.length
                       }
                       onClick={() => void proposeReschedule()}
-                      className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white disabled:opacity-50"
+                      className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white gc-disabled-control"
                     >
                       {busy
                         ? "Checking availability…"
@@ -4380,7 +4380,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     <button
                       disabled={busy || !reason}
                       onClick={() => void cancelBooking()}
-                      className="mt-3 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white disabled:opacity-50"
+                      className="mt-3 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white gc-disabled-control"
                     >
                       {busy
                         ? "Cancelling and refunding…"
@@ -4550,7 +4550,7 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               <div><h2 className="font-serif text-xl text-plum">Review inbox</h2><p className="mt-1 text-xs text-ink/55">Customer words are immutable. Reply, dispute, and review Platform Admin decisions from a focused record.</p></div>
               <input aria-label="Search reviews" value={reviewQuery} onChange={(event)=>setReviewQuery(event.target.value)} placeholder="Search review or booking" className="min-h-10 rounded-lg border border-plum/15 px-3 text-xs"/>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Review status filters">
+            <div role="group" className="flex gap-2 overflow-x-auto pb-1" aria-label="Review status filters">
               {([[
                 "recent", "Recent",
               ], ["awaiting", "Awaiting reply"], ["replied", "Replied"], ["disputed", "Disputed"], ["removed", "Removed by Platform Admin"], ["all", "All"]] as const).map(([value, label]) => (
@@ -4595,7 +4595,7 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     Flag / Dispute
                   </button>
                 </div> : null}
-                {recordId ? (review.salon_reply ? <div className="mt-4 rounded-lg bg-blush/25 p-4 text-sm"><b className="text-plum">Salon reply</b><p className="mt-2 leading-6 text-ink/70">{String(review.salon_reply)}</p></div> : reviewState(review) === "removed" ? <div className="mt-4 rounded-lg border border-plum/10 bg-cream p-4 text-xs text-ink/65">This review was removed by Platform Admin. It remains in your audit history, but cannot receive a public salon reply.</div> : <div className="mt-4 rounded-lg border border-plum/10 p-4"><label className="block text-xs font-bold text-plum">Reply as the salon<textarea value={replyText} onChange={(event)=>setReplyText(event.target.value.slice(0,2000))} rows={4} className="mt-2 w-full rounded-lg border border-plum/15 p-3 font-normal text-ink" placeholder="Thank the customer or address their experience professionally."/></label><button type="button" disabled={replySaving || !replyText.trim()} onClick={()=>void saveReply(review)} className="mt-3 min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-50">{replySaving ? "Saving reply…" : "Save reply"}</button></div>) : null}
+                {recordId ? (review.salon_reply ? <div className="mt-4 rounded-lg bg-blush/25 p-4 text-sm"><b className="text-plum">Salon reply</b><p className="mt-2 leading-6 text-ink/70">{String(review.salon_reply)}</p></div> : reviewState(review) === "removed" ? <div className="mt-4 rounded-lg border border-plum/10 bg-cream p-4 text-xs text-ink/65">This review was removed by Platform Admin. It remains in your audit history, but cannot receive a public salon reply.</div> : <div className="mt-4 rounded-lg border border-plum/10 p-4"><label className="block text-xs font-bold text-plum">Reply as the salon<textarea value={replyText} onChange={(event)=>setReplyText(event.target.value.slice(0,2000))} rows={4} className="mt-2 w-full rounded-lg border border-plum/15 p-3 font-normal text-ink" placeholder="Thank the customer or address their experience professionally."/></label><button type="button" disabled={replySaving || !replyText.trim()} onClick={()=>void saveReply(review)} className="mt-3 min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control">{replySaving ? "Saving reply…" : "Save reply"}</button></div>) : null}
                 {recordId ? <div className="mt-4 grid gap-3 rounded-xl border border-plum/10 bg-cream/55 p-4 text-xs sm:grid-cols-2"><div><b className="text-plum">Moderation status</b><p className="mt-1 text-ink/65">{String(review.moderation_status || "Published")}</p></div><div><b className="text-plum">Dispute status</b><p className="mt-1 text-ink/65">{String(review.dispute_status || "None")}</p></div>{review.moderation_reason ? <div className="sm:col-span-2"><b className="text-plum">Platform decision</b><p className="mt-1 leading-5 text-ink/65">{String(review.moderation_reason)}</p></div> : null}</div> : null}
                 {recordId ? <div className="mt-4 rounded-xl border border-plum/10 p-4"><b className="text-plum">Audit history</b><div className="mt-3 space-y-2">{([...(Array.isArray(review.moderation_events) ? review.moderation_events as Row[] : []), ...(Array.isArray(review.dispute_events) ? review.dispute_events as Row[] : [])]).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))).map((event)=><div key={String(event.id)} className="rounded-lg bg-cream px-3 py-2 text-xs"><span className="font-semibold">{String(event.action || "Updated")}</span><span className="ml-2 text-ink/50">{dateText(event.created_at)}</span>{event.reason ? <p className="mt-1 text-ink/65">{String(event.reason)}</p> : null}</div>)}{!(Array.isArray(review.moderation_events) && review.moderation_events.length) && !(Array.isArray(review.dispute_events) && review.dispute_events.length) ? <p className="text-ink/50">No later moderation action has been recorded.</p> : null}</div></div> : null}
                 {recordId && disputeId === review.id ? (
@@ -4653,7 +4653,7 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         disabled={disputeSaving}
-                        className="min-h-10 rounded-lg bg-magenta px-4 font-bold text-white disabled:opacity-50"
+                        className="min-h-10 rounded-lg bg-magenta px-4 font-bold text-white gc-disabled-control"
                       >
                         {disputeSaving ? "Submitting…" : "Submit dispute"}
                       </button>
@@ -4831,7 +4831,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <h2 className="font-serif text-xl text-plum">Payout Account</h2>
           {c.salon.stripe_account_id ? (
             <>
-              <p className="mt-4 flex items-center gap-2 text-green-700">
+              <p className="mt-4 flex items-center gap-2 gc-text-success">
                 <BadgeCheck size={18} aria-hidden="true" />
                 Account connected
               </p>
@@ -4861,7 +4861,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         </Panel>
         <Panel>
           <h2 className="font-serif text-xl text-plum">Account Status</h2>
-          <p className="mt-4 text-sm text-green-700">
+          <p className="mt-4 text-sm gc-text-success">
             {c.salon.stripe_account_id ? "Account connected" : "Not connected"}
           </p>
           <p className="mt-3 text-xs text-ink/60">
@@ -4878,13 +4878,13 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           </div>
         </Panel>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2" aria-label="Earnings ledger source">
+      <div role="group" className="mt-4 flex flex-wrap gap-2" aria-label="Earnings ledger source">
         <button type="button" onClick={()=>setLedgerView("appointments")} className={`min-h-10 rounded-full border px-4 text-xs font-bold ${ledgerView === "appointments" ? "border-magenta bg-magenta text-white" : "border-plum/15 bg-white text-plum"}`}>Appointment deposits</button>
         <button type="button" onClick={()=>setLedgerView("products")} className={`min-h-10 rounded-full border px-4 text-xs font-bold ${ledgerView === "products" ? "border-magenta bg-magenta text-white" : "border-plum/15 bg-white text-plum"}`}>Product sales</button>
       </div>
       {ledgerView === "appointments" ? <Panel className="mt-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div><h2 className="font-serif text-xl text-plum">Transaction ledger</h2><p className="mt-1 text-xs text-ink/55">Authoritative booking, refund, transfer, and payout evidence. Totals above follow these filters.</p></div>
+          <div><h2 className="font-serif text-xl text-plum">Transaction ledger</h2><p className="mt-1 text-xs gc-text-secondary">Authoritative booking, refund, transfer, and payout evidence. Totals above follow these filters.</p></div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(170px,1fr)_150px_145px_145px_auto]">
             <input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search customer or reference" className="min-h-11 rounded-lg border border-plum/15 px-3 text-xs"/>
             <select value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{statuses.map((value)=><option key={value}>{value}</option>)}</select>
@@ -4923,7 +4923,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 <td className="py-3 pr-3">{dateText(row.date,timeZone)}<b className="mt-1 block">{String(row.public_reference)}</b></td>
                 <td className="pr-3">{String(row.customer)}<span className="mt-1 block text-ink/50">{String(row.transaction_type)}</span></td>
                 <td className="pr-3">{money(row.original_service_value)}<span className="mt-1 block text-ink/50">− {money(row.discount)}</span></td>
-                <td className="pr-3">{money(row.deposit_collected)}<span className="mt-1 block text-ink/50">Balance {money(row.balance_due)}</span></td>
+                <td className="pr-3">{money(row.deposit_collected)}<span className="mt-1 block gc-text-primary">Balance {money(row.balance_due)}</span></td>
                 <td className="pr-3">Stripe {money(row.stripe_processing_fee)}<span className="mt-1 block text-ink/50">Platform {money(row.platform_fee)}</span></td>
                 <td className="pr-3">{money(row.refund_amount)}<span className="mt-1 block"><Status value={String(row.refund_status)}/></span></td>
                 <td className="pr-3"><Status value={String(row.transfer_status)}/><span className="mt-1 block"><Status value={String(row.payout_status)}/></span></td>
@@ -5091,7 +5091,7 @@ function SettingsWorkspace({ c, focus = "" }: { c: Ctx; focus?: string }) {
   if (focus === "team") return <><OwnerDetailHeader title="Team & permissions" subtitle="Choose one team member to manage without losing the settings context. Subscription and billing always remain owner-only." fallbackHref="/salon/dashboard/settings" status={c.isOwner ? "Owner access" : "Read only"}/><TeamUserManager scope="salon" /></>;
   if (focus.startsWith("member-")) return <><OwnerDetailHeader title={focus === "member-new" ? "Add team member" : "Manage team member"} subtitle="Save identity, role, status, and dashboard permissions together." fallbackHref="/salon/dashboard/settings/team" status="Owner-only access"/><TeamUserManager scope="salon" initialUserId={focus.slice("member-".length)} showBackLink={false}/></>;
   if (focus === "marketplace") return <><OwnerDetailHeader title="Marketplace status" subtitle="Manage publication and booking availability without changing the salon record." fallbackHref="/salon/dashboard/settings"/><PublicationControls c={c}/></>;
-  if (focus === "security") return <><OwnerDetailHeader title="Security & sign out" subtitle="Password changes use the verified email recovery flow." fallbackHref="/salon/dashboard/settings"/><Panel><h2 className="font-serif text-xl text-plum">Secure salon session</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/65">Use the salon login page to request a password-reset email. Signing out here only ends this salon workspace session and does not affect a separate platform-admin session.</p><div className="mt-5"><RoleLogoutButton scope="salon" /></div></Panel></>;
+  if (focus === "security") return <><OwnerDetailHeader title="Security & sign out" subtitle="Password changes use the verified email recovery flow." fallbackHref="/salon/dashboard/settings"/><Panel><h2 className="font-serif text-xl text-plum">Secure salon session</h2><p className="mt-2 max-w-2xl text-sm leading-6 gc-text-primary">Use the salon login page to request a password-reset email. Signing out here only ends this salon workspace session and does not affect a separate platform-admin session.</p><div className="mt-5"><RoleLogoutButton scope="salon" /></div></Panel></>;
   return <SettingsPage c={c} focus={focus === "notifications" ? "notifications" : "account"} />;
 }
 
@@ -5167,7 +5167,7 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
               >
                 <span>
                   {label}
-                  <small className="mt-1 block text-ink/45">Required</small>
+                  <small className="mt-1 block font-semibold gc-text-primary">Required</small>
                 </span>
                 <input
                   type="checkbox"
@@ -5304,7 +5304,7 @@ function PublicationControls({ c }: { c: Ctx }) {
         <button
           disabled={Boolean(busy) || state.closure}
           onClick={() => void action("request_closure")}
-          className="min-h-11 rounded-[8px] border border-red-200 px-4 text-xs font-bold text-red-700"
+          className="min-h-11 rounded-[8px] border border-red-200 px-4 text-xs font-bold gc-text-danger"
         >
           {state.closure ? "Closure requested" : "Request permanent closure"}
         </button>
@@ -5416,12 +5416,12 @@ function TextArea({
 }
 function Status({ value }: { value: string }) {
   const color = /confirmed|paid|active|completed/i.test(value)
-    ? "bg-green-100 text-green-800"
+    ? "bg-green-100 gc-text-success"
     : /cancel|declin|ended/i.test(value)
-      ? "bg-red-100 text-red-700"
+      ? "bg-red-100 gc-text-danger"
       : /request|pending|scheduled/i.test(value)
-        ? "bg-amber/20 text-[#9b5a00]"
-        : "bg-blue-100 text-blue-700";
+        ? "bg-amber/20 gc-text-warning"
+        : "bg-blue-100 gc-text-link";
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-semibold ${color}`}

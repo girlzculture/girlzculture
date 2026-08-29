@@ -11,6 +11,7 @@ import {
 import { capturePlatformError } from "@/lib/platformErrors";
 import { requireSalonPermission, sendEmail } from "@/lib/supabaseAdmin";
 import { issueBookingReviewLink } from "@/lib/reviewAccessServer";
+import { NON_DOM_VISUAL_TOKENS } from "@/lib/nonDomVisualTokens.mjs";
 
 const EARLY_REASONS = [
   ["customer_arrived_early", "Customer arrived earlier than scheduled"],
@@ -241,7 +242,7 @@ async function POSTHandler(
           await sendEmail(
             String(booking.guest_email),
             "Your Girlz Culture appointment is complete",
-            `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#0D1114;background:#F5F7F8;border-radius:16px"><h1 style="font-family:Fraunces,Georgia,serif;color:#0D1114">Appointment complete</h1><p>Thank you for visiting ${String(context.salon.name || "your salon")}.</p><p>Booking <strong>${reference}</strong> is now complete.</p>${reviewUrl ? `<p><a href="${reviewUrl}" style="display:inline-block;background:#0083A6;color:#FFFFFF;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Leave your verified review</a></p><p style="color:#52616A;font-size:13px">This secure link expires in 30 days and can be used once. You do not need an account.</p>` : ""}</div>`,
+            `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:${NON_DOM_VISUAL_TOKENS.primaryText};background:${NON_DOM_VISUAL_TOKENS.lightSurface};border-radius:16px"><h1 style="font-family:Fraunces,Georgia,serif;color:${NON_DOM_VISUAL_TOKENS.primaryText}">Appointment complete</h1><p>Thank you for visiting ${String(context.salon.name || "your salon")}.</p><p>Booking <strong>${reference}</strong> is now complete.</p>${reviewUrl ? `<p><a href="${reviewUrl}" style="display:inline-block;background:${NON_DOM_VISUAL_TOKENS.action};color:${NON_DOM_VISUAL_TOKENS.onAction};padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Leave your verified review</a></p><p style="color:${NON_DOM_VISUAL_TOKENS.mutedText};font-size:13px">This secure link expires in 30 days and can be used once. You do not need an account.</p>` : ""}</div>`,
             "bookings",
           );
         } catch (emailError) {

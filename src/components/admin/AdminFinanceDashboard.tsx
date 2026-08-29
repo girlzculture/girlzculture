@@ -736,7 +736,7 @@ export default function AdminFinanceDashboard({
                 type="button"
                 onClick={exportUnifiedCsv}
                 disabled={!unifiedTransactions.length}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta disabled:opacity-40"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta gc-disabled-control"
               >
                 <Download size={15} /> Export filtered CSV
               </button>
@@ -855,7 +855,7 @@ export default function AdminFinanceDashboard({
                 type="button"
                 onClick={exportCsv}
                 disabled={!filtered.length}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta disabled:opacity-40"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta gc-disabled-control"
               >
                 <Download size={15} /> Export safe CSV
               </button>
@@ -1723,7 +1723,7 @@ function ProductOrderLedger({
                     !order.stripe_payment_intent_id
                   }
                   onClick={() => onRefund(order)}
-                  className="rounded-lg border border-magenta px-3 py-2 text-[11px] font-bold text-magenta disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-magenta px-3 py-2 text-[11px] font-bold text-magenta disabled:cursor-not-allowed gc-disabled-control"
                 >
                   {actionBusy === String(order.id)
                     ? "Submitting…"
@@ -2010,7 +2010,7 @@ function Mode({ value }: { value: unknown }) {
   return (
     <span
       className={`mt-1 block w-fit rounded-full px-2 py-1 text-[8px] font-extrabold uppercase ${
-        live ? "bg-green-100 text-green-800" : "bg-amber/15 text-amber-800"
+        live ? "bg-green-100 gc-text-success" : "bg-amber/15 gc-text-warning"
       }`}
     >
       {live ? "Live money" : "Test mode"}

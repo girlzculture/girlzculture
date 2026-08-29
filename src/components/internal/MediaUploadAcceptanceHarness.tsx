@@ -273,11 +273,11 @@ export default function MediaUploadAcceptanceHarness() {
                 Queue: {image.queueStatus}
               </p>
               {image.error ? (
-                <p role="alert" className="mt-2 text-xs text-red-700">
+                <p role="alert" className="mt-2 text-xs gc-text-danger">
                   {image.error}
                 </p>
               ) : (
-                <p className="mt-2 text-xs text-green-700">
+                <p className="mt-2 text-xs gc-text-success">
                   Accepted for every placement
                 </p>
               )}

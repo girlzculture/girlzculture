@@ -43,7 +43,7 @@ export default function HeaderStyleSearch() {
           maxLength={600}
           autoComplete="off"
           enterKeyHint="search"
-          className="min-w-0 flex-1 bg-transparent px-1 text-[12px] font-semibold text-ink outline-none placeholder:text-ink/50"
+          className="gc-placeholder-light min-w-0 flex-1 bg-transparent px-1 text-[12px] font-semibold text-ink outline-none"
         />
         <button
           type="submit"

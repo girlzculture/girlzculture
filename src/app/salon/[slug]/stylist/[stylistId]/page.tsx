@@ -118,7 +118,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
               {canBook ? (
                 <Link href={`/salon/${canonicalSalonSlug}/book?stylist=${stylist.id}`} className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(0,131,166,0.2)] hover:bg-primary-hover"><CalendarDays size={17} />Book with {stylist.name || "this stylist"}</Link>
               ) : (
-                <span className="mt-8 inline-flex min-h-12 cursor-not-allowed items-center justify-center gap-2 rounded-[10px] bg-ink/10 px-7 text-[13px] font-bold text-ink/55" aria-disabled="true"><CalendarDays size={17} />Bookings are paused</span>
+                <span className="gc-state-disabled mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border px-7 text-[13px] font-bold" aria-disabled="true" data-visual-state="disabled"><CalendarDays size={17} />Bookings are paused</span>
               )}
             </div>
           </div>

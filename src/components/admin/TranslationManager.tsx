@@ -461,7 +461,7 @@ export default function TranslationManager() {
                 onClick={() =>
                   void updateLocale({ is_enabled: !currentLocale.is_enabled })
                 }
-                className="ml-auto min-h-9 rounded-lg border border-magenta px-3 font-bold text-magenta disabled:opacity-40"
+                className="ml-auto min-h-9 rounded-lg border border-magenta px-3 font-bold text-magenta gc-disabled-control"
               >
                 {currentLocale.is_enabled ? "Disable" : "Enable"}
               </button>
@@ -567,7 +567,7 @@ export default function TranslationManager() {
                   />
                 </label>
                 {overflow ? (
-                  <p className="rounded-lg bg-amber/10 p-3 text-[10px] text-[#7b4a00]">
+                  <p className="rounded-lg bg-amber/10 p-3 text-[10px] gc-text-warning">
                     Text overflow warning: this translation is substantially
                     longer than its source. Check compact and mobile previews
                     before publishing.
@@ -625,7 +625,7 @@ export default function TranslationManager() {
                       Boolean(HIGH.has(selected.impact_level) && !reviewed)
                     }
                     onClick={() => void save("review")}
-                    className="min-h-10 rounded-lg border border-plum px-4 text-xs font-bold text-plum disabled:opacity-50"
+                    className="min-h-10 rounded-lg border border-plum px-4 text-xs font-bold text-plum gc-disabled-control"
                   >
                     Mark reviewed
                   </button>
@@ -637,7 +637,7 @@ export default function TranslationManager() {
                       Boolean(HIGH.has(selected.impact_level) && !reviewed)
                     }
                     onClick={() => void save("publish")}
-                    className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white disabled:opacity-50"
+                    className="min-h-10 rounded-lg bg-magenta px-4 text-xs font-bold text-white gc-disabled-control"
                   >
                     Review & publish
                   </button>

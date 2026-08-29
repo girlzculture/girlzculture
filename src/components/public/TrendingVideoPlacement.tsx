@@ -123,12 +123,12 @@ export default function TrendingVideoPlacement({
         </div>
       ) : error ? (
         <div role="alert" className="rounded-[15px] border border-red-200 bg-white p-6 text-center">
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm gc-text-danger">{error}</p>
           <button type="button" onClick={() => void load()} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-4 text-xs font-bold text-white"><RotateCcw size={14} aria-hidden="true" />Try again</button>
         </div>
       ) : videos.length ? (
         <>
-          <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} aria-label={viewAll ? undefined : "Trending Picks carousel"} className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}>
+          <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} role={viewAll ? undefined : "region"} aria-label={viewAll ? undefined : "Trending Picks carousel"} className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}>
             {videos.map((video) => (
               <article key={video.campaign_id} className="w-[54vw] max-w-[250px] shrink-0 snap-start overflow-hidden rounded-[14px] border border-plum/10 bg-white shadow-[0_5px_18px_rgba(13,17,20,.07)] sm:w-auto sm:max-w-none">
                 <SafeCampaignVideo src={video.video_url} poster={video.thumbnail_url} label={`${video.salon_name} Trending Pick`} className="aspect-video w-full" />
@@ -140,7 +140,7 @@ export default function TrendingVideoPlacement({
               </article>
             ))}
           </div>
-          {viewAll && videos.length < total ? <button type="button" disabled={more} onClick={() => void load(videos.length, true)} className="mt-5 min-h-12 w-full rounded-lg border border-magenta bg-white text-sm font-bold text-magenta disabled:opacity-60">{more ? "Loading…" : "Load more Trending Picks"}</button> : null}
+          {viewAll && videos.length < total ? <button type="button" disabled={more} onClick={() => void load(videos.length, true)} className="mt-5 min-h-12 w-full rounded-lg border border-magenta bg-white text-sm font-bold text-magenta gc-disabled-control">{more ? "Loading…" : "Load more Trending Picks"}</button> : null}
         </>
       ) : (
         <Link href="/partner" className="flex min-h-36 items-center gap-4 rounded-[15px] border border-plum/10 bg-[linear-gradient(120deg,#fff,#F5F7F8)] p-6">
@@ -153,5 +153,5 @@ export default function TrendingVideoPlacement({
 }
 
 function Skeletons() {
-  return <div aria-label="Loading Trending Picks" className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{Array.from({ length: 6 }, (_, index) => <div key={index} className="animate-pulse overflow-hidden rounded-[14px] bg-white"><div className="aspect-video bg-blush" /><div className="space-y-2 p-3"><div className="h-4 rounded bg-blush" /><div className="h-3 w-2/3 rounded bg-blush/60" /></div></div>)}</div>;
+  return <div role="status" aria-live="polite" aria-label="Loading Trending Picks" className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{Array.from({ length: 6 }, (_, index) => <div key={index} className="animate-pulse overflow-hidden rounded-[14px] bg-white"><div className="aspect-video bg-blush" /><div className="space-y-2 p-3"><div className="h-4 rounded bg-blush" /><div className="h-3 w-2/3 rounded bg-blush/60" /></div></div>)}</div>;
 }

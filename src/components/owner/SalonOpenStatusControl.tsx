@@ -48,7 +48,7 @@ export default function SalonOpenStatusControl({ salon }: { salon: Record<string
   return (
     <section className={`mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[14px] border p-4 ${closed ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
       <div className="flex items-center gap-3">
-        {closed ? <Clock3 className="text-red-700"/> : <Store className="text-emerald-700"/>}
+        {closed ? <Clock3 className="gc-text-danger"/> : <Store className="gc-text-success"/>}
         <div>
           <p className="font-semibold text-plum">{closed ? "Full today · bookings blocked" : "Open according to normal hours"}</p>
           <p className="text-sm text-ink/70">
@@ -63,7 +63,7 @@ export default function SalonOpenStatusControl({ salon }: { salon: Record<string
         type="button"
         disabled={busy}
         onClick={() => void change(!closed)}
-        className={`min-h-11 rounded-lg px-5 text-sm font-bold text-white disabled:opacity-60 ${closed ? "bg-emerald-700" : "bg-red-700"}`}
+        className={`min-h-11 rounded-lg px-5 text-sm font-bold text-white gc-disabled-control ${closed ? "bg-emerald-700" : "bg-red-700"}`}
       >
         {busy ? "Updating…" : closed ? "Reopen Today" : "Mark Full Today"}
       </button>

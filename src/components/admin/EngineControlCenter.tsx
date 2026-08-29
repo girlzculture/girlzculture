@@ -609,7 +609,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
             </span>
             <div>
               <h2 className="font-serif text-3xl">The Engine</h2>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-white/70">
+              <p className="mt-1 max-w-2xl text-xs leading-5 gc-text-on-dark-muted">
                 Manage safe platform rules, labels, thresholds, and behavior
                 with drafts, review, publication history, and rollback.
                 Credentials remain in secure deployment settings.
@@ -646,13 +646,13 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
             <div key={item.key} className="rounded-xl bg-white/8 p-3">
               <span className="flex items-center gap-2 text-xs font-bold">
                 {item.configured ? (
-                  <CheckCircle2 size={15} className="text-green-300" />
+                  <CheckCircle2 size={15} className="gc-text-on-dark" />
                 ) : (
                   <AlertTriangle size={15} className="text-amber" />
                 )}
                 {item.label}
               </span>
-              <span className="mt-1 block text-[10px] text-white/60">
+              <span className="mt-1 block text-[10px] gc-text-on-dark">
                 {item.configured ? "Configured securely" : "Not configured"}
               </span>
             </div>
@@ -671,7 +671,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
             changed · {importPreview.errors.length} blocked. <span>Imports create drafts only</span> and never copy secrets or publish behavior.
           </p>
           {importPreview.errors.length ? (
-            <ul className="mt-3 list-disc pl-5 text-xs text-red-700">
+            <ul className="mt-3 list-disc pl-5 text-xs gc-text-danger">
               {importPreview.errors.map((error) => (
                 <li key={error}>{error}</li>
               ))}
@@ -709,7 +709,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                 importConfirmation !== `IMPORT DRAFTS ${environment}`
               }
               onClick={() => void importDrafts()}
-              className="min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-40"
+              className="min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
             >
               Import validated drafts
             </button>
@@ -900,7 +900,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                           {row.status || "Draft"}
                         </span>
                         <span
-                          className={`rounded-full px-2 py-1 text-[8px] font-bold ${highImpact.has(row.impact_level) ? "bg-amber/20 text-[#7b4a00]" : "bg-cream text-ink/55"}`}
+                          className={`rounded-full px-2 py-1 text-[8px] font-bold ${highImpact.has(row.impact_level) ? "bg-amber/20 gc-text-warning" : "bg-cream text-ink/55"}`}
                         >
                           {row.impact_level}
                         </span>
@@ -1041,7 +1041,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                           `Review ready: ${selected.display_name} affects ${selected.affected_surfaces?.join(", ") || "the listed platform behavior"}. Publish only after checking the preview and change reason.`,
                         );
                       }}
-                      className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta disabled:opacity-45"
+                      className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta gc-disabled-control"
                     >
                       Review
                     </button>
@@ -1055,7 +1055,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                         )
                       }
                       onClick={() => void change("publish")}
-                      className="min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-45"
+                      className="min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
                     >
                       Publish
                     </button>
@@ -1199,7 +1199,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                         busy || selected.published_version === item.version
                       }
                       onClick={() => void change("rollback", item.version)}
-                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta disabled:opacity-40"
+                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta gc-disabled-control"
                     >
                       <RotateCcw size={13} />
                       Restore
@@ -1213,7 +1213,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                   ["Published", "Rolled back"].includes(item.action),
               ) ? (
                 <div className="mt-4 rounded-xl border border-red-200 bg-red-50/50 p-4">
-                  <h4 className="font-bold text-red-800">
+                  <h4 className="font-bold gc-text-danger">
                     Emergency last-known-good recovery
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-ink/60">
@@ -1239,7 +1239,7 @@ export default function EngineControlCenter({ initialRecordId }: { initialRecord
                       emergencyConfirmation !== `REVERT ${selected.setting_key}`
                     }
                     onClick={() => void emergencyRevert()}
-                    className="mt-3 min-h-11 rounded-lg bg-red-700 px-5 text-xs font-bold text-white disabled:opacity-40"
+                    className="mt-3 min-h-11 rounded-lg bg-red-700 px-5 text-xs font-bold text-white gc-disabled-control"
                   >
                     <RotateCcw className="mr-2 inline" size={14} />
                     Emergency revert
@@ -1384,7 +1384,7 @@ function EngineOverview({
               <AlertTriangle
                 size={20}
                 className={
-                  urgentEvents.length ? "text-red-700" : "text-green-700"
+                  urgentEvents.length ? "gc-text-danger" : "gc-text-success"
                 }
               />
               <h3 className="font-serif text-xl text-plum">
@@ -1408,7 +1408,7 @@ function EngineOverview({
                 key={event.id}
                 className="rounded-xl border border-red-200 bg-white p-3"
               >
-                <span className="rounded-full bg-red-100 px-2 py-1 text-[8px] font-bold uppercase text-red-800">
+                <span className="rounded-full bg-red-100 px-2 py-1 text-[8px] font-bold uppercase gc-text-danger">
                   {event.severity}
                 </span>
                 <p className="mt-2 text-xs font-bold text-plum">

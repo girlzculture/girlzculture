@@ -342,7 +342,7 @@ function PromotionCard({
           </h2>
         ) : null}
         {card.body || representsSalon ? (
-          <p className="mt-2 line-clamp-2 text-[10px] leading-4 text-white/85 sm:text-[11px]">
+          <p className="mt-2 line-clamp-2 text-[10px] leading-4 gc-text-on-dark sm:text-[11px]">
             {representsSalon ? <><span className="sm:hidden">{mobileDistance}</span>{card.body ? <span className="hidden sm:inline">{card.body}</span> : null}</> : card.body}
           </p>
         ) : null}

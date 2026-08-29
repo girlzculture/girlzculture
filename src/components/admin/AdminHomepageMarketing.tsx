@@ -164,7 +164,7 @@ export default function AdminHomepageMarketing(
                   className={`flex items-center gap-3 rounded-lg border bg-white p-3 ${
                     section.is_visible
                       ? "border-plum/10"
-                      : "border-dashed border-plum/15 opacity-55"
+                      : "border-dashed border-plum/15 bg-mist/60"
                   }`}
                 >
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-plum text-[10px] font-bold text-white">
@@ -174,7 +174,7 @@ export default function AdminHomepageMarketing(
                     {section.title}
                   </span>
                   {!section.is_visible ? (
-                    <span className="ml-auto text-[10px] font-bold uppercase text-ink/45">
+                    <span className="ml-auto text-[10px] font-bold uppercase gc-text-muted">
                       Hidden
                     </span>
                   ) : null}
@@ -199,7 +199,7 @@ export default function AdminHomepageMarketing(
               }}
               className={`grid gap-3 rounded-[12px] border bg-cream/35 p-4 transition sm:grid-cols-[36px_1fr_auto] sm:items-center ${
                 draggedKey === section.section_key
-                  ? "border-magenta opacity-60"
+                  ? "border-magenta bg-blush/35"
                   : "border-plum/10"
               }`}
             >
@@ -232,7 +232,7 @@ export default function AdminHomepageMarketing(
                   aria-label={`Move ${LABELS[section.section_key]} up`}
                   disabled={index === 0}
                   onClick={() => move(section.section_key, index - 1)}
-                  className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-plum/15 bg-white text-plum disabled:opacity-30"
+                  className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-plum/15 bg-white text-plum gc-disabled-control"
                 >
                   <ArrowUp size={16} />
                 </button>
@@ -241,7 +241,7 @@ export default function AdminHomepageMarketing(
                   aria-label={`Move ${LABELS[section.section_key]} down`}
                   disabled={index === sections.length - 1}
                   onClick={() => move(section.section_key, index + 1)}
-                  className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-plum/15 bg-white text-plum disabled:opacity-30"
+                  className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-plum/15 bg-white text-plum gc-disabled-control"
                 >
                   <ArrowDown size={16} />
                 </button>
@@ -259,7 +259,7 @@ export default function AdminHomepageMarketing(
                   }
                   className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-[10px] font-bold ${
                     section.is_visible
-                      ? "bg-green-100 text-green-800"
+                      ? "bg-green-100 gc-text-success"
                       : "bg-blush text-plum"
                   }`}
                 >
@@ -285,7 +285,7 @@ export default function AdminHomepageMarketing(
             type="button"
             disabled={busy}
             onClick={() => void publish()}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-55"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
           >
             <Save size={15} />
             {busy ? "Publishing…" : "Save and Publish"}

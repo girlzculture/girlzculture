@@ -262,7 +262,7 @@ export default function PickupReservationManager({
             type="button"
             disabled={busy}
             onClick={() => void cancel()}
-            className="mt-5 min-h-11 rounded-xl border border-coral px-5 text-sm font-bold text-coral disabled:opacity-50"
+            className="mt-5 min-h-11 rounded-xl border border-coral px-5 text-sm font-bold text-coral gc-disabled-control"
           >
             {busy ? "Canceling…" : "Cancel reservation"}
           </button>

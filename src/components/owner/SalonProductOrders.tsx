@@ -293,7 +293,7 @@ export default function SalonProductOrders({
                         key={status}
                         disabled={Boolean(busy)}
                         onClick={() => void advance(order, status)}
-                        className={`rounded-lg px-3 py-2 text-[10px] font-bold disabled:opacity-50 ${
+                        className={`rounded-lg px-3 py-2 text-[10px] font-bold gc-disabled-control ${
                           status === "Canceled"
                             ? "border border-coral text-coral"
                             : "bg-teal text-white"

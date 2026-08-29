@@ -100,7 +100,7 @@ export default function SalonPhotoGallery({ photos, salonName }: { photos: strin
         <SafeImage src={available[active]} fallbackSrc={available[active]} alt={`${salonName} gallery photo ${active + 1}`} draggable={false} className="max-h-full max-w-full select-none object-contain transition-transform duration-150" style={{ transform: `scale(${zoom})` }} />
         <button type="button" aria-label="Next photo" onPointerDown={event=>event.stopPropagation()} onClick={()=>move(1)} className="absolute right-1 z-10 grid h-12 w-12 place-items-center rounded-full bg-white/10 backdrop-blur sm:right-4"><ArrowRight/></button>
       </div>
-      <p className="pt-3 text-center text-[10px] text-white/65">Use arrow keys or swipe to browse. Pinch or use the zoom controls to inspect a photo.</p>
+      <p className="pt-3 text-center text-[10px] gc-text-on-dark-muted">Use arrow keys or swipe to browse. Pinch or use the zoom controls to inspect a photo.</p>
     </div> : null}
   </>;
 }

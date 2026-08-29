@@ -125,7 +125,7 @@ export default function GuestBookingRecovery() {
           </div>
           <button
             disabled={busy}
-            className="min-h-12 rounded-xl bg-magenta font-bold text-white disabled:opacity-50"
+            className="min-h-12 rounded-xl bg-magenta font-bold text-white gc-disabled-control"
           >
             Send secure code
           </button>
@@ -149,7 +149,7 @@ export default function GuestBookingRecovery() {
           </label>
           <button
             disabled={busy}
-            className="min-h-12 rounded-xl bg-magenta font-bold text-white disabled:opacity-50"
+            className="min-h-12 rounded-xl bg-magenta font-bold text-white gc-disabled-control"
           >
             Verify and open booking
           </button>
@@ -166,7 +166,7 @@ export default function GuestBookingRecovery() {
         </form>
       )}
       {error && (
-        <p role="alert" className="mt-4 text-center text-sm font-bold text-red-700">
+        <p role="alert" className="mt-4 text-center text-sm font-bold gc-text-danger">
           {error}
         </p>
       )}

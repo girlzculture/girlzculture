@@ -12,7 +12,7 @@ export default async function LegalPoliciesPage() {
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader/>
     <header className="bg-[linear-gradient(130deg,#006b88,#0083a6)] px-4 py-10 text-white sm:px-8 sm:py-16">
-      <div className="mx-auto max-w-[1100px]"><Link href="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white/85"><ArrowLeft size={17}/>Back to Home</Link><p className="mt-4 text-[10px] font-bold uppercase tracking-[.18em] text-amber">Girlz Culture</p><h1 className="mt-2 font-serif text-4xl font-semibold sm:text-6xl">{title}</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">{subtitle}</p></div>
+      <div className="mx-auto max-w-[1100px]"><Link href="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold gc-text-on-dark"><ArrowLeft size={17}/>Back to Home</Link><p className="mt-4 text-[10px] font-bold uppercase tracking-[.18em] text-amber">Girlz Culture</p><h1 className="mt-2 font-serif text-4xl font-semibold sm:text-6xl">{title}</h1><p className="mt-4 max-w-2xl text-sm leading-6 gc-text-on-dark-muted sm:text-base">{subtitle}</p></div>
     </header>
     <section className="mx-auto max-w-[1100px] px-4 py-7 sm:px-8 sm:py-10" aria-labelledby="policy-list-heading">
       <h2 id="policy-list-heading" className="font-serif text-2xl font-semibold text-plum">Choose a document</h2>

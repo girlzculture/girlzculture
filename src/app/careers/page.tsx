@@ -65,7 +65,7 @@ export default async function Careers() {
           </div>
         </section>
         <div className="mt-7 flex items-center justify-between rounded-[18px] bg-plum p-7 text-white">
-          <div><h2 className="font-serif text-3xl">Ready to shape the future of beauty?</h2><p className="text-sm text-white/65">Explore open roles and find your place at Girlz Culture.</p></div>
+          <div><h2 className="font-serif text-3xl">Ready to shape the future of beauty?</h2><p className="text-sm gc-text-on-dark-muted">Explore open roles and find your place at Girlz Culture.</p></div>
           <a href="#roles" className="rounded-lg bg-magenta px-6 py-3 text-sm font-bold">View Open Roles</a>
         </div>
       </section>

@@ -1,3 +1,5 @@
+import { NON_DOM_VISUAL_TOKENS } from "./nonDomVisualTokens.mjs";
+
 type Row = Record<string, unknown>;
 export type EmailBrandTheme = {
   primary: string;
@@ -11,8 +13,8 @@ export type EmailBrandTheme = {
   bodyFont: string;
 };
 const DEFAULT_EMAIL_THEME: EmailBrandTheme = {
-  primary: "#0083A6",
-  cta: "#0083A6",
+  primary: NON_DOM_VISUAL_TOKENS.action,
+  cta: NON_DOM_VISUAL_TOKENS.action,
   page: "#FFFFFF",
   card: "#FFFFFF",
   heading: "#0D1114",
@@ -89,7 +91,7 @@ function button(
   theme = DEFAULT_EMAIL_THEME,
 ) {
   if (!/^https?:\/\//i.test(href)) return "";
-  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 8px 0 0;padding:12px 18px;border-radius:9px;${secondary ? `border:1px solid ${theme.cta};color:${theme.cta};background:${theme.card}` : `color:#fff;background:${theme.cta}`};font-size:13px;font-weight:800;text-decoration:none">${escapeHtml(label)}</a>`;
+  return `<a href="${escapeHtml(href)}" style="display:inline-block;margin:8px 8px 0 0;padding:12px 18px;border-radius:9px;${secondary ? `border:1px solid ${theme.cta};color:${theme.cta};background:${theme.card}` : `color:${NON_DOM_VISUAL_TOKENS.onAction};background:${theme.cta}`};font-size:13px;font-weight:800;text-decoration:none">${escapeHtml(label)}</a>`;
 }
 
 function shell(

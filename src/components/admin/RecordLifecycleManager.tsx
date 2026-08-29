@@ -409,7 +409,7 @@ export default function RecordLifecycleManager() {
 
           {ownerDelete ? (
             <div className="mt-4 rounded-lg border border-red-200 bg-white p-3">
-              <b className="text-sm text-red-800">
+              <b className="text-sm gc-text-danger">
                 Super Admin permanent action
               </b>
               <p className="mt-2 text-sm leading-6 text-ink/70">
@@ -418,7 +418,7 @@ export default function RecordLifecycleManager() {
                   : "The application is permanently removed from the active records. Its immutable revision and administrative audit evidence remains available."}
               </p>
               {!isSuperAdmin ? (
-                <p className="mt-2 font-bold text-red-800">
+                <p className="mt-2 font-bold gc-text-danger">
                   This action requires Super Admin.
                 </p>
               ) : null}
@@ -428,7 +428,7 @@ export default function RecordLifecycleManager() {
           {testDelete && destructive ? (
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div className="rounded-lg border border-red-200 bg-white p-3">
-                <b className="text-sm text-red-800">
+                <b className="text-sm gc-text-danger">
                   Operational records changed
                 </b>
                 <ul className="mt-2 list-disc space-y-1 pl-4 text-sm leading-5 text-ink/70">
@@ -438,7 +438,7 @@ export default function RecordLifecycleManager() {
                 </ul>
               </div>
               <div className="rounded-lg border border-emerald-200 bg-white p-3">
-                <b className="text-sm text-emerald-800">
+                <b className="text-sm gc-text-success">
                   History explicitly retained
                 </b>
                 <ul className="mt-2 list-disc space-y-1 pl-4 text-sm leading-5 text-ink/70">
@@ -488,7 +488,7 @@ export default function RecordLifecycleManager() {
           </label>
 
           {requiresRetentionAcknowledgement ? (
-            <label className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-white p-3 text-sm font-bold text-red-800">
+            <label className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-white p-3 text-sm font-bold gc-text-danger">
               <input
                 type="checkbox"
                 checked={acknowledgeRetention}
@@ -504,7 +504,7 @@ export default function RecordLifecycleManager() {
           <label className="mt-3 block text-sm font-bold">
             Type{" "}
             <span
-              className={destructiveAction ? "text-red-700" : "text-magenta"}
+              className={destructiveAction ? "gc-text-danger" : "text-magenta"}
             >
               {requiredConfirmation}
             </span>{" "}
@@ -528,7 +528,7 @@ export default function RecordLifecycleManager() {
               (ownerDelete && !isSuperAdmin) ||
               (requiresRetentionAcknowledgement && !acknowledgeRetention)
             }
-            className={`mt-4 min-h-11 rounded-lg px-6 text-sm font-bold text-white disabled:opacity-40 ${
+            className={`mt-4 min-h-11 rounded-lg px-6 text-sm font-bold text-white gc-disabled-control ${
               destructiveAction ? "bg-red-700" : "bg-magenta"
             }`}
           >

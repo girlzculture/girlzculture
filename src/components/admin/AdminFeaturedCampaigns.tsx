@@ -514,7 +514,7 @@ export default function AdminFeaturedCampaigns() {
 
           <button
             disabled={busy === "save"}
-            className="min-h-11 w-full rounded-lg bg-magenta px-6 text-xs font-bold text-white disabled:opacity-50 sm:w-auto"
+            className="min-h-11 w-full rounded-lg bg-magenta px-6 text-xs font-bold text-white gc-disabled-control sm:w-auto"
           >
             {busy === "save" ? "Saving…" : editing ? "Save campaign" : "Create campaign"}
           </button>
@@ -534,7 +534,7 @@ export default function AdminFeaturedCampaigns() {
             {visibleCampaigns.length} matching campaign{visibleCampaigns.length === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Campaign status filters">
+        <div role="group" className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Campaign status filters">
           {statusTabs.map((status) => (
             <button
               key={status}
@@ -617,7 +617,7 @@ export default function AdminFeaturedCampaigns() {
                     ) : (
                       <button type="button" onClick={() => void manage(campaign, "archive")} className="block w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-blush">Archive</button>
                     )}
-                    <button type="button" onClick={() => void manage(campaign, "delete")} className="block w-full rounded-lg px-3 py-2 text-left text-xs text-red-700 hover:bg-red-50">Delete permanently</button>
+                    <button type="button" onClick={() => void manage(campaign, "delete")} className="block w-full rounded-lg px-3 py-2 text-left text-xs gc-text-danger hover:bg-red-50">Delete permanently</button>
                     {campaign.audit?.length ? (
                       <span className="block border-t border-plum/10 px-3 py-2 text-[10px] text-ink/50">
                         {campaign.audit.length} audit event{campaign.audit.length === 1 ? "" : "s"}
@@ -658,7 +658,7 @@ export default function AdminFeaturedCampaigns() {
             />
           </label>
         </div>
-        <button type="button" disabled={busy === "settings"} onClick={() => void saveSettings()} className="mt-4 min-h-11 rounded-lg bg-plum px-5 text-xs font-bold text-white disabled:opacity-50">
+        <button type="button" disabled={busy === "settings"} onClick={() => void saveSettings()} className="mt-4 min-h-11 rounded-lg bg-plum px-5 text-xs font-bold text-white gc-disabled-control">
           {busy === "settings" ? "Saving…" : "Save zero-result card"}
         </button>
       </section>
@@ -707,7 +707,7 @@ function Field({
         max={max}
         step={step}
         disabled={disabled}
-        className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal disabled:bg-cream disabled:text-ink/40"
+        className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs font-normal disabled:bg-cream gc-disabled-control"
       />
     </label>
   );

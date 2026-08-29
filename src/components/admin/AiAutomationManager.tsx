@@ -60,18 +60,18 @@ function featureConfigurationState(
   if (!configured) {
     return {
       label: "Not Configured",
-      className: "bg-amber/20 text-[#795516]",
+      className: "bg-amber/20 gc-text-warning",
     };
   }
   if (killSwitch) {
     return {
       label: "Safely Disabled",
-      className: "bg-amber/20 text-[#795516]",
+      className: "bg-amber/20 gc-text-warning",
     };
   }
   return {
     label: "Enabled",
-    className: "bg-green-100 text-green-800",
+    className: "bg-green-100 gc-text-success",
   };
 }
 
@@ -213,7 +213,7 @@ export default function AiAutomationManager() {
           {killSwitch || !hasConfiguredProvider ? (
             <AlertTriangle className="text-amber" />
           ) : (
-            <CheckCircle2 className="text-green-700" />
+            <CheckCircle2 className="gc-text-success" />
           )}
           <div>
             <h3 className="font-serif text-xl text-plum">
@@ -413,7 +413,7 @@ export default function AiAutomationManager() {
             </div>
             <button
               disabled={busy}
-              className="mt-4 min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-50"
+              className="mt-4 min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
             >
               Save governed controls
             </button>
@@ -442,7 +442,7 @@ export default function AiAutomationManager() {
             type="button"
             disabled={busy || input.trim().length < 3}
             onClick={() => void runSandbox()}
-            className="mt-3 min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta disabled:opacity-40"
+            className="mt-3 min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta gc-disabled-control"
           >
             Run sandbox test
           </button>

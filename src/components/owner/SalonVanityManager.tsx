@@ -152,7 +152,7 @@ export default function SalonVanityManager({ salon }: { salon: Salon }) {
         <Field name="instagram_url" label="Instagram profile" defaultValue={current.instagram_url} placeholder="https://instagram.com/..." />
         <Field name="tiktok_url" label="TikTok profile" defaultValue={current.tiktok_url} placeholder="https://tiktok.com/@..." />
         <Field name="google_business_url" label="Google Business profile" defaultValue={current.google_business_url} placeholder="https://g.page/..." wide />
-        <button disabled={saving || latest?.status === "Pending"} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-45 sm:col-span-2">
+        <button disabled={saving || latest?.status === "Pending"} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control sm:col-span-2">
           <QrCode size={16} />{saving ? "Submitting…" : latest?.status === "Pending" ? "Awaiting platform review" : "Request link approval"}
         </button>
       </form>

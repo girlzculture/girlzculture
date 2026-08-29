@@ -112,7 +112,7 @@ export default function OwnerWorkflowAcceptanceHarness() {
                   <textarea defaultValue="Customer requested a gentle braid-down." rows={4} className="mt-2 w-full rounded-lg border border-plum/15 p-3 font-normal" />
                 </label>
                 <button className="mt-4 min-h-11 rounded-lg bg-magenta px-6 text-xs font-bold text-white">Save booking note</button>
-                {saved ? <p role="status" className="mt-4 rounded-lg bg-green-50 p-3 text-xs font-semibold text-green-800">Booking note saved. You can return to the filtered list.</p> : null}
+                {saved ? <p role="status" className="mt-4 rounded-lg bg-green-50 p-3 text-xs font-semibold gc-text-success">Booking note saved. You can return to the filtered list.</p> : null}
               </form>
             ) : null}
           </>
@@ -167,10 +167,10 @@ export default function OwnerWorkflowAcceptanceHarness() {
                 <input aria-label="Search bookings" type="search" value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} placeholder="Customer, reference, service, or status" className="min-h-11 flex-1 rounded-lg border border-plum/15 px-3 text-xs" />
                 <button className="min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white">Search</button>
               </form>
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Booking workflow groups">
+              <div role="group" className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Booking workflow groups">
                 {workflowGroups.map((item) => <button key={item} type="button" onClick={() => setGroup(item)} aria-pressed={group === item} className={`min-h-10 shrink-0 rounded-lg px-4 text-xs font-bold ${group === item ? "bg-plum text-white" : "border border-plum/15"}`}>{item}</button>)}
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {["All", "Confirmed", "Completed"].map((item) => <button key={item} type="button" onClick={() => setStatus(item)} aria-pressed={status === item} className={`min-h-10 rounded-lg px-4 text-xs font-bold ${status === item ? "bg-blush text-plum" : "border border-plum/15"}`}>{item === "All" ? "All statuses" : item}</button>)}
               </div>
               <div className="mt-4 space-y-3">

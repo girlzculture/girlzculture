@@ -36,6 +36,7 @@ export default function SalonRatingSummary({
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
       <span
+        role="img"
         className="flex gap-0.5"
         aria-label={hasReviews ? `${safeRating.toFixed(1)} out of 5 stars` : "No reviews yet"}
       >

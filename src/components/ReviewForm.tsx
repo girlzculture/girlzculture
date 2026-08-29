@@ -247,13 +247,13 @@ export default function ReviewForm({
           </span>
         </label>
         {error ? (
-          <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm gc-text-danger">
             {error}
           </p>
         ) : null}
         <button
           disabled={!canSubmit}
-          className="mt-5 min-h-12 w-full rounded-xl bg-teal px-6 font-bold text-white disabled:bg-mist disabled:text-ink/45"
+          className="mt-5 min-h-12 w-full rounded-xl bg-teal px-6 font-bold text-white disabled:bg-mist gc-disabled-control"
         >
           {saving ? "Submitting…" : "Submit verified review"}
         </button>

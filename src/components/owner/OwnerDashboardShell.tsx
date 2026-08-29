@@ -187,7 +187,7 @@ export default function OwnerDashboardShell({
                 className={`flex min-h-10 items-center gap-3 rounded-[9px] px-3 text-[12px] font-medium transition ${
                   active
                     ? "bg-magenta/70 text-white shadow-[0_8px_24px_rgba(0,131,166,.2)]"
-                    : "text-white/85 hover:bg-white/10"
+                    : "gc-text-on-dark hover:bg-white/10"
                 }`}
               >
                 <Icon aria-hidden="true" size={18} strokeWidth={1.7} />
@@ -208,7 +208,7 @@ export default function OwnerDashboardShell({
               <br />
               with Girlz Culture
             </p>
-            <p className="mt-3 text-[10px] leading-4 text-white/70">
+            <p className="mt-3 text-[10px] leading-4 gc-text-on-dark-muted">
               Reach more clients and build your beauty empire.
             </p>
             <div className="mt-4 h-28 rounded-[10px] bg-[url('/images/hero-braids.jpg')] bg-cover bg-[center_20%]" />
@@ -222,7 +222,7 @@ export default function OwnerDashboardShell({
         ) : null}
         <RoleLogoutButton
           scope="salon"
-          className="mt-5 flex w-full items-center gap-3 rounded-[9px] px-3 py-3 text-sm text-white/85 hover:bg-white/10"
+          className="mt-5 flex w-full items-center gap-3 rounded-[9px] px-3 py-3 text-sm gc-text-on-dark hover:bg-white/10"
         />
       </aside>
 

@@ -246,7 +246,7 @@ export default function MarketplaceSalonCard({
           ) : null}
 
           {isList && salon.next_slot ? (
-            <p className="mt-1 text-[10px] font-semibold text-green-800">
+            <p className="mt-1 text-[10px] font-semibold gc-text-success">
               Opening {salon.next_slot.date} at {salon.next_slot.label}
             </p>
           ) : null}

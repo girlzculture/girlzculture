@@ -189,7 +189,7 @@ export default function AdminUserActivityTimeline({
           type="button"
           onClick={() => void load()}
           disabled={loading}
-          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum disabled:opacity-50"
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-plum/15 px-4 text-xs font-bold text-plum gc-disabled-control"
         >
           <RefreshCw size={14} />
           Refresh
@@ -259,7 +259,7 @@ export default function AdminUserActivityTimeline({
       {error ? (
         <p
           role="alert"
-          className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+          className="mt-4 rounded-lg bg-red-50 p-3 text-sm gc-text-danger"
         >
           {error}
         </p>

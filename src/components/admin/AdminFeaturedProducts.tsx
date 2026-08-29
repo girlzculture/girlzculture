@@ -275,7 +275,7 @@ export default function AdminFeaturedProducts() {
                     type="button"
                     disabled={busy || placement.status === "Archived"}
                     onClick={() => void archive(placement)}
-                    className="grid h-10 w-10 place-items-center rounded-lg border border-plum/10 text-magenta disabled:opacity-40"
+                    className="grid h-10 w-10 place-items-center rounded-lg border border-plum/10 text-magenta gc-disabled-control"
                     aria-label={`Archive ${product?.name || "placement"}`}
                   >
                     <Archive size={15} />
@@ -505,7 +505,7 @@ export default function AdminFeaturedProducts() {
           ) : null}
           <button
             disabled={busy}
-            className="min-h-11 flex-[2] rounded-lg bg-magenta text-xs font-bold text-white disabled:opacity-50"
+            className="min-h-11 flex-[2] rounded-lg bg-magenta text-xs font-bold text-white gc-disabled-control"
           >
             {busy ? "Saving…" : "Save Featured Product"}
           </button>

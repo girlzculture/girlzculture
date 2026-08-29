@@ -37,8 +37,10 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
   useEffect(() => {
     for (const [salonId, button] of markerButtons.current) {
       const selected = salonId === selectedSalonId;
-      button.style.background = selected ? "#0083A6" : "#fff";
-      button.style.color = selected ? "#fff" : "#0D1114";
+      button.style.background = selected ? "var(--gc-teal)" : "var(--gc-white)";
+      button.style.color = selected
+        ? "var(--gc-text-on-dark)"
+        : "var(--gc-text-primary)";
       button.style.transform = selected ? "scale(1.08)" : "scale(1)";
       button.setAttribute("aria-pressed", String(selected));
     }
@@ -134,7 +136,7 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
           button.title = `Open ${salon.name}`;
           button.setAttribute("aria-label", `Open ${salon.name}`);
           button.innerHTML = `<span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${salon.name.replace(/[<>&"']/g, "")}</span><span style="font-size:10px;opacity:.72">${reviews > 0 ? `★ ${rating.toFixed(1)}` : "☆ New"}${price == null ? "" : ` · From $${Number(price).toFixed(0)}`}</span>`;
-          button.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:42px;padding:6px 10px;border-radius:10px;background:#fff;color:#0D1114;font:700 11px Inter,sans-serif;box-shadow:0 5px 18px rgba(13,17,20,.2);border:2px solid #0083A6;cursor:pointer;transition:transform .15s ease";
+          button.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:42px;padding:6px 10px;border-radius:10px;background:var(--gc-white);color:var(--gc-text-primary);font:700 11px Inter,sans-serif;box-shadow:0 5px 18px rgba(13,17,20,.2);border:2px solid var(--gc-teal);cursor:pointer;transition:transform .15s ease";
           button.addEventListener("click", openSalon);
           buttons.set(salon.id, button);
           if (!markerLibrary) {

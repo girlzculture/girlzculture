@@ -78,7 +78,7 @@ export default function ProductPurchaseActions(props: Props) {
             `/salon/${props.salonSlug}/reserve/${props.productId}?quantity=${quantity}${props.promotionId ? `&promotion=${encodeURIComponent(props.promotionId)}` : ""}`,
           )
         }
-        className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal px-6 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal px-6 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed gc-disabled-control"
       >
         <PackageCheck size={18} />
         Reserve for Pickup

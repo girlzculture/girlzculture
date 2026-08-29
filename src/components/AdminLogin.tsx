@@ -50,8 +50,8 @@ export default function AdminLogin() {
       <div className="block"><label htmlFor="admin-password" className="mb-2 block text-sm font-semibold">Password</label><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 px-4 py-2"><LockKeyhole size={18}/><PasswordInput id="admin-password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} inputClassName="w-full bg-transparent py-1 outline-none"/></span></div>
       <Link href="/forgot-password" className="block text-right text-sm font-semibold text-magenta">Forgot password?</Link>
     </>}
-    {message ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}
-    <button disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta py-3.5 font-bold text-white disabled:opacity-60">{loading ? "Verifying..." : challenge ? "Verify and open Admin" : "Continue securely"}</button>
+    {message ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm gc-text-danger">{message}</p> : null}
+    <button disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta py-3.5 font-bold text-white gc-disabled-control">{loading ? "Verifying..." : challenge ? "Verify and open Admin" : "Continue securely"}</button>
     <p className="flex items-center justify-center gap-2 text-sm text-ink/60"><ShieldCheck size={15}/>Admin 2FA is required on every new sign-in.</p>
   </form>;
 }

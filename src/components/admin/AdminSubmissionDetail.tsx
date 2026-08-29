@@ -506,8 +506,8 @@ export default function AdminSubmissionDetail({
             aria-live="polite"
             className={`sticky top-3 z-40 mt-4 rounded-[10px] border p-3 text-sm font-semibold shadow-lg ${
               /could not|unable|permission|only a super|not found|enter|type the/i.test(message)
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-green-200 bg-green-50 text-green-800"
+                ? "border-red-200 bg-red-50 gc-text-danger"
+                : "border-green-200 bg-green-50 gc-text-success"
             }`}
           >
             {message}
@@ -546,7 +546,7 @@ export default function AdminSubmissionDetail({
                     "Current salon information saved.",
                   )
                 }
-                className="mt-4 min-h-11 rounded-[9px] bg-magenta px-5 text-sm font-bold text-white disabled:opacity-45"
+                className="mt-4 min-h-11 rounded-[9px] bg-magenta px-5 text-sm font-bold text-white gc-disabled-control"
               >
                 Save current salon changes
               </button>
@@ -591,7 +591,7 @@ export default function AdminSubmissionDetail({
                       "Submitted snapshot corrected; prior revision retained.",
                     )
                   }
-                  className="mt-4 min-h-11 rounded-[9px] border border-magenta bg-white px-5 text-sm font-bold text-magenta disabled:opacity-45"
+                  className="mt-4 min-h-11 rounded-[9px] border border-magenta bg-white px-5 text-sm font-bold text-magenta gc-disabled-control"
                 >
                   Save snapshot correction
                 </button>
@@ -645,7 +645,7 @@ export default function AdminSubmissionDetail({
                     type="button"
                     disabled={saving || reason.trim().length < 5}
                     onClick={() => void run("restore", {}, "Application restored.")}
-                    className="min-h-11 rounded-[9px] bg-plum px-4 text-sm font-bold text-white disabled:opacity-45"
+                    className="min-h-11 rounded-[9px] bg-plum px-4 text-sm font-bold text-white gc-disabled-control"
                   >
                     Restore application
                   </button>
@@ -654,7 +654,7 @@ export default function AdminSubmissionDetail({
                     type="button"
                     disabled={saving || reason.trim().length < 5}
                     onClick={() => void run("archive", {}, "Application archived without changing salon status.")}
-                    className="min-h-11 rounded-[9px] border border-plum/20 bg-white px-4 text-sm font-bold text-plum disabled:opacity-45"
+                    className="min-h-11 rounded-[9px] border border-plum/20 bg-white px-4 text-sm font-bold text-plum gc-disabled-control"
                   >
                     Archive application
                   </button>
@@ -665,7 +665,7 @@ export default function AdminSubmissionDetail({
                       type="button"
                       disabled={saving}
                       onClick={() => void decide("approve")}
-                      className="min-h-11 rounded-[9px] bg-magenta px-4 text-sm font-bold text-white disabled:opacity-45"
+                      className="min-h-11 rounded-[9px] bg-magenta px-4 text-sm font-bold text-white gc-disabled-control"
                     >
                       Approve application
                     </button>
@@ -673,7 +673,7 @@ export default function AdminSubmissionDetail({
                       type="button"
                       disabled={saving || reason.trim().length < 5}
                       onClick={() => void decide("reject")}
-                      className="min-h-11 rounded-[9px] border border-red-300 bg-white px-4 text-sm font-bold text-red-700 disabled:opacity-45"
+                      className="min-h-11 rounded-[9px] border border-red-300 bg-white px-4 text-sm font-bold gc-text-danger gc-disabled-control"
                     >
                       Reject and offboard atomically
                     </button>
@@ -685,7 +685,7 @@ export default function AdminSubmissionDetail({
                       type="button"
                       disabled={saving}
                       onClick={() => void decide("activate")}
-                      className="min-h-11 rounded-[9px] bg-plum px-4 text-sm font-bold text-white disabled:opacity-45"
+                      className="min-h-11 rounded-[9px] bg-plum px-4 text-sm font-bold text-white gc-disabled-control"
                     >
                       Recheck gates and publish if ready
                     </button>
@@ -700,7 +700,7 @@ export default function AdminSubmissionDetail({
                       type="button"
                       disabled={saving || overrideReason.trim().length < 12}
                       onClick={() => void decide("activate", true)}
-                      className="min-h-11 rounded-[9px] border border-magenta bg-white px-4 text-sm font-bold text-magenta disabled:opacity-45"
+                      className="min-h-11 rounded-[9px] border border-magenta bg-white px-4 text-sm font-bold text-magenta gc-disabled-control"
                     >
                       Publish with audited pilot override
                     </button>
@@ -734,13 +734,13 @@ export default function AdminSubmissionDetail({
 
             {isSuperAdmin ? (
               <section className="rounded-[14px] border border-red-200 bg-red-50 p-4 sm:p-5">
-                <h2 className="font-serif text-xl font-semibold text-red-900">Super Admin permanent actions</h2>
-                <p className="mt-2 text-sm leading-6 text-red-800">
+                <h2 className="font-serif text-xl font-semibold gc-text-danger">Super Admin permanent actions</h2>
+                <p className="mt-2 text-sm leading-6 gc-text-danger">
                   These confirmations protect against an accidental click; they do not transfer authority away from the Super Admin. Immutable revisions and financial/audit evidence remain available where required.
                 </p>
                 <div className="mt-4 space-y-4">
                   <div>
-                    <p className="text-xs font-bold text-red-900">Type exactly: {appDeletePhrase}</p>
+                    <p className="text-xs font-bold gc-text-danger">Type exactly: {appDeletePhrase}</p>
                     <input
                       value={applicationConfirmation}
                       onChange={(event) => setApplicationConfirmation(event.target.value)}
@@ -760,14 +760,14 @@ export default function AdminSubmissionDetail({
                           "Application deleted.",
                         )
                       }
-                      className="mt-2 min-h-11 w-full rounded-[9px] border border-red-500 bg-white px-4 text-sm font-bold text-red-800 disabled:opacity-45"
+                      className="mt-2 min-h-11 w-full rounded-[9px] border border-red-500 bg-white px-4 text-sm font-bold gc-text-danger gc-disabled-control"
                     >
                       Permanently delete application
                     </button>
                   </div>
                   {salon && !salon.deleted_at ? (
                     <div className="border-t border-red-200 pt-4">
-                      <p className="text-xs font-bold text-red-900">Type exactly: {salonDeletePhrase}</p>
+                      <p className="text-xs font-bold gc-text-danger">Type exactly: {salonDeletePhrase}</p>
                       <input
                         value={salonConfirmation}
                         onChange={(event) => setSalonConfirmation(event.target.value)}
@@ -787,11 +787,11 @@ export default function AdminSubmissionDetail({
                             "Salon removed from operational records.",
                           )
                         }
-                        className="mt-2 min-h-11 w-full rounded-[9px] bg-red-700 px-4 text-sm font-bold text-white disabled:opacity-45"
+                        className="mt-2 min-h-11 w-full rounded-[9px] bg-red-700 px-4 text-sm font-bold text-white gc-disabled-control"
                       >
                         Remove salon from operational records
                       </button>
-                      <p className="mt-2 text-xs leading-5 text-red-800">
+                      <p className="mt-2 text-xs leading-5 gc-text-danger">
                         Public identity, access, services, availability, promotions, and applications are removed or archived. Financial, booking, refund, subscription, dispute, and audit history remains anchored to a hidden tombstone.
                       </p>
                     </div>
