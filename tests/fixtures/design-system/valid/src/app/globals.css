@@ -1,0 +1,47 @@
+:root {
+  --gc-charcoal: #0d1114;
+  --gc-teal: #0083a6;
+  --gc-coral: #ff6868;
+  --gc-light-gray: #f5f7f8;
+  --gc-mist-gray: #e6eaed;
+  --gc-white: #ffffff;
+  --gc-star: #e0a34e;
+  --gc-body: var(--gc-charcoal);
+  --gc-muted: #52616a;
+  --gc-success: #147d64;
+  --gc-error: #c83f4a;
+  --gc-text-primary: var(--gc-body);
+  --gc-text-secondary: var(--gc-body);
+  --gc-text-muted: var(--gc-muted);
+  --gc-text-placeholder: #667681;
+  --gc-text-disabled: var(--gc-muted);
+  --gc-text-on-dark: var(--gc-white);
+  --gc-text-link: #006b88;
+  --gc-text-danger: var(--gc-error);
+  --gc-text-success: var(--gc-success);
+  --gc-text-warning: #795516;
+  --gc-plum: var(--gc-charcoal);
+}
+
+@theme inline {
+  --color-text-primary: var(--gc-text-primary);
+  --color-text-secondary: var(--gc-text-secondary);
+  --color-text-muted: var(--gc-text-muted);
+  --color-text-placeholder: var(--gc-text-placeholder);
+  --color-text-disabled: var(--gc-text-disabled);
+  --color-text-on-dark: var(--gc-text-on-dark);
+  --color-text-link: var(--gc-text-link);
+  --color-text-danger: var(--gc-text-danger);
+  --color-text-success: var(--gc-text-success);
+  --color-text-warning: var(--gc-text-warning);
+  --color-ink: var(--gc-text-primary);
+  --color-plum: var(--gc-plum);
+}
+
+:where(input, textarea)::placeholder {
+  color: var(--gc-text-placeholder);
+}
+
+.gc-text-on-dark {
+  color: var(--gc-text-on-dark);
+}

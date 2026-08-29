@@ -74,7 +74,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
         </span>
         <LocationAutocomplete name="location_query" value={locationText} onChange={beginLocationEdit} onResolved={resolve} placeholder={locationPlaceholder} className="mt-0.5"/>
         <button type="button" onClick={() => void requestDeviceLocation()} className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-[10px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><LocateFixed size={13}/>Use my location</button>
-        {customerLocation.permissionError ? <p role="alert" className="mt-1 text-[10px] text-red-700">{customerLocation.permissionError}</p> : null}
+        {customerLocation.permissionError ? <p role="alert" className="mt-1 text-[10px] gc-text-danger">{customerLocation.permissionError}</p> : null}
       </div>
       <button type="submit" className="min-h-11 rounded-[10px] bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover">Search</button>
     </div>

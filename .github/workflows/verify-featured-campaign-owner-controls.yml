@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  featured-campaign-owner-controls:
     runs-on: ubuntu-latest
     env:
       # Pull-request builds cannot access protected production secrets. These

@@ -22,7 +22,7 @@ function errorElement(control: ValidatedControl) {
     error = document.createElement("span");
     error.id = id;
     error.dataset.inlineValidation = "true";
-    error.className = "mt-1 block text-xs font-semibold text-red-700";
+    error.className = "mt-1 block text-xs font-semibold gc-text-danger";
     const label = control.closest("label");
     if (label) label.insertAdjacentElement("afterend", error); else control.insertAdjacentElement("afterend", error);
   }

@@ -1031,7 +1031,7 @@ export default function ImageUpload({
           </p>
           <div className="mt-4 flex justify-end">
             {active.status === "complete" ? (
-              <p className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-50 px-5 text-xs font-bold text-emerald-800">
+              <p className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-50 px-5 text-xs font-bold gc-text-success">
                 <Check size={16} />
                 {active.attached
                   ? "Image saved to this record"
@@ -1042,7 +1042,7 @@ export default function ImageUpload({
                 type="button"
                 disabled={busy}
                 onClick={() => void uploadAll(active.id)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-60"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
               >
                 <UploadCloud size={16} />
                 {active.status === "uploading"
@@ -1073,7 +1073,7 @@ export default function ImageUpload({
                 type="button"
                 disabled={busy}
                 onClick={() => void uploadAll()}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-60"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
               >
                 {busy ? (
                   <LoaderCircle className="animate-spin" size={16} />
@@ -1108,7 +1108,7 @@ export default function ImageUpload({
                       {item.file.name}
                     </p>
                     {item.status === "complete" ? (
-                      <Check size={15} className="text-emerald-700" />
+                      <Check size={15} className="gc-text-success" />
                     ) : item.status === "uploading" ? (
                       <LoaderCircle
                         size={15}
@@ -1134,7 +1134,7 @@ export default function ImageUpload({
                     </div>
                   ) : null}
                   {item.error ? (
-                    <p className="mt-1 text-[10px] leading-4 text-red-700">
+                    <p className="mt-1 text-[10px] leading-4 gc-text-danger">
                       {item.error}
                     </p>
                   ) : null}
@@ -1160,7 +1160,7 @@ export default function ImageUpload({
                         type="button"
                         disabled={busy}
                         onClick={() => void uploadAll(item.id)}
-                        className="min-h-10 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta disabled:opacity-50"
+                        className="min-h-10 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta gc-disabled-control"
                       >
                         {item.status === "error" ? "Retry" : "Upload"}
                       </button>
@@ -1170,7 +1170,7 @@ export default function ImageUpload({
                     type="button"
                     disabled={item.status === "uploading"}
                     onClick={() => removeQueueItem(item.id)}
-                    className="grid min-h-10 min-w-10 place-items-center rounded-lg border border-plum/15 text-plum disabled:opacity-40"
+                    className="grid min-h-10 min-w-10 place-items-center rounded-lg border border-plum/15 text-plum gc-disabled-control"
                     aria-label={`Remove ${item.file.name} from upload queue`}
                   >
                     <X size={15} />
@@ -1216,7 +1216,7 @@ export default function ImageUpload({
                   type="button"
                   disabled={locked}
                   onClick={() => inputRef.current?.click()}
-                  className="min-h-10 rounded-full bg-white/20 px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-10 rounded-full bg-white/20 px-3 text-xs font-bold disabled:cursor-not-allowed gc-disabled-control"
                 >
                   Replace
                 </button>
@@ -1248,7 +1248,7 @@ export default function ImageUpload({
               type="button"
               disabled={locked}
               onClick={() => inputRef.current?.click()}
-              className="flex min-h-[150px] w-full flex-col items-center justify-center rounded-[12px] px-4 text-center disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-[150px] w-full flex-col items-center justify-center rounded-[12px] px-4 text-center disabled:cursor-not-allowed gc-disabled-control"
             >
               <ImagePlus size={28} className="text-magenta" />
               <b className="mt-2 text-sm text-plum">
@@ -1297,7 +1297,7 @@ export default function ImageUpload({
       {error ? (
         <p
           role="alert"
-          className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700"
+          className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs gc-text-danger"
         >
           {error}
         </p>

@@ -55,8 +55,8 @@ export default function SalonLogin() {
       <div className="block text-sm font-semibold"><label htmlFor="salon-password">Password</label><span className="mt-2 flex w-full rounded-md border border-ink/15 bg-white px-3 py-1.5"><PasswordInput id="salon-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required inputClassName="bg-transparent py-1.5 outline-none" /></span></div>
       <Link className="block text-right text-sm font-semibold text-magenta" href="/forgot-password">Forgot password?</Link>
     </>}
-    {errorMsg ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{errorMsg}</p> : null}
-    <button type="submit" disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta px-4 py-3 font-semibold text-white disabled:opacity-60">{loading ? "Verifying..." : challenge ? "Verify and open dashboard" : "Continue securely"}</button>
+    {errorMsg ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm gc-text-danger">{errorMsg}</p> : null}
+    <button type="submit" disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta px-4 py-3 font-semibold text-white gc-disabled-control">{loading ? "Verifying..." : challenge ? "Verify and open dashboard" : "Continue securely"}</button>
     {!challenge ? <p className="text-sm text-ink/65">Salon accounts use SMS two-factor verification. If SMS delivery is unavailable, the code is sent to the account email.</p> : null}
     <Link className="block text-center text-sm text-ink/70 hover:text-plum" href="/salon/signup">Need an account?</Link>
   </form>;

@@ -381,7 +381,7 @@ export function StyleAutocomplete({
               Finding matches...
             </p>
           ) : error ? (
-            <div role="alert" className="px-4 py-3 text-xs text-red-700">
+            <div role="alert" className="px-4 py-3 text-xs gc-text-danger">
               <p>{error}</p>
               <button type="button" onClick={() => { setError(""); setRetryCount((count) => count + 1); }} className="mt-2 min-h-9 font-bold text-magenta">Try again</button>
             </div>

@@ -86,7 +86,7 @@ export default async function InfoPage({
     <section className="bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,.18),transparent_28%),linear-gradient(130deg,#006b88,#0083a6)] px-5 py-20 text-center text-white">
       {page.eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber">{page.eyebrow}</p> : null}
       <h1 className="mt-3 font-serif text-5xl sm:text-6xl">{page.hero_title || page.title}</h1>
-      {page.hero_subtitle ? <p className="mx-auto mt-5 max-w-2xl leading-7 text-white/70">{page.hero_subtitle}</p> : null}
+      {page.hero_subtitle ? <p className="mx-auto mt-5 max-w-2xl leading-7 gc-text-on-dark-muted">{page.hero_subtitle}</p> : null}
     </section>
     <PublicContentSections sections={page.sections?.length ? page.sections : [{ type: "text", title: page.title, body: fallback.body }]} />
     <div className="flex flex-wrap justify-center gap-3 px-5 pb-12 text-center">{isLegal ? <Link href="/legal" className="inline-flex rounded-lg border border-plum/20 bg-white px-6 py-3 text-sm font-bold text-plum">Back to Legal & Policies</Link> : null}<Link href="/contact" className="inline-flex rounded-lg bg-magenta px-6 py-3 text-sm font-bold text-white">Contact Girlz Culture</Link></div>

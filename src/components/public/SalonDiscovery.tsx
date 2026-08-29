@@ -599,13 +599,13 @@ export default function SalonDiscovery({
               maxLength={600}
               autoComplete="off"
               enterKeyHint="search"
-              className="min-h-10 w-full min-w-0 bg-transparent px-3 text-[15px] font-semibold text-ink outline-none placeholder:text-ink/50"
+              className="gc-placeholder-light min-h-10 w-full min-w-0 bg-transparent px-3 text-[15px] font-semibold text-ink outline-none"
             />
           </label>
           <button
             type="submit"
             disabled={loading}
-            className="min-h-10 shrink-0 rounded-[9px] bg-magenta px-4 text-[12px] font-bold text-white disabled:opacity-60 sm:px-6"
+            className="min-h-10 shrink-0 rounded-[9px] bg-magenta px-4 text-[12px] font-bold text-white gc-disabled-control sm:px-6"
           >
             {loading ? "Searching…" : "Search"}
           </button>
@@ -643,7 +643,7 @@ export default function SalonDiscovery({
             type="button"
             onClick={() => void requestDeviceLocation()}
             disabled={locationBusy}
-            className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-[8px] border border-magenta bg-white px-3 text-[10px] font-bold text-magenta disabled:opacity-60"
+            className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-[8px] border border-magenta bg-white px-3 text-[10px] font-bold text-magenta gc-disabled-control"
           >
             <LocateFixed aria-hidden="true" size={13} />
             {locationBusy ? "Locating…" : "Use my location"}
@@ -680,7 +680,7 @@ export default function SalonDiscovery({
       {error ? (
         <div
           role="alert"
-          className="mt-2 rounded-[9px] border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold leading-5 text-red-800"
+          className="mt-2 rounded-[9px] border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold leading-5 gc-text-danger"
         >
           {error}
         </div>
@@ -723,7 +723,7 @@ export default function SalonDiscovery({
         </div>
 
         {loading && !salons.length ? (
-          <div className="mt-3 space-y-3" aria-label="Loading salons">
+          <div role="status" aria-live="polite" className="mt-3 space-y-3" aria-label="Loading salons">
             {[0, 1, 2].map((row) => (
               <div
                 key={row}

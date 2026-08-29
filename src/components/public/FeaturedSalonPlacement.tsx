@@ -169,7 +169,7 @@ export default function FeaturedSalonPlacement({
           role="alert"
           className="rounded-[15px] border border-red-200 bg-white p-6 text-center"
         >
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm gc-text-danger">{error}</p>
           <button
             onClick={() => void load()}
             className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-4 text-xs font-bold text-white"
@@ -182,7 +182,7 @@ export default function FeaturedSalonPlacement({
         <Skeletons count={viewAll ? 8 : 4} />
       ) : salons.length ? (
         <>
-          <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} aria-label={viewAll ? undefined : "Featured salons carousel"}
+          <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} role={viewAll ? undefined : "region"} aria-label={viewAll ? undefined : "Featured salons carousel"}
             className={viewAll ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"}
           >
             {salons.map((salon) => (
@@ -198,7 +198,7 @@ export default function FeaturedSalonPlacement({
             <button
               disabled={loadingMore}
               onClick={() => void load(salons.length, true)}
-              className="mt-5 min-h-12 w-full rounded-[10px] border border-magenta bg-white text-sm font-bold text-magenta disabled:opacity-50"
+              className="mt-5 min-h-12 w-full rounded-[10px] border border-magenta bg-white text-sm font-bold text-magenta gc-disabled-control"
             >
               {loadingMore ? "Loading…" : "Load more featured salons"}
             </button>
@@ -230,6 +230,8 @@ export default function FeaturedSalonPlacement({
 function Skeletons({ count }: { count: number }) {
   return (
     <div
+      role="status"
+      aria-live="polite"
       aria-label="Loading featured salons"
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
     >

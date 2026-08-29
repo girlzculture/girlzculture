@@ -25,7 +25,7 @@ export default async function TestimonialsPage() {
       <div className="relative">
         <p className="text-[10px] font-bold uppercase tracking-[.2em] text-amber">{page.eyebrow || "Customer stories"}</p>
         <h1 className="mx-auto mt-3 max-w-4xl font-serif text-5xl leading-[.95] sm:text-6xl">{page.hero_title || page.title}</h1>
-        <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-white/70">{page.hero_subtitle}</p>
+        <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 gc-text-on-dark-muted">{page.hero_subtitle}</p>
       </div>
     </section>
     <PublicContentSections sections={customSections} />

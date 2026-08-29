@@ -17,6 +17,12 @@ import { getPublishedBrandAsset } from "@/lib/brandAssets";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 import { bookingReference } from "@/lib/bookingReference";
 import {
+  accessibleSurfaceColor,
+  accessibleTextColor,
+  hasMinimumContrastOnAll,
+} from "@/lib/colorContrast";
+import { NON_DOM_VISUAL_TOKENS } from "@/lib/nonDomVisualTokens.mjs";
+import {
   cancellationActorLabel,
   refundCustomerSummary,
   safeCancellationReason,
@@ -391,6 +397,17 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const configuredDepositPercentage=Number(values["booking.deposit_percentage"]??10);
   const color=(key:string,fallback:string)=>{const value=String(values[key]||"");return /^#[0-9a-f]{6}$/i.test(value)?value:fallback};
   const font=(key:string,allowed:string[],fallback:string)=>{const value=String(values[key]||"");return allowed.includes(value)?value:fallback};
+  const rawEmailPage=color("branding.page_background","#FFFFFF");
+  const rawEmailCard=color("branding.card_background","#FFFFFF");
+  const rawEmailHeading=color("branding.heading_color","#0D1114");
+  const rawEmailBody=color("branding.body_color","#0D1114");
+  const rawEmailMuted=color("branding.muted_color","#52616A");
+  const configuredEmailSurfaces=[rawEmailPage,rawEmailCard];
+  const emailPaletteIsReadable=[rawEmailHeading,rawEmailBody,rawEmailMuted].every((foreground)=>hasMinimumContrastOnAll(foreground,configuredEmailSurfaces));
+  const emailPage=emailPaletteIsReadable?rawEmailPage:"#FFFFFF";
+  const emailCard=emailPaletteIsReadable?rawEmailCard:"#FFFFFF";
+  const emailSurfaces=[emailPage,emailCard];
+  const emailBody=accessibleTextColor(rawEmailBody,emailSurfaces,["#0D1114","#FFFFFF"]);
   return{
     channels,templates,translations,warningReferences,
     reminderHours:reminderHours.length?reminderHours:[24,2],
@@ -407,13 +424,13 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
     footer:text("notifications.booking_email_footer","Only use Girlz Culture links from this message. Contact support if you did not make this booking.",400),
     depositPercentage:Number.isFinite(configuredDepositPercentage)?configuredDepositPercentage:10,
     emailTheme:{
-      primary:color("branding.primary_color","#0083A6"),
-      cta:color("branding.cta_color","#0083A6"),
-      page:color("branding.page_background","#FFFFFF"),
-      card:color("branding.card_background","#FFFFFF"),
-      heading:color("branding.heading_color","#0D1114"),
-      body:color("branding.body_color","#0D1114"),
-      muted:color("branding.muted_color","#52616A"),
+      primary:accessibleSurfaceColor(color("branding.primary_color",NON_DOM_VISUAL_TOKENS.action),NON_DOM_VISUAL_TOKENS.onAction,NON_DOM_VISUAL_TOKENS.action),
+      cta:accessibleSurfaceColor(color("branding.cta_color",NON_DOM_VISUAL_TOKENS.action),NON_DOM_VISUAL_TOKENS.onAction,NON_DOM_VISUAL_TOKENS.action),
+      page:emailPage,
+      card:emailCard,
+      heading:accessibleTextColor(rawEmailHeading,emailSurfaces,["#0D1114",emailBody,"#FFFFFF"]),
+      body:emailBody,
+      muted:accessibleTextColor(rawEmailMuted,emailSurfaces,["#52616A",emailBody,"#FFFFFF"]),
       headingFont:font("branding.heading_font",["Playfair Display","Fraunces","Georgia"],"Playfair Display"),
       bodyFont:font("branding.body_font",["Montserrat","Inter","Arial"],"Montserrat"),
     },

@@ -27,7 +27,7 @@ export default function PlansPage() {
           </article>;
         })}
       </div>
-      <div className="mt-10 rounded-[18px] bg-plum p-7 text-center text-white"><h2 className="font-serif text-3xl">No payment at application</h2><p className="mt-2 text-sm text-white/70">Apply first. After approval, activate your selected plan securely through Stripe test mode.</p></div>
+      <div className="mt-10 rounded-[18px] bg-plum p-7 text-center text-white"><h2 className="font-serif text-3xl">No payment at application</h2><p className="mt-2 text-sm gc-text-on-dark-muted">Apply first. After approval, activate your selected plan securely through Stripe test mode.</p></div>
     </section>
     <PublicFooter />
   </main>;

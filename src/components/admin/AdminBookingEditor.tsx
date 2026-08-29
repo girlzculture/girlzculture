@@ -346,7 +346,7 @@ export default function AdminBookingEditor({
                 name="action"
                 value="cancel"
                 disabled={busy}
-                className="rounded-lg border border-red-400 px-5 py-3 font-bold text-red-700"
+                className="rounded-lg border border-red-400 px-5 py-3 font-bold gc-text-danger"
               >
                 Cancel Booking &amp; Process Refund
               </button>

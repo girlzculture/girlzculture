@@ -14,7 +14,7 @@ export default async function ApplyPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"/>
         <div className="absolute inset-x-8 bottom-10 text-white">
           <h2 className="font-serif text-4xl font-semibold">Grow Your Beauty Business with Girlz Culture</h2>
-          <p className="mt-4 text-sm leading-6 text-white/80">Join a premium directory and connect with clients in your community.</p>
+          <p className="mt-4 text-sm leading-6 gc-text-on-dark">Join a premium directory and connect with clients in your community.</p>
           <ul className="mt-6 space-y-4 text-sm">{benefits.map(([Icon, label]) => <li key={label} className="flex items-center gap-3"><Icon size={18} className="text-amber" aria-hidden="true"/>{label}</li>)}</ul>
         </div>
       </aside>

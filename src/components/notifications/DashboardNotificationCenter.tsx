@@ -239,7 +239,7 @@ export default function DashboardNotificationCenter({
         {loadMessage ? (
           <p
             role="status"
-            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-[10px] leading-4 text-amber-950"
+            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-[10px] leading-4 gc-text-warning"
           >
             {loadMessage}
           </p>
@@ -247,7 +247,7 @@ export default function DashboardNotificationCenter({
         {notifications.length ? notifications.map((notification) => {
           const Icon = categoryIcon(notification.category);
           return <button type="button" key={notification.id} onClick={() => void select(notification)} className={`flex w-full gap-3 border-b border-plum/8 p-4 text-left hover:bg-blush/20 ${notification.read_at ? "bg-white" : "bg-blush/15"}`}>
-            <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full ${notification.severity === "critical" || notification.severity === "high" ? "bg-red-50 text-red-700" : "bg-cream text-magenta"}`}><Icon size={16}/></span>
+            <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full ${notification.severity === "critical" || notification.severity === "high" ? "bg-red-50 gc-text-danger" : "bg-cream text-magenta"}`}><Icon size={16}/></span>
             <span className="min-w-0 flex-1"><span className="flex items-start justify-between gap-2"><b className="text-xs text-plum">{notification.title || "Update"}</b>{!notification.read_at ? <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-magenta"/> : null}</span><span className="mt-1 block text-[11px] leading-4 text-ink/60">{notification.body}</span>{Number(notification.occurrence_count || 1) > 1 ? <span className="mt-1 block text-[9px] font-bold text-ink/45">{notification.occurrence_count} occurrences grouped</span> : null}</span>
           </button>;
         }) : <p className="p-8 text-center text-xs text-ink/50">No notifications yet.</p>}

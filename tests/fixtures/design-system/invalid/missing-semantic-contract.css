@@ -1,0 +1,14 @@
+:root {
+  --gc-charcoal: #0d1114;
+  --gc-teal: #0083a6;
+  --gc-coral: #ff6868;
+  --gc-light-gray: #f5f7f8;
+  --gc-mist-gray: #e6eaed;
+  --gc-white: #ffffff;
+  --gc-star: #e0a34e;
+  --gc-plum: var(--gc-charcoal);
+}
+
+@theme inline {
+  --color-plum: var(--gc-plum);
+}

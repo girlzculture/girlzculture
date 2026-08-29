@@ -160,7 +160,7 @@ export default function SalonSpreadsheetPanel({
             type="button"
             disabled={busy}
             onClick={() => void downloadWorkbook("template")}
-            className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-teal px-4 text-xs font-bold text-teal disabled:opacity-50"
+            className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-teal px-4 text-xs font-bold text-teal gc-disabled-control"
           >
             <Download size={14} />
             Download Template
@@ -169,7 +169,7 @@ export default function SalonSpreadsheetPanel({
             type="button"
             disabled={busy}
             onClick={() => void downloadWorkbook("export")}
-            className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum disabled:opacity-50"
+            className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum gc-disabled-control"
           >
             <Download size={14} />
             Export Current {kind === "services" ? "Services" : "Products"}
@@ -200,7 +200,7 @@ export default function SalonSpreadsheetPanel({
           type="button"
           disabled={busy || !file}
           onClick={() => void importAndSave()}
-          className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-[8px] bg-teal px-6 text-xs font-bold text-white disabled:opacity-50"
+          className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-[8px] bg-teal px-6 text-xs font-bold text-white gc-disabled-control"
         >
           <Upload size={15} />
           {busy ? "Working…" : "Import & Save"}
@@ -212,7 +212,7 @@ export default function SalonSpreadsheetPanel({
           role="status"
           className={`mt-3 rounded-[8px] border px-3 py-2 text-xs ${
             noticeKind === "error"
-              ? "border-red-200 bg-red-50 text-red-800"
+              ? "border-red-200 bg-red-50 gc-text-danger"
               : "border-teal/20 bg-teal/5 text-ink"
           }`}
         >
@@ -223,7 +223,7 @@ export default function SalonSpreadsheetPanel({
       {errors.length ? (
         <div className="mt-3 max-h-64 overflow-auto rounded-[8px] border border-red-200 bg-white">
           <table className="w-full min-w-[560px] text-left text-[11px]">
-            <thead className="sticky top-0 bg-red-50 text-red-900">
+            <thead className="sticky top-0 bg-red-50 gc-text-danger">
               <tr>
                 <th className="p-3">Spreadsheet row</th>
                 <th className="p-3">What needs to be corrected</th>

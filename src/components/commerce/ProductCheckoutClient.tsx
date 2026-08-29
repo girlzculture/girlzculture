@@ -407,7 +407,7 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
                       aria-label={`Increase ${product.name}`}
                       disabled={value >= maximum}
                       onClick={() => quantity(product.id, value + 1)}
-                      className="grid h-7 w-7 place-items-center rounded-md border border-plum/15 disabled:opacity-40"
+                      className="grid h-7 w-7 place-items-center rounded-md border border-plum/15 gc-disabled-control"
                     >
                       <Plus size={12} />
                     </button>
@@ -447,7 +447,7 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
               type="button"
               disabled={!pickupAvailable}
               onClick={() => setFulfillment("Pickup")}
-              className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-40 ${fulfillment === "Pickup" ? "border-magenta bg-blush/35" : "border-plum/10"}`}
+              className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed gc-disabled-control ${fulfillment === "Pickup" ? "border-magenta bg-blush/35" : "border-plum/10"}`}
             >
               <Store className="text-magenta" size={20} />
               <b className="mt-2 block text-sm">Salon pickup</b>
@@ -459,7 +459,7 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
               type="button"
               disabled={!shippingAvailable}
               onClick={() => setFulfillment("Shipping")}
-              className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-40 ${fulfillment === "Shipping" ? "border-magenta bg-blush/35" : "border-plum/10"}`}
+              className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed gc-disabled-control ${fulfillment === "Shipping" ? "border-magenta bg-blush/35" : "border-plum/10"}`}
             >
               <Truck className="text-magenta" size={20} />
               <b className="mt-2 block text-sm">US shipping</b>
@@ -570,14 +570,14 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
             />
           </div>
         </div>
-        <p className="mt-4 text-[10px] leading-5 text-ink/50">
+        <p className="mt-4 text-[10px] leading-5 gc-text-secondary">
           Inventory, live prices, fulfillment eligibility, promotions, tax,
           shipping, and the final total are verified by the server before
           payment.
         </p>
         <button
           disabled={saving || !rows.length}
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-magenta px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-magenta px-5 text-sm font-bold text-white disabled:cursor-not-allowed gc-disabled-control"
         >
           <LockKeyhole size={16} />
           {saving ? "Starting secure checkout…" : "Continue to Secure Payment"}
@@ -592,12 +592,12 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
         {message ? (
           <p
             role="alert"
-            className="mt-4 rounded-lg bg-red-50 p-3 text-xs leading-5 text-red-700"
+            className="mt-4 rounded-lg bg-red-50 p-3 text-xs leading-5 gc-text-danger"
           >
             {message}
           </p>
         ) : null}
-        <p className="mt-5 flex items-center justify-center gap-2 text-[10px] text-ink/50">
+        <p className="mt-5 flex items-center justify-center gap-2 text-[10px] gc-text-secondary">
           <LockKeyhole size={13} />
           Stripe test mode · encrypted checkout
         </p>

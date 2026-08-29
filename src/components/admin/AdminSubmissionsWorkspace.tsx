@@ -234,7 +234,7 @@ export default function AdminSubmissionsWorkspace() {
         </section>
 
         {message ? (
-          <p role="alert" className="mt-4 rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <p role="alert" className="mt-4 rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm gc-text-danger">
             {message}
           </p>
         ) : null}
@@ -317,7 +317,7 @@ export default function AdminSubmissionsWorkspace() {
                 type="button"
                 disabled={loadingMore}
                 onClick={() => void load({ append: true, cursor: nextCursor })}
-                className="min-h-12 w-full rounded-[10px] border border-magenta bg-white text-sm font-bold text-magenta disabled:opacity-55"
+                className="min-h-12 w-full rounded-[10px] border border-magenta bg-white text-sm font-bold text-magenta gc-disabled-control"
               >
                 {loadingMore ? "Loading…" : "Load more"}
               </button>

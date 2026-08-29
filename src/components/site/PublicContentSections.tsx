@@ -36,7 +36,7 @@ export default function PublicContentSections({
                   <h2 className="font-serif text-3xl">{section.title}</h2>
                 ) : null}
                 {section.body ? (
-                  <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white/80">
+                  <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-7 gc-text-on-dark">
                     {section.body}
                   </p>
                 ) : null}

@@ -37,12 +37,12 @@ type Status = {
 const presentation = {
   healthy: {
     label: "Healthy",
-    className: "bg-green-100 text-green-800",
+    className: "bg-green-100 gc-text-success",
     Icon: CheckCircle2,
   },
   degraded: {
     label: "Degraded",
-    className: "bg-amber/15 text-[#7b4a00]",
+    className: "bg-amber/15 gc-text-warning",
     Icon: AlertTriangle,
   },
   not_configured: {
@@ -159,7 +159,7 @@ export default function SystemStatusManager() {
           type="button"
           disabled={loading}
           onClick={() => void load()}
-          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta disabled:opacity-50"
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta gc-disabled-control"
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           Check again
@@ -187,7 +187,7 @@ export default function SystemStatusManager() {
                     size={17}
                     className={
                       status.state === "healthy"
-                        ? "text-green-700"
+                        ? "gc-text-success"
                         : status.state === "degraded"
                           ? "text-amber"
                           : "text-ink/35"
@@ -243,8 +243,8 @@ export default function SystemStatusManager() {
                         <span
                           className={`mt-1 block font-bold ${
                             variable.present
-                              ? "text-green-700"
-                              : "text-red-700"
+                              ? "gc-text-success"
+                              : "gc-text-danger"
                           }`}
                         >
                           {variable.present ? "Present" : "Missing"}
@@ -260,7 +260,7 @@ export default function SystemStatusManager() {
                 </div>
               ) : null}
               {status.safeError ? (
-                <p className="mt-3 rounded-lg bg-amber/10 p-3 text-[10px] text-[#7b4a00]">
+                <p className="mt-3 rounded-lg bg-amber/10 p-3 text-[10px] gc-text-warning">
                   {status.safeError}
                 </p>
               ) : null}
@@ -282,7 +282,7 @@ export default function SystemStatusManager() {
                 type="button"
                 disabled={!status.canTest || Boolean(testing)}
                 onClick={() => void testConnection(status)}
-                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-[10px] font-bold text-magenta disabled:opacity-40"
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-magenta px-4 text-[10px] font-bold text-magenta gc-disabled-control"
               >
                 <RefreshCw
                   size={13}

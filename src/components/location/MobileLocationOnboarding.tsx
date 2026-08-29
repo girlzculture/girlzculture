@@ -131,7 +131,7 @@ export default function MobileLocationOnboarding() {
           </div>
         ) : null}
         {locationState.permissionError ? (
-          <p role="alert" className="mt-3 text-xs leading-5 text-red-700">
+          <p role="alert" className="mt-3 text-xs leading-5 gc-text-danger">
             {locationState.permissionError}
           </p>
         ) : null}
@@ -141,7 +141,7 @@ export default function MobileLocationOnboarding() {
             type="button"
             disabled={locating}
             onClick={() => void requestDeviceLocation()}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[12px] bg-coral px-5 text-sm font-bold text-white disabled:opacity-60"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[12px] bg-coral px-5 text-sm font-bold text-white gc-disabled-control"
           >
             <LocateFixed size={18} aria-hidden="true" />
             {locating ? "Finding your location…" : "Use my location"}

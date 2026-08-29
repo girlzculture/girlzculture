@@ -189,7 +189,7 @@ export default async function About() {
             <h1 className="mt-2 max-w-3xl font-serif text-[34px] font-semibold leading-[.92] md:mt-4 md:text-7xl">
               {page.hero_title}
             </h1>
-            <p className="mt-3 line-clamp-4 max-w-xl text-[11px] leading-4 text-white/80 md:mt-5 md:line-clamp-none md:text-sm md:leading-6">
+            <p className="mt-3 line-clamp-4 max-w-xl text-[11px] leading-4 gc-text-on-dark md:mt-5 md:line-clamp-none md:text-sm md:leading-6">
               {page.hero_subtitle}
             </p>
             <AboutStoryDialog

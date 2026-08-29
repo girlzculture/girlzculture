@@ -84,7 +84,7 @@ export default function SalonLifecycleSettings() {
         <label className="text-xs font-bold">If eligibility is lost<select value={config.loss_behavior} onChange={(event) => setConfig({ ...config, loss_behavior: event.target.value as Config["loss_behavior"] })} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3"><option value="needs_attention">Needs Attention + hide</option><option value="hide_immediately">Hide immediately</option><option value="grace_period">Grace period</option></select></label>
         <label className="text-xs font-bold">Grace period days<NumericInput integer min={0} max={90} value={config.grace_period_days} onValueChange={(value) => setConfig({ ...config, grace_period_days: value === "" ? "" : Number(value) })} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3"/></label>
       </div>
-      <button type="button" disabled={saving} onClick={() => void save()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-6 text-xs font-bold text-white disabled:opacity-50"><CheckCircle2 size={16}/>{saving ? "Saving…" : "Save lifecycle rules"}</button>
+      <button type="button" disabled={saving} onClick={() => void save()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-magenta px-6 text-xs font-bold text-white gc-disabled-control"><CheckCircle2 size={16}/>{saving ? "Saving…" : "Save lifecycle rules"}</button>
     </>}
     {message ? <p role="status" className="mt-4 rounded-lg bg-blush/45 p-3 text-xs text-plum">{message}</p> : null}
   </section>;

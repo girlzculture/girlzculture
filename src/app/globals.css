@@ -32,18 +32,52 @@
   --gc-page: var(--gc-white);
   --gc-card: var(--gc-white);
   --gc-header: var(--gc-white);
-  --gc-footer: var(--gc-teal);
+  --gc-footer: #006b88;
   --gc-heading: var(--gc-charcoal);
   --gc-body: var(--gc-charcoal);
   --gc-muted: #52616a;
-  --gc-link: var(--gc-teal);
+  --gc-link: #006b88;
   --gc-accent: var(--gc-star);
   --gc-success: #147d64;
-  --gc-warning: var(--gc-coral);
+  --gc-warning: #795516;
   --gc-error: #c83f4a;
   --gc-hover: #006b88;
-  --gc-focus: var(--gc-teal);
+  --gc-focus: #006b88;
+  --gc-focus-contrast: var(--gc-white);
   --gc-disabled: var(--gc-mist-gray);
+  /* Text roles are intentionally separate from brand colors so content keeps
+     its meaning and contrast when an administrator changes the theme. */
+  --gc-text-primary: var(--gc-body);
+  /* Secondary copy remains AA-readable while sitting one deliberate step
+     below primary content. Muted copy is a separate, lower-priority role. */
+  --gc-text-secondary: color-mix(in srgb, var(--gc-body) 60%, var(--gc-muted));
+  --gc-text-muted: var(--gc-muted);
+  --gc-text-placeholder: #667681;
+  --gc-text-disabled: #52616a;
+  --gc-text-on-dark: var(--gc-white);
+  --gc-text-on-dark-muted: var(--gc-light-gray);
+  --gc-text-danger: var(--gc-error);
+  --gc-text-success: var(--gc-success);
+  --gc-text-link: #006b88;
+  --gc-text-warning: #795516;
+  /* Shared visual-state surfaces. Every state also has a non-color cue in the
+     contract below (border weight/style, inset marker, or progress pattern). */
+  --gc-state-selected-surface: color-mix(in srgb, var(--gc-teal) 9%, var(--gc-card));
+  --gc-state-unavailable-surface: color-mix(in srgb, var(--gc-warning) 9%, var(--gc-card));
+  --gc-state-completed-surface: color-mix(in srgb, var(--gc-success) 4%, var(--gc-card));
+  --gc-state-error-surface: color-mix(in srgb, var(--gc-error) 4%, var(--gc-card));
+  /* Deterministic internal acceptance colors. These are used only by the
+     rendered contrast-math fixture; application content must use text roles. */
+  --gc-contrast-fixture-black: black;
+  --gc-contrast-fixture-white: white;
+  --gc-contrast-fixture-alpha-black: color-mix(
+    in srgb,
+    var(--gc-contrast-fixture-black) 50%,
+    transparent
+  );
+  /* #0083a6 remains the recognizable accent. Text-bearing strong surfaces
+     use the darker accessible teal rather than reducing foreground opacity. */
+  --gc-strong-surface: #006b88;
   --background: var(--gc-page);
   --foreground: var(--gc-body);
   --font-inter: "Inter", Arial, Helvetica, sans-serif;
@@ -67,10 +101,21 @@
   --color-mist: var(--gc-mist-gray);
   --color-plum: var(--gc-plum);
   --color-magenta: var(--gc-magenta);
-  --color-ink: var(--gc-body);
+  --color-ink: var(--gc-text-primary);
   --color-cream: var(--gc-page);
   --color-blush: var(--gc-light-gray);
   --color-amber: var(--gc-accent);
+  --color-text-primary: var(--gc-text-primary);
+  --color-text-secondary: var(--gc-text-secondary);
+  --color-text-muted: var(--gc-text-muted);
+  --color-text-placeholder: var(--gc-text-placeholder);
+  --color-text-disabled: var(--gc-text-disabled);
+  --color-text-on-dark: var(--gc-text-on-dark);
+  --color-text-on-dark-muted: var(--gc-text-on-dark-muted);
+  --color-text-danger: var(--gc-text-danger);
+  --color-text-success: var(--gc-text-success);
+  --color-text-link: var(--gc-text-link);
+  --color-text-warning: var(--gc-text-warning);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-fraunces);
 }
@@ -112,7 +157,7 @@ body {
 }
 
 :where([class~="text-ink/20"], [class~="text-ink/25"], [class~="text-ink/35"], [class~="text-ink/40"], [class~="text-ink/45"], [class~="text-ink/50"], [class~="text-ink/55"]) {
-  color: #52616a !important;
+  color: var(--gc-text-muted) !important;
 }
 
 :where(input, select, textarea) {
@@ -122,7 +167,23 @@ body {
 }
 
 :where(input, textarea)::placeholder {
-  color: #667681;
+  color: var(--gc-text-placeholder);
+  opacity: 1;
+}
+
+.gc-placeholder-light::placeholder {
+  color: var(--gc-text-placeholder) !important;
+  opacity: 1;
+}
+
+.gc-control-on-dark,
+.gc-placeholder-on-dark {
+  color: var(--gc-text-on-dark) !important;
+}
+
+.gc-control-on-dark::placeholder,
+.gc-placeholder-on-dark::placeholder {
+  color: var(--gc-text-on-dark-muted) !important;
   opacity: 1;
 }
 
@@ -141,9 +202,12 @@ body {
   color: var(--gc-heading);
 }
 
-:where(a, button, input, textarea, select, summary):focus-visible {
+:where(a, button, input, textarea, select, summary, [role="button"], [role="option"], [role="combobox"], [role="tab"]):focus-visible {
   outline: 3px solid var(--gc-focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
+  /* A second white ring remains visible when the configured focus color sits
+     on a dark branded surface; the inner ring remains visible on light ones. */
+  box-shadow: 0 0 0 7px var(--gc-focus-contrast);
 }
 
 button,
@@ -171,8 +235,162 @@ input[type="number"]::-webkit-outer-spin-button {
   cursor: pointer;
 }
 
-:where(button:disabled, input:disabled, select:disabled) {
+:where(button:disabled, input:disabled, select:disabled, textarea:disabled, [aria-disabled="true"], [data-visual-state="disabled"]) {
   cursor: not-allowed;
+}
+
+/* Native disabled controls keep native semantics. The explicit compatibility
+   class supplies a readable baseline without an application-wide !important
+   override, so unavailable and loading controls can retain distinct states. */
+.gc-disabled-control:disabled,
+.gc-disabled-control[aria-disabled="true"],
+.gc-state-disabled {
+  background-color: var(--gc-disabled);
+  border-color: var(--gc-text-disabled);
+  border-style: solid;
+  color: var(--gc-text-disabled);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+:where(input[type="checkbox"]:disabled, input[type="radio"]:disabled) {
+  accent-color: var(--gc-text-disabled);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* Shared active/selection/availability lifecycle. Consumers retain their
+   native or ARIA state attributes; these classes standardize presentation.
+   Border shape/weight and inset markers keep the states understandable when
+   color perception is reduced. */
+.gc-state-active {
+  background-color: var(--gc-strong-surface);
+  border-color: var(--gc-strong-surface);
+  border-style: solid;
+  color: var(--gc-text-on-dark);
+  box-shadow: inset 0 -4px 0 var(--gc-accent);
+}
+
+.gc-state-selected {
+  background-color: var(--gc-state-selected-surface);
+  border-color: var(--gc-teal);
+  border-style: double;
+  border-width: 3px;
+  color: var(--gc-text-primary);
+  box-shadow: inset 4px 0 0 var(--gc-teal);
+}
+
+.gc-state-inactive {
+  background-color: var(--gc-card);
+  border-color: var(--gc-text-muted);
+  border-style: dotted;
+  color: var(--gc-text-secondary);
+}
+
+.gc-state-unavailable {
+  background-color: var(--gc-state-unavailable-surface);
+  border-color: var(--gc-text-warning);
+  border-style: dashed;
+  color: var(--gc-text-warning);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.gc-state-loading {
+  background-color: var(--gc-strong-surface);
+  border-color: var(--gc-text-on-dark);
+  border-style: double;
+  border-width: 3px;
+  color: var(--gc-text-on-dark);
+  cursor: progress;
+  box-shadow: inset 5px 0 0 var(--gc-accent);
+}
+
+.gc-state-completed {
+  background-color: var(--gc-state-completed-surface);
+  border-color: var(--gc-text-success);
+  border-style: double;
+  border-width: 3px;
+  color: var(--gc-text-success);
+}
+
+.gc-state-error {
+  background-color: var(--gc-state-error-surface);
+  border-color: var(--gc-text-danger);
+  border-left-width: 5px;
+  border-style: solid;
+  color: var(--gc-text-danger);
+}
+
+/* The three classes below make the browser contrast helper's alpha and
+   ancestor-compositing checks deterministic without inline color bypasses. */
+.gc-contrast-alpha-color {
+  background-color: var(--gc-contrast-fixture-white);
+  color: var(--gc-contrast-fixture-alpha-black);
+}
+
+.gc-contrast-element-opacity {
+  background-color: var(--gc-contrast-fixture-white);
+  color: var(--gc-contrast-fixture-black);
+  opacity: 0.5;
+}
+
+.gc-contrast-ancestor-container {
+  background-color: var(--gc-contrast-fixture-black);
+}
+
+.gc-contrast-ancestor-opacity {
+  background-color: var(--gc-contrast-fixture-white);
+  opacity: 0.5;
+}
+
+.gc-contrast-solid-black {
+  color: var(--gc-contrast-fixture-black);
+}
+
+.gc-text-primary,
+:where([data-visual-state="primary"]) {
+  color: var(--gc-text-primary);
+}
+
+.gc-text-secondary,
+:where([data-visual-state="secondary"]) {
+  color: var(--gc-text-secondary);
+}
+
+.gc-text-muted,
+:where([data-visual-state="muted"], [data-visual-state="metadata"]) {
+  color: var(--gc-text-muted);
+}
+
+.gc-text-on-dark,
+:where([data-visual-state="on-dark"]) {
+  color: var(--gc-text-on-dark);
+}
+
+.gc-text-on-dark-muted,
+:where([data-visual-state="on-dark-muted"]) {
+  color: var(--gc-text-on-dark-muted);
+}
+
+.gc-text-danger,
+:where([data-visual-state="danger"]) {
+  color: var(--gc-text-danger);
+}
+
+.gc-text-success,
+:where([data-visual-state="success"]) {
+  color: var(--gc-text-success);
+}
+
+.gc-text-link,
+:where([data-visual-state="link"]) {
+  color: var(--gc-text-link);
+}
+
+.gc-text-warning,
+:where([data-visual-state="warning"]) {
+  color: var(--gc-text-warning);
 }
 
 .gc-brand-header {
@@ -181,6 +399,12 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .gc-brand-footer {
   background-color: var(--gc-footer);
+  color: var(--gc-text-on-dark);
+}
+
+.gc-strong-surface {
+  background-color: var(--gc-strong-surface);
+  color: var(--gc-text-on-dark);
 }
 
 .gc-brand-card {
@@ -192,7 +416,7 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .gc-brand-muted {
-  color: var(--gc-muted);
+  color: var(--gc-text-muted);
 }
 
 .gc-brand-primary-action:hover:not(:disabled) {

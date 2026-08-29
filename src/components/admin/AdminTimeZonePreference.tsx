@@ -111,7 +111,7 @@ export default function AdminTimeZonePreference() {
         type="button"
         disabled={busy}
         onClick={() => void save()}
-        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white disabled:opacity-50"
+        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control"
       >
         <Save size={14} />
         Save timezone

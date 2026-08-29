@@ -51,7 +51,7 @@ export default function BookingCheckInExceptionForm({
   return (
     <section className="mt-3 rounded-xl border border-amber/35 bg-amber/10 p-4">
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-amber-800">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white gc-text-warning">
           <Clock3 size={18} />
         </span>
         <div>
@@ -107,13 +107,13 @@ export default function BookingCheckInExceptionForm({
         />
         I confirm that the reason and information entered above are accurate.
       </label>
-      {error ? <p role="alert" className="mt-2 text-xs font-semibold text-red-700">{error}</p> : null}
+      {error ? <p role="alert" className="mt-2 text-xs font-semibold gc-text-danger">{error}</p> : null}
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="min-h-11 rounded-lg border border-plum/15 bg-white text-xs font-bold text-plum disabled:opacity-50"
+          className="min-h-11 rounded-lg border border-plum/15 bg-white text-xs font-bold text-plum gc-disabled-control"
         >
           Cancel
         </button>
@@ -139,7 +139,7 @@ export default function BookingCheckInExceptionForm({
               attested: true,
             });
           }}
-          className="min-h-11 rounded-lg bg-magenta text-xs font-bold text-white disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-magenta text-xs font-bold text-white gc-disabled-control"
         >
           {busy ? "Checking in…" : "Confirm check-in"}
         </button>

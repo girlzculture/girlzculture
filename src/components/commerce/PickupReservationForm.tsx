@@ -174,7 +174,7 @@ export default function PickupReservationForm(props: Props) {
         ) : null}
         <button
           disabled={busy}
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal px-6 text-sm font-bold text-white disabled:opacity-50"
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal px-6 text-sm font-bold text-white gc-disabled-control"
         >
           <LockKeyhole size={17} />
           {busy

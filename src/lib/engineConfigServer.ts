@@ -1,6 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { hasOperationalContext } from "@/lib/operationalTelemetryContext";
+import {
+  resolveAccessibleEngineThemeColors,
+} from "@/lib/colorContrast";
 
 const PUBLIC_ENGINE_READ_TIMEOUT_MS = 2_500;
 
@@ -110,15 +113,6 @@ const BRAND_KEYS = [
   "branding.body_font",
 ] as const;
 
-function publishedColor(
-  config: Record<string, unknown>,
-  key: string,
-  fallback: string,
-) {
-  const value = String(config[key] ?? "");
-  return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
-}
-
 function publishedFont(
   config: Record<string, unknown>,
   key: string,
@@ -133,24 +127,9 @@ export async function getEngineBrandTheme(): Promise<EngineBrandTheme> {
   const config = await getPublishedEngineConfig([...BRAND_KEYS], {
     publicOnly: true,
   });
+  const colors = resolveAccessibleEngineThemeColors(config);
   return {
-    primary: publishedColor(config, "branding.primary_color", "#0083A6"),
-    accent: publishedColor(config, "branding.accent_color", "#FF6868"),
-    cta: publishedColor(config, "branding.cta_color", "#0083A6"),
-    page: publishedColor(config, "branding.page_background", "#FFFFFF"),
-    card: publishedColor(config, "branding.card_background", "#FFFFFF"),
-    header: publishedColor(config, "branding.header_background", "#FFFFFF"),
-    footer: publishedColor(config, "branding.footer_background", "#0083A6"),
-    heading: publishedColor(config, "branding.heading_color", "#0D1114"),
-    body: publishedColor(config, "branding.body_color", "#0D1114"),
-    muted: publishedColor(config, "branding.muted_color", "#52616A"),
-    link: publishedColor(config, "branding.link_color", "#0083A6"),
-    success: publishedColor(config, "branding.success_color", "#147D64"),
-    warning: publishedColor(config, "branding.warning_color", "#FF6868"),
-    error: publishedColor(config, "branding.error_color", "#C83F4A"),
-    hover: publishedColor(config, "branding.hover_color", "#006B88"),
-    focus: publishedColor(config, "branding.focus_color", "#0083A6"),
-    disabled: publishedColor(config, "branding.disabled_color", "#E6EAED"),
+    ...colors,
     headingFont: publishedFont(
       config,
       "branding.heading_font",

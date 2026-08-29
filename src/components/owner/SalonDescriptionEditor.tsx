@@ -96,7 +96,7 @@ export default function SalonDescriptionEditor({
       />
       <div className="mt-1 flex justify-between gap-3 text-xs text-ink/60">
         <span>Up to 200 words. The public page shows a short preview with Read more.</span>
-        <span className={count > 200 ? "font-bold text-red-700" : ""}>
+        <span className={count > 200 ? "font-bold gc-text-danger" : ""}>
           {count}/200 words
         </span>
       </div>
@@ -117,7 +117,7 @@ export default function SalonDescriptionEditor({
             type="button"
             onClick={generate}
             disabled={loading}
-            className="min-h-11 rounded-[8px] border border-magenta bg-white px-4 text-sm font-bold text-magenta disabled:opacity-60"
+            className="min-h-11 rounded-[8px] border border-magenta bg-white px-4 text-sm font-bold text-magenta gc-disabled-control"
           >
             {loading ? "Creating draft…" : "Create draft"}
           </button>

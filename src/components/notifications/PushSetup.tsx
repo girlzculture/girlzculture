@@ -136,7 +136,7 @@ export default function PushSetup({
   return (
     <section data-owner-device-alerts className={`rounded-[16px] border p-5 ${ready ? "border-emerald-200 bg-emerald-50" : "border-amber/40 bg-amber/10"}`} aria-live="polite">
       <div className="flex items-start gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${ready ? "bg-emerald-100 text-emerald-700" : "bg-white text-magenta"}`}>
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${ready ? "bg-emerald-100 gc-text-success" : "bg-white text-magenta"}`}>
           {ready ? <CheckCircle2 size={20} /> : <ShieldAlert size={20} />}
         </span>
         <div className="min-w-0 flex-1">
@@ -147,18 +147,18 @@ export default function PushSetup({
           <p className="mt-1 text-xs leading-5 text-ink/65">
             {ready ? "Installed and reachable. New bookings and cancellations can reach you even when the dashboard is closed." : "Install Girlz Culture and allow notifications so time-sensitive bookings are never missed."}
           </p>
-          {!supported ? <p className="mt-3 text-xs font-semibold text-red-700">Web Push is not supported in this browser.</p> : null}
+          {!supported ? <p className="mt-3 text-xs font-semibold gc-text-danger">Web Push is not supported in this browser.</p> : null}
           {!ready ? (
             <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={() => void installApp()} disabled={installed} className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-magenta px-4 text-xs font-bold text-magenta disabled:border-emerald-300 disabled:text-emerald-700">
+              <button type="button" onClick={() => void installApp()} disabled={installed} className="inline-flex min-h-10 items-center gap-2 rounded-[8px] border border-magenta px-4 text-xs font-bold text-magenta gc-disabled-control">
                 {installed ? <CheckCircle2 size={15} /> : <Download size={15} />}{installed ? "App installed" : "1. Install app"}
               </button>
-              <button type="button" onClick={() => void enableNotifications()} disabled={busy || !installed} className="inline-flex min-h-10 items-center gap-2 rounded-[8px] bg-magenta px-4 text-xs font-bold text-white disabled:opacity-50">
+              <button type="button" onClick={() => void enableNotifications()} disabled={busy || !installed} className="inline-flex min-h-10 items-center gap-2 rounded-[8px] bg-magenta px-4 text-xs font-bold text-white gc-disabled-control">
                 {busy ? <RefreshCw className="animate-spin" size={15} /> : <BellRing size={15} />}2. {busy ? "Enabling…" : "Enable alerts"}
               </button>
             </div>
           ) : null}
-          {message ? <p className={`mt-3 text-xs leading-5 ${ready ? "text-emerald-700" : "text-plum"}`}>{message}</p> : null}
+          {message ? <p className={`mt-3 text-xs leading-5 ${ready ? "gc-text-success" : "text-plum"}`}>{message}</p> : null}
         </div>
       </div>
     </section>
