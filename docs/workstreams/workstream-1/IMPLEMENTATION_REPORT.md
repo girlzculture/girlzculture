@@ -284,7 +284,7 @@ Authenticated production accounts and provider-backed Google Maps/payment operat
 | WS01-002 | Disabled controls | Partially implemented | PASS | Native/custom contract; pointer, Enter, Space, scripted activation and computed-style tests. | Manual script §5. |
 | WS01-003 | Clearly nonessential metadata | Partially implemented | PASS | Content-role migration and exact 307-ceiling/3-exception inventory; important financial/booking/policy copy promoted. | Representative families reviewed; remaining genuine metadata is ratcheted, not globally approved. |
 | WS01-004 | Inactive states | Partially implemented | PASS | Eight shared states with non-color cues and ARIA/native semantics; state matrix. | Manual script §5. |
-| WS01-005 | Full text-color audit | Partially implemented | AUTOMATED COMPLETE; FOUNDER ACCEPTANCE PENDING | Static inventory plus representative computed route/state matrix pass. | Founder visual review and unavailable authenticated/provider staging variants remain explicit acceptance work. |
+| WS01-005 | Full text-color audit | Partially implemented | AUTOMATED ONLY | Static inventory plus representative computed route/state matrix pass. | Founder visual review and unavailable authenticated/provider staging variants remain explicit acceptance work. |
 | WS01-006 | Semantic theme tokens | Partially implemented | PASS | Ten required text roles plus on-dark-muted and shared state surfaces; Engine mapping. | Token table above. |
 | WS01-007 | Primary text use | Complete but weak | PASS | Cross-family targeted role migration; scanner blocks known bypass classes. | Founder checks representative routes in §7. |
 | WS01-008 | Hardcoded gray removal | Partially implemented | PASS | Known RGB and `text-slate-600` fixed; gray/hex/RGB/HSL/inline scanners baseline-clean. | Scanner fixtures reproduce rejection. |
@@ -294,12 +294,12 @@ Authenticated production accounts and provider-backed Google Maps/payment operat
 | WS01-012 | Important information readability | Partially implemented | PASS | Booking totals, deposit/balance, checkout, account, Admin finance, policy, modal, toast/alert computed tests. | No real payment is submitted. |
 | WS01-013 | Placeholder versus entered text | Complete but weak | PASS | Separate computed pseudo-element/value measurements for light, dark, and select prompt. | Manual script §4. |
 | WS01-014 | Disabled controls do not appear active | Partially implemented | PASS | Visual signatures and behavior differ from active, selected, unavailable, and loading. | Manual script §5. |
-| WS01-015 | Desktop/mobile visual review | Partially implemented | AUTOMATED COMPLETE; FOUNDER ACCEPTANCE PENDING | Versioned route/state matrix at phone, landscape, tablet, desktop and zoom/reflow sizes, followed by independent screenshot inspection. | Founder product acceptance remains required; provider/auth cases are named in §11. |
+| WS01-015 | Desktop/mobile visual review | Partially implemented | AUTOMATED ONLY | Versioned route/state matrix at phone, landscape, tablet, desktop and zoom/reflow sizes, followed by independent screenshot inspection. | Founder product acceptance remains required; provider/auth cases are named in §11. |
 | WS01-016 | Automated accessibility suite | Partially implemented | PASS | Explicit Axe dependency/script; WCAG A/AA, contrast enabled, no broad exclusions; required `verify` step. | Zero unreviewed violations in scoped suite. |
 | WS01-017 | All important text readable | Partially implemented | PASS | Footer remediated; semantic roles and runtime Engine contrast clamping; representative computed matrix. | Provider-backed staging remains a separate acceptance step. |
 | WS01-018 | Ordinary content not faint by default | Partially implemented | PASS | Ordinary on-dark opacity removed; shared roles replace accidental opacity; static and computed enforcement. | Intentional metadata/decorative exceptions inventoried. |
 
-`AUTOMATED COMPLETE; FOUNDER ACCEPTANCE PENDING` means the implementation and deterministic evidence pass but final founder visual acceptance and any unavailable authenticated/provider-backed staging route remain outstanding. It does not mean the implementation layer is omitted.
+`AUTOMATED ONLY` means the implementation and deterministic evidence pass but final founder visual acceptance and any unavailable authenticated/provider-backed staging route remain outstanding. It does not mean the implementation layer is omitted.
 
 ## CI changes
 
