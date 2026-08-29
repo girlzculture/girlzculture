@@ -1,0 +1,2190 @@
+{
+  "schemaVersion": 1,
+  "description": "Exact non-text visual-layer opacity exceptions plus per-file/token ratcheting ceilings for reviewed legacy text-ink opacity utilities. Exceptions are not palette approvals. Ceilings may decrease but must never increase; any new file/token pair is rejected, and important booking, financial, security, policy, and operational contexts are rejected independently.",
+  "exceptions": [
+    {
+      "id": "image-upload-hover-controls",
+      "rule": "GC_GENERIC_OPACITY_UTILITY",
+      "file": "src/components/ImageUpload.tsx",
+      "token": "sm:opacity-0",
+      "context": "sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+      "maxOccurrences": 1,
+      "classification": "interaction-visibility-layer",
+      "reason": "The image action overlay remains fully visible on touch viewports and is visually hidden only until hover or focus-within on pointer layouts.",
+      "owner": "design-system"
+    },
+    {
+      "id": "public-content-card-blurred-image",
+      "rule": "GC_GENERIC_OPACITY_UTILITY",
+      "file": "src/components/site/PublicContentCard.tsx",
+      "token": "opacity-35",
+      "context": "scale-110 object-cover opacity-35 blur-xl sm:hidden",
+      "maxOccurrences": 2,
+      "classification": "decorative-image-layer",
+      "reason": "The opacity applies only to a blurred decorative image used behind the readable foreground artwork and never to text or controls.",
+      "owner": "design-system"
+    },
+    {
+      "id": "about-hero-decorative-image",
+      "rule": "GC_GENERIC_OPACITY_UTILITY",
+      "file": "src/app/about/page.tsx",
+      "token": "opacity-35",
+      "context": "className=\"absolute inset-0 opacity-35\"",
+      "maxOccurrences": 1,
+      "classification": "decorative-image-layer",
+      "reason": "The opacity applies to a non-content background image layer beneath an independent opaque readability scrim and semantic foreground copy.",
+      "owner": "design-system"
+    }
+  ],
+  "legacyTextOpacityBudgets": [
+    {
+      "file": "src/app/admin/login/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/blog/[slug]/page.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/blog/[slug]/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/blog/page.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/blog/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/blog/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/careers/page.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/careers/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/complaint/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/contact/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/error.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/20",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/25",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/35",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/globals.css",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/legal/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/not-found.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/offline/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/partner/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/plans/page.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/plans/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/plans/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/book/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/checkout/page.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/checkout/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/page.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/page.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 7,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/product/[productId]/page.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/[slug]/stylist/[stylistId]/page.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salon/setup-guide/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/salons/error.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/social/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/social/page.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/app/testimonials/page.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminApplicationReview.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminApplicationReview.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminApplicationReview.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminApplicationReview.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminBookingEditor.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminBookingEditor.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminBookingEditor.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminEngineLanding.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminEngineLanding.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedCampaigns.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedCampaigns.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 6,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedCampaigns.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedCampaigns.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedProducts.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedProducts.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFeaturedProducts.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFinanceDashboard.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFinanceDashboard.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 6,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFinanceDashboard.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFinanceDashboard.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 6,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFinanceDashboard.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminFinanceDashboard.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminHomepageMarketing.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminHomepageMarketing.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminManualBookingWizard.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminManualBookingWizard.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminManualBookingWizard.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminManualBookingWizard.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminMarketingWorkspace.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminPromoCodes.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminPromoCodes.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminPromotionSectionWorkspace.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminRecordWorkspace.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminRecordWorkspace.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 6,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminRecordWorkspace.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 14,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminRecordWorkspace.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminRecordWorkspace.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalon360Sections.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalon360Sections.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalon360Sections.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 10,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalon360Sections.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalon360Sections.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonPayoutAction.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonPayoutAction.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonPayoutWorkspace.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonPayoutWorkspace.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonPayoutWorkspace.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonPayoutWorkspace.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonsManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonsManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 7,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonsManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 8,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonsManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 8,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSalonsManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminServiceCatalogWorkspace.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminServiceCatalogWorkspace.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminServiceCatalogWorkspace.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionDetail.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionDetail.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionDetail.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionDetail.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionsWorkspace.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionsWorkspace.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubmissionsWorkspace.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubscriptionsDashboard.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminSubscriptionsDashboard.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminTimeZonePreference.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminTrendingCampaigns.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminTrendingCampaigns.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminTrendingCampaigns.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminTrendingCampaigns.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminTrendingCampaigns.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminUserActivityTimeline.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminUserActivityTimeline.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminUserActivityTimeline.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AdminUserActivityTimeline.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AiAutomationManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AiAutomationManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AiAutomationManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/AiAutomationManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/BrandAppearanceManager.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/BrandAppearanceManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/BrandAppearanceManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/BrandAppearanceManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/BrandAppearanceManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/EngineControlCenter.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/EngineControlCenter.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/EngineControlCenter.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 9,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/EngineControlCenter.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 9,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/EngineControlCenter.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/EngineControlCenter.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/ErrorMonitoringManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/ErrorMonitoringManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 6,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/ErrorMonitoringManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/ErrorMonitoringManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 6,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/ErrorMonitoringManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/HeroImageFraming.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/HeroImageFraming.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/IdentityDeletionManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/MediaRulesSettings.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/MediaRulesSettings.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NavigationMenuManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NavigationMenuManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NavigationMenuManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NotificationTemplateManager.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NotificationTemplateManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NotificationTemplateManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NotificationTemplateManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/NotificationTemplateManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/RecordLifecycleManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/RecordLifecycleManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/RecordLifecycleManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SalonLifecycleSettings.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SearchLanguageSettings.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SearchLanguageSettings.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SearchLanguageSettings.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SearchLanguageSettings.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SearchLanguageSettings.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/35",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/SystemStatusManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TestDataManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TestDataManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TestDataManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TestDataManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TranslationManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TranslationManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/admin/TranslationManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminContentManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminContentManager.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 12,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminContentManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 23,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminContentManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 11,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminContentManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminDashboard.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminDashboard.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 16,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminDashboard.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 14,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminDashboard.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 8,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminDashboard.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminLogin.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminSupportInbox.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/AdminSupportInbox.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/auth/PasswordInput.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/auth/TeamUserManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/auth/TeamUserManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/auth/TeamUserManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/booking/GuestBookingManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/booking/GuestBookingManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/booking/GuestBookingManager.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/booking/GuestBookingRecovery.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/BookingInbox.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/BookingInbox.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/BookingInbox.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/BookingInbox.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/commerce/ProductCheckoutClient.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/commerce/ProductCheckoutClient.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/CustomerAccount.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/CustomerAccount.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/CustomerAccount.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/CustomerAuth.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/CustomerAuth.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/CustomerAuth.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/ImageUpload.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/ImageUpload.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/ImageUpload.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/internal/MediaUploadAcceptanceHarness.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/internal/MediaUploadAcceptanceHarness.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/internal/OwnerWorkflowAcceptanceHarness.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/internal/OwnerWorkflowAcceptanceHarness.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/notifications/DashboardNotificationCenter.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/notifications/DashboardNotificationCenter.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/notifications/DashboardNotificationCenter.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/notifications/PushSetup.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/BookingCheckInExceptionForm.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/BookingCheckInExceptionForm.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/BookingCheckInExceptionForm.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/20",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/35",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 17,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 32,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 15,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerDashboardApp.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 15,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerRealtimeAlertBridge.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerSetupGuideLink.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerWorkflowUi.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerWorkflowUi.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/OwnerWorkflowUi.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonDescriptionEditor.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonDescriptionEditor.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonDescriptionEditor.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonPromotionsManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonPromotionsManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonPromotionsManager.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonSpreadsheetPanel.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonVanityManager.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/SalonVanityManager.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/StructuredCatalogEditors.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/StructuredCatalogEditors.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/StructuredCatalogEditors.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/StructuredCatalogEditors.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 7,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/StructuredCatalogEditors.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/owner/StylistSectionFallbackEditor.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/PasswordRecovery.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/PasswordRecovery.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/BeautyConcierge.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/BeautyConcierge.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/BeautyConcierge.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/ComplaintForm.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/ExpandableSalonDescription.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedProductPlacement.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedProductPlacement.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedProductPlacement.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedProductPlacement.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedSalonPlacement.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedSalonPlacement.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/FeaturedSalonPlacement.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/HelpCenter.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/MarketplaceSalonCard.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/MarketplaceSalonCard.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/MarketplaceSalonCard.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/NearbySalonPlacement.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/NearbySalonPlacement.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/SalonDiscovery.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/SalonDiscovery.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/SalonDistance.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/SalonRatingSummary.tsx",
+      "token": "text-ink/20",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/SalonRatingSummary.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/SalonStylistFallback.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/StyleCatalog.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/TrendingVideoPlacement.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/TrendingVideoPlacement.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/public/TrendingVideoPlacement.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/ReviewForm.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/ReviewForm.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/ReviewForm.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonApplication.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonApplication.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonApplication.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonBookingWizard.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 3,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonBookingWizard.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonLogin.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonOnboarding.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonReviews.tsx",
+      "token": "text-ink/20",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonReviews.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonReviews.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonReviews.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonReviews.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonSignup.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStyles.tsx",
+      "token": "text-ink/40",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStyles.tsx",
+      "token": "text-ink/45",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStyles.tsx",
+      "token": "text-ink/50",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStyles.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStyles.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStylists.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/SalonStylists.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/search/AutocompleteInputs.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/search/AutocompleteInputs.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 5,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/search/GoogleSalonMap.tsx",
+      "token": "text-ink/60",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/search/GoogleSalonMap.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/site/PublicChrome.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/site/PublicContentCard.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 2,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/site/PublicContentSections.tsx",
+      "token": "text-ink/65",
+      "maxOccurrences": 4,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    },
+    {
+      "file": "src/components/site/SalonProfileActions.tsx",
+      "token": "text-ink/55",
+      "maxOccurrences": 1,
+      "classification": "legacy-metadata-migration-budget",
+      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
+    }
+  ]
+}

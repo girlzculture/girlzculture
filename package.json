@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:browser": "playwright test",
+    "test:accessibility": "playwright test tests/browser/workstream-1-accessibility.spec.ts tests/browser/workstream-1-visual-states.spec.ts --project=chromium",
     "test:media-browser": "playwright test tests/browser/media-upload-regression.spec.ts --project=chromium",
     "test:google-maps-provider": "playwright test tests/browser/google-maps-provider.spec.ts --project=chromium",
     "verify:final-completion": "node scripts/verify-final-completion.mjs",
@@ -40,7 +41,10 @@
     "verify:media-trace": "node scripts/verify-media-upload-contract.mjs --require-build-traces",
     "verify:i18n": "node scripts/verify-localization-engine.mjs",
     "verify:numeric": "node scripts/verify-numeric-inputs.mjs",
-    "verify:design-system": "node scripts/verify-launch-design-system.mjs",
+    "verify:design-system:source": "node scripts/verify-launch-design-system.mjs",
+    "verify:design-system:fixtures": "node tests/design-system/launch-design-system-audit.test.mjs",
+    "verify:theme-contrast": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/design-system/theme-contrast.test.ts",
+    "verify:design-system": "npm run verify:design-system:source && npm run verify:design-system:fixtures && npm run verify:theme-contrast",
     "verify:engine": "node scripts/verify-platform-engine.mjs",
     "verify:concierge": "node scripts/verify-ai-beauty-concierge.mjs",
     "verify:monitoring": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-operational-monitoring.mjs",
@@ -110,6 +114,7 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
