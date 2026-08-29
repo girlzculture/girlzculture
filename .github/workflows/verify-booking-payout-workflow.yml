@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  booking-payout:
     runs-on: ubuntu-latest
     env:
       # Pull-request builds cannot access protected production secrets. These
