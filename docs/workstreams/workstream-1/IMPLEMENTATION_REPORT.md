@@ -228,6 +228,18 @@ The authoritative exact list is the Draft PR diff. It is grouped here for review
 - `docs/workstreams/workstream-1/IMPLEMENTATION_REPORT.md`
 - `docs/workstreams/workstream-1/MANUAL_ACCEPTANCE.md`
 
+### Release-control continuation
+
+The original Workstream 1 implementation and evidence inventory contained 219 paths. The release-control continuation added these five CI-only paths:
+
+- `.github/workflows/content-slot-search-hotfix.yml`
+- `.github/workflows/final-launch-mobile-realtime-admin-corrections.yml`
+- `.github/workflows/verify-booking-checkout-hold-safety.yml`
+- `.github/workflows/verify-booking-payout-workflow.yml`
+- `.github/workflows/verify-featured-campaign-owner-controls.yml`
+
+PR #51 therefore contains 224 total changed paths: the original 219-path Workstream 1 implementation/evidence inventory plus the five CI-only release-control paths. Each workflow modification changed its job key only; triggers, filters, permissions, environment, steps, and behavior remain unchanged.
+
 ## Automated evidence
 
 | Check | Result |
