@@ -23,6 +23,7 @@ import {
   requestBookingDepositRefund,
   safeCancellationReason,
 } from "@/lib/bookingCancellation";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 class GuestBookingError extends Error {
   constructor(message: string, public status = 400) {
@@ -31,11 +32,7 @@ class GuestBookingError extends Error {
 }
 
 function siteRoot(request: Request) {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    new URL(request.url).origin ||
-    "https://girlzculture.com"
-  ).replace(/\/$/, "");
+  return serverSiteUrl(request);
 }
 
 async function accessFor(request: Request, token: string) {

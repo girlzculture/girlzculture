@@ -20,9 +20,17 @@ const platformErrorsSource = fs
     "const isStaticBuildPhase = () => false;",
   )
   .replace(
-    'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
-    'const deploymentReleaseId = () => "verification";',
+    /import\s*\{[^}]*\}\s*from\s*["']@\/lib\/deploymentIdentity["'];?/,
+    [
+      'const deploymentEnvironmentId = () => "verification";',
+      'const deploymentReleaseId = () => "verification";',
+    ].join("\n"),
   );
+if (/@\/lib\/(?:buildPhaseCore|deploymentIdentity)/.test(platformErrorsSource)) {
+  throw new Error(
+    "Platform error verification could not isolate its server-only imports.",
+  );
+}
 const { capturePlatformError } = await import(
   `data:text/javascript;base64,${Buffer.from(
     ts.transpileModule(platformErrorsSource, {

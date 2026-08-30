@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
@@ -169,8 +170,5 @@ export function verifyStripeEvent(
 }
 
 export function siteUrl(request?: Request) {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (request ? new URL(request.url).origin : "http://localhost:3000")
-  ).replace(/\/$/, "");
+  return serverSiteUrl(request);
 }

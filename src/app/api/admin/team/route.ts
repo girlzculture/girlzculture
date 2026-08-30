@@ -12,6 +12,7 @@ import {
   isPermissionDenialMessage,
 } from "@/lib/operationalMonitoringCore";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 export const ADMIN_PERMISSION_KEYS = ["overview","submissions","salons","customers","bookings","quality","reviews","finance","marketing","content","support","complaints","subscriptions","engine","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(ADMIN_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
@@ -302,7 +303,7 @@ async function PATCHHandler(request: Request) {
       if (Date.now() - sentAt < 60_000) {
         throw new Error("Please wait 60 seconds before resending this invitation.");
       }
-      const redirectTo = `${(process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "")}/reset-password?invited=admin`;
+      const redirectTo = `${serverSiteUrl(request)}/reset-password?invited=admin`;
       const link = await admin.auth.admin.generateLink({
         type: "recovery",
         email: String(target.email || ""),

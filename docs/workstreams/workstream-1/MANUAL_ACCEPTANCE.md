@@ -1,14 +1,25 @@
 # Workstream 1 founder manual acceptance
 
-This is the safe, reproducible product-review script for the Draft Workstream 1 pull request. Do not approve a production merge from screenshots alone. Use the Draft PR preview for public pages. Acceptance-only routes require a preview/local build with `GIRLZ_CULTURE_ACCEPTANCE_MODE=true` and `NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS=true`; they do not write bookings, payments, providers, or production data.
+This is the safe, reproducible Workstream 1 product-review script. PR #51 is already merged and closed, and its old Deploy Preview is stale; do not use that runtime for acceptance. Use a designated nonproduction preview only after its exact release SHA is documented and the provider-backed smoke passes. Acceptance-only routes require a preview/local build with `GIRLZ_CULTURE_ACCEPTANCE_MODE=true` and `NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS=true`; they do not write bookings, payments, providers, or production data.
 
 ## 1. Accounts, environment, and viewports
 
-Use Chrome or Edge and the Draft PR preview.
+Use Chrome or Edge and a fresh exact-head nonproduction preview that has passed its readiness and smoke gates.
+
+Current environment status:
+
+| Environment check | Status |
+|---|---|
+| Isolated Supabase preview branch | PASS — all 136 migrations executed. |
+| Guarded synthetic preview seed | PASS — database assertions passed; no copied/live records. |
+| Existing Netlify `deploy-preview-51` | FAIL/STALE — it predates the repair and must not be reviewed. |
+| Fresh exact-head Netlify preview | BLOCKED/not yet created. |
+| Full local clean-PostgreSQL workflow | BLOCKED — no disposable local PostgreSQL/Docker runtime is available. |
+| Production | Unchanged and not used for this acceptance. |
 
 | Review family | Account required now | Safe source |
 |---|---|---|
-| Public pages and footer | None | Real public routes in the preview |
+| Public pages and footer | None | Real public routes in a fresh exact-head preview after smoke passes; currently blocked |
 | State, salon-profile, stylist-profile, owner, and Platform Admin deterministic review | None | `/internal/acceptance/**` routes, with the two acceptance flags enabled |
 | Real customer, stylist/team, salon-owner, and Platform Admin review | Four separate, non-production staging accounts | Deferred staging acceptance in §11 |
 | Google Maps, payment, email/SMS/push, and external media | Provider-configured non-production staging runtime | Deferred provider acceptance in §11; do not create a charge |
@@ -211,12 +222,12 @@ These checks remain pending founder/specialist acceptance; they are not silently
 
 1. Create or use four separate non-production staging identities: customer, stylist/team member, salon owner, and Platform Admin. Do not reuse one browser session across roles; use isolated browser profiles.
 2. For each role, review the first dashboard page and one data-rich page at 390×844, 1024×768, and 1440×1000. Verify ordinary copy, metadata, statuses, disabled/unavailable controls, focus, error text, and financial/booking figures.
-3. In a provider-configured non-production runtime, review Google Maps, external media, and notification setup/failure surfaces. Do not send real customer notifications.
+3. The isolated Supabase fixture is available, but a fresh application deployment, authenticated role identities, and external providers remain pending. In a provider-configured non-production runtime, review Google Maps, external media, and notification setup/failure surfaces. Do not send real customer notifications.
 4. Review checkout/payment presentation with Stripe test mode only. Do not create a real charge.
 5. Have an accessibility specialist run NVDA or JAWS with Chrome/Edge and VoiceOver with Safari, including landmarks, headings, names/roles/states, error announcements, modal focus, responsive reflow, and zoom.
 6. Record the exact route, role, viewport, text/control, keyboard step, and screenshot for every failure.
 
-WS01-005 and WS01-015 are automated-complete but remain pending this founder/manual acceptance where authenticated or provider-backed variants were unavailable.
+WS01-005 and WS01-015 are automated-complete but remain pending this founder/manual acceptance where authenticated roles, a fresh exact-head deployment, or provider-backed variants are unavailable.
 
 ## 12. Exact evidence filename inventory
 

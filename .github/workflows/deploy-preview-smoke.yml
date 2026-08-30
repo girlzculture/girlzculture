@@ -2,6 +2,7 @@ name: Verify Netlify deploy preview
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -13,52 +14,104 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview-smoke:
+  preview-smoke-contract:
+    name: Validate provider-preview smoke capability contract
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify deploy-preview acceptance contracts
+        run: >-
+          node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          --test --test-isolation=none
+          tests/deploy-preview/deploy-preview-smoke-core.test.mjs
+          tests/deploy-preview/preview-seed-target-core.test.mjs
+          tests/deployment-url-core.test.ts
+          tests/netlify-deployment-url.test.mjs
+          tests/runtime-acceptance-markers.test.ts
+      - name: Record provider-preview capability
+        shell: bash
+        env:
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+        run: |
+          {
+            echo "## Provider-backed preview smoke capability"
+            echo
+            if [ "$EVENT_ACTION" = "labeled" ] && [ "$EVENT_LABEL" = "provider-preview-seeded" ]; then
+              echo "READY TO ATTEMPT — this label event explicitly attests that the current PR head has an isolated, disposable Supabase preview with all migrations, the synthetic preview seed, and its seed assertions applied. The strict smoke job will still verify the data and exact deployed release."
+            else
+              echo "BLOCKED / NOT RUN — deep provider smoke is intentionally skipped because seed readiness was not explicitly attested for this PR head."
+              echo
+              echo "Safe repeatable path: verify the target is a disposable non-production Supabase PR branch; apply every migration; apply the guarded preview seed; run its database assertions; link only the PR deploy context; wait for the exact-head Netlify preview; then remove and re-apply the \`provider-preview-seeded\` label. A later commit requires a fresh label event after readiness is rechecked."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  provider-preview-smoke:
+    name: Exercise provider-backed preview (seed-attested)
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'provider-preview-seeded' }}
+    needs: preview-smoke-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       DEPLOY_PREVIEW_URL: https://deploy-preview-${{ github.event.pull_request.number }}--girlzculture.netlify.app
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPOSITORY: ${{ github.repository }}
       PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
       PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PREVIEW_SEED_READINESS_EVENT: ${{ github.event.action }}
+      PREVIEW_SEED_READINESS_LABEL: ${{ github.event.label.name }}
+      PREVIEW_SEED_READINESS_PR: ${{ github.event.pull_request.number }}
+      PREVIEW_SEED_READINESS_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Record optional preview-runtime status
-        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE != 'true' }}
-        shell: bash
-        run: |
-          {
-            echo "## Deploy Preview runtime acceptance — intentionally not executed"
-            echo
-            echo "The repository variable \`ENABLE_SUPABASE_PREVIEW_SMOKE\` is not set to \`true\`."
-            echo "This project is not using the disposable Supabase Preview integration, so a Supabase-backed Netlify preview cannot truthfully exercise discovery or trending data."
-            echo
-            echo "The required repository, clean-database, build, security, and responsive-browser checks remain separate and must still pass. Production runtime acceptance must be performed only after the protected production migration and the matching locked Netlify production deploy."
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "Supabase-backed deploy-preview smoke intentionally skipped by repository policy."
-
       - uses: actions/checkout@v6
-        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
       - uses: actions/setup-node@v6
-        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         with:
           node-version: 22
           cache: npm
       - name: Install dependencies
-        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         run: npm ci
       - name: Install Chromium
-        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
         run: npx playwright install --with-deps chromium
-      - name: Exercise the actual Netlify Deploy Preview
-        if: ${{ vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
+      - name: Exercise provider-backed Netlify Deploy Preview
+        id: core-preview-smoke
         run: node scripts/run-deploy-preview-smoke.mjs
-      - name: Capture redacted Supabase provider diagnostics
-        if: ${{ failure() && vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
+      - name: Capture minimized provider diagnostics
+        if: ${{ failure() }}
         continue-on-error: true
         run: node scripts/diagnose-deploy-preview-supabase.mjs
-      - name: Upload deploy-preview screenshots and failure evidence
-        if: ${{ always() && vars.ENABLE_SUPABASE_PREVIEW_SMOKE == 'true' }}
+      - name: Check Google Maps provider separately
+        id: google-maps-provider
+        continue-on-error: true
+        env:
+          DEPLOY_PREVIEW_SMOKE_SCOPE: google-maps
+        run: node scripts/verify-deploy-preview.mjs
+      - name: Record Google Maps provider status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          CORE_OUTCOME: ${{ steps.core-preview-smoke.outcome }}
+          GOOGLE_MAPS_OUTCOME: ${{ steps.google-maps-provider.outcome }}
+        run: |
+          {
+            echo "## Google Maps provider check"
+            echo
+            if [ "$CORE_OUTCOME" != "success" ]; then
+              echo "NOT RUN — the required core provider-backed preview smoke failed first."
+            elif [ "$GOOGLE_MAPS_OUTCOME" = "success" ]; then
+              echo "PASS — Google Maps and salon markers rendered on the provider-backed preview."
+            else
+              echo "BLOCKED — the core database/content smoke passed independently, but the Google Maps provider did not render. Inspect the uploaded google-maps evidence and provider key/referrer configuration."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload deploy-preview screenshots and minimized evidence
+        if: ${{ always() }}
         uses: actions/upload-artifact@v5
         with:
           name: deploy-preview-evidence-${{ github.run_id }}-${{ github.run_attempt }}

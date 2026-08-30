@@ -20,6 +20,11 @@ import {
 } from "@/lib/videoTranscoderServer";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { REPOSITORY_MIGRATION_HEAD } from "@/generated/repositoryMetadata";
+import {
+  serverDomainReady,
+  serverSiteUrlDiagnostic,
+} from "@/lib/siteUrlServer";
+import { deploymentEnvironmentTier } from "@/lib/deploymentIdentity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,12 +54,7 @@ type Status = {
 };
 
 function environmentName() {
-  return (
-    process.env.CONTEXT ||
-    process.env.DEPLOY_CONTEXT ||
-    process.env.NODE_ENV ||
-    "unknown"
-  );
+  return deploymentEnvironmentTier();
 }
 
 function configured(...names: string[]) {
@@ -111,7 +111,6 @@ function providerSpecs(
     (provider) => provider !== "test" && aiProviderConfigured(provider),
   );
   const transcoderDiagnostic = videoTranscoderRuntimeDiagnostic();
-  const siteUrl = String(process.env.NEXT_PUBLIC_SITE_URL || "");
   return [
     status(
       {
@@ -341,11 +340,14 @@ function providerSpecs(
       {
         key: "domains",
         label: "Domains & TLS",
-        configured: /^https:\/\//i.test(siteUrl),
+        configured: serverDomainReady(),
         detail:
           "The canonical public URL and dashboard aliases must resolve over valid HTTPS before subdomain routing is enabled.",
         required: true,
         envNames: [
+          "DEPLOY_PRIME_URL",
+          "DEPLOY_URL",
+          "URL",
           "NEXT_PUBLIC_SITE_URL",
           "NEXT_PUBLIC_SITE_HOST",
           "NEXT_PUBLIC_SALON_DASHBOARD_HOST",
@@ -530,10 +532,10 @@ async function testIntegration(
     return;
   }
   if (key === "domains") {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (!siteUrl || !/^https:\/\//i.test(siteUrl))
+    const siteUrl = serverSiteUrlDiagnostic();
+    if (!serverDomainReady())
       throw new Error("NOT_CONFIGURED");
-    const response = await safeFetch(siteUrl, {
+    const response = await safeFetch(siteUrl.origin, {
       method: "HEAD",
       redirect: "follow",
     });

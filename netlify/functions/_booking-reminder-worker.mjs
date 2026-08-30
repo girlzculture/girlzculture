@@ -1,3 +1,5 @@
+import { netlifySiteOrigin } from "./_deployment-url.mjs";
+
 const RETRYABLE_STATUS = new Set([408, 429]);
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
@@ -10,21 +12,6 @@ function isUuid(value) {
 
 function retryableStatus(status) {
   return RETRYABLE_STATUS.has(status) || status >= 500;
-}
-
-function safeRootUrl(environment) {
-  const candidate =
-    environment.DEPLOY_PRIME_URL ||
-    environment.URL ||
-    environment.NEXT_PUBLIC_SITE_URL ||
-    "";
-  try {
-    const parsed = new URL(candidate);
-    if (!/^https?:$/.test(parsed.protocol)) return "";
-    return parsed.toString().replace(/\/$/, "");
-  } catch {
-    return "";
-  }
 }
 
 function responsePayload(text) {
@@ -52,7 +39,7 @@ function correlatedResponse(response, text, payload) {
 
 export function reminderWorkerConfiguration(environment = process.env) {
   return {
-    root: safeRootUrl(environment),
+    root: netlifySiteOrigin(environment),
     hasInternalSecret: Boolean(environment.INTERNAL_API_SECRET),
   };
 }

@@ -10,6 +10,7 @@ import {
   publicErrorResponse,
 } from "@/lib/requestSecurity";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 class RescheduleInputError extends Error {}
 
@@ -124,9 +125,7 @@ async function POSTHandler(
         reason: body.reason,
         message: body.message,
         localOptions: body.options,
-        rootUrl: (
-          process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
-        ).replace(/\/$/, ""),
+        rootUrl: serverSiteUrl(request),
       });
       return Response.json(result, { status: 201 });
     } catch (error) {

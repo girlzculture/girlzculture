@@ -12,6 +12,7 @@ import { capturePlatformError } from "@/lib/platformErrors";
 import { requireSalonPermission, sendEmail } from "@/lib/supabaseAdmin";
 import { issueBookingReviewLink } from "@/lib/reviewAccessServer";
 import { NON_DOM_VISUAL_TOKENS } from "@/lib/nonDomVisualTokens.mjs";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 const EARLY_REASONS = [
   ["customer_arrived_early", "Customer arrived earlier than scheduled"],
@@ -174,9 +175,7 @@ async function POSTHandler(
       );
       let reviewUrl = "";
       try {
-        const root = (
-          process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
-        ).replace(/\/$/, "");
+        const root = serverSiteUrl(request);
         reviewUrl = (await issueBookingReviewLink(booking.id, root)).url;
       } catch (reviewLinkError) {
         const warningReference = await capturePlatformError({

@@ -9,6 +9,10 @@ import {
   isHomepagePromotionCardComplete,
   selectLocalPromotionCards,
 } from "@/lib/homePromotionCore";
+import {
+  homepagePromotionCollectionSource,
+  homepagePromotionSource,
+} from "@/lib/publicAcceptanceMarkersCore";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import { distanceMiles, formatDistanceMiles, validCoordinates, type CustomerLocation } from "@/lib/location";
 
@@ -171,6 +175,7 @@ export default function HomepagePromoRail({
     <section
       aria-label="Featured Girlz Culture promotions"
       data-promotion-rail
+      data-promotion-source={homepagePromotionCollectionSource(visibleCards)}
       data-current-index={currentIndex}
       data-auto-state={
         reducedMotion
@@ -304,6 +309,7 @@ function PromotionCard({
   return (
     <article
       data-promotion-card
+      data-promotion-source={homepagePromotionSource(card)}
       data-media-kind={
         card.content_type === "video" || /\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(card.media_url || "")
           ? "video"

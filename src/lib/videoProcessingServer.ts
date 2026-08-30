@@ -12,6 +12,10 @@ import {
 } from "@/lib/videoTranscoderCore";
 import { inspectVideoBytes } from "@/lib/videoInspection";
 import { loadVideoTranscoderRuntimeConfig } from "@/lib/videoTranscoderServer";
+import {
+  serverDomainReady,
+  serverSiteUrlDiagnostic,
+} from "@/lib/siteUrlServer";
 
 type Row = Record<string, unknown>;
 
@@ -42,19 +46,12 @@ function cloudinarySignature(
 }
 
 function publicCallbackOrigin() {
-  for (const candidate of [
-    process.env.NEXT_PUBLIC_SITE_URL,
-    process.env.URL,
-  ]) {
-    try {
-      const url = new URL(String(candidate || "").trim());
-      if (url.protocol === "https:") return url.origin;
-    } catch {
-      // Ignore malformed optional origins. Sparse authenticated polling remains
-      // the recovery path when a public callback cannot be registered.
-    }
-  }
-  return "";
+  const resolution = serverSiteUrlDiagnostic();
+  return serverDomainReady() &&
+    resolution.configured &&
+    resolution.origin.startsWith("https://")
+    ? resolution.origin
+    : "";
 }
 
 export function cloudinaryVideoCallbackToken(jobId: string, secret: string) {

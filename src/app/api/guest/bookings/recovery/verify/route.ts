@@ -14,6 +14,7 @@ import {
   publicErrorResponse,
 } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 async function POSTHandler(request: Request) {
   try {
@@ -79,9 +80,7 @@ async function POSTHandler(request: Request) {
         { status: 409 },
       );
     }
-    const root = (
-      process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
-    ).replace(/\/$/, "");
+    const root = serverSiteUrl(request);
     const access = await issueGuestBookingToken(admin, challenge.booking_id, {
       reason: "Verified recovery",
       rootUrl: root,

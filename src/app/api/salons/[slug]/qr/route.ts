@@ -2,6 +2,7 @@ import QRCode from "qrcode";
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 async function GETHandler(
   request: Request,
@@ -26,10 +27,7 @@ async function GETHandler(
       return Response.json({ error: "Salon not found." }, { status: 404 });
     }
     salonId = result.data.id;
-    const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-    const origin = configuredOrigin
-      ? configuredOrigin.replace(/\/+$/, "")
-      : new URL(request.url).origin;
+    const origin = serverSiteUrl(request);
     const svg = await QRCode.toString(`${origin}/${slug}`, {
       type: "svg",
       errorCorrectionLevel: "H",

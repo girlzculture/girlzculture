@@ -44,6 +44,7 @@
     "verify:design-system:source": "node scripts/verify-launch-design-system.mjs",
     "verify:design-system:fixtures": "node tests/design-system/launch-design-system-audit.test.mjs",
     "verify:theme-contrast": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/design-system/theme-contrast.test.ts",
+    "verify:deployment-url": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/deployment-url-core.test.ts",
     "verify:design-system": "npm run verify:design-system:source && npm run verify:design-system:fixtures && npm run verify:theme-contrast",
     "verify:engine": "node scripts/verify-platform-engine.mjs",
     "verify:concierge": "node scripts/verify-ai-beauty-concierge.mjs",

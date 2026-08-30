@@ -1,10 +1,11 @@
-import { readFile, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  assertPreviewSeedReadiness,
+  runtimeShaFromNetlifyComment,
+} from "./deploy-preview-smoke-core.mjs";
 
 const repository = String(process.env.GITHUB_REPOSITORY || "");
 const pullRequestNumber = String(process.env.PULL_REQUEST_NUMBER || "");
-const expectedHeadSha = String(process.env.PULL_REQUEST_HEAD_SHA || "");
+const expectedHeadSha = String(process.env.PULL_REQUEST_HEAD_SHA || "").toLowerCase();
 const githubToken = String(process.env.GITHUB_TOKEN || "");
 
 if (!repository || !pullRequestNumber || !expectedHeadSha || !githubToken) {
@@ -12,6 +13,18 @@ if (!repository || !pullRequestNumber || !expectedHeadSha || !githubToken) {
     "GitHub repository, pull request, head SHA, and token are required for Netlify preview readiness.",
   );
 }
+if (!/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
+  throw new Error("PULL_REQUEST_HEAD_SHA must be a full 40-character Git commit SHA.");
+}
+
+assertPreviewSeedReadiness({
+  eventAction: process.env.PREVIEW_SEED_READINESS_EVENT,
+  eventLabel: process.env.PREVIEW_SEED_READINESS_LABEL,
+  attestedPullRequestNumber: process.env.PREVIEW_SEED_READINESS_PR,
+  attestedHeadSha: process.env.PREVIEW_SEED_READINESS_HEAD_SHA,
+  expectedPullRequestNumber: pullRequestNumber,
+  expectedHeadSha,
+});
 
 const headers = {
   Accept: "application/vnd.github+json",
@@ -26,132 +39,59 @@ async function githubJson(url) {
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    throw new Error(`GitHub API returned HTTP ${response.status} for ${url}.`);
+    throw new Error(`GitHub API returned HTTP ${response.status} while checking preview readiness.`);
   }
   return response.json();
 }
 
-function runtimeShaFrom(body) {
-  if (!/Deploy Preview[\s\S]*ready!/i.test(body)) return "";
-  return body.match(/[0-9a-f]{40}/i)?.[0] || "";
-}
-
-function isPreviewOnlyFile(filename) {
-  return (
-    filename === "scripts/verify-deploy-preview.mjs" ||
-    filename === "scripts/run-deploy-preview-smoke.mjs" ||
-    filename === "scripts/capture-deploy-preview-response.mjs" ||
-    filename === "scripts/diagnose-deploy-preview-supabase.mjs" ||
-    filename === ".github/workflows/deploy-preview-smoke.yml"
-  );
-}
-
-async function runDeployPreviewVerifier() {
-  const verifyUrl = new URL("./verify-deploy-preview.mjs", import.meta.url);
-  const source = await readFile(verifyUrl, "utf8");
-  const requestFailureHook = `  page.on("requestfailed", (request) => {
-    if (isNetlifyPreviewToolingUrl(request.url())) return;
-`;
-  const requestFailureHookWithExpectedPrefetch = `  page.on("requestfailed", (request) => {
-    if (isNetlifyPreviewToolingUrl(request.url())) return;
-    try {
-      const failedUrl = new URL(request.url());
-      if (
-        request.resourceType() === "fetch" &&
-        failedUrl.searchParams.has("_rsc") &&
-        request.failure()?.errorText === "net::ERR_ABORTED"
-      ) {
-        log(\`Ignored expected Next.js RSC prefetch cancellation: \${failedUrl.pathname}\`);
-        return;
-      }
-    } catch {
-      // Preserve unknown failed requests for the assertion below.
-    }
-`;
-
-  if (!source.includes(requestFailureHook)) {
-    throw new Error(
-      "Deploy-preview verifier changed without updating its expected-prefetch filter.",
-    );
-  }
-
-  const runtimePath = path.join(
-    path.dirname(fileURLToPath(verifyUrl)),
-    `.verify-deploy-preview-runtime-${process.pid}.mjs`,
-  );
-  await writeFile(
-    runtimePath,
-    source.replace(
-      requestFailureHook,
-      requestFailureHookWithExpectedPrefetch,
-    ),
-    "utf8",
-  );
-  try {
-    await import(`${pathToFileURL(runtimePath).href}?v=${Date.now()}`);
-  } finally {
-    await unlink(runtimePath).catch(() => {});
-  }
-}
-
 const commentsUrl = `https://api.github.com/repos/${repository}/issues/${pullRequestNumber}/comments?per_page=100`;
-let compatibleRuntimeSha = "";
+let exactRuntimeReady = false;
 let lastMessage = "Netlify has not published a ready preview yet.";
 
-for (let attempt = 1; attempt <= 48; attempt += 1) {
+for (let attempt = 1; attempt <= 60; attempt += 1) {
   try {
     const comments = await githubJson(commentsUrl);
-    const netlifyComment = Array.isArray(comments)
-      ? comments.find((comment) => comment?.user?.login === "netlify[bot]")
-      : null;
-    const body = String(netlifyComment?.body || "");
-    const runtimeSha = runtimeShaFrom(body);
-
-    if (runtimeSha) {
-      if (runtimeSha === expectedHeadSha) {
-        compatibleRuntimeSha = runtimeSha;
-        console.log(`Netlify is ready on the exact PR head ${runtimeSha}.`);
-        break;
-      }
-
-      const comparison = await githubJson(
-        `https://api.github.com/repos/${repository}/compare/${runtimeSha}...${expectedHeadSha}`,
+    const netlifyComments = (Array.isArray(comments) ? comments : [])
+      .filter((comment) => comment?.user?.login === "netlify[bot]")
+      .sort(
+        (left, right) =>
+          Date.parse(String(right?.updated_at || "")) -
+          Date.parse(String(left?.updated_at || "")),
       );
-      const changedFiles = Array.isArray(comparison.files)
-        ? comparison.files.map((file) => String(file.filename || ""))
-        : [];
-      const runtimeChanges = changedFiles.filter(
-        (filename) => filename && !isPreviewOnlyFile(filename),
-      );
+    const publishedRuntimeShas = netlifyComments
+      .map((comment) => runtimeShaFromNetlifyComment(comment?.body))
+      .filter(Boolean);
 
-      if (runtimeChanges.length === 0) {
-        compatibleRuntimeSha = runtimeSha;
-        console.log(
-          `Netlify is ready on runtime commit ${runtimeSha}; all newer files are preview-test-only.`,
-        );
-        break;
-      }
-
-      lastMessage = `Netlify is ready on ${runtimeSha}, but runtime files changed afterward: ${runtimeChanges.join(", ")}`;
-    } else {
-      lastMessage = "Netlify is still processing or has not reported the current preview.";
+    if (publishedRuntimeShas.includes(expectedHeadSha)) {
+      exactRuntimeReady = true;
+      console.log(`Netlify is ready on the exact PR head ${expectedHeadSha}.`);
+      break;
     }
+
+    lastMessage = publishedRuntimeShas.length
+      ? `Netlify is ready on ${publishedRuntimeShas[0]}, not the required PR head ${expectedHeadSha}.`
+      : "Netlify is still processing or has not reported a ready preview.";
   } catch (error) {
     lastMessage = error instanceof Error ? error.message : String(error);
   }
 
-  console.log(`Netlify readiness attempt ${attempt}/48: ${lastMessage}`);
-  if (attempt < 48) {
+  console.log(`Netlify readiness attempt ${attempt}/60: ${lastMessage}`);
+  if (attempt < 60) {
     await new Promise((resolve) => setTimeout(resolve, 5_000));
   }
 }
 
-if (!compatibleRuntimeSha) {
+if (!exactRuntimeReady) {
   throw new Error(
-    `Netlify did not publish a compatible Deploy Preview within the bounded readiness window: ${lastMessage}`,
+    `Netlify did not publish the exact pull-request head within the bounded readiness window: ${lastMessage}`,
   );
 }
 
-process.env.PULL_REQUEST_HEAD_SHA = compatibleRuntimeSha;
-await import("./capture-deploy-preview-response.mjs");
-await runDeployPreviewVerifier();
+await import("./verify-deploy-preview.mjs");
+if ((process.env.DEPLOY_PREVIEW_SMOKE_SCOPE || "core") === "core") {
+  // Capture/uploadable evidence only after the verifier has proved that this
+  // is the expected staging deployment and exact release. This prevents a
+  // mislinked preview from exporting visible content before its identity and
+  // synthetic-data boundary have been established.
+  await import("./capture-deploy-preview-response.mjs");
+}

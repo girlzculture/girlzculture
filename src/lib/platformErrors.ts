@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isStaticBuildPhase } from "@/lib/buildPhaseCore";
-import { deploymentReleaseId } from "@/lib/deploymentIdentity";
+import {
+  deploymentEnvironmentId,
+  deploymentReleaseId,
+} from "@/lib/deploymentIdentity";
 
 export type ErrorContext = {
   request?: Request;
@@ -78,7 +81,7 @@ export async function capturePlatformError(context: ErrorContext) {
   const technicalMessage = safeText(context.error instanceof Error ? context.error.message : record.message || context.error || "Unknown error");
   const technicalStack = safeText(context.error instanceof Error ? context.error.stack : record.details || "", 6_000);
   const release = deploymentReleaseId();
-  const environment = process.env.CONTEXT || process.env.NODE_ENV || "unknown";
+  const environment = deploymentEnvironmentId();
   const route = context.request ? new URL(context.request.url).pathname : null;
   const fingerprint = hashFingerprint(`${context.feature}|${context.action}|${String(record.code || "")}|${technicalMessage.slice(0, 300)}`);
   const logRecord = {

@@ -24,6 +24,7 @@ import HomepagePromoRail from "@/components/public/HomepagePromoRail";
 import { resolvePublishedHomepagePromotions } from "@/lib/homepagePromotionServer";
 import { homepageSearchInsertIndex } from "@/lib/homepageSectionOrderingCore";
 import { HOMEPAGE_EDITORIAL_FALLBACKS } from "@/lib/homePromotionCore";
+import { homepagePromotionCollectionSource, publicContentSource } from "@/lib/publicAcceptanceMarkersCore";
 import {
   canonicalHomeHeroSection,
   findHomeHeroSection,
@@ -61,8 +62,9 @@ async function loadHomepageSections() {
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const previewQuery = await searchParams;
   const depthPreview = previewQuery.homepage3d === "1";
+  const editorialFallback = { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] };
   const [homeContent, sectionData] = await Promise.all([
-    getContentPage("home", { slug: "home", title: "Home", hero_title: "Book with Confidence.", hero_subtitle: "", hero_image_url: "/images/braids-knotless.jpg", sections: [] }),
+    getContentPage("home", editorialFallback),
     loadHomepageSections(),
   ]);
   if (!homeContent) notFound();
@@ -93,7 +95,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const searchInsertIndex = homepageSearchInsertIndex(homepageSections);
 
   return (
-    <main data-homepage-variant={depthPreview ? "depth" : "standard"} className={`min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0 ${depthPreview ? "gc-home-depth" : ""}`}>
+    <main data-homepage-variant={depthPreview ? "depth" : "standard"} data-content-source={publicContentSource(homeContent, editorialFallback)} className={`min-h-screen overflow-x-clip bg-cream pb-20 text-ink md:pb-0 ${depthPreview ? "gc-home-depth" : ""}`}>
       <PublicHeader />
       <FirstRelevantLocationRequest />
       <MobileLocationOnboarding />
@@ -131,7 +133,8 @@ function HomepageRow({ section,promotionCards,promotionSection,promotionLayout,n
   if (section.section_key === "promo_rail") {
     if (promotionLayout === "promo_rail") return <HomepagePromoRail cards={promotionCards} now={new Date().toISOString()} />;
     const presentable: ContentSection = { ...promotionSection, type: promotionLayout, cards: promotionCards };
-    return <PublicContentSections sections={[presentable]} variant="homepage" />;
+    const source = homepagePromotionCollectionSource(promotionCards);
+    return <div data-promotion-source={source}><PublicContentSections sections={[presentable]} variant="homepage" /></div>;
   }
   if (section.section_key === "salons_near_you") return <NearbySalonPlacement title={section.title} description={section.description} maxCards={nearbyCardCount}/>;
   if (section.section_key === "featured_salons") return <FeaturedSalonPlacement title={section.title} description={section.description} maxCards={featuredCardCount}/>;

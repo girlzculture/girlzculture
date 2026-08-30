@@ -507,6 +507,11 @@ assert.match(videoProcessingServer, /eager_notification_url/);
 assert.match(videoProcessingServer, /cloudinaryVideoCallbackToken/);
 assert.match(
   videoProcessingServer,
+  /serverDomainReady\(\)[\s\S]*?resolution\.configured/,
+  "Cloudinary callbacks must require an origin assigned to the current deploy",
+);
+assert.match(
+  videoProcessingServer,
   /setTimeout\(\(\) => controller\.abort\(\), 30_000\)/,
 );
 assert.match(videoProcessingServer, /poster_url/);

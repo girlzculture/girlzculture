@@ -1,13 +1,18 @@
 import { monitoredNetlifyFailure } from "./_monitoring.mjs";
+import { netlifySiteOrigin } from "./_deployment-url.mjs";
+
+export function pickupCleanupConfiguration(environment = process.env) {
+  const root = netlifySiteOrigin(environment);
+  return {
+    root,
+    configured: Boolean(root && environment.CRON_SECRET),
+  };
+}
 
 const pickupReservationCleanup = async () => {
   try {
-    const root = (
-      process.env.URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      ""
-    ).replace(/\/$/, "");
-    if (!root || !process.env.CRON_SECRET) {
+    const { root, configured } = pickupCleanupConfiguration();
+    if (!configured) {
       throw new Error("PICKUP_RESERVATION_CLEANUP_NOT_CONFIGURED");
     }
     const response = await fetch(`${root}/api/commerce/pickup-cleanup`, {

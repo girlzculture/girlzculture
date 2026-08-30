@@ -5,12 +5,12 @@
 - Repository: `girlzculture/girlzculture`
 - Verified starting `origin/main`: `22dd9b55ac417823a4a35e7d8fb14b9d970ccd7d`
 - Branch: `codex/workstream-1-readability-accessibility`
-- Final branch SHA: recorded in the Draft pull request and delivery report. A commit cannot contain its own resulting SHA; this document records the immutable starting point and the reviewed implementation scope.
+- Merged Workstream head: `bae438652e443b60beb47382415fe6a5bfb85c06`. GitHub reports PR #51 was merged and closed on 2026-08-29. The provider-preview repair described below began after that merge and is not part of the merged PR.
 - Workstream: WS01-001 through WS01-018 only—readability, semantic theme roles, visual states, accessibility, enforcement, evidence, and acceptance documentation.
 
 The branch was created from the verified remote main commit in a separate clean worktree. The six historical Workstream 0 audit documents under `docs/audits/workstream-0/` were preserved unchanged. No retired audit branch was reused.
 
-This work did **not** create or edit a migration, database object, price, deposit, refund rule, Stripe behavior, booking rule, search/advertising ranking, permission, authentication flow, provider configuration, policy meaning, notification delivery behavior, or production record. Workstreams 2–18 were not started.
+The original merged Workstream 1 implementation did **not** create or edit a migration, database object, price, deposit, refund rule, Stripe behavior, booking rule, search/advertising ranking, permission, authentication flow, provider configuration, policy meaning, notification delivery behavior, or production record. The post-merge continuation created an isolated Supabase preview branch, applied the existing migration chain, loaded synthetic `.invalid` acceptance records, and configured branch-only Netlify preview values. It did not change a migration, a production provider setting, or production data. Workstreams 2–18 were not started.
 
 ## Original failures reproduced
 
@@ -73,7 +73,7 @@ Positive and negative fixtures exercise every rule and include stable violation 
 
 ## Files changed
 
-The authoritative exact list is the Draft PR diff. It is grouped here for reviewer navigation; no file outside these categories is intentionally changed.
+The authoritative original list is the merged PR #51 diff at `bae438652e443b60beb47382415fe6a5bfb85c06`. It is grouped here for reviewer navigation; the post-merge provider-preview continuation is reported separately and must not be folded into the historical 224-path count.
 
 ### Tokens, runtime theme, and non-DOM visual roles
 
@@ -240,6 +240,20 @@ The original Workstream 1 implementation and evidence inventory contained 219 pa
 
 PR #51 therefore contains 224 total changed paths: the original 219-path Workstream 1 implementation/evidence inventory plus the five CI-only release-control paths. Each workflow modification changed its job key only; triggers, filters, permissions, environment, steps, and behavior remain unchanged.
 
+### Post-merge provider-preview continuation inventory
+
+The provider-preview repair began only after PR #51 had already been merged and closed. It is therefore separate from the historical 224-path PR inventory above. At the final continuation checkpoint, it contains exactly **54 non-screenshot paths**. The 73 pre-existing modified files under `docs/screenshots/**` are deliberately excluded and preserved unstaged.
+
+- Workflow/local state: `.github/workflows/deploy-preview-smoke.yml`, `.gitignore`, `package.json`
+- Workstream records: `docs/workstreams/workstream-1/IMPLEMENTATION_REPORT.md`, `docs/workstreams/workstream-1/MANUAL_ACCEPTANCE.md`
+- Netlify functions: `netlify/functions/_booking-reminder-worker.mjs`, `netlify/functions/_deployment-url.mjs`, `netlify/functions/_monitoring.mjs`, `netlify/functions/media-cleanup.mjs`, `netlify/functions/pickup-reservation-cleanup.mjs`
+- Preview/verification scripts: `scripts/apply-preview-seed.mjs`, `scripts/capture-deploy-preview-response.mjs`, `scripts/deploy-preview-smoke-core.mjs`, `scripts/diagnose-deploy-preview-supabase.mjs`, `scripts/preview-seed-target-core.mjs`, `scripts/run-deploy-preview-smoke.mjs`, `scripts/sql/verify-preview-seed.sql`, `scripts/verify-clean-database.mjs`, `scripts/verify-deploy-preview.mjs`, `scripts/verify-homepage-promotion-pool-and-trending-media.mjs`, `scripts/verify-operational-monitoring.mjs`, `scripts/verify-video-job-auth-lifecycle.mjs`
+- Protected/public route hardening: `src/app/api/admin/bookings/[id]/route.ts`, `src/app/api/admin/engine/config/route.ts`, `src/app/api/admin/engine/system-status/route.ts`, `src/app/api/admin/submissions/[id]/decision/route.ts`, `src/app/api/admin/team/route.ts`, `src/app/api/admin/test-data/route.ts`, `src/app/api/config/route.ts`, `src/app/api/guest/bookings/manage/route.ts`, `src/app/api/guest/bookings/recovery/verify/route.ts`, `src/app/api/messages/route.ts`, `src/app/api/monitor/client-provider/route.ts`, `src/app/api/salon/bookings/[id]/reschedule/route.ts`, `src/app/api/salon/bookings/[id]/service/route.ts`, `src/app/api/salons/[slug]/qr/route.ts`
+- Public presentation markers: `src/app/page.tsx`, `src/components/public/HomepagePromoRail.tsx`
+- Shared runtime boundaries: `src/lib/deploymentIdentity.ts`, `src/lib/deploymentUrlCore.ts`, `src/lib/guestBookingAccess.ts`, `src/lib/platformErrors.ts`, `src/lib/publicAcceptanceMarkersCore.ts`, `src/lib/siteUrlServer.ts`, `src/lib/stripeServer.ts`, `src/lib/supabaseAdmin.ts`, `src/lib/teamInvite.ts`, `src/lib/videoProcessingServer.ts`
+- Synthetic preview seed: `supabase/seed.preview.sql`
+- Focused regressions: `tests/deploy-preview/deploy-preview-smoke-core.test.mjs`, `tests/deploy-preview/preview-seed-target-core.test.mjs`, `tests/deployment-url-core.test.ts`, `tests/netlify-deployment-url.test.mjs`, `tests/runtime-acceptance-markers.test.ts`
+
 ## Automated evidence
 
 | Check | Result |
@@ -247,9 +261,13 @@ PR #51 therefore contains 224 total changed paths: the original 219-path Workstr
 | `npm ci` | PASS — 490 packages installed, 491 packages audited, 0 vulnerabilities. The first restricted-process attempt returned Windows `spawn EPERM`; the same immutable install passed with approved execution. |
 | `npm run verify:design-system` | PASS — 489 source assets scanned; 20 documented color literals; 6 documented RGB roles; 18/18 positive and negative scanner fixtures; 14/14 runtime theme-contrast tests. The exact exception inventory contains 307 per-file/token ratchets and 3 non-text visual exceptions. |
 | `npm run verify:migrations` | PASS — 136 unique migrations ordered; no migration was changed or added. |
+| Empty Supabase preview migration execution | PASS — the isolated, data-less PR51 Supabase branch executed all 136 repository migrations and reports migration head `20260825150000`. This is real remote SQL execution, not a filename-only check. |
+| Guarded preview seed and database assertions | PASS — the guard classifies all 135 public tables (26 reference/configuration, 9 direct seed-owned, 4 exact trigger side effects, and 96 prohibited private/runtime tables). A deliberately forced database assertion reached `PREVIEW_SEED_FORCED_ASSERTION_FAILURE`; the surrounding transaction rolled back and retained the original counts. Two subsequent guarded transactions completed successfully and idempotently. Final remote assertions found 6 synthetic salons, 7 non-login `.invalid` identities, 12 styles, 6 stylists, 36 availability rows, and zero customers, bookings, reviews, product orders, checkout/payment rows, support tickets, subscribers, or complaints. |
+| `npm run verify:database-clean` in this local Windows runtime | BLOCKED/NOT RUN — no disposable local PostgreSQL/Docker runtime or `CLEAN_DATABASE_URL` is available. The successful empty Supabase preview migration execution above is reported separately and is not relabeled as this local workflow. |
 | `npx tsc --noEmit` | PASS. |
 | `npm run lint` | PASS — 0 errors and 9 warnings. The warnings are the existing unused-import/variable and native-image advisories; none is an accessibility-rule failure. |
-| `npm run build` | PASS under the sanitized acceptance environment; 147 routes generated. The intentionally unavailable local Supabase fixture timed out and exercised its sanitized fallback without failing the build. |
+| `npm run build` | PASS under the sanitized acceptance environment; 147 routes generated. A separate production build using only the isolated preview branch's in-memory runtime values also passed compilation, TypeScript, page-data collection, and all 147 routes. No credential value was printed or written. |
+| Provider-preview safety regressions | PASS — 54/54 focused URL identity, Netlify worker, seed-target/TLS/attestation, response-sanitization, acceptance-marker, and smoke-capability tests. The CI contract job runs this complete focused set. `npm run verify:video-job-auth` also passes against the current multiline deployment-identity import. |
 | `npm run test:accessibility` | PASS — 56/56 focused Chromium tests: 29 Axe WCAG A/AA scans with `color-contrast` enabled and 0 violations, plus 27 direct computed-contrast, state, behavior, keyboard, focus, validation, responsive, overflow, and evidence checks. An earlier run exposed four fixture-readiness/reflow test defects; the focused closure rerun passed 56/56 after those test/harness corrections. |
 | First `npm run test:browser` full-suite attempt | INCONCLUSIVE INFRASTRUCTURE FAILURE — one Chromium browser process crashed during the parallel run. This was a runner/process crash, not a product assertion failure, and is not reported as a product PASS or FAIL. |
 | Reduced-concurrency `npm run test:browser` closure rerun | PASS — 143 passed, 6 conditional/provider-dependent tests skipped, 0 failed across 149 collected cases using two workers. |
@@ -261,11 +279,11 @@ PR #51 therefore contains 224 total changed paths: the original 219-path Workstr
 
 - Local and GitHub Playwright acceptance is fixture-backed. The public routes run against sanitized acceptance configuration, while the protected owner, Platform Admin, and stylist surfaces use deterministic internal acceptance fixtures. These runs do not prove authenticated staging roles or live provider behavior.
 - The focused accessibility suite combines 29 direct Axe WCAG A/AA scans with 27 computed-style, semantic, keyboard, focus, validation, responsive, overflow, and evidence checks. Axe and computed-style results are automated evidence, not a substitute for assistive-technology or founder acceptance.
-- The Netlify Deploy Preview build is **SUCCESS/READY**: Netlify built and deployed this branch. Netlify header and redirect checks are also **SUCCESS**.
-- The `preview-smoke` wrapper job is **SUCCESS**, but its checkout, dependency setup, Chromium setup, `Exercise the actual Netlify Deploy Preview` browser step, provider diagnostics, and preview evidence upload are **SKIPPED** because `ENABLE_SUPABASE_PREVIEW_SMOKE` is not enabled. Supabase Preview is likewise **SKIPPED**. The ready Deploy Preview proves that Netlify built and deployed the branch. The skipped browser-exercise step means this is not yet provider-backed deployed-preview browser acceptance.
-- Provider-backed staging acceptance and representative authenticated customer, stylist/team, salon-owner, and Platform Admin role acceptance remain pending. No Stripe, Maps, OpenAI, Cloudinary, notification, or other external-provider success is inferred from the fixture-backed suites.
+- The historical Netlify result at the merged Workstream head is preserved as historical build evidence only. The existing `deploy-preview-51` runtime predates the post-merge branch configuration and repair; its discovery endpoints are stale/failing and it is **not ready** for founder or provider acceptance.
+- Supabase Preview is no longer skipped. The isolated nonproduction branch executed all 136 migrations and passed guarded synthetic seed/database assertions without copied production data. That proves the preview database foundation, not a fresh Netlify application deployment.
+- A fresh exact-head nonproduction Netlify deployment and its provider-backed browser smoke remain **BLOCKED/not yet produced**. Representative authenticated customer, stylist/team, salon-owner, and Platform Admin acceptance also remains pending. No Stripe, Maps, OpenAI, Cloudinary, notification, or other external-provider success is inferred from the database or fixture-backed suites.
 
-Three independently isolated verifier mismatches remain pre-existing and outside Workstream 1. `npm run verify:engine` expects the historical `section === "engine" ? "settings"` mapping although main already uses `const permissionForSection = section => section`. `npm run verify:brand-appearance` likewise expects `requireAdminPermission(request, "settings")` while main's Engine route uses the `engine` permission. `npm run verify:content-presentation` expects an incomplete content card to be absent although main's unchanged presentation contract renders that state. The relevant verifier/core/route files have zero diff from `origin/main`; this branch does not change permissions or content behavior and does not weaken those tests to mask unrelated failures.
+Three independently isolated verifier mismatches remain pre-existing and outside Workstream 1. `npm run verify:engine` expects the historical `section === "engine" ? "settings"` mapping although main already uses `const permissionForSection = section => section`. `npm run verify:brand-appearance` likewise expects `requireAdminPermission(request, "settings")` while main's Engine route uses the `engine` permission. `npm run verify:content-presentation` expects an incomplete content card to be absent although main's presentation contract renders that state. The continuation does touch selected Engine/config route files only to add release/environment identity and safe URL behavior; it does not change the permission or content behavior involved in those three pre-existing mismatches, and it does not weaken their tests to mask unrelated failures.
 
 The focused Axe suite in `tests/browser/workstream-1-accessibility.spec.ts` uses WCAG 2 A/AA, 2.1 A/AA, and 2.2 AA tags. It runs 18 complete-route scans, 10 scoped deterministic-fixture scans, and 1 modal scan. Color contrast remains enabled and there are no broad rule or page-region exclusions. Result: 29/29 scans passed with 0 violations. The remaining 27 focused tests are the 15 direct semantics/contrast/behavior checks in that file plus the 12 responsive/evidence tests generated by `tests/browser/workstream-1-visual-states.spec.ts`.
 
@@ -294,7 +312,7 @@ Evidence covers homepage/navigation/footer, discovery, salon and stylist present
 
 The final screenshots were inspected independently in addition to computed assertions. That inspection caught the desktop footer switching to its six-column grid too early at 1024px, where the “For Professionals” heading could break inside the word. The final implementation retains the two-column tablet grid until the wider breakpoint and permits heading wrapping only between words. The focused 56-test suite was rerun after the correction. Text is not clipped, footer copy remains readable, state labels are distinguishable without color alone, forms retain visible labels and prompts, and focus/validation states remain legible.
 
-Authenticated production accounts and provider-backed Google Maps/payment operations were intentionally not used. The owner/Admin/stylist acceptance routes are sanitized deterministic fixtures. Public routes and the acceptance-safe public salon route were exercised directly. No real booking, message, provider request, or charge was created.
+Authenticated production accounts and customer-facing Google Maps/payment operations were intentionally not used. The owner/Admin/stylist acceptance routes are sanitized deterministic fixtures. Public routes and the acceptance-safe public salon route were exercised directly. The continuation used only Supabase preview control-plane/database operations and branch-only Netlify configuration; it created no real booking, message, notification, provider transaction, or charge.
 
 ## WS01-001 through WS01-018
 
@@ -328,10 +346,19 @@ The comprehensive protected job in `.github/workflows/database-migrations.yml` r
 ## Known limitations and blocked acceptance
 
 - No real customer, salon, stylist, or Admin account was used. Sanitized acceptance fixtures cover protected state presentations.
-- No Google Maps, Stripe, email, SMS, push, or other provider-backed action was invoked.
-- A founder should review the Draft PR preview at the routes and viewports in `MANUAL_ACCEPTANCE.md`.
+- No customer-facing Google Maps, Stripe, OpenAI, Cloudinary, email, SMS, push, or other provider-backed transaction was invoked. Only isolated Supabase preview preparation and branch-only Netlify configuration occurred.
+- Do not review the stale PR51 preview. Founder review requires a fresh exact-head nonproduction deployment with passing smoke evidence at the routes and viewports in `MANUAL_ACCEPTANCE.md`.
+- Production Supabase, the production Netlify context, live provider configuration, and production data were not changed.
 - Automated WCAG checks do not replace a later specialist audit with assistive technology and representative authenticated staging accounts.
+
+## Post-merge provider-preview repair status
+
+- PR #51 is merged and closed at `bae438652e443b60beb47382415fe6a5bfb85c06`; a merged PR cannot be returned to Draft or receive the continuation as a new PR revision.
+- The isolated Supabase branch `pr-51-workstream-1` is nondefault, nonpersistent, data-less at creation, and parented to the Girlz Culture production project without copying production rows. All 136 migrations executed. The real remote seed transaction proved forced rollback, then passed twice idempotently under the complete 135-table guard.
+- Production Supabase, production Netlify settings/providers, and production data remain unchanged.
+- Branch-scoped Netlify preview values exist, but the old PR51 deployment predates them and remains stale/failing. No fresh deployed acceptance result is claimed.
+- Workstream 0 remains a dated baseline. Its “no staging/Supabase Preview skipped” findings are superseded only for the isolated database foundation; deployed provider-backed acceptance is still incomplete.
 
 ## Rollback
 
-Revert the Workstream 1 commits in reverse order through a follow-up pull request. This restores the former presentation/test files without database rollback because this workstream creates no migration or persistent-data change. Remove the Axe dependency only with its package-lock entry and remove the two CI steps with the corresponding scripts; do not rewrite the Workstream 0 audit.
+Revert the Workstream 1 commits in reverse order through a follow-up pull request. This restores the former presentation/test files without a production database rollback because this workstream creates no migration or production-data change. The isolated preview branch contains deterministic acceptance fixtures only; removing that disposable branch is the provider-side cleanup path and requires separate explicit authorization. Remove the Axe dependency only with its package-lock entry and remove the two CI steps with the corresponding scripts; do not rewrite the Workstream 0 audit.

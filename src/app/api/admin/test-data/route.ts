@@ -2,11 +2,12 @@ import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitori
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { requireAdmin } from "@/lib/supabaseAdmin";
 import { assertRecentHighRiskVerification, identityDependencySummary, prepareAndDeleteIdentity } from "@/lib/identityDeletionServer";
+import { deploymentEnvironmentTier } from "@/lib/deploymentIdentity";
 
 const recordSources={salon:{table:"salons",label:"name"},salon_application:{table:"salon_applications",label:"business_name"},customer:{table:"customers",label:"email"},salon_team:{table:"salon_team_members",label:"email"},booking:{table:"bookings",label:"public_reference"},review:{table:"reviews",label:"id"},support_ticket:{table:"support_tickets",label:"subject"},style:{table:"styles",label:"name"},stylist:{table:"stylists",label:"name"},salon_product:{table:"salon_products",label:"name"},salon_promotion:{table:"salon_promotions",label:"title"},promo_code:{table:"promo_codes",label:"code"},featured_campaign:{table:"featured_salon_campaigns",label:"internal_note"},trending_campaign:{table:"trending_video_campaigns",label:"description"},blog_post:{table:"blog_posts",label:"title"},location_market:{table:"location_markets",label:"name"},newsletter_subscriber:{table:"newsletter_subscribers",label:"email"}} as const;
 type RecordType=keyof typeof recordSources;
 const types=Object.keys(recordSources) as RecordType[];
-const currentEnvironment=()=>{const value=process.env.CONTEXT||process.env.NODE_ENV||"development";return value==="production"?"production":value.includes("preview")?"preview":"development"};
+const currentEnvironment=()=>deploymentEnvironmentTier();
 async function superContext(request:Request){const context=await requireAdmin(request);if(!(context.adminUser as{is_super_admin?:boolean}).is_super_admin)throw new Error("Only a Super Admin can manage labeled test data.");return context}
 async function count(admin:Awaited<ReturnType<typeof requireAdmin>>["admin"],table:string,column:string,value:string){const result=await admin.from(table).select("*",{count:"exact",head:true}).eq(column,value);return result.error?0:result.count||0}
 function numericDependencies(value:unknown):Record<string,number>{

@@ -5,6 +5,7 @@ import {
   type PrimaryIdentityRole,
 } from "@/lib/identityServer";
 import type { InvitationCompensationOutcome } from "@/lib/teamInviteAtomicity";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 function authUserIsMissing(error: unknown) {
   if (!error || typeof error !== "object") return false;
@@ -30,7 +31,7 @@ export async function inviteNewIdentity(
     context.request,
     context.actorUserId,
   );
-  const redirectTo = `${(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "")}/reset-password?invited=${role}`;
+  const redirectTo = `${serverSiteUrl(context.request)}/reset-password?invited=${role}`;
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { role, invitation_pending: true } });
   if (error || !data.user) {
     await auditIdentityEvent({

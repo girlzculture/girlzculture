@@ -77,8 +77,8 @@ const platformErrorsSource = fs
     "const isStaticBuildPhase = () => false;",
   )
   .replace(
-    'import { deploymentReleaseId } from "@/lib/deploymentIdentity";',
-    'const deploymentReleaseId = () => "verification";',
+    /import\s*\{\s*deploymentEnvironmentId,\s*deploymentReleaseId,\s*\}\s*from\s*"@\/lib\/deploymentIdentity";/,
+    'const deploymentEnvironmentId = () => "verification"; const deploymentReleaseId = () => "verification";',
   );
 assert.match(
   platformErrorsSource,
@@ -97,6 +97,21 @@ const platformErrors = await import(
 );
 const apiResponseClient = await import(
   `${pathToFileURL(path.join(root, "src", "lib", "apiResponseClient.ts")).href}?v=${Date.now()}`
+);
+
+const systemStatusSource = fs.readFileSync(
+  path.join(root, "src", "app", "api", "admin", "engine", "system-status", "route.ts"),
+  "utf8",
+);
+assert.match(
+  systemStatusSource,
+  /key:\s*"domains"[\s\S]*?configured:\s*serverDomainReady\(\)/,
+  "Domains & TLS status must use the context-aware canonical-domain guard.",
+);
+assert.match(
+  systemStatusSource,
+  /if\s*\(!serverDomainReady\(\)\)\s*throw new Error\("NOT_CONFIGURED"\)/,
+  "The live Domains & TLS test must reject a non-canonical production deploy URL.",
 );
 
 const inventoryRows = new Map(
@@ -325,13 +340,43 @@ const previousUrl = process.env.SUPABASE_URL;
 const previousPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const previousServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const previousSiteUrl = process.env.URL;
+const previousDeployPrimeUrl = process.env.DEPLOY_PRIME_URL;
+const previousDeployUrl = process.env.DEPLOY_URL;
 const previousContext = process.env.CONTEXT;
 const previousNodeEnvironment = process.env.NODE_ENV;
 delete process.env.SUPABASE_URL;
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.URL = "https://girlzculture.com";
+process.env.DEPLOY_PRIME_URL =
+  "https://deploy-preview-51--girlzculture.netlify.app";
+process.env.DEPLOY_URL =
+  "https://68c000000000000000000051--girlzculture.netlify.app";
 delete process.env.CONTEXT;
+process.env.NODE_ENV = "production";
+assert.equal(
+  monitoring.netlifyEnvironment(process.env),
+  "deploy-preview",
+  "NODE_ENV=production and the production URL must not mask a preview prime URL",
+);
+assert.equal(
+  monitoring.netlifyEnvironment({ URL: "https://girlzculture.com" }),
+  "production",
+  "a scheduled function must retain production identity from the canonical URL",
+);
+assert.equal(
+  monitoring.netlifyEnvironment({
+    CONTEXT: "production",
+    NODE_ENV: "production",
+    URL: "https://girlzculture.com",
+    DEPLOY_PRIME_URL:
+      "https://deploy-preview-51--girlzculture.netlify.app",
+  }),
+  "production",
+  "an explicit Netlify production context remains authoritative",
+);
+delete process.env.DEPLOY_PRIME_URL;
+delete process.env.DEPLOY_URL;
 delete process.env.NODE_ENV;
 const capturedLogs = [];
 const originalConsoleError = console.error;
@@ -355,6 +400,8 @@ if (previousUrl === undefined) delete process.env.SUPABASE_URL; else process.env
 if (previousPublicUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = previousPublicUrl;
 if (previousServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = previousServiceKey;
 if (previousSiteUrl === undefined) delete process.env.URL; else process.env.URL = previousSiteUrl;
+if (previousDeployPrimeUrl === undefined) delete process.env.DEPLOY_PRIME_URL; else process.env.DEPLOY_PRIME_URL = previousDeployPrimeUrl;
+if (previousDeployUrl === undefined) delete process.env.DEPLOY_URL; else process.env.DEPLOY_URL = previousDeployUrl;
 if (previousContext === undefined) delete process.env.CONTEXT; else process.env.CONTEXT = previousContext;
 if (previousNodeEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnvironment;
 

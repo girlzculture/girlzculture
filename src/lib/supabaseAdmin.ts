@@ -36,6 +36,7 @@ import {
   isActiveSalonTeamMembership,
   resolveSalonIdentityScope,
 } from "@/lib/salonAuthorizationCore";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -566,7 +567,7 @@ export async function deliverBookingNotifications(
   const professional = String(stylist?.name || "Salon owner");
   const customer = String(booking.guest_name || "Customer");
   const reference = bookingReference(booking);
-  const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
+  const root = serverSiteUrl();
   const dashboardUrl = `${root}/salon/dashboard/bookings?booking=${booking.id}`;
   const accountUrl = options.manageUrl || (
     await issueGuestBookingToken(admin, booking.id, {
@@ -646,7 +647,7 @@ export async function deliverCancellationNotifications(bookingId: string) {
   const message=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_cancelled.summary",`Your ${service} appointment at ${salon.name} for ${when}${stylistClause} was cancelled. Reason: ${customerReason}.${noteClause} ${refundMessage}`,variables);
   const businessMessage=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_cancelled.summary",`${customer}'s ${service} appointment for ${when}${stylistClause} was cancelled. Internal reason: ${internalReason}. Customer-facing reason: ${customerReason}.`,variables);
   const stylistMessage=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_cancelled.summary",`${customer}'s ${service} appointment for ${when}${stylistClause} was cancelled. Reason: ${customerReason}.`,variables);
-  const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
+  const root=serverSiteUrl();
   const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
   const accountUrl=booking.customer_id
     ? `${root}/account?tab=past`
@@ -694,7 +695,7 @@ export async function deliverBookingReminder(bookingId:string,reminderHours:numb
   const notification=await bookingNotificationSettings(admin,[customerLocale,salonLocale,stylistLocale]);
   const when=formatInTimeZone(booking.appointment_datetime,salon.time_zone);
   const service=String(style?.name||"Braiding service");
-  const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
+  const root=serverSiteUrl();
   const customer=String(booking.guest_name||"A customer");const stylistClause=stylist?.name?` with ${stylist.name}`:"";const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,customer};
   const summary=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.summary",`Reminder: ${service} at ${salon.name} is scheduled for ${when}${stylistClause}.`,variables);
   const salonSummary=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.summary",`Reminder: ${customer}'s ${service} appointment is scheduled for ${when}${stylistClause}.`,variables);

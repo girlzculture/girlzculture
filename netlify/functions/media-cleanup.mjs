@@ -1,4 +1,5 @@
 import { monitoredNetlifyFailure } from "./_monitoring.mjs";
+import { netlifySiteOrigin } from "./_deployment-url.mjs";
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const RETRY_DELAYS_MS = [750, 2_000];
@@ -6,6 +7,14 @@ const REQUEST_TIMEOUT_MS = 25_000;
 
 const sleep = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+export function mediaCleanupConfiguration(environment = process.env) {
+  const root = netlifySiteOrigin(environment);
+  return {
+    root,
+    configured: Boolean(root && environment.CRON_SECRET),
+  };
+}
 
 function retryAfterMilliseconds(response, fallback) {
   const raw = response.headers.get("retry-after");
@@ -53,11 +62,8 @@ async function requestCleanup(url, secret) {
 
 const mediaCleanup = async () => {
   try {
-    const root = (process.env.URL || process.env.NEXT_PUBLIC_SITE_URL || "").replace(
-      /\/$/,
-      "",
-    );
-    if (!root || !process.env.CRON_SECRET)
+    const { root, configured } = mediaCleanupConfiguration();
+    if (!configured)
       throw new Error("MEDIA_CLEANUP_NOT_CONFIGURED");
     const response = await requestCleanup(
       `${root}/api/media/cleanup`,

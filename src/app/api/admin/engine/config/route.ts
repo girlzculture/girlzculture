@@ -2,6 +2,7 @@ import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitori
 import { requireAdminPermission as requireGrantedAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
 import { assertRecentHighRiskVerification } from "@/lib/identityDeletionServer";
+import { deploymentEnvironmentTier } from "@/lib/deploymentIdentity";
 
 // Engine access is an independent least-privilege grant. The compact route
 // still passes its historical label at each call site, so normalize it here.
@@ -11,7 +12,7 @@ const requireAdminPermission = (request: Request, legacyPermission: string) => {
 };
 
 type Setting = Record<string, unknown> & { setting_key:string; value_type:string; validation?:Record<string,unknown>; impact_level:string; version:number; is_secret_status:boolean };
-const serverEnvironment=()=>{const value=process.env.CONTEXT||process.env.NODE_ENV||"development";return value==="production"?"production":value.includes("preview")||value==="branch-deploy"?"preview":"development"};
+const serverEnvironment=()=>deploymentEnvironmentTier();
 
 function validateValue(setting:Setting,value:unknown) {
   const rules=setting.validation&&typeof setting.validation==="object"?setting.validation:{};

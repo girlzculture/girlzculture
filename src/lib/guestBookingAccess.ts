@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientAddress } from "@/lib/requestSecurity";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 import {
   guestTokenHash,
   parseGuestToken,
@@ -143,11 +144,9 @@ export async function issueGuestBookingToken(
     outcome: "completed",
     metadata: { reason: options.reason || "Booking communication" },
   });
-  const root = String(
-    options.rootUrl ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://girlzculture.com",
-  ).replace(/\/$/, "");
+  const root = options.rootUrl
+    ? String(options.rootUrl).replace(/\/$/, "")
+    : serverSiteUrl();
   return {
     token,
     tokenId,

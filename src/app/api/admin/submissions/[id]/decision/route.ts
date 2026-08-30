@@ -13,6 +13,7 @@ import {
 } from "@/lib/publicationActivationCore";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireAdminPermission, sendEmail } from "@/lib/supabaseAdmin";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 async function POSTHandler(
   request: Request,
@@ -127,7 +128,7 @@ async function POSTHandler(
       changed = rejection.data?.changed !== false;
     }
 
-    const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const base = serverSiteUrl(request);
     const subject =
       decision === "activate"
         ? "Your Girlz Culture salon is live"

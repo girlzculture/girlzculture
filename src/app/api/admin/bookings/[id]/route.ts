@@ -12,6 +12,7 @@ import {
   requestBookingDepositRefund,
   safeCancellationReason,
 } from "@/lib/bookingCancellation";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 async function contextFor(request: Request, id: string) {
   const context = await requireAdminPermission(request, "bookings");
@@ -80,7 +81,7 @@ async function PATCHHandler(request: Request, route: { params: Promise<{ id: str
         reason,
         message:body.message,
         localOptions:body.options,
-        rootUrl:(process.env.NEXT_PUBLIC_SITE_URL||new URL(request.url).origin).replace(/\/$/,""),
+        rootUrl:serverSiteUrl(request),
       });
       return Response.json({booking:ctx.booking,...result});
     }

@@ -7,6 +7,7 @@ import { generateTranslationDraft } from "@/lib/aiAutomationServer";
 import { normalizeLocale } from "@/i18n/catalog";
 import { translatedMessageFields } from "@/lib/localizationCore";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
+import { serverSiteUrl } from "@/lib/siteUrlServer";
 
 type Row = Record<string, unknown>;
 type Role = "customer" | "salon" | "admin";
@@ -155,7 +156,7 @@ async function POSTHandler(request: Request) {
     const salon = access.booking.salon as Row;
     const notificationBody = translatedBody || messageBody;
     const preview = notificationBody.length > 140 ? `${notificationBody.slice(0, 137)}...` : notificationBody;
-    const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
+    const root = serverSiteUrl(request);
     let recipientIds: string[] = [];
     const warningReferences: string[] = [];
     if (access.role === "customer") {

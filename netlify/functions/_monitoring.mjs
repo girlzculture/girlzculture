@@ -1,3 +1,5 @@
+import { netlifyDeploymentContext } from "./_deployment-url.mjs";
+
 const SECRET_PATTERN = /(authorization|cookie|password|secret|token|api[-_]?key|card|cvc|service[-_]?role)/i;
 
 function safeText(value, max = 2_000) {
@@ -37,36 +39,11 @@ function fingerprint(value) {
   return `gc-${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 
-function netlifyEnvironment() {
-  if (process.env.CONTEXT) return process.env.CONTEXT;
-  if (process.env.NODE_ENV) return process.env.NODE_ENV;
-  // Scheduled functions do not consistently receive CONTEXT at runtime, but
-  // Netlify exposes URL for the production site. Do not mislabel a deployed
-  // cleanup failure as "unknown · local" simply because those two variables
-  // were omitted from the isolated function process.
-  try {
-    const productionUrl = new URL(process.env.URL || "");
-    if (
-      productionUrl.protocol === "https:" &&
-      !["localhost", "127.0.0.1"].includes(productionUrl.hostname)
-    ) {
-      return "production";
-    }
-  } catch {
-    // Fall through to the deploy URL or the honest unknown label.
-  }
-  try {
-    const deployUrl = new URL(process.env.DEPLOY_PRIME_URL || "");
-    if (
-      deployUrl.protocol === "https:" &&
-      !["localhost", "127.0.0.1"].includes(deployUrl.hostname)
-    ) {
-      return "deployed";
-    }
-  } catch {
-    // No trusted Netlify deployment identity was injected.
-  }
-  return "unknown";
+export function netlifyEnvironment(
+  environment = process.env,
+  requestUrl = null,
+) {
+  return netlifyDeploymentContext(environment, requestUrl);
 }
 
 export function netlifyReleaseIdentity(environment = process.env) {
@@ -119,10 +96,13 @@ export async function monitoredNetlifyFailure({
   const reference = crypto.randomUUID();
   const technicalMessage = safeText(error instanceof Error ? error.message : error || "Unknown error");
   const route = request ? new URL(request.url).pathname : `/.netlify/functions/${action}`;
-  const environment = netlifyEnvironment();
+  const environment = netlifyEnvironment(process.env, request?.url);
   const releaseIdentity = netlifyReleaseIdentity();
   const release =
-    releaseIdentity.configured || environment === "production"
+    releaseIdentity.configured ||
+    ["production", "preview", "deploy-preview", "branch-deploy"].includes(
+      environment,
+    )
       ? releaseIdentity.release
       : "local";
   const record = {

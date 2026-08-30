@@ -9,7 +9,10 @@ import {
   publicErrorResponse,
 } from "@/lib/requestSecurity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { deploymentReleaseId } from "@/lib/deploymentIdentity";
+import {
+  deploymentEnvironmentId,
+  deploymentReleaseId,
+} from "@/lib/deploymentIdentity";
 
 const SAFE_PROVIDER_CODES = /^[A-Z0-9_.:-]{1,80}$/i;
 const SAFE_OPERATION = /^[a-z0-9_.:/-]{1,120}$/i;
@@ -80,8 +83,7 @@ async function POSTHandler(request: Request) {
         );
       }
       const release = deploymentReleaseId();
-      const environment =
-        process.env.CONTEXT || process.env.NODE_ENV || "unknown";
+      const environment = deploymentEnvironmentId();
       const { data: openEvents, error: lookupError } = await admin
         .from("platform_error_events")
         .select("id")
