@@ -206,6 +206,18 @@ assert.match(
   /32 concurrent database transactions/,
 );
 assert.match(cleanDatabaseRunner, /runScheduledDowngradeWriterRace/);
+for (const fixtureSlug of [
+  "scheduled-downgrade-product-race-fixture",
+  "scheduled-downgrade-promotion-race-fixture",
+  "concurrent-starter-plan-fixture",
+  "concurrent-growth-plan-fixture",
+]) {
+  assert.match(
+    cleanDatabaseRunner,
+    new RegExp(`${fixtureSlug}'[\\s\\S]{0,120}'New'`),
+    `${fixtureSlug} must remain lifecycle-neutral so the disposable fixture can be removed without immutable audit history`,
+  );
+}
 assert.match(
   cleanDatabaseRunner,
   /Scheduled downgrade versus product writer race/,

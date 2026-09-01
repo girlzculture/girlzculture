@@ -208,6 +208,27 @@ assert.ok(
 );
 assert.match(cleanDatabaseRunner, /runConcurrentSubscriptionCheckoutWorkers/);
 assert.match(cleanDatabaseRunner, /one durable subscription attempt and one promotion reservation/i);
+assert.match(
+  cleanDatabaseRunner,
+  /Concurrent subscription checkout fixture'[\s\S]*?'concurrent-subscription-checkout-fixture'[\s\S]*?'New'/,
+  "The synthetic checkout salon must use a lifecycle-neutral state so cleanup does not create immutable audit history",
+);
+const checkoutCleanupStart = cleanDatabaseRunner.indexOf(
+  '"Concurrent subscription-checkout fixture cleanup"',
+);
+const checkoutCleanupSource = cleanDatabaseRunner.slice(
+  cleanDatabaseRunner.lastIndexOf("runPsql(", checkoutCleanupStart),
+  checkoutCleanupStart,
+);
+assert.ok(
+  checkoutCleanupSource.indexOf("delete from public.promo_code_redemptions") <
+    checkoutCleanupSource.indexOf("delete from public.subscription_checkout_attempts") &&
+    checkoutCleanupSource.indexOf("delete from public.subscription_checkout_attempts") <
+      checkoutCleanupSource.indexOf("delete from public.salons") &&
+    checkoutCleanupSource.indexOf("delete from public.salons") <
+      checkoutCleanupSource.indexOf("delete from public.promo_codes"),
+  "Checkout fixture cleanup must remove dependent rows before the salon and promo-code parents",
+);
 assert.match(cleanDatabaseAssertions, /Completed checkout was replaced before subscription reconciliation/);
 assert.match(cleanDatabaseAssertions, /Canceled subscription did not release its completed checkout/);
 

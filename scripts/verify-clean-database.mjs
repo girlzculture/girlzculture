@@ -609,7 +609,7 @@ runPsql(
         '${checkoutConcurrencySalonId}',
         'Concurrent subscription checkout fixture',
         'concurrent-subscription-checkout-fixture',
-        'Active'
+        'New'
       );
       insert into public.promo_codes(
         id,code,discount_type,discount_value,applies_to,starts_at,ends_at,
@@ -665,10 +665,12 @@ try {
     [
       "--command",
       `
-        delete from public.salons salon
-        where salon.id='${checkoutConcurrencySalonId}';
         delete from public.promo_code_redemptions redemption
         where redemption.promo_code_id='${checkoutConcurrencyPromoId}';
+        delete from public.subscription_checkout_attempts attempt
+        where attempt.salon_id='${checkoutConcurrencySalonId}';
+        delete from public.salons salon
+        where salon.id='${checkoutConcurrencySalonId}';
         delete from public.promo_codes promo
         where promo.id='${checkoutConcurrencyPromoId}';
       `,
@@ -698,13 +700,13 @@ runPsql(
           '${downgradeProductRaceSalonId}',
           'Scheduled downgrade product race fixture',
           'scheduled-downgrade-product-race-fixture',
-          'Active','Premium','active'
+          'New','Premium','active'
         ),
         (
           '${downgradePromotionRaceSalonId}',
           'Scheduled downgrade promotion race fixture',
           'scheduled-downgrade-promotion-race-fixture',
-          'Active','Premium','active'
+          'New','Premium','active'
         );
       insert into public.subscriptions(
         salon_id,tier,status,stripe_subscription_id,current_period_end
@@ -863,13 +865,13 @@ runPsql(
           '${planBoundaryStarterSalonId}',
           'Concurrent Starter plan fixture',
           'concurrent-starter-plan-fixture',
-          'Active','Starter','active'
+          'New','Starter','active'
         ),
         (
           '${planBoundaryGrowthSalonId}',
           'Concurrent Growth plan fixture',
           'concurrent-growth-plan-fixture',
-          'Active','Growth','active'
+          'New','Growth','active'
         );
 
       insert into public.subscriptions(
