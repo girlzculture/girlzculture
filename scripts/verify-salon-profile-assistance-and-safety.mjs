@@ -79,7 +79,8 @@ assert.match(rating, /No reviews yet/);
 assert.match(rating, /fill \* 100/);
 assert.match(rating, /scrollIntoView\(\{ behavior: "smooth"/);
 assert.match(rating, /section\.focus/);
-assert.match(reviews, /id="reviews" tabIndex=\{-1\}/);
+assert.match(reviews, /sectionId = "reviews"/);
+assert.match(reviews, /<section id=\{sectionId\} tabIndex=\{-1\}/);
 assert.match(publicProfile, /<SalonRatingSummary/);
 
 assert.match(reviewForm, />First name</);
