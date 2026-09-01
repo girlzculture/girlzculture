@@ -241,6 +241,16 @@ assert.ok(
 );
 assert.match(cleanDatabaseAssertions, /Completed checkout was replaced before subscription reconciliation/);
 assert.match(cleanDatabaseAssertions, /Canceled subscription did not release its completed checkout/);
+assert.match(
+  cleanDatabaseAssertions,
+  /'Subscription checkout idempotency fixture'[\s\S]*?'subscription-checkout-idempotency-fixture'[\s\S]*?'New'/,
+  "The SQL checkout fixture must stay lifecycle-neutral so its parent cleanup cannot create immutable audit history",
+);
+assert.doesNotMatch(
+  cleanDatabaseAssertions,
+  /'Subscription checkout idempotency fixture'[\s\S]{0,160}?'Active'/,
+  "The disposable SQL checkout fixture must not enter the Active salon lifecycle",
+);
 
 console.log(
   "Subscription checkout idempotency verification passed: stable provider keys, 100-call concurrency model, serialized attempt/promo reservation, provider-state reconciliation, service-role boundary, and durable local linking.",

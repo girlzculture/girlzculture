@@ -3128,7 +3128,7 @@ begin
     checkout_salon_id,
     'Subscription checkout idempotency fixture',
     'subscription-checkout-idempotency-fixture',
-    'Active'
+    'New'
   );
 
   select public.reserve_subscription_checkout_attempt(
