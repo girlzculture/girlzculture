@@ -496,6 +496,18 @@ section {
 }
 
 @media (orientation: landscape) and (max-width: 1023px) and (max-height: 600px) {
+  /* A phone remains a phone after rotation. Tailwind's width-only `md`
+     breakpoint would otherwise remove the primary customer navigation at
+     844x390 even though the device still has phone-height interaction space. */
+  .gc-customer-bottom-nav {
+    display: block !important;
+  }
+
+  .gc-customer-bottom-nav-landscape-spacer {
+    display: block !important;
+    height: calc(5rem + env(safe-area-inset-bottom));
+  }
+
   .gc-promotion-card {
     height: min(10rem, 42vh) !important;
     min-height: 8.75rem;

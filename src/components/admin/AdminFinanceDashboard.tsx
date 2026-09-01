@@ -29,6 +29,7 @@ import { formatZonedDateTime } from "@/lib/dateTime";
 import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
 import AdminSalonPayoutWorkspace from "@/components/admin/AdminSalonPayoutWorkspace";
 import AdminSalonPayoutAction from "@/components/admin/AdminSalonPayoutAction";
+import { displayStoredPlan } from "@/lib/plans";
 
 type FinanceData = {
   booking_transactions: FinanceRow[];
@@ -1535,8 +1536,8 @@ function SubscriptionLedger({
                 <Status value={event.event_type} />
               </Td>
               <Td>
-                {String(event.previous_plan || "—")} →{" "}
-                {String(event.new_plan || "—")}
+                {event.previous_plan ? displayStoredPlan(event.previous_plan) : "—"} →{" "}
+                {event.new_plan ? displayStoredPlan(event.new_plan) : "—"}
               </Td>
               <Td>{minorMoney(event.amount_collected, event.currency)}</Td>
               <Td>
@@ -1576,7 +1577,7 @@ function SubscriptionLedger({
                 <small>{String(change.salon_id)}</small>
               </Td>
               <Td>
-                {String(change.previous_plan)} → {String(change.new_plan)}
+                {displayStoredPlan(change.previous_plan)} → {displayStoredPlan(change.new_plan)}
               </Td>
               <Td>{minorMoney(change.proration_credit, change.currency)}</Td>
               <Td>{minorMoney(change.proration_charge, change.currency)}</Td>

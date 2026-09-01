@@ -15,6 +15,8 @@ const storageMigration = read("supabase/migrations/20260715200000_storage_policy
 const changeRoute = read("src/app/api/stripe/subscription/change/route.ts");
 const lifecycleRoute = read("src/app/api/stripe/subscription/lifecycle/route.ts");
 const webhookRoute = read("src/app/api/stripe/webhook/route.ts");
+const salonApplication = read("src/components/SalonApplication.tsx");
+const adminSalonRoute = read("src/app/api/admin/salons/route.ts");
 
 requireMatch("subscription lifecycle columns", lifecycleMigration, /scheduled_change_effective_at/);
 requireMatch("upgrade waits for payment", changeRoute, /payment_behavior:\s*"pending_if_incomplete"/);
@@ -53,6 +55,25 @@ for (const eventType of [
 ]) {
   requireMatch(`webhook event ${eventType}`, webhookRoute, new RegExp(eventType));
 }
+
+const subscriptionSync = webhookRoute.slice(
+  webhookRoute.indexOf("function planFromObject"),
+  webhookRoute.indexOf("async function billingContext"),
+);
+requireMatch("webhook preserves stored Basic identity", subscriptionSync, /parseStoredPlan\(object\.metadata\?\.plan\)/);
+requireMatch("webhook treats a provider Price ID as authoritative", subscriptionSync, /if \(priceId\) return planFromStripePriceId\(priceId\)/);
+requireMatch("webhook rejects unknown plan mappings", subscriptionSync, /STRIPE_SUBSCRIPTION_PLAN_UNRECOGNIZED/);
+if (/normalizePlan\(/.test(subscriptionSync)) failures.push("webhook subscription sync must not normalize unknown provider values to Starter");
+if (/featured_weight/.test(subscriptionSync)) failures.push("webhook subscription sync must not write organic or featured placement weights");
+
+for (const [plan, amount] of [["Starter", 59], ["Growth", 69], ["Premium", 89]]) {
+  requireMatch(`application includes ${plan}`, salonApplication, new RegExp(`PLAN_ORDER|${plan}`));
+  requireMatch(`canonical plan catalog price ${amount}`, read("src/lib/plans.ts"), new RegExp(`monthlyAmountCents:\\s*${amount}00`));
+}
+requireMatch("application persists plan in URL", salonApplication, /next\.set\("plan", plan\.toLowerCase\(\)\)/);
+requireMatch("application displays whole-dollar catalog price", salonApplication, /plan\.monthlyAmountCents \/ 100/);
+requireMatch("admin accepts Starter", adminSalonRoute, /ALLOWED_PLANS[^\n]*"Starter"/);
+requireMatch("admin preserves legacy Basic filter", adminSalonRoute, /ALLOWED_PLANS[^\n]*"Basic"/);
 
 const folderCalls = [...storageMigration.matchAll(/storage\.foldername\(([^)]+)\)/g)].map((match) => match[1].trim());
 if (folderCalls.length === 0) failures.push("storage policies: no storage.foldername calls found");

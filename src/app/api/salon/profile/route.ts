@@ -218,8 +218,6 @@ async function PATCHHandler(request: Request) {
         throw new Error("Choose a description draft created for this account before marking it AI-assisted.");
     }
     const fallback = patch.stylist_section_fallback as { mode?: string } | undefined;
-    if (fallback?.mode && fallback.mode !== "empty" && !["Growth", "Premium"].includes(String(context.salon.subscription_tier || "")))
-      throw new Error("Upgrade to Growth or Premium to publish a salon-page stylist replacement.");
     if (fallback?.mode === "image") {
       const selected = String((patch.stylist_section_fallback as { image_url?: string }).image_url || "");
       const allowed = [context.salon.cover_photo_url, ...(Array.isArray(context.salon.gallery_photos) ? context.salon.gallery_photos : [])]

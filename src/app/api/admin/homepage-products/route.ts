@@ -259,11 +259,10 @@ async function POSTHandler(request: Request) {
     }
     if (
       ["Scheduled", "Active"].includes(status) &&
-      String(salon.subscription_tier || "").toLowerCase() !== "premium" &&
       !entitlementId
     ) {
       rejectRequest(
-        "Active Featured Products require a Premium salon or a verified payment or platform credit.",
+        "Active Featured Products require verified payment or platform credit.",
         409,
       );
     }

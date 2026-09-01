@@ -45,12 +45,15 @@ import OwnerDashboardShell, {
   DashboardSection,
 } from "@/components/owner/OwnerDashboardShell";
 import {
-  hasPlanFeature,
+  displayStoredPlan,
   isSubscriptionActive,
   normalizePlan,
+  parsePlan,
+  parseStoredPlan,
   planRank,
   PLAN_ORDER,
   SUBSCRIPTION_PLANS,
+  type StoredSubscriptionPlan,
   type SubscriptionPlan,
 } from "@/lib/plans";
 import {
@@ -686,7 +689,8 @@ export default function OwnerDashboardApp({
       </div>
     );
 
-  const plan = normalizePlan(subscription?.tier || salon.subscription_tier);
+  const storedPlan = parseStoredPlan(subscription?.tier || salon.subscription_tier);
+  const plan = normalizePlan(storedPlan);
   const subscriptionActive = isSubscriptionActive(
     subscription?.status,
     subscription?.current_period_end,
@@ -745,6 +749,7 @@ export default function OwnerDashboardApp({
     subscription,
     billingEvents,
     plan,
+    storedPlan,
     subscriptionActive,
     isOwner: !isTeamMember,
     access: teamPermissions,
@@ -849,6 +854,7 @@ type Ctx = {
   subscription: Row | null;
   billingEvents: Row[];
   plan: SubscriptionPlan;
+  storedPlan: StoredSubscriptionPlan | null;
   subscriptionActive: boolean;
   isOwner: boolean;
   access: Record<string, boolean> | null;
@@ -906,15 +912,11 @@ function DashboardContent({
     ) : (
       <AccessPaused isOwner={false} />
     );
-  if (section === "promotions" && !hasPlanFeature(c.plan, "promotions"))
-    return (
-      <UpgradeRequired feature="Promotions" plan="Growth" isOwner={c.isOwner} />
-    );
   if (section === "overview") return <Overview c={c} />;
   if (section === "my-page") return <MyPage c={c} focus={c.focusedRecordId} />;
   if (section === "photos") return <Photos c={c} focus={c.focusedRecordId} />;
   if (section === "styles") return <StructuredStylesEditor c={c} recordId={c.focusedRecordId} />;
-  if (section === "stylists") return <><StructuredStylistsEditor c={c} recordId={c.focusedRecordId} />{!c.focusedRecordId && c.stylists.length === 0 ? <StylistSectionFallbackEditor plan={c.plan} gallery={Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : []} products={c.products} promotions={c.promotions} initial={c.salon.stylist_section_fallback} onSave={c.updateSalon} onNotice={c.setNotice} /> : null}</>;
+  if (section === "stylists") return <><StructuredStylistsEditor c={c} recordId={c.focusedRecordId} />{!c.focusedRecordId && c.stylists.length === 0 ? <StylistSectionFallbackEditor gallery={Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : []} products={c.products} promotions={c.promotions} initial={c.salon.stylist_section_fallback} onSave={c.updateSalon} onNotice={c.setNotice} /> : null}</>;
   if (section === "products") return <TruthfulProducts c={c} recordId={c.focusedRecordId} />;
   if (section === "availability") return <Availability c={c} recordId={c.focusedRecordId} />;
   if (section === "bookings") return <Bookings c={c} recordId={c.focusedRecordId || c.initialBookingId} />;
@@ -948,7 +950,7 @@ function SubscriptionRequired({ c }: { c: Ctx }) {
       <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
         Your salon is approved, but the business workspace remains locked until
         a subscription is active. Your selected {c.plan} plan can be activated
-        in Stripe test mode.
+        through secure subscription billing.
       </p>
       <Link
         href="/salon/dashboard/subscription"
@@ -983,41 +985,6 @@ function AccessPaused({ isOwner }: { isOwner: boolean }) {
     </div>
   );
 }
-function UpgradeRequired({
-  feature,
-  plan,
-  isOwner,
-}: {
-  feature: string;
-  plan: SubscriptionPlan;
-  isOwner: boolean;
-}) {
-  return (
-    <div className="mx-auto max-w-3xl py-16 text-center">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blush text-magenta">
-        <LockKeyhole size={30} />
-      </span>
-      <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
-        Upgrade to unlock {feature}
-      </h1>
-      <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
-        This feature is available on the {plan} and Premium plans.{" "}
-        {isOwner
-          ? "Upgrade securely from your subscription page."
-          : "Ask the salon owner to review the plan."}
-      </p>
-      {isOwner ? (
-        <Link
-          href="/salon/dashboard/subscription"
-          className="mt-7 inline-flex rounded-[9px] bg-magenta px-7 py-3.5 text-sm font-bold text-white"
-        >
-          Compare plans
-        </Link>
-      ) : null}
-    </div>
-  );
-}
-
 function SubscriptionV2({ c }: { c: Ctx }) {
   const [busy, setBusy] = useState("");
   const [upgradePreview, setUpgradePreview] = useState<null | {
@@ -1037,9 +1004,11 @@ function SubscriptionV2({ c }: { c: Ctx }) {
       renewalDate: string | null;
     };
   }>(null);
-  const scheduledPlan = c.subscription?.scheduled_tier
-    ? normalizePlan(c.subscription.scheduled_tier)
-    : null;
+  const scheduledPlan = parsePlan(c.subscription?.scheduled_tier);
+  const currentPlanLabel = c.subscriptionActive
+    ? displayStoredPlan(c.storedPlan)
+    : c.plan;
+  const legacyBasicActive = c.subscriptionActive && c.storedPlan === "Basic";
   const scheduledEffective = c.subscription?.scheduled_change_effective_at;
   const cancellationScheduled = Boolean(c.subscription?.cancel_at_period_end);
   const paidThrough = c.subscription?.current_period_end;
@@ -1085,6 +1054,13 @@ function SubscriptionV2({ c }: { c: Ctx }) {
         return;
       }
       if (body.url) {
+        if (body.reconciliation_required && body.reference) {
+          c.setNotice(
+            `${String(body.warning || "Checkout needs reconciliation.")} Reference ${String(body.reference)}. Continuing to Stripe…`,
+          );
+          window.setTimeout(() => window.location.assign(body.url), 1600);
+          return;
+        }
         window.location.assign(body.url);
         return;
       }
@@ -1154,12 +1130,18 @@ function SubscriptionV2({ c }: { c: Ctx }) {
     <>
       <Title
         title="Subscription"
-        subtitle="Choose the plan that matches your growth goals. Payments are in Stripe test mode."
+        subtitle="Choose the plan that matches your salon's operations and growth goals."
       />
-      <div className="mb-4 rounded-[10px] border border-amber/30 bg-amber/10 px-4 py-3 text-xs text-ink/70">
-        <b>TEST MODE:</b> No real charges are processed while Girlz Culture is
-        in pre-launch testing.
-      </div>
+      {legacyBasicActive ? (
+        <Panel className="mb-4 border-plum/20 bg-cream/60">
+          <h2 className="font-serif text-2xl text-plum">Basic (legacy)</h2>
+          <p className="mt-2 text-xs leading-5 text-ink/65">
+            Your existing Basic subscription remains active at its
+            provider-confirmed terms. It has not been converted to Starter or
+            repriced. Choose a current plan only when you are ready to change.
+          </p>
+        </Panel>
+      ) : null}
       {upgradePreview ? (
         <Panel className="mb-4 border-magenta/30 bg-blush/25">
           <h2 className="font-serif text-2xl text-plum">
@@ -1260,7 +1242,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           <div className="grid gap-4 sm:grid-cols-4">
             <div>
               <p className="text-[10px] uppercase text-ink/55">Current plan</p>
-              <p className="mt-1 font-serif text-xl text-plum">{c.plan}</p>
+              <p className="mt-1 font-serif text-xl text-plum">{currentPlanLabel}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase text-ink/55">
@@ -1284,7 +1266,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
             </div>
           </div>
           <p className="mt-4 text-xs leading-5 text-ink/65">
-            Your {c.plan} access remains unchanged through this paid period. No
+            Your {currentPlanLabel} access remains unchanged through this paid period. No
             refund, account credit, deduction, or negative proration was
             created.
           </p>
@@ -1332,11 +1314,13 @@ function SubscriptionV2({ c }: { c: Ctx }) {
       <div className="grid gap-4 lg:grid-cols-3">
         {PLAN_ORDER.map((name) => {
           const plan = SUBSCRIPTION_PLANS[name];
-          const current = c.plan === name && c.subscriptionActive;
+          const current = !legacyBasicActive && c.plan === name && c.subscriptionActive;
           const changing = c.subscriptionActive && !current;
           const upgrading = changing && planRank(name) > planRank(c.plan);
           const isScheduled = scheduledPlan === name;
-          const label = changing
+          const label = legacyBasicActive && name === "Starter"
+            ? "Change to Starter"
+            : changing
             ? upgrading
               ? `Upgrade to ${name}`
               : `Schedule ${name}`
@@ -1355,7 +1339,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 ) : null}
               </div>
               <p className="mt-3 font-serif text-3xl font-semibold">
-                ${plan.monthlyPrice.toFixed(2)}
+                ${plan.monthlyAmountCents / 100}
                 <span className="font-sans text-[10px] font-normal">
                   {" "}
                   / month
@@ -1783,11 +1767,10 @@ function Overview({ c }: { c: Ctx }) {
               <div>
                 <p className="text-xs">Subscription</p>
                 <h2 className="font-serif text-xl text-plum">
-                  {String(
+                  {displayStoredPlan(
                     c.subscription?.subscription_tier ||
                       c.subscription?.tier ||
-                      c.salon.subscription_tier ||
-                      "No",
+                      c.salon.subscription_tier,
                   )}{" "}
                   Plan
                 </h2>

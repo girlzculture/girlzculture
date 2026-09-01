@@ -13,6 +13,7 @@ import {
   completeCommerceCheckout,
   estimateStripeCommerceTax,
 } from "@/lib/commerceCheckoutServer";
+import { hasPlanFeature } from "@/lib/plans";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -119,7 +120,7 @@ async function POSTHandler(request: Request) {
     let salonPromotionDiscount = 0;
     let salonPromotionSnapshot: Record<string, unknown> = {};
     if (salonPromotionId) {
-      if (!["Growth","Premium"].includes(String(salon.subscription_tier || ""))) throw new Error("This salon offer is no longer available.");
+      if (!hasPlanFeature(salon.subscription_tier, "promotions")) throw new Error("This salon offer is no longer available.");
       if (!/^[0-9a-f-]{36}$/i.test(salonPromotionId)) throw new Error("The selected salon offer is not valid.");
       const promotionResult = await admin.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("id", salonPromotionId).eq("salon_id", salonId).maybeSingle();
       if (promotionResult.error) throw promotionResult.error;

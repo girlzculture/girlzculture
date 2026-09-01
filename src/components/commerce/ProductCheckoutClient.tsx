@@ -599,7 +599,7 @@ export default function ProductCheckoutClient({ salon, products }: Props) {
         ) : null}
         <p className="mt-5 flex items-center justify-center gap-2 text-[10px] gc-text-secondary">
           <LockKeyhole size={13} />
-          Stripe test mode · encrypted checkout
+          Secure, encrypted checkout
         </p>
       </aside>
     </form>

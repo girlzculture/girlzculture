@@ -1,15 +1,26 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
-  normalizePlan,
+  parseOfficialPlan,
+  parseStoredPlan,
+  planDowngradeLimitConflicts,
   planFromStripePriceId,
   planRank,
-  stripePriceEnv,
   SUBSCRIPTION_PLANS,
 } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse, RateLimitError } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { stripeGet, stripeRequest } from "@/lib/stripeServer";
-import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
+import {
+  isSubscriptionPriceValidationError,
+  SubscriptionPriceValidationError,
+} from "@/lib/subscriptionPriceCore";
+import { verifiedSubscriptionPrice } from "@/lib/subscriptionPriceServer";
+import {
+  capturePlatformError,
+  monitoredRouteFailure,
+  rejectRequest,
+  safeFailure,
+} from "@/lib/platformErrors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type StripeInvoice = {
@@ -61,20 +72,68 @@ async function invoiceDetails(value: StripeSubscription["latest_invoice"]) {
   return stripeGet<StripeInvoice>(`/invoices/${value}?expand[]=payment_intent`);
 }
 
+async function enforceDowngradePlanLimits(input: {
+  admin: SupabaseClient;
+  salonId: string;
+  targetPlan: keyof typeof SUBSCRIPTION_PLANS;
+}) {
+  const targetEntitlements = SUBSCRIPTION_PLANS[input.targetPlan].entitlements;
+  if (
+    targetEntitlements.productListings.limit === null &&
+    targetEntitlements.customerPromotions.limit === null
+  ) return;
+
+  const [products, promotions] = await Promise.all([
+    input.admin
+      .from("salon_products")
+      .select("id", { count: "exact", head: true })
+      .eq("salon_id", input.salonId)
+      .is("archived_at", null)
+      .or("product_status.is.null,product_status.neq.Archived"),
+    input.admin
+      .from("salon_promotions")
+      .select("id", { count: "exact", head: true })
+      .eq("salon_id", input.salonId)
+      .is("archived_at", null)
+      .eq("is_active", true)
+      .eq("status", "Active"),
+  ]);
+  if (products.error) throw products.error;
+  if (promotions.error) throw promotions.error;
+
+  const conflicts = planDowngradeLimitConflicts(input.targetPlan, {
+    productListings: products.count ?? 0,
+    activePromotions: promotions.count ?? 0,
+  });
+  if (!conflicts.length) return;
+
+  const details = conflicts.map((conflict) =>
+    `${input.targetPlan} allows ${conflict.limit} ${conflict.resource}; your salon currently has ${conflict.count}`
+  ).join(". ");
+  rejectRequest(
+    `This downgrade cannot be scheduled yet. ${details}. Archive product listings or end active promotions until the salon is within the target plan limits, then try again.`,
+    409,
+  );
+}
+
 async function POSTHandler(request: Request) {
   let monitoringAdmin: SupabaseClient | undefined;
   let salonId: string | null = null;
+  let actorId: string | null = null;
   try {
     enforceRateLimit(request, "subscription-plan-change", 8, 10 * 60_000);
     const context = await requireSalonOwner(request);
-    const { admin, salon, isOwner } = context;
+    const { admin, user, salon, isOwner } = context;
     monitoringAdmin = admin;
     salonId = salon.id;
+    actorId = user.id;
     if (!isOwner) rejectRequest("Only the salon owner can change the salon plan.", 403);
     const body = await request.json() as Record<string, unknown>;
-    const plan = normalizePlan(cleanText(body.plan, 20));
-    const priceId = process.env[stripePriceEnv(plan)];
-    if (!priceId) throw new Error(`${plan} Stripe test price is not configured yet.`);
+    const plan = parseOfficialPlan(cleanText(body.plan, 20));
+    if (!plan) rejectRequest("Choose Starter, Growth, or Premium.");
+    // Verify the complete Price object before previewing or applying any
+    // provider-side subscription mutation.
+    const { priceId } = await verifiedSubscriptionPrice(plan);
 
     const { data: stored, error: storedError } = await admin
       .from("subscriptions")
@@ -94,7 +153,14 @@ async function POSTHandler(request: Request) {
     const currentPeriodStart = current.current_period_start || item.current_period_start;
     const currentPeriodEnd = current.current_period_end || item.current_period_end;
 
-    const currentPlan = planFromStripePriceId(item.price.id) || normalizePlan(stored.tier || salon.subscription_tier);
+    const currentPlan = planFromStripePriceId(item.price.id)
+      || parseStoredPlan(stored.tier || salon.subscription_tier);
+    if (!currentPlan) {
+      throw new SubscriptionPriceValidationError(
+        "CURRENT_SUBSCRIPTION_IDENTITY_UNRECOGNIZED",
+        "The current subscription plan identity could not be verified.",
+      );
+    }
     if (item.price.id === priceId) return Response.json({ changed: false, plan, message: `${plan} is already active.` });
     const isUpgrade = planRank(plan) > planRank(currentPlan);
     const requestKey = `plan-change:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd || "current"}`;
@@ -129,6 +195,11 @@ async function POSTHandler(request: Request) {
           scheduledPlan: stored.scheduled_tier || null,
         }, { status: 409 });
       }
+      await enforceDowngradePlanLimits({
+        admin,
+        salonId: salon.id,
+        targetPlan: plan,
+      });
       if (!currentPeriodStart || !currentPeriodEnd) throw new Error("Stripe did not return the paid billing period for this subscription.");
 
       let schedule: StripeSchedule | null = null;
@@ -194,7 +265,27 @@ async function POSTHandler(request: Request) {
         current_period_end: effectiveAt,
         updated_at: new Date().toISOString(),
       }).eq("salon_id", salon.id);
-      if (updateError) throw updateError;
+      if (updateError) {
+        await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {}, {
+          idempotencyKey: `release-unpersisted-schedule:${schedule.id}`,
+        }).catch((releaseError) => {
+          noteOperationalFailure("Unpersisted downgrade schedule cleanup failed", {
+            salonId: salon.id,
+            scheduleId: schedule.id,
+            releaseError,
+          });
+        });
+        if (
+          updateError.message.includes("PLAN_DOWNGRADE_PRODUCT_LIMIT_EXCEEDED") ||
+          updateError.message.includes("PLAN_DOWNGRADE_PROMOTION_LIMIT_EXCEEDED")
+        ) {
+          rejectRequest(
+            "Salon inventory changed while this downgrade was being scheduled. Archive product listings or end active promotions until the salon is within the target plan limits, then try again.",
+            409,
+          );
+        }
+        throw updateError;
+      }
       await trackChange({ status: "Scheduled", effective_at: effectiveAt, event_source: "stripe_schedule", amount_due: 0, amount_collected: 0, amount_pending: 0 });
 
       console.info("Salon subscription downgrade scheduled", { salonId: salon.id, subscriptionId: current.id, scheduleId: schedule.id, from: currentPlan, to: plan, effectiveAt });
@@ -241,9 +332,7 @@ async function POSTHandler(request: Request) {
         preview.total_tax_amounts ||
         []
       ).reduce((sum, tax) => sum + Number(tax.amount || 0), 0);
-      const renewalAmount = Math.round(
-        SUBSCRIPTION_PLANS[plan].monthlyPrice * 100,
-      );
+      const renewalAmount = SUBSCRIPTION_PLANS[plan].monthlyAmountCents;
       const previewedAt = new Date().toISOString();
       const renewalDate = isoFromSeconds(currentPeriodEnd);
       await trackChange({
@@ -373,7 +462,6 @@ async function POSTHandler(request: Request) {
     const updatedItem = updated.items?.data?.[0];
     const periodStart = isoFromSeconds(updated.current_period_start || updatedItem?.current_period_start) || stored.current_period_start;
     const periodEnd = isoFromSeconds(updated.current_period_end || updatedItem?.current_period_end) || stored.current_period_end;
-    const featuredWeight = plan === "Premium" ? 100 : plan === "Growth" ? 40 : 0;
     const now = new Date().toISOString();
     const { error: subscriptionError } = await admin.from("subscriptions").update({
       tier: plan,
@@ -395,7 +483,6 @@ async function POSTHandler(request: Request) {
     const { error: salonError } = await admin.from("salons").update({
       subscription_tier: plan,
       subscription_status: status,
-      featured_weight: featuredWeight,
     }).eq("id", salon.id);
     if (salonError) throw salonError;
     await trackChange({
@@ -429,7 +516,41 @@ async function POSTHandler(request: Request) {
     });
   } catch (error) {
     if (error instanceof RateLimitError) return errorResponse(error, error.message);
-    return monitoredRouteFailure({ request, admin: monitoringAdmin, error, feature: "subscriptions", action: "change_plan", actorRole: "salon-owner", salonId, safeMessage: "We couldn't change the subscription plan." });
+    if (isSubscriptionPriceValidationError(error)) {
+      const reference = await capturePlatformError({
+        request,
+        admin: monitoringAdmin,
+        error,
+        feature: "subscriptions",
+        action: "validate_plan_change_price",
+        actorRole: "salon-owner",
+        actorId,
+        salonId,
+        provider: "stripe",
+        safeMessage: "Subscription billing is temporarily unavailable.",
+        metadata: { subscription_price_validation_reason: error.reason },
+      });
+      return safeFailure(
+        "Subscription billing is temporarily unavailable.",
+        reference,
+        503,
+        { code: error.code },
+      );
+    }
+    return monitoredRouteFailure({
+      request,
+      admin: monitoringAdmin,
+      error,
+      feature: "subscriptions",
+      action: "change_plan",
+      actorRole: "salon-owner",
+      actorId,
+      salonId,
+      provider: error && typeof error === "object" && (error as { provider?: unknown }).provider === "stripe"
+        ? "stripe"
+        : null,
+      safeMessage: "We couldn't change the subscription plan.",
+    });
   }
 }
 export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/stripe/subscription/change", "POST"), POSTHandler);

@@ -38,7 +38,7 @@ async function loadFeaturedProducts(maxCards: number) {
     const placements = await admin
       .from("homepage_product_placements")
       .select(
-        "id,sort_order,product:salon_products(id,salon_id,name,description,price,sale_price,photo_url,images,inventory_quantity,track_inventory,pickup_enabled,product_status,is_visible,archived_at,salon:salons(id,name,slug,status,is_discoverable,subscription_status,address_city,address_state,latitude,longitude))",
+        "id,sort_order,starts_at,ends_at,entitlement:marketing_entitlements(salon_id,placement_type,status,valid_from,valid_until),product:salon_products(id,salon_id,name,description,price,sale_price,photo_url,images,inventory_quantity,track_inventory,pickup_enabled,product_status,is_visible,archived_at,salon:salons(id,name,slug,status,is_discoverable,subscription_status,address_city,address_state,latitude,longitude))",
       )
       .in("status", ["Active", "Scheduled"])
       .lte("starts_at", now)
@@ -51,9 +51,30 @@ async function loadFeaturedProducts(maxCards: number) {
     const eligible = ((placements.data || []) as Row[]).filter((placement) => {
       const product = related(placement.product);
       const salon = related(product?.salon);
+      const entitlement = related(placement.entitlement);
+      const startsAt = Date.parse(String(placement.starts_at || ""));
+      const endsAt = placement.ends_at
+        ? Date.parse(String(placement.ends_at))
+        : null;
+      const entitlementFrom = Date.parse(
+        String(entitlement?.valid_from || ""),
+      );
+      const entitlementUntil = entitlement?.valid_until
+        ? Date.parse(String(entitlement.valid_until))
+        : null;
       return (
         product &&
         salon &&
+        entitlement &&
+        entitlement.salon_id === product.salon_id &&
+        entitlement.placement_type === "Featured Product" &&
+        ["Paid", "Credited"].includes(String(entitlement.status || "")) &&
+        Number.isFinite(startsAt) &&
+        Number.isFinite(entitlementFrom) &&
+        entitlementFrom <= startsAt &&
+        (endsAt === null
+          ? entitlementUntil === null
+          : entitlementUntil === null || entitlementUntil >= endsAt) &&
         product.pickup_enabled === true &&
         product.product_status === "Active" &&
         product.is_visible === true &&

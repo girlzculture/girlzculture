@@ -7,6 +7,7 @@ import NumericInput from "@/components/forms/NumericInput";
 import SafeImage from "@/components/site/SafeImage";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import { getSessionForScope } from "@/lib/supabase";
+import { displayStoredPlan } from "@/lib/plans";
 
 type Row = Record<string, any>;
 
@@ -220,8 +221,8 @@ export default function AdminFeaturedProducts() {
               Featured Products
             </h2>
             <p className="text-xs text-ink/55">
-              Curate real, pickup-ready inventory. Active placements require a
-              Premium salon or verified funding.
+              Curate real, pickup-ready inventory. Active placements require
+              verified funding.
             </p>
           </div>
         </div>
@@ -340,7 +341,7 @@ export default function AdminFeaturedProducts() {
                   <span>
                     <b className="block">{product.name}</b>
                     <span className="text-[10px] text-ink/50">
-                      {salon?.name} · {salon?.subscription_tier || "No tier"}
+                      {salon?.name} · {displayStoredPlan(salon?.subscription_tier)}
                     </span>
                   </span>
                   <span className="font-bold text-teal">
@@ -428,7 +429,7 @@ export default function AdminFeaturedProducts() {
         </div>
         <details className="mt-4 rounded-lg border border-plum/10 p-3">
           <summary className="cursor-pointer text-xs font-bold text-plum">
-            Verified funding (non-Premium salons)
+            Verified funding
           </summary>
           <div className="mt-3 grid gap-3">
             <select
@@ -441,7 +442,7 @@ export default function AdminFeaturedProducts() {
               }
               className="min-h-11 rounded-lg border border-plum/15 px-3 text-xs"
             >
-              <option value="">Premium plan eligibility</option>
+              <option value="">Choose a verified funding source</option>
               <option value="stripe_payment">Stripe payment</option>
               <option value="verified_invoice">Verified invoice</option>
               <option value="platform_credit">Platform credit</option>
