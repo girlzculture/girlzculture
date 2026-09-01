@@ -84,14 +84,16 @@ assert.match(discovery, /Availability date/);
 assert.match(discovery, /Active offers only/);
 assert.match(discovery, /sessionStorage\.setItem\(STORAGE_KEY/);
 assert.match(discovery, /scrollY/);
-assert.match(discovery, /Verified marketplace information only/);
+assert.match(discovery, /Current salon profiles and booking-based reviews/);
+assert.doesNotMatch(discovery, /Verified marketplace information only/);
 assert.match(discovery, /<GoogleSalonMap[\s\S]*?salons=\{salons\}/);
 assert.match(discovery, /salons\.map\(\(salon\)/);
 assert.doesNotMatch(discovery, /StyleAutocomplete/);
 
 assert.match(salonCard, />\s*View\s*</);
 assert.match(salonCard, />\s*Book\s*</);
-assert.match(salonCard, />\s*New\s*</);
+assert.match(salonCard, /salon\.review_count > 0 && salon\.rating_overall > 0/);
+assert.doesNotMatch(salonCard, />\s*New\s*</);
 assert.doesNotMatch(salonCard, /New on Girlz Culture/);
 assert.match(salonCard, /MapPin/);
 assert.match(salonCard, /Star/);
