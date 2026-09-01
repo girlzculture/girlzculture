@@ -212,10 +212,11 @@ begin
     'expires_at', v_attempt.expires_at,
     'stripe_customer_id', v_attempt.stripe_customer_id,
     'stripe_checkout_session_id', null,
+    'promo_redemption_id', v_attempt.promo_redemption_id,
     'reused', false,
     'request_conflict', false,
     'provider_reconciliation_required', false
-  ) || v_promo;
+  ) || (v_promo - 'redemption_id');
 end;
 $$;
 

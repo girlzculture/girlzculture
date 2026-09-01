@@ -196,6 +196,16 @@ assert.match(
   "Promotion inventory must be reserved only after the per-salon lock",
 );
 assert.match(migration, /status = 'pending'[\s\S]*stripe_checkout_session_id is null/i);
+assert.match(
+  migration,
+  /'promo_redemption_id',\s*v_attempt\.promo_redemption_id/i,
+  "Initial and reused checkout reservations must return the same canonical promotion-redemption field",
+);
+assert.match(
+  migration,
+  /\|\|\s*\(v_promo\s*-\s*'redemption_id'\)/i,
+  "Checkout reservations must not leak the legacy redemption_id field into the RPC response",
+);
 assert.match(migration, /revoke all on public\.subscription_checkout_attempts[\s\S]*authenticated/i);
 assert.match(migration, /grant execute on function public\.reserve_subscription_checkout_attempt[\s\S]*to service_role/i);
 assert.doesNotMatch(migration, /to authenticated\s*;/i);
