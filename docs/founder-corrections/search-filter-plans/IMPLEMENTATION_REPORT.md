@@ -14,8 +14,9 @@ passed.
 | Expected starting `main` | `f84681c5b89fa19b83c9370fa0d2da2c88834eaf` |
 | Verified starting `origin/main` | `f84681c5b89fa19b83c9370fa0d2da2c88834eaf` |
 | Branch | `codex/founder-search-filter-plan-corrections` |
-| Final branch SHA | **TO BE FILLED AFTER PUBLICATION — use the final pushed branch head** |
-| Pull request | **TO BE FILLED AFTER PUBLICATION — use the opened Draft PR number/link** |
+| Validated implementation/report head | `358a02c85c42e3a4922318e9e20000e435bef1f5` |
+| Final published branch SHA | Recorded in the Draft PR description and final handoff after this document-only publication commit; a commit cannot embed its own SHA without changing that SHA. |
+| Pull request | [Draft PR #52](https://github.com/girlzculture/girlzculture/pull/52) |
 
 No commit is being made directly to `main`. Workstream 1 remains the base of
 this work and Workstreams 2–18 are not being broadly started.
