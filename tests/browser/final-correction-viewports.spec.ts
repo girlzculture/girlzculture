@@ -52,6 +52,7 @@ test("required launch viewports remain readable without page overflow", async ({
         `homepage-${viewport.width}x${viewport.height}.png`,
       ),
       animations: "disabled",
+      caret: "initial",
     });
   }
 });
@@ -68,6 +69,7 @@ test("mobile About, footer, legal hub, and discovery layouts have acceptance scr
   await page.screenshot({
     path: path.join(screenshotDirectory, "about-mobile-390x844.png"),
     animations: "disabled",
+    caret: "initial",
   });
 
   await readMore.click();
@@ -75,20 +77,23 @@ test("mobile About, footer, legal hub, and discovery layouts have acceptance scr
   await page.screenshot({
     path: path.join(screenshotDirectory, "about-read-more-mobile-390x844.png"),
     animations: "disabled",
+    caret: "initial",
   });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(readMore).toBeFocused();
 
-  await page.locator("footer").scrollIntoViewIfNeeded();
+  const publicFooter = page.locator("footer.gc-brand-footer");
+  await publicFooter.scrollIntoViewIfNeeded();
   await expect(page.getByRole("link", { name: "Legal & Policies" })).toBeVisible();
-  const footerTrailingGap = await page.locator("footer").evaluate((footer) =>
+  const footerTrailingGap = await publicFooter.evaluate((footer) =>
     Math.max(0, document.documentElement.scrollHeight - ((footer as HTMLElement).offsetTop + (footer as HTMLElement).offsetHeight)),
   );
   expect(footerTrailingGap, "mobile footer has excessive trailing whitespace").toBeLessThanOrEqual(8);
   await page.screenshot({
     path: path.join(screenshotDirectory, "footer-mobile-390x844.png"),
     animations: "disabled",
+    caret: "initial",
   });
 
   await page.goto("/legal");
@@ -99,6 +104,7 @@ test("mobile About, footer, legal hub, and discovery layouts have acceptance scr
   await page.screenshot({
     path: path.join(screenshotDirectory, "legal-mobile-390x844.png"),
     animations: "disabled",
+    caret: "initial",
   });
 
   await page.goto(
@@ -110,13 +116,14 @@ test("mobile About, footer, legal hub, and discovery layouts have acceptance scr
   await page.screenshot({
     path: path.join(screenshotDirectory, "discovery-mobile-390x844.png"),
     animations: "disabled",
+    caret: "initial",
   });
 
   await page.goto("/internal/acceptance/map-summary");
   const mapSummary = page.locator("[data-map-salon-summary]");
   await expect(mapSummary).toBeVisible();
   await expect(mapSummary).toContainText("1.5 miles away");
-  await expect(mapSummary.getByRole("link", { name: "View salon" })).toHaveAttribute(
+  await expect(mapSummary.getByRole("link", { name: "View", exact: true })).toHaveAttribute(
     "href",
     "/salon/the-braid-lounge",
   );
@@ -124,5 +131,6 @@ test("mobile About, footer, legal hub, and discovery layouts have acceptance scr
   await page.screenshot({
     path: path.join(screenshotDirectory, "map-summary-mobile-390x844.png"),
     animations: "disabled",
+    caret: "initial",
   });
 });

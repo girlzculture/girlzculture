@@ -49,6 +49,21 @@ jobs:
       - name: Verify Workstream 1 semantic design system
         run: npm run verify:design-system
       - run: npm run verify:migrations
+      - name: Verify founder discovery, catalog, and subscription corrections
+        run: |
+          npm run verify:decision-search-enrichment
+          npm run verify:authoritative-discovery
+          npm run verify:connected-discovery
+          npm run verify:discovery
+          npm run verify:search-location
+          npm run verify:founder-discovery-presentation
+          npm run verify:founder-style-catalog
+          npm run verify:plan-catalog
+          npm run verify:subscription-price-validation
+          npm run verify:subscription-checkout-idempotency
+          npm run verify:founder-plan-enforcement
+          npm run verify:billing
+          npm run verify:promotion-enforcement
       - name: Execute the complete migration chain from an empty database
         run: npm run verify:database-clean
       - name: Verify authoritative salon-submission lifecycle

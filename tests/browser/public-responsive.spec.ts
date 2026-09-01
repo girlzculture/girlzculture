@@ -286,7 +286,7 @@ test("selected map marker summary exposes the same decision details as the list"
   await expect(summary).toContainText("4.9 (982)");
   await expect(summary).toContainText("From $150");
   await expect(summary).toContainText("1.5 miles away");
-  await expect(summary.getByRole("link", { name: "View salon" })).toHaveAttribute(
+  await expect(summary.getByRole("link", { name: "View" })).toHaveAttribute(
     "href",
     "/salon/the-braid-lounge",
   );
@@ -369,7 +369,8 @@ test("explicit URL location wins over stored location and same-count search stat
   );
   await expect(page.getByText("Near Harlem, NY", { exact: true })).toBeVisible();
   await expect(page.getByText("Near Texas", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Restored search state", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Search updated: 20 matching salons.");
+  await expect(page.getByText("Restored search state", { exact: true })).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400);
   await page.waitForTimeout(250);
   expect(decisionSearchRequests).toBe(0);
@@ -380,10 +381,10 @@ test("functional public pages begin without the removed marketing introductions"
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "One browser covers the content contract.");
   await page.goto("/salons");
-  await expect(page.getByRole("heading", { name: "Tell us the look you want" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Find salons" })).toBeVisible();
   await expect(page.getByText("Find salons that fit your style", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Your Beauty Assistant", { exact: false })).toHaveCount(0);
-  await expect(page.getByText("AI", { exact: true })).toBeVisible();
+  await expect(page.getByText("AI", { exact: true })).toHaveCount(0);
 
   await page.goto("/styles");
   await expect(page.getByText("Explore. Compare. Book with confidence.", { exact: false })).toHaveCount(0);
@@ -938,6 +939,23 @@ test("the ten required searches resolve deterministically and a real service fix
   );
   await expect(fixture).toHaveAttribute("data-selected-price", "75");
   await expect(fixture).toHaveAttribute("data-opening-date", "2026-08-08");
+  const rejectedFixture = page.getByTestId("decision-rejected-service-fixture");
+  const rejectedArchived = JSON.parse(
+    String(await rejectedFixture.getAttribute("data-archived-intent")),
+  );
+  const rejectedMissing = JSON.parse(
+    String(await rejectedFixture.getAttribute("data-missing-intent")),
+  );
+  for (const rejected of [rejectedArchived, rejectedMissing]) {
+    expect(rejected).toMatchObject({
+      service: null,
+      stableServiceId: null,
+      rejectedExplicitServiceId: true,
+      serviceGroupId: null,
+      categoryId: null,
+      semanticPhrase: null,
+    });
+  }
 });
 
 test("first relevant visit requests location once and reuses it across discovery pages", async ({

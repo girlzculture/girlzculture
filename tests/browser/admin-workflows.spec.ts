@@ -146,7 +146,7 @@ test("platform-admin complaint, subscription, and admin-member records expose li
   await page.goto("/internal/acceptance/admin-workflows/subscriptions/subscription-1");
   await expect(page.getByRole("heading", { name: "Plan-change history" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Provider-confirmed events" })).toBeVisible();
-  await expect(page.getByText("Basic → Growth", { exact: true })).toBeVisible();
+  await expect(page.getByText("Basic (legacy) → Growth", { exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("admin-subscription-detail-tablet.png"), fullPage: true });
 

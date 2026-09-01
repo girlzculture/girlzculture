@@ -17,6 +17,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "30 min",
     "impact": "standard"
   },
+  "source.c8702ca6e848": {
+    "source": "4.9 rating",
+    "impact": "standard"
+  },
   "source.983be76344ba": {
     "source": "45 min",
     "impact": "standard"
@@ -29,6 +33,30 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "A short, helpful message without internal details.",
     "impact": "standard"
   },
+  "source.0f618bccf208": {
+    "source": "Aaliyah J.",
+    "impact": "standard"
+  },
+  "source.de41b8b15fb8": {
+    "source": "Aaliyah specializes in protective styles with clear consultations, careful parting, and published service expectations.",
+    "impact": "standard"
+  },
+  "source.027054d18671": {
+    "source": "Acceptance fixture",
+    "impact": "standard"
+  },
+  "source.43f3192ef3e2": {
+    "source": "Acceptance Salon",
+    "impact": "standard"
+  },
+  "source.d2bdd60d4e4a": {
+    "source": "Acceptance Salon · Brooklyn, New York",
+    "impact": "standard"
+  },
+  "source.551b3366833c": {
+    "source": "Acceptance Salon · September 12 at 10:00 AM",
+    "impact": "standard"
+  },
   "source.4d04eece64a7": {
     "source": "Account connected",
     "impact": "standard"
@@ -39,6 +67,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.968d27b46a89": {
     "source": "Account created. Confirm your email, then log in to complete your salon application.",
+    "impact": "standard"
+  },
+  "source.e68d6d1e1cf2": {
+    "source": "Account details",
     "impact": "standard"
   },
   "source.a951f4d0a0fa": {
@@ -61,8 +93,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Activate subscription",
     "impact": "booking"
   },
-  "source.2f5dcc92240f": {
-    "source": "Active Blocks",
+  "source.19ea5b253e18": {
+    "source": "Active catalog",
+    "impact": "standard"
+  },
+  "source.605a7379e035": {
+    "source": "Active control",
     "impact": "standard"
   },
   "source.15363eb576e7": {
@@ -71,6 +107,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.e9e7205b6f0b": {
     "source": "Add another",
+    "impact": "standard"
+  },
+  "source.91edf1fe47ea": {
+    "source": "Add card",
     "impact": "standard"
   },
   "source.5bcf4db4336b": {
@@ -97,6 +137,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Add Stylist",
     "impact": "standard"
   },
+  "source.874393854692": {
+    "source": "Add User",
+    "impact": "standard"
+  },
   "source.526c6c08e518": {
     "source": "Adjusted Total",
     "impact": "standard"
@@ -104,10 +148,6 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.bb25b8516d74": {
     "source": "Admin access",
     "impact": "standard"
-  },
-  "source.500188faa84f": {
-    "source": "Admin login",
-    "impact": "security"
   },
   "source.71adefcd1937": {
     "source": "Admin Login",
@@ -117,16 +157,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Admin notes",
     "impact": "standard"
   },
-  "source.eeaa13a51a89": {
-    "source": "Admin response",
-    "impact": "standard"
-  },
   "source.3f5e1dad429b": {
     "source": "Admin timezone",
     "impact": "standard"
   },
   "source.e20c4bf694c2": {
     "source": "admin@girlzculture.com",
+    "impact": "standard"
+  },
+  "source.4700d7ecc3b2": {
+    "source": "Administrative audit",
+    "impact": "standard"
+  },
+  "source.0eabf33b34d0": {
+    "source": "Administrator activity",
+    "impact": "standard"
+  },
+  "source.2cb7a34e146b": {
+    "source": "Advertising disclosure",
     "impact": "standard"
   },
   "source.45449576972d": {
@@ -145,12 +193,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Alert thresholds",
     "impact": "standard"
   },
-  "source.8da023614791": {
-    "source": "All Bookings",
-    "impact": "booking"
+  "source.060be00f4f26": {
+    "source": "All categories",
+    "impact": "standard"
   },
   "source.f136c558660a": {
     "source": "All features",
+    "impact": "standard"
+  },
+  "source.7eec5b96810b": {
+    "source": "All fulfillment",
+    "impact": "standard"
+  },
+  "source.797a4917230e": {
+    "source": "All locations",
     "impact": "standard"
   },
   "source.a438b7180dd4": {
@@ -161,8 +217,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "All plans",
     "impact": "standard"
   },
-  "source.cbe8ec59a80a": {
-    "source": "All Reviews",
+  "source.475181d45c4c": {
+    "source": "All records",
+    "impact": "standard"
+  },
+  "source.6a2035af3f3e": {
+    "source": "All salons",
     "impact": "standard"
   },
   "source.8721d71a0a5b": {
@@ -177,6 +237,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "All statuses",
     "impact": "standard"
   },
+  "source.ce5b9961b171": {
+    "source": "Alpha color",
+    "impact": "standard"
+  },
   "source.2a153ef29153": {
     "source": "Alphabetical (recommended)",
     "impact": "standard"
@@ -189,9 +253,25 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Alt text",
     "impact": "standard"
   },
+  "source.8d87ae1b0b19": {
+    "source": "Alternative text",
+    "impact": "standard"
+  },
+  "source.c598cc3b26e8": {
+    "source": "Amina R.",
+    "impact": "standard"
+  },
   "source.90346db04697": {
     "source": "Amounts are stored from Stripe invoices, refunds, and credit notes. State and market are snapshots from the salon record when each event was received.",
     "impact": "booking"
+  },
+  "source.ea324467dd45": {
+    "source": "an item moves from staged to uploaded, attached, saved, and published. A failed upload remains visible with a safe error instead of silently disappearing.",
+    "impact": "standard"
+  },
+  "source.63b4cc286fe3": {
+    "source": "Ancestor opacity",
+    "impact": "standard"
   },
   "source.0aafdfb493fb": {
     "source": "Any rating",
@@ -205,28 +285,84 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Appears in:",
     "impact": "standard"
   },
-  "source.0d9ba174ebf2": {
-    "source": "Application submitted!",
+  "source.b0cb9cde5416": {
+    "source": "Application approved",
+    "impact": "standard"
+  },
+  "source.24cd5b88024d": {
+    "source": "Application documents",
+    "impact": "standard"
+  },
+  "source.5dfc92d651e5": {
+    "source": "Application lifecycle",
+    "impact": "standard"
+  },
+  "source.e4cee9220ad1": {
+    "source": "Application received",
     "impact": "standard"
   },
   "source.e2e5335e3c55": {
     "source": "application[key] ?",
     "impact": "standard"
   },
-  "source.e6681179a3b5": {
-    "source": "Apply first. After approval, activate your selected plan securely through Stripe test mode.",
+  "source.0c9d314d2bc3": {
+    "source": "Applies to",
     "impact": "standard"
+  },
+  "source.926161d3e620": {
+    "source": "Apply filters",
+    "impact": "standard"
+  },
+  "source.a9a76afc4124": {
+    "source": "Apply first. After approval, activate your selected plan securely through subscriptions",
+    "impact": "booking"
+  },
+  "source.664038f80e21": {
+    "source": "Appointment calendar",
+    "impact": "booking"
+  },
+  "source.3ee6ae3bf092": {
+    "source": "Appointment date",
+    "impact": "booking"
+  },
+  "source.7b6cfa2dbd89": {
+    "source": "Appointment deposits",
+    "impact": "booking"
+  },
+  "source.9aa75fc21f57": {
+    "source": "Appointment details",
+    "impact": "booking"
+  },
+  "source.83db9a38988a": {
+    "source": "Appointments from",
+    "impact": "booking"
+  },
+  "source.c6348d3a7fba": {
+    "source": "Appointments through",
+    "impact": "booking"
+  },
+  "source.2b1f555f1125": {
+    "source": "Approval unlocks subscription checkout and onboarding. It does not publish the salon. Publication happens after every required marketplace gate passes, unless an authorized pilot override is explicitly recorded.",
+    "impact": "booking"
   },
   "source.d316560592f3": {
     "source": "Approve application",
     "impact": "standard"
   },
-  "source.4faa9c5e66c1": {
-    "source": "Approve the due-diligence application, reject it with a reason, then activate the salon when it is ready for subscription setup.",
-    "impact": "booking"
-  },
   "source.a12cf250e41a": {
     "source": "Approved slug",
+    "impact": "standard"
+  },
+  "source.f0194c30ac7c": {
+    "source": "Archive application",
+    "impact": "standard"
+  },
+  "source.8ae22addfe74": {
+    "source": "Archive product",
+    "impact": "standard"
+  },
+  "source.46f51aae43a1": {
+    "source": "Archived & hidden",
     "impact": "standard"
   },
   "source.448f7fcd78b0": {
@@ -241,12 +377,40 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Assigned admin",
     "impact": "standard"
   },
+  "source.05c40fe0f8f1": {
+    "source": "Assigned administrator",
+    "impact": "standard"
+  },
+  "source.dbf4c4bf9e2f": {
+    "source": "Assigned sections",
+    "impact": "standard"
+  },
+  "source.d775dcbbdbfe": {
+    "source": "Audience market",
+    "impact": "standard"
+  },
+  "source.949c289d4a7b": {
+    "source": "Audience radius (miles)",
+    "impact": "standard"
+  },
   "source.5714d2e05481": {
     "source": "Audit history",
     "impact": "standard"
   },
+  "source.e2a0860210b2": {
+    "source": "Audit timeline",
+    "impact": "standard"
+  },
   "source.e01eacc119b7": {
     "source": "Audit Trail",
+    "impact": "standard"
+  },
+  "source.74564afc3100": {
+    "source": "Authoritative booking, refund, transfer, and payout evidence. Totals above follow these filters.",
+    "impact": "booking"
+  },
+  "source.533dc9a2f1ac": {
+    "source": "Authorized administrators",
     "impact": "standard"
   },
   "source.408fc571e4c1": {
@@ -269,6 +433,22 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Available Times",
     "impact": "standard"
   },
+  "source.add01a5b1deb": {
+    "source": "Back to Legal & Policies",
+    "impact": "standard"
+  },
+  "source.bebeab86fb2e": {
+    "source": "Balance due",
+    "impact": "standard"
+  },
+  "source.7ccd23227a53": {
+    "source": "Bank payouts",
+    "impact": "standard"
+  },
+  "source.35d24818ec06": {
+    "source": "Basic (legacy)",
+    "impact": "standard"
+  },
   "source.511593991976": {
     "source": "Beauty accessories",
     "impact": "standard"
@@ -281,6 +461,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Best-Performing Partners",
     "impact": "standard"
   },
+  "source.ea9e981e8491": {
+    "source": "Billing support",
+    "impact": "standard"
+  },
   "source.12bf7fc0c82a": {
     "source": "block.startsWith(\"### \") ?",
     "impact": "standard"
@@ -289,8 +473,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Blog categories",
     "impact": "standard"
   },
-  "source.9b99dde2b360": {
-    "source": "Blog Management",
+  "source.19c5f0114a84": {
+    "source": "Blog post",
+    "impact": "standard"
+  },
+  "source.7fef20e1cfed": {
+    "source": "Blog posts",
     "impact": "standard"
   },
   "source.003d871bc5c8": {
@@ -305,6 +493,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Booked until",
     "impact": "standard"
   },
+  "source.82b728798e4d": {
+    "source": "Booking category",
+    "impact": "booking"
+  },
   "source.c36fdafe4375": {
     "source": "Booking deposits",
     "impact": "booking"
@@ -317,12 +509,28 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Booking email",
     "impact": "booking"
   },
+  "source.994113d37cd5": {
+    "source": "Booking evidence",
+    "impact": "booking"
+  },
+  "source.c30d59fbe111": {
+    "source": "Booking handoff",
+    "impact": "booking"
+  },
   "source.2f266d8f6179": {
     "source": "Booking Management",
     "impact": "booking"
   },
+  "source.8d3938e4ea09": {
+    "source": "Booking messages",
+    "impact": "booking"
+  },
   "source.8bc4caddc54b": {
     "source": "Booking Messages",
+    "impact": "booking"
+  },
+  "source.887b7bd3c657": {
+    "source": "Booking queue",
     "impact": "booking"
   },
   "source.9086c078dadb": {
@@ -331,6 +539,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.2d9e9b86120c": {
     "source": "Booking Reference",
+    "impact": "booking"
+  },
+  "source.74de7dbb2dbf": {
+    "source": "Booking status",
+    "impact": "booking"
+  },
+  "source.c74dedfa420c": {
+    "source": "Booking support",
     "impact": "booking"
   },
   "source.7c9053b51ba7": {
@@ -385,24 +601,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Business Growth & Admin",
     "impact": "standard"
   },
-  "source.a10a31503e1c": {
-    "source": "Business Information",
-    "impact": "standard"
-  },
-  "source.16c2c52a5770": {
-    "source": "Buy Now",
+  "source.d3e37b2d3935": {
+    "source": "Business information",
     "impact": "standard"
   },
   "source.b7ba36c7a167": {
     "source": "c.cancellationThreshold ? (",
     "impact": "booking"
   },
+  "source.fd5d09c7c324": {
+    "source": "Call-to-action label",
+    "impact": "standard"
+  },
   "source.21636936db94": {
     "source": "Campaign upload",
     "impact": "standard"
   },
+  "source.e023fb5f9f57": {
+    "source": "Campaign workspaces",
+    "impact": "standard"
+  },
   "source.c6085eb5c6bd": {
     "source": "Cancel booking",
+    "impact": "booking"
+  },
+  "source.b8f944abaa35": {
+    "source": "Cancel edit",
     "impact": "booking"
   },
   "source.4f8b84ac75e8": {
@@ -425,12 +649,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Card grid",
     "impact": "standard"
   },
-  "source.d31c249199c3": {
-    "source": "Card slot",
-    "impact": "standard"
-  },
   "source.232ef6dc296d": {
     "source": "Card source",
+    "impact": "standard"
+  },
+  "source.abc0de6affd0": {
+    "source": "Card status",
     "impact": "standard"
   },
   "source.602fc5527955": {
@@ -473,12 +697,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Checking live availability…",
     "impact": "standard"
   },
+  "source.6d079ca12195": {
+    "source": "Checking salon and stylist availability…",
+    "impact": "standard"
+  },
+  "source.9f97c35537b0": {
+    "source": "Checking Stripe Connect payout readiness…",
+    "impact": "standard"
+  },
   "source.28dac644f726": {
     "source": "Choose a city, market, or address",
     "impact": "standard"
   },
   "source.4de619e3bb53": {
     "source": "Choose a translation to edit, preview, publish, or restore.",
+    "impact": "standard"
+  },
+  "source.b0b5d1cce160": {
+    "source": "Choose an image already saved to this salon's gallery.",
     "impact": "standard"
   },
   "source.a23eff716581": {
@@ -497,6 +733,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Choose from the platform catalog, then set your price.",
     "impact": "booking"
   },
+  "source.397f3d697a44": {
+    "source": "Choose one operational area. Its compact control list opens each editable setting on a dedicated, auditable page.",
+    "impact": "standard"
+  },
   "source.7801b461c742": {
     "source": "Choose replacement",
     "impact": "standard"
@@ -505,9 +745,17 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Choose salon",
     "impact": "standard"
   },
-  "source.d162f601f5e0": {
-    "source": "Choose your location, compare real prices and reviews, and book with confidence.",
-    "impact": "booking"
+  "source.d7bcfe77fa6f": {
+    "source": "Choose the plan that matches your salon's operations and growth goals.",
+    "impact": "standard"
+  },
+  "source.643ba0f2de2e": {
+    "source": "Choose the standard empty message or one existing salon highlight. A highlight appears only on your salon page. It does not guarantee placement on the Girlz Culture homepage, Featured Salons, Trending Picks, blogs, or advertising.",
+    "impact": "standard"
+  },
+  "source.8d3409a337e2": {
+    "source": "City, neighborhood, or ZIP",
+    "impact": "standard"
   },
   "source.412226715c56": {
     "source": "Clear filters",
@@ -525,20 +773,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Clear selection",
     "impact": "standard"
   },
-  "source.e4ba801351dc": {
-    "source": "Clear slot",
+  "source.7b29020292a4": {
+    "source": "Close dialog",
     "impact": "standard"
   },
   "source.f0252bf7d604": {
     "source": "Close notifications",
     "impact": "standard"
   },
+  "source.8f12aaaa7f69": {
+    "source": "Communication unavailable",
+    "impact": "standard"
+  },
   "source.a4c41c6ef844": {
     "source": "Compare plans",
     "impact": "standard"
   },
+  "source.f9ecd5e0c337": {
+    "source": "Complaint received",
+    "impact": "safety"
+  },
   "source.83831d48bb62": {
     "source": "Complete service",
+    "impact": "standard"
+  },
+  "source.18f5e5a211ca": {
+    "source": "Completed: the acceptance form passed validation. Nothing was sent.",
     "impact": "standard"
   },
   "source.824bdcf6878f": {
@@ -573,6 +833,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Contact us",
     "impact": "standard"
   },
+  "source.783b18562954": {
+    "source": "Content Management",
+    "impact": "standard"
+  },
   "source.2631f16105c3": {
     "source": "Context preview",
     "impact": "standard"
@@ -585,8 +849,28 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Control public labels, safe internal destinations, order, visibility, and New badges. External URLs and markup are rejected server-side.",
     "impact": "standard"
   },
+  "source.2f84eea5d45d": {
+    "source": "Copy link",
+    "impact": "standard"
+  },
+  "source.1d23ba9da103": {
+    "source": "Cover photo",
+    "impact": "standard"
+  },
+  "source.740dca1e63c8": {
+    "source": "Cover, logo & gallery",
+    "impact": "standard"
+  },
   "source.4802c44091db": {
     "source": "Create Promotion",
+    "impact": "standard"
+  },
+  "source.36ff2c8c8992": {
+    "source": "Curate real, pickup-ready inventory. Active placements require verified funding.",
+    "impact": "standard"
+  },
+  "source.9f0ad8c0453f": {
+    "source": "Curated placements",
     "impact": "standard"
   },
   "source.f3cb57f4b9de": {
@@ -597,12 +881,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Current Offers",
     "impact": "standard"
   },
+  "source.6111491666e2": {
+    "source": "Current override",
+    "impact": "standard"
+  },
   "source.ec5cfba8f01b": {
     "source": "Current plan",
     "impact": "standard"
   },
   "source.4c9712f8d3e6": {
     "source": "Currently published:",
+    "impact": "standard"
+  },
+  "source.4b3de248fe02": {
+    "source": "Custom activations:",
     "impact": "standard"
   },
   "source.d28ea62b8b54": {
@@ -613,9 +905,17 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Custom position",
     "impact": "standard"
   },
-  "source.77d433f98236": {
-    "source": "Customer login",
-    "impact": "security"
+  "source.2ce2c48f1d19": {
+    "source": "Customer account",
+    "impact": "standard"
+  },
+  "source.9069e98160e4": {
+    "source": "Customer accounts",
+    "impact": "standard"
+  },
+  "source.cbc29378bc2c": {
+    "source": "Customer email",
+    "impact": "standard"
   },
   "source.309c693a5ffa": {
     "source": "Customer name",
@@ -625,8 +925,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Customer navigation",
     "impact": "standard"
   },
+  "source.6ad7e9f2e90e": {
+    "source": "Customer status",
+    "impact": "standard"
+  },
+  "source.b42f194e3805": {
+    "source": "Customer words are immutable. Reply, dispute, and review Platform Admin decisions from a focused record.",
+    "impact": "standard"
+  },
   "source.beddc873459b": {
     "source": "Customer-safe reason",
+    "impact": "standard"
+  },
+  "source.b22c0b2186fe": {
+    "source": "Customer, reference, service, or status",
+    "impact": "standard"
+  },
+  "source.76575bede1f0": {
+    "source": "Customer, reference, style, stylist, or status",
     "impact": "standard"
   },
   "source.726ab6b6c805": {
@@ -645,6 +961,14 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Default buffer",
     "impact": "standard"
   },
+  "source.e63b5153bde0": {
+    "source": "Delete permanently",
+    "impact": "standard"
+  },
+  "source.22cf4f86d9e0": {
+    "source": "Dependencies & audit-safe actions",
+    "impact": "standard"
+  },
   "source.bdf337f85aad": {
     "source": "Dependencies & safe actions",
     "impact": "standard"
@@ -653,17 +977,33 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Deposit Amount",
     "impact": "booking"
   },
+  "source.ecd489377e65": {
+    "source": "Deposit handling",
+    "impact": "booking"
+  },
   "source.3ffa89447c06": {
     "source": "Deposit paid",
     "impact": "booking"
   },
+  "source.c9500cff3129": {
+    "source": "Deposit report",
+    "impact": "booking"
+  },
+  "source.342ecc1bda43": {
+    "source": "Deposit today",
+    "impact": "booking"
+  },
+  "source.7f42d04f283c": {
+    "source": "Deposits collected",
+    "impact": "booking"
+  },
+  "source.64ad7acb1aa2": {
+    "source": "Describe the beauty service you want, your preferred location, date, or other preferences.",
+    "impact": "standard"
+  },
   "source.81e5f759aabd": {
     "source": "Describe the issue, what happened, and the resolution you are seeking.",
     "impact": "standard"
-  },
-  "source.0467d447c351": {
-    "source": "Describe the style, area, date, budget, or rating. Every result comes from current Girlz Culture salon, price, location, and availability data.",
-    "impact": "booking"
   },
   "source.91bdda6b3687": {
     "source": "Descriptive offer",
@@ -673,8 +1013,44 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Desktop · tablet · mobile",
     "impact": "standard"
   },
+  "source.8f9d7d78df10": {
+    "source": "Desktop preview",
+    "impact": "standard"
+  },
   "source.60b334c71dab": {
     "source": "Directions available",
+    "impact": "standard"
+  },
+  "source.df71c830ddd5": {
+    "source": "Disabled checkbox",
+    "impact": "standard"
+  },
+  "source.df3b7d846598": {
+    "source": "Disabled choices",
+    "impact": "standard"
+  },
+  "source.e98d55efcd72": {
+    "source": "Disabled control",
+    "impact": "standard"
+  },
+  "source.83b809fea6b0": {
+    "source": "Disabled radio",
+    "impact": "standard"
+  },
+  "source.d2749786940d": {
+    "source": "Disabled select",
+    "impact": "standard"
+  },
+  "source.7b8831fd5f96": {
+    "source": "Disabled textarea",
+    "impact": "standard"
+  },
+  "source.98f3b0e0cc0c": {
+    "source": "Dismiss message",
+    "impact": "standard"
+  },
+  "source.47241c605f44": {
+    "source": "Display limit",
     "impact": "standard"
   },
   "source.5f1293a21937": {
@@ -685,8 +1061,36 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Display timezone",
     "impact": "standard"
   },
+  "source.5ffd02831747": {
+    "source": "Dispute status",
+    "impact": "standard"
+  },
+  "source.7d925fd88559": {
+    "source": "Distance unavailable",
+    "impact": "standard"
+  },
+  "source.4d60cee34d10": {
+    "source": "Done cropping",
+    "impact": "standard"
+  },
+  "source.edf570e912b9": {
+    "source": "Download a template, export the current catalog, or validate and import an Excel/CSV file.",
+    "impact": "standard"
+  },
+  "source.db38cd707422": {
+    "source": "Download Template",
+    "impact": "standard"
+  },
+  "source.0c0b9a5a2fb4": {
+    "source": "Draft placed in the description. Review it, then use Save changes to publish.",
+    "impact": "standard"
+  },
   "source.89f24f888e28": {
     "source": "Draft preview",
+    "impact": "standard"
+  },
+  "source.466c85e7899c": {
+    "source": "Draft preview · not published",
     "impact": "standard"
   },
   "source.87682e27aacd": {
@@ -709,6 +1113,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "e.g., Knotless Braids",
     "impact": "standard"
   },
+  "source.e86aa6a25f3d": {
+    "source": "Each legal page has the same explicit draft, schedule, publish, hide, and archive workflow.",
+    "impact": "standard"
+  },
   "source.709d23d3c29b": {
     "source": "Earnings & Payouts",
     "impact": "standard"
@@ -721,12 +1129,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Edit cart",
     "impact": "standard"
   },
-  "source.99da1f9e92df": {
-    "source": "Edit titles, visibility, and order without a code change.",
+  "source.9f2676a02b7d": {
+    "source": "Edit crop",
+    "impact": "standard"
+  },
+  "source.0960e15afa0c": {
+    "source": "Editorial promotions",
     "impact": "standard"
   },
   "source.153c9b215753": {
     "source": "Effective date",
+    "impact": "standard"
+  },
+  "source.e447bea68140": {
+    "source": "Element opacity",
     "impact": "standard"
   },
   "source.0821dec60212": {
@@ -753,12 +1169,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Emergency revert",
     "impact": "standard"
   },
+  "source.92d6de14fed9": {
+    "source": "Ends (optional)",
+    "impact": "standard"
+  },
   "source.a40890f5deda": {
     "source": "Engine areas",
     "impact": "standard"
   },
-  "source.8743d80ebd24": {
-    "source": "Enter a city, neighborhood, or ZIP above, or share your location when you are ready. We never ask for location permission automatically.",
+  "source.10be1edabe18": {
+    "source": "Enter a few services, qualities, or details about the salon.",
+    "impact": "standard"
+  },
+  "source.f490abbfbbcf": {
+    "source": "Enter a few services, qualities, or details first.",
     "impact": "standard"
   },
   "source.a77ff8607fc4": {
@@ -801,16 +1225,40 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Error status",
     "impact": "standard"
   },
+  "source.5116e4dc0151": {
+    "source": "Errors & incidents",
+    "impact": "standard"
+  },
   "source.1636f5a9808d": {
     "source": "Estimated Total",
+    "impact": "standard"
+  },
+  "source.56ebff8186b7": {
+    "source": "Exact status",
+    "impact": "standard"
+  },
+  "source.30562d814b93": {
+    "source": "Example: silk presses, color, welcoming, appointment-only",
+    "impact": "booking"
+  },
+  "source.ac66e89e1fee": {
+    "source": "Executable service, promotion, budget and opening fixture",
     "impact": "standard"
   },
   "source.329cb94db385": {
     "source": "Expert tips, style inspiration, and real stories from the braid community.",
     "impact": "standard"
   },
-  "source.30bd33e760d2": {
-    "source": "Explore. Compare. Book with confidence.",
+  "source.5755f9ac0aa1": {
+    "source": "Export CSV",
+    "impact": "standard"
+  },
+  "source.a50ec1e198fc": {
+    "source": "Exports include every incident matching the current filters, not only the records visible on this page.",
+    "impact": "standard"
+  },
+  "source.711d017b4daf": {
+    "source": "Favorites & account activity",
     "impact": "standard"
   },
   "source.6f7db049612e": {
@@ -821,8 +1269,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Feature unavailable",
     "impact": "standard"
   },
+  "source.8465a5c92b03": {
+    "source": "Featured campaign",
+    "impact": "standard"
+  },
+  "source.ec07379d59d1": {
+    "source": "Featured Products",
+    "impact": "standard"
+  },
   "source.388eaebee35c": {
     "source": "Featured Salons",
+    "impact": "standard"
+  },
+  "source.09c512675fb0": {
+    "source": "Filter active and historical records by state, plan, status, or date.",
     "impact": "standard"
   },
   "source.1542d1d3d9ca": {
@@ -835,6 +1295,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.9b72bfcc1cfd": {
     "source": "Financial records",
+    "impact": "standard"
+  },
+  "source.b91d00cdb159": {
+    "source": "Find an existing customer (optional)",
     "impact": "standard"
   },
   "source.794d2b0fdada": {
@@ -861,8 +1325,28 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Finish setup",
     "impact": "standard"
   },
+  "source.7e568a90221d": {
+    "source": "First name",
+    "impact": "standard"
+  },
+  "source.5c8c633da673": {
+    "source": "First recheck the normal payment and setup gates. If they all pass, activation is safe and idempotent.",
+    "impact": "booking"
+  },
   "source.42695908def8": {
     "source": "Fixed discount",
+    "impact": "standard"
+  },
+  "source.b39c6176f95e": {
+    "source": "Follow the mobile, tablet, or desktop guide for photos, services, staff, products, hours, and publishing.",
+    "impact": "standard"
+  },
+  "source.702d80cd8f9e": {
+    "source": "Footer group order & previews",
+    "impact": "standard"
+  },
+  "source.4123078e4bb0": {
+    "source": "For example, Janel",
     "impact": "standard"
   },
   "source.399f2cd9ffe3": {
@@ -881,8 +1365,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Forbidden: only the salon owner can request a public URL.",
     "impact": "standard"
   },
+  "source.be783ca0e5fc": {
+    "source": "Forbidden: this account is not authorized for the salon workspace.",
+    "impact": "standard"
+  },
+  "source.3cbc904ecd2c": {
+    "source": "Forbidden: this active salon-team identity is not linked to an active team membership.",
+    "impact": "security"
+  },
   "source.26e06aaa8c99": {
     "source": "Forbidden: this admin role does not have access to this section.",
+    "impact": "standard"
+  },
+  "source.5a61d0fa3fe1": {
+    "source": "Forbidden: this salon role cannot draft profile copy.",
     "impact": "standard"
   },
   "source.79eff64aa1d0": {
@@ -891,6 +1387,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.062589116deb": {
     "source": "Forbidden: this salon role does not have access to this section.",
+    "impact": "standard"
+  },
+  "source.9d68cfa167d3": {
+    "source": "Forbidden: this salon-owner identity is not linked to a salon.",
+    "impact": "security"
+  },
+  "source.40f621e752c2": {
+    "source": "Forbidden: this upload belongs to another account.",
     "impact": "standard"
   },
   "source.f03df1e8c8a2": {
@@ -907,6 +1411,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.ac009d16e419": {
     "source": "Founder workflow",
+    "impact": "standard"
+  },
+  "source.359408ab618d": {
+    "source": "Full comparison",
     "impact": "standard"
   },
   "source.a005b4058495": {
@@ -941,8 +1449,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Google Business",
     "impact": "standard"
   },
+  "source.dd4236dc97bc": {
+    "source": "Governed configuration",
+    "impact": "standard"
+  },
   "source.eba58f3cc16e": {
     "source": "Grace period",
+    "impact": "standard"
+  },
+  "source.b0c94c4fba3e": {
+    "source": "Grid columns",
     "impact": "standard"
   },
   "source.8ecf4a8e86b3": {
@@ -961,12 +1477,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Hero zoom",
     "impact": "standard"
   },
+  "source.86882459dea7": {
+    "source": "Hidden & archived",
+    "impact": "standard"
+  },
   "source.cd5711c9dcd8": {
     "source": "Hide immediately",
     "impact": "standard"
   },
-  "source.163a88c60210": {
-    "source": "Homepage Rows",
+  "source.6d8d2a056925": {
+    "source": "Higher-priority eligible cards appear first inside the customer’s radius.",
     "impact": "standard"
   },
   "source.1e5ee27ce804": {
@@ -985,13 +1505,33 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "How should we get it to you?",
     "impact": "standard"
   },
+  "source.779707a416f9": {
+    "source": "I confirm that I reviewed this booking, Stripe deposit, refunds, fees, connected salon account, and the verified",
+    "impact": "booking"
+  },
+  "source.e5afd75e21b2": {
+    "source": "I understand that operational identity and content is removed while immutable financial, booking, refund, subscription, dispute, and audit history remains available for reconciliation.",
+    "impact": "security"
+  },
   "source.d7e190542d79": {
     "source": "Identity deletion & email reuse",
+    "impact": "security"
+  },
+  "source.c43454139e99": {
+    "source": "Identity health",
     "impact": "security"
   },
   "source.5d40f9f2cd92": {
     "source": "Impact:",
     "impact": "standard"
+  },
+  "source.fbfe114aa07f": {
+    "source": "Import & Export",
+    "impact": "standard"
+  },
+  "source.c52bd8daed70": {
+    "source": "Import categories, service groups, service names, and category-level add-ons. Prices, durations, and images are intentionally excluded from the platform template.",
+    "impact": "booking"
   },
   "source.e82f14ed31df": {
     "source": "Import drafts",
@@ -1005,6 +1545,14 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "In Progress",
     "impact": "standard"
   },
+  "source.079c2a34646b": {
+    "source": "In-person only",
+    "impact": "standard"
+  },
+  "source.a710a1a77d64": {
+    "source": "Inactive · not accepting bookings",
+    "impact": "booking"
+  },
   "source.062e79bd33f1": {
     "source": "Increase quantity",
     "impact": "standard"
@@ -1013,24 +1561,56 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Integrations & System Status",
     "impact": "standard"
   },
+  "source.fc3edc92d7f6": {
+    "source": "Interaction states",
+    "impact": "standard"
+  },
+  "source.b9c3ac3dcb7c": {
+    "source": "Internal acceptance fixture · no production authentication or data is used.",
+    "impact": "standard"
+  },
+  "source.731aef8e3a61": {
+    "source": "Internal deterministic accessibility fixture · no provider or production data is used.",
+    "impact": "standard"
+  },
   "source.fad8b0edb478": {
     "source": "Internal evidence",
+    "impact": "standard"
+  },
+  "source.e6e5bd843b82": {
+    "source": "Internal note",
     "impact": "standard"
   },
   "source.33ff84fa3d5d": {
     "source": "Inventory, live prices, fulfillment eligibility, promotions, tax, shipping, and the final total are verified by the server before payment.",
     "impact": "booking"
   },
+  "source.d2b24bdfaa91": {
+    "source": "Janel S.",
+    "impact": "standard"
+  },
+  "source.ae31605b125b": {
+    "source": "Jasmine P.",
+    "impact": "standard"
+  },
   "source.aa3a4dd907c8": {
     "source": "Join Now",
     "impact": "standard"
   },
-  "source.18f45cc042de": {
-    "source": "JPG or PNG · maximum original size 12 MB",
+  "source.28b93dc95361": {
+    "source": "Keep pricing, duration, options, inclusions, and service media together.",
+    "impact": "standard"
+  },
+  "source.d99df77b199f": {
+    "source": "Keep targeting, eligibility, dates, terms, and publication status together.",
     "impact": "standard"
   },
   "source.d600f02ffecd": {
     "source": "Keep your response warm, respectful, and on-brand.",
+    "impact": "standard"
+  },
+  "source.4debe2b9b64d": {
+    "source": "Knotless braids",
     "impact": "standard"
   },
   "source.66734da79059": {
@@ -1051,6 +1631,22 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.ada1b7255975": {
     "source": "Last checked",
+    "impact": "standard"
+  },
+  "source.bb7c4053141c": {
+    "source": "Last published",
+    "impact": "standard"
+  },
+  "source.aaa5f3452d6c": {
+    "source": "Last published:",
+    "impact": "standard"
+  },
+  "source.1b761be09489": {
+    "source": "Last saved",
+    "impact": "standard"
+  },
+  "source.5090c0945612": {
+    "source": "Last saved:",
     "impact": "standard"
   },
   "source.d9958cb15055": {
@@ -1089,12 +1685,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Licenses & supporting documents",
     "impact": "standard"
   },
-  "source.48bb50b53cbf": {
-    "source": "Linked salon",
-    "impact": "standard"
-  },
   "source.c3ffe1ef49d0": {
     "source": "Loading account…",
+    "impact": "standard"
+  },
+  "source.51598a6dc35d": {
+    "source": "Loading administrator activity…",
     "impact": "standard"
   },
   "source.b5b255570f49": {
@@ -1105,6 +1701,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Loading application…",
     "impact": "standard"
   },
+  "source.1e2cd8678651": {
+    "source": "Loading availability…",
+    "impact": "standard"
+  },
   "source.078cf5af9eb8": {
     "source": "Loading booking",
     "impact": "booking"
@@ -1113,12 +1713,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Loading booking messages…",
     "impact": "booking"
   },
+  "source.90a466bbe2c6": {
+    "source": "Loading campaigns…",
+    "impact": "standard"
+  },
   "source.d6b61171cda1": {
     "source": "Loading details…",
     "impact": "standard"
   },
   "source.ef2341f5ccef": {
     "source": "Loading editable content…",
+    "impact": "standard"
+  },
+  "source.0d8428c6d905": {
+    "source": "Loading focused content editor…",
     "impact": "standard"
   },
   "source.42b87840f593": {
@@ -1137,6 +1745,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Loading navigation…",
     "impact": "standard"
   },
+  "source.84c73eba7889": {
+    "source": "Loading pickup reservation…",
+    "impact": "standard"
+  },
   "source.d2c1dfc3de53": {
     "source": "Loading platform administration…",
     "impact": "standard"
@@ -1149,8 +1761,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Loading secure booking…",
     "impact": "booking"
   },
+  "source.10e27101409c": {
+    "source": "Loading Service Catalog…",
+    "impact": "standard"
+  },
   "source.4bf91800d196": {
     "source": "Loading signup…",
+    "impact": "standard"
+  },
+  "source.511086fc6565": {
+    "source": "Loading submissions…",
     "impact": "standard"
   },
   "source.541ebe74ceb9": {
@@ -1173,9 +1793,21 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Main navigation",
     "impact": "standard"
   },
-  "source.b68be532ac2a": {
-    "source": "Manage login, notifications, publication, and business account details.",
-    "impact": "security"
+  "source.d76aad62a9e4": {
+    "source": "Manage booking",
+    "impact": "booking"
+  },
+  "source.397b7a569798": {
+    "source": "Manage invitation, status, and permissions",
+    "impact": "standard"
+  },
+  "source.c82226e300bd": {
+    "source": "Manage product media, price, inventory, pickup, shipping, and publication in one focused workspace.",
+    "impact": "booking"
+  },
+  "source.0280d3f42ae4": {
+    "source": "Manage record",
+    "impact": "standard"
   },
   "source.c2e19cee771a": {
     "source": "Manage safe platform rules, labels, thresholds, and behavior with drafts, review, publication history, and rollback. Credentials remain in secure deployment settings.",
@@ -1185,12 +1817,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Manage salons",
     "impact": "standard"
   },
+  "source.1236beded5df": {
+    "source": "Manage shared categories, service groups, service names, and add-ons. Salon prices, durations, and images remain salon-owned.",
+    "impact": "booking"
+  },
   "source.5c9a858e1b79": {
     "source": "Manage subscription",
     "impact": "booking"
   },
   "source.604ee7e209b2": {
     "source": "Manage the media that tells your salon’s story.",
+    "impact": "standard"
+  },
+  "source.77a6ef76df19": {
+    "source": "Manage the stylist profile, specialties, experience, and portfolio in one focused workspace.",
     "impact": "standard"
   },
   "source.c27ea1b8d2f9": {
@@ -1213,12 +1853,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Mark reviewed",
     "impact": "standard"
   },
-  "source.96968ac5e163": {
-    "source": "Marketing administration",
-    "impact": "standard"
-  },
-  "source.c36fd394a9b7": {
-    "source": "Marketing overview",
+  "source.6611cd6888fd": {
+    "source": "Marketing summary",
     "impact": "standard"
   },
   "source.f497ad9eb7f9": {
@@ -1233,12 +1869,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Media Rules & Dimensions",
     "impact": "standard"
   },
+  "source.e0fe0557476a": {
+    "source": "Media status:",
+    "impact": "standard"
+  },
   "source.058f36b25e30": {
     "source": "Mobile navigation",
     "impact": "standard"
   },
+  "source.658d06c628af": {
+    "source": "Mobile preview",
+    "impact": "standard"
+  },
+  "source.5f1e0880c274": {
+    "source": "Moderation decision",
+    "impact": "safety"
+  },
   "source.8b784d18c936": {
     "source": "Moderation required",
+    "impact": "safety"
+  },
+  "source.2592ac93807e": {
+    "source": "Moderation saved, read back, and added to the audit history.",
+    "impact": "safety"
+  },
+  "source.dca8660a0487": {
+    "source": "Moderation status",
     "impact": "safety"
   },
   "source.22a0d89359bb": {
@@ -1257,8 +1913,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Monthly budget must be between $0 and $100,000.",
     "impact": "standard"
   },
-  "source.bf7117ef3cae": {
-    "source": "More filters",
+  "source.a1e34f91579d": {
+    "source": "More actions",
     "impact": "standard"
   },
   "source.385b4b232f2a": {
@@ -1269,6 +1925,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Most reviews",
     "impact": "standard"
   },
+  "source.db1c5577b489": {
+    "source": "Move complete groups without changing link order. The compact mobile footer shows one Legal & Policies hub link.",
+    "impact": "standard"
+  },
   "source.07dd6f321e97": {
     "source": "Move earlier",
     "impact": "standard"
@@ -1277,12 +1937,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Move later",
     "impact": "standard"
   },
-  "source.08bdec178602": {
-    "source": "Move left/right",
-    "impact": "standard"
-  },
-  "source.9f88b63e04e4": {
-    "source": "Move up/down",
+  "source.28f55df4a28d": {
+    "source": "Movement direction",
     "impact": "standard"
   },
   "source.feff301529be": {
@@ -1295,6 +1951,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.080ec6fcc0b2": {
     "source": "Name Z–A",
+    "impact": "standard"
+  },
+  "source.578a5a577746": {
+    "source": "Name, email, or phone",
     "impact": "standard"
   },
   "source.3945a5d48ef4": {
@@ -1317,6 +1977,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Need an account?",
     "impact": "standard"
   },
+  "source.5d32a3e41806": {
+    "source": "Need help setting up your page?",
+    "impact": "standard"
+  },
   "source.97e2e9fd5798": {
     "source": "Need help?",
     "impact": "standard"
@@ -1333,13 +1997,17 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Needs review",
     "impact": "standard"
   },
+  "source.702f07895577": {
+    "source": "net amount.",
+    "impact": "standard"
+  },
+  "source.a729ff555871": {
+    "source": "Net owed",
+    "impact": "standard"
+  },
   "source.2c34891e488b": {
     "source": "New batch name, e.g. July checkout QA",
     "impact": "standard"
-  },
-  "source.739e818452f3": {
-    "source": "new Date(booking.service_started_at).getTime()",
-    "impact": "booking"
   },
   "source.d850ee188c7c": {
     "source": "New password",
@@ -1347,6 +2015,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.c6a9afc3f9ef": {
     "source": "New promotion",
+    "impact": "standard"
+  },
+  "source.7aa7c4b47296": {
+    "source": "Next cards",
     "impact": "standard"
   },
   "source.ffc791243176": {
@@ -1357,9 +2029,25 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Next photo",
     "impact": "standard"
   },
+  "source.5357e2b792f3": {
+    "source": "Next promotion",
+    "impact": "standard"
+  },
   "source.933d88cd451c": {
     "source": "Next review",
     "impact": "standard"
+  },
+  "source.5a20763adfb0": {
+    "source": "Next week",
+    "impact": "standard"
+  },
+  "source.df21ed446323": {
+    "source": "Nia S.",
+    "impact": "standard"
+  },
+  "source.bedb54d501c4": {
+    "source": "No appointment is required. Enter your contact details, then pay the reservation deposit through secure Stripe checkout.",
+    "impact": "booking"
   },
   "source.d3c94796d9f9": {
     "source": "No appointments",
@@ -1367,6 +2055,22 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.f794cf40a5a4": {
     "source": "No buffer",
+    "impact": "standard"
+  },
+  "source.03fd5ca5bbf9": {
+    "source": "No catalog table was found. Use a sheet named \"Catalog\" with a Category column.",
+    "impact": "standard"
+  },
+  "source.ac2c8c19817e": {
+    "source": "No Engine control, section, integration, or handbook entry matches this search.",
+    "impact": "standard"
+  },
+  "source.b944b7b3c117": {
+    "source": "No product table was found. Use a sheet named \"Products\" with a Product Name column.",
+    "impact": "standard"
+  },
+  "source.f19f6b10e7d5": {
+    "source": "No promotion",
     "impact": "standard"
   },
   "source.72a49518a002": {
@@ -1385,12 +2089,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "No salons found — try a nearby area.",
     "impact": "standard"
   },
+  "source.5525475f42ae": {
+    "source": "No service table was found. Use a sheet named \"Services\" with a Category column.",
+    "impact": "standard"
+  },
   "source.da49fb3e5c45": {
     "source": "Not offered",
     "impact": "standard"
   },
-  "source.1f22e07160cd": {
-    "source": "Not staged",
+  "source.e0ae0f5cf7db": {
+    "source": "Not prioritized",
+    "impact": "standard"
+  },
+  "source.2ecbad08c453": {
+    "source": "Not waiting",
     "impact": "standard"
   },
   "source.18650168a17b": {
@@ -1417,16 +2129,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Occurrences by day · last 14 days",
     "impact": "standard"
   },
+  "source.acb801192767": {
+    "source": "Offboarding is the safe archive action and preserves bookings, finance, reviews, and audit history. Permanent deletion is available only for a record explicitly registered as test data after its dependency preview is reviewed.",
+    "impact": "booking"
+  },
   "source.28cdc4bd1e13": {
     "source": "Offers only",
     "impact": "standard"
   },
   "source.f7690f067211": {
     "source": "One-salon cart",
-    "impact": "standard"
-  },
-  "source.3656436c1b25": {
-    "source": "Online Orders",
     "impact": "standard"
   },
   "source.a970c9a90f3c": {
@@ -1441,12 +2153,104 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Open batch",
     "impact": "standard"
   },
+  "source.ff5b51387f28": {
+    "source": "Open booking",
+    "impact": "booking"
+  },
+  "source.4eeb04ec4073": {
+    "source": "Open booking →",
+    "impact": "booking"
+  },
+  "source.993e2466fc80": {
+    "source": "Open booking evidence →",
+    "impact": "booking"
+  },
+  "source.b8070a663bdc": {
+    "source": "Open booking record →",
+    "impact": "booking"
+  },
+  "source.6f73ba2191fe": {
+    "source": "Open complete application →",
+    "impact": "standard"
+  },
+  "source.53239eda8a32": {
+    "source": "Open complete record →",
+    "impact": "standard"
+  },
+  "source.435cf527a4f5": {
+    "source": "Open customer account →",
+    "impact": "standard"
+  },
+  "source.da819769e613": {
+    "source": "Open customer record →",
+    "impact": "standard"
+  },
+  "source.5c866a7a5cf5": {
+    "source": "Open details",
+    "impact": "standard"
+  },
+  "source.f2f0aa4f5995": {
+    "source": "Open evidence and moderation →",
+    "impact": "safety"
+  },
+  "source.edb52b404d02": {
+    "source": "Open full application & pilot controls",
+    "impact": "standard"
+  },
+  "source.ef031ccab028": {
+    "source": "Open member →",
+    "impact": "standard"
+  },
+  "source.f8ee425b9fa2": {
+    "source": "Open member record →",
+    "impact": "standard"
+  },
+  "source.5781944f47cb": {
+    "source": "Open one public page, then edit one section at a time. Saved and published state is shown before you enter an editor.",
+    "impact": "standard"
+  },
+  "source.9ee309dcedc9": {
+    "source": "Open page",
+    "impact": "standard"
+  },
+  "source.b08579141823": {
+    "source": "Open review",
+    "impact": "standard"
+  },
   "source.35e8e17ec7bc": {
     "source": "Open Roles",
     "impact": "standard"
   },
   "source.79f2032ea42c": {
     "source": "Open salon",
+    "impact": "standard"
+  },
+  "source.317f4eb6b505": {
+    "source": "Open salon workspace →",
+    "impact": "standard"
+  },
+  "source.05fd76552dcf": {
+    "source": "Open Stripe",
+    "impact": "standard"
+  },
+  "source.4e7368d63de8": {
+    "source": "Open subscription record →",
+    "impact": "booking"
+  },
+  "source.d7ee63f8ea05": {
+    "source": "Open the Home page in Content Management to edit all eight image or animated GIF cards, their links, schedules, status, order, and optional salon or paid-campaign association. Promotional video remains intentionally deferred for the pilot.",
+    "impact": "standard"
+  },
+  "source.a199f140fdb8": {
+    "source": "Open today",
+    "impact": "standard"
+  },
+  "source.b7f086ca72a5": {
+    "source": "Open workspace →",
+    "impact": "standard"
+  },
+  "source.2f9eae789592": {
+    "source": "Opening private document…",
     "impact": "standard"
   },
   "source.a31d83ac508a": {
@@ -1473,20 +2277,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Original price",
     "impact": "booking"
   },
+  "source.f367f07e8b42": {
+    "source": "Original total",
+    "impact": "standard"
+  },
   "source.96ef71934710": {
     "source": "Our Products",
     "impact": "standard"
   },
-  "source.db29279880c3": {
-    "source": "Our Stylists",
-    "impact": "standard"
-  },
-  "source.a806d765009a": {
-    "source": "Overall rating",
+  "source.c8927cf4e88c": {
+    "source": "Our Story",
     "impact": "standard"
   },
   "source.d09656c441d7": {
     "source": "Overall Rating",
+    "impact": "standard"
+  },
+  "source.751dee2daa1f": {
+    "source": "Overrides & blockouts",
     "impact": "standard"
   },
   "source.bb7a3b0e69b4": {
@@ -1501,9 +2309,17 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Page title",
     "impact": "standard"
   },
+  "source.ae00c86e7e10": {
+    "source": "panel.current?.querySelector",
+    "impact": "standard"
+  },
   "source.1de6d0816c54": {
     "source": "Password updated",
     "impact": "security"
+  },
+  "source.3650b946d70e": {
+    "source": "Past booking",
+    "impact": "booking"
   },
   "source.899a10c131b9": {
     "source": "Past Bookings",
@@ -1517,8 +2333,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Payment receipt",
     "impact": "booking"
   },
+  "source.ef1d62ecea5b": {
+    "source": "Payment state",
+    "impact": "booking"
+  },
   "source.0704b50f2057": {
     "source": "Payout Account",
+    "impact": "standard"
+  },
+  "source.8854c39fefa3": {
+    "source": "Pending moderation",
+    "impact": "safety"
+  },
+  "source.75058c6322d7": {
+    "source": "Per-stylist availability",
     "impact": "standard"
   },
   "source.b971a034b4e1": {
@@ -1533,13 +2361,37 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Percentage off",
     "impact": "standard"
   },
+  "source.abf6fbff25a8": {
+    "source": "Photos & Media",
+    "impact": "standard"
+  },
+  "source.fc1d393c7ccf": {
+    "source": "pi_… or in_…",
+    "impact": "standard"
+  },
   "source.1120490a6369": {
     "source": "Pick a date, then offer a preferred available time/stylist and up to two alternatives. The current appointment stays confirmed until the customer accepts.",
     "impact": "booking"
   },
+  "source.64e5dd7d0bb5": {
+    "source": "Pickup address",
+    "impact": "standard"
+  },
+  "source.005dcedc9e03": {
+    "source": "Pickup deadline",
+    "impact": "standard"
+  },
+  "source.ceab91d429dc": {
+    "source": "Pickup enabled",
+    "impact": "standard"
+  },
   "source.4cd2a06f025b": {
     "source": "Pickup, shipping, payment, and tracking details from your salons.",
     "impact": "booking"
+  },
+  "source.08c2d75495d3": {
+    "source": "Placement preview",
+    "impact": "standard"
   },
   "source.8f2bd70b53b9": {
     "source": "Plain-language guidance for Engine sections, controls, publishing, integrations, recovery, and monitored errors.",
@@ -1547,6 +2399,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.4907c3f80be7": {
     "source": "Plain-text message",
+    "impact": "standard"
+  },
+  "source.07c810b91157": {
+    "source": "Plan-change history",
     "impact": "standard"
   },
   "source.046f911cf01e": {
@@ -1557,12 +2413,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Platform Admin",
     "impact": "standard"
   },
+  "source.0da4562793c7": {
+    "source": "Platform Admin overrides do not require an internal-reason field. The selected override, administrator, time, appointment, and amounts are recorded automatically in the audit history.",
+    "impact": "booking"
+  },
+  "source.63d28eb7496f": {
+    "source": "Platform administration",
+    "impact": "standard"
+  },
   "source.3f03c15d0123": {
     "source": "Platform Administration",
     "impact": "standard"
   },
-  "source.449b5f460fb5": {
-    "source": "Platform Settings",
+  "source.4becec9c4350": {
+    "source": "Platform credit",
+    "impact": "standard"
+  },
+  "source.9844760a57cf": {
+    "source": "Platform decision",
     "impact": "standard"
   },
   "source.0ae7b020e731": {
@@ -1573,6 +2441,30 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Please enter a valid ZIP code (12345 or 12345-6789).",
     "impact": "standard"
   },
+  "source.6a0b2fe566fc": {
+    "source": "Please revise the public salon content to remove abusive, hateful, threatening, or unsafe language.",
+    "impact": "standard"
+  },
+  "source.f955b6f3a6c4": {
+    "source": "Policy content",
+    "impact": "standard"
+  },
+  "source.753d87a5e818": {
+    "source": "Premium placement",
+    "impact": "standard"
+  },
+  "source.04db399890a1": {
+    "source": "Presence only from the request-time Node function. No credential values are returned, logged, hashed, or partially displayed.",
+    "impact": "standard"
+  },
+  "source.05673d43fcd8": {
+    "source": "Preview blog →",
+    "impact": "standard"
+  },
+  "source.321a67fad72d": {
+    "source": "Preview device",
+    "impact": "standard"
+  },
   "source.b2e2352e9043": {
     "source": "Preview for",
     "impact": "standard"
@@ -1581,16 +2473,52 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Preview import",
     "impact": "standard"
   },
+  "source.7f0e2dd51110": {
+    "source": "Preview Import",
+    "impact": "standard"
+  },
+  "source.d432cd979e4c": {
+    "source": "Preview live",
+    "impact": "standard"
+  },
+  "source.d2b38c8198ba": {
+    "source": "Preview note",
+    "impact": "standard"
+  },
+  "source.4abc14b86b7a": {
+    "source": "Preview placement",
+    "impact": "standard"
+  },
+  "source.91679721d3d5": {
+    "source": "Preview policies →",
+    "impact": "standard"
+  },
+  "source.65c698ebe08c": {
+    "source": "Preview related records before changing anything. Safeguards prevent accidental clicks, while Super Admin retains final authority. Financial, booking, refund, dispute, subscription, and audit history is retained where reconciliation requires it.",
+    "impact": "booking"
+  },
   "source.1c43c795d02e": {
     "source": "Preview translation",
+    "impact": "standard"
+  },
+  "source.4b81a62441a3": {
+    "source": "Previous cards",
     "impact": "standard"
   },
   "source.09972524c11e": {
     "source": "Previous photo",
     "impact": "standard"
   },
+  "source.dde58fb84fdc": {
+    "source": "Previous promotion",
+    "impact": "standard"
+  },
   "source.fd6211f2a982": {
     "source": "Previous review",
+    "impact": "standard"
+  },
+  "source.c4970e09294a": {
+    "source": "Previous week",
     "impact": "standard"
   },
   "source.f05d12203b78": {
@@ -1601,12 +2529,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Primary action",
     "impact": "standard"
   },
+  "source.9db108ba6b7f": {
+    "source": "Privacy Policy",
+    "impact": "standard"
+  },
   "source.63af45e3593d": {
     "source": "Private documents",
     "impact": "standard"
   },
   "source.75674afc93a7": {
     "source": "Private PDF, JPG, or PNG · up to 10 MB each",
+    "impact": "standard"
+  },
+  "source.84f1af4ed544": {
+    "source": "Processing transfer…",
+    "impact": "standard"
+  },
+  "source.93a582b0acae": {
+    "source": "Product highlight",
     "impact": "standard"
   },
   "source.45c1dda1e379": {
@@ -1619,6 +2559,18 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.8ff5a4b60f5a": {
     "source": "Product Orders",
+    "impact": "standard"
+  },
+  "source.31b956ddaa0e": {
+    "source": "Product sales",
+    "impact": "standard"
+  },
+  "source.c63abb4a0351": {
+    "source": "Product status",
+    "impact": "standard"
+  },
+  "source.d01bb712056b": {
+    "source": "Product total",
     "impact": "standard"
   },
   "source.e328e4c2a95e": {
@@ -1637,8 +2589,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Promo code",
     "impact": "standard"
   },
+  "source.c0d68172890b": {
+    "source": "Promotion attached",
+    "impact": "standard"
+  },
+  "source.ef01b59d6774": {
+    "source": "Promotion highlight",
+    "impact": "standard"
+  },
   "source.555fec629695": {
     "source": "Promotion Performance",
+    "impact": "standard"
+  },
+  "source.5e2fd624d187": {
+    "source": "Promotion state",
     "impact": "standard"
   },
   "source.0a56b1d27c31": {
@@ -1649,6 +2613,30 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Propose reschedule",
     "impact": "standard"
   },
+  "source.2fa45ddfd627": {
+    "source": "Provider-confirmed events",
+    "impact": "standard"
+  },
+  "source.48427becd4ac": {
+    "source": "Public cards",
+    "impact": "standard"
+  },
+  "source.2607f91e1b33": {
+    "source": "Public content",
+    "impact": "standard"
+  },
+  "source.934b3e24cd01": {
+    "source": "Public heading",
+    "impact": "standard"
+  },
+  "source.c72f59833961": {
+    "source": "Public identity",
+    "impact": "security"
+  },
+  "source.861ba5fcbb4e": {
+    "source": "Public identity, access, services, availability, promotions, and applications are removed or archived. Financial, booking, refund, subscription, dispute, and audit history remains anchored to a hidden tombstone.",
+    "impact": "security"
+  },
   "source.f9031ae76c04": {
     "source": "Public Link & Social Profiles",
     "impact": "standard"
@@ -1657,8 +2645,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Public page",
     "impact": "standard"
   },
+  "source.219f3b54df6c": {
+    "source": "Public profile",
+    "impact": "standard"
+  },
   "source.ca3a767e4981": {
     "source": "Public URL & social profiles",
+    "impact": "standard"
+  },
+  "source.ac1cbda50c34": {
+    "source": "Public visibility",
     "impact": "standard"
   },
   "source.7022bbbd27b2": {
@@ -1672,6 +2668,22 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.22d678d12784": {
     "source": "Published promotions are shown according to your active plan. Performance reporting will remain empty until real views, clicks, and attributed bookings are collected.",
     "impact": "booking"
+  },
+  "source.bf84c92ee2bf": {
+    "source": "Published reason",
+    "impact": "standard"
+  },
+  "source.c3b23568bacd": {
+    "source": "Publishing validates all four required sections, prevents duplicate positions, stores the acting administrator, and invalidates the public homepage cache.",
+    "impact": "standard"
+  },
+  "source.a1183f7817e9": {
+    "source": "Quality market",
+    "impact": "standard"
+  },
+  "source.47e8593516f7": {
+    "source": "Quality state",
+    "impact": "standard"
   },
   "source.a521d2f7f901": {
     "source": "Quality Threshold",
@@ -1713,6 +2725,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Recent Activity",
     "impact": "standard"
   },
+  "source.5cccc6d5d12d": {
+    "source": "Recent bookings",
+    "impact": "booking"
+  },
   "source.892aca2bdedf": {
     "source": "Recent Promotions",
     "impact": "standard"
@@ -1727,6 +2743,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.851f13c19369": {
     "source": "Recheck eligibility",
+    "impact": "standard"
+  },
+  "source.134de66c017d": {
+    "source": "Recheck gates & publish if ready",
     "impact": "standard"
   },
   "source.6bc9ee86ca82": {
@@ -1749,8 +2769,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Refresh checklist",
     "impact": "standard"
   },
+  "source.27b6342eee06": {
+    "source": "Release override",
+    "impact": "standard"
+  },
   "source.939fea83dc87": {
     "source": "Remaining balance",
+    "impact": "standard"
+  },
+  "source.a13a9514ccdc": {
+    "source": "Remove access",
+    "impact": "standard"
+  },
+  "source.872fc85f5d63": {
+    "source": "Remove card",
     "impact": "standard"
   },
   "source.8eee07bdc8bf": {
@@ -1765,10 +2797,6 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Replacement record",
     "impact": "standard"
   },
-  "source.4d0255e85ede": {
-    "source": "request failed",
-    "impact": "standard"
-  },
   "source.0bb6adcc63eb": {
     "source": "Requested:",
     "impact": "standard"
@@ -1776,6 +2804,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.956043788db3": {
     "source": "Required workflow:",
     "impact": "standard"
+  },
+  "source.6a0422d8570e": {
+    "source": "Reservation deposit (10%)",
+    "impact": "booking"
   },
   "source.5c4bc97ee5d0": {
     "source": "Reset password",
@@ -1785,8 +2817,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Response needed",
     "impact": "standard"
   },
+  "source.66334e9dc380": {
+    "source": "Restore application",
+    "impact": "standard"
+  },
   "source.ab300c41bc74": {
     "source": "Restore draft",
+    "impact": "standard"
+  },
+  "source.d2b13dc5cafb": {
+    "source": "Retry access",
+    "impact": "standard"
+  },
+  "source.2df22e02033f": {
+    "source": "Retry map",
     "impact": "standard"
   },
   "source.eed38a8e6f17": {
@@ -1805,8 +2849,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Review decision",
     "impact": "standard"
   },
+  "source.cd2f1d9ccd6d": {
+    "source": "Review details",
+    "impact": "standard"
+  },
   "source.d0b749c40c36": {
     "source": "Review Distribution",
+    "impact": "standard"
+  },
+  "source.ab34d96cf485": {
+    "source": "Review evidence",
+    "impact": "standard"
+  },
+  "source.67a4d7467d65": {
+    "source": "Review evidence & moderate",
+    "impact": "standard"
+  },
+  "source.9e18f328f31c": {
+    "source": "Review inbox",
+    "impact": "standard"
+  },
+  "source.d55c263b8ad2": {
+    "source": "Review title",
+    "impact": "standard"
+  },
+  "source.5d75e28907ae": {
+    "source": "Review totals",
     "impact": "standard"
   },
   "source.c49dbcbfcd54": {
@@ -1817,12 +2885,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Rotate 90°",
     "impact": "standard"
   },
+  "source.ac77a54d4cbc": {
+    "source": "Rotation weight",
+    "impact": "standard"
+  },
   "source.d0c7f5a99ef8": {
     "source": "Rule active",
     "impact": "standard"
   },
-  "source.6fb9a2485316": {
-    "source": "Safe action",
+  "source.ca8b77395d23": {
+    "source": "Safe delete",
     "impact": "standard"
   },
   "source.9332b77083a4": {
@@ -1832,6 +2904,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.b31aef39deb6": {
     "source": "Safety sandbox",
     "impact": "safety"
+  },
+  "source.857d2d192a80": {
+    "source": "Salon 360",
+    "impact": "standard"
   },
   "source.9cec90aadd67": {
     "source": "Salon accounts use SMS two-factor verification. If SMS delivery is unavailable, the code is sent to the account email.",
@@ -1845,16 +2921,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Salon Application",
     "impact": "standard"
   },
+  "source.5e2b36bd657e": {
+    "source": "Salon cards use this radius. Campaign cards can be narrowed here but never broadened beyond the campaign’s authorized radius.",
+    "impact": "standard"
+  },
   "source.59013a9d1301": {
     "source": "Salon login",
     "impact": "security"
+  },
+  "source.7a3119e4549e": {
+    "source": "Salon logo",
+    "impact": "standard"
   },
   "source.c8612b5c9f84": {
     "source": "Salon Logo",
     "impact": "standard"
   },
+  "source.2c2c9800178f": {
+    "source": "Salon note",
+    "impact": "standard"
+  },
   "source.d255e860fcbb": {
     "source": "Salon operations",
+    "impact": "standard"
+  },
+  "source.e7f5e67116bb": {
+    "source": "Salon payout",
     "impact": "standard"
   },
   "source.d48d6a88eafb": {
@@ -1865,8 +2957,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Salon pickup",
     "impact": "standard"
   },
-  "source.63d294ecd3b6": {
-    "source": "Salon Promotions",
+  "source.d0596d5e41ed": {
+    "source": "Salon policies",
+    "impact": "standard"
+  },
+  "source.a20b0bc813e7": {
+    "source": "Salon profile",
+    "impact": "standard"
+  },
+  "source.c9e2c4345fd6": {
+    "source": "Salon promotions",
+    "impact": "standard"
+  },
+  "source.cd350b7a3489": {
+    "source": "Salon reply",
     "impact": "standard"
   },
   "source.35490bc18f18": {
@@ -1881,16 +2985,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Salon totals",
     "impact": "standard"
   },
-  "source.1a650489fba6": {
-    "source": "Salon, customer name, and a valid local appointment time are required.",
+  "source.5fb24ddaeda5": {
+    "source": "Salon transfers",
+    "impact": "standard"
+  },
+  "source.55b59dd9ad63": {
+    "source": "Salon, service, and an available appointment time are required.",
     "impact": "booking"
   },
   "source.089447226155": {
     "source": "Salon, style, and date are required.",
-    "impact": "standard"
-  },
-  "source.179359b39edb": {
-    "source": "Save changes",
     "impact": "standard"
   },
   "source.fa2984b367b8": {
@@ -1913,6 +3017,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Save hours",
     "impact": "standard"
   },
+  "source.e474b2572dee": {
+    "source": "Save identity, role, status, and dashboard permissions together.",
+    "impact": "security"
+  },
   "source.f62a6b681347": {
     "source": "Save Logo",
     "impact": "standard"
@@ -1925,16 +3033,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Save Page",
     "impact": "standard"
   },
-  "source.eb4f0b0efc9a": {
-    "source": "Save Post",
-    "impact": "standard"
-  },
   "source.1076e8efbcbf": {
     "source": "Save Product",
-    "impact": "standard"
-  },
-  "source.02b4503b849d": {
-    "source": "Save row",
     "impact": "standard"
   },
   "source.0022a3e10caa": {
@@ -1953,8 +3053,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Save timezone",
     "impact": "standard"
   },
+  "source.2a2fac0ae410": {
+    "source": "Saved cards",
+    "impact": "standard"
+  },
+  "source.2e0ae721a5e6": {
+    "source": "Saved preview",
+    "impact": "standard"
+  },
   "source.0a228a597fb4": {
     "source": "Saved promotions",
+    "impact": "standard"
+  },
+  "source.0885ee0c9f04": {
+    "source": "Saved-card eligibility",
     "impact": "standard"
   },
   "source.bbcbe4b247f4": {
@@ -1969,16 +3081,60 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Saving decision...",
     "impact": "standard"
   },
-  "source.00a509366d18": {
-    "source": "Scheduled and Active campaigns require a verified Stripe payment, paid invoice, or approved platform credit covering the full campaign period.",
+  "source.73cc5c3dc007": {
+    "source": "Saving decision…",
+    "impact": "standard"
+  },
+  "source.522cf97e8ada": {
+    "source": "Schedule missing",
+    "impact": "standard"
+  },
+  "source.5219b44779e6": {
+    "source": "Schedule set",
+    "impact": "standard"
+  },
+  "source.42abca85217e": {
+    "source": "Search actions, records, reasons, or references",
+    "impact": "standard"
+  },
+  "source.be2505af1ba2": {
+    "source": "Search bookings",
     "impact": "booking"
+  },
+  "source.55b0a300a206": {
+    "source": "Search business, owner, email, city, state, or ZIP",
+    "impact": "standard"
+  },
+  "source.82d31ccbed70": {
+    "source": "Search business, owner, email, or market",
+    "impact": "standard"
+  },
+  "source.d128718e84ab": {
+    "source": "Search catalog",
+    "impact": "standard"
+  },
+  "source.83984ec28edc": {
+    "source": "Search deduplicated operational events, then open one incident for evidence, assignment, and resolution.",
+    "impact": "standard"
   },
   "source.b1bd47e1b093": {
     "source": "Search keys, source, or translation",
     "impact": "standard"
   },
+  "source.4412bfe59cdf": {
+    "source": "Search products",
+    "impact": "standard"
+  },
   "source.1f121436db81": {
     "source": "Search reference, UUID, or customer",
+    "impact": "standard"
+  },
+  "source.44b49c1aaf65": {
+    "source": "Search reviewer, salon, text, or review ID",
+    "impact": "standard"
+  },
+  "source.e9a21ea50fa7": {
+    "source": "Search reviews",
     "impact": "standard"
   },
   "source.5ae6c089d01d": {
@@ -1993,12 +3149,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Search sections, publishing, integrations, or errors",
     "impact": "standard"
   },
-  "source.e40daa9c6721": {
-    "source": "Search style",
+  "source.d1e0a42e2495": {
+    "source": "Search services",
     "impact": "standard"
   },
   "source.9926c61c8ae4": {
     "source": "Search styles",
+    "impact": "standard"
+  },
+  "source.5c0c4fe1b604": {
+    "source": "Search stylists",
+    "impact": "standard"
+  },
+  "source.849c5a987d10": {
+    "source": "Search submissions",
     "impact": "standard"
   },
   "source.02591fea29b4": {
@@ -2009,6 +3173,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Section permissions",
     "impact": "standard"
   },
+  "source.f7e10c7b024d": {
+    "source": "Section text",
+    "impact": "standard"
+  },
   "source.60ab023b8a3e": {
     "source": "Secure · Verified Salon · Test Mode",
     "impact": "standard"
@@ -2017,8 +3185,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Secure booking",
     "impact": "booking"
   },
+  "source.2fb4997cb96b": {
+    "source": "Secure, encrypted checkout",
+    "impact": "standard"
+  },
+  "source.fdae552e2176": {
+    "source": "Security & sign out",
+    "impact": "security"
+  },
+  "source.a9fb5f736bbe": {
+    "source": "Security audit",
+    "impact": "security"
+  },
+  "source.9ef79a040e0a": {
+    "source": "Select a salon, choose the placement basis, and publish the schedule. Platform credit and complimentary Admin placement do not require an internal reason or a manually entered reference.",
+    "impact": "standard"
+  },
+  "source.59a38d927f99": {
+    "source": "Select the exact salon, service, stylist, and verified available time. When a deposit is required, send a short-lived Stripe link so the customer—not the administrator—completes payment.",
+    "impact": "booking"
+  },
   "source.391394c8f82b": {
     "source": "Selected add-ons",
+    "impact": "standard"
+  },
+  "source.8acf0fddd32d": {
+    "source": "Selected handling",
     "impact": "standard"
   },
   "source.60c04eca58f2": {
@@ -2037,12 +3229,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Selected Work",
     "impact": "standard"
   },
+  "source.7d04a38f3d58": {
+    "source": "Service Catalog",
+    "impact": "standard"
+  },
+  "source.9c995cd13e56": {
+    "source": "Service category",
+    "impact": "standard"
+  },
+  "source.d439c090dba2": {
+    "source": "Service details",
+    "impact": "standard"
+  },
   "source.b449b942c8ef": {
     "source": "Service group",
     "impact": "standard"
   },
+  "source.87b5b12574ef": {
+    "source": "Service Group",
+    "impact": "standard"
+  },
   "source.fa3598a3e47f": {
     "source": "Service Image",
+    "impact": "standard"
+  },
+  "source.5a6be7a0ac4d": {
+    "source": "Service Name",
     "impact": "standard"
   },
   "source.3b488812a6f9": {
@@ -2053,29 +3265,45 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Service state",
     "impact": "standard"
   },
-  "source.12abb2344c17": {
-    "source": "Setup instructions",
+  "source.7efad8d91004": {
+    "source": "Service status",
     "impact": "standard"
   },
-  "source.63bb10c08f11": {
-    "source": "Share what made this experience great, or where there’s room to improve.",
+  "source.e5e8e951ac8d": {
+    "source": "Service total",
+    "impact": "standard"
+  },
+  "source.a240cfc1da73": {
+    "source": "Settings & Team",
+    "impact": "standard"
+  },
+  "source.2670267ff3d5": {
+    "source": "Settings workspaces",
+    "impact": "standard"
+  },
+  "source.12abb2344c17": {
+    "source": "Setup instructions",
     "impact": "standard"
   },
   "source.9585cf1ab941": {
     "source": "Share your salon’s work with nearby clients.",
     "impact": "standard"
   },
+  "source.eaac80cc56e6": {
+    "source": "Shipping enabled",
+    "impact": "standard"
+  },
   "source.093c3f5d1305": {
     "source": "Shop salons",
     "impact": "standard"
   },
-  "source.396c2137a0b5": {
-    "source": "Short description",
+  "source.16108bbcfa91": {
+    "source": "Short explanation",
     "impact": "standard"
   },
-  "source.044b852f30b6": {
-    "source": "Show password",
-    "impact": "security"
+  "source.49f48817047d": {
+    "source": "show((event as CustomEvent",
+    "impact": "standard"
   },
   "source.ada2e9e96fa9": {
     "source": "Sign in",
@@ -2085,8 +3313,8 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Sign up",
     "impact": "security"
   },
-  "source.99d21ae3a65b": {
-    "source": "Six vertical slots · maximum 30 seconds · MP4/WebM · optimized before upload.",
+  "source.2f2e1af80be2": {
+    "source": "Silk press",
     "impact": "standard"
   },
   "source.52e07d3b3586": {
@@ -2105,6 +3333,22 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Social channels",
     "impact": "standard"
   },
+  "source.52e0b0a389f8": {
+    "source": "Social links",
+    "impact": "standard"
+  },
+  "source.3fb9b261fa0c": {
+    "source": "Spreadsheet import & export",
+    "impact": "standard"
+  },
+  "source.e7e6858d3e98": {
+    "source": "Spreadsheet row",
+    "impact": "standard"
+  },
+  "source.21ee0b3f18c7": {
+    "source": "Standard deposit",
+    "impact": "booking"
+  },
   "source.01e23234329c": {
     "source": "Standard parcel",
     "impact": "standard"
@@ -2113,12 +3357,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Start service",
     "impact": "standard"
   },
+  "source.5508dccc64b7": {
+    "source": "Starter, Growth, and Premium salon subscription feature comparison",
+    "impact": "booking"
+  },
   "source.b291fb0a20b7": {
     "source": "Starting price",
     "impact": "booking"
   },
   "source.21bd05b0c1b0": {
     "source": "State *",
+    "impact": "standard"
+  },
+  "source.3d193344dcf7": {
+    "source": "State inventory",
     "impact": "standard"
   },
   "source.3764d8cad266": {
@@ -2129,6 +3381,22 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Status history",
     "impact": "standard"
   },
+  "source.6bac23c6dfc3": {
+    "source": "Step 1",
+    "impact": "standard"
+  },
+  "source.aefbadf9176e": {
+    "source": "Step 2",
+    "impact": "standard"
+  },
+  "source.27030a62f7c3": {
+    "source": "Step 3",
+    "impact": "standard"
+  },
+  "source.94a57066758f": {
+    "source": "Step 4",
+    "impact": "standard"
+  },
   "source.25e6e3e3abd1": {
     "source": "Still need help?",
     "impact": "standard"
@@ -2137,25 +3405,93 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Stop words",
     "impact": "standard"
   },
+  "source.574daf9b1977": {
+    "source": "Store hours",
+    "impact": "standard"
+  },
   "source.d5ef851fefd7": {
     "source": "Store Hours",
     "impact": "standard"
   },
-  "source.de105f615dd5": {
-    "source": "Stripe test mode · encrypted checkout",
-    "impact": "standard"
+  "source.7a319b11418e": {
+    "source": "Stripe payment",
+    "impact": "booking"
   },
   "source.fd2f033ebd4e": {
     "source": "Styles & Pricing",
     "impact": "standard"
   },
-  "source.322ca9835504": {
-    "source": "Subscription Records",
+  "source.757d2c32c15c": {
+    "source": "Stylist availability",
+    "impact": "standard"
+  },
+  "source.59b8777cdcd2": {
+    "source": "Stylist details",
+    "impact": "standard"
+  },
+  "source.0e8e80232cac": {
+    "source": "Stylist override",
+    "impact": "standard"
+  },
+  "source.cf344ab79cc4": {
+    "source": "Stylist specialties",
+    "impact": "standard"
+  },
+  "source.f763b57dd69d": {
+    "source": "Stylist status",
+    "impact": "standard"
+  },
+  "source.4f1af2cf93fd": {
+    "source": "Submission history",
+    "impact": "standard"
+  },
+  "source.6698f658f9c1": {
+    "source": "Submission status",
+    "impact": "standard"
+  },
+  "source.1a7285f1390a": {
+    "source": "Submission view",
+    "impact": "standard"
+  },
+  "source.543b4ae6cdaa": {
+    "source": "Submitted name:",
+    "impact": "standard"
+  },
+  "source.56d03ec359f8": {
+    "source": "Submitted review:",
+    "impact": "standard"
+  },
+  "source.eb6a1a4ff154": {
+    "source": "Submitted snapshot",
+    "impact": "standard"
+  },
+  "source.be6ce3cf9cdd": {
+    "source": "Submitted title:",
+    "impact": "standard"
+  },
+  "source.460722a5be06": {
+    "source": "Subscription performance",
+    "impact": "booking"
+  },
+  "source.93ef24fad9e3": {
+    "source": "Subscription records",
     "impact": "booking"
   },
   "source.d9694c846cbf": {
     "source": "Subscription saved.",
     "impact": "booking"
+  },
+  "source.5f826fef4d8a": {
+    "source": "Succeeded refunds",
+    "impact": "booking"
+  },
+  "source.55433ba7e001": {
+    "source": "Successful activations:",
+    "impact": "standard"
+  },
+  "source.ec07788ec08f": {
+    "source": "Suggested Add-ons",
+    "impact": "standard"
   },
   "source.16815828c493": {
     "source": "Super Admin only. This immediately republishes the preceding published version, records the reason, and invalidates configuration caches.",
@@ -2165,8 +3501,20 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Super Admin only. This removes the canonical Auth account, revokes access, preserves required history by anonymizing or detaching personal data, and releases the normalized email only after Auth deletion succeeds.",
     "impact": "standard"
   },
+  "source.a2c36c9aa286": {
+    "source": "Support & complaints",
+    "impact": "safety"
+  },
+  "source.6f9d3bac945a": {
+    "source": "System & provider status",
+    "impact": "standard"
+  },
   "source.82f60e52901e": {
     "source": "Tax category",
+    "impact": "standard"
+  },
+  "source.3ace6474102e": {
+    "source": "Team & permissions",
     "impact": "standard"
   },
   "source.4be37be90bfc": {
@@ -2175,10 +3523,6 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.43782b37f011": {
     "source": "Test mode",
-    "impact": "standard"
-  },
-  "source.693040ed6979": {
-    "source": "TEST MODE:",
     "impact": "standard"
   },
   "source.28baa9dc55ae": {
@@ -2197,6 +3541,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "The Engine",
     "impact": "standard"
   },
+  "source.b2c350d39003": {
+    "source": "The landing is a compact directory, not a stack of every scheduling form.",
+    "impact": "standard"
+  },
   "source.53ea53bc4b5f": {
     "source": "The last active Super Admin cannot be suspended, revoked, or removed.",
     "impact": "standard"
@@ -2209,12 +3557,28 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "The original is inspected after upload. Incompatible video or audio tracks are converted to H.264/AAC MP4 and a poster frame is generated by the configured secure media processor. If processing fails, the original is retained temporarily for retry.",
     "impact": "standard"
   },
+  "source.9cc6c8e4eda1": {
+    "source": "The reason is retained with the administrator, time, previous values, and resulting values.",
+    "impact": "standard"
+  },
   "source.1756d7b8e5b7": {
     "source": "The record now carries an explicit, durable test-data marker.",
     "impact": "standard"
   },
+  "source.3d3db9944604": {
+    "source": "The salon will notify you when the order is ready. Canceling while the reservation is still Reserved releases the inventory and submits the deposit for refund. Once the salon marks the order Ready for pickup, the deposit is retained. The remaining balance is paid directly to the salon when you collect the product.",
+    "impact": "booking"
+  },
   "source.c6ea785f27a8": {
     "source": "The salon you requested is not available yet, or the link may need a refresh.",
+    "impact": "standard"
+  },
+  "source.8b86dbe48e16": {
+    "source": "The state name, ARIA attribute, border treatment, and readable foreground work together so color is never the only cue.",
+    "impact": "standard"
+  },
+  "source.e1100ee67c49": {
+    "source": "The transaction was removed, is outside your permissions, or no longer matches this salon scope.",
     "impact": "standard"
   },
   "source.c45f30146a38": {
@@ -2224,6 +3588,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.dcd8fb471d15": {
     "source": "These salons have active, paid Featured campaigns and are shown only when they are genuinely within the campaign radius of your location.",
     "impact": "standard"
+  },
+  "source.9253bcfae7a0": {
+    "source": "These steps work on a phone, tablet, or desktop. Save and refresh after each section so you know the information was stored.",
+    "impact": "standard"
+  },
+  "source.616ed117f0a5": {
+    "source": "These values are the present-day source of truth. Saving here does not change subscription, billing, publication, suspension, or offboarding state.",
+    "impact": "booking"
   },
   "source.4e4812b6c5a0": {
     "source": "This browser does not support Web Push. Use current Safari, Chrome, Edge, or Firefox.",
@@ -2241,17 +3613,33 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "This is a sanitized processing ledger. It contains event IDs and statuses, never provider payloads, card data, tokens, or secrets.",
     "impact": "standard"
   },
-  "source.066ca8e2f1a4": {
-    "source": "This product is currently available to view, but the salon has not enabled online pickup or shipping.",
+  "source.5130f7dadd77": {
+    "source": "This page uses local fixture data only. It does not represent a signed-in user, contact a provider, create a booking, or mutate production data.",
+    "impact": "booking"
+  },
+  "source.af2a35a92530": {
+    "source": "This product is available to view, but the salon has not enabled online pickup reservations.",
     "impact": "standard"
   },
   "source.fef059380e2b": {
     "source": "This record has booking history and must be archived, not deleted.",
     "impact": "booking"
   },
+  "source.128469d21178": {
+    "source": "This records the administrator, reason, and exact incomplete gates. It never creates a subscription or changes Stripe/payment records.",
+    "impact": "booking"
+  },
   "source.75cefd953657": {
     "source": "This refunds the deposit, releases the slot, notifies the customer, and affects your cancellation rate.",
     "impact": "booking"
+  },
+  "source.948adac5fc79": {
+    "source": "This review was removed by Platform Admin. It remains in your audit history, but cannot receive a public salon reply.",
+    "impact": "standard"
+  },
+  "source.365f86394488": {
+    "source": "Tiffany M.",
+    "impact": "standard"
   },
   "source.45b2d4829bc5": {
     "source": "Times use the salon’s local timezone and include service duration plus cleanup buffer.",
@@ -2269,32 +3657,36 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Track your earnings, manage payouts, and view your transaction history.",
     "impact": "standard"
   },
-  "source.4ed32a0e08a9": {
-    "source": "Transaction History",
-    "impact": "standard"
-  },
   "source.a1a871ce540f": {
     "source": "Transaction ledger",
+    "impact": "standard"
+  },
+  "source.0866c45ffdb0": {
+    "source": "Transaction unavailable",
+    "impact": "standard"
+  },
+  "source.b2a99f2033c1": {
+    "source": "Transfer evidence",
+    "impact": "standard"
+  },
+  "source.954fe1e8402f": {
+    "source": "Transfer recorded",
+    "impact": "standard"
+  },
+  "source.4ecae7ebe623": {
+    "source": "Transferred to the salon’s Stripe balance. Stripe controls the connected account’s later bank payout timing.",
     "impact": "standard"
   },
   "source.0b85f9e56e97": {
     "source": "Translation language",
     "impact": "standard"
   },
-  "source.6be8a417a40d": {
-    "source": "Trending Picks",
-    "impact": "standard"
-  },
-  "source.d1e58d4b6256": {
-    "source": "Trust Info",
+  "source.3e2b88464fec": {
+    "source": "Trust information",
     "impact": "standard"
   },
   "source.042c862e4467": {
     "source": "Try again",
-    "impact": "standard"
-  },
-  "source.0faa668453e0": {
-    "source": "Try: Affordable knotless braids near Harlem this Saturday morning",
     "impact": "standard"
   },
   "source.b1f9bfea5f64": {
@@ -2309,20 +3701,44 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Type of Business *",
     "impact": "standard"
   },
+  "source.8a3bc6b481ae": {
+    "source": "Unavailable control",
+    "impact": "standard"
+  },
+  "source.db31653cb0da": {
+    "source": "Unavailable link",
+    "impact": "standard"
+  },
+  "source.9de45896c746": {
+    "source": "Unavailable option",
+    "impact": "standard"
+  },
   "source.7c5263dbe764": {
     "source": "Unavailable today",
+    "impact": "standard"
+  },
+  "source.31a3695b4c2c": {
+    "source": "Unverified Salon",
     "impact": "standard"
   },
   "source.0ea26fe6adb4": {
     "source": "Upcoming Appointments",
     "impact": "booking"
   },
+  "source.4cf5e857fa09": {
+    "source": "Upcoming booking",
+    "impact": "booking"
+  },
   "source.535b127dc82e": {
     "source": "Upcoming Bookings",
     "impact": "booking"
   },
-  "source.bdf08d13a6aa": {
-    "source": "Upload an MP4, WebM, MOV, M4V, or Matroska video.",
+  "source.6a3f2b2e71cd": {
+    "source": "Upcoming is future confirmed work. In Progress tracks active services. Needs Resolution collects requests, failures, disputes, and overdue active bookings.",
+    "impact": "booking"
+  },
+  "source.359fa12dbc84": {
+    "source": "Upload a supported JPG, PNG, or animated GIF.",
     "impact": "standard"
   },
   "source.fb443d12cdb7": {
@@ -2333,12 +3749,12 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Upload platform identity assets, position each draft, preview responsive placements, record review, publish without a code deploy, and restore prior versions.",
     "impact": "security"
   },
-  "source.705e0f84982e": {
-    "source": "Upload, trim where your browser supports it, choose a poster frame, preview, moderate, and schedule local placement.",
+  "source.b86e95f1fb32": {
+    "source": "Upload queue",
     "impact": "standard"
   },
-  "source.a6a4019397c6": {
-    "source": "Uploaded image",
+  "source.f85524c944d3": {
+    "source": "Upload, trim where your browser supports it, preview, moderate, and schedule local placement. The media provider generates the public poster.",
     "impact": "standard"
   },
   "source.e8dbf793c6d3": {
@@ -2347,6 +3763,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.5bba0a4f84f6": {
     "source": "URL history",
+    "impact": "standard"
+  },
+  "source.168940739455": {
+    "source": "US phone",
     "impact": "standard"
   },
   "source.51f5a8a8bb55": {
@@ -2369,8 +3789,16 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Use a valid BCP-47 locale such as ht, fil, or zh-CN.",
     "impact": "standard"
   },
-  "source.703db3c2e42c": {
-    "source": "Use your new password in the customer, salon-owner, or admin login that belongs to your account.",
+  "source.ed238ce85dc2": {
+    "source": "Validate file",
+    "impact": "standard"
+  },
+  "source.b6cff1b6ae74": {
+    "source": "Validate fixture",
+    "impact": "standard"
+  },
+  "source.d65c92baceb1": {
+    "source": "Verification & source links",
     "impact": "security"
   },
   "source.e1e0fe832249": {
@@ -2381,12 +3809,32 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Verification code",
     "impact": "security"
   },
-  "source.55ab0c400e85": {
-    "source": "Verified Client",
-    "impact": "standard"
+  "source.c520df18b231": {
+    "source": "Verified booking",
+    "impact": "booking"
   },
   "source.953de2202761": {
     "source": "Verified coordinates",
+    "impact": "standard"
+  },
+  "source.5ef817552bc8": {
+    "source": "Verified funding",
+    "impact": "standard"
+  },
+  "source.6a7904b89cf6": {
+    "source": "Verified invoice",
+    "impact": "standard"
+  },
+  "source.1a72a0222379": {
+    "source": "Verified reference",
+    "impact": "standard"
+  },
+  "source.3fec3ccab923": {
+    "source": "Verified Salon",
+    "impact": "standard"
+  },
+  "source.f63f387147b8": {
+    "source": "Verified salon fixture · 4.8 rating · 156 reviews",
     "impact": "standard"
   },
   "source.f11f93587440": {
@@ -2421,12 +3869,40 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "View details",
     "impact": "standard"
   },
+  "source.5c12586c4971": {
+    "source": "View pricing",
+    "impact": "standard"
+  },
+  "source.c1445852edff": {
+    "source": "View product",
+    "impact": "standard"
+  },
   "source.b98795a246f0": {
     "source": "View profile",
     "impact": "standard"
   },
+  "source.8cde900d731e": {
+    "source": "View reviews",
+    "impact": "standard"
+  },
   "source.1951520ad9ac": {
     "source": "View salon",
+    "impact": "standard"
+  },
+  "source.8349b5968e61": {
+    "source": "View transaction",
+    "impact": "standard"
+  },
+  "source.7abff607dd56": {
+    "source": "Visibility changes only through the publication actions below, so a draft cannot be mistaken for live content.",
+    "impact": "standard"
+  },
+  "source.aaa9a4625d7a": {
+    "source": "void | Promise",
+    "impact": "standard"
+  },
+  "source.a48bc80f4ee8": {
+    "source": "Waiting state",
     "impact": "standard"
   },
   "source.82dd83fdd3d3": {
@@ -2437,20 +3913,24 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "We couldn't confirm the order yet. Refresh in a moment.",
     "impact": "standard"
   },
-  "source.2dad0a7efa21": {
-    "source": "We’ll notify you of our decision and guide you through the next steps.",
+  "source.db860a2a82f4": {
+    "source": "We couldn't reach the secure sign-in service. Check your connection, refresh this page, and try again.",
+    "impact": "standard"
+  },
+  "source.1426bf75d3f0": {
+    "source": "We have received your application. Our team will review and get back to you within 2–4 business days.",
     "impact": "standard"
   },
   "source.8c8b73267861": {
     "source": "Welcome back,",
     "impact": "standard"
   },
-  "source.e9ef659a9f0d": {
-    "source": "What happened?",
+  "source.de08f802a44b": {
+    "source": "Welcome back, Janel",
     "impact": "standard"
   },
-  "source.4ef9217b5444": {
-    "source": "What happens next?",
+  "source.e9ef659a9f0d": {
+    "source": "What happened?",
     "impact": "standard"
   },
   "source.9aa54cdcbdd8": {
@@ -2473,6 +3953,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Where? (city, state, or ZIP)",
     "impact": "standard"
   },
+  "source.e0da709e4218": {
+    "source": "Why should the platform review this feedback?",
+    "impact": "standard"
+  },
   "source.b6d53c7ba0e8": {
     "source": "Works for",
     "impact": "standard"
@@ -2480,6 +3964,14 @@ export const GENERATED_SOURCE_MESSAGES = {
   "source.ae512695a9a8": {
     "source": "Write a helpful response…",
     "impact": "standard"
+  },
+  "source.3d2d2e4ee8c0": {
+    "source": "Writing-assisted draft",
+    "impact": "standard"
+  },
+  "source.904333a4600b": {
+    "source": "You can still compare this salon’s published services, prices, duration, availability, and booking details. The salon will assign an available professional where applicable.",
+    "impact": "booking"
   },
   "source.1c80bc4b6eac": {
     "source": "You can still submit. Support will review it manually, and it will not change a business’s quality score without a verified booking.",
@@ -2513,6 +4005,10 @@ export const GENERATED_SOURCE_MESSAGES = {
     "source": "Your beauty.",
     "impact": "standard"
   },
+  "source.32d3c2be7f52": {
+    "source": "Your Dashboard",
+    "impact": "standard"
+  },
   "source.feb7b7dcc402": {
     "source": "Your dashboard and records remain available, but the public profile is hidden and new bookings are disabled. Contact platform support for status details.",
     "impact": "booking"
@@ -2523,6 +4019,10 @@ export const GENERATED_SOURCE_MESSAGES = {
   },
   "source.ab42293e29e1": {
     "source": "Your name",
+    "impact": "standard"
+  },
+  "source.501c17289aa6": {
+    "source": "Your review",
     "impact": "standard"
   },
   "source.02963d38fdb2": {
