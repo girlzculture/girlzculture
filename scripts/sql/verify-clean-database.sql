@@ -2830,7 +2830,7 @@ begin
   end if;
 
   update public.salon_promotions promotion
-  set is_active=false, status='Ended'
+  set is_active=false, status='Paused'
   where promotion.id=(
     select candidate.id
     from public.salon_promotions candidate

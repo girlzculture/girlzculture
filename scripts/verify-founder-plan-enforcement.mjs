@@ -193,6 +193,16 @@ assert.match(cleanDatabase, /Starter application approval did not preserve the s
 assert.match(cleanDatabase, /A downgrade was scheduled above the target product limit/);
 assert.match(cleanDatabase, /A downgrade was scheduled above the target promotion limit/);
 assert.match(cleanDatabase, /Scheduled downgrade limits were bypassed by a later inventory write/);
+assert.match(
+  cleanDatabase,
+  /set is_active=false, status='Paused'/,
+  "The downgrade fixture must deactivate excess promotions with a valid authoritative status",
+);
+assert.doesNotMatch(
+  cleanDatabase,
+  /set is_active=false, status='Ended'/,
+  "The downgrade fixture must not use the unsupported legacy Ended status",
+);
 
 assert.match(cleanDatabaseRunner, /runConcurrentPlanBoundaryWorkers/);
 assert.match(cleanDatabaseRunner, /Starter product-limit race/);
