@@ -218,6 +218,37 @@ for (const fixtureSlug of [
     `${fixtureSlug} must remain lifecycle-neutral so the disposable fixture can be removed without immutable audit history`,
   );
 }
+for (const cleanupLabel of [
+  "Scheduled downgrade/write race fixture cleanup",
+  "Concurrent plan-limit fixture cleanup",
+]) {
+  const cleanupEnd = cleanDatabaseRunner.indexOf(`"${cleanupLabel}"`);
+  assert.notEqual(cleanupEnd, -1, `${cleanupLabel} must remain present`);
+  const cleanupSource = cleanDatabaseRunner.slice(
+    cleanDatabaseRunner.lastIndexOf("runPsql(", cleanupEnd),
+    cleanupEnd,
+  );
+  assert.match(
+    cleanupSource,
+    /set local session_replication_role=replica/,
+    `${cleanupLabel} must isolate disposal from immutable operational triggers`,
+  );
+  const salonDelete = cleanupSource.indexOf("delete from public.salons");
+  for (const childTable of [
+    "salon_promotion_audit",
+    "subscription_change_requests",
+    "salon_products",
+    "salon_promotions",
+    "subscriptions",
+    "salon_status_audit",
+  ]) {
+    const childDelete = cleanupSource.indexOf(`delete from public.${childTable}`);
+    assert.ok(
+      childDelete >= 0 && childDelete < salonDelete,
+      `${cleanupLabel} must remove ${childTable} before its salon parent`,
+    );
+  }
+}
 assert.match(
   cleanDatabaseRunner,
   /Scheduled downgrade versus product writer race/,

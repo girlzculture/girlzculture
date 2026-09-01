@@ -833,11 +833,44 @@ try {
     [
       "--command",
       `
+        begin;
+        set local session_replication_role=replica;
+        delete from public.salon_promotion_audit promotion_audit
+        where promotion_audit.salon_id in (
+          '${downgradeProductRaceSalonId}',
+          '${downgradePromotionRaceSalonId}'
+        );
+        delete from public.subscription_change_requests change_request
+        where change_request.salon_id in (
+          '${downgradeProductRaceSalonId}',
+          '${downgradePromotionRaceSalonId}'
+        );
+        delete from public.salon_products product
+        where product.salon_id in (
+          '${downgradeProductRaceSalonId}',
+          '${downgradePromotionRaceSalonId}'
+        );
+        delete from public.salon_promotions promotion
+        where promotion.salon_id in (
+          '${downgradeProductRaceSalonId}',
+          '${downgradePromotionRaceSalonId}'
+        );
+        delete from public.subscriptions subscription
+        where subscription.salon_id in (
+          '${downgradeProductRaceSalonId}',
+          '${downgradePromotionRaceSalonId}'
+        );
+        delete from public.salon_status_audit status_audit
+        where status_audit.salon_id in (
+          '${downgradeProductRaceSalonId}',
+          '${downgradePromotionRaceSalonId}'
+        );
         delete from public.salons salon
         where salon.id in (
           '${downgradeProductRaceSalonId}',
           '${downgradePromotionRaceSalonId}'
         );
+        commit;
       `,
     ],
     "Scheduled downgrade/write race fixture cleanup",
@@ -1012,11 +1045,44 @@ try {
     [
       "--command",
       `
+        begin;
+        set local session_replication_role=replica;
+        delete from public.salon_promotion_audit promotion_audit
+        where promotion_audit.salon_id in (
+          '${planBoundaryStarterSalonId}',
+          '${planBoundaryGrowthSalonId}'
+        );
+        delete from public.subscription_change_requests change_request
+        where change_request.salon_id in (
+          '${planBoundaryStarterSalonId}',
+          '${planBoundaryGrowthSalonId}'
+        );
+        delete from public.salon_products product
+        where product.salon_id in (
+          '${planBoundaryStarterSalonId}',
+          '${planBoundaryGrowthSalonId}'
+        );
+        delete from public.salon_promotions promotion
+        where promotion.salon_id in (
+          '${planBoundaryStarterSalonId}',
+          '${planBoundaryGrowthSalonId}'
+        );
+        delete from public.subscriptions subscription
+        where subscription.salon_id in (
+          '${planBoundaryStarterSalonId}',
+          '${planBoundaryGrowthSalonId}'
+        );
+        delete from public.salon_status_audit status_audit
+        where status_audit.salon_id in (
+          '${planBoundaryStarterSalonId}',
+          '${planBoundaryGrowthSalonId}'
+        );
         delete from public.salons salon
         where salon.id in (
           '${planBoundaryStarterSalonId}',
           '${planBoundaryGrowthSalonId}'
         );
+        commit;
       `,
     ],
     "Concurrent plan-limit fixture cleanup",
