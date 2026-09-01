@@ -118,11 +118,16 @@ const unaliasedApplicationDocumentTable = applicationDocumentBlock.match(
 const unqualifiedApplicationDocumentColumn = applicationDocumentBlock.match(
   /\b(?:where|and)\s+(?:id|status|application_id|expires_at|user_id|salon_id|storage_path|cleaned_at)\b/,
 );
+const permissionScopedApplicationApprovalActor =
+  /'clean-application-approval@example\.test','Admin',\s*'\{"submissions":true\}'::jsonb,'Active',false/.test(
+    applicationDocumentBlock,
+  );
 if (
   !applicationDocumentBlock.includes("#variable_conflict error") ||
   unsafeApplicationDocumentVariable ||
   unaliasedApplicationDocumentTable ||
   unqualifiedApplicationDocumentColumn ||
+  !permissionScopedApplicationApprovalActor ||
   !applicationDocumentBlock.includes(
     "while application_document_lifecycle_verification.application_document_ordinal <= 5 loop",
   ) ||
@@ -135,7 +140,7 @@ if (
   )
 ) {
   console.error(
-    "Application-document lifecycle verification must use error-on-conflict mode, unambiguous fixture variables, and explicit table aliases.",
+    "Application-document lifecycle verification must use a permission-scoped non-super-admin approval fixture, error-on-conflict mode, unambiguous fixture variables, and explicit table aliases.",
   );
   process.exit(1);
 }

@@ -2299,8 +2299,8 @@ begin
     application_document_lifecycle_verification.application_document_approval_actor_id,
     application_document_lifecycle_verification.application_document_approval_actor_id,
     'Clean application approval admin',
-    'clean-application-approval@example.test','Super Admin',
-    '{"submissions":true}'::jsonb,'Active',true
+    'clean-application-approval@example.test','Admin',
+    '{"submissions":true}'::jsonb,'Active',false
   );
   insert into public.salons(id,user_id,name,slug,email,status)
   values (
