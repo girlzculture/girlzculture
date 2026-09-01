@@ -3015,6 +3015,11 @@ begin
     now()+interval '1 day',placement_actor_id,placement_actor_id
   );
 
+  -- Dispose only these synthetic verification rows without weakening the
+  -- immutable production audit triggers. Setting the replication role is
+  -- transaction-local to this DO statement, and every dependent fixture row
+  -- is removed explicitly before its salon parent.
+  perform set_config('session_replication_role','replica',true);
   delete from public.homepage_product_placements placement
   using public.salon_products product
   where placement.product_id=product.id
@@ -3025,6 +3030,42 @@ begin
     );
   delete from public.marketing_entitlements entitlement
   where entitlement.id in (valid_entitlement_id,invalid_entitlement_id);
+  delete from public.salon_promotion_audit promotion_audit
+  where promotion_audit.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.subscription_change_requests change_request
+  where change_request.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salon_products product
+  where product.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salon_promotions promotion
+  where promotion.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.subscriptions subscription
+  where subscription.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salon_status_audit status_audit
+  where status_audit.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
   delete from public.salons salon
   where salon.id in (
     starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,

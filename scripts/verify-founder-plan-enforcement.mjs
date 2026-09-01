@@ -204,6 +204,33 @@ assert.doesNotMatch(
   "The downgrade fixture must not use the unsupported legacy Ended status",
 );
 
+const planLimitBlockStart = cleanDatabase.indexOf("do $plan_limit_verification$");
+const planLimitBlockEnd = cleanDatabase.indexOf("$plan_limit_verification$;", planLimitBlockStart + 1);
+assert.ok(planLimitBlockStart >= 0 && planLimitBlockEnd > planLimitBlockStart);
+const planLimitBlock = cleanDatabase.slice(planLimitBlockStart, planLimitBlockEnd);
+assert.match(
+  planLimitBlock,
+  /set_config\('session_replication_role','replica',true\)/,
+  "The plan-limit fixture cleanup must isolate disposal from immutable operational triggers",
+);
+const planLimitSalonDelete = planLimitBlock.lastIndexOf("delete from public.salons");
+for (const childTable of [
+  "homepage_product_placements",
+  "marketing_entitlements",
+  "salon_promotion_audit",
+  "subscription_change_requests",
+  "salon_products",
+  "salon_promotions",
+  "subscriptions",
+  "salon_status_audit",
+]) {
+  const childDelete = planLimitBlock.lastIndexOf(`delete from public.${childTable}`);
+  assert.ok(
+    childDelete >= 0 && childDelete < planLimitSalonDelete,
+    `The plan-limit fixture cleanup must remove ${childTable} before its salon parent`,
+  );
+}
+
 assert.match(cleanDatabaseRunner, /runConcurrentPlanBoundaryWorkers/);
 assert.match(cleanDatabaseRunner, /Starter product-limit race/);
 assert.match(cleanDatabaseRunner, /Growth product-limit race/);
