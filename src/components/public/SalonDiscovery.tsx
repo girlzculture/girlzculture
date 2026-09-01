@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { List, LocateFixed, Map, MapPin } from "lucide-react";
+import { List, LocateFixed, Map as MapIcon, MapPin } from "lucide-react";
 import {
   type FormEvent,
   useCallback,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -59,6 +60,11 @@ type SearchResponse = {
   empty_reason?: SearchEmptyReason | null;
   partial_search?: boolean;
   warning?: string | null;
+  pagination?: {
+    page?: number;
+    page_size?: number;
+    has_more_results?: boolean;
+  };
   error?: string;
 };
 
@@ -88,9 +94,11 @@ type Props = {
   initialTotal: number;
   initialQuery?: string;
   initialStyleId?: string;
+  initialServiceIntent?: boolean;
   initialLocation?: string;
   initialOrigin?: Coordinates | null;
   initialFilters?: DiscoveryFilters;
+  initialView?: "list" | "map";
 };
 
 type StoredState = {
@@ -105,6 +113,8 @@ type StoredState = {
   locationLabel: string;
   view: "list" | "map";
   scrollY: number;
+  page?: number;
+  hasMore?: boolean;
 };
 
 const STORAGE_KEY = "girlz-culture-salon-search-v2";
@@ -122,10 +132,37 @@ function asDecisionRows(rows: PublicSalonResult[]): DecisionSalon[] {
   return rows.map((row) => ({ ...row, sponsored: false }));
 }
 
+function authoritativeServiceRows(rows: DecisionSalon[]) {
+  return rows.filter((row) => Boolean(row.matched_service?.id));
+}
+
 function priceValue(value: string) {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function filtersFromUrl(params: URLSearchParams): DiscoveryFilters {
+  const radius = Number(params.get("radius"));
+  const rating = Number(params.get("rating"));
+  const sortValue = params.get("sort") || "distance";
+  const sort = new Set(["distance", "rating", "price_low", "price_high"]).has(sortValue)
+    ? sortValue as DiscoveryFilters["sort"]
+    : "distance";
+  return {
+    radiusMiles: Number.isFinite(radius) && radius > 0
+      ? Math.max(1, Math.min(100, radius))
+      : DEFAULT_NEARBY_RADIUS_MILES,
+    minimumRating: Number.isFinite(rating)
+      ? Math.max(0, Math.min(5, rating))
+      : 0,
+    maximumPrice: params.get("max_price") || "",
+    date: /^\d{4}-\d{2}-\d{2}$/.test(params.get("date") || "")
+      ? params.get("date") || ""
+      : "",
+    sort,
+    promotionOnly: params.get("offers") === "true",
+  };
 }
 
 function sameCoordinates(
@@ -169,9 +206,11 @@ export default function SalonDiscovery({
   initialTotal,
   initialQuery = "",
   initialStyleId = "",
+  initialServiceIntent = Boolean(initialStyleId),
   initialLocation = "",
   initialOrigin = null,
   initialFilters = defaultFilters,
+  initialView = "list",
 }: Props) {
   const startingFilters = useMemo(
     () => ({
@@ -180,15 +219,17 @@ export default function SalonDiscovery({
     }),
     [initialFilters],
   );
+  const initialDecisionRows = useMemo(() => {
+    const rows = asDecisionRows(initialSalons);
+    return initialServiceIntent ? authoritativeServiceRows(rows) : rows;
+  }, [initialSalons, initialServiceIntent]);
   const customerLocation = useCustomerLocation();
   const [query, setQuery] = useState(initialQuery);
   const [draftQuery, setDraftQuery] = useState(initialQuery);
   const [serviceId, setServiceId] = useState(initialStyleId);
   const [filters, setFilters] = useState<DiscoveryFilters>(startingFilters);
   const [draftFilters, setDraftFilters] = useState<DiscoveryFilters>(startingFilters);
-  const [salons, setSalons] = useState<DecisionSalon[]>(
-    asDecisionRows(initialSalons),
-  );
+  const [salons, setSalons] = useState<DecisionSalon[]>(initialDecisionRows);
   const [summary, setSummary] = useState(
     initialTotal
       ? `${initialTotal} ${initialTotal === 1 ? "salon" : "salons"} nearby.`
@@ -199,9 +240,16 @@ export default function SalonDiscovery({
   const [locationText, setLocationText] = useState("");
   const [locationEditorOpen, setLocationEditorOpen] = useState(!initialOrigin);
   const [ignoreInitialOrigin, setIgnoreInitialOrigin] = useState(false);
-  const [view, setView] = useState<"list" | "map">("list");
+  const [view, setView] = useState<"list" | "map">(initialView);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(
+    initialServiceIntent && initialDecisionRows.length !== initialSalons.length,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(
+    initialTotal > initialSalons.length,
+  );
   const [locationBusy, setLocationBusy] = useState(false);
   const [error, setError] = useState("");
   const [emptyReason, setEmptyReason] = useState<SearchEmptyReason | null>(null);
@@ -256,7 +304,7 @@ export default function SalonDiscovery({
   ].filter(Boolean).length;
 
   const persist = useCallback(
-    (scrollY = window.scrollY) => {
+    (scrollY = window.scrollY, nextView = view) => {
       try {
         const state: StoredState = {
           version: 2,
@@ -268,14 +316,16 @@ export default function SalonDiscovery({
           salons,
           summary,
           locationLabel: visibleLocation,
-          view,
+          view: nextView,
           scrollY,
+          page: currentPage,
+          hasMore,
         };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch {
         // Search remains usable when browser storage is unavailable.
       }
-    }, [filters, origin, query, salons, serviceId, summary, view, visibleLocation],
+    }, [currentPage, filters, hasMore, origin, query, salons, serviceId, summary, view, visibleLocation],
   );
 
   useEffect(() => {
@@ -288,6 +338,7 @@ export default function SalonDiscovery({
       initialStyleId ||
       initialLocation ||
       initialOrigin ||
+      initialView !== "list" ||
       !sameFilters(startingFilters, defaultFilters)
     );
     if (
@@ -295,7 +346,8 @@ export default function SalonDiscovery({
       (state.query.trim().toLocaleLowerCase() !== initialQuery.trim().toLocaleLowerCase() ||
         state.serviceId !== initialStyleId ||
         !sameCoordinates(state.origin, initialOrigin) ||
-        !sameFilters(state.filters, startingFilters))
+        !sameFilters(state.filters, startingFilters) ||
+        state.view !== initialView)
     ) return;
     // Set this guard before applying restored state. React runs the remaining
     // mount effects in the same flush; without the synchronous guard,
@@ -306,16 +358,26 @@ export default function SalonDiscovery({
     // Defer the React updates while leaving the guards synchronous. A
     // microtask is not cancelled by Strict Mode's development effect replay,
     // so restoration remains deterministic in both dev and production.
+    const restoredRows = state.serviceId
+      ? authoritativeServiceRows(state.salons)
+      : state.salons;
+    if (state.serviceId && restoredRows.length !== state.salons.length) {
+      restoredFromStorage.current = false;
+      return;
+    }
     queueMicrotask(() => {
       setQuery(state.query);
       setDraftQuery(state.query);
       setServiceId(state.serviceId);
       setFilters(state.filters);
       setDraftFilters(state.filters);
-      setSalons(state.salons);
+      setSalons(restoredRows);
+      setLoading(false);
       setSummary(state.summary);
       setLocationLabel(state.locationLabel);
       setView(state.view);
+      setCurrentPage(Math.max(1, Number(state.page || 1)));
+      setHasMore(Boolean(state.hasMore));
       pendingScroll.current = state.scrollY;
       setScrollRestoreRevision((revision) => revision + 1);
     });
@@ -324,6 +386,7 @@ export default function SalonDiscovery({
     initialOrigin,
     initialQuery,
     initialStyleId,
+    initialView,
     startingFilters,
   ]);
 
@@ -343,26 +406,64 @@ export default function SalonDiscovery({
     };
   }, [salons.length, scrollRestoreRevision]);
 
+  const persistOnPageHide = useEffectEvent(() => persist());
+
   useEffect(() => {
-    const save = () => persist();
+    const save = () => persistOnPageHide();
     window.addEventListener("pagehide", save);
     return () => {
       window.removeEventListener("pagehide", save);
-      requestController.current?.abort();
     };
-  }, [persist]);
+  }, []);
+
+  useEffect(() => () => requestController.current?.abort(), []);
 
   const runSearch = useCallback(
     async (
       nextQuery: string,
       nextFilters: DiscoveryFilters,
-      options: { restoreScroll?: boolean } = {},
+      options: {
+        restoreScroll?: boolean;
+        history?: "push" | "replace" | "none";
+        originOverride?: Coordinates | null;
+        serviceIdOverride?: string;
+        viewOverride?: "list" | "map";
+        locationLabelOverride?: string;
+        page?: number;
+        append?: boolean;
+        requireMatchedService?: boolean;
+      } = {},
     ) => {
       const normalizedQuery = nextQuery.trim() || "salons near me";
+      const searchOrigin = options.originOverride === undefined
+        ? origin
+        : options.originOverride;
+      const searchServiceId = options.serviceIdOverride ?? serviceId;
+      const searchView = options.viewOverride ?? view;
+      const searchLocationLabel = options.locationLabelOverride ?? visibleLocation;
+      const requestedPage = Math.max(1, Math.floor(Number(options.page) || 1));
+      const requireMatchedService = options.requireMatchedService ?? Boolean(searchServiceId);
       requestController.current?.abort();
       const controller = new AbortController();
       requestController.current = controller;
-      setLoading(true);
+      if (options.append) {
+        setLoading(false);
+        setLoadingMore(true);
+      } else {
+        setLoadingMore(false);
+        setLoading(true);
+        setHasMore(false);
+        // A replacement query owns the results area as soon as it starts.
+        // Keeping the previous cards visible here can misrepresent them as
+        // matches for the new query or filters, especially if the request
+        // later fails. Append pagination is the only search allowed to retain
+        // the existing result set.
+        setSalons([]);
+        setSummary("");
+        setEmptyReason(null);
+        setSelectedSalonId("");
+        setCurrentPage(1);
+      }
       setError("");
       setSearchWarning("");
       try {
@@ -374,16 +475,18 @@ export default function SalonDiscovery({
           },
           body: JSON.stringify({
             query: normalizedQuery,
-            latitude: origin?.lat,
-            longitude: origin?.lng,
+            latitude: searchOrigin?.lat,
+            longitude: searchOrigin?.lng,
             filters: {
-              serviceId: serviceId || null,
+              serviceId: searchServiceId || null,
               radiusMiles: nextFilters.radiusMiles,
               minimumRating: nextFilters.minimumRating || null,
               maximumPrice: priceValue(nextFilters.maximumPrice),
               date: nextFilters.date || null,
               sort: nextFilters.sort,
               promotionOnly: nextFilters.promotionOnly,
+              page: requestedPage,
+              pageSize: 48,
             },
             website: "",
           }),
@@ -397,12 +500,26 @@ export default function SalonDiscovery({
         if (!response.ok)
           throw new Error(body.error || "Search could not be completed.");
 
-        const rows = Array.isArray(body.salons) ? body.salons : [];
+        const responseRows = Array.isArray(body.salons) ? body.salons : [];
+        const rows = requireMatchedService
+          ? authoritativeServiceRows(responseRows)
+          : responseRows;
         setQuery(normalizedQuery);
         setDraftQuery(normalizedQuery);
         setFilters(nextFilters);
         setDraftFilters(nextFilters);
-        setSalons(rows);
+        setSalons((current) => {
+          if (!options.append) return rows;
+          return [
+            ...new Map(
+              [...current, ...rows].map((salon) => [salon.id, salon]),
+            ).values(),
+          ];
+        });
+        setCurrentPage(
+          Math.max(1, Number(body.pagination?.page || requestedPage)),
+        );
+        setHasMore(Boolean(body.pagination?.has_more_results));
         setEmptyReason(rows.length ? null : body.empty_reason || "no_exact_match");
         setSummary(
           body.summary ||
@@ -428,12 +545,12 @@ export default function SalonDiscovery({
         }
 
         const params = new URLSearchParams();
-        params.set(serviceId ? "style" : "q", normalizedQuery);
-        if (serviceId) params.set("style_id", serviceId);
-        if (origin) {
-          params.set("lat", String(origin.lat));
-          params.set("lng", String(origin.lng));
-          if (visibleLocation) params.set("location", visibleLocation);
+        params.set(searchServiceId ? "style" : "q", normalizedQuery);
+        if (searchServiceId) params.set("style_id", searchServiceId);
+        if (searchOrigin) {
+          params.set("lat", String(searchOrigin.lat));
+          params.set("lng", String(searchOrigin.lng));
+          if (searchLocationLabel) params.set("location", searchLocationLabel);
         }
         if (nextFilters.radiusMiles !== DEFAULT_NEARBY_RADIUS_MILES)
           params.set("radius", String(nextFilters.radiusMiles));
@@ -445,13 +562,13 @@ export default function SalonDiscovery({
         if (nextFilters.sort !== "distance")
           params.set("sort", nextFilters.sort);
         if (nextFilters.promotionOnly) params.set("offers", "true");
-        window.history.replaceState(
-          null,
-          "",
-          `/salons?${params.toString()}`,
-        );
+        if (searchView === "map") params.set("view", "map");
+        if (!options.append && options.history !== "none") {
+          const method = options.history === "replace" ? "replaceState" : "pushState";
+          window.history[method](null, "", `/salons?${params.toString()}`);
+        }
 
-        if (!options.restoreScroll) {
+        if (!options.append && !options.restoreScroll) {
           window.requestAnimationFrame(() =>
             document.getElementById("salon-results")?.scrollIntoView({
               block: "start",
@@ -473,23 +590,80 @@ export default function SalonDiscovery({
         setSearchWarning("");
         setEmptyReason(null);
       } finally {
-        if (requestController.current === controller) setLoading(false);
+        if (requestController.current === controller) {
+          if (options.append) setLoadingMore(false);
+          else setLoading(false);
+        }
       }
-    }, [customerLocation.location, initialLocation, origin, serviceId, visibleLocation],
+    }, [customerLocation.location, initialLocation, origin, serviceId, view, visibleLocation],
   );
+
+  // Keep browser-history observation mounted for the lifetime of the page.
+  // Effect Events see the latest location/search state without leaving a
+  // listener gap while List/Map or a filter transition changes runSearch.
+  const restoreFromHistory = useEffectEvent(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nextServiceId = params.get("style_id") || "";
+    const nextQuery = params.get(nextServiceId ? "style" : "q") || "salons near me";
+    const nextFilters = filtersFromUrl(params);
+    const nextView = params.get("view") === "map" ? "map" : "list";
+    const nextLocationLabel = params.get("location") || "";
+    const nextHasExplicitServiceIntent = Boolean(nextServiceId || params.has("style"));
+    const candidateOrigin = {
+      lat: Number(params.get("lat")),
+      lng: Number(params.get("lng")),
+    };
+    const nextOrigin = params.has("lat") && params.has("lng") && validCoordinates(candidateOrigin)
+      ? candidateOrigin
+      : origin;
+
+    setQuery(nextQuery);
+    setDraftQuery(nextQuery);
+    setServiceId(nextServiceId);
+    setFilters(nextFilters);
+    setDraftFilters(nextFilters);
+    setView(nextView);
+    if (nextLocationLabel) setLocationLabel(nextLocationLabel);
+    if (nextOrigin && validCoordinates(nextOrigin)) {
+      setIgnoreInitialOrigin(true);
+      customerLocation.setLocation({
+        ...nextOrigin,
+        label: nextLocationLabel || visibleLocation || "Selected location",
+        source: "explicit",
+      });
+    }
+    void runSearch(nextQuery, nextFilters, {
+      restoreScroll: true,
+      history: "none",
+      originOverride: nextOrigin,
+      serviceIdOverride: nextServiceId,
+      viewOverride: nextView,
+      locationLabelOverride: nextLocationLabel || visibleLocation,
+      requireMatchedService: nextHasExplicitServiceIntent,
+    });
+  });
+
+  useEffect(() => {
+    window.addEventListener("popstate", restoreFromHistory);
+    return () => window.removeEventListener("popstate", restoreFromHistory);
+  }, []);
 
   useEffect(() => {
     if (
       initialIntentHandled.current ||
       !restorationChecked.current ||
       restoredFromStorage.current ||
-      !initialQuery.trim() ||
+      !(initialQuery.trim() || initialStyleId || !sameFilters(startingFilters, defaultFilters)) ||
       !customerLocation.ready
     )
       return;
     initialIntentHandled.current = true;
-    void runSearch(initialQuery, filters, { restoreScroll: true });
-  }, [customerLocation.ready, filters, initialQuery, runSearch]);
+    void runSearch(initialQuery || "salons near me", filters, {
+      restoreScroll: true,
+      history: "replace",
+      requireMatchedService: initialServiceIntent,
+    });
+  }, [customerLocation.ready, filters, initialQuery, initialServiceIntent, initialStyleId, runSearch, startingFilters]);
 
   useEffect(() => {
     if (
@@ -503,7 +677,7 @@ export default function SalonDiscovery({
     )
       return;
     automaticNearbySearch.current = true;
-    void runSearch("salons near me", filters, { restoreScroll: true });
+    void runSearch("salons near me", filters, { restoreScroll: true, history: "replace" });
   }, [
     customerLocation.ready,
     filters,
@@ -533,6 +707,27 @@ export default function SalonDiscovery({
 
   function clearFilters() {
     setDraftFilters(defaultFilters);
+    setFilters(defaultFilters);
+    setFiltersOpen(false);
+    const params = new URLSearchParams(window.location.search);
+    for (const key of ["radius", "rating", "max_price", "date", "sort", "offers"]) {
+      params.delete(key);
+    }
+    window.history.pushState(
+      null,
+      "",
+      `/salons${params.size ? `?${params.toString()}` : ""}`,
+    );
+    void runSearch(draftQuery || query, defaultFilters, { history: "none" });
+  }
+
+  function changeView(nextView: "list" | "map") {
+    setView(nextView);
+    persist(window.scrollY, nextView);
+    const params = new URLSearchParams(window.location.search);
+    if (nextView === "map") params.set("view", "map");
+    else params.delete("view");
+    window.history.pushState(null, "", `/salons${params.size ? `?${params}` : ""}`);
   }
 
   function resolveLocation(next: CustomerLocation | null) {
@@ -578,41 +773,47 @@ export default function SalonDiscovery({
     setSearchWarning("");
     setError("");
     setView("list");
+    setCurrentPage(1);
+    setHasMore(false);
   }
 
   return (
     <div className="mx-auto w-full max-w-[1500px]">
-      <form
-        onSubmit={submit}
-        className="sticky top-16 z-30 bg-cream/95 py-2 backdrop-blur md:static md:bg-transparent md:py-0"
+      <div
+        data-discovery-search-sticky
+        className="sticky top-[env(safe-area-inset-top)] z-[85] -mx-3 bg-cream/95 px-3 py-2 backdrop-blur sm:-mx-8 sm:px-8 lg:-mx-12 lg:px-12 xl:static xl:mx-0 xl:bg-transparent xl:px-0 xl:py-0"
       >
-        <div className="flex min-h-12 items-center gap-2 rounded-[12px] border border-plum/15 bg-white p-1.5 shadow-[0_8px_24px_rgba(13,17,20,.06)]">
-          <label className="min-w-0 flex-1">
-            <span className="sr-only">Search salons</span>
-            <input
-              value={draftQuery}
-              onChange={(event) => {
-                setDraftQuery(event.target.value);
-                setServiceId("");
-              }}
-              placeholder="Search"
-              maxLength={600}
-              autoComplete="off"
-              enterKeyHint="search"
-              className="gc-placeholder-light min-h-10 w-full min-w-0 bg-transparent px-3 text-[15px] font-semibold text-ink outline-none"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="min-h-10 shrink-0 rounded-[9px] bg-magenta px-4 text-[12px] font-bold text-white gc-disabled-control sm:px-6"
-          >
-            {loading ? "Searching…" : "Search"}
-          </button>
-        </div>
-      </form>
+        <form onSubmit={submit}>
+          <div className="flex min-h-12 items-center gap-2 rounded-[12px] border border-plum/15 bg-white p-1.5 shadow-[0_8px_24px_rgba(13,17,20,.06)]">
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">Search salons</span>
+              <input
+                value={draftQuery}
+                onChange={(event) => {
+                  setDraftQuery(event.target.value);
+                  setServiceId("");
+                }}
+                placeholder="Search"
+                maxLength={600}
+                autoComplete="off"
+                enterKeyHint="search"
+                className="gc-placeholder-light min-h-10 w-full min-w-0 bg-transparent px-3 text-[15px] font-semibold text-ink outline-none"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={loading}
+              className="min-h-10 shrink-0 rounded-[9px] bg-magenta px-4 text-[12px] font-bold text-white gc-disabled-control sm:px-6"
+            >
+              {loading ? "Searching…" : "Search"}
+            </button>
+          </div>
+        </form>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div
+          data-discovery-sticky-controls
+          className="mt-2 flex flex-wrap items-center gap-2"
+        >
         {locationEditorOpen || !origin ? (
           <div className="relative z-[70] min-w-0 flex-[1_1_250px] rounded-[9px] bg-white">
             <LocationAutocomplete
@@ -661,17 +862,10 @@ export default function SalonDiscovery({
         >
           {activeFilterCount ? `Filter (${activeFilterCount})` : "Filter"}
         </button>
+        </div>
       </div>
 
-      {summary ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="mt-2 rounded-[9px] border border-plum/10 bg-white px-3 py-2 text-[11px] font-semibold leading-5 text-plum"
-        >
-          {summary}
-        </div>
-      ) : null}
+      {summary ? <p role="status" aria-live="polite" className="sr-only">{`Search updated: ${salons.length} matching ${salons.length === 1 ? "salon" : "salons"}.`}</p> : null}
       {searchWarning ? (
         <div role="status" className="mt-2 rounded-[9px] border border-amber/40 bg-amber/10 px-3 py-2 text-[11px] font-semibold leading-5 text-plum">
           {searchWarning}
@@ -693,14 +887,14 @@ export default function SalonDiscovery({
               {origin ? "Salons Near You" : "Salons"}
             </h1>
             <p className="mt-1 text-[11px] font-medium text-ink/65">
-              Verified marketplace information only.
+              Current salon profiles and booking-based reviews.
             </p>
           </div>
           <div className="flex shrink-0 overflow-hidden rounded-[9px] border border-plum/15 bg-white text-[10px] font-bold">
             <button
               type="button"
               aria-pressed={view === "list"}
-              onClick={() => setView("list")}
+              onClick={() => changeView("list")}
               className={`inline-flex min-h-9 items-center gap-1 px-3 ${
                 view === "list" ? "bg-plum text-white" : "text-plum"
               }`}
@@ -711,12 +905,12 @@ export default function SalonDiscovery({
             <button
               type="button"
               aria-pressed={view === "map"}
-              onClick={() => setView("map")}
+              onClick={() => changeView("map")}
               className={`inline-flex min-h-9 items-center gap-1 px-3 ${
                 view === "map" ? "bg-plum text-white" : "text-plum"
               }`}
             >
-              <Map aria-hidden="true" size={14} />
+              <MapIcon aria-hidden="true" size={14} />
               Map
             </button>
           </div>
@@ -769,6 +963,25 @@ export default function SalonDiscovery({
         ) : (
           <EmptyState reason={emptyReason} />
         )}
+        {salons.length && hasMore ? (
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              disabled={loadingMore}
+              onClick={() =>
+                void runSearch(query || draftQuery, filters, {
+                  append: true,
+                  history: "none",
+                  restoreScroll: true,
+                  page: currentPage + 1,
+                })
+              }
+              className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-teal bg-white px-6 text-[11px] font-bold text-teal transition hover:bg-teal hover:text-white gc-disabled-control"
+            >
+              {loadingMore ? "Loading more salons..." : "Load more salons"}
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {filtersOpen ? (

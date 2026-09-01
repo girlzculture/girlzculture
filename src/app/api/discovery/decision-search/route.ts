@@ -18,7 +18,9 @@ import {
   resolveCatalogCorrection,
   type CatalogCorrection,
   type CatalogCorrectionCandidate,
+  withUniqueCanonicalNameTokens,
 } from "@/lib/catalogFuzzySearchCore";
+import { collectDecisionSearchPages } from "@/lib/decisionSearchEnrichmentCore";
 
 export const runtime = "nodejs";
 
@@ -37,40 +39,46 @@ async function catalogCorrection(query: string): Promise<CatalogCorrection | nul
   try {
     const admin = getSupabaseAdmin();
     const [stylesResult, rulesResult] = await Promise.all([
-      admin
-        .from("master_styles")
-        .select("id,name")
-        .eq("is_active", true)
-        .is("archived_at", null)
-        .limit(2_000),
-      admin
-        .from("search_language_rules")
-        .select("target_id,canonical_term,aliases,keywords,common_phrases,misspellings")
-        .eq("target_type", "service")
-        .eq("is_active", true)
-        .limit(2_000),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("master_styles")
+          .select("id,name")
+          .eq("is_active", true)
+          .is("archived_at", null)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("search_language_rules")
+          .select("target_id,canonical_term,aliases,keywords,common_phrases,misspellings")
+          .eq("target_type", "service")
+          .eq("is_active", true)
+          .order("target_id", { ascending: true })
+          .range(from, to),
+      ),
     ]);
     if (stylesResult.error) throw stylesResult.error;
     if (rulesResult.error) throw rulesResult.error;
     const rules = new Map(
       (rulesResult.data || []).map((rule) => [String(rule.target_id), rule]),
     );
-    const candidates: CatalogCorrectionCandidate[] = (stylesResult.data || []).map(
-      (style) => {
-        const rule = rules.get(String(style.id));
-        return {
-          id: String(style.id),
-          name: String(style.name),
-          terms: [
-            String(rule?.canonical_term || ""),
-            ...safeArray(rule?.aliases),
-            ...safeArray(rule?.keywords),
-            ...safeArray(rule?.common_phrases),
-            ...safeArray(rule?.misspellings),
-          ].filter(Boolean),
-        };
-      },
-    );
+    const candidates: CatalogCorrectionCandidate[] =
+      withUniqueCanonicalNameTokens(
+        (stylesResult.data || []).map((style) => {
+          const rule = rules.get(String(style.id));
+          return {
+            id: String(style.id),
+            name: String(style.name),
+            terms: [],
+            canonicalTerms: [String(rule?.canonical_term || "")].filter(Boolean),
+            aliasTerms: safeArray(rule?.aliases),
+            keywordTerms: safeArray(rule?.keywords),
+            commonPhraseTerms: safeArray(rule?.common_phrases),
+            misspellingTerms: safeArray(rule?.misspellings),
+          };
+        }),
+      );
     return resolveCatalogCorrection(query, candidates);
   } catch (error) {
     noteOperationalFailure("Catalog typo correction lookup failed", error);
@@ -158,7 +166,7 @@ async function POSTHandler(request: Request) {
       resolved_query: correction?.resolvedQuery || query,
       corrected_terms: correction?.correctedTerms || [],
       correction_confidence: correction?.confidence || null,
-      stable_service_id: serviceId,
+      stable_service_id: result.intent.stable_service_id,
     },
     {
       headers: {

@@ -2,6 +2,11 @@ export type CatalogCorrectionCandidate = {
   id: string;
   name: string;
   terms: string[];
+  canonicalTerms?: string[];
+  aliasTerms?: string[];
+  commonPhraseTerms?: string[];
+  keywordTerms?: string[];
+  misspellingTerms?: string[];
 };
 
 export type CatalogCorrection = {
@@ -26,6 +31,15 @@ const EXCLUDED_SINGLE_TERMS = new Set([
   "services",
   "style",
   "styles",
+]);
+
+const EXCLUDED_CANONICAL_NAME_TOKENS = new Set([
+  ...EXCLUDED_SINGLE_TERMS,
+  "beauty",
+  "hair",
+  "natural",
+  "professional",
+  "treatment",
 ]);
 
 export function normalizeCatalogSearchText(value: unknown) {
@@ -75,6 +89,44 @@ export function damerauLevenshteinDistance(left: string, right: string) {
     }
   }
   return matrix[left.length][right.length];
+}
+
+/**
+ * Add a canonical-name token only when it identifies exactly one service.
+ * This lets a customer type a meaningful shorthand such as `Blowout` for the
+ * sole `Dominican Blowout` catalog entry without turning generic words such as
+ * `Braids` into an arbitrary service choice. If another catalog service later
+ * uses the same token, the shorthand automatically becomes unavailable until
+ * an approved alias disambiguates it.
+ */
+export function withUniqueCanonicalNameTokens(
+  candidates: CatalogCorrectionCandidate[],
+) {
+  const owners = new Map<string, Set<string>>();
+  const candidateTokens = new Map<string, string[]>();
+  for (const candidate of candidates) {
+    const tokens = normalizeCatalogSearchText(candidate.name)
+      .split(" ")
+      .filter(
+        (token) =>
+          token.length >= 5 && !EXCLUDED_CANONICAL_NAME_TOKENS.has(token),
+      );
+    candidateTokens.set(candidate.id, tokens);
+    for (const token of tokens) {
+      const tokenOwners = owners.get(token) || new Set<string>();
+      tokenOwners.add(candidate.id);
+      owners.set(token, tokenOwners);
+    }
+  }
+  return candidates.map((candidate) => ({
+    ...candidate,
+    aliasTerms: [
+      ...(candidate.aliasTerms || []),
+      ...(candidateTokens.get(candidate.id) || []).filter(
+        (token) => owners.get(token)?.size === 1,
+      ),
+    ].filter((term, index, values) => values.indexOf(term) === index),
+  }));
 }
 
 function singular(value: string) {
@@ -164,20 +216,46 @@ export function resolveCatalogCorrection(
   if (!queryTokens.length) return null;
 
   const matches = candidates.flatMap((candidate) => {
-    const uniqueTerms = [candidate.name, ...candidate.terms]
-      .map(normalizeCatalogSearchText)
-      .filter(Boolean)
-      .filter((term, index, values) => values.indexOf(term) === index);
-    return uniqueTerms.flatMap((term) => {
+    const terms = [
+      ...[candidate.name, ...(candidate.canonicalTerms || [])].map((term) => ({
+        term,
+        provenance: 0,
+      })),
+      ...[
+        ...(candidate.aliasTerms || []),
+        ...(candidate.commonPhraseTerms || []),
+        ...(candidate.keywordTerms || []),
+        ...candidate.terms,
+      ].map((term) => ({ term, provenance: 1 })),
+      ...(candidate.misspellingTerms || []).map((term) => ({
+        term,
+        provenance: 2,
+      })),
+    ]
+      .map(({ term, provenance }) => ({
+        term: normalizeCatalogSearchText(term),
+        provenance,
+      }))
+      .filter(({ term }) => Boolean(term));
+    const uniqueTerms = [
+      ...new Map(
+        terms
+          .sort((left, right) => right.provenance - left.provenance)
+          .map((entry) => [entry.term, entry]),
+      ).values(),
+    ];
+    return uniqueTerms.flatMap(({ term, provenance }) => {
       const match = bestTermMatch(queryTokens, term);
-      return match ? [{ candidate, term, ...match }] : [];
+      return match ? [{ candidate, term, provenance, ...match }] : [];
     });
   });
   matches.sort(
     (left, right) =>
+      Number(right.edits === 0) - Number(left.edits === 0) ||
+      right.target.join(" ").length - left.target.join(" ").length ||
+      left.provenance - right.provenance ||
       right.score - left.score ||
       left.edits - right.edits ||
-      right.target.join(" ").length - left.target.join(" ").length ||
       left.candidate.name.localeCompare(right.candidate.name),
   );
   const best = matches[0];
@@ -190,7 +268,18 @@ export function resolveCatalogCorrection(
   const margin = secondDifferentService
     ? best.score - secondDifferentService.score
     : 1;
-  if (!exact && (best.score < minimumConfidence || margin < 0.045)) return null;
+  const ambiguousExact = Boolean(
+    exact &&
+      secondDifferentService?.edits === 0 &&
+      secondDifferentService.score === best.score &&
+      secondDifferentService.target.join(" ") === best.target.join(" ") &&
+      secondDifferentService.provenance === best.provenance,
+  );
+  if (
+    ambiguousExact ||
+    (!exact && (best.score < minimumConfidence || margin < 0.045))
+  )
+    return null;
 
   const correctedTerms = best.source.flatMap((source, index) =>
     source === best.target[index]

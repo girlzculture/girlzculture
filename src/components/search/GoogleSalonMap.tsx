@@ -13,9 +13,11 @@ import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { reportClientOperationalFailure } from "@/lib/supabase";
 import { formatDistanceMiles } from "@/lib/location";
 
-export type MapSalon = { id: string; name: string; slug: string; starting_price?: number | null; startingPrice?: number | null; rating_overall?: number | null; review_count?: number | null; latitude?: number | null; longitude?: number | null; distance_miles?: number | null };
+export type MapSalon = { id: string; name: string; slug: string; starting_price?: number | null; startingPrice?: number | null; rating_overall?: number | null; review_count?: number | null; latitude?: number | null; longitude?: number | null; distance_miles?: number | null; matched_service?: { id: string; name: string; price: number | null } | null };
 
 function mapPrice(value: unknown) {
+  if (value === null || value === undefined || value === "")
+    return "View pricing";
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount < 0) return "View pricing";
   return `From $${amount.toFixed(Number.isInteger(amount) ? 0 : 2)}`;
@@ -24,7 +26,13 @@ function mapPrice(value: unknown) {
 export function SalonMapSelectionSummary({ salon }: { salon: MapSalon }) {
   const reviews = Number(salon.review_count || 0);
   const rating = Number(salon.rating_overall || 0);
-  return <aside aria-live="polite" data-map-salon-summary className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-[12px] border border-plum/10 bg-white/95 p-3 shadow-[0_10px_30px_rgba(13,17,20,.18)] backdrop-blur"><div className="min-w-0"><p className="truncate font-serif text-base font-semibold text-plum">{salon.name}</p><p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-ink/65"><span>{reviews > 0 && rating > 0 ? `${rating.toFixed(1)} (${reviews})` : "New"}</span><span>{mapPrice(salon.starting_price ?? salon.startingPrice)}</span><span>{formatDistanceMiles(salon.distance_miles)}</span></p></div><Link href={`/salon/${encodeURIComponent(salon.slug)}`} className="inline-flex min-h-10 shrink-0 items-center rounded-[8px] bg-magenta px-4 text-[11px] font-bold text-white">View salon</Link></aside>;
+  const bookingParams = new URLSearchParams();
+  if (salon.matched_service?.id) bookingParams.set("style", salon.matched_service.id);
+  const bookingHref = `/salon/${encodeURIComponent(salon.slug)}/book${bookingParams.size ? `?${bookingParams}` : ""}`;
+  const price = salon.matched_service
+    ? salon.matched_service.price
+    : salon.starting_price ?? salon.startingPrice;
+  return <aside aria-live="polite" data-map-salon-summary className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-[12px] border border-plum/10 bg-white/95 p-3 shadow-[0_10px_30px_rgba(13,17,20,.18)] backdrop-blur"><div className="min-w-0"><p className="truncate font-serif text-base font-semibold text-plum">{salon.name}</p>{salon.matched_service ? <p className="truncate text-[10px] font-semibold text-plum">{salon.matched_service.name}</p> : null}<p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-ink/65">{reviews > 0 && rating > 0 ? <span>{rating.toFixed(1)} ({reviews})</span> : null}<span>{mapPrice(price)}</span><span>{formatDistanceMiles(salon.distance_miles)}</span></p></div><div className="flex shrink-0 gap-2"><Link href={`/salon/${encodeURIComponent(salon.slug)}`} className="inline-flex min-h-10 items-center rounded-[8px] border border-magenta bg-white px-3 text-[11px] font-bold text-magenta">View</Link><Link href={bookingHref} className="inline-flex min-h-10 items-center rounded-[8px] bg-magenta px-3 text-[11px] font-bold text-white">Book</Link></div></aside>;
 }
 
 export default function GoogleSalonMap({ salons, compact = false, selectedSalonId = "", onSelect }: { salons: MapSalon[]; compact?: boolean; selectedSalonId?: string; onSelect?: (salonId: string) => void }) {
@@ -124,7 +132,9 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
         const markers = mapped.map((salon) => {
           const position = { lat: Number(salon.latitude), lng: Number(salon.longitude) };
           bounds.extend(position);
-          const price = salon.starting_price ?? salon.startingPrice;
+          const price = salon.matched_service
+            ? salon.matched_service.price
+            : salon.starting_price ?? salon.startingPrice;
           const rating = Number(salon.rating_overall || 0);
           const reviews = Number(salon.review_count || 0);
           const openSalon = () => {
@@ -135,7 +145,7 @@ export default function GoogleSalonMap({ salons, compact = false, selectedSalonI
           button.type = "button";
           button.title = `Open ${salon.name}`;
           button.setAttribute("aria-label", `Open ${salon.name}`);
-          button.innerHTML = `<span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${salon.name.replace(/[<>&"']/g, "")}</span><span style="font-size:10px;opacity:.72">${reviews > 0 ? `★ ${rating.toFixed(1)}` : "☆ New"}${price == null ? "" : ` · From $${Number(price).toFixed(0)}`}</span>`;
+          button.innerHTML = `<span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${salon.name.replace(/[<>&"']/g, "")}</span><span style="font-size:10px;opacity:.72">${reviews > 0 ? `★ ${rating.toFixed(1)}` : ""}${reviews > 0 && price != null ? " · " : ""}${price == null ? "" : `From $${Number(price).toFixed(0)}`}</span>`;
           button.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:42px;padding:6px 10px;border-radius:10px;background:var(--gc-white);color:var(--gc-text-primary);font:700 11px Inter,sans-serif;box-shadow:0 5px 18px rgba(13,17,20,.2);border:2px solid var(--gc-teal);cursor:pointer;transition:transform .15s ease";
           button.addEventListener("click", openSalon);
           buttons.set(salon.id, button);

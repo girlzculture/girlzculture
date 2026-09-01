@@ -89,6 +89,7 @@ const migration = read(
   "supabase/migrations/20260807200000_authoritative_discovery_search.sql",
 );
 const decisionSearch = read("src/lib/decisionSearchServer.ts");
+const decisionSearchCore = read("src/lib/decisionSearchEnrichmentCore.ts");
 const discovery = read("src/lib/discoveryServer.ts");
 const salonsPage = read("src/app/salons/page.tsx");
 const salonDiscovery = read("src/components/public/SalonDiscovery.tsx");
@@ -130,9 +131,14 @@ assert.match(decisionSearch, /Radius\/eligibility is deliberately the first stag
 assert.doesNotMatch(decisionSearch, /masterStyleId: intent\.stableServiceId/);
 assert.match(
   decisionSearch,
-  /\(intent\.stableServiceId \|\| intent\.serviceGroupId \|\| intent\.categoryId\)[\s\S]*candidateStyles\.length === 0/,
+  /intent\.stableServiceId[\s\S]*intent\.serviceGroupId[\s\S]*intent\.categoryId[\s\S]*intent\.semanticPhrase[\s\S]*candidateStyles\.length === 0/,
 );
-assert.match(decisionSearch, /rows\.filter\(\(row\) => row\.master_style_id === stableServiceId\)/);
+assert.match(decisionSearch, /decisionRelevantStyles/);
+assert.match(
+  decisionSearchCore,
+  /row\.master_style_id === input\.stableServiceId/,
+);
+assert.match(decisionSearchCore, /if \(input\.unresolvedServicePhrase\) return \[\]/);
 assert.match(decisionSearch, /evaluateDecisionStyleCandidates/);
 assert.match(decisionSearch, /selectDecisionStyleWithOpening/);
 assert.match(discovery, /result_limit: limit/);
@@ -141,7 +147,9 @@ assert.match(salonsPage, /limit: "all"/);
 assert.match(salonsPage, /masterStyleId: initialStyleId \|\| null/);
 assert.match(salonDiscovery, /className="mt-3 grid gap-3"/);
 assert.doesNotMatch(salonDiscovery, /lg:grid-cols-2/);
-assert.doesNotMatch(salonDiscovery, /Load more|pagination/i);
+assert.match(salonDiscovery, /page:\s*requestedPage/);
+assert.match(salonDiscovery, /body\.pagination\?\.has_more_results/);
+assert.match(salonDiscovery, />\s*\{loadingMore \? "Loading more salons\.\.\." : "Load more salons"\}\s*</);
 assert.match(salonDiscovery, /!ignoreInitialOrigin &&[\s\S]*initialOrigin/);
 assert.match(salonDiscovery, /setIgnoreInitialOrigin\(true\)/);
 assert.match(salonDiscovery, /restorationChecked\.current = true/);
@@ -152,13 +160,17 @@ assert.match(salonDiscovery, /\[salons\.length, scrollRestoreRevision\]/);
 assert.match(map, /const selectedSalon = salons\.find/);
 assert.match(map, /SalonMapSelectionSummary salon=\{selectedSalon\}/);
 assert.match(map, /rating\.toFixed\(1\)/);
-assert.match(map, /mapPrice\(salon\.starting_price/);
+assert.match(
+  map,
+  /const price = salon\.matched_service[\s\S]*\? salon\.matched_service\.price[\s\S]*: salon\.starting_price \?\? salon\.startingPrice/,
+);
+assert.match(map, /bookingParams\.set\("style", salon\.matched_service\.id\)/);
 assert.match(map, /formatDistanceMiles\(salon\.distance_miles\)/);
 assert.match(autocomplete, /waitForGoogleMapsSdkReady/);
 assert.match(autocomplete, /callback=\$\{GOOGLE_MAPS_READY_CALLBACK\}/);
 assert.match(stylesPage, /master_style_id/);
 assert.match(styleCatalog, /style_id=/);
-assert.match(styleCatalog, /STYLE_STATE_KEY/);
+assert.match(styleCatalog, /STYLE_SCROLL_STATE_KEY/);
 assert.match(nearby, /lat: String\(location\.lat\)/);
 assert.match(nearby, /radius: String\(locationState\.radiusMiles\)/);
 

@@ -49,6 +49,7 @@ export function matchDecisionLocationMarket(
 export type ParsedDecisionSearchIntent = {
   service: DecisionIntentCatalogService | null;
   stableServiceId: string | null;
+  rejectedExplicitServiceId: boolean;
   serviceGroupId: string | null;
   categoryId: string | null;
   semanticPhrase: string | null;
@@ -97,6 +98,18 @@ function containsPhrase(haystack: string, needle: string) {
     normalizedNeedle &&
       ` ${normalizeDecisionQuery(haystack)} `.includes(` ${normalizedNeedle} `),
   );
+}
+
+function singularizedDecisionPhrase(value: unknown) {
+  return normalizeDecisionQuery(value)
+    .split(" ")
+    .map((token) => {
+      if (token.length >= 5 && token.endsWith("ies"))
+        return `${token.slice(0, -3)}y`;
+      if (token.length >= 5 && token.endsWith("s")) return token.slice(0, -1);
+      return token;
+    })
+    .join(" ");
 }
 
 function dateOnly(now: Date, offsetDays = 0) {
@@ -188,6 +201,13 @@ function broadCatalogMatch(
     .filter((candidate) => {
       if (containsPhrase(query, candidate.term)) return true;
       const term = normalizeDecisionQuery(candidate.term);
+      if (
+        containsPhrase(
+          singularizedDecisionPhrase(query),
+          singularizedDecisionPhrase(term),
+        )
+      )
+        return true;
       // "braid", "braids" and "braiding" describe the managed Braids
       // category/group; they must not disappear as stop words or degrade into
       // an unfiltered salon search.
@@ -235,7 +255,7 @@ export function parseDecisionSearchIntent(
     services,
     filters.serviceId,
   );
-  const broad = serviceIdentity.stableServiceId
+  const broad = serviceIdentity.stableServiceId || serviceIdentity.rejectedExplicitServiceId
     ? null
     : broadCatalogMatch(query, services);
   const affordableIntent =
@@ -262,13 +282,17 @@ export function parseDecisionSearchIntent(
   const minimumRating =
     boundedSearchNumber(filters.minimumRating, null, 0, 5) ??
     boundedSearchNumber(ratingMatch?.[1], bestIntent ? 3.9 : null, 0, 5);
-  const semanticPhrase = serviceIdentity.stableServiceId || broad
+  const semanticPhrase =
+    serviceIdentity.stableServiceId ||
+    serviceIdentity.rejectedExplicitServiceId ||
+    broad
     ? null
     : residualSemanticPhrase(query);
 
   return {
     service: serviceIdentity.service,
     stableServiceId: serviceIdentity.stableServiceId,
+    rejectedExplicitServiceId: serviceIdentity.rejectedExplicitServiceId,
     serviceGroupId: broad?.kind === "group" ? broad.id : null,
     categoryId: broad?.kind === "category" ? broad.categoryId : null,
     semanticPhrase,

@@ -293,34 +293,40 @@ export async function CustomerBottomNav({
   }));
 
   return (
-    <nav
-      aria-label="Customer navigation"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
-    >
-      <div className="mx-auto grid max-w-md grid-cols-5">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const isActive = active === item.id;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold ${
-                isActive ? "text-magenta" : "text-ink/75"
-              }`}
-            >
-              <Icon
-                aria-hidden="true"
-                size={20}
-                strokeWidth={isActive ? 2.4 : 1.8}
-              />
-              <LocalizedText messageKey={item.key} fallback={item.label} />
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      <div
+        aria-hidden="true"
+        className="gc-customer-bottom-nav-landscape-spacer hidden"
+      />
+      <nav
+        aria-label="Customer navigation"
+        className="gc-customer-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-5">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const isActive = active === item.id;
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold ${
+                  isActive ? "text-magenta" : "text-ink/75"
+                }`}
+              >
+                <Icon
+                  aria-hidden="true"
+                  size={20}
+                  strokeWidth={isActive ? 2.4 : 1.8}
+                />
+                <LocalizedText messageKey={item.key} fallback={item.label} />
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
 

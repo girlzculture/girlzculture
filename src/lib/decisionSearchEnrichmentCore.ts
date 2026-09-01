@@ -1,4 +1,5 @@
 export const DECISION_SEARCH_ENRICHMENT_PAGE_SIZE = 500;
+export const DECISION_SEARCH_CATALOG_PAGE_SIZE = 500;
 export const DECISION_SEARCH_MAX_SALON_IDS_PER_QUERY = 25;
 export const DECISION_SEARCH_MAX_ENCODED_ID_FILTER_CHARACTERS = 1_200;
 export const DECISION_SEARCH_AVAILABILITY_CONCURRENCY = 4;
@@ -52,6 +53,36 @@ export type DecisionCatalogService = {
   aliases: string[];
 };
 
+export type DecisionCatalogLifecycleRow = {
+  is_active?: unknown;
+  archived_at?: unknown;
+};
+
+/**
+ * Public search requires the entire canonical catalog path to remain live.
+ * A salon service can outlive a master style, group, or category that an
+ * administrator archived, so checking the salon-owned row alone is not
+ * sufficient.
+ */
+export function decisionCatalogHierarchyIsEligible(input: {
+  master: DecisionCatalogLifecycleRow | null | undefined;
+  group: DecisionCatalogLifecycleRow | null | undefined;
+  category: DecisionCatalogLifecycleRow | null | undefined;
+}) {
+  return [input.master, input.group, input.category].every(
+    (row) => row?.is_active === true && row.archived_at == null,
+  );
+}
+
+/** Only salon services backed by an eligible canonical master may enrich. */
+export function decisionCanonicalStyleIsEligible(
+  style: { master_style_id?: unknown },
+  eligibleMasterStyleIds: ReadonlySet<string>,
+) {
+  const masterStyleId = String(style.master_style_id || "").trim();
+  return Boolean(masterStyleId) && eligibleMasterStyleIds.has(masterStyleId);
+}
+
 export type DecisionPromotionPrice = {
   promotion_type: string | null;
   discount_value: number | null;
@@ -65,6 +96,11 @@ export type DecisionSearchStyleCandidate = {
   base_price: number | null;
   price_display_min: number | null;
   price_display_max: number | null;
+};
+
+export type DecisionRelevantStyleCandidate = DecisionSearchStyleCandidate & {
+  name: string;
+  category_id?: string | null;
 };
 
 export type DecisionSearchPromotionCandidate = DecisionPromotionPrice & {
@@ -83,6 +119,7 @@ export type EvaluatedDecisionStyle<
   originalPrice: number | null;
   price: number | null;
   promotion: TPromotion | null;
+  matchQuality: number;
 };
 
 export type DecisionSearchPageResult<T> = {
@@ -90,11 +127,153 @@ export type DecisionSearchPageResult<T> = {
   error: unknown;
 };
 
+/**
+ * Read a complete ordered catalog through bounded PostgREST ranges. Advancing
+ * by the number of rows actually returned also handles a deployment whose
+ * provider row ceiling is lower than the requested page size. An empty page,
+ * rather than an arbitrary total-row cap, is the completion signal.
+ */
+export async function collectDecisionSearchPages<T>(
+  loadPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<DecisionSearchPageResult<T>>,
+  requestedPageSize = DECISION_SEARCH_CATALOG_PAGE_SIZE,
+): Promise<DecisionSearchPageResult<T>> {
+  const pageSize = Math.max(
+    1,
+    Math.min(1_000, Math.floor(requestedPageSize || 1)),
+  );
+  const rows: T[] = [];
+  let from = 0;
+
+  for (;;) {
+    const result = await loadPage(from, from + pageSize - 1);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data || [];
+    if (!page.length) break;
+    rows.push(...page);
+    from += page.length;
+  }
+
+  return { data: rows, error: null };
+}
+
+/**
+ * Read a complete, stably ordered provider collection by keyset. This is used
+ * for eligibility functions where an offset would repeatedly rescan every
+ * preceding row. The provider page remains bounded, while the collection has
+ * no arbitrary total-row ceiling.
+ */
+export async function collectDecisionSearchKeysetPages<T>(
+  loadPage: (
+    after: string | null,
+    pageSize: number,
+  ) => PromiseLike<DecisionSearchPageResult<T>>,
+  keyOf: (row: T) => string,
+  requestedPageSize = DECISION_SEARCH_CATALOG_PAGE_SIZE,
+): Promise<DecisionSearchPageResult<T>> {
+  const pageSize = Math.max(
+    1,
+    Math.min(1_000, Math.floor(requestedPageSize || 1)),
+  );
+  const rows: T[] = [];
+  let after: string | null = null;
+
+  for (;;) {
+    const result = await loadPage(after, pageSize);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data || [];
+    if (!page.length) break;
+    const next = keyOf(page[page.length - 1]).trim();
+    if (!next || next === after) {
+      return {
+        data: null,
+        error: new Error("Keyset pagination did not advance."),
+      };
+    }
+    rows.push(...page);
+    after = next;
+  }
+
+  return { data: rows, error: null };
+}
+
+export type DecisionRatingSortableSalon = {
+  id: string;
+  rating_overall: number | null;
+  review_count: number | null;
+  distance_miles: number;
+};
+
 type DecisionSearchCollectionOptions = {
   pageSize?: number;
   maximumIdsPerChunk?: number;
   maximumEncodedFilterCharacters?: number;
 };
+
+/**
+ * Rating sort means rating first. Review count, distance and stable ID are
+ * deterministic tie-breakers only; availability, promotions and operational
+ * history must not silently turn the customer-facing option into a composite
+ * score.
+ */
+export function compareDecisionSearchRating(
+  left: DecisionRatingSortableSalon,
+  right: DecisionRatingSortableSalon,
+) {
+  return (
+    Number(right.rating_overall || 0) - Number(left.rating_overall || 0) ||
+    Number(right.review_count || 0) - Number(left.review_count || 0) ||
+    left.distance_miles - right.distance_miles ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+/** Keep each customer result page bounded without capping its page number. */
+export function decisionSearchPagination(input: {
+  page?: number | null;
+  pageSize?: number | null;
+}) {
+  const requestedPage = Math.floor(Number(input.page) || 1);
+  return {
+    page:
+      Number.isSafeInteger(requestedPage) && requestedPage > 0
+        ? requestedPage
+        : 1,
+    pageSize: Math.max(
+      1,
+      Math.min(50, Math.floor(Number(input.pageSize) || 20)),
+    ),
+  };
+}
+
+/**
+ * Calculate an in-memory page offset without allowing multiplication beyond
+ * JavaScript's safe-integer range. A valid but far-past-the-end page resolves
+ * to the collection end and therefore returns an honest empty page.
+ */
+export function decisionSearchPageOffset(input: {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}) {
+  const totalCount = Math.max(
+    0,
+    Number.isSafeInteger(input.totalCount) ? input.totalCount : 0,
+  );
+  const pageIndex = input.page - 1;
+  if (
+    !Number.isSafeInteger(pageIndex) ||
+    pageIndex < 0 ||
+    !Number.isSafeInteger(input.pageSize) ||
+    input.pageSize < 1 ||
+    pageIndex > Math.floor(Number.MAX_SAFE_INTEGER / input.pageSize)
+  ) {
+    return totalCount;
+  }
+  return Math.min(pageIndex * input.pageSize, totalCount);
+}
 
 /**
  * Run provider-backed work with a hard concurrency ceiling while preserving
@@ -197,6 +376,73 @@ function containsDecisionSearchPhrase(haystack: string, needle: string) {
   );
 }
 
+function singularDecisionSearchToken(value: string) {
+  if (value.length >= 5 && value.endsWith("ies"))
+    return `${value.slice(0, -3)}y`;
+  if (value.length >= 5 && value.endsWith("s")) return value.slice(0, -1);
+  return value;
+}
+
+/**
+ * Score a real published salon service against the customer's normalized
+ * request. This score is evaluated before price so a cheap unrelated service
+ * can never displace a stronger qualifying service within a broad approved
+ * service group or category.
+ */
+export function decisionServiceMatchQuality(query: unknown, styleName: unknown) {
+  const normalizedQuery = normalizeDecisionSearchText(query);
+  const normalizedName = normalizeDecisionSearchText(styleName);
+  if (!normalizedQuery || !normalizedName) return 0;
+  if (normalizedQuery === normalizedName) return 1_000;
+  if (containsDecisionSearchPhrase(normalizedQuery, normalizedName)) return 900;
+  if (containsDecisionSearchPhrase(normalizedName, normalizedQuery)) return 850;
+  const queryTokens = new Set(
+    normalizedQuery
+      .split(" ")
+      .map(singularDecisionSearchToken)
+      .filter((token) => token.length >= 3),
+  );
+  const nameTokens = normalizedName
+    .split(" ")
+    .map(singularDecisionSearchToken)
+    .filter((token) => token.length >= 3);
+  if (!queryTokens.size || !nameTokens.length) return 0;
+  const overlap = nameTokens.filter((token) => queryTokens.has(token)).length;
+  return Math.round((overlap / Math.max(queryTokens.size, nameTokens.length)) * 500);
+}
+
+/**
+ * Return only the salon's published rows that satisfy the resolved service
+ * identity. An unresolved service-like phrase deliberately returns no rows;
+ * callers must show an honest empty/disambiguation state instead of selecting
+ * the salon's cheapest service.
+ */
+export function decisionRelevantStyles<
+  TStyle extends DecisionRelevantStyleCandidate,
+>(
+  rows: TStyle[],
+  input: {
+    stableServiceId?: string | null;
+    serviceGroupId?: string | null;
+    categoryId?: string | null;
+    unresolvedServicePhrase?: string | null;
+  },
+) {
+  if (!rows.length) return [];
+  if (input.stableServiceId)
+    return rows.filter(
+      (row) => row.master_style_id === input.stableServiceId,
+    );
+  if (input.serviceGroupId)
+    return rows.filter(
+      (row) => row.service_group_id === input.serviceGroupId,
+    );
+  if (input.categoryId)
+    return rows.filter((row) => row.category_id === input.categoryId);
+  if (input.unresolvedServicePhrase) return [];
+  return [...rows];
+}
+
 /**
  * Resolve typed service copy to the same stable master-style identity used by
  * an explicit catalog selection. Once a customer types a recognized exact
@@ -207,12 +453,18 @@ export function resolveDecisionServiceIdentity<T extends DecisionCatalogService>
   query: string,
   services: T[],
   explicitServiceId: unknown,
-): { service: T | null; stableServiceId: string | null } {
+): {
+  service: T | null;
+  stableServiceId: string | null;
+  rejectedExplicitServiceId: boolean;
+} {
   const explicitId = String(explicitServiceId || "").trim();
   if (explicitId) {
+    const service = services.find((candidate) => candidate.id === explicitId) || null;
     return {
-      service: services.find((service) => service.id === explicitId) || null,
-      stableServiceId: explicitId,
+      service,
+      stableServiceId: service?.id || null,
+      rejectedExplicitServiceId: !service,
     };
   }
 
@@ -229,28 +481,39 @@ export function resolveDecisionServiceIdentity<T extends DecisionCatalogService>
     "hair salon",
     "near me",
   ]);
+  const matches = services
+    .flatMap((candidate) =>
+      [candidate.name, ...candidate.aliases].map((term) => ({
+        service: candidate,
+        normalized: normalizeDecisionSearchText(term),
+      })),
+    )
+    .filter(
+      (candidate) =>
+        candidate.normalized &&
+        !excluded.has(candidate.normalized) &&
+        containsDecisionSearchPhrase(query, candidate.normalized),
+    )
+    .sort(
+      (left, right) =>
+        right.normalized.length - left.normalized.length ||
+        left.service.name.localeCompare(right.service.name),
+    );
+  const best = matches[0] || null;
+  const equallySpecific = best
+    ? matches.filter((match) => match.normalized.length === best.normalized.length)
+    : [];
+  // Preserve longest-match intent resolution, but never use alphabetical
+  // order to break a tie between equally specific services.
   const service =
-    services
-      .flatMap((candidate) =>
-        [candidate.name, ...candidate.aliases].map((term) => ({
-          service: candidate,
-          normalized: normalizeDecisionSearchText(term),
-        })),
-      )
-      .filter(
-        (candidate) =>
-          !excluded.has(candidate.normalized) &&
-          containsDecisionSearchPhrase(query, candidate.normalized),
-      )
-      .sort(
-        (left, right) =>
-          right.normalized.length - left.normalized.length ||
-          left.service.name.localeCompare(right.service.name),
-      )[0]?.service || null;
+    new Set(equallySpecific.map((match) => match.service.id)).size > 1
+      ? null
+      : best?.service || null;
 
   return {
     service,
     stableServiceId: service?.id || null,
+    rejectedExplicitServiceId: false,
   };
 }
 
@@ -279,7 +542,8 @@ export function decisionDisplayedStylePrice(
     style.base_price,
     style.price_display_max,
   ]
-    .map(Number)
+    .filter((value) => value !== null && value !== undefined)
+    .map((value) => Number(value))
     .filter((value) => Number.isFinite(value) && value >= 0);
   return values.length ? Math.min(...values) : null;
 }
@@ -356,6 +620,7 @@ export function evaluateDecisionStyleCandidates<
   promotions: TPromotion[];
   maximumPrice: number | null;
   promotionOnly: boolean;
+  matchQuality?: (style: TStyle) => number;
 }) {
   const all = input.styles
     .map((style): EvaluatedDecisionStyle<TStyle, TPromotion> => {
@@ -384,10 +649,12 @@ export function evaluateDecisionStyleCandidates<
         originalPrice,
         price: offers[0]?.price ?? originalPrice,
         promotion: offers[0]?.promotion || null,
+        matchQuality: Math.max(0, Number(input.matchQuality?.(style) || 0)),
       };
     })
     .sort(
       (left, right) =>
+        right.matchQuality - left.matchQuality ||
         (left.price ?? Number.POSITIVE_INFINITY) -
           (right.price ?? Number.POSITIVE_INFINITY) ||
         left.style.id.localeCompare(right.style.id),
@@ -404,9 +671,9 @@ export function evaluateDecisionStyleCandidates<
 }
 
 /**
- * Select the cheapest real candidate with a verified opening. When openings
- * are informative rather than required (for example a best-rated search), a
- * lack of slots falls back to the cheapest eligible service.
+ * Select the highest-ranked real candidate with a verified opening. The
+ * caller controls ranking (strongest service match, then price). When openings
+ * are informative rather than required, a lack of slots keeps that ranking.
  */
 export async function selectDecisionStyleWithOpening<
   TCandidate,

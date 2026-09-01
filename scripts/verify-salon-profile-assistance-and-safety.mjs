@@ -127,7 +127,7 @@ assert.match(descriptionEditor, /Use this draft/);
 assert.match(descriptionEditor, /200 words/);
 assert.match(migration, /human_review_required=true/);
 
-assert.match(fallbackEditor, /Growth and Premium plans/);
+assert.doesNotMatch(fallbackEditor, /Growth and Premium plans|View upgrade options/);
 assert.match(fallbackEditor, /only on your salon page/);
 assert.match(fallbackEditor, /does not guarantee placement/);
 assert.match(fallbackPublic, /Stylist profiles are being prepared/);
@@ -160,4 +160,4 @@ assert.match(migration, /complaints_log_moderation_queue_idx/);
 assert.match(supportInbox, /Content review required/);
 assert.match(supportInbox, /report was preserved so evidence is not lost/);
 
-console.log("Verified accessible password visibility, 200-word salon descriptions, reliable reviewed writing drafts, compact rating navigation, first-name review safety, cross-surface content moderation, enhanced Growth+ salon-page fallback content, and the configurable owner setup guide.");
+console.log("Verified accessible password visibility, 200-word salon descriptions, reliable reviewed writing drafts, compact rating navigation, first-name review safety, cross-surface content moderation, enhanced salon-page fallback content for every active plan, and the configurable owner setup guide.");

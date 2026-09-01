@@ -26,6 +26,7 @@ type Props = {
   reviews: ReviewRecord[];
   salonRating: number;
   salonReviewCount: number;
+  sectionId?: string;
 };
 
 function renderStars(value: number) {
@@ -34,7 +35,7 @@ function renderStars(value: number) {
   ));
 }
 
-export default function SalonReviews({ reviews, salonRating, salonReviewCount }: Props) {
+export default function SalonReviews({ reviews, salonRating, salonReviewCount, sectionId = "reviews" }: Props) {
   const searchParams = useSearchParams();
   const canReply = searchParams.get("reply") === "1";
   const [activeIndex, setActiveIndex] = useState(0);
@@ -110,11 +111,11 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
   const showNext = () => setActiveIndex((current) => localReviews.length ? (current + 1) % localReviews.length : 0);
 
   return (
-    <section id="reviews" tabIndex={-1} className="scroll-mt-24 rounded-[15px] border border-plum/10 bg-white/75 p-4 shadow-[0_5px_18px_rgba(13,17,20,0.05)] outline-none focus-visible:ring-2 focus-visible:ring-magenta sm:p-5">
+    <section id={sectionId} tabIndex={-1} className="scroll-mt-24 rounded-[15px] border border-plum/10 bg-white/75 p-4 shadow-[0_5px_18px_rgba(13,17,20,0.05)] outline-none focus-visible:ring-2 focus-visible:ring-magenta sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="font-serif text-[24px] font-semibold text-ink">Reviews</h2>
-          {salonReviewCount > 0 && salonRating > 0 ? <><span className="inline-flex items-center gap-1 text-[12px] font-semibold"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span><span className="text-[10px] text-ink/50">({salonReviewCount})</span></> : <span className="rounded-full bg-blush px-2.5 py-1 text-[12px] font-semibold text-plum">New</span>}
+          {salonReviewCount > 0 && salonRating > 0 ? <><span className="inline-flex items-center gap-1 text-[12px] font-semibold"><Star size={14} className="fill-amber text-amber" />{salonRating.toFixed(1)}</span><span className="text-[10px] text-ink/50">({salonReviewCount})</span></> : null}
         </div>
         {localReviews.length > 1 ? <div className="flex items-center gap-2"><button type="button" onClick={showPrevious} aria-label="Previous review" className="grid h-8 w-8 place-items-center rounded-full border border-plum/10 text-plum"><ChevronLeft size={15} /></button><button type="button" onClick={showNext} aria-label="Next review" className="grid h-8 w-8 place-items-center rounded-full border border-plum/10 text-plum"><ChevronRight size={15} /></button></div> : null}
       </div>
@@ -148,7 +149,7 @@ export default function SalonReviews({ reviews, salonRating, salonReviewCount }:
             {replyStatus ? <p role="status" className="mt-3 rounded-[8px] bg-emerald-50 p-2 text-[9px] gc-text-success">{replyStatus}</p> : null}
             {activeReview.salon_reply ? <div className="mt-3 rounded-[8px] bg-blush/25 p-3 text-[10px] leading-4 text-ink/70"><strong className="text-plum">Salon reply:</strong> {activeReview.salon_reply}</div> : canReply ? <div className="mt-3">{activeReply === activeReview.id ? <><textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} rows={2} placeholder="Write a reply" className="w-full rounded-[8px] border border-plum/10 px-3 py-2 text-[10px] outline-none" /><div className="mt-2 flex gap-2"><button type="button" onClick={() => submitReply(activeReview.id || "")} disabled={replySaving} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">{replySaving ? "Saving…" : "Save reply"}</button><button type="button" onClick={() => { setActiveReply(null); setReplyText(""); }} className="rounded-full border border-magenta px-3 py-1.5 text-[9px] text-magenta">Cancel</button></div>{replyError ? <p className="mt-2 text-[9px] gc-text-danger">{replyError}</p> : null}</> : <button type="button" onClick={() => setActiveReply(activeReview.id || null)} className="rounded-full bg-magenta px-3 py-1.5 text-[9px] font-semibold text-white">Reply as salon</button>}</div> : null}
           </article>
-        ) : <p className="grid min-h-28 place-items-center rounded-[12px] border border-dashed border-plum/15 text-[11px] text-ink/55">No reviews yet. Reviews from completed bookings will appear here automatically.</p>}
+        ) : <p className="grid min-h-28 place-items-center rounded-[12px] border border-dashed border-plum/15 text-[11px] text-ink/55">No reviews yet</p>}
       </div>
 
       {localReviews.length > 1 ? <div className="mt-3 flex justify-center gap-1.5">{localReviews.map((review, index) => <button key={review.id || index} type="button" onClick={() => setActiveIndex(index)} aria-label={`Show review ${index + 1}`} className={`h-1.5 rounded-full transition-all ${index === activeIndex ? "w-5 bg-magenta" : "w-1.5 bg-ink/20"}`} />)}</div> : null}
