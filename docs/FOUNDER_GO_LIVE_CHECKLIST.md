@@ -16,9 +16,9 @@ This migration makes an activated salon publicly visible only while its subscrip
 
 1. In Stripe, turn on **Test mode**.
 2. Create three products with recurring monthly prices:
-   - Basic — USD $99.50 monthly
-   - Growth — USD $129.50 monthly
-   - Premium — USD $159.50 monthly
+   - Starter — USD $59 monthly
+   - Growth — USD $69 monthly
+   - Premium — USD $89 monthly
 3. Copy each `price_...` ID.
 4. In Stripe Workbench → Webhooks, add `https://YOUR-DOMAIN/api/stripe/webhook`.
 5. Subscribe the endpoint to:
@@ -84,9 +84,10 @@ MFA_MAX_ATTEMPTS=5
 MFA_RESEND_COOLDOWN_SECONDS=60
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_BASIC_PRICE_ID=price_...
-STRIPE_GROWTH_PRICE_ID=price_...
-STRIPE_PREMIUM_PRICE_ID=price_...
+STRIPE_PRICE_STARTER=price_...
+STRIPE_PRICE_GROWTH=price_...
+STRIPE_PRICE_PREMIUM=price_...
+SUBSCRIPTION_SALES_ENABLED=false
 INTERNAL_API_SECRET=<at least 32 random characters>
 RESEND_API_KEY=
 EMAIL_FROM=Girlz Culture <notifications@YOUR-DOMAIN>
@@ -104,12 +105,13 @@ Never prefix service-role, Stripe secret, webhook, internal, Resend, or Twilio s
 2. Salon: plans → signup → email confirmation → application with chosen plan → submitted screen.
 3. Admin: submission appears under its state → approve → activate.
 4. Salon: sign in → only Subscription is available → complete Stripe test subscription → dashboard unlocks.
-5. Basic: Promotions shows an upgrade prompt and direct database writes are rejected.
-6. Growth: Promotions works and the salon ranks above Basic.
-7. Premium: Premium badge appears and the salon receives the highest marketplace priority.
-8. Cancel the test subscription in Stripe and confirm the dashboard relocks and the salon disappears from public search after the webhook arrives.
-9. Install the PWA from the browser and verify `/offline` appears without a connection.
-10. Confirm `robots.txt` disallows crawling until the real public launch.
+5. Starter: one active customer promotion and up to 10 product listings are accepted; the next write is rejected safely.
+6. Growth: up to five active promotions and 30 product listings are accepted; the next write is rejected safely.
+7. Premium: fair-use unlimited promotion/product writes work without a Premium badge or organic-placement boost.
+8. Confirm Starter, Growth, and Premium receive the same Standard organic marketplace visibility; paid/credited sponsored placements require a separate valid marketing entitlement.
+9. Cancel the test subscription in Stripe and confirm the dashboard relocks and the salon disappears from public search after the webhook arrives.
+10. Install the PWA from the browser and verify `/offline` appears without a connection.
+11. Confirm `robots.txt` disallows crawling until the real public launch.
 
 ## 7. Real launch later
 

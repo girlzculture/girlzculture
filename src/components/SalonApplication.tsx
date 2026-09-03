@@ -27,7 +27,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form,setForm] = useState({...initial,business_type:businessTypes[0]||initial.business_type});
-  const [selectedPlan,setSelectedPlan] = useState<SubscriptionPlan>(() => normalizePlan(searchParams.get("plan") || "Growth"));
+  const selectedPlan = normalizePlan(searchParams.get("plan") || "Starter");
   const [userId,setUserId] = useState("");
   const [checks,setChecks] = useState([false,false,false]);
   const [message,setMessage] = useState("");
@@ -45,6 +45,12 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
       // place so the next authenticated operation can recover the session.
     });
   }, [router]);
+
+  function choosePlan(plan: SubscriptionPlan) {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("plan", plan.toLowerCase());
+    router.replace(`/salon/apply?${next.toString()}`, { scroll: false });
+  }
 
   function update(key: keyof typeof initial, value: string) { setForm((current) => ({...current,[key]:value})); }
 
@@ -279,7 +285,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   return <form onSubmit={submit} className="rounded-[18px] border border-plum/10 bg-white/85 p-5 shadow-[0_20px_60px_rgba(13,17,20,.08)] sm:p-8">
     <div className="mb-7 flex items-center gap-4"><span className="grid h-16 w-16 place-items-center rounded-[15px] bg-blush text-magenta"><Building2 size={34}/></span><div><h1 className="font-serif text-4xl font-semibold text-plum">Salon Application</h1><p className="mt-1 text-sm text-ink/65">Tell us about your business so we can help you grow with Girlz Culture.</p></div></div>
 
-    <section className="mb-7"><div className="flex items-end justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Choose your plan</h2><p className="mt-1 text-xs text-ink/55">No payment today. Billing begins only after approval and activation.</p></div><Link href="/plans" target="_blank" className="text-xs font-bold text-magenta">Compare plans</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{PLAN_ORDER.map((name) => { const plan=SUBSCRIPTION_PLANS[name]; const active=selectedPlan===name; return <button key={name} type="button" onClick={()=>setSelectedPlan(name)} className={`rounded-[13px] border p-4 text-left ${active?"border-magenta bg-blush/30 ring-2 ring-magenta/10":"border-plum/10 bg-white"}`}><span className="flex items-center justify-between"><b className="font-serif text-xl text-plum">{name}</b>{active?<Check size={18} className="text-magenta"/>:null}</span><span className="mt-1 block text-sm font-bold">${plan.monthlyPrice.toFixed(2)}/mo</span><span className="mt-2 block text-[10px] leading-4 text-ink/55">{plan.description}</span></button>; })}</div></section>
+    <section className="mb-7"><div className="flex items-end justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Choose your plan</h2><p className="mt-1 text-xs text-ink/55">No payment today. Billing begins only after approval and subscription.</p></div><Link href="/plans" target="_blank" className="text-xs font-bold text-magenta">Compare plans</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{PLAN_ORDER.map((name) => { const plan=SUBSCRIPTION_PLANS[name]; const active=selectedPlan===name; return <button key={name} type="button" onClick={()=>choosePlan(name)} className={`rounded-[13px] border p-4 text-left ${active?"border-magenta bg-blush/30 ring-2 ring-magenta/10":"border-plum/10 bg-white"}`}><span className="flex items-center justify-between"><b className="font-serif text-xl text-plum">{name}</b>{active?<Check size={18} className="text-magenta"/>:null}</span><span className="mt-1 block text-sm font-bold">${plan.monthlyAmountCents / 100}/month</span><span className="mt-2 block text-[10px] leading-4 text-ink/55">{plan.description}</span></button>; })}</div></section>
 
     <div className="grid gap-4 sm:grid-cols-2">
       <Input label="Business / Salon Name" value={form.business_name} onChange={(value)=>update("business_name",value)} />

@@ -4,15 +4,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BadgeCheck, LockKeyhole, Mail, Phone, ShieldCheck, UsersRound } from "lucide-react";
 import { salonSupabase as supabase } from "@/lib/supabase";
-import { normalizePlan } from "@/lib/plans";
+import { normalizePlan, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, normalizeEmail, normalizeUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
 export default function SalonSignup() {
-  const router=useRouter(); const searchParams=useSearchParams(); const selectedPlan=normalizePlan(searchParams.get("plan")||"Growth"); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [phone,setPhone]=useState(""); const [loading,setLoading]=useState(false); const [message,setMessage]=useState("");
+  const router=useRouter(); const searchParams=useSearchParams(); const selectedPlan=normalizePlan(searchParams.get("plan")||"Starter"); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [phone,setPhone]=useState(""); const [loading,setLoading]=useState(false); const [message,setMessage]=useState("");
   async function submit(event:FormEvent){event.preventDefault();setMessage("");if(!isValidEmail(email)){setMessage("Please enter a valid email address (name@example.com).");return;}if(!isValidUsPhone(phone)){setMessage("Please enter a US phone number.");return;}const validEmail=normalizeEmail(email),validPhone=normalizeUsPhone(phone);setLoading(true);try{const response=await fetch("/api/auth/signup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({scope:"salon_owner",email:validEmail,password,phone:validPhone,selected_plan:selectedPlan,website:""})});const body=await readApiResponse(response,"Your account could not be created.") as {error?:string;session?:{access_token:string;refresh_token:string}|null};if(!response.ok)throw new Error(body.error||"Your account could not be created.");if(body.session){const {error}=await supabase.auth.setSession(body.session);if(error)throw error;sessionStorage.removeItem("girlz-culture-signed-out:salon");router.push(`/salon/apply?plan=${selectedPlan.toLowerCase()}`);router.refresh();}else setMessage("Account created. Confirm your email, then log in to complete your salon application.");}catch(error){setMessage(error instanceof Error?error.message:"Your account could not be created.");}finally{setLoading(false);}}
   return <form onSubmit={submit} className="space-y-5">
+    <div
+      aria-label="Selected application plan"
+      data-selected-application-plan={selectedPlan.toLowerCase()}
+      className="flex items-center justify-between gap-3 rounded-[12px] border border-plum/10 bg-blush/35 px-4 py-3 text-sm"
+    >
+      <span className="gc-text-secondary">Selected application plan</span>
+      <strong className="text-plum">{selectedPlan} · ${SUBSCRIPTION_PLANS[selectedPlan].monthlyAmountCents / 100}/month</strong>
+    </div>
     <Field label="Email" icon={Mail}><input type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com" className="w-full bg-transparent outline-none"/></Field>
     <div className="block"><label htmlFor="salon-signup-password" className="mb-2 block text-sm font-semibold">Password</label><span className="flex items-center gap-3 rounded-[9px] border border-plum/15 bg-white px-4 py-3.5"><LockKeyhole size={19} className="text-ink/55"/><PasswordInput id="salon-signup-password" autoComplete="new-password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Create a strong password" inputClassName="w-full bg-transparent outline-none"/></span></div>
     <Field label="Phone Number" icon={Phone}><input type="tel" required inputMode="tel" pattern={US_PHONE_PATTERN} title="Please enter a US phone number" value={phone} onChange={e=>setPhone(formatUsPhoneInput(e.target.value))} placeholder="+1 (555) 123-4567" className="w-full bg-transparent outline-none"/></Field>

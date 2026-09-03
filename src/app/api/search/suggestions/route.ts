@@ -10,6 +10,10 @@ import {
   type SearchLanguageRule,
 } from "@/lib/searchLanguage";
 import { isSalonClosedToday } from "@/lib/salonOpenStatus";
+import {
+  collectDecisionSearchKeysetPages,
+  collectDecisionSearchPages,
+} from "@/lib/decisionSearchEnrichmentCore";
 
 type SalonRow = {
   id: string;
@@ -26,6 +30,10 @@ type SalonRow = {
   time_zone: string | null;
 };
 
+type VisibleSalonIdRow = {
+  salon_id: string;
+};
+
 type Suggestion = {
   kind: "style" | "salon" | "category" | "location";
   label: string;
@@ -35,6 +43,7 @@ type Suggestion = {
   lat?: number;
   lng?: number;
   matched_terms?: string[];
+  service_id?: string;
   score: number;
 };
 
@@ -58,13 +67,72 @@ async function GETHandler(request: Request) {
     const admin = getSupabaseAdmin();
     const [settingsResult, rulesResult, visibleSalonsResult, salonsResult, catalogResult, categoriesResult, offeringsResult, marketsResult] = await Promise.all([
       admin.from("search_engine_settings").select("stop_words,fuzzy_distance,zero_result_logging_enabled").eq("id", true).maybeSingle(),
-      admin.from("search_language_rules").select("target_type,target_id,canonical_term,aliases,keywords,common_phrases,misspellings,ranking_boost,is_active").eq("is_active", true).limit(2_000),
-      admin.rpc("marketplace_visible_salon_ids", { p_limit: 500 }),
-      admin.from("salons").select("id,name,slug,address_city,address_state,borough,latitude,longitude,accepting_bookings,is_closed_override,closed_override_date,time_zone").eq("status", "Active").eq("is_discoverable", true).in("subscription_status", ["active", "trialing"]).eq("geocode_status", "success").eq("address_needs_review", false).limit(500),
-      admin.from("master_styles").select("id,name,category_id,service_group_id,sort_order").eq("is_active", true).order("sort_order").limit(2_000),
-      admin.from("service_categories").select("id,name,slug,sort_order").eq("is_active", true).order("sort_order").limit(500),
-      admin.from("styles").select("salon_id,master_style_id,name").is("archived_at",null).eq("is_draft", false).limit(5_000),
-      admin.from("location_markets").select("id,name,state_code,center_latitude,center_longitude").eq("is_active", true).order("name").limit(500),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("search_language_rules")
+          .select("target_type,target_id,canonical_term,aliases,keywords,common_phrases,misspellings,ranking_boost,is_active")
+          .eq("is_active", true)
+          .order("target_type", { ascending: true })
+          .order("target_id", { ascending: true })
+          .range(from, to),
+      ),
+      collectDecisionSearchKeysetPages<VisibleSalonIdRow>(
+        (after, pageSize) =>
+          admin.rpc("marketplace_visible_salon_ids_page", {
+            p_after: after,
+            p_limit: pageSize,
+          }),
+        (row) => String(row.salon_id),
+      ),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("salons")
+          .select("id,name,slug,address_city,address_state,borough,latitude,longitude,accepting_bookings,is_closed_override,closed_override_date,time_zone")
+          .eq("status", "Active")
+          .eq("is_discoverable", true)
+          .in("subscription_status", ["active", "trialing"])
+          .eq("geocode_status", "success")
+          .eq("address_needs_review", false)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("master_styles")
+          .select("id,name,category_id,service_group_id,sort_order")
+          .eq("is_active", true)
+          .is("archived_at", null)
+          .order("sort_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("service_categories")
+          .select("id,name,slug,sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("styles")
+          .select("salon_id,master_style_id,name")
+          .is("archived_at", null)
+          .eq("is_draft", false)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      collectDecisionSearchPages((from, to) =>
+        admin
+          .from("location_markets")
+          .select("id,name,state_code,center_latitude,center_longitude")
+          .eq("is_active", true)
+          .order("name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
     ]);
     const firstError = [settingsResult.error, rulesResult.error, visibleSalonsResult.error, salonsResult.error, catalogResult.error, categoriesResult.error, offeringsResult.error, marketsResult.error].find(Boolean);
     if (firstError) throw firstError;
@@ -107,6 +175,7 @@ async function GETHandler(request: Request) {
           kind: "style" as const,
           label: String(style.name),
           value: String(style.name),
+          service_id: String(style.id),
           score: deterministicSearchScore({ query: term, candidates: ruleCandidates(rule, String(style.name)), stopWords, fuzzyDistance, boost: rule?.ranking_boost }),
           matched_terms: searchTokens(term, stopWords),
         };

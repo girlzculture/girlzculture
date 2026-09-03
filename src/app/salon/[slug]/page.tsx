@@ -2,12 +2,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
-  BadgeCheck,
   Clock3,
   MapPin,
   Navigation,
   Package,
-  ShieldCheck,
   Tag,
 } from "lucide-react";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
@@ -27,6 +25,10 @@ import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescription";
 import SalonRatingSummary from "@/components/public/SalonRatingSummary";
 import SalonStylistFallback from "@/components/public/SalonStylistFallback";
+import SalonTrustLabels, {
+  SalonVerificationBadge,
+} from "@/components/public/SalonTrustLabels";
+import { hasPlanFeature } from "@/lib/plans";
 
 type SalonRecord = {
   id: string;
@@ -253,7 +255,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const styles = (stylesResult.data || []) as StyleRecord[];
   const stylists = (stylistsResult.data || []) as StylistRecord[];
   const products = (productsResult.data || []) as ProductRecord[];
-  const promotions = ["Growth","Premium"].includes(String(salon.subscription_tier || "")) ? (promotionsResult.data || []) as SalonPromotion[] : [];
+  const promotions = hasPlanFeature(salon.subscription_tier, "promotions") ? (promotionsResult.data || []) as SalonPromotion[] : [];
   const promotionCards = promotions.map((promotion) => {
     const eligibleStyles = styles.filter((style) => bestPromotionForContext([promotion], {
       salonId: salon.id,
@@ -313,9 +315,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const isVerified = salon.verification_status?.toLowerCase().startsWith("verified") ?? false;
   const verifiedLabel=await getEngineText("trust.verified_label","Verified Salon",60);
   const stylistFallback = salon.stylist_section_fallback || { mode: "empty" };
-  const canShowStylistFallback = !stylists.length && ["Growth", "Premium"].includes(String(salon.subscription_tier || ""));
+  const canShowStylistFallback = !stylists.length;
 
-  const trustIcons = [ShieldCheck, Tag, Clock3];
   const trustLabels = [pageContent.labels?.trust_label_1, pageContent.labels?.trust_label_2, pageContent.labels?.trust_label_3].filter(Boolean) as string[];
 
   return (
@@ -332,22 +333,12 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
-            <div className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-blush px-3 py-1.5 text-[9px] font-semibold text-ink"><BadgeCheck size={14} className="text-amber" />{isVerified ? verifiedLabel : "Salon Profile"}</span><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 gc-text-danger":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
+            <div className="flex flex-wrap gap-2"><SalonVerificationBadge verified={isVerified} label={verifiedLabel} /><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold ${closedToday?"bg-red-100 gc-text-danger":"bg-blush/55 text-plum"}`}><Clock3 size={14}/>{statusLabel}</span></div>
             <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[0.95] tracking-[-0.04em] text-charcoal sm:text-[48px] xl:text-[54px]">{salon.name || "Salon profile"}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-ink/70"><MapPin size={15} className="text-plum" /><span>{locationLine}</span><SalonDistance latitude={salon.latitude} longitude={salon.longitude}/></div>
             <SalonRatingSummary rating={rating} reviewCount={reviewCount} />
 
-            {trustLabels.length ? <div className="mt-4 grid grid-cols-3 gap-2">
-              {trustLabels.map((label, index) => {
-                const Icon = trustIcons[index] || ShieldCheck;
-                return (
-                  <div key={label} className="flex min-h-[58px] items-center gap-2 rounded-[11px] border border-plum/10 bg-white/65 px-2.5 py-2">
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blush text-amber"><Icon size={16} /></span>
-                    <span className="min-w-0 text-[9px] font-semibold leading-tight text-ink">{label}</span>
-                  </div>
-                );
-              })}
-            </div> : null}
+            <SalonTrustLabels labels={trustLabels} verified={isVerified} />
 
             {salon.description?.trim() ? <ExpandableSalonDescription description={salon.description} aiAssisted={salon.description_ai_assisted === true} /> : null}
 

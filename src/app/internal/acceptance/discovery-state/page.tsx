@@ -21,14 +21,21 @@ const salons: PublicSalonResult[] = Array.from({ length: 20 }, (_, index) => ({
   total_count: 20,
 }));
 
-export default function DiscoveryStateAcceptancePage() {
+export default async function DiscoveryStateAcceptancePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   if (process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS !== "true") notFound();
+  const query = await searchParams;
+  const serviceIntent = query.service_intent === "true";
   return (
     <main className="min-h-screen bg-cream p-4 text-ink">
       <SalonDiscovery
         initialSalons={salons}
         initialTotal={20}
-        initialQuery="salons near me"
+        initialQuery={serviceIntent ? "Dominican Blowout" : "salons near me"}
+        initialServiceIntent={serviceIntent}
         initialLocation="Harlem, NY"
         initialOrigin={{ lat: 40.8116, lng: -73.9465 }}
       />

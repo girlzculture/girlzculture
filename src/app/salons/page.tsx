@@ -44,6 +44,11 @@ export default async function SalonsPage({
   const initialQuery =
     stringValue(query.q) || stringValue(query.style);
   const initialStyleId = stringValue(query.style_id);
+  const initialServiceIntent = Boolean(
+    initialStyleId ||
+      stringValue(query.style).trim() ||
+      stringValue(query.q).trim(),
+  );
   const location = stringValue(query.location);
   const radius = normalizeRadius(stringValue(query.radius));
   const sort = new Set(["distance", "rating", "price_low", "price_high"]).has(
@@ -61,6 +66,7 @@ export default async function SalonsPage({
     sort,
     promotionOnly: stringValue(query.offers) === "true",
   };
+  const initialView = stringValue(query.view) === "map" ? "map" as const : "list" as const;
   let initial = {
     salons: [],
     total: 0,
@@ -89,22 +95,19 @@ export default async function SalonsPage({
       <PublicHeader active="salons" />
       <FirstRelevantLocationRequest />
       <section className="mx-auto w-full max-w-[1760px] px-3 pb-5 pt-3 sm:px-8 sm:pt-5 lg:px-12 2xl:px-16">
-        <div className="mb-2 flex min-w-0 items-center gap-2">
-          <span className="shrink-0 rounded-full bg-plum px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
-            AI
-          </span>
-          <h2 className="min-w-0 truncate text-[13px] font-bold text-ink sm:text-sm">
-            Tell us the look you want
-          </h2>
-        </div>
+        <h1 className="mb-2 font-serif text-[24px] font-semibold leading-none text-ink sm:text-[28px]">
+          Find salons
+        </h1>
         <SalonDiscovery
           initialSalons={initial.salons}
           initialTotal={initial.total}
           initialQuery={initialQuery}
           initialStyleId={initialStyleId}
+          initialServiceIntent={initialServiceIntent}
           initialLocation={location}
           initialOrigin={validOrigin}
           initialFilters={initialFilters}
+          initialView={initialView}
         />
       </section>
       <TrustStrip />

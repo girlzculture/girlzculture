@@ -9,6 +9,7 @@ import type { CustomerLocation } from "@/lib/location";
 
 export default function SearchComposer({ compact = false }: { compact?: boolean }) {
   const [style, setStyle] = useState("");
+  const [serviceId, setServiceId] = useState("");
   const [locationText, setLocationText] = useState("");
   const [resolved, setResolved] = useState<CustomerLocation | null>(null);
   const [editingLocation, setEditingLocation] = useState(false);
@@ -44,7 +45,8 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
     const selectedLocation = effectiveLocation;
     const query = new URLSearchParams();
     const customerQuery = style.trim();
-    if (customerQuery) query.set("q", customerQuery);
+    if (customerQuery) query.set(serviceId ? "style" : "q", customerQuery);
+    if (serviceId) query.set("style_id", serviceId);
     if (selectedLocation) {
       query.set("lat", String(selectedLocation.lat));
       query.set("lng", String(selectedLocation.lng));
@@ -66,7 +68,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
 
   return <form role="search" onSubmit={submit} className={`relative z-[70] overflow-visible border border-plum/10 bg-white shadow-[0_12px_34px_rgba(13,17,20,.10)] ${compact ? "rounded-[14px] p-2.5" : "rounded-[16px] p-2.5 sm:p-3 md:p-1.5"}`}>
     <div className="grid gap-2 md:grid-cols-[1.15fr_1fr_auto] md:items-stretch">
-      <label className="block min-w-0 rounded-[10px] px-3 py-1 focus-within:bg-cream/55"><span className="block text-[10px] font-bold text-ink">What service are you looking for?</span><StyleAutocomplete value={style} onChange={setStyle} onLocation={resolve} placeholder="e.g., Knotless Braids" className="mt-0.5"/></label>
+      <label className="block min-w-0 rounded-[10px] px-3 py-1 focus-within:bg-cream/55"><span className="block text-[10px] font-bold text-ink">What service are you looking for?</span><StyleAutocomplete value={style} onChange={(value) => { setStyle(value); setServiceId(""); }} onService={(service) => { setStyle(service.name); setServiceId(service.id); }} onLocation={resolve} placeholder="e.g., Knotless Braids" className="mt-0.5"/></label>
       <div className="block min-w-0 border-t border-plum/10 px-3 py-1 focus-within:bg-cream/55 md:border-l md:border-t-0">
         <span className="flex min-h-4 items-center justify-between gap-2 text-[10px] font-bold text-ink">
           <span>Where?</span>

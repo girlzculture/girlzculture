@@ -228,6 +228,7 @@ type SearchSuggestion = {
   lat?: number;
   lng?: number;
   matched_terms?: string[];
+  service_id?: string;
 };
 type SearchGroup = {
   kind: SearchSuggestion["kind"];
@@ -239,11 +240,13 @@ export function StyleAutocomplete({
   value,
   onChange,
   onLocation,
+  onService,
   placeholder = "Search services",
   className = "",
   name = "style",
 }: SharedProps & {
   onLocation?: (location: CustomerLocation) => void;
+  onService?: (service: { id: string; name: string }) => void;
 }) {
   const router = useRouter();
   const customerLocation = useCustomerLocation();
@@ -320,6 +323,9 @@ export function StyleAutocomplete({
       customerLocation.setLocation(location);
       if (onLocation) onLocation(location);
       else router.push("/salons");
+    } else if (item.kind === "style" && item.service_id) {
+      onChange(item.value || item.label);
+      onService?.({ id: item.service_id, name: item.value || item.label });
     } else onChange(item.value || item.label);
     setOpen(false);
   }

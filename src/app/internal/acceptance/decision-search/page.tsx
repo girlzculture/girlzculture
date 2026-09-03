@@ -55,7 +55,19 @@ export default async function DecisionSearchAcceptancePage() {
     requireOpening: true,
     loadOpening: async (candidate) => candidate.style.id === "discounted-with-opening" ? { date: "2026-08-08", value: "10:00" } : null,
   });
-  return <main className="min-h-screen bg-cream p-6 text-ink"><h1 className="font-serif text-4xl text-plum">Deterministic search acceptance</h1><section className="mt-5 rounded-xl border border-plum/10 bg-white p-4" data-testid="decision-service-fixture" data-selected-service={selected.candidate?.style.id || ""} data-selected-price={String(selected.candidate?.price ?? "")} data-opening-date={selected.opening?.date || ""}><b>Executable service, promotion, budget and opening fixture</b></section><ol className="mt-6 space-y-3">{queries.map((query, index) => {
+  const rejectedArchivedService = parseDecisionSearchIntent(
+    "Box Braids",
+    catalog,
+    { serviceId: "service-archived" },
+    now,
+  );
+  const rejectedMissingService = parseDecisionSearchIntent(
+    "Boho Braids",
+    catalog,
+    { serviceId: "service-missing" },
+    now,
+  );
+  return <main className="min-h-screen bg-cream p-6 text-ink"><h1 className="font-serif text-4xl text-plum">Deterministic search acceptance</h1><section className="mt-5 rounded-xl border border-plum/10 bg-white p-4" data-testid="decision-service-fixture" data-selected-service={selected.candidate?.style.id || ""} data-selected-price={String(selected.candidate?.price ?? "")} data-opening-date={selected.opening?.date || ""}><b>Executable service, promotion, budget and opening fixture</b></section><section data-testid="decision-rejected-service-fixture" data-archived-intent={JSON.stringify(rejectedArchivedService)} data-missing-intent={JSON.stringify(rejectedMissingService)}><b>Archived and missing master identities are rejected</b></section><ol className="mt-6 space-y-3">{queries.map((query, index) => {
     const intent = parseDecisionSearchIntent(query, catalog, {}, now);
     const location = matchDecisionLocationMarket(query, markets);
     return <li key={query} data-testid={`decision-query-${index + 1}`} data-query={query} data-intent={JSON.stringify(intent)} data-location={location?.market.name || ""} className="rounded-xl border border-plum/10 bg-white p-4"><b>{query}</b><pre className="mt-2 overflow-auto text-[10px]">{JSON.stringify(intent, null, 2)}</pre></li>;

@@ -207,13 +207,6 @@
     },
     {
       "file": "src/app/plans/page.tsx",
-      "token": "text-ink/60",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/app/plans/page.tsx",
       "token": "text-ink/65",
       "maxOccurrences": 1,
       "classification": "legacy-metadata-migration-budget",

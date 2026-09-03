@@ -2,7 +2,13 @@ import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operati
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
-import { hasPlanFeature, isSubscriptionActive, normalizePlan } from "@/lib/plans";
+import {
+  canonicalPlanForStored,
+  isSubscriptionActive,
+  restrictivePlanForLimits,
+  SUBSCRIPTION_PLANS,
+  type SubscriptionPlan,
+} from "@/lib/plans";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 
 type SaveConfig = { permission: string; fields: ReadonlySet<string>; label: string };
@@ -153,6 +159,53 @@ function isUserInputError(error: unknown) {
   return error instanceof Error && !/permission denied|violates|constraint|record\s+"|column|relation|postgres|supabase|pgrst/i.test(error.message);
 }
 
+function planLimit(plan: SubscriptionPlan, table: string) {
+  if (table === "salon_products") {
+    return SUBSCRIPTION_PLANS[plan].entitlements.productListings.limit;
+  }
+  return SUBSCRIPTION_PLANS[plan].entitlements.customerPromotions.limit;
+}
+
+async function enforcePlanAllowance(input: {
+  admin: Awaited<ReturnType<typeof requireSalonPermission>>["admin"];
+  salonId: string;
+  storedPlan: unknown;
+  table: "salon_products" | "salon_promotions";
+  id: string | null;
+  values: Record<string, unknown>;
+}) {
+  const plan = canonicalPlanForStored(input.storedPlan) || "Starter";
+  const limit = planLimit(plan, input.table);
+  if (limit === null) return;
+
+  const isNewProduct = input.table === "salon_products" && !input.id
+    && input.values.archived_at == null
+    && input.values.product_status !== "Archived";
+  const activatesPromotion = input.table === "salon_promotions"
+    && input.values.archived_at == null
+    && input.values.status === "Active"
+    && input.values.is_active === true;
+  if (!isNewProduct && !activatesPromotion) return;
+
+  let countQuery = input.admin
+    .from(input.table)
+    .select("id", { count: "exact", head: true })
+    .eq("salon_id", input.salonId)
+    .is("archived_at", null);
+  if (input.table === "salon_products") {
+    countQuery = countQuery.neq("product_status", "Archived");
+  } else {
+    countQuery = countQuery.eq("status", "Active").eq("is_active", true);
+  }
+  if (input.id) countQuery = countQuery.neq("id", input.id);
+  const counted = await countQuery;
+  if (counted.error) throw counted.error;
+  if ((counted.count || 0) >= limit) {
+    const item = input.table === "salon_products" ? "product listings" : "active promotions";
+    throw new Error(`Your ${plan} plan allows ${limit} ${item}. Archive one or choose another plan before adding more.`);
+  }
+}
+
 async function POSTHandler(request: Request) {
   let admin;
   let salonId: string | null = null;
@@ -164,14 +217,31 @@ async function POSTHandler(request: Request) {
     const context = await requireSalonPermission(request, config.permission);
     admin = context.admin;
     salonId = context.salon.id;
-    if (table === "salon_promotions") {
-      const subscription = await admin.from("subscriptions").select("tier,status,current_period_end").eq("salon_id", salonId).maybeSingle();
+    let effectiveSubscriptionTier: unknown = context.salon.subscription_tier;
+    if (table === "salon_products" || table === "salon_promotions") {
+      const subscription = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier").eq("salon_id", salonId).maybeSingle();
       if (subscription.error) throw subscription.error;
-      if (!subscription.data || !isSubscriptionActive(subscription.data.status, subscription.data.current_period_end) || !hasPlanFeature(normalizePlan(subscription.data.tier), "promotions")) throw new Error("Promotions require an active Growth or Premium plan.");
+      if (!subscription.data || !isSubscriptionActive(subscription.data.status, subscription.data.current_period_end)) {
+        throw new Error(`${table === "salon_products" ? "Products" : "Promotions"} require an active salon subscription.`);
+      }
+      effectiveSubscriptionTier = restrictivePlanForLimits(
+        subscription.data.tier,
+        subscription.data.scheduled_tier,
+      );
     }
     const id = cleanText(body.id, 60) || null;
     const rawValues = body.values && typeof body.values === "object" && !Array.isArray(body.values) ? body.values as Record<string, unknown> : {};
     const values = sanitize(table, rawValues, !id);
+    if (table === "salon_products" || table === "salon_promotions") {
+      await enforcePlanAllowance({
+        admin,
+        salonId: context.salon.id,
+        storedPlan: effectiveSubscriptionTier,
+        table: table as "salon_products" | "salon_promotions",
+        id,
+        values,
+      });
+    }
     if (["styles", "stylists", "salon_products", "salon_promotions"].includes(table)) {
       const moderation = await moderatePublicContent(admin, {
         name: typeof values.name === "string" ? values.name : undefined,
@@ -217,6 +287,16 @@ async function POSTHandler(request: Request) {
     if (readBack.error || !readBack.data) throw readBack.error || new Error(`The ${config.label} could not be verified after saving.`);
     return Response.json({ record: readBack.data, verified: true }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/PLAN_PRODUCT_LIMIT_REACHED/.test(message)) {
+      return Response.json({ error: "Your plan's product-listing limit has been reached. Archive a product or choose another plan." }, { status: 409 });
+    }
+    if (/PLAN_PROMOTION_LIMIT_REACHED/.test(message)) {
+      return Response.json({ error: "Your plan's active-promotion limit has been reached. Pause an offer or choose another plan." }, { status: 409 });
+    }
+    if (/Your (Starter|Growth|Premium) plan allows/.test(message)) {
+      return Response.json({ error: message }, { status: 409 });
+    }
     if (isUserInputError(error)) return Response.json({ error: (error as Error).message }, { status: /Unauthorized/.test((error as Error).message) ? 401 : /Forbidden/.test((error as Error).message) ? 403 : 400 });
     const safeMessage = "We couldn't save this change.";
     const reference = await capturePlatformError({ request, admin, error, feature: "salon-dashboard", action: "save-record", actorRole: "salon", salonId, safeMessage });

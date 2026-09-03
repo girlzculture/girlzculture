@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, FileText, MapPin } from "lucide-react";
 import { formatZonedDateTime } from "@/lib/dateTime";
+import { displayStoredPlan } from "@/lib/plans";
 
 type Row = Record<string, unknown>;
 
@@ -248,7 +249,7 @@ export default function AdminSalon360Sections({ data }: { data: Salon360Data }) 
                   ["Application phone", value(application.phone, application.contact_phone, application.owner_phone)],
                   ["Legal business name", value(application.legal_business_name, application.registered_business_name, application.business_name)],
                   ["Entity type", value(application.business_entity_type, application.entity_type)],
-                  ["Selected plan", value(application.selected_plan)],
+                  ["Selected plan", displayStoredPlan(application.selected_plan)],
                   ["Application status", value(application.status)],
                   ["Application ID", value(application.id)],
                 ]}

@@ -64,7 +64,8 @@ begin
     'prepare_application_document_upload',
     'finalize_application_document_upload',
     'abandon_application_document_upload',
-    'marketplace_visible_salon_ids'
+    'marketplace_visible_salon_ids',
+    'marketplace_visible_salon_ids_page'
   ]
   loop
     if not exists (
@@ -347,15 +348,93 @@ begin
     raise exception 'Atomic commerce reservation function grants are unsafe';
   end if;
 
-  if to_regprocedure('public.list_public_style_catalog(integer)') is null
+  if to_regprocedure('public.list_public_style_catalog(integer,integer)') is null
     or not has_function_privilege(
       'anon',
-      'public.list_public_style_catalog(integer)',
+      'public.list_public_style_catalog(integer,integer)',
       'EXECUTE'
     )
     or has_table_privilege('anon','public.salons','SELECT')
   then
     raise exception 'Authorized public style projection or salon privacy is incorrect';
+  end if;
+
+  -- Execute the deployed function and inspect its real PostgreSQL catalog
+  -- contract. These checks ensure Browse Styles remains an aggregate of the
+  -- active managed catalog rather than regressing to a capped offering feed.
+  perform count(*)
+  from public.list_public_style_catalog(500, 0);
+  if not exists (
+    select 1
+    from pg_proc procedure
+    where procedure.oid =
+      'public.list_public_style_catalog(integer,integer)'::regprocedure
+      and procedure.prosecdef
+      and procedure.provolatile = 's'
+      and position(
+        'search_path=public, pg_temp'
+        in array_to_string(
+          coalesce(procedure.proconfig, array[]::text[]),
+          ','
+        )
+      ) > 0
+  )
+    or position(
+      'master_style_id uuid'
+      in lower(pg_get_function_result(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'salon_count bigint'
+      in lower(pg_get_function_result(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'lengths text[]'
+      in lower(pg_get_function_result(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'search_terms text[]'
+      in lower(pg_get_function_result(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'join public.master_styles'
+      in lower(pg_get_functiondef(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'join public.service_groups'
+      in lower(pg_get_functiondef(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'join public.service_categories'
+      in lower(pg_get_functiondef(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'search_language_rules'
+      in lower(pg_get_functiondef(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+    or position(
+      'count(distinct offered.salon_id)'
+      in lower(pg_get_functiondef(
+        'public.list_public_style_catalog(integer,integer)'::regprocedure
+      ))
+    ) = 0
+  then
+    raise exception 'Authoritative public style catalog contract is incomplete';
   end if;
 
   if to_regprocedure(
@@ -389,6 +468,7 @@ begin
   -- as discovery. Verify the deployed catalog and execute the function against
   -- the post-migration database; migration-text checks alone are insufficient.
   if to_regprocedure('public.marketplace_visible_salon_ids(integer)') is null
+    or to_regprocedure('public.marketplace_visible_salon_ids_page(uuid,integer)') is null
     or has_function_privilege(
       'anon',
       'public.marketplace_visible_salon_ids(integer)',
@@ -404,6 +484,21 @@ begin
       'public.marketplace_visible_salon_ids(integer)',
       'EXECUTE'
     )
+    or has_function_privilege(
+      'anon',
+      'public.marketplace_visible_salon_ids_page(uuid,integer)',
+      'EXECUTE'
+    )
+    or has_function_privilege(
+      'authenticated',
+      'public.marketplace_visible_salon_ids_page(uuid,integer)',
+      'EXECUTE'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.marketplace_visible_salon_ids_page(uuid,integer)',
+      'EXECUTE'
+    )
     or not has_function_privilege(
       'service_role',
       'public.resolve_search_service_query(text)',
@@ -413,6 +508,19 @@ begin
       select 1
       from pg_proc procedure
       where procedure.oid='public.marketplace_visible_salon_ids(integer)'::regprocedure
+        and (
+          not procedure.prosecdef
+          or procedure.provolatile <> 's'
+          or position(
+            'search_path=pg_catalog, public'
+            in array_to_string(coalesce(procedure.proconfig,array[]::text[]),',')
+          )=0
+        )
+    )
+    or exists (
+      select 1
+      from pg_proc procedure
+      where procedure.oid='public.marketplace_visible_salon_ids_page(uuid,integer)'::regprocedure
         and (
           not procedure.prosecdef
           or procedure.provolatile <> 's'
@@ -443,6 +551,8 @@ begin
   )
     or (select count(*) from public.marketplace_visible_salon_ids(0)) > 1
     or (select count(*) from public.marketplace_visible_salon_ids(999999)) > 2000
+    or (select count(*) from public.marketplace_visible_salon_ids_page(null, 0)) > 1
+    or (select count(*) from public.marketplace_visible_salon_ids_page(null, 999999)) > 1000
   then
     raise exception 'Marketplace-visible suggestion function diverges from canonical eligibility or its bounds';
   end if;
@@ -2156,6 +2266,7 @@ do $$
 <<application_document_lifecycle_verification>>
 declare
   application_document_actor_id constant uuid := '10000000-0000-4000-8000-0000000000a1';
+  application_document_approval_actor_id constant uuid := '10000000-0000-4000-8000-0000000000a8';
   application_document_salon_id constant uuid := '10000000-0000-4000-8000-0000000000a2';
   application_document_upload_id constant uuid := '10000000-0000-4000-8000-0000000000a3';
   application_document_quality_style_id constant uuid := '10000000-0000-4000-8000-0000000000a4';
@@ -2176,6 +2287,21 @@ begin
     'clean-application-docs@example.test','',now(),
     '{"role":"salon_owner"}'::jsonb
   );
+  insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data)
+  values (
+    application_document_lifecycle_verification.application_document_approval_actor_id,
+    'clean-application-approval@example.test','',now(),
+    '{"role":"admin"}'::jsonb
+  );
+  insert into public.admin_users(
+    id,user_id,name,email,role,permissions,status,is_super_admin
+  ) values (
+    application_document_lifecycle_verification.application_document_approval_actor_id,
+    application_document_lifecycle_verification.application_document_approval_actor_id,
+    'Clean application approval admin',
+    'clean-application-approval@example.test','Admin',
+    '{"submissions":true}'::jsonb,'Active',false
+  );
   insert into public.salons(id,user_id,name,slug,email,status)
   values (
     application_document_lifecycle_verification.application_document_salon_id,
@@ -2187,6 +2313,10 @@ begin
   if exists (
     select 1
     from public.marketplace_visible_salon_ids(2000) visible
+    where visible.salon_id=application_document_lifecycle_verification.application_document_salon_id
+  ) or exists (
+    select 1
+    from public.marketplace_visible_salon_ids_page(null, 1000) visible
     where visible.salon_id=application_document_lifecycle_verification.application_document_salon_id
   ) then
     raise exception 'Pending salon leaked through the marketplace-visible suggestion boundary';
@@ -2258,14 +2388,14 @@ begin
         'owner_name','Clean Owner','email','clean-application-docs@example.test',
         'phone','+12125550100','address_street','1 Clean Way',
         'address_city','Brooklyn','address_state','NY','address_zip','11201',
-        'business_type','Braiding Studio','subscription_tier','Growth'
+        'business_type','Braiding Studio','subscription_tier','Starter'
       ),
       jsonb_build_object(
         'business_name','Clean Document Salon','owner_name','Clean Owner',
         'business_email','clean-application-docs@example.test',
         'phone','+12125550100','street_address','1 Clean Way',
         'city','Brooklyn','state','NY','zip_code','11201',
-        'business_type','Braiding Studio','selected_plan','Growth',
+        'business_type','Braiding Studio','selected_plan','Starter',
         'years_in_operation',2,'stylist_count',2,
         'photo_urls',jsonb_build_array(),
         'document_urls',jsonb_build_array(
@@ -2294,14 +2424,14 @@ begin
       'owner_name','Clean Owner','email','clean-application-docs@example.test',
       'phone','+12125550100','address_street','1 Clean Way',
       'address_city','Brooklyn','address_state','NY','address_zip','11201',
-      'business_type','Braiding Studio','subscription_tier','Growth'
+      'business_type','Braiding Studio','subscription_tier','Starter'
     ),
     jsonb_build_object(
       'business_name','Clean Document Salon','owner_name','Clean Owner',
       'business_email','clean-application-docs@example.test',
       'phone','+12125550100','street_address','1 Clean Way',
       'city','Brooklyn','state','NY','zip_code','11201',
-      'business_type','Braiding Studio','selected_plan','Growth',
+      'business_type','Braiding Studio','selected_plan','Starter',
       'years_in_operation',2,'stylist_count',2,
       'photo_urls',jsonb_build_array(),
       'document_urls',jsonb_build_array(
@@ -2322,6 +2452,18 @@ begin
       and document_upload.expires_at is null
   ) then
     raise exception 'Finalized application document was not atomically attached';
+  end if;
+  perform public.approve_salon_application(
+    application_document_lifecycle_verification.application_document_application_id,
+    application_document_lifecycle_verification.application_document_approval_actor_id
+  );
+  if not exists (
+    select 1
+    from public.salons salon
+    where salon.id=application_document_lifecycle_verification.application_document_salon_id
+      and salon.subscription_tier='Starter'
+  ) then
+    raise exception 'Starter application approval did not preserve the selected plan';
   end if;
 
   application_document_lifecycle_verification.application_document_ordinal := 1;
@@ -2457,6 +2599,8 @@ begin
   where salon.id=application_document_lifecycle_verification.application_document_salon_id;
   delete from auth.users auth_user
   where auth_user.id=application_document_lifecycle_verification.application_document_actor_id;
+  delete from auth.users auth_user
+  where auth_user.id=application_document_lifecycle_verification.application_document_approval_actor_id;
   if exists (
     select 1
     from public.booking_financial_events financial_event
@@ -2480,6 +2624,625 @@ begin
   end if;
 end application_document_lifecycle_verification
 $$;
+
+do $plan_limit_verification$
+declare
+  starter_salon_id uuid := '10000000-0000-4000-8000-000000001101';
+  growth_salon_id uuid := '10000000-0000-4000-8000-000000001102';
+  premium_salon_id uuid := '10000000-0000-4000-8000-000000001103';
+  placement_actor_id uuid := '10000000-0000-4000-8000-000000001104';
+  legacy_basic_salon_id uuid := '10000000-0000-4000-8000-000000001105';
+  inactive_salon_id uuid := '10000000-0000-4000-8000-000000001106';
+  drift_salon_id uuid := '10000000-0000-4000-8000-000000001107';
+  downgrade_salon_id uuid := '10000000-0000-4000-8000-000000001108';
+  valid_entitlement_id uuid := '10000000-0000-4000-8000-000000001109';
+  invalid_entitlement_id uuid := '10000000-0000-4000-8000-00000000110a';
+  scheduled_downgrade_salon_id uuid := '10000000-0000-4000-8000-00000000110b';
+  starter_product_id uuid;
+  product_limit_rejected boolean := false;
+  promotion_limit_rejected boolean := false;
+  scheduled_product_rejected boolean := false;
+  scheduled_promotion_rejected boolean := false;
+  scheduled_product_write_rejected boolean := false;
+  scheduled_promotion_write_rejected boolean := false;
+  inactive_write_rejected boolean := false;
+  unpaid_placement_rejected boolean := false;
+  invalid_placement_rejected boolean := false;
+begin
+  if public.plan_rank('Starter') <> 1
+    or public.plan_rank('Basic') <> 1
+    or public.plan_rank('Growth') <> 2
+    or public.plan_rank('Premium') <> 3
+  then
+    raise exception 'Official and legacy subscription plan ranks are incorrect';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns column_info
+    where column_info.table_schema='public'
+      and column_info.table_name='salon_applications'
+      and column_info.column_name='selected_plan'
+      and column_info.column_default like '%Starter%'
+  ) then
+    raise exception 'New salon applications do not default to Starter';
+  end if;
+
+  if not exists (
+    select 1 from pg_trigger trigger_info
+    where trigger_info.tgrelid='public.salon_products'::regclass
+      and trigger_info.tgname='salon_products_enforce_plan_limit'
+      and not trigger_info.tgisinternal
+  ) or not exists (
+    select 1 from pg_trigger trigger_info
+    where trigger_info.tgrelid='public.salon_promotions'::regclass
+      and trigger_info.tgname='salon_promotions_enforce_plan_limit'
+      and not trigger_info.tgisinternal
+  ) or not exists (
+    select 1 from pg_trigger trigger_info
+    where trigger_info.tgrelid='public.subscriptions'::regclass
+      and trigger_info.tgname='subscriptions_enforce_scheduled_plan_limits'
+      and not trigger_info.tgisinternal
+  ) then
+    raise exception 'Database plan-limit triggers are missing';
+  end if;
+
+  insert into auth.users(id,email,raw_user_meta_data)
+  values (
+    placement_actor_id,
+    'clean-plan-placement@example.test',
+    '{"role":"admin"}'::jsonb
+  );
+
+  insert into public.salons(
+    id,name,slug,status,subscription_tier,subscription_status
+  ) values
+    (starter_salon_id,'Plan limit Starter fixture','plan-limit-starter-fixture','Active','Starter','active'),
+    (growth_salon_id,'Plan limit Growth fixture','plan-limit-growth-fixture','Active','Growth','active'),
+    (premium_salon_id,'Plan limit Premium fixture','plan-limit-premium-fixture','Active','Premium','active'),
+    (legacy_basic_salon_id,'Plan limit legacy Basic fixture','plan-limit-basic-fixture','Active','Basic','active'),
+    (inactive_salon_id,'Plan limit inactive fixture','plan-limit-inactive-fixture','Active','Premium','active'),
+    (drift_salon_id,'Plan limit drift fixture','plan-limit-drift-fixture','Active','Premium','active'),
+    (downgrade_salon_id,'Plan limit downgrade fixture','plan-limit-downgrade-fixture','Active','Growth','active'),
+    (scheduled_downgrade_salon_id,'Scheduled downgrade fixture','scheduled-downgrade-fixture','Active','Premium','active');
+
+  insert into public.subscriptions(
+    salon_id,tier,status,stripe_subscription_id,current_period_end
+  ) values
+    (starter_salon_id,'Starter','active','sub_plan_limit_starter',now()+interval '30 days'),
+    (growth_salon_id,'Growth','active','sub_plan_limit_growth',now()+interval '30 days'),
+    (premium_salon_id,'Premium','active','sub_plan_limit_premium',now()+interval '30 days'),
+    (inactive_salon_id,'Premium','active','sub_plan_limit_inactive',now()-interval '1 day'),
+    (drift_salon_id,'Growth','active','sub_plan_limit_drift',now()+interval '30 days'),
+    (downgrade_salon_id,'Starter','active','sub_plan_limit_downgrade',now()+interval '30 days'),
+    (scheduled_downgrade_salon_id,'Premium','active','sub_plan_limit_scheduled_downgrade',now()+interval '30 days');
+
+  if public.salon_plan_limit(starter_salon_id,'product_listings') <> 10
+    or public.salon_plan_limit(growth_salon_id,'product_listings') <> 30
+    or public.salon_plan_limit(premium_salon_id,'product_listings') is not null
+    or public.salon_plan_limit(starter_salon_id,'customer_promotions') <> 1
+    or public.salon_plan_limit(growth_salon_id,'customer_promotions') <> 5
+    or public.salon_plan_limit(premium_salon_id,'customer_promotions') is not null
+    or public.salon_plan_limit(legacy_basic_salon_id,'product_listings') <> 10
+    or public.salon_plan_limit(legacy_basic_salon_id,'customer_promotions') <> 1
+    or public.salon_plan_limit(inactive_salon_id,'product_listings') <> 0
+    or public.salon_plan_limit(inactive_salon_id,'customer_promotions') <> 0
+    or public.salon_plan_limit(drift_salon_id,'product_listings') <> 30
+    or public.salon_plan_limit(drift_salon_id,'customer_promotions') <> 5
+    or public.salon_plan_limit(downgrade_salon_id,'product_listings') <> 10
+    or public.salon_plan_limit(downgrade_salon_id,'customer_promotions') <> 1
+  then
+    raise exception 'Authoritative, legacy, inactive, downgrade, or drifted plan allowances are incorrect';
+  end if;
+
+  if public.salon_effective_plan_key(starter_salon_id) <> 'starter'
+    or public.salon_effective_plan_key(growth_salon_id) <> 'growth'
+    or public.salon_effective_plan_key(premium_salon_id) <> 'premium'
+    or public.salon_effective_plan_key(legacy_basic_salon_id) <> 'starter'
+    or public.salon_effective_plan_key(inactive_salon_id) is not null
+    or public.salon_effective_plan_key(drift_salon_id) <> 'growth'
+    or public.salon_effective_plan_key(downgrade_salon_id) <> 'starter'
+  then
+    raise exception 'Effective subscription plan resolution did not fail closed or preserve the legacy fallback';
+  end if;
+
+  if public.salon_has_feature(starter_salon_id,'advanced_analytics')
+    or not public.salon_has_feature(growth_salon_id,'advanced_analytics')
+    or not public.salon_has_feature(premium_salon_id,'advanced_analytics')
+    or public.salon_has_feature(legacy_basic_salon_id,'advanced_analytics')
+    or public.salon_has_feature(inactive_salon_id,'advanced_analytics')
+    -- The active Growth subscription must override the stale Premium mirror.
+    or not public.salon_has_feature(drift_salon_id,'advanced_analytics')
+    -- The active Starter downgrade must override the stale Growth mirror.
+    or public.salon_has_feature(downgrade_salon_id,'advanced_analytics')
+  then
+    raise exception 'Advanced analytics did not use the authoritative effective subscription plan';
+  end if;
+
+  if not public.salon_has_feature(starter_salon_id,'promotions')
+    or not public.salon_has_feature(legacy_basic_salon_id,'promotions')
+    or public.salon_has_feature(inactive_salon_id,'promotions')
+    or public.salon_has_feature(starter_salon_id,'featured_rotation')
+    or public.salon_has_feature(premium_salon_id,'featured_rotation')
+    or public.salon_has_feature(premium_salon_id,'premium_badge')
+  then
+    raise exception 'Subscription features still grant an unapproved organic-placement benefit';
+  end if;
+
+  -- A scheduled downgrade is serialized with product/promotion writes. It
+  -- cannot be recorded while current usage exceeds the target limits; once
+  -- recorded, the lower inventory limits apply immediately even though paid
+  -- Premium feature access remains active through renewal.
+  insert into public.salon_products(salon_id,name,price,product_status)
+  select scheduled_downgrade_salon_id,
+         'Scheduled downgrade product ' || series.product_number,10,'Draft'
+  from generate_series(1,11) as series(product_number);
+  insert into public.salon_promotions(
+    salon_id,title,status,is_active,public_headline
+  ) values
+    (scheduled_downgrade_salon_id,'Scheduled promotion 1','Active',true,'Scheduled promotion 1'),
+    (scheduled_downgrade_salon_id,'Scheduled promotion 2','Active',true,'Scheduled promotion 2');
+
+  begin
+    update public.subscriptions subscription
+    set scheduled_tier='Starter',
+        scheduled_price_id='price_scheduled_starter',
+        stripe_schedule_id='sub_sched_limit_product',
+        scheduled_change_effective_at=now()+interval '30 days'
+    where subscription.salon_id=scheduled_downgrade_salon_id;
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_DOWNGRADE_PRODUCT_LIMIT_EXCEEDED' then
+      scheduled_product_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not scheduled_product_rejected then
+    raise exception 'A downgrade was scheduled above the target product limit';
+  end if;
+
+  update public.salon_products product
+  set archived_at=now(), product_status='Archived'
+  where product.id=(
+    select candidate.id
+    from public.salon_products candidate
+    where candidate.salon_id=scheduled_downgrade_salon_id
+      and candidate.archived_at is null
+    order by candidate.id desc
+    limit 1
+  );
+  begin
+    update public.subscriptions subscription
+    set scheduled_tier='Starter',
+        scheduled_price_id='price_scheduled_starter',
+        stripe_schedule_id='sub_sched_limit_promotion',
+        scheduled_change_effective_at=now()+interval '30 days'
+    where subscription.salon_id=scheduled_downgrade_salon_id;
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_DOWNGRADE_PROMOTION_LIMIT_EXCEEDED' then
+      scheduled_promotion_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not scheduled_promotion_rejected then
+    raise exception 'A downgrade was scheduled above the target promotion limit';
+  end if;
+
+  update public.salon_promotions promotion
+  set is_active=false, status='Paused'
+  where promotion.id=(
+    select candidate.id
+    from public.salon_promotions candidate
+    where candidate.salon_id=scheduled_downgrade_salon_id
+      and candidate.is_active is true
+    order by candidate.id desc
+    limit 1
+  );
+  update public.subscriptions subscription
+  set scheduled_tier='Starter',
+      scheduled_price_id='price_scheduled_starter',
+      stripe_schedule_id='sub_sched_limit_valid',
+      scheduled_change_effective_at=now()+interval '30 days'
+  where subscription.salon_id=scheduled_downgrade_salon_id;
+
+  if public.salon_effective_plan_key(scheduled_downgrade_salon_id) <> 'premium'
+    or public.salon_limit_plan_key(scheduled_downgrade_salon_id) <> 'starter'
+    or public.salon_plan_limit(scheduled_downgrade_salon_id,'product_listings') <> 10
+    or public.salon_plan_limit(scheduled_downgrade_salon_id,'customer_promotions') <> 1
+  then
+    raise exception 'Scheduled downgrade did not preserve paid access while applying stricter inventory limits';
+  end if;
+
+  begin
+    insert into public.salon_products(salon_id,name,price,product_status)
+    values(scheduled_downgrade_salon_id,'Post-schedule product',10,'Draft');
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_PRODUCT_LIMIT_REACHED' then
+      scheduled_product_write_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  begin
+    insert into public.salon_promotions(
+      salon_id,title,status,is_active,public_headline
+    ) values(
+      scheduled_downgrade_salon_id,'Post-schedule promotion','Active',true,
+      'Post-schedule promotion'
+    );
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_PROMOTION_LIMIT_REACHED' then
+      scheduled_promotion_write_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not scheduled_product_write_rejected or not scheduled_promotion_write_rejected then
+    raise exception 'Scheduled downgrade limits were bypassed by a later inventory write';
+  end if;
+
+  insert into public.salon_products(salon_id,name,price,product_status)
+  select starter_salon_id,'Starter product ' || series.product_number,10,'Draft'
+  from generate_series(1,10) as series(product_number);
+  select product.id into starter_product_id
+  from public.salon_products product
+  where product.salon_id=starter_salon_id
+  order by product.id
+  limit 1;
+  begin
+    insert into public.salon_products(salon_id,name,price,product_status)
+    values(starter_salon_id,'Starter product over limit',10,'Draft');
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_PRODUCT_LIMIT_REACHED' then
+      product_limit_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not product_limit_rejected then
+    raise exception 'Starter product limit was not enforced by the database';
+  end if;
+
+  -- Premium remains unlimited/fair-use at the database boundary.
+  insert into public.salon_products(salon_id,name,price,product_status)
+  select premium_salon_id,'Premium product ' || series.product_number,10,'Draft'
+  from generate_series(1,35) as series(product_number);
+
+  begin
+    insert into public.salon_products(salon_id,name,price,product_status)
+    values(inactive_salon_id,'Inactive subscription product',10,'Draft');
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_PRODUCT_LIMIT_REACHED' then
+      inactive_write_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not inactive_write_rejected then
+    raise exception 'An expired subscription was allowed to create a product';
+  end if;
+
+  insert into public.salon_promotions(
+    salon_id,title,status,is_active,public_headline
+  )
+  select growth_salon_id,'Growth promotion ' || series.promotion_number,
+         'Active',true,'Growth promotion'
+  from generate_series(1,5) as series(promotion_number);
+  begin
+    insert into public.salon_promotions(
+      salon_id,title,status,is_active,public_headline
+    ) values(
+      growth_salon_id,'Growth promotion over limit','Active',true,
+      'Growth promotion over limit'
+    );
+  exception when sqlstate 'P0001' then
+    if sqlerrm='PLAN_PROMOTION_LIMIT_REACHED' then
+      promotion_limit_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not promotion_limit_rejected then
+    raise exception 'Growth promotion limit was not enforced by the database';
+  end if;
+
+  -- Premium promotions are unlimited/fair-use; Starter is independently
+  -- verified by its authoritative allowance, not by the salon mirror.
+  insert into public.salon_promotions(
+    salon_id,title,status,is_active,public_headline
+  )
+  select premium_salon_id,'Premium promotion ' || series.promotion_number,
+         'Active',true,'Premium promotion'
+  from generate_series(1,7) as series(promotion_number);
+
+  begin
+    insert into public.homepage_product_placements(
+      product_id,status,sort_order,starts_at,created_by,updated_by
+    ) values(
+      starter_product_id,'Active',1,now(),placement_actor_id,placement_actor_id
+    );
+  exception when sqlstate '22023' then
+    if sqlerrm='FEATURED_PRODUCT_ENTITLEMENT_REQUIRED' then
+      unpaid_placement_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not unpaid_placement_rejected then
+    raise exception 'Tier-only homepage product placement was not rejected';
+  end if;
+
+  insert into public.marketing_entitlements(
+    id,placement_type,salon_id,source,external_reference,status,
+    valid_from,valid_until,created_by
+  ) values
+    (
+      valid_entitlement_id,'Featured Product',starter_salon_id,
+      'platform_credit','clean-plan-valid-product-placement','Credited',
+      now()-interval '1 day',now()+interval '2 days',placement_actor_id
+    ),
+    (
+      invalid_entitlement_id,'Featured Salon',starter_salon_id,
+      'platform_credit','clean-plan-invalid-product-placement','Credited',
+      now()-interval '1 day',now()+interval '2 days',placement_actor_id
+    );
+
+  begin
+    insert into public.homepage_product_placements(
+      product_id,entitlement_id,status,sort_order,starts_at,ends_at,
+      created_by,updated_by
+    ) values(
+      starter_product_id,invalid_entitlement_id,'Active',1,now(),
+      now()+interval '1 day',placement_actor_id,placement_actor_id
+    );
+  exception when sqlstate '22023' then
+    if sqlerrm='FEATURED_PRODUCT_ENTITLEMENT_INVALID' then
+      invalid_placement_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not invalid_placement_rejected then
+    raise exception 'A mismatched homepage product entitlement was accepted';
+  end if;
+
+  insert into public.homepage_product_placements(
+    product_id,entitlement_id,status,sort_order,starts_at,ends_at,
+    created_by,updated_by
+  ) values(
+    starter_product_id,valid_entitlement_id,'Active',1,now(),
+    now()+interval '1 day',placement_actor_id,placement_actor_id
+  );
+
+  -- Dispose only these synthetic verification rows without weakening the
+  -- immutable production audit triggers. Setting the replication role is
+  -- transaction-local to this DO statement, and every dependent fixture row
+  -- is removed explicitly before its salon parent.
+  perform set_config('session_replication_role','replica',true);
+  delete from public.homepage_product_placements placement
+  using public.salon_products product
+  where placement.product_id=product.id
+    and product.salon_id in (
+      starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+      inactive_salon_id,drift_salon_id,downgrade_salon_id,
+      scheduled_downgrade_salon_id
+    );
+  delete from public.marketing_entitlements entitlement
+  where entitlement.id in (valid_entitlement_id,invalid_entitlement_id);
+  delete from public.salon_promotion_audit promotion_audit
+  where promotion_audit.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.subscription_change_requests change_request
+  where change_request.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salon_products product
+  where product.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salon_promotions promotion
+  where promotion.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.subscriptions subscription
+  where subscription.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salon_status_audit status_audit
+  where status_audit.salon_id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from public.salons salon
+  where salon.id in (
+    starter_salon_id,growth_salon_id,premium_salon_id,legacy_basic_salon_id,
+    inactive_salon_id,drift_salon_id,downgrade_salon_id,
+    scheduled_downgrade_salon_id
+  );
+  delete from auth.users auth_user where auth_user.id=placement_actor_id;
+end
+$plan_limit_verification$;
+
+do $subscription_checkout_idempotency_verification$
+declare
+  checkout_salon_id uuid := '10000000-0000-4000-8000-000000001201';
+  first_attempt jsonb;
+  reused_attempt jsonb;
+  conflicting_attempt jsonb;
+  linked_attempt jsonb;
+  completed_attempt jsonb;
+  replacement_attempt jsonb;
+  linked boolean;
+  completed boolean;
+  released boolean;
+  conflicting_link_rejected boolean := false;
+begin
+  if to_regclass('public.subscription_checkout_attempts') is null then
+    raise exception 'Subscription checkout attempt table is missing';
+  end if;
+  if not (
+    select class.relrowsecurity
+    from pg_class class
+    where class.oid='public.subscription_checkout_attempts'::regclass
+  ) then
+    raise exception 'Subscription checkout attempt RLS is not enabled';
+  end if;
+  if has_table_privilege(
+    'authenticated',
+    'public.subscription_checkout_attempts',
+    'select'
+  ) or not has_table_privilege(
+    'service_role',
+    'public.subscription_checkout_attempts',
+    'select,insert,update,delete'
+  ) then
+    raise exception 'Subscription checkout attempt table grants are unsafe';
+  end if;
+  if has_function_privilege(
+    'authenticated',
+    'public.reserve_subscription_checkout_attempt(uuid,text,text,text,uuid)',
+    'execute'
+  ) or not has_function_privilege(
+    'service_role',
+    'public.reserve_subscription_checkout_attempt(uuid,text,text,text,uuid)',
+    'execute'
+  ) then
+    raise exception 'Subscription checkout reservation RPC grants are unsafe';
+  end if;
+
+  insert into public.salons(id,name,slug,status)
+  values(
+    checkout_salon_id,
+    'Subscription checkout idempotency fixture',
+    'subscription-checkout-idempotency-fixture',
+    'New'
+  );
+
+  select public.reserve_subscription_checkout_attempt(
+    checkout_salon_id,'Starter','price_clean_starter','',null::uuid
+  ) into first_attempt;
+  select public.reserve_subscription_checkout_attempt(
+    checkout_salon_id,'Starter','price_clean_starter','',null::uuid
+  ) into reused_attempt;
+  if first_attempt ->> 'attempt_id' is distinct from
+      reused_attempt ->> 'attempt_id'
+    or coalesce((reused_attempt ->> 'reused')::boolean,false) is not true
+    or coalesce(
+      (reused_attempt ->> 'request_conflict')::boolean,
+      false
+    ) is true
+  then
+    raise exception 'Same subscription checkout request was not reused';
+  end if;
+
+  select public.reserve_subscription_checkout_attempt(
+    checkout_salon_id,'Growth','price_clean_growth','',null::uuid
+  ) into conflicting_attempt;
+  if first_attempt ->> 'attempt_id' is distinct from
+      conflicting_attempt ->> 'attempt_id'
+    or coalesce(
+      (conflicting_attempt ->> 'request_conflict')::boolean,
+      false
+    ) is not true
+  then
+    raise exception 'Concurrent different-plan checkout was not rejected as a conflict';
+  end if;
+
+  select public.link_subscription_checkout_attempt(
+    (first_attempt ->> 'attempt_id')::uuid,
+    'cus_clean_subscription_checkout',
+    'cs_clean_subscription_checkout'
+  ) into linked;
+  if linked is not true then
+    raise exception 'Subscription checkout attempt did not link provider IDs';
+  end if;
+
+  select public.reserve_subscription_checkout_attempt(
+    checkout_salon_id,'Starter','price_clean_starter','',null::uuid
+  ) into linked_attempt;
+  if linked_attempt ->> 'stripe_checkout_session_id'
+      is distinct from 'cs_clean_subscription_checkout'
+    or coalesce(
+      (linked_attempt ->> 'provider_reconciliation_required')::boolean,
+      false
+    ) is not true
+  then
+    raise exception 'Linked provider session was replaced without reconciliation';
+  end if;
+
+  begin
+    perform public.link_subscription_checkout_attempt(
+      (first_attempt ->> 'attempt_id')::uuid,
+      'cus_clean_subscription_checkout',
+      'cs_conflicting_subscription_checkout'
+    );
+  exception when unique_violation then
+    if sqlerrm='SUBSCRIPTION_CHECKOUT_SESSION_CONFLICT' then
+      conflicting_link_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not conflicting_link_rejected then
+    raise exception 'A checkout attempt accepted a different provider session';
+  end if;
+
+  select public.complete_subscription_checkout_attempt(
+    (first_attempt ->> 'attempt_id')::uuid,
+    'cs_clean_subscription_checkout',
+    'sub_clean_subscription_checkout'
+  ) into completed;
+  if completed is not true then
+    raise exception 'Completed subscription checkout did not finalize its attempt';
+  end if;
+  select public.reserve_subscription_checkout_attempt(
+    checkout_salon_id,'Starter','price_clean_starter','',null::uuid
+  ) into completed_attempt;
+  if completed_attempt ->> 'attempt_id' is distinct from
+      first_attempt ->> 'attempt_id'
+    or completed_attempt ->> 'status' is distinct from 'completed'
+    or coalesce(
+      (completed_attempt ->> 'provider_reconciliation_required')::boolean,
+      false
+    ) is not true
+  then
+    raise exception 'Completed checkout was replaced before subscription reconciliation';
+  end if;
+
+  -- This models the provider-confirmed cancellation path: only the matching
+  -- completed subscription may release the terminal attempt for resubscribe.
+  select public.release_completed_subscription_checkout_attempt(
+    checkout_salon_id,
+    'sub_clean_subscription_checkout'
+  ) into released;
+  if released is not true then
+    raise exception 'Canceled subscription did not release its completed checkout';
+  end if;
+  select public.reserve_subscription_checkout_attempt(
+    checkout_salon_id,'Starter','price_clean_starter','',null::uuid
+  ) into replacement_attempt;
+  if replacement_attempt ->> 'attempt_id' is not distinct from
+      first_attempt ->> 'attempt_id'
+  then
+    raise exception 'Expired checkout attempt was not safely rotated';
+  end if;
+
+  delete from public.salons salon where salon.id=checkout_salon_id;
+end
+$subscription_checkout_idempotency_verification$;
 
 select
   'clean database assertions passed' as result,

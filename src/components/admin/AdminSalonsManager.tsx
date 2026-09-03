@@ -18,6 +18,7 @@ import { getSessionForScope } from "@/lib/supabase";
 import { US_STATES } from "@/lib/usStates";
 import { LocationAutocomplete } from "@/components/search/AutocompleteInputs";
 import type { CustomerLocation } from "@/lib/location";
+import { displayStoredPlan, PLAN_ORDER } from "@/lib/plans";
 import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
 import AdminSalon360Sections from "@/components/admin/AdminSalon360Sections";
 
@@ -423,9 +424,10 @@ export default function AdminSalonsManager() {
             }}
           >
             <option value="">All plans</option>
-            {["Basic", "Growth", "Premium"].map((value) => (
+            {PLAN_ORDER.map((value) => (
               <option key={value}>{value}</option>
             ))}
+            <option value="Basic">Basic (legacy)</option>
           </Filter>
           <Filter
             label="Rating"
@@ -690,7 +692,7 @@ export default function AdminSalonsManager() {
                     <StatusBadge value={salon.status} />
                   </td>
                   <td className="px-4 py-3">
-                    {salon.subscription_tier || "Not selected"}
+                    {displayStoredPlan(salon.subscription_tier)}
                     <small className="block text-[9px] text-ink/50">
                       {salon.subscription_status || "inactive"}
                     </small>
@@ -773,7 +775,7 @@ export default function AdminSalonsManager() {
                 <span>
                   Plan
                   <br />
-                  <b>{salon.subscription_tier || "—"}</b>
+                  <b>{displayStoredPlan(salon.subscription_tier)}</b>
                 </span>
                 <span>
                   Rating
@@ -1166,7 +1168,7 @@ export function AdminSalonDetail({
                 />
                 <Detail
                   label="Plan / subscription"
-                  value={`${salon.subscription_tier || "—"} · ${salon.subscription_status || "—"}`}
+                  value={`${displayStoredPlan(salon.subscription_tier)} · ${salon.subscription_status || "—"}`}
                 />
                 <Detail
                   label="Rating"

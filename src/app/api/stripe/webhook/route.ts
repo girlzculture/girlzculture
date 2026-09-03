@@ -1,6 +1,10 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { capturePlatformError } from "@/lib/platformErrors";
-import { normalizePlan, planFromStripePriceId, planRank, type SubscriptionPlan } from "@/lib/plans";
+import {
+  parseStoredPlan,
+  planFromStripePriceId,
+  type StoredSubscriptionPlan,
+} from "@/lib/plans";
 import { deliverBookingNotifications, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripeGet, verifyStripeEvent } from "@/lib/stripeServer";
 import { normalizeUsState } from "@/lib/usStates";
@@ -74,8 +78,8 @@ function isoFromSeconds(value?: number) {
   return value ? new Date(value * 1000).toISOString() : null;
 }
 
-function optionalPlan(value: unknown): SubscriptionPlan | null {
-  return String(value || "").trim() ? normalizePlan(value) : null;
+function optionalPlan(value: unknown): StoredSubscriptionPlan | null {
+  return parseStoredPlan(value);
 }
 
 function invoicePriceId(invoice: StripeObject) {
@@ -89,21 +93,48 @@ function invoicePriceId(invoice: StripeObject) {
 
 function planFromObject(object: StripeObject) {
   const priceId = object.items?.data?.[0]?.price?.id;
-  return planFromStripePriceId(priceId) || normalizePlan(object.metadata?.plan);
+  if (priceId) return planFromStripePriceId(priceId);
+  return parseStoredPlan(object.metadata?.plan);
 }
 
 async function syncSubscription(object: StripeObject) {
   const admin = getSupabaseAdmin();
-  const salonId = object.metadata?.salon_id;
-  if (!salonId || !object.id) return;
-  const { data: existing } = await admin.from("subscriptions").select("*").eq("salon_id", salonId).maybeSingle();
+  if (!object.id) throw new Error("STRIPE_SUBSCRIPTION_ID_MISSING");
+  const metadataSalonId = String(object.metadata?.salon_id || "").trim();
+  const byStripeId = await admin
+    .from("subscriptions")
+    .select("*")
+    .eq("stripe_subscription_id", object.id)
+    .maybeSingle();
+  if (byStripeId.error) throw byStripeId.error;
+  if (
+    metadataSalonId &&
+    byStripeId.data?.salon_id &&
+    String(byStripeId.data.salon_id) !== metadataSalonId
+  ) {
+    throw new Error("STRIPE_SUBSCRIPTION_SALON_IDENTITY_CONFLICT");
+  }
+  const salonId = metadataSalonId || String(byStripeId.data?.salon_id || "");
+  if (!salonId) throw new Error("STRIPE_SUBSCRIPTION_SALON_UNLINKED");
+
+  let existing = byStripeId.data as StoredSubscription | null;
+  if (!existing) {
+    const bySalonId = await admin
+      .from("subscriptions")
+      .select("*")
+      .eq("salon_id", salonId)
+      .maybeSingle();
+    if (bySalonId.error) throw bySalonId.error;
+    existing = bySalonId.data as StoredSubscription | null;
+  }
   const plan = planFromObject(object);
+  if (!plan) throw new Error("STRIPE_SUBSCRIPTION_PLAN_UNRECOGNIZED");
   const status = String(object.status || "inactive");
   const subscriptionItem = object.items?.data?.[0];
   const periodStart = isoFromSeconds(object.current_period_start || subscriptionItem?.current_period_start) || existing?.current_period_start || null;
   const periodEnd = isoFromSeconds(object.current_period_end || subscriptionItem?.current_period_end);
   const scheduleId = stripeId(object.schedule) || existing?.stripe_schedule_id || null;
-  const scheduledBecameEffective = Boolean(existing?.scheduled_tier && normalizePlan(existing.scheduled_tier) === plan);
+  const scheduledBecameEffective = Boolean(existing?.scheduled_tier && parseStoredPlan(existing.scheduled_tier) === plan);
   const cancellationRequestedAt = object.cancel_at_period_end ? (existing?.cancellation_requested_at || new Date().toISOString()) : null;
   const endedAt = ["canceled", "incomplete_expired"].includes(status.toLowerCase()) ? (existing?.ended_at || new Date().toISOString()) : null;
   const latestInvoiceId = stripeId(object.latest_invoice) || existing?.last_invoice_id || null;
@@ -131,7 +162,6 @@ async function syncSubscription(object: StripeObject) {
   const { error: salonError } = await admin.from("salons").update({
     subscription_tier: plan,
     subscription_status: active ? status : "inactive",
-    featured_weight: active ? (planRank(plan) === 3 ? 100 : planRank(plan) === 2 ? 40 : 0) : 0,
   }).eq("id", salonId);
   if (salonError) throw salonError;
   const reconciliation = await admin.rpc("reconcile_salon_publication", {
@@ -238,7 +268,7 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
   if (event.type === "invoice.paid") {
     if (object.billing_reason === "subscription_create") eventType = "New subscription";
     else if (context.metadata.change_type === "upgrade" || object.billing_reason === "subscription_update") eventType = "Upgrade";
-    else if (context.metadata.change_type === "downgrade_effective" || (context.stored?.scheduled_tier && newPlan === normalizePlan(context.stored.scheduled_tier))) eventType = "Downgrade became effective";
+    else if (context.metadata.change_type === "downgrade_effective" || (context.stored?.scheduled_tier && newPlan === parseStoredPlan(context.stored.scheduled_tier))) eventType = "Downgrade became effective";
     else if (object.billing_reason === "subscription_cycle") eventType = "Renewal payment";
     else return;
     changeTiming = eventType === "Upgrade" || eventType === "New subscription" ? "immediate" : null;
@@ -821,6 +851,20 @@ async function releaseExpiredCheckout(
 ) {
   if (eventType !== "checkout.session.expired") return;
   const admin = getSupabaseAdmin();
+  const subscriptionAttemptId = String(
+    session.metadata?.checkout_attempt_id || "",
+  ).trim();
+  if (subscriptionAttemptId && session.id) {
+    const expiredAttempt = await admin.rpc(
+      "expire_subscription_checkout_attempt",
+      {
+        p_attempt_id: subscriptionAttemptId,
+        p_stripe_checkout_session_id: session.id,
+      },
+    );
+    if (expiredAttempt.error) throw expiredAttempt.error;
+    if (session.mode === "subscription") return;
+  }
   const commerceIntentId = String(
     session.metadata?.commerce_intent_id || "",
   ).trim();
@@ -897,8 +941,26 @@ async function POSTHandler(request: Request) {
         request,
       );
       if (object.mode === "subscription" && object.subscription) {
-        const subscription = await stripeGet<StripeObject>(`/subscriptions/${stripeId(object.subscription)}`);
+        const subscriptionId = stripeId(object.subscription);
+        const subscription = await stripeGet<StripeObject>(`/subscriptions/${subscriptionId}`);
         await syncSubscription(subscription);
+        const checkoutAttemptId = String(
+          object.metadata?.checkout_attempt_id || "",
+        ).trim();
+        if (checkoutAttemptId && object.id) {
+          const completedAttempt = await admin.rpc(
+            "complete_subscription_checkout_attempt",
+            {
+              p_attempt_id: checkoutAttemptId,
+              p_stripe_checkout_session_id: object.id,
+              p_stripe_subscription_id: subscriptionId,
+            },
+          );
+          if (completedAttempt.error) throw completedAttempt.error;
+          if (completedAttempt.data !== true) {
+            throw new Error("SUBSCRIPTION_CHECKOUT_ATTEMPT_COMPLETION_REJECTED");
+          }
+        }
       }
     }
     if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) await syncSubscription(object);

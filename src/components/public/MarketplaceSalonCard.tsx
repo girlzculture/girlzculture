@@ -83,13 +83,12 @@ export default function MarketplaceSalonCard({
   const bookingQuery = new URLSearchParams();
   if (salon.matched_service?.id)
     bookingQuery.set("style", salon.matched_service.id);
-  else if (salon.services[0]?.id)
-    bookingQuery.set("style", salon.services[0].id);
   const bookHref = `/salon/${salon.slug}/book${
     bookingQuery.size ? `?${bookingQuery}` : ""
   }`;
-  const currentPrice =
-    salon.matched_service?.price ?? salon.starting_price;
+  const currentPrice = salon.matched_service
+    ? salon.matched_service.price
+    : salon.starting_price;
   const originalPrice = salon.matched_service?.original_price ?? null;
 
   return (
@@ -203,11 +202,7 @@ export default function MarketplaceSalonCard({
                 <b>{Number(salon.rating_overall).toFixed(1)}</b>
                 <span className="text-ink/55">({salon.review_count})</span>
               </span>
-            ) : (
-              <span className="rounded-full bg-blush px-2 py-1 font-bold text-plum">
-                New
-              </span>
-            )}
+            ) : null}
             {currentPrice !== null ? (
               <span className="whitespace-nowrap">
                 From{" "}
@@ -251,14 +246,6 @@ export default function MarketplaceSalonCard({
             </p>
           ) : null}
 
-          {isList && salon.reliability ? (
-            <p className="mt-1 text-[10px] font-medium text-ink/55">
-              {salon.reliability.label}
-              {salon.reliability.completed_appointments
-                ? ` · ${salon.reliability.completed_appointments} completed`
-                : ""}
-            </p>
-          ) : null}
         </div>
 
         <div

@@ -17,7 +17,13 @@ assert.ok(migration.includes("fs.master_style_id=master_style_filter"), "Stable 
 assert.ok(!/service_role/i.test(api), "Public discovery must run through customer-safe RLS/RPC access.");
 assert.ok(api.includes('"Cache-Control": "private, no-store"'), "Location-specific results must not enter shared caches.");
 assert.ok(UI.includes('origin ? "Salons Near You" : "Salons"'), "No-location state must not pretend results are nearby.");
-assert.ok(!UI.includes("Load more salons"), "All eligible results must render as one continuous list.");
+assert.ok(
+  UI.includes("Load more salons") &&
+    UI.includes("has_more_results") &&
+    UI.includes("new Map(") &&
+    UI.includes("[...current, ...rows]"),
+  "Bounded discovery must expose a deduplicated Load more path until every eligible result is rendered.",
+);
 assert.ok(UI.includes("changeLocation") && UI.includes("Change"), "Customers must be able to change location.");
 
 function miles(a, b) {
@@ -41,4 +47,4 @@ const acrossAntimeridian = miles(
 assert.ok(acrossAntimeridian > 13 && acrossAntimeridian < 15, `Antimeridian fixture should be about 13.8 miles, got ${acrossAntimeridian}`);
 assert.ok(acrossAntimeridian <= 50, "A nearby salon across the antimeridian must survive a 50-mile search.");
 
-console.log("Verified authoritative organic eligibility, truthful nearest-first ordering, explicit all-results discovery, customer-safe fields, honest location states, and a five-mile inclusion fixture at 10/15/50 miles.");
+console.log("Verified authoritative organic eligibility, truthful nearest-first ordering, bounded deduplicated all-results paging, customer-safe fields, honest location states, and a five-mile inclusion fixture at 10/15/50 miles.");

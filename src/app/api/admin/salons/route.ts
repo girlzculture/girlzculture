@@ -15,7 +15,7 @@ const ALLOWED_STATUSES = new Set([
   "Suspended",
   "Offboarded",
 ]);
-const ALLOWED_PLANS = new Set(["Basic", "Growth", "Premium"]);
+const ALLOWED_PLANS = new Set(["Starter", "Growth", "Premium", "Basic"]);
 const ALLOWED_SETUP = new Set(["complete", "incomplete"]);
 const ALLOWED_SUBSCRIPTION = new Set(["eligible", "ineligible"]);
 
