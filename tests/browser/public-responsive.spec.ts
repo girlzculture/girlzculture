@@ -267,11 +267,14 @@ test("Browse Styles carries stable identity and restores filters and scroll afte
   await page.goto("/internal/acceptance/style-catalog");
   const search = page.getByPlaceholder("Search styles");
   await search.fill("Box");
+  const catalogUrl = page.url();
   await page.evaluate(() => window.scrollTo({ top: 240, behavior: "auto" }));
   await page.getByRole("link", { name: /Box Braids/ }).click();
   await expect(page).toHaveURL(/\/salons\?style=Box(?:\+|%20)Braids/);
   await expect(page).toHaveURL(/style_id=11111111-1111-4111-8111-111111111111/);
   await page.goBack();
+  await expect(page).toHaveURL(catalogUrl);
+  await expect(search).toBeVisible();
   await expect(search).toHaveValue("Box");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });

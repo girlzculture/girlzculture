@@ -446,6 +446,11 @@ export default function SalonDiscovery({
       requestController.current?.abort();
       const controller = new AbortController();
       requestController.current = controller;
+      let requestPathname = window.location.pathname;
+      const isCurrentSearch = () =>
+        !controller.signal.aborted &&
+        requestController.current === controller &&
+        window.location.pathname === requestPathname;
       if (options.append) {
         setLoading(false);
         setLoadingMore(true);
@@ -497,6 +502,10 @@ export default function SalonDiscovery({
           response,
           "Search could not be completed.",
         )) as SearchResponse;
+        // A body read can be aborted after HTTP 200 headers have arrived.
+        // readApiResponse returns a safe fallback in that case; the obsolete
+        // search must not overwrite the route, filters or results after Back.
+        if (!isCurrentSearch()) return;
         if (!response.ok)
           throw new Error(body.error || "Search could not be completed.");
 
@@ -566,17 +575,20 @@ export default function SalonDiscovery({
         if (!options.append && options.history !== "none") {
           const method = options.history === "replace" ? "replaceState" : "pushState";
           window.history[method](null, "", `/salons?${params.toString()}`);
+          requestPathname = window.location.pathname;
         }
 
         if (!options.append && !options.restoreScroll) {
-          window.requestAnimationFrame(() =>
+          window.requestAnimationFrame(() => {
+            if (!isCurrentSearch()) return;
             document.getElementById("salon-results")?.scrollIntoView({
               block: "start",
               behavior: "smooth",
-            }),
-          );
+            });
+          });
         }
       } catch (requestError) {
+        if (!isCurrentSearch()) return;
         if (
           requestError instanceof Error &&
           requestError.name === "AbortError"
@@ -590,7 +602,7 @@ export default function SalonDiscovery({
         setSearchWarning("");
         setEmptyReason(null);
       } finally {
-        if (requestController.current === controller) {
+        if (isCurrentSearch()) {
           if (options.append) setLoadingMore(false);
           else setLoading(false);
         }
@@ -644,8 +656,18 @@ export default function SalonDiscovery({
   });
 
   useEffect(() => {
-    window.addEventListener("popstate", restoreFromHistory);
-    return () => window.removeEventListener("popstate", restoreFromHistory);
+    const pathname = window.location.pathname;
+    const restoreDiscovery = () => {
+      // popstate fires before the outgoing route's effects are cleaned up.
+      // Only restore filters for history entries owned by this page.
+      if (window.location.pathname !== pathname) {
+        requestController.current?.abort();
+        return;
+      }
+      restoreFromHistory();
+    };
+    window.addEventListener("popstate", restoreDiscovery);
+    return () => window.removeEventListener("popstate", restoreDiscovery);
   }, []);
 
   useEffect(() => {
