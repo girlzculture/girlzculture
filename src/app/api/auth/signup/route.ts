@@ -1,6 +1,6 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { createClient } from "@supabase/supabase-js";
-import { normalizePlan } from "@/lib/plans";
+import { parseApplicationPlan } from "@/lib/plans";
 import {
   assertEmailAvailableForNewIdentity,
   auditIdentityEvent,
@@ -56,7 +56,7 @@ async function POSTHandler(request: Request) {
     const name = cleanText(body.name, 120);
     if (role === "customer" && !name) throw new Error("Name is required.");
     const phone = role === "salon_owner" ? cleanUsPhone(body.phone) : "";
-    const plan = normalizePlan(body.selected_plan);
+    const plan = parseApplicationPlan(body.selected_plan);
     await assertEmailAvailableForNewIdentity(email, role, `${role}_signup`, request);
 
     const auth = await signupClient().auth.signUp({
@@ -99,7 +99,7 @@ async function POSTHandler(request: Request) {
         slug: `pending-${createdUserId.slice(0, 8)}`,
         status: "Pending",
         verification_status: "Pending",
-        subscription_tier: plan,
+        subscription_tier: plan ?? "Free-seed",
         subscription_status: "inactive",
       });
       if (error) throw error;

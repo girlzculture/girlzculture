@@ -5,7 +5,7 @@ import {
 } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
-import { normalizePlan } from "@/lib/plans";
+import { parseApplicationPlan } from "@/lib/plans";
 import {
   cleanEmail,
   cleanText,
@@ -136,7 +136,12 @@ async function POSTHandler(request: Request) {
       );
     }
 
-    const selectedPlan = normalizePlan(body.selected_plan);
+    const selectedPlan = parseApplicationPlan(body.selected_plan);
+    if (!selectedPlan)
+      return Response.json(
+        { error: "Please choose a plan before submitting your application." },
+        { status: 400 },
+      );
     const businessTypes = await getEngineList(
       "catalog.business_types",
       [
