@@ -214,7 +214,7 @@ function Field({
   return (
     <label className="block min-w-0">
       <span className="mb-1 block text-[11px] font-bold text-plum">{label}</span>
-      {options ? <select value={value} onChange={event => onChange(event.target.value)} className="min-h-11 w-full rounded-[8px] border border-plum/15 bg-white px-3 text-sm"><option value="" disabled>Not provided</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input
+      {options ? <select aria-label={label} value={value} onChange={event => onChange(event.target.value)} className="min-h-11 w-full rounded-[8px] border border-plum/15 bg-white px-3 text-sm"><option value="" disabled>Not provided</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
