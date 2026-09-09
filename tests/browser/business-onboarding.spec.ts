@@ -84,11 +84,23 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [844, 390], 
     await expect(page.getByRole("link", { name: "Log In", exact: true })).toBeVisible();
     await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
     const button = page.getByRole("button", { name: "Continue with Hair Salon & Braiding" });
-    const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: innerWidth, background: getComputedStyle(document.querySelector(".business-lower")!).backgroundColor, cta: getComputedStyle(document.querySelector(".business-continue")!).backgroundColor }));
+    const dimensions = await page.evaluate(() => {
+      const main = document.querySelector<HTMLElement>(".business-onboarding")!;
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = "var(--gc-magenta)";
+      main.appendChild(probe);
+      const brand = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return { width: document.documentElement.scrollWidth, viewport: innerWidth, brand, background: getComputedStyle(main).backgroundImage, cta: getComputedStyle(document.querySelector(".business-continue")!).backgroundColor };
+    });
     expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
-    expect(dimensions.background).toBe(dimensions.cta);
+    expect(dimensions.cta).toBe(dimensions.brand);
+    expect(dimensions.background).toContain("gradient");
     expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await expect.poll(() => page.locator(".business-hero-panel img").evaluateAll(images => images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+    await expect(page.locator(".business-category img")).toHaveCount(8);
+    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 12 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+    const trust = await page.locator(".business-trust").boundingBox();
+    expect((await button.boundingBox())!.y).toBeGreaterThan(trust!.y + trust!.height);
     expect(failedMedia).toEqual([]);
     const audit = await new AxeBuilder({ page }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
     expect(audit.violations).toEqual([]);

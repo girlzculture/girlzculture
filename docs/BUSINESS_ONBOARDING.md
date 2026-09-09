@@ -75,21 +75,32 @@ migration is not applied to production by this task.
 
 ## Landing media, accessibility and caching
 
-The lower background and Continue button use `--gc-magenta`, the existing
-compatibility alias for semantic `brand.cta` teal. Approved copy, eight category
-cards and three trust items are retained. Only Hair Salon & Braiding can be
-selected; the other seven native controls are disabled. No category is selected
-automatically. Responsive coverage includes 320, 390, 768, 844, 1440 and 1920
-pixel widths, keyboard interaction and WCAG A/AA browser checks.
+The landing composition follows the founder's September 9 Image A: four service
+photo panels, a soft dark-to-teal media transition, compact centered benefits,
+an elevated white selector with eight photo cards, a three-column trust row,
+and the rounded Continue CTA below that row. Shading derives from the existing
+`--gc-magenta` / semantic `brand.cta` teal and charcoal; it introduces no separate
+green. The CTA keeps the existing accessible theme color.
 
-`src/lib/businessSignupMedia.ts` contains four unlabeled media slots. No approved
-video clips or dedicated nail/wellness/tattoo imagery were present. Existing
-local hair and salon-interior posters are temporary decorative fallbacks; they
-do not constitute final footage for those verticals. The founder can supply
-approved same-origin or configured Supabase-storage video URLs. The component
-uses real autoplay/muted/loop/playsInline video with no controls and falls back
-to posters for missing/failed media or reduced motion. No nonexistent video
-URLs or downloaded stock assets are shipped.
+Hair Salon & Braiding is visually emphasized as Available Now on entry, but
+still requires explicit selection. The other seven native radios remain
+disabled with readable Coming Soon pills. No category or plan is automatically
+selected. Keyboard and WCAG A/AA checks cover 320, 390, 768, 844, 1440 and 1920
+pixel widths; desktop has a four-column, two-row photo grid and mobile adapts
+to two columns without dropping imagery.
+
+`public/images/business/approved-business-reference.png` is the unmodified
+founder-provided Image A. `src/lib/businessSignupMedia.ts` defines clean photo
+windows for the four service scenes and eight category thumbnails.
+`BusinessPhoto` clips those regions proportionally in CSS. All typography,
+controls and layout are live HTML, not part of a screenshot. See the colocated
+asset README for provenance, exact hash, subjects and source limitations. No
+new AI artwork, stock downloads, remote hotlinks or dependencies are introduced.
+
+No approved video clips were supplied. The existing optional video behavior
+remains available for future approved standalone posters/clips, including
+reduced-motion and failed-playback fallback. Current rendering uses twelve
+static photo windows with a single cached local image request.
 
 Business pages render dynamically with private/no-store HTML and an explicit
 Netlify CDN no-store boundary. Worker v4 excludes `/business` and legacy
@@ -125,8 +136,8 @@ failure artifacts, matching the main verification workflow.
 
 Open the new PR's actual Netlify Deploy Preview in a fresh browser. Verify the
 plain QR route, all three explicit plan CTAs, legacy redirects, account step,
-mobile/desktop composition and absence of hydration/media errors. Final video
-selection remains pending founder-provided approved assets. Do not submit a
+mobile/desktop composition and absence of hydration/media errors. Current photo composition uses the founder-provided reference; video clips
+remain optional pending approved sources. Do not submit a
 preview application to a production-connected database. Repository browser/API
 fixtures and clean PostgreSQL verification cover writes without production data.
 
