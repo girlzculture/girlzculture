@@ -2665,9 +2665,10 @@ begin
     where column_info.table_schema='public'
       and column_info.table_name='salon_applications'
       and column_info.column_name='selected_plan'
-      and column_info.column_default like '%Starter%'
+      and column_info.column_default is null
+      and column_info.is_nullable = 'NO'
   ) then
-    raise exception 'New salon applications do not default to Starter';
+    raise exception 'New salon applications must require an explicit plan with NO DEFAULT and NOT NULL';
   end if;
 
   if not exists (
