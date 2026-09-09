@@ -91,14 +91,32 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
   );
 
   useEffect(() => {
+    const pathname = window.location.pathname;
     const applyLocation = () => {
+      // An outgoing catalog remains mounted during a route transition. Its
+      // filters belong to this route, not the destination's query string.
+      if (window.location.pathname !== pathname) return;
       const next = filtersFromLocation();
       setFilters((current) =>
         sameStyleCatalogFilters(current, next) ? current : next,
       );
     };
     applyLocation();
-    window.addEventListener("popstate", applyLocation);
+    let historyTimer = 0;
+    const onPopState = () => {
+      window.clearTimeout(historyTimer);
+      const url = currentRelativeUrl();
+      // Let every history listener (including Next's router) consume the
+      // browser URL before a React update can commit a pending navigation.
+      historyTimer = window.setTimeout(() => {
+        if (currentRelativeUrl() === url) applyLocation();
+      }, 0);
+    };
+    const stopHistoryListener = () => {
+      window.removeEventListener("popstate", onPopState);
+      window.clearTimeout(historyTimer);
+    };
+    window.addEventListener("popstate", onPopState);
 
     if (!scrollRestored.current) {
       try {
@@ -123,7 +141,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
             });
           });
           return () => {
-            window.removeEventListener("popstate", applyLocation);
+            stopHistoryListener();
             window.cancelAnimationFrame(firstFrame);
             if (secondFrame) window.cancelAnimationFrame(secondFrame);
           };
@@ -132,7 +150,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
         // URL state remains authoritative when session storage is unavailable.
       }
     }
-    return () => window.removeEventListener("popstate", applyLocation);
+    return stopHistoryListener;
   }, [filtersFromLocation]);
 
   const persistScroll = useCallback((scrollY = window.scrollY) => {
