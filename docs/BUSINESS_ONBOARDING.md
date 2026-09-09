@@ -102,6 +102,18 @@ registers the shipped worker after hydration and also runs on a production build
 
 ## Founder preview acceptance
 
+The full production browser validation also exposed an intermittent Browse
+Styles Back-navigation race. Instrumented native history events showed the
+correct catalog URL at `popstate`, then the shared customer-location provider's
+synchronous React update committed a pending salon-search URL before Next's
+history listener read the destination. The catalog consequently mounted with
+the salon query and lost its visible filters. Location synchronization now waits
+until the native listeners finish, checks that its captured URL is still current,
+and cancels superseded/unmounted callbacks. The permanent pending-history browser
+test holds real scheduler callbacks across Back to exercise this boundary; it
+failed against the original production build. Existing catalog URL, input,
+filter and scroll assertions remain intact.
+
 Open the new PR's actual Netlify Deploy Preview in a fresh browser. Verify the
 plain QR route, all three explicit plan CTAs, legacy redirects, account step,
 mobile/desktop composition and absence of hydration/media errors. Final video

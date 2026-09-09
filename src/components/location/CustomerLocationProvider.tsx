@@ -223,15 +223,25 @@ export default function CustomerLocationProvider({ children }: { children: React
       const next = readStoredLocation(retentionDays);
       if (active) setLocationState(next?.location || null);
     };
+    let navigationTimer = 0;
     const syncNavigationLocation = () => {
-      const explicit = locationFromUrl();
-      if (explicit) {
-        setLocationState(explicit);
-        persistLocation(explicit, retentionDays);
-        return;
-      }
-      const stored = readStoredLocation(retentionDays);
-      setLocationState(stored?.location || null);
+      window.clearTimeout(navigationTimer);
+      const href = window.location.href;
+      // Native history listeners run before the outgoing route has settled.
+      // A synchronous React update here can commit a pending search URL before
+      // Next's popstate listener reads the Back/Forward destination. Wait until
+      // every listener has consumed that URL, and discard superseded callbacks.
+      navigationTimer = window.setTimeout(() => {
+        if (!active || window.location.href !== href) return;
+        const explicit = locationFromUrl();
+        if (explicit) {
+          setLocationState(explicit);
+          persistLocation(explicit, retentionDays);
+          return;
+        }
+        const stored = readStoredLocation(retentionDays);
+        setLocationState(stored?.location || null);
+      }, 0);
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("popstate", syncNavigationLocation);
@@ -240,6 +250,7 @@ export default function CustomerLocationProvider({ children }: { children: React
       active = false;
       controller.abort();
       window.clearTimeout(timer);
+      window.clearTimeout(navigationTimer);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("popstate", syncNavigationLocation);
       window.removeEventListener("pageshow", syncNavigationLocation);
