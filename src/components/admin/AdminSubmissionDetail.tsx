@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BUSINESS_SETUP_OPTIONS, businessSetupLabel } from "@/lib/businessOnboarding";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import { readApiResponse } from "@/lib/apiResponseClient";
@@ -64,6 +65,7 @@ type CurrentForm = {
   business_type: string;
 };
 
+
 type SnapshotForm = {
   business_name: string;
   owner_name: string;
@@ -75,6 +77,7 @@ type SnapshotForm = {
   state: string;
   zip_code: string;
   business_type: string;
+  business_setup_type: string;
   referral_source: string;
   website_url: string;
   instagram_url: string;
@@ -108,6 +111,7 @@ const emptySnapshot: SnapshotForm = {
   state: "",
   zip_code: "",
   business_type: "",
+  business_setup_type: "",
   referral_source: "",
   website_url: "",
   instagram_url: "",
@@ -173,6 +177,7 @@ function snapshotValues(application: Application): SnapshotForm {
     state: stringValue(application.state),
     zip_code: stringValue(application.zip_code),
     business_type: stringValue(application.business_type),
+    business_setup_type: stringValue(application.business_setup_type),
     referral_source: stringValue(application.referral_source),
     website_url: stringValue(application.website_url),
     instagram_url: stringValue(application.instagram_url),
@@ -198,21 +203,23 @@ function Field({
   value,
   onChange,
   type = "text",
+  options,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: "text" | "email" | "number" | "url";
+  options?: typeof BUSINESS_SETUP_OPTIONS;
 }) {
   return (
     <label className="block min-w-0">
       <span className="mb-1 block text-[11px] font-bold text-plum">{label}</span>
-      <input
+      {options ? <select aria-label={label} value={value} onChange={event => onChange(event.target.value)} className="min-h-11 w-full rounded-[8px] border border-plum/15 bg-white px-3 text-sm"><option value="" disabled>Not provided</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="min-h-11 w-full rounded-[8px] border border-plum/15 bg-white px-3 text-sm outline-none focus:border-magenta"
-      />
+      />}
     </label>
   );
 }
@@ -494,6 +501,7 @@ export default function AdminSubmissionDetail({
               Submitted snapshot
             </p>
             <p className="mt-1 text-sm text-ink/75">{submittedAddress}</p>
+            <p className="mt-2 text-sm gc-text-secondary">Business setup: <strong>{businessSetupLabel(application.business_setup_type)}</strong></p>
             <p className="mt-1 text-xs text-ink/55">
               Submitted {dateLabel(application.submitted_at)} · {application.business_email}
             </p>
@@ -564,7 +572,7 @@ export default function AdminSubmissionDetail({
                   {(Object.keys(snapshotForm) as Array<keyof SnapshotForm>).map((key) => (
                     <Field
                       key={key}
-                      label={key.replaceAll("_", " ")}
+                      label={(key === "business_setup_type" ? "Business setup" : key.replaceAll("_", " "))}
                       type={
                         key.includes("email")
                           ? "email"
@@ -574,6 +582,7 @@ export default function AdminSubmissionDetail({
                               ? "number"
                               : "text"
                       }
+                      options={key === "business_setup_type" ? BUSINESS_SETUP_OPTIONS : undefined}
                       value={snapshotForm[key]}
                       onChange={(value) =>
                         setSnapshotForm((current) => ({ ...current, [key]: value }))

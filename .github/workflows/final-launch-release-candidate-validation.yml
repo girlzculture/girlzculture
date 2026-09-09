@@ -134,6 +134,17 @@ jobs:
             echo "No Playwright configuration is present; browser acceptance remains covered by the repository's dedicated browser workflow."
           fi
 
+      - name: Upload browser failure report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify Stripe test-mode connectivity without creating a payment or transfer
         id: stripe
         env:
@@ -174,56 +185,20 @@ jobs:
           rm -f /tmp/stripe-account.json /tmp/stripe-error.txt
           echo "status=Passed: authenticated read-only Stripe test-mode account connectivity; no payment, charge, payout, or transfer was created." >> "$GITHUB_OUTPUT"
 
-      - name: Publish the successful verification result to the existing pull request
-        if: success() && github.repository == 'girlzculture/girlzculture'
+      - name: Record successful verification without replacing the PR description
+        if: success()
         env:
-          GH_TOKEN: ${{ github.token }}
           STRIPE_STATUS: ${{ steps.stripe.outputs.status }}
         shell: bash
         run: |
           set -euo pipefail
-          pr_number="${{ github.event.pull_request.number }}"
-          if [ -z "$pr_number" ]; then
-            pr_number="$(gh api \
-              "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}%3Aagent%2Ffinal-launch-mobile-realtime-admin-corrections&per_page=20" \
-              --jq 'map(select(.number == 47))[0].number // empty')"
-          fi
-          [ -n "$pr_number" ] || exit 0
-
-          cat > /tmp/pr-body.md <<EOF
-          ## Final-launch implementation and repository acceptance
-
-          The implementation pass is complete on \
-          \`agent/final-launch-mobile-realtime-admin-corrections\` and this PR remains intentionally unmerged.
-
-          ### Completed and verified
-
-          - Public About-page order, dual promotional carousels, continuous opposite-direction loops, compact responsive cards, media framing, publication warnings, and public realtime refresh.
-          - Salon-owner realtime booking inserts/updates/deletes, actionable-booking count, in-dashboard alerts, optional browser notifications, tone, and vibration.
-          - Salon 360, protected administrator activity history, and server-enforced early/late check-in exceptions with evidence.
-          - Protected incident queue CSV/JSON export of the authorized filtered result set, 10,000-record cap, audit evidence, occurrence/business context, CSV-injection protection, and recursive secret/token/private-credential redaction.
-          - Platform Admin manual-booking wizard, authoritative availability, atomic checkout hold, Stripe checkout-link recovery/idempotency, and notification recovery.
-          - Stripe Connect salon transfer reservation/finalization, booking-specific idempotency, source-charge evidence, uncertain-delivery reconciliation, duplicate-transfer prevention, and truthful separation of Connect transfer from the salon's later bank payout.
-          - Featured Salon indefinite scheduling, searchable eligible-salon selection, archive/restore/delete, immutable deletion evidence, verified paid placement, platform credit, and complimentary Admin authority.
-          - Complete clean PostgreSQL 17 migration chain, permanent regression checks, TypeScript, lint, production build, responsive browser acceptance, and dependency audit.
-
-          ### Provider acceptance
-
-          ${STRIPE_STATUS}
-
-          ### Safety boundary
-
-          Verification used an isolated empty database and test/build configuration. No production migration, production deployment, production-data mutation, real payment, real charge, real payout, or real salon transfer was performed. Final merge and any production release remain owner-controlled actions.
-
-          **Authoritative release-candidate run:** ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}  
-          **Verified commit:** \`${GITHUB_SHA}\`
-          EOF
-
-          sed -i 's/^          //' /tmp/pr-body.md
-          jq -Rs '{body: .}' /tmp/pr-body.md \
-            | gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" \
-                --method PATCH \
-                --input - >/dev/null
+          {
+            echo "## Release-candidate verification"
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "${STRIPE_STATUS}"
+            echo "Production release and migration remain founder-controlled."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Leave a failure reference on the existing PR
         if: failure() && github.repository == 'girlzculture/girlzculture'

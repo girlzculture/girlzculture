@@ -92,6 +92,20 @@ assert.doesNotThrow(() =>
   assertRoleSurfaceHost(request("dashboard.girlzculture.com"), "salon", config),
 );
 
+for (const pathname of ["/business/signup", "/business/signup/hair", "/business/login", "/business/apply"]) {
+  assert.deepEqual(resolveHostRoute(config.publicHost, pathname, config), { kind: "pass", surface: "public" });
+  for (const host of [config.salonHost, config.adminHost]) {
+    assert.deepEqual(resolveHostRoute(host, pathname, config), { kind: "redirect", surface: "public", host: config.publicHost, pathname, status: 308 });
+    assert.equal(surfacePathForHost("salon", pathname, host, config), `https://${config.publicHost}${pathname}`);
+  }
+}
+for (const pathname of ["/api/auth/login/start", "/api/auth/login/verify"]) {
+  const loginRequest = new Request(`https://${config.publicHost}${pathname}`, { headers: { host: config.publicHost } });
+  assert.doesNotThrow(() => assertRoleSurfaceHost(loginRequest, "salon", config));
+  assert.throws(() => assertRoleSurfaceHost(loginRequest, "admin", config), /Forbidden/);
+}
+assert.throws(() => assertRoleSurfaceHost(request(config.publicHost), "salon", config), /Forbidden/);
+
 const read = (path) => fs.readFileSync(path, "utf8");
 const loginServer = read("src/lib/secureLoginServer.ts");
 const adminSecurity = read("src/lib/adminSecurityServer.ts");

@@ -292,8 +292,10 @@ Migration `20260831110000_official_subscription_plans_and_limits.sql` is
 forward-only and data-preserving. It replaces the necessary constraints,
 functions, and triggers without rewriting business/billing history. It:
 
-- changes only the default for new `salon_applications.selected_plan` rows to
-  `Starter`;
+- historically changed the new-row `selected_plan` default to `Starter`; this
+  is superseded by `20260909185351_business_onboarding_explicit_application_choices.sql`,
+  which removes the default and requires an explicit application choice. See
+  [the current business onboarding contract](../../BUSINESS_ONBOARDING.md);
 - permits `Starter`, `Growth`, `Premium`, and historical `Basic` in the
   scheduled-tier constraint;
 - establishes `salon_effective_plan_key` as the authority for feature access:

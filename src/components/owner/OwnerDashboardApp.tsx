@@ -632,7 +632,7 @@ export default function OwnerDashboardApp({
           <h1 className="font-serif text-3xl text-plum">Owner dashboard</h1>
           <p className="mt-3 text-sm text-ink/70">{error}</p>
           <Link
-            href="/salon/login"
+            href="/business/login"
             className="mt-5 inline-flex rounded-[9px] bg-magenta px-5 py-3 text-sm font-bold text-white"
           >
             Sign in

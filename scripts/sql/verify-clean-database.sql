@@ -2396,6 +2396,7 @@ begin
         'phone','+12125550100','street_address','1 Clean Way',
         'city','Brooklyn','state','NY','zip_code','11201',
         'business_type','Braiding Studio','selected_plan','Starter',
+      'business_setup_type','solo_professional',
         'years_in_operation',2,'stylist_count',2,
         'photo_urls',jsonb_build_array(),
         'document_urls',jsonb_build_array(
@@ -2432,6 +2433,7 @@ begin
       'phone','+12125550100','street_address','1 Clean Way',
       'city','Brooklyn','state','NY','zip_code','11201',
       'business_type','Braiding Studio','selected_plan','Starter',
+      'business_setup_type','solo_professional',
       'years_in_operation',2,'stylist_count',2,
       'photo_urls',jsonb_build_array(),
       'document_urls',jsonb_build_array(
@@ -2663,9 +2665,10 @@ begin
     where column_info.table_schema='public'
       and column_info.table_name='salon_applications'
       and column_info.column_name='selected_plan'
-      and column_info.column_default like '%Starter%'
+      and column_info.column_default is null
+      and column_info.is_nullable = 'NO'
   ) then
-    raise exception 'New salon applications do not default to Starter';
+    raise exception 'New salon applications must require an explicit plan with NO DEFAULT and NOT NULL';
   end if;
 
   if not exists (

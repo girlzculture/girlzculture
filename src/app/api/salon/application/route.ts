@@ -5,6 +5,7 @@ import {
 } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
+import { parseBusinessSetup } from "@/lib/businessOnboarding";
 import { parseApplicationPlan } from "@/lib/plans";
 import {
   cleanEmail,
@@ -130,7 +131,7 @@ async function POSTHandler(request: Request) {
       return Response.json(
         {
           error:
-            "Use the email address associated with your signed-in salon account.",
+            "Use the email address associated with your signed-in business account.",
         },
         { status: 400 },
       );
@@ -142,6 +143,11 @@ async function POSTHandler(request: Request) {
         { error: "Please choose a plan before submitting your application." },
         { status: 400 },
       );
+    const businessSetup = parseBusinessSetup(body.business_setup_type);
+    if (!businessSetup) return Response.json(
+      { error: "Please choose your business setup before submitting your application." },
+      { status: 400 },
+    );
     const businessTypes = await getEngineList(
       "catalog.business_types",
       [
@@ -214,6 +220,7 @@ async function POSTHandler(request: Request) {
       state,
       zip_code: zip,
       business_type: businessType,
+      business_setup_type: businessSetup,
       referral_source: cleanText(body.referral_source, 120) || null,
       selected_plan: selectedPlan,
       years_in_operation: yearsInOperation,

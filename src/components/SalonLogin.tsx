@@ -23,7 +23,7 @@ export default function SalonLogin() {
     sessionStorage.removeItem("girlz-culture-signed-out:salon");
     const destination = await fetch("/api/auth/destination", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
     const result = await destination.json() as { path?: string; role?: string };
-    if (!destination.ok || result.role !== "salon_owner") throw new Error("This account is not linked to an active salon profile.");
+    if (!destination.ok || result.role !== "salon_owner") throw new Error("This account is not linked to a business profile.");
     window.location.replace(
       surfacePathForHost(
         "salon",
@@ -57,7 +57,7 @@ export default function SalonLogin() {
     </>}
     {errorMsg ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm gc-text-danger">{errorMsg}</p> : null}
     <button type="submit" disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta px-4 py-3 font-semibold text-white gc-disabled-control">{loading ? "Verifying..." : challenge ? "Verify and open dashboard" : "Continue securely"}</button>
-    {!challenge ? <p className="text-sm text-ink/65">Salon accounts use SMS two-factor verification. If SMS delivery is unavailable, the code is sent to the account email.</p> : null}
-    <Link className="block text-center text-sm text-ink/70 hover:text-plum" href="/salon/signup">Need an account?</Link>
+    {!challenge ? <p className="text-sm text-ink/65">Business accounts use SMS two-factor verification. If SMS delivery is unavailable, the code is sent to the account email.</p> : null}
+    <Link className="block text-center text-sm text-ink/70 hover:text-plum" href="/business/signup">Need an account?</Link>
   </form>;
 }

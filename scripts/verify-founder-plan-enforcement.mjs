@@ -95,7 +95,9 @@ assert.deepEqual(
   [],
 );
 
-assert.match(migration, /alter column selected_plan set default 'Starter'/);
+const onboardingMigration = readFileSync(new URL("../supabase/migrations/20260909185351_business_onboarding_explicit_application_choices.sql", import.meta.url), "utf8");
+assert.match(onboardingMigration, /alter column selected_plan drop default/);
+assert.doesNotMatch(onboardingMigration, /alter column selected_plan (?:set default|drop not null)/);
 assert.match(migration, /scheduled_tier in \('Starter', 'Growth', 'Premium', 'Basic'\)/);
 assert.match(migration, /when 'starter' then 1/);
 assert.match(migration, /when 'basic' then 1/);

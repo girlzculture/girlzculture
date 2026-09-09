@@ -11,7 +11,7 @@ import {
   hasPlanFeature,
   normalizePlan,
   parseOfficialPlan,
-  parseApplicationPlan,
+  parseApplicationPlanQuery,
   parsePlan,
   parseStoredPlan,
   planFromStripePriceId,
@@ -59,7 +59,7 @@ for (const [query, expected] of [
 ]) {
   const searchParams = new URLSearchParams(query);
   assert.equal(
-    parseApplicationPlan(searchParams.get("plan")),
+    parseApplicationPlanQuery(searchParams.get("plan")),
     expected,
     `Salon application query ${query || "(missing plan)"} must select ${expected}`,
   );
@@ -185,7 +185,7 @@ assert.doesNotMatch(page, /test.mode|Priority search|Top search|featured rotatio
 
 assert.match(
   application,
-  /parseApplicationPlan\(searchParams\.get\("plan"\)\)/,
+  /parseApplicationPlanQuery\(searchParams\.get\("plan"\)\)/,
   "Application query parsing must normalize starter/growth/premium and legacy basic",
 );
 assert.match(application, /next\.set\("plan", plan\.toLowerCase\(\)\)/);
@@ -194,12 +194,12 @@ assert.match(application, /PLAN_ORDER\.map/);
 assert.match(application, /href="\/plans" target="_blank"/);
 assert.match(
   signup,
-  /parseApplicationPlan\(searchParams\.get\("plan"\)\)/,
+  /parseApplicationPlanQuery\(searchParams\.get\("plan"\)\)/,
   "Direct salon signup must preserve an absent plan selection",
 );
 assert.match(
   page,
-  /href=\{`\/salon\/signup\?plan=\$\{plan\.key\}`\}/,
+  /href=\{`\/business\/signup\?plan=\$\{plan\.key\}`\}/,
   "Every plan CTA must carry its explicit starter/growth/premium query selection",
 );
 

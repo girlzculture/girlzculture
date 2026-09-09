@@ -1219,6 +1219,11 @@ process.stdout.write(
 
 const assertionOutput = runPsql(["--file", assertions], "Post-migration assertions");
 if (assertionOutput) process.stdout.write(`${assertionOutput}\n`);
+const onboardingOutput = runPsql(
+  ["--file", path.join(root, "scripts", "sql", "verify-business-onboarding.sql")],
+  "Explicit business onboarding database assertions",
+);
+if (onboardingOutput) process.stdout.write(`${onboardingOutput}\n`);
 const deployedMigration = runPsql(
   [
     "--tuples-only",

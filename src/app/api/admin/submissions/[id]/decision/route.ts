@@ -3,7 +3,7 @@ import {
   routeMonitoringProfile,
   withOperationalMonitoring,
 } from "@/lib/operationalMonitoring";
-import { normalizePlan } from "@/lib/plans";
+import { canonicalPlanForStored } from "@/lib/plans";
 import {
   pilotOverrideReasonError,
   publicationBlockMessage,
@@ -57,7 +57,10 @@ async function POSTHandler(
       if (reasonError) return Response.json({ error: reasonError }, { status: 400 });
     }
 
-    const plan = normalizePlan(application.selected_plan);
+    const plan = canonicalPlanForStored(application.selected_plan);
+    if (decision !== "reject" && !plan) return Response.json(
+      { error: "The applicant must choose a valid plan before approval." }, { status: 400 },
+    );
     let status = "Approved";
     let changed = true;
     let lifecycle: PublicationDiagnostic | null = null;
@@ -140,7 +143,7 @@ async function POSTHandler(
           ? `<h1>Your salon is live for the founding pilot</h1><p>An authorized Girlz Culture administrator published your salon for the pilot. Any remaining setup items will stay visible in your dashboard and do not change your real subscription or payment records.</p><p><a href="${base}/salon/dashboard">Open your dashboard</a></p>`
           : `<h1>Your salon is live</h1><p>Every required setup and eligibility gate passed. Clients can now discover and book your salon.</p><p><a href="${base}/salon/dashboard">Open your dashboard</a></p>`
         : decision === "approve"
-          ? `<h1>You’re approved</h1><p>Log in to activate your ${plan} subscription and complete the marketplace setup checklist. Your salon will remain private until every required gate passes.</p><p><a href="${base}/salon/login">Continue setup</a></p>`
+          ? `<h1>You’re approved</h1><p>Log in to activate your ${plan} subscription and complete the marketplace setup checklist. Your salon will remain private until every required gate passes.</p><p><a href="${base}/business/login">Continue setup</a></p>`
           : `<h1>Application update</h1><p>We’re unable to approve your salon at this time.</p><p><strong>Reason:</strong> ${safeReason}</p>`;
     if (changed) {
       try {

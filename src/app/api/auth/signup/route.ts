@@ -66,7 +66,7 @@ async function POSTHandler(request: Request) {
         data:
           role === "customer"
             ? { role, name }
-            : { role, phone, selected_plan: plan },
+            : { role, phone, selected_plan: plan, application_plan_explicit: plan !== null },
       },
     });
     if (auth.error || !auth.data.user) {
