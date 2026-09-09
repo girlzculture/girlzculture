@@ -134,6 +134,17 @@ jobs:
             echo "No Playwright configuration is present; browser acceptance remains covered by the repository's dedicated browser workflow."
           fi
 
+      - name: Upload browser failure report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify Stripe test-mode connectivity without creating a payment or transfer
         id: stripe
         env:

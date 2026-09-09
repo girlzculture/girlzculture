@@ -114,6 +114,15 @@ test holds real scheduler callbacks across Back to exercise this boundary; it
 failed against the original production build. Existing catalog URL, input,
 filter and scroll assertions remain intact.
 
+The development release gate then exposed a separate mount-replay defect: Strict
+Mode cleanup aborted the initial salon search while its one-shot intent flag
+remained set. The replay never restarted that request, leaving “Searching…”
+indefinitely. Cleanup now clears the initial/automatic search guards after
+aborting, allowing replay to start the required replacement request. The same
+pending-history regression remains unchanged and covers completed search before
+Back in both development and production. The release workflow now retains browser
+failure artifacts, matching the main verification workflow.
+
 Open the new PR's actual Netlify Deploy Preview in a fresh browser. Verify the
 plain QR route, all three explicit plan CTAs, legacy redirects, account step,
 mobile/desktop composition and absence of hydration/media errors. Final video

@@ -416,7 +416,14 @@ export default function SalonDiscovery({
     };
   }, []);
 
-  useEffect(() => () => requestController.current?.abort(), []);
+  useEffect(() => () => {
+    requestController.current?.abort();
+    // Strict Mode replays mount effects after their cleanup. The aborted
+    // initial search did not finish, so the replay must be allowed to start
+    // it again instead of leaving the results permanently loading.
+    initialIntentHandled.current = false;
+    automaticNearbySearch.current = false;
+  }, []);
 
   const runSearch = useCallback(
     async (
