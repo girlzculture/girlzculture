@@ -110,6 +110,20 @@ test exercises both pointer and keyboard selection in Chromium, Firefox and
 WebKit; unavailable categories and the explicit selection requirement remain
 unchanged.
 
+The category form uses `autocomplete="off"` so Firefox cannot restore checked
+radios or an enabled Continue button ahead of React's initial unselected state.
+The development release gate reproduced this native restoration as a checked
+radio and a mismatched `disabled` attribute after reload. The reload and
+hydration assertions remain intact. This scope follows
+[Mozilla's documented form-state restoration control](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#description).
+
+Firefox also exposes React's successful `console.timeStamp("Hydrated")` event
+to Playwright. Trace evidence and the installed React development source
+identify it as a performance marker. The hydration audit excludes only that
+exact `timeStamp` event; its warning/error matcher, page-error listener and
+empty-error-list assertion remain unchanged. The same category regression
+continues to exercise real reload state and hydration in all three engines.
+
 Business pages render dynamically with private/no-store HTML and an explicit
 Netlify CDN no-store boundary. Worker v4 excludes `/business` and legacy
 application routes; activation clears earlier application cache versions. The

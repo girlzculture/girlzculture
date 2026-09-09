@@ -20,7 +20,9 @@ const categories = [
 export default function BusinessTypeSelector({ continueHref, children }: { continueHref: string; children?: ReactNode }) {
   const [selected, setSelected] = useState(false);
   const router = useRouter();
-  return <form className="business-selection-flow" onSubmit={event => { event.preventDefault(); if (selected) router.push(continueHref); }}>
+  // Firefox can restore checked/disabled properties before React hydrates.
+  // This entry choice must start in the same state as the rendered controls.
+  return <form className="business-selection-flow" autoComplete="off" onSubmit={event => { event.preventDefault(); if (selected) router.push(continueHref); }}>
     <fieldset className="business-type-selector">
       <legend className="business-selector-title">Select Your Business Type</legend>
       <p className="business-selector-description">Choose the category that best describes your business to get started.</p>

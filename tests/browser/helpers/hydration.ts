@@ -9,7 +9,13 @@ export const test = base.extend<{ hydrationAudit: void }>({
         errors.push(message);
       }
     };
-    page.on("console", (message) => record(message.text()));
+    page.on("console", (message) => {
+      // Firefox exposes React's successful console.timeStamp("Hydrated")
+      // performance marker. It is not a warning or hydration mismatch.
+      // The protocol event is absent from Playwright's console-type union.
+      if (String(message.type()) === "timeStamp" && message.text() === "Hydrated") return;
+      record(message.text());
+    });
     page.on("pageerror", (error) => record(error.message));
     await use();
     expect(errors, "The application must hydrate without mismatches").toEqual([]);
