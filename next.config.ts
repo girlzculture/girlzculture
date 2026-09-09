@@ -53,6 +53,13 @@ const nextConfig: NextConfig = {
         ]
       : [],
   },
+  async redirects() {
+    return ["signup", "login", "apply"].map(route => ({
+      source: `/salon/${route}`,
+      destination: `/business/${route}`,
+      permanent: true,
+    }));
+  },
   async headers() {
     const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
       ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/rest\/v1\/?$/i, "")).origin
@@ -64,6 +71,7 @@ const nextConfig: NextConfig = {
       `img-src 'self' data: blob: ${supabaseOrigin} https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com`,
       `connect-src 'self' ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")} https://api.stripe.com https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://cloudflareinsights.com`,
       "font-src 'self' data: https://fonts.gstatic.com",
+      `media-src 'self' blob: ${supabaseOrigin}`,
       "frame-src https://checkout.stripe.com https://js.stripe.com https://*.google.com",
       "worker-src 'self' blob:",
       "object-src 'none'",
@@ -83,6 +91,9 @@ const nextConfig: NextConfig = {
         : []),
       {key:"Cross-Origin-Opener-Policy",value:"same-origin-allow-popups"},
       {key:"X-Robots-Tag",value:process.env.NEXT_PUBLIC_ALLOW_INDEXING==="true"?"index, follow":"noindex, nofollow, noarchive"},
+    ]}, { source: "/business/:path*", headers: [
+      { key: "Cache-Control", value: "private, no-store, max-age=0" },
+      { key: "Netlify-CDN-Cache-Control", value: "no-store" },
     ]}];
   },
 };

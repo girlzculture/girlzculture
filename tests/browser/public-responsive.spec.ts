@@ -53,7 +53,7 @@ const pilotPublicRoutes = [
   "/help",
   "/contact",
   "/login",
-  "/salon/login",
+  "/business/login",
   "/admin/login",
 ];
 
@@ -439,7 +439,7 @@ test("customer, salon, and platform-admin password fields can be revealed withou
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "One browser covers the shared password control.");
-  for (const route of ["/login", "/salon/login", "/admin/login"]) {
+  for (const route of ["/login", "/business/login", "/admin/login"]) {
     await page.goto(route);
     const password = page.getByLabel("Password", { exact: true });
     await expect(password, `${route} has a masked password field`).toBeVisible();

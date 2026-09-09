@@ -6,7 +6,7 @@ test("salon phone input enforces its actual HTML pattern under UnicodeSets seman
   page.on("console", (message) => {
     if (/Pattern attribute value|Invalid regular expression/i.test(message.text())) patternErrors.push(message.text());
   });
-  await page.goto("/salon/signup");
+  await page.goto("/business/signup/hair");
   const phone = page.getByRole("textbox", { name: "Phone Number" });
   // A real input event hydrates the form. Native checkValidity below does not
   // dispatch an input event and can otherwise insert inline errors before hydration.
@@ -41,7 +41,7 @@ test("salon phone input enforces its actual HTML pattern under UnicodeSets seman
 });
 
 test("formatted salon phone number remains browser-valid without changing its digits", async ({ page }) => {
-  await page.goto("/salon/signup");
+  await page.goto("/business/signup/hair");
   const phone = page.getByRole("textbox", { name: "Phone Number" });
   await phone.fill("2125550123");
   await expect(phone).toHaveValue("+1 (212) 555-0123");

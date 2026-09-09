@@ -16,18 +16,19 @@ import {
   APPLICATION_DOCUMENT_MAXIMUM_COUNT,
   APPLICATION_DOCUMENT_MIME_TYPES,
 } from "@/lib/applicationDocumentUploadCore";
-import { parseApplicationPlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
+import { parseApplicationPlanQuery, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
 import { isValidUsZip, US_STATES } from "@/lib/usStates";
 import NumericInput from "@/components/forms/NumericInput";
-const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", address_line2:"", city:"", state:"NY", zip_code:"", business_type:"Braiding Studio", years_in_operation:"", stylist_count:"", website_url:"", instagram_url:"", business_license_number:"", cosmetology_license_number:"", referral_source:"" };
+import { BUSINESS_SETUP_OPTIONS, parseBusinessSetup } from "@/lib/businessOnboarding";
+const initial = { business_name:"", owner_name:"", business_email:"", phone:"", street_address:"", address_line2:"", city:"", state:"NY", zip_code:"", business_type:"Braiding Studio", business_setup_type:"", years_in_operation:"", stylist_count:"", website_url:"", instagram_url:"", business_license_number:"", cosmetology_license_number:"", referral_source:"" };
 
 export default function SalonApplication({businessTypes}:{businessTypes:string[]}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form,setForm] = useState({...initial,business_type:businessTypes[0]||initial.business_type});
-  const selectedPlan = parseApplicationPlan(searchParams.get("plan"));
+  const selectedPlan = parseApplicationPlanQuery(searchParams.get("plan"));
   const [userId,setUserId] = useState("");
   const [checks,setChecks] = useState([false,false,false]);
   const [message,setMessage] = useState("");
@@ -37,7 +38,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
 
   useEffect(() => {
     void getSessionForScope("salon").then((session) => {
-      if (!session?.user) { router.replace("/salon/login"); return; }
+      if (!session?.user) { router.replace("/business/login"); return; }
       setUserId(session.user.id);
       setForm((current) => ({...current, business_email:session.user.email || "", phone:String(session.user.user_metadata?.phone || "")}));
     }).catch(() => {
@@ -49,7 +50,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   function choosePlan(plan: SubscriptionPlan) {
     const next = new URLSearchParams(searchParams.toString());
     next.set("plan", plan.toLowerCase());
-    router.replace(`/salon/apply?${next.toString()}`, { scroll: false });
+    router.replace(`/business/apply?${next.toString()}`, { scroll: false });
   }
 
   function update(key: keyof typeof initial, value: string) { setForm((current) => ({...current,[key]:value})); }
@@ -266,6 +267,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
     event.preventDefault();
     if (!selectedPlan) { setMessage("Please choose a plan before submitting your application."); return; }
     if (!checks.every(Boolean)) { setMessage("Please accept all three confirmations."); return; }
+    if (!parseBusinessSetup(form.business_setup_type)) { setMessage("Please choose your business setup before submitting your application."); return; }
     if (!userId) { setMessage("Your account is not ready. Please sign in again."); return; }
     if (!isValidEmail(form.business_email)) { setMessage("Please enter a valid email address (name@example.com)."); return; }
     if (!isValidUsPhone(form.phone)) { setMessage("Please enter a US phone number."); return; }
@@ -284,12 +286,12 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   }
 
   return <form onSubmit={submit} className="rounded-[18px] border border-plum/10 bg-white/85 p-5 shadow-[0_20px_60px_rgba(13,17,20,.08)] sm:p-8">
-    <div className="mb-7 flex items-center gap-4"><span className="grid h-16 w-16 place-items-center rounded-[15px] bg-blush text-magenta"><Building2 size={34}/></span><div><h1 className="font-serif text-4xl font-semibold text-plum">Salon Application</h1><p className="mt-1 text-sm text-ink/65">Tell us about your business so we can help you grow with Girlz Culture.</p></div></div>
+    <div className="mb-7 flex items-center gap-4"><span className="grid h-16 w-16 place-items-center rounded-[15px] bg-blush text-magenta"><Building2 size={34}/></span><div><h1 className="font-serif text-4xl font-semibold text-plum">Business Application</h1><p className="mt-1 text-sm text-ink/65">Tell us about your business so we can help you grow with Girlz Culture.</p></div></div>
 
     <section className="mb-7"><div className="flex items-end justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Choose your plan</h2><p className="mt-1 text-xs text-ink/55">No payment today. Billing begins only after approval and subscription.</p></div><Link href="/plans" target="_blank" className="text-xs font-bold text-magenta">Compare plans</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{PLAN_ORDER.map((name) => { const plan=SUBSCRIPTION_PLANS[name]; const active=selectedPlan===name; return <button key={name} type="button" aria-pressed={active} onClick={()=>choosePlan(name)} className={`rounded-[13px] border p-4 text-left ${active?"border-magenta bg-blush/30 ring-2 ring-magenta/10":"border-plum/10 bg-white"}`}><span className="flex items-center justify-between"><b className="font-serif text-xl text-plum">{name}</b>{active?<Check size={18} className="text-magenta"/>:null}</span><span className="mt-1 block text-sm font-bold">${plan.monthlyAmountCents / 100}/month</span><span className="mt-2 block text-[10px] leading-4 text-ink/55">{plan.description}</span></button>; })}</div></section>
 
     <div className="grid gap-4 sm:grid-cols-2">
-      <Input label="Business / Salon Name" value={form.business_name} onChange={(value)=>update("business_name",value)} />
+      <Input label="Business Name" value={form.business_name} onChange={(value)=>update("business_name",value)} />
       <Input label="Owner / Contact Full Name" value={form.owner_name} onChange={(value)=>update("owner_name",value)} />
       <Input label="Business Email" type="email" pattern={EMAIL_PATTERN} title="Enter a valid email address such as name@example.com" value={form.business_email} onChange={(value)=>update("business_email",value)} />
       <Input label="Phone Number" type="tel" pattern={US_PHONE_PATTERN} title="Please enter a US phone number" value={form.phone} onChange={(value)=>update("phone",formatUsPhoneInput(value))} placeholder="+1 (555) 123-4567" />
@@ -298,6 +300,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
       <label><span className="mb-2 block text-xs font-bold">State *</span><select required value={form.state} onChange={(event)=>update("state",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{US_STATES.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
       <Input label="ZIP Code" pattern="\d{5}(-\d{4})?" title="Use 12345 or 12345-6789 format" value={form.zip_code} onChange={(value)=>update("zip_code",value)} />
       <label><span className="mb-2 block text-xs font-bold">Type of Business *</span><select value={form.business_type} onChange={(event)=>update("business_type",event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm">{businessTypes.map((item)=><option key={item}>{item}</option>)}</select></label>
+      <label><span className="mb-2 block text-xs font-bold">Business setup *</span><select required value={form.business_setup_type} onChange={event => update("business_setup_type", event.target.value)} className="w-full rounded-[8px] border border-plum/15 bg-white px-3 py-3 text-sm"><option value="" disabled>Choose your business setup</option>{BUSINESS_SETUP_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       <Input label="Years in operation" type="number" min={0} max={150} value={form.years_in_operation} onChange={(value)=>update("years_in_operation",value)} />
       <Input label="Number of stylists" type="number" min={1} max={500} value={form.stylist_count} onChange={(value)=>update("stylist_count",value)} />
       <Input label="Business website" type="url" value={form.website_url} onChange={(value)=>update("website_url",value)} required={false} placeholder="https://yoursalon.com" />

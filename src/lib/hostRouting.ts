@@ -59,6 +59,12 @@ export function resolveHostRoute(
   if (!config.enabled || !normalizedHost)
     return { kind: "pass", surface: "public" };
 
+  if (starts(pathname, "/business")) {
+    return normalizedHost === config.publicHost
+      ? { kind: "pass", surface: "public" }
+      : { kind: "redirect", surface: "public", host: config.publicHost, pathname, status: 308 };
+  }
+
   if (normalizedHost === config.salonHost) {
     if (pathname === "/")
       return { kind: "redirect", surface: "salon", host: config.salonHost, pathname: "/salon", status: 308 };
@@ -73,9 +79,9 @@ export function resolveHostRoute(
         status: 308,
       };
     if (pathname === "/login")
-      return { kind: "rewrite", surface: "salon", pathname: "/salon/login" };
+      return { kind: "redirect", surface: "public", host: config.publicHost, pathname: "/business/login", status: 308 };
     if (pathname === "/signup")
-      return { kind: "rewrite", surface: "salon", pathname: "/salon/signup" };
+      return { kind: "redirect", surface: "public", host: config.publicHost, pathname: "/business/signup", status: 308 };
     if (starts(pathname, "/salon"))
       return {
         kind: "rewrite",
@@ -126,7 +132,7 @@ export function resolveHostRoute(
     };
   }
   if (pathname === "/salon/login") {
-    return { kind: "redirect", surface: "salon", host: config.salonHost, pathname: "/login", status: 308 };
+    return { kind: "redirect", surface: "public", host: config.publicHost, pathname: "/business/login", status: 308 };
   }
   return { kind: "pass", surface: "public" };
 }
@@ -139,6 +145,9 @@ export function surfacePathForHost(
 ) {
   const normalizedHost = normalizeRequestHost(host);
   if (!config.enabled) return internalPath;
+  if (starts(internalPath, "/business")) {
+    return normalizedHost === config.publicHost ? internalPath : `https://${config.publicHost}${internalPath}`;
+  }
   if (scope === "admin" && normalizedHost === config.adminHost) {
     return starts(internalPath, "/admin")
       ? `/superadmin${suffix(internalPath, "/admin")}`
@@ -163,5 +172,10 @@ export function assertRoleSurfaceHost(
     request.headers.get("x-forwarded-host") || request.headers.get("host"),
   );
   const expected = scope === "admin" ? config.adminHost : config.salonHost;
+  // Public business login is canonical even if dashboard subdomains are enabled.
+  // Only the two authentication endpoints gain this origin; protected dashboard
+  // API access retains its existing dedicated-host requirement.
+  if (scope === "salon" && host === config.publicHost &&
+      ["/api/auth/login/start", "/api/auth/login/verify"].includes(new URL(request.url).pathname)) return;
   if (host !== expected) throw new Error("Forbidden: use the authorized account portal.");
 }

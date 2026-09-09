@@ -19,7 +19,7 @@ const auditedRoutes = [
   { feature: "public partner", route: "/partner" },
   { feature: "public contact", route: "/contact" },
   { feature: "customer authentication", route: "/login" },
-  { feature: "salon authentication", route: "/salon/login" },
+  { feature: "salon authentication", route: "/business/login" },
   { feature: "admin authentication", route: "/admin/login" },
   { feature: "legal and policies", route: "/legal" },
   { feature: "public salon profile", route: "/salon/acceptance-salon" },

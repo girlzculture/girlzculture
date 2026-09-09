@@ -306,9 +306,15 @@ export function parseOfficialPlan(value: unknown): SubscriptionPlan | null {
   return null;
 }
 
-/** Application choices may be absent. Preserve explicit legacy URL aliases only. */
+/** Submission/metadata must contain an explicit current plan, never a fallback. */
 export function parseApplicationPlan(value: unknown): SubscriptionPlan | null {
-  return typeof value === "string" ? parsePlan(value) : null;
+  return typeof value === "string" ? parseOfficialPlan(value) : null;
+}
+
+/** Only an explicitly supplied historical URL may translate Basic to Starter. */
+export function parseApplicationPlanQuery(value: unknown): SubscriptionPlan | null {
+  if (typeof value !== "string") return null;
+  return value.trim().toLowerCase() === "basic" ? "Starter" : parseApplicationPlan(value);
 }
 
 /** Compatibility display fallback. Never use this to infer an application choice. */

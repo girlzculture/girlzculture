@@ -5,7 +5,7 @@ import vm from "node:vm";
 const workerSource = readFileSync("public/sw.js", "utf8");
 const nextConfig = readFileSync("next.config.ts", "utf8");
 
-for (const path of ["/api", "/admin", "/account", "/salon/dashboard"]) {
+for (const path of ["/api", "/admin", "/account", "/salon/dashboard", "/salon/apply", "/business"]) {
   assert.match(workerSource, new RegExp(path.replace("/", "\\/")), `service worker must bypass ${path}`);
 }
 assert.match(workerSource, /response\.clone\(\)/, "responses must be cloned before caching");
@@ -78,6 +78,12 @@ assert.equal(cacheWriteCount, 1, "public navigation should cache a cloned respon
 
 const privateResponse = await dispatchFetch("/admin");
 assert.equal(privateResponse, undefined, "private navigation must bypass the service worker cache");
+for (const path of ["/business/signup", "/business/signup/hair", "/business/login", "/business/apply", "/salon/signup", "/salon/login", "/salon/apply"]) {
+  for (const query of ["", "?plan=starter", "?plan=garbage"]) {
+    cacheEntries.set(`https://example.test${path}${query}`, new Response("stale Starter"));
+    assert.equal(await dispatchFetch(`${path}${query}`), undefined, `${path}${query} must bypass cached onboarding HTML`);
+  }
+}
 
 fetchFails = true;
 const offlineResponse = await dispatchFetch("/salons");

@@ -1,3 +1,4 @@
+import { businessOnboardingHref, explicitSignupPlan } from "@/lib/businessOnboarding";
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { canonicalIdentityForUser } from "@/lib/identityServer";
@@ -32,7 +33,7 @@ async function POSTHandler(request: Request) {
       let path = "/salon/dashboard";
       if (salon.status?.toLowerCase() === "pending") {
         const { data: application } = await admin.from("salon_applications").select("id").eq("salon_id", salon.id).maybeSingle();
-        path = application?.id ? "/pending" : "/salon/apply";
+        path = application?.id ? "/pending" : businessOnboardingHref("/business/apply", explicitSignupPlan(user.user_metadata));
       }
       return Response.json({ path, role: "salon_owner", salon_status: salon.status });
     }

@@ -94,6 +94,7 @@ const applicationProjection = [
   "business_license_number",
   "cosmetology_license_number",
   "selected_plan",
+  "business_setup_type",
   "logo_url",
   "photo_urls",
   "document_urls",

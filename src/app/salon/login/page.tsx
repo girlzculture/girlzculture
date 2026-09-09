@@ -1,17 +1,11 @@
-import SalonLogin from '@/components/SalonLogin';
-import LanguageSelector from '@/components/i18n/LanguageSelector';
+import { permanentRedirect } from "next/navigation";
 
-export default function LoginPage() {
-  return (
-    <main className="min-h-screen bg-cream text-ink">
-      <div data-language-selector-host className="flex justify-end px-4 pt-4"><LanguageSelector compact /></div>
-      <div className="mx-auto w-full max-w-[900px] px-4 py-12">
-        <div className="rounded-lg border border-plum/10 bg-white p-6 shadow-sm">
-          <h1 className="font-serif mb-2 text-2xl text-plum">Salon login</h1>
-          <p className="mb-6 text-sm text-ink/70">Log in to manage your salon profile.</p>
-          <SalonLogin />
-        </div>
-      </div>
-    </main>
-  );
+// Compatibility for direct rendering and internal rewrites; next.config also
+// redirects HTTP requests before rendering, preserving their complete query.
+export default async function LegacyBusinessRoute({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, item);
+  }
+  permanentRedirect(`/business/login${query.size ? `?${query}` : ""}`);
 }

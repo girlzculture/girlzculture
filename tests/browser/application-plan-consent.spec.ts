@@ -1,5 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./helpers/hydration";
 import { buildAuthStorageKeys } from "../../src/lib/authSessionCore";
+import { BUSINESS_SETUP_OPTIONS } from "../../src/lib/businessOnboarding";
 
 // Local session/provider fixtures only. Never submit a production application.
 const providerURL = process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || "http://127.0.0.1:3105";
@@ -31,22 +33,91 @@ async function seedApplicant(page: Page) {
 }
 
 const applicationForm = (page: Page) => page.locator("form:visible").filter({
-  has: page.getByRole("heading", { name: "Salon Application", exact: true }),
+  has: page.getByRole("heading", { name: "Business Application", exact: true }),
 });
 
 async function fillApplication(page: Page) {
   const form = applicationForm(page);
   await expect(form).toHaveCount(1);
-  await form.getByLabel("Business / Salon Name").fill("Fixture Salon");
+  await form.getByLabel("Business Name").fill("Fixture Salon");
   await form.getByLabel("Owner / Contact Full Name").fill("Fixture Owner");
   await form.getByLabel("Business Email").fill(user.email);
   await form.getByLabel("Phone Number").fill("2125550123");
   await form.getByLabel("Address Line 1").fill("123 Test Street");
   await form.getByLabel("City", { exact: false }).fill("Brooklyn");
   await form.getByLabel("ZIP Code").fill("11201");
+  await form.getByLabel("Business setup").selectOption("solo_professional");
   await form.getByLabel("Years in operation").fill("1");
   await form.getByLabel("Number of stylists").fill("1");
   for (const checkbox of await form.getByRole("checkbox").all()) await checkbox.check();
+}
+
+test("business setup has no default and omission blocks submission", async ({ page }) => {
+  await seedApplicant(page);
+  let submissions = 0;
+  await page.route("**/api/salon/application", route => { submissions += 1; return route.fulfill({ json: { ok: true } }); });
+  await page.goto("/business/apply?plan=growth");
+  const setup = applicationForm(page).getByLabel("Business setup");
+  await expect(setup).toHaveValue("");
+  await fillApplication(page);
+  await setup.selectOption("");
+  await page.getByRole("button", { name: "Submit Application" }).click();
+  expect(await setup.evaluate((element: HTMLSelectElement) => element.validity.valueMissing)).toBe(true);
+  expect(submissions).toBe(0);
+});
+
+for (const [index, option] of BUSINESS_SETUP_OPTIONS.entries()) {
+  test(`${option.label} is submitted explicitly and displayed in admin details and history after reload`, async ({ page }) => {
+    await seedApplicant(page);
+    let saved: Record<string, unknown> | undefined;
+    await page.route("**/api/salon/application", async route => {
+      saved = route.request().postDataJSON();
+      await route.fulfill({ json: { ok: true } });
+    });
+    await page.goto("/business/apply?plan=premium");
+    await fillApplication(page);
+    await applicationForm(page).getByLabel("Business setup").selectOption(option.value);
+    await page.getByRole("button", { name: "Submit Application" }).click();
+    await expect(page).toHaveURL(/\/salon\/application-submitted$/);
+    expect(saved?.business_setup_type).toBe(option.value);
+    expect(saved?.selected_plan).toBe("Premium");
+
+    // Render the real admin route against the saved local provider fixture.
+    // The clean PostgreSQL test independently verifies actual row/revision writes.
+    await page.addInitScript(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+      key: buildAuthStorageKeys(providerURL).admin, value: { ...session, user: { ...user, user_metadata: { role: "admin" } } },
+    });
+    await page.route("**/api/admin/submissions/setup-fixture", route => route.fulfill({ json: {
+      is_super_admin: index % 2 === 0,
+      application: { ...saved, id: "setup-fixture", salon_id: "salon-fixture", status: "Submitted",
+        revisions: [{ id: "revision-1", revision_number: 1, change_source: "application_submission", created_at: "2026-09-09T12:00:00Z", snapshot: saved }],
+      },
+    } }));
+    await page.goto("/admin/submissions/setup-fixture");
+    await expect(page.getByText(`Business setup: ${option.label}`, { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(`Business setup: ${option.label}`, { exact: true })).toBeVisible();
+    await page.getByText(/Revision 1 ·/).click();
+    await expect(page.locator("details pre")).toContainText(`"business_setup_type": "${option.value}"`);
+    if (index % 2 === 0) await expect(page.getByLabel("Business setup", { exact: true })).toHaveValue(option.value);
+  });
+}
+
+for (const plan of [null, "Starter", "Growth", "Premium"]) {
+  test(`confirmed business login restores ${plan || "no selection"} into the application`, async ({ page }) => {
+    const path = plan ? `/business/apply?plan=${plan.toLowerCase()}` : "/business/apply";
+    await page.route("**/api/auth/destination", route => route.fulfill({ json: { path, role: "salon_owner", salon_status: "Pending" } }));
+    await page.route("**/api/auth/login/start", route => route.fulfill({ json: { session } }));
+    await page.route(`${providerURL}/auth/v1/user`, route => route.fulfill({ json: user }));
+    await page.goto("/business/login");
+    await page.getByLabel("Email", { exact: true }).fill(user.email);
+    await page.getByLabel("Password", { exact: true }).fill("local-fixture-password");
+    await page.getByRole("button", { name: "Continue securely" }).click();
+    await expect(page).toHaveURL(new RegExp(`${path.replace("?", "\\?")}$`));
+    for (const choice of ["Starter", "Growth", "Premium"]) {
+      await expect(planButton(page, choice)).toHaveAttribute("aria-pressed", String(choice === plan));
+    }
+  });
 }
 
 for (const query of ["", "?plan=invalid", "?plan="]) {
@@ -57,13 +128,16 @@ for (const query of ["", "?plan=invalid", "?plan="]) {
       await route.fulfill({ json: { session } });
     });
     await page.route(`${providerURL}/auth/v1/user`, (route) => route.fulfill({ json: user }));
-    await page.goto(`/salon/signup${query}`);
+    await page.goto(`/business/signup${query}`);
+    await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
+    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
+    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
     await page.getByLabel("Email", { exact: true }).fill(user.email);
     await page.getByLabel("Password", { exact: true }).fill("local-fixture-password");
     await page.getByLabel("Phone Number").fill("2125550123");
-    await page.getByRole("button", { name: "Join Now" }).click();
-    await expect(page).toHaveURL(/\/salon\/apply$/);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page).toHaveURL(/\/business\/apply$/);
     expect(signupPayload?.selected_plan).toBeNull();
     for (const plan of ["Starter", "Growth", "Premium"]) await expect(planButton(page, plan)).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
@@ -76,7 +150,7 @@ for (const query of ["", "?plan=invalid", "?plan="]) {
       submissions.push(route.request().postDataJSON());
       await route.fulfill({ status: 400, json: { error: "Fixture submission rejected" } });
     });
-    await page.goto(`/salon/apply${query}`);
+    await page.goto(`/business/apply${query}`);
     for (const plan of ["Starter", "Growth", "Premium"]) await expect(planButton(page, plan)).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
     await page.reload();
@@ -88,7 +162,7 @@ for (const query of ["", "?plan=invalid", "?plan="]) {
     await planButton(page, "Growth").focus();
     await page.keyboard.press("Enter");
     await expect(planButton(page, "Growth")).toHaveAttribute("aria-pressed", "true");
-    await expect(applicationForm(page).getByLabel("Business / Salon Name")).toHaveValue("Fixture Salon");
+    await expect(applicationForm(page).getByLabel("Business Name")).toHaveValue("Fixture Salon");
     await page.getByRole("button", { name: "Submit Application" }).click();
     await expect(applicationForm(page).getByRole("alert")).toHaveText("Fixture submission rejected");
     expect(submissions).toHaveLength(1);
@@ -111,13 +185,17 @@ for (const [plan, price] of [["Starter", 59], ["Growth", 69], ["Premium", 89]] a
     });
     await page.goto("/plans");
     await page.getByRole("link", { name: `Choose ${plan}` }).click();
-    await expect(page.getByLabel("Selected application plan")).toContainText(`${plan} · $${price}/month`);
+    await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
+    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
+    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+    await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
     await page.getByLabel("Email", { exact: true }).fill(user.email);
     await page.getByLabel("Password", { exact: true }).fill("local-fixture-password");
     await page.getByLabel("Phone Number").fill("2125550123");
-    await page.getByRole("button", { name: "Join Now" }).click();
-    await expect(page).toHaveURL(new RegExp(`/salon/apply\\?plan=${plan.toLowerCase()}$`));
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page).toHaveURL(new RegExp(`/business/apply\\?plan=${plan.toLowerCase()}$`));
     expect(signupPayload?.selected_plan).toBe(plan);
+    await expect(planButton(page, plan)).toContainText(`$${price}/month`);
     await expect(planButton(page, plan)).toHaveAttribute("aria-pressed", "true");
     await page.reload();
     await expect(planButton(page, plan)).toHaveAttribute("aria-pressed", "true");
@@ -132,7 +210,7 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [844, 390], 
   test(`application choices remain unselected and keyboard accessible at ${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await seedApplicant(page);
-    await page.goto("/salon/apply");
+    await page.goto("/business/apply");
     await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
     for (const plan of ["Starter", "Growth", "Premium"]) {
       const button = planButton(page, plan);

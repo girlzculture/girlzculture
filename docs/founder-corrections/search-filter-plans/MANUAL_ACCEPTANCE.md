@@ -389,17 +389,22 @@ The 18 comparison rows must match this literal acceptance matrix:
 | Advertising credit | — | $10 quarterly | $10 monthly |
 | Early access to advertising spaces | — | — | 48 hours early |
 
-### F2. Application query
+### F2. Application query and business gateway
 
-- **Route:** click each `/plans` selection button
-- **Account:** signed out/test salon applicant
-- **Viewport:** 390×844 and 1440×1000
-- **Input:** Starter, Growth, Premium; separately open `/salon/signup?plan=basic`.
-- **Expected:** application selects the matching new plan; legacy `basic`
-  safely normalizes to Starter. Compare plans opens the full page as designed.
-- **Failure:** wrong name/price, Basic offered, or selected plan lost.
-- **Safe production write:** none if the form is not submitted.
-- **Status/evidence:** `[ ] [PASS/FAIL/BLOCKED] [URLs/screenshots]`
+- **Route:** `/plans`, `/business/signup`, `/business/signup/hair`, `/business/apply`.
+- **Input:** Starter, Growth, Premium; separately open legacy `/salon/signup?plan=basic`.
+- **Expected:** Plans CTAs enter the category gateway with the explicit plan query.
+  Choose Hair Salon & Braiding. The account step has no selected-plan banner.
+  After account creation the explicit choice is selected on the application.
+  Legacy basic redirects and intentionally maps to Starter. Plain, invalid and
+  empty-query entry carries no plan; category selection never supplies one.
+  Application submission requires both a plan and a Business setup choice.
+- **Persistence:** Test each of the five setup values in the isolated acceptance
+  environment, then inspect admin details and revision history after reload.
+  Historical null setup remains “Not provided”; it is never replaced by Solo.
+- **Database:** The final migration chain leaves selected_plan NOT NULL with
+  NO DEFAULT. Do not apply migrations or submit test applications to production.
+- **Current contract:** [Business onboarding](../../BUSINESS_ONBOARDING.md).
 
 ### F3. Safe subscription setup before activation
 

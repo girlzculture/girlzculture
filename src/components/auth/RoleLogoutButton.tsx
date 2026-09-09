@@ -11,7 +11,7 @@ import { surfacePathForHost } from "@/lib/hostRouting";
 
 const destinationFor: Record<AuthScope, string> = {
   customer: "/login",
-  salon: "/salon/login",
+  salon: "/business/login",
   admin: "/admin/login",
 };
 

@@ -7,6 +7,7 @@ import { ArrowLeft, Building2, ExternalLink, FileText } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
+import { businessSetupLabel } from "@/lib/businessOnboarding";
 import { displayStoredPlan } from "@/lib/plans";
 
 type Application = Record<string, unknown> & { id: string; status: string; business_name: string };
@@ -15,10 +16,11 @@ const fields: Array<[string, string]> = [
   ["Owner / contact", "owner_name"], ["Business email", "business_email"], ["Phone", "phone"],
   ["Business type", "business_type"], ["Years in operation", "years_in_operation"], ["Number of stylists", "stylist_count"],
   ["Business license", "business_license_number"], ["Cosmetology license", "cosmetology_license_number"],
-  ["Selected plan", "selected_plan"], ["Referral source", "referral_source"], ["Submitted", "submitted_at"],
+  ["Business setup", "business_setup_type"], ["Selected plan", "selected_plan"], ["Referral source", "referral_source"], ["Submitted", "submitted_at"],
 ];
 
 function fieldValue(application: Application, key: string) {
+  if (key === "business_setup_type") return businessSetupLabel(application[key]);
   if (key === "selected_plan") return displayStoredPlan(application[key]);
   return String(application[key] || "Not provided");
 }

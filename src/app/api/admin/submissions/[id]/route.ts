@@ -6,6 +6,8 @@ import {
 import { cleanText, enforceRateLimit } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 
+import { parseBusinessSetup } from "@/lib/businessOnboarding";
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const currentSalonFields = new Set([
@@ -32,6 +34,7 @@ const snapshotFields = new Set([
   "state",
   "zip_code",
   "business_type",
+  "business_setup_type",
   "referral_source",
   "website_url",
   "instagram_url",
@@ -218,6 +221,9 @@ async function POSTHandler(
           { status: 403 },
         );
       const patch = objectPatch(body.patch, snapshotFields);
+      if (Object.hasOwn(patch, "business_setup_type") && !parseBusinessSetup(patch.business_setup_type)) {
+        return Response.json({ error: "Choose an allowed business setup." }, { status: 400 });
+      }
       if (!Object.keys(patch).length)
         return Response.json({ error: "Enter at least one change." }, { status: 400 });
       result = await admin.rpc("admin_update_salon_application_snapshot", {

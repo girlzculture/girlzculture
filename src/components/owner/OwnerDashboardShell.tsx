@@ -135,7 +135,7 @@ export default function OwnerDashboardShell({
   const visibleNav = nav.filter(([id]) => canAccess(id));
   const homeHref = visibleNav.length
     ? hrefFor(visibleNav[0][0])
-    : "/salon/login";
+    : "/business/login";
   const mobileNav = (
     [
       ["overview", "Overview", Home],

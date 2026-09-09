@@ -36,15 +36,15 @@ test("plans page publishes the exact founder-approved catalog and application li
 
   await expect(page.getByRole("link", { name: "Choose Starter" })).toHaveAttribute(
     "href",
-    "/salon/signup?plan=starter",
+    "/business/signup?plan=starter",
   );
   await expect(page.getByRole("link", { name: "Choose Growth" })).toHaveAttribute(
     "href",
-    "/salon/signup?plan=growth",
+    "/business/signup?plan=growth",
   );
   await expect(page.getByRole("link", { name: "Choose Premium" })).toHaveAttribute(
     "href",
-    "/salon/signup?plan=premium",
+    "/business/signup?plan=premium",
   );
 
   const table = page.getByRole("table", {
@@ -74,35 +74,33 @@ test("plans page publishes the exact founder-approved catalog and application li
   );
 });
 
-test("each plan CTA carries the normalized selection into salon signup", async ({
+test("each plan CTA carries the normalized selection through the business gateway", async ({
   page,
 }) => {
   for (const plan of ["Starter", "Growth", "Premium"] as const) {
     await page.goto("/plans");
     await page.getByRole("link", { name: `Choose ${plan}` }).click();
     await expect(page).toHaveURL(
-      new RegExp(`/salon/signup\\?plan=${plan.toLowerCase()}$`),
+      new RegExp(`/business/signup\\?plan=${plan.toLowerCase()}$`),
     );
-    const selectedPlan = page.getByLabel("Selected application plan");
-    await expect(selectedPlan).toHaveAttribute(
-      "data-selected-application-plan",
-      plan.toLowerCase(),
-    );
-    await expect(selectedPlan).toContainText(`${plan} ·`);
+    await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
+    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
+    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+    await expect(page).toHaveURL(new RegExp(`/business/signup/hair\\?plan=${plan.toLowerCase()}$`));
+    await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
   }
 
   await page.goto("/salon/signup?plan=basic");
-  const legacySelection = page.getByLabel("Selected application plan");
-  await expect(legacySelection).toHaveAttribute(
-    "data-selected-application-plan",
-    "starter",
-  );
-  await expect(legacySelection).toContainText("Starter · $59/month");
+  await expect(page).toHaveURL(/\/business\/signup\?plan=basic$/);
+  await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
+  await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+  await expect(page).toHaveURL(/\/business\/signup\/hair\?plan=starter$/);
+  await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
   await expect(page.getByText("Basic", { exact: true })).toHaveCount(0);
 });
 
-test("direct salon signup does not claim a plan was selected", async ({ page }) => {
-  await page.goto("/salon/signup");
+test("direct business signup does not claim a plan was selected", async ({ page }) => {
+  await page.goto("/business/signup");
 
   const selection = page.getByLabel("Selected application plan");
   await expect(selection).toHaveCount(0);

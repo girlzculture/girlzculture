@@ -36,7 +36,7 @@ export default function PlansPage() {
             <p className="mt-2 min-h-12 text-sm leading-6 gc-text-secondary">{plan.description}</p>
             <p className="mt-6 font-serif text-4xl font-semibold text-ink">${plan.monthlyPrice}<span className="font-sans text-xs font-normal text-ink/50"> / month</span></p>
             <ul className="mt-7 flex-1 space-y-3 text-sm">{plan.features.map((feature) => <li key={feature} className="flex gap-2"><Check aria-hidden="true" size={17} className="mt-0.5 shrink-0 text-magenta" />{feature}</li>)}</ul>
-            <Link href={`/salon/signup?plan=${plan.key}`} className={`mt-8 flex min-h-12 items-center justify-center rounded-[9px] text-sm font-bold ${popular ? "bg-magenta text-white" : "border border-magenta text-magenta"}`}>Choose {name}</Link>
+            <Link href={`/business/signup?plan=${plan.key}`} className={`mt-8 flex min-h-12 items-center justify-center rounded-[9px] text-sm font-bold ${popular ? "bg-magenta text-white" : "border border-magenta text-magenta"}`}>Choose {name}</Link>
           </article>;
         })}
       </div>

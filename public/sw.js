@@ -1,8 +1,10 @@
 const APP_CACHE_PREFIX = "girlz-culture-";
-const CACHE = `${APP_CACHE_PREFIX}public-v3`;
+const CACHE = `${APP_CACHE_PREFIX}public-v4`;
 const CORE = ["/offline", "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 const PRIVATE_PATHS = [
   "/account",
+  "/business",
+  "/salon/apply",
   "/admin",
   "/superadmin",
   "/api",
