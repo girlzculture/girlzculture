@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./helpers/hydration";
 
 test("salon phone input enforces its actual HTML pattern under UnicodeSets semantics", async ({ page }) => {
   const patternErrors: string[] = [];
@@ -7,6 +8,10 @@ test("salon phone input enforces its actual HTML pattern under UnicodeSets seman
   });
   await page.goto("/salon/signup");
   const phone = page.getByRole("textbox", { name: "Phone Number" });
+  // A real input event hydrates the form. Native checkValidity below does not
+  // dispatch an input event and can otherwise insert inline errors before hydration.
+  await phone.fill("2125550123");
+  await expect(phone).toHaveValue("+1 (212) 555-0123");
   const cases = [
     ["2125550123", true], ["12125550123", true], ["+12125550123", true],
     ["212-555-0123", true], ["212.555.0123", true], ["212 555 0123", true],

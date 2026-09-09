@@ -11,6 +11,27 @@ Girlz Culture uses separate Google Cloud credentials for browser suggestions/map
 5. Set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` to the production map ID.
 6. Set conservative daily quotas and billing alerts in Google Cloud.
 
+## Real Google Maps browser acceptance
+
+`npm run test:google-maps-provider` loads Google's real Maps JavaScript API at
+`http://127.0.0.1:3104/internal/acceptance/map-provider`. It requires a browser key
+in `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` when building and starting the application.
+There is no opt-in skip: missing configuration fails the test with setup guidance.
+
+For GitHub Actions, add the repository Actions secret `GOOGLE_MAPS_TEST_BROWSER_KEY`.
+Both verification workflows supply it at build and test time. Use a dedicated test
+key with billing enabled, Maps JavaScript API enabled, and the website referrer
+`http://127.0.0.1:3104/*` allowed. Restrict the key to Maps JavaScript API (and Places
+API (New) if exercising autocomplete). Do not use a server key or change production
+key restrictions. A Map ID is optional: the application supports real map overlays
+without one. No Geocoding server key is needed for the two synthetic salon locations.
+
+Store local configuration in an untracked environment file or process environment;
+never put key values in source, logs, PR comments, or chat. A `RefererNotAllowedMapError`
+means Google Cloud has not authorized the test origin. The founder must update the
+test key's website restrictions, then rerun the workflow. An absent or rejected key
+is an external acceptance blocker, not a passing or skipped provider test.
+
 ## Geocoding lifecycle
 
 - `20260716120000_location_foundation.sql` marks a salon address `pending` whenever a geocoding-relevant field changes and clears stale coordinates.

@@ -111,8 +111,15 @@ for (const control of [
   assert.match(completionMigration, control);
 
 const route = read("src/app/api/admin/engine/brand-assets/route.ts");
+// Brand asset operations moved to Engine permission in 8be9fd3. Require that
+// boundary on GET, POST, and PATCH instead of accepting one stale settings call.
+assert.equal(
+  [...route.matchAll(/requireAdminPermission\(request, "engine"\)/g)].length,
+  3,
+  "all three brand asset handlers must enforce Engine permission",
+);
 for (const control of [
-  /requireAdminPermission\(request, "settings"\)/,
+  /requireAdminPermission\(request, "engine"\)/,
   /limitInputPixels/,
   /inspectBrandAssetBinary/,
   /Buffer\.from\(Uint8Array\.from\(transformed\)\)/,

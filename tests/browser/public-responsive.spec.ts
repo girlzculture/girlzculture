@@ -152,6 +152,16 @@ test("promotion schedule boundaries take effect without a page refresh", async (
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "One browser covers the shared schedule clock.");
+  // This composite fixture also mounts the admin editor. Its synthetic token
+  // must stay inside the same local API fixture used by the editor tests below.
+  await page.route("**/api/admin/content", async (route) => {
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ pages: [], posts: [], masterStyles: [], serviceCategories: [], serviceGroups: [], serviceAddons: [], linkTargets: [], publicationByPage: {} }),
+    });
+  });
   await page.goto("/internal/acceptance/content-promotion");
   const fixture = page.getByTestId("promotion-schedule-boundary");
   await expect(fixture.getByText("Schedule baseline card", { exact: true })).toBeVisible();

@@ -38,6 +38,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: "1"
+      # Dedicated, referrer-restricted browser test key; never a production/server key.
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_TEST_BROWSER_KEY }}
       CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
     steps:
       - uses: actions/checkout@v6
@@ -46,6 +48,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Require secure full and production dependency trees
+        run: |
+          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=moderate
       - name: Verify Workstream 1 semantic design system
         run: npm run verify:design-system
       - run: npm run verify:migrations

@@ -101,7 +101,6 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
     window.addEventListener("popstate", applyLocation);
 
     if (!scrollRestored.current) {
-      scrollRestored.current = true;
       try {
         const stored = JSON.parse(
           sessionStorage.getItem(STYLE_SCROLL_STATE_KEY) || "null",
@@ -118,6 +117,9 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
                 top: Number(stored.scrollY || 0),
                 behavior: "auto",
               });
+              // An effect cleanup (including Strict Mode's mount replay) can
+              // cancel these frames. Only mark a restoration that actually ran.
+              scrollRestored.current = true;
             });
           });
           return () => {
