@@ -8,9 +8,6 @@
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
 [functions."booking-reminders"]
   schedule = "*/15 * * * *"
 
