@@ -97,9 +97,13 @@ for (const [index, option] of BUSINESS_SETUP_OPTIONS.entries()) {
     await expect(page.getByText(`Business setup: ${option.label}`, { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByText(`Business setup: ${option.label}`, { exact: true })).toBeVisible();
+    await page.getByText("Submission history", { exact: true }).click();
     await page.getByText(/Revision 1 ·/).click();
     await expect(page.locator("details pre")).toContainText(`"business_setup_type": "${option.value}"`);
-    if (index % 2 === 0) await expect(page.getByLabel("Business setup", { exact: true })).toHaveValue(option.value);
+    if (index % 2 === 0) {
+      await page.getByText("Correct submitted snapshot", { exact: true }).click();
+      await expect(page.getByLabel("Business setup", { exact: true })).toHaveValue(option.value);
+    }
   });
 }
 
