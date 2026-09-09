@@ -102,6 +102,12 @@ remains available for future approved standalone posters/clips, including
 reduced-motion and failed-playback fallback. Current rendering uses twelve
 static photo windows with a single cached local image request.
 
+Decorative photo windows ignore pointer events so their oversized clipped image
+cannot intercept the native radio's hit area in WebKit. The category gating
+test exercises both pointer and keyboard selection in Chromium, Firefox and
+WebKit; unavailable categories and the explicit selection requirement remain
+unchanged.
+
 Business pages render dynamically with private/no-store HTML and an explicit
 Netlify CDN no-store boundary. Worker v4 excludes `/business` and legacy
 application routes; activation clears earlier application cache versions. The

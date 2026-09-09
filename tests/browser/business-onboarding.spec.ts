@@ -52,6 +52,14 @@ test("only Hair Salon & Braiding can continue; unavailable categories cannot sub
     await expect(continueButton).toBeDisabled();
   }
   const hair = page.getByRole("radio", { name: /Hair Salon & Braiding/ });
+  // Photo windows must not intercept the native control in WebKit. Exercise
+  // pointer selection as well as the independent keyboard path below.
+  await hair.check();
+  await expect(hair).toBeChecked();
+  await expect(continueButton).toBeEnabled();
+  await page.reload();
+  await expect(hair).not.toBeChecked();
+  await expect(continueButton).toBeDisabled();
   await hair.focus();
   await expect(hair).toBeFocused();
   await page.keyboard.press("Space");

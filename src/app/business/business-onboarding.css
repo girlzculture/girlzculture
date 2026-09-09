@@ -14,7 +14,7 @@
 .business-hero-panel > .business-photo { height: 100%; }
 .business-hero-panel[data-business-media-panel="nails"] > .business-photo, .business-hero-panel[data-business-media-panel="wellness"] > .business-photo { height: clamp(260px, 22vw, 370px); mask-image: linear-gradient(var(--gc-charcoal) 64%, transparent 100%); }
 .business-hero-panel video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.business-photo { display: block; position: relative; overflow: hidden; container-type: size; }
+.business-photo { display: block; position: relative; overflow: hidden; container-type: size; pointer-events: none; }
 .business-photo-window { position: absolute; left: 50%; top: 50%; width: max(100cqw, calc(100cqh * var(--business-photo-ratio))); height: max(100cqh, calc(100cqw / var(--business-photo-ratio))); transform: translate(-50%, -50%); overflow: hidden; }
 .business-hero-shade { position: absolute; inset: 0 0 -145px; z-index: -1; background: linear-gradient(to bottom, color-mix(in srgb, var(--gc-charcoal) 30%, transparent) 0%, color-mix(in srgb, var(--gc-charcoal) 12%, transparent) 28%, color-mix(in srgb, var(--business-teal-shade) 88%, transparent) 72%, var(--business-teal-shade) 100%); mask-image: linear-gradient(var(--gc-charcoal) 65%, transparent 100%); }
 .business-entry-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 1680px; margin: auto; padding: 20px 4.5%; }
