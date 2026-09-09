@@ -103,7 +103,9 @@ reduced-motion and failed-playback fallback. Current rendering uses twelve
 static photo windows with a single cached local image request.
 
 Decorative photo windows ignore pointer events so their oversized clipped image
-cannot intercept the native radio's hit area in WebKit. The category gating
+cannot intercept the native radio's hit area in WebKit. Each invisible native
+radio covers its full card, avoiding one-pixel hit targets that
+Firefox can resolve to the label instead of the input. The category gating
 test exercises both pointer and keyboard selection in Chromium, Firefox and
 WebKit; unavailable categories and the explicit selection requirement remain
 unchanged.
