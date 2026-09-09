@@ -165,7 +165,10 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
     const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     if (nextUrl === `${currentRelativeUrl()}${window.location.hash}`) return;
     window.history[historyMode === "push" ? "pushState" : "replaceState"](
-      null,
+      // An input can fire before Next installs its history wrapper. A non-null
+      // entry lets Next reload that URL on Back if router metadata is absent;
+      // a null entry is ignored and leaves the destination page on screen.
+      { girlzCultureStyleCatalog: true },
       "",
       nextUrl,
     );
