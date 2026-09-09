@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
+import { test, screenshotCaret } from "./helpers/hydration";
 import { expectNoHorizontalOverflow } from "./helpers/accessibility";
 
 const fixtureRoute = "/internal/acceptance/accessibility-states";
@@ -45,7 +46,7 @@ async function preserveScreenshot(
 async function captureViewport(page: Page, testInfo: TestInfo, filename: string) {
   const image = await page.screenshot({
     animations: "disabled",
-    caret: "hide",
+    ...screenshotCaret,
     fullPage: false,
   });
   await preserveScreenshot(testInfo, filename, image);
@@ -54,7 +55,7 @@ async function captureViewport(page: Page, testInfo: TestInfo, filename: string)
 async function captureFullPage(page: Page, testInfo: TestInfo, filename: string) {
   const image = await page.screenshot({
     animations: "disabled",
-    caret: "hide",
+    ...screenshotCaret,
     fullPage: true,
   });
   await preserveScreenshot(testInfo, filename, image);
@@ -69,7 +70,7 @@ async function captureFixtureSection(
   const section = page.locator(selector);
   await section.scrollIntoViewIfNeeded();
   await expect(section).toBeVisible();
-  const image = await section.screenshot({ animations: "disabled", caret: "hide" });
+  const image = await section.screenshot({ animations: "disabled", ...screenshotCaret });
   await preserveScreenshot(testInfo, filename, image);
 }
 

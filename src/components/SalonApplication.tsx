@@ -16,7 +16,7 @@ import {
   APPLICATION_DOCUMENT_MAXIMUM_COUNT,
   APPLICATION_DOCUMENT_MIME_TYPES,
 } from "@/lib/applicationDocumentUploadCore";
-import { normalizePlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
+import { parseApplicationPlan, PLAN_ORDER, SUBSCRIPTION_PLANS, type SubscriptionPlan } from "@/lib/plans";
 import { EMAIL_PATTERN, formatUsPhoneInput, isValidEmail, isValidUsPhone, US_PHONE_PATTERN } from "@/lib/validation";
 
 import { isValidUsZip, US_STATES } from "@/lib/usStates";
@@ -27,7 +27,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form,setForm] = useState({...initial,business_type:businessTypes[0]||initial.business_type});
-  const selectedPlan = normalizePlan(searchParams.get("plan") || "Starter");
+  const selectedPlan = parseApplicationPlan(searchParams.get("plan"));
   const [userId,setUserId] = useState("");
   const [checks,setChecks] = useState([false,false,false]);
   const [message,setMessage] = useState("");
@@ -264,6 +264,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!selectedPlan) { setMessage("Please choose a plan before submitting your application."); return; }
     if (!checks.every(Boolean)) { setMessage("Please accept all three confirmations."); return; }
     if (!userId) { setMessage("Your account is not ready. Please sign in again."); return; }
     if (!isValidEmail(form.business_email)) { setMessage("Please enter a valid email address (name@example.com)."); return; }
@@ -285,7 +286,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
   return <form onSubmit={submit} className="rounded-[18px] border border-plum/10 bg-white/85 p-5 shadow-[0_20px_60px_rgba(13,17,20,.08)] sm:p-8">
     <div className="mb-7 flex items-center gap-4"><span className="grid h-16 w-16 place-items-center rounded-[15px] bg-blush text-magenta"><Building2 size={34}/></span><div><h1 className="font-serif text-4xl font-semibold text-plum">Salon Application</h1><p className="mt-1 text-sm text-ink/65">Tell us about your business so we can help you grow with Girlz Culture.</p></div></div>
 
-    <section className="mb-7"><div className="flex items-end justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Choose your plan</h2><p className="mt-1 text-xs text-ink/55">No payment today. Billing begins only after approval and subscription.</p></div><Link href="/plans" target="_blank" className="text-xs font-bold text-magenta">Compare plans</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{PLAN_ORDER.map((name) => { const plan=SUBSCRIPTION_PLANS[name]; const active=selectedPlan===name; return <button key={name} type="button" onClick={()=>choosePlan(name)} className={`rounded-[13px] border p-4 text-left ${active?"border-magenta bg-blush/30 ring-2 ring-magenta/10":"border-plum/10 bg-white"}`}><span className="flex items-center justify-between"><b className="font-serif text-xl text-plum">{name}</b>{active?<Check size={18} className="text-magenta"/>:null}</span><span className="mt-1 block text-sm font-bold">${plan.monthlyAmountCents / 100}/month</span><span className="mt-2 block text-[10px] leading-4 text-ink/55">{plan.description}</span></button>; })}</div></section>
+    <section className="mb-7"><div className="flex items-end justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Choose your plan</h2><p className="mt-1 text-xs text-ink/55">No payment today. Billing begins only after approval and subscription.</p></div><Link href="/plans" target="_blank" className="text-xs font-bold text-magenta">Compare plans</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{PLAN_ORDER.map((name) => { const plan=SUBSCRIPTION_PLANS[name]; const active=selectedPlan===name; return <button key={name} type="button" aria-pressed={active} onClick={()=>choosePlan(name)} className={`rounded-[13px] border p-4 text-left ${active?"border-magenta bg-blush/30 ring-2 ring-magenta/10":"border-plum/10 bg-white"}`}><span className="flex items-center justify-between"><b className="font-serif text-xl text-plum">{name}</b>{active?<Check size={18} className="text-magenta"/>:null}</span><span className="mt-1 block text-sm font-bold">${plan.monthlyAmountCents / 100}/month</span><span className="mt-2 block text-[10px] leading-4 text-ink/55">{plan.description}</span></button>; })}</div></section>
 
     <div className="grid gap-4 sm:grid-cols-2">
       <Input label="Business / Salon Name" value={form.business_name} onChange={(value)=>update("business_name",value)} />
@@ -309,7 +310,7 @@ export default function SalonApplication({businessTypes}:{businessTypes:string[]
     <section className="mt-7 rounded-[14px] border border-plum/10 bg-blush/25 p-5"><h2 className="font-serif text-xl text-plum">Photos are added after approval</h2><p className="mt-1 text-xs leading-5 text-ink/65">You will add and crop your logo, cover image, and gallery in the setup dashboard. Your salon will not become marketplace-visible until all required media is complete.</p></section>
     <section className="mt-6 rounded-[14px] border border-dashed border-plum/25 bg-blush/20 p-5"><div className="flex items-center gap-3"><FileUp className="text-magenta"/><div><h2 className="font-semibold text-plum">Licenses & supporting documents</h2><p className="text-xs text-ink/55">Private PDF, JPG, or PNG · up to 10 MB each</p></div></div><input type="file" multiple accept="application/pdf,image/jpeg,image/png" onChange={(event)=>void uploadDocuments(event.target.files)} className="mt-4 block w-full text-sm"/>{uploadingDocs?<p className="mt-2 text-xs text-magenta">Uploading documents…</p>:null}<ul className="mt-3 space-y-1 text-xs">{documents.map((path,index)=><li key={path} className="flex justify-between"><span className="text-plum">Private document {index+1} uploaded</span><button type="button" onClick={()=>void removeDocument(path)} className="font-semibold text-magenta">Remove</button></li>)}</ul></section>
     <div className="mt-6 space-y-3">{["I confirm the information is accurate and I’m authorized to represent this business.","I agree to the Terms of Service and Partner Agreement.","I confirm I have permission and rights for any photos I upload now or during setup."].map((label,index)=><label key={label} className="flex gap-3 text-sm"><input required type="checkbox" checked={checks[index]} onChange={(event)=>setChecks((current)=>current.map((value,itemIndex)=>itemIndex===index?event.target.checked:value))} className="accent-magenta"/>{label}</label>)}</div>
-    {message?<p className="mt-4 rounded-lg bg-red-50 p-3 text-sm gc-text-danger">{message}</p>:null}
+    {message?<p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm gc-text-danger">{message}</p>:null}
     <button disabled={saving} className="mt-6 w-full rounded-[8px] bg-magenta py-3.5 font-bold text-white gc-disabled-control">{saving?"Submitting…":"Submit Application"}</button><p className="mt-4 flex items-center justify-center gap-2 text-[11px] text-ink/50"><LockKeyhole size={13}/>Your information is secure and will never be shared.</p>
   </form>;
 }

@@ -101,15 +101,11 @@ test("each plan CTA carries the normalized selection into salon signup", async (
   await expect(page.getByText("Basic", { exact: true })).toHaveCount(0);
 });
 
-test("direct salon signup defaults safely to Starter", async ({ page }) => {
+test("direct salon signup does not claim a plan was selected", async ({ page }) => {
   await page.goto("/salon/signup");
 
   const selection = page.getByLabel("Selected application plan");
-  await expect(selection).toHaveAttribute(
-    "data-selected-application-plan",
-    "starter",
-  );
-  await expect(selection).toContainText("Starter · $59/month");
+  await expect(selection).toHaveCount(0);
   await expect(page.getByText("Basic", { exact: true })).toHaveCount(0);
 });
 

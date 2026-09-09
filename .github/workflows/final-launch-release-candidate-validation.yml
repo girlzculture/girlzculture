@@ -26,6 +26,8 @@ env:
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
   NEXT_PUBLIC_SITE_URL: http://localhost:3000
   NEXT_TELEMETRY_DISABLED: 1
+  # Dedicated browser credential; the real provider test fails when it is absent.
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_TEST_BROWSER_KEY }}
   CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
 
 concurrency:
@@ -83,6 +85,12 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Require zero high or critical advisories in the full dependency tree
+        run: npm audit --audit-level=high
+
+      - name: Require production dependencies free of moderate-or-higher advisories
+        run: npm audit --omit=dev --audit-level=moderate
+
       - name: Verify final completion invariants
         run: npm run verify:final-completion
 
@@ -125,12 +133,6 @@ jobs:
           else
             echo "No Playwright configuration is present; browser acceptance remains covered by the repository's dedicated browser workflow."
           fi
-
-      - name: Require zero high or critical advisories in the full dependency tree
-        run: npm audit --audit-level=high
-
-      - name: Require production dependencies free of moderate-or-higher advisories
-        run: npm audit --omit=dev --audit-level=moderate
 
       - name: Verify Stripe test-mode connectivity without creating a payment or transfer
         id: stripe

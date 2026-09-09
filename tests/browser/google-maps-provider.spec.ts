@@ -3,10 +3,10 @@ import { expect, test } from "@playwright/test";
 test("configured Google Maps provider renders the real map and salon markers", async ({
   page,
 }) => {
-  test.skip(
-    process.env.PLAYWRIGHT_LIVE_GOOGLE_MAPS !== "true",
-    "Set PLAYWRIGHT_LIVE_GOOGLE_MAPS=true only when exercising a configured provider.",
-  );
+  expect(
+    Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()),
+    "Real Google Maps acceptance requires NEXT_PUBLIC_GOOGLE_MAPS_API_KEY. In CI, configure GOOGLE_MAPS_TEST_BROWSER_KEY with http://127.0.0.1:3104/* authorized; missing configuration is a failure, never a skip.",
+  ).toBe(true);
 
   await page.goto("/internal/acceptance/map-provider");
   const surface = page.locator("[data-google-maps-provider-surface]");

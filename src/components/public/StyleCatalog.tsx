@@ -91,17 +91,34 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
   );
 
   useEffect(() => {
+    const pathname = window.location.pathname;
     const applyLocation = () => {
+      // An outgoing catalog remains mounted during a route transition. Its
+      // filters belong to this route, not the destination's query string.
+      if (window.location.pathname !== pathname) return;
       const next = filtersFromLocation();
       setFilters((current) =>
         sameStyleCatalogFilters(current, next) ? current : next,
       );
     };
     applyLocation();
-    window.addEventListener("popstate", applyLocation);
+    let historyTimer = 0;
+    const onPopState = () => {
+      window.clearTimeout(historyTimer);
+      const url = currentRelativeUrl();
+      // Let every history listener (including Next's router) consume the
+      // browser URL before a React update can commit a pending navigation.
+      historyTimer = window.setTimeout(() => {
+        if (currentRelativeUrl() === url) applyLocation();
+      }, 0);
+    };
+    const stopHistoryListener = () => {
+      window.removeEventListener("popstate", onPopState);
+      window.clearTimeout(historyTimer);
+    };
+    window.addEventListener("popstate", onPopState);
 
     if (!scrollRestored.current) {
-      scrollRestored.current = true;
       try {
         const stored = JSON.parse(
           sessionStorage.getItem(STYLE_SCROLL_STATE_KEY) || "null",
@@ -118,10 +135,13 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
                 top: Number(stored.scrollY || 0),
                 behavior: "auto",
               });
+              // An effect cleanup (including Strict Mode's mount replay) can
+              // cancel these frames. Only mark a restoration that actually ran.
+              scrollRestored.current = true;
             });
           });
           return () => {
-            window.removeEventListener("popstate", applyLocation);
+            stopHistoryListener();
             window.cancelAnimationFrame(firstFrame);
             if (secondFrame) window.cancelAnimationFrame(secondFrame);
           };
@@ -130,7 +150,7 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
         // URL state remains authoritative when session storage is unavailable.
       }
     }
-    return () => window.removeEventListener("popstate", applyLocation);
+    return stopHistoryListener;
   }, [filtersFromLocation]);
 
   const persistScroll = useCallback((scrollY = window.scrollY) => {
@@ -165,7 +185,10 @@ export default function StyleCatalog({ items }: { items: StyleCatalogItem[] }) {
     const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     if (nextUrl === `${currentRelativeUrl()}${window.location.hash}`) return;
     window.history[historyMode === "push" ? "pushState" : "replaceState"](
-      null,
+      // An input can fire before Next installs its history wrapper. A non-null
+      // entry lets Next reload that URL on Back if router metadata is absent;
+      // a null entry is ignored and leaves the destination page on screen.
+      { girlzCultureStyleCatalog: true },
       "",
       nextUrl,
     );

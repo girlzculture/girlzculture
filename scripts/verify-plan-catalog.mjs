@@ -11,6 +11,7 @@ import {
   hasPlanFeature,
   normalizePlan,
   parseOfficialPlan,
+  parseApplicationPlan,
   parsePlan,
   parseStoredPlan,
   planFromStripePriceId,
@@ -49,16 +50,16 @@ for (const retiredOrUnknown of ["Basic", "essentials", "pro", "platinum", "unkno
 }
 assert.equal(normalizePlan("unknown-public-value"), "Starter");
 for (const [query, expected] of [
-  ["", "Starter"],
+  ["", null],
   ["plan=starter", "Starter"],
   ["plan=growth", "Growth"],
   ["plan=premium", "Premium"],
   ["plan=basic", "Starter"],
-  ["plan=unknown", "Starter"],
+  ["plan=unknown", null],
 ]) {
   const searchParams = new URLSearchParams(query);
   assert.equal(
-    normalizePlan(searchParams.get("plan") || "Starter"),
+    parseApplicationPlan(searchParams.get("plan")),
     expected,
     `Salon application query ${query || "(missing plan)"} must select ${expected}`,
   );
@@ -184,7 +185,7 @@ assert.doesNotMatch(page, /test.mode|Priority search|Top search|featured rotatio
 
 assert.match(
   application,
-  /normalizePlan\(searchParams\.get\("plan"\) \|\| "Starter"\)/,
+  /parseApplicationPlan\(searchParams\.get\("plan"\)\)/,
   "Application query parsing must normalize starter/growth/premium and legacy basic",
 );
 assert.match(application, /next\.set\("plan", plan\.toLowerCase\(\)\)/);
@@ -193,8 +194,8 @@ assert.match(application, /PLAN_ORDER\.map/);
 assert.match(application, /href="\/plans" target="_blank"/);
 assert.match(
   signup,
-  /normalizePlan\(searchParams\.get\("plan"\)\|\|"Starter"\)/,
-  "Direct salon signup must default missing plan selections to Starter",
+  /parseApplicationPlan\(searchParams\.get\("plan"\)\)/,
+  "Direct salon signup must preserve an absent plan selection",
 );
 assert.match(
   page,
@@ -243,3 +244,5 @@ for (const file of customerFacingFiles) {
 }
 
 console.log("Canonical Starter, Growth, and Premium plan catalog verification passed.");
+
+await import("./verify-application-plan.mjs");

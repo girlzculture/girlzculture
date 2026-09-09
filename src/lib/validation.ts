@@ -1,5 +1,6 @@
 export const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$";
-export const US_PHONE_PATTERN = "^(?:\\+?1[ .-]?)?(?:\\([2-9]\\d{2}\\)|[2-9]\\d{2})[ .-]?\\d{3}[ .-]?\\d{4}$";
+// HTML pattern uses UnicodeSets (v), which requires escaping literal hyphens.
+export const US_PHONE_PATTERN = "^(?:\\+?1[ .\\-]?)?(?:\\([2-9]\\d{2}\\)|[2-9]\\d{2})[ .\\-]?\\d{3}[ .\\-]?\\d{4}$";
 
 export function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase();

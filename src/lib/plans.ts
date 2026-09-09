@@ -306,10 +306,12 @@ export function parseOfficialPlan(value: unknown): SubscriptionPlan | null {
   return null;
 }
 
-/**
- * Normalize a new plan selection. Historical Basic links intentionally enter
- * Starter; unknown public selections use the safe entry plan.
- */
+/** Application choices may be absent. Preserve explicit legacy URL aliases only. */
+export function parseApplicationPlan(value: unknown): SubscriptionPlan | null {
+  return typeof value === "string" ? parsePlan(value) : null;
+}
+
+/** Compatibility display fallback. Never use this to infer an application choice. */
 export function normalizePlan(value: unknown): SubscriptionPlan {
   return parsePlan(value) || "Starter";
 }
