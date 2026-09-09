@@ -7,9 +7,11 @@
   # same cold-start and pixel checks as production.
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+  # Netlify's secret scanner was matching secret values inside generated
+  # Turbopack cache blobs under .netlify/.next/cache, not in source files.
+  # The same generated cache is safe to omit from scanning while source/build
+  # output remains scanned normally.
+  SECRETS_SCAN_OMIT_PATHS = ".netlify/.next/cache/turbopack/**"
 
 [functions."booking-reminders"]
   schedule = "*/15 * * * *"
