@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarDays, ChartNoAxesCombined, UsersRound, Heart, Gem, ShieldCheck } from "lucide-react";
+import { UsersRound, Gem, ShieldCheck } from "lucide-react";
 import BusinessSignupMedia from "@/components/business/BusinessSignupMedia";
 import BusinessTypeSelector from "@/components/business/BusinessTypeSelector";
 import { businessOnboardingHref } from "@/lib/businessOnboarding";
@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   openGraph: { url: "https://girlzculture.com/business/signup", title: "Grow Your Beauty Business" },
 };
 
-const benefits = [[CalendarDays, "Get More Bookings"], [ChartNoAxesCombined, "Grow Your Brand"], [UsersRound, "Reach New Clients"], [Heart, "Join a Supportive Community"]] as const;
 const trust = [
   [Gem, "A Platform Built for You", "Designed for beauty and wellness businesses like yours."],
   [ShieldCheck, "Safe & Secure", "Your data and business information are always protected."],
@@ -24,16 +23,14 @@ export default async function BusinessSignupPage({ searchParams }: { searchParam
   const query = await searchParams;
   return <main className="business-onboarding">
     <section className="business-hero" aria-labelledby="business-hero-title">
-      <BusinessSignupMedia />
-      <div className="business-hero-shade" />
       <header className="business-entry-header">
         <Link href="/" className="business-wordmark">Girlz Culture</Link>
         <div className="business-entry-login"><span>Already have an account?</span><Link href="/business/login">Log In</Link></div>
       </header>
+      <BusinessSignupMedia />
       <div className="business-hero-copy">
         <h1 id="business-hero-title">Grow Your Beauty Business</h1>
         <p>Get discovered, attract more clients, manage your business all in one place.</p>
-        <ul>{benefits.map(([Icon, label]) => <li key={label}><Icon size={28} strokeWidth={1.7} aria-hidden="true" /><span>{label}</span></li>)}</ul>
       </div>
     </section>
     <div className="business-lower">

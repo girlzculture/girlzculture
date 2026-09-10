@@ -206,7 +206,7 @@ export default async function About() {
                 Find your salon
               </Link>
               <Link
-                href="/partner"
+                href="/business/signup"
                 className="rounded-lg border border-white/50 px-4 py-2.5 text-center text-[11px] font-bold md:px-6 md:py-3 md:text-sm"
               >
                 Partner with us

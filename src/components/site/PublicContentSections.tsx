@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { businessEntryHref } from "@/lib/businessCategories";
 import type { ContentSection } from "@/lib/content";
 import RichTextBody from "@/components/site/RichTextBody";
 import AutoContentCarousel from "@/components/site/AutoContentCarousel";
@@ -42,7 +43,7 @@ export default function PublicContentSections({
                 ) : null}
                 {section.cta_href && section.cta_label ? (
                   <Link
-                    href={section.cta_href}
+                    href={businessEntryHref(section.cta_href)}
                     className="mt-5 inline-flex rounded-lg bg-white px-5 py-3 text-xs font-bold text-teal"
                   >
                     {section.cta_label}

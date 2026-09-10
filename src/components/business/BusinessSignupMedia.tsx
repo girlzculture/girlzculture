@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { BUSINESS_SIGNUP_MEDIA, type BusinessSignupPanel } from "@/lib/businessSignupMedia";
 import BusinessPhoto from "./BusinessPhoto";
@@ -27,8 +26,8 @@ function Panel({ panel }: { panel: BusinessSignupPanel }) {
   }, [panel.videoUrl]);
 
   return <div className="business-hero-panel" data-business-media-panel={panel.id}>
-    {panel.crop ? <BusinessPhoto crop={panel.crop} priority /> : <Image src={panel.poster} alt="" fill sizes="25vw" priority style={{ objectFit: "cover", objectPosition: panel.position }} />}
-    {panel.videoUrl ? <video ref={video} autoPlay muted loop playsInline controls={false} poster={panel.crop ? undefined : panel.poster} preload="none" aria-hidden="true" style={{ objectPosition: panel.position }} onError={event => { event.currentTarget.style.visibility = "hidden"; }} /> : null}
+    <BusinessPhoto photo={{ src: panel.poster, position: panel.position }} priority />
+    {panel.videoUrl ? <video ref={video} autoPlay muted loop playsInline controls={false} poster={panel.poster} preload="none" aria-hidden="true" style={{ objectPosition: panel.position }} onError={event => { event.currentTarget.style.visibility = "hidden"; }} /> : null}
   </div>;
 }
 

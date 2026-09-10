@@ -1,33 +1,29 @@
+export type BusinessPhotoAsset = { src: string; position: string };
 export type BusinessSignupPanel = {
   id: "hair" | "nails" | "wellness" | "tattoo";
   poster: string;
   position: string;
-  crop?: BusinessPhotoCrop;
   videoUrl?: string;
 };
 
-export type BusinessPhotoCrop = { x: number; y: number; width: number; height: number };
-
-// The founder-supplied reference is stored unchanged. CSS windows display only
-// its photographic regions; all page copy and controls remain accessible HTML.
-// Coordinates refer to the original 1672 x 941 image, excluding baked-in text.
-export const BUSINESS_REFERENCE_PHOTO = "/images/business/approved-business-reference.png";
-export const BUSINESS_REFERENCE_SIZE = { width: 1672, height: 941 };
-
-export const BUSINESS_SIGNUP_MEDIA: readonly BusinessSignupPanel[] = [
-  { id: "hair", poster: BUSINESS_REFERENCE_PHOTO, position: "50% 50%", crop: { x: 0, y: 58, width: 425, height: 340 } },
-  { id: "nails", poster: BUSINESS_REFERENCE_PHOTO, position: "50% 50%", crop: { x: 426, y: 0, width: 409, height: 219 } },
-  { id: "wellness", poster: BUSINESS_REFERENCE_PHOTO, position: "50% 50%", crop: { x: 837, y: 0, width: 388, height: 219 } },
-  { id: "tattoo", poster: BUSINESS_REFERENCE_PHOTO, position: "50% 50%", crop: { x: 1227, y: 60, width: 445, height: 340 } },
-];
-
+// Unchanged licensed service photographs, hosted locally. Full provenance is in
+// public/images/business/media-sources.json. No mockup thumbnail is enlarged.
 export const BUSINESS_CATEGORY_PHOTOS = {
-  hair: { x: 274, y: 495, width: 83, height: 73 },
-  nails: { x: 565, y: 495, width: 80, height: 73 },
-  massage: { x: 864, y: 495, width: 78, height: 73 },
-  aesthetics: { x: 1163, y: 495, width: 78, height: 73 },
-  tattoo: { x: 274, y: 607, width: 83, height: 78 },
-  lashes: { x: 565, y: 607, width: 80, height: 78 },
-  barber: { x: 864, y: 607, width: 78, height: 78 },
-  other: { x: 1163, y: 607, width: 78, height: 78 },
-} as const satisfies Record<string, BusinessPhotoCrop>;
+  hair: { src: "/images/business/hair-service.avif", position: "50% 48%" },
+  nails: { src: "/images/business/nails-service.avif", position: "50% 50%" },
+  massage: { src: "/images/business/massage-service.avif", position: "50% 48%" },
+  facial: { src: "/images/business/facial-service.avif", position: "50% 50%" },
+  tattoo: { src: "/images/business/tattoo-service.avif", position: "50% 48%" },
+  lashes: { src: "/images/business/lashes-service.avif", position: "50% 50%" },
+  barber: { src: "/images/business/barber-service.avif", position: "50% 45%" },
+  other: { src: "/images/business/other-service.avif", position: "50% 50%" },
+} as const satisfies Record<string, BusinessPhotoAsset>;
+
+// Optional local video slots retain reduced-motion and failed-autoplay posters.
+// Only add a clip after it is available locally and its license is recorded.
+export const BUSINESS_SIGNUP_MEDIA: readonly BusinessSignupPanel[] = [
+  { id: "hair", poster: BUSINESS_CATEGORY_PHOTOS.hair.src, position: "50% 48%" },
+  { id: "nails", poster: BUSINESS_CATEGORY_PHOTOS.nails.src, position: "50% 50%" },
+  { id: "wellness", poster: BUSINESS_CATEGORY_PHOTOS.facial.src, position: "50% 48%" },
+  { id: "tattoo", poster: BUSINESS_CATEGORY_PHOTOS.tattoo.src, position: "50% 48%" },
+];

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { businessEntryHref } from "@/lib/businessCategories";
 import SafeImage from "@/components/site/SafeImage";
 import type { ContentCard } from "@/lib/content";
 
@@ -118,7 +119,7 @@ export default function PublicContentCard({
     homepage || compact ? "rounded-[14px]" : "rounded-[16px]"
   }`;
   return card.href ? (
-    <Link href={card.href} className={classes}>
+    <Link href={businessEntryHref(card.href)} className={classes}>
       {content}
     </Link>
   ) : (

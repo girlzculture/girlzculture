@@ -1,7 +1,7 @@
 # Business onboarding contract
 
-This correction starts from main `dc3ef437da37fd270e9153fb5a48bc408c72fb62`
-(PR #54). Production release and migration remain founder-controlled.
+The current focused entry-flow correction starts from main `1b3e5ba`
+(the merged PR #55). Earlier investigation below is historical context. Production release and migration remain founder-controlled.
 
 ## Production Starter banner investigation
 
@@ -23,6 +23,10 @@ This task does not unlock, promote, or deploy production.
 - `/business/signup`: category gateway; no plan or account form by default.
 - `/business/signup/hair`: account creation; never shows a selected-plan banner.
 - `/business/login`: stable public business login.
+- `/business/waitlist?category=<slug>`: category-specific interest capture.
+- `/partner`: permanent 308 redirect to `/business/signup`, preserving queries.
+  Visible public business CTAs normalize this retired destination at render time;
+  stored content and discovery behavior are unchanged.
 - `/business/apply`: detailed application and explicit plan/setup selection.
 - `/salon/signup`, `/salon/login`, `/salon/apply`: permanent 308 redirects to
   their business equivalents, preserving the original query.
@@ -73,49 +77,56 @@ invalid/omitted writes, and preservation of the existing salon subscription.
 The test rolls back its fixtures in an isolated PostgreSQL database. The new
 migration is not applied to production by this task.
 
-## Landing media, accessibility and caching
+## Landing media and direct card navigation
 
-The landing composition follows the founder's September 9 Image A: four service
-photo panels, a soft dark-to-teal media transition, compact centered benefits,
-an elevated white selector with eight photo cards, a three-column trust row,
-and the rounded Continue CTA below that row. Shading derives from the existing
-`--gc-magenta` / semantic `brand.cta` teal and charcoal; it introduces no separate
-green. The CTA keeps the existing accessible theme color.
+The founder's focused correction removes the entire four-item hero benefit strip,
+status badges, radio/checkmark selection, inner arrows and separate Continue step.
+All eight cards are native links with their entire image/title surface tappable.
+Hair Salon & Braiding opens `/business/signup/hair` immediately, preserving only
+an explicitly valid plan supplied to the gateway. The other seven links open
+their category-specific waitlist without carrying a sales plan.
 
-Hair Salon & Braiding is visually emphasized as Available Now on entry, but
-still requires explicit selection. The other seven native radios remain
-disabled with readable Coming Soon pills. No category or plan is automatically
-selected. Keyboard and WCAG A/AA checks cover 320, 390, 768, 844, 1440 and 1920
-pixel widths; desktop has a four-column, two-row photo grid and mobile adapts
-to two columns without dropping imagery.
+Clear standalone service photos replace enlarged mockup fragments. Four bright,
+staggered hero panels show braiding, manicure, facial and tattoo action. Phones
+show all four in a two-by-two composition. Eight image-led category cards use
+balanced cover crops and compact title areas. Source/author/license/hash records
+are in `public/images/business/media-sources.json` and its accompanying README.
+The archived founder reference is no longer requested by the page.
 
-`public/images/business/approved-business-reference.png` is the unmodified
-founder-provided Image A. `src/lib/businessSignupMedia.ts` defines clean photo
-windows for the four service scenes and eight category thumbnails.
-`BusinessPhoto` clips those regions proportionally in CSS. All typography,
-controls and layout are live HTML, not part of a screenshot. See the colocated
-asset README for provenance, exact hash, subjects and source limitations. No
-new AI artwork, stock downloads, remote hotlinks or dependencies are introduced.
+No usable local video was available and source clip exports returned HTTP 403.
+The approved image fallback is implemented; optional local video slots retain
+reduced-motion and failed-playback posters. A brief 3.5-second image entrance
+animation stops automatically and is disabled for reduced motion.
 
-No approved video clips were supplied. The existing optional video behavior
-remains available for future approved standalone posters/clips, including
-reduced-motion and failed-playback fallback. Current rendering uses twelve
-static photo windows with a single cached local image request.
+Responsive and WCAG A/AA coverage includes 390x844, 430x932, 768x1024, 1024x1366
+and 1440 desktop, plus narrow/landscape/wide regression sizes. Browser tests
+assert all images load, balanced image/title space, whole-card pointer/keyboard
+navigation, no overflow, no badges/radios and preserved explicit plan consent.
+Chromium, Firefox and WebKit exercise direct card navigation and return/reload.
 
-Decorative photo windows ignore pointer events so their oversized clipped image
-cannot intercept the native radio's hit area in WebKit. Each invisible native
-radio covers its full card, avoiding one-pixel hit targets that
-Firefox can resolve to the label instead of the input. The category gating
-test exercises both pointer and keyboard selection in Chromium, Firefox and
-WebKit; unavailable categories and the explicit selection requirement remain
-unchanged.
+## Category waitlist capture
 
-The category form uses `autocomplete="off"` so Firefox cannot restore checked
-radios or an enabled Continue button ahead of React's initial unselected state.
-The development release gate reproduced this native restoration as a checked
-radio and a mismatched `disabled` attribute after reload. The reload and
-hydration assertions remain intact. This scope follows
-[Mozilla's documented form-state restoration control](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#description).
+The seven exact route slugs are `nail-studio`, `massage-wellness`,
+`aesthetics-clinic`, `tattoo-studio`, `lash-brow-bar`, `barbershop` and `other`.
+Missing, invalid, duplicate or live-hair categories redirect to the gateway.
+Each page names its category, explains the expansion positively and collects
+only business name and email, with consent to a category-opening notification.
+
+Capture reuses the existing monitored `POST /api/support` endpoint and
+`support_tickets` Partnerships inbox. Subject and message record the selected
+business category and slug; the business name/email use existing fields.
+Existing validation, honeypot, moderation, rate limit and protected admin intake
+remain in force. No API, schema, subscription or automatic-email subsystem is
+added. No plan is selected or sold by joining the waitlist.
+
+Success requires an OK response, `ok: true` and a returned record ID. Failure
+retains the contact details for retry, hides raw provider diagnostics and shows
+only a validated canonical incident reference if one is supplied. Browser tests
+cover the request contract, retry, rate limiting, edge HTML and unconfirmed
+success. Mocked browser capture is automated evidence only; actual persistence
+must also be verified against an isolated non-production preview backend.
+
+## Preserved hydration and caching safeguards
 
 Firefox also exposes React's successful `console.timeStamp("Hydrated")` event
 to Playwright. Trace evidence and the installed React development source
@@ -158,8 +169,8 @@ failure artifacts, matching the main verification workflow.
 
 Open the new PR's actual Netlify Deploy Preview in a fresh browser. Verify the
 plain QR route, all three explicit plan CTAs, legacy redirects, account step,
-mobile/desktop composition and absence of hydration/media errors. Current photo composition uses the founder-provided reference; video clips
-remain optional pending approved sources. Do not submit a
+mobile/desktop composition and absence of hydration/media errors. Current composition uses the locally hosted service photographs; video clips
+remain optional pending a safely acquired source. Do not submit a
 preview application to a production-connected database. Repository browser/API
 fixtures and clean PostgreSQL verification cover writes without production data.
 

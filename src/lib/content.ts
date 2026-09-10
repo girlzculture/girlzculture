@@ -1,4 +1,5 @@
 import "server-only";
+import { businessEntryHref } from "@/lib/businessCategories";
 
 import { unstable_noStore as noStore } from "next/cache";
 import { supabase } from "@/lib/supabase";
@@ -195,6 +196,7 @@ export async function getVisibleLegalLinks() {
 }
 
 export async function getNavigationItems(surface:NavigationItem["surface"],fallback:NavigationItem[]){
+  fallback = fallback.map(item => ({ ...item, href: businessEntryHref(item.href) }));
   // The public projection returns only publishable links plus a separate
   // configured flag. This preserves an administrator-authored all-disabled
   // surface without exposing disabled or archived destinations to visitors.
@@ -204,7 +206,7 @@ export async function getNavigationItems(surface:NavigationItem["surface"],fallb
     ? data as { configured?: unknown; items?: unknown }
     : null;
   if(payload?.configured !== true)return fallback;
-  return Array.isArray(payload.items) ? payload.items as NavigationItem[] : [];
+  return Array.isArray(payload.items) ? (payload.items as NavigationItem[]).map(item => ({ ...item, href: businessEntryHref(item.href) })) : [];
 }
 
 export async function getBlogPosts() {

@@ -54,11 +54,11 @@ const nextConfig: NextConfig = {
       : [],
   },
   async redirects() {
-    return ["signup", "login", "apply"].map(route => ({
+    return [{ source: "/partner", destination: "/business/signup", permanent: true }, ...["signup", "login", "apply"].map(route => ({
       source: `/salon/${route}`,
       destination: `/business/${route}`,
       permanent: true,
-    }));
+    }))];
   },
   async headers() {
     const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL

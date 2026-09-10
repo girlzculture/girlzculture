@@ -1,28 +1,41 @@
-# Founder-supplied business imagery
+# Business onboarding service photography
 
-`approved-business-reference.png` is the unchanged 1672 x 941 Image A supplied
-by the founder for PR #55's design correction on September 9, 2026.
-Original filename: `ChatGPT Image Sep 9, 2026, 05_05_44 PM.png`.
-SHA-256: `2117890fb18dc3addcafcc7f70d6fee221fde5a5091818b9b873eb32012ba052`.
+Eight real service photographs are hosted locally as AVIF files, totaling
+346,092 bytes. Each file is the unchanged image exported
+from its source page; layout uses proportional CSS cover crops. No tiny mockup
+thumbnail is enlarged. `media-sources.json` records source URLs, authors,
+licenses, byte sizes and SHA-256 hashes.
 
-The task explicitly prioritizes founder-provided assets. This is the supplied
-reference, not newly generated artwork or a claim of independently verified
-photographic provenance. No new image generation, stock downloads or hotlinks
-are used. The application serves this single local source; browsers cache it
-across the twelve photo windows. It is 1,614,164 bytes.
+| Local asset | Photographer | Original page |
+| --- | --- | --- |
+| `hair-service.avif` | Vurzie Kim | [Source](https://www.pexels.com/photo/a-young-woman-having-her-hair-braided-15576674/) |
+| `nails-service.avif` | Artem Podrez | [Source](https://www.pexels.com/video/person-getting-her-nails-done-4783398/) |
+| `massage-service.avif` | KoolShooters | [Source](https://www.pexels.com/photo/a-woman-having-a-massage-6628599/) |
+| `facial-service.avif` | Anna Shvets | [Source](https://www.pexels.com/photo/focused-cosmetologist-applying-mask-on-female-client-5069463/) |
+| `tattoo-service.avif` | Antoni Shkraba | [Source](https://www.pexels.com/photo/a-tattoo-artist-working-on-a-client-7005729/) |
+| `lashes-service.avif` | José Antonio Otegui Auzmendi | [Source](https://www.pexels.com/photo/close-up-of-eyelash-extension-application-in-salon-34930118/) |
+| `barber-service.avif` | RDNE Stock project | [Source](https://www.pexels.com/photo/a-barber-at-work-7697445/) |
+| `other-service.avif` | MART PRODUCTION | [Source](https://www.pexels.com/photo/assorted-cosmetic-products-on-white-surface-7290178/) |
 
-`src/lib/businessSignupMedia.ts` records the twelve photographic rectangles.
-`BusinessPhoto` uses CSS clipping and proportional cover sizing; it does not
-render the reference's copy or controls. The header, hero, benefit labels,
-selector, status pills, trust row and CTA are native accessible HTML.
+The [Pexels license](https://www.pexels.com/license/) permits website use and
+modification. These stock subjects illustrate service activity and are not
+presented as platform members or endorsers. The nails image is the source
+video's standalone poster; the remaining files are photographs.
 
-Hero panels, left to right: braiding service, manicure service, facial treatment,
-tattoo service. The crops omit the reference's header and central typography.
-Category thumbnails: braided hairstyle, nails, massage, facial, tattoo, eye/lash,
-barber haircut, and cosmetic tools, respectively. Thumbnail crops stay within
-the small photographs in the reference; they are intentionally displayed small.
+The hero shows braiding, manicure, facial and tattoo activity. The cards also
+show a massage treatment, lash application, barber at work and cosmetic products.
+Desktop displays four staggered bright panels; phone displays all four in a
+two-by-two composition. The entrance animation ends after 3.5 seconds and is
+disabled for reduced motion.
 
-The clean original standalone photographs were not supplied. These approved
-reference photo windows provide the requested subjects without substituting
-unrelated salon interiors. Future original media can replace the windows
-without changing category gating, plan consent, routes, or page structure.
+No real video is shipped. No local approved video was available, and attempts
+to acquire the licensed source clips returned HTTP 403, including browser asset
+export. The implementation uses the founder-authorized improved-image fallback.
+Optional local video slots preserve muted/autoplay/loop/playsInline behavior,
+reduced-motion handling and poster fallback for a later approved clip. There
+are no runtime media hotlinks or added media dependencies.
+
+`approved-business-reference.png` remains archived as the unchanged founder
+reference for PR #55 (SHA-256
+`2117890fb18dc3addcafcc7f70d6fee221fde5a5091818b9b873eb32012ba052`).
+The current page does not render or request it.

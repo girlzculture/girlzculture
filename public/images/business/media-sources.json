@@ -1,0 +1,82 @@
+[
+  {
+    "name": "hair",
+    "file": "hair-service.avif",
+    "author": "Vurzie Kim",
+    "page": "https://www.pexels.com/photo/a-young-woman-having-her-hair-braided-15576674/",
+    "source": "https://images.pexels.com/photos/15576674/pexels-photo-15576674/free-photo-of-a-young-woman-having-her-hair-braided.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 38875,
+    "sha256": "b017eeeb814370f2f37af759b5c0a0bba0588a7c5d49e76859948eb4aad541e5"
+  },
+  {
+    "name": "nails",
+    "file": "nails-service.avif",
+    "author": "Artem Podrez",
+    "page": "https://www.pexels.com/video/person-getting-her-nails-done-4783398/",
+    "source": "https://images.pexels.com/videos/4783398/active-lifestyle-adult-adults-only-beautician-4783398.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 56408,
+    "sha256": "53393412d8433a6e0409b146d0936c1b7562906e00bd4b151814acebe57cd340"
+  },
+  {
+    "name": "massage",
+    "file": "massage-service.avif",
+    "author": "KoolShooters",
+    "page": "https://www.pexels.com/photo/a-woman-having-a-massage-6628599/",
+    "source": "https://images.pexels.com/photos/6628599/pexels-photo-6628599.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 31565,
+    "sha256": "ff117e5aa09b49f00c4ac6127288dabf0ee0ebab0e87cbeafb45f24a92c96748"
+  },
+  {
+    "name": "facial",
+    "file": "facial-service.avif",
+    "author": "Anna Shvets",
+    "page": "https://www.pexels.com/photo/focused-cosmetologist-applying-mask-on-female-client-5069463/",
+    "source": "https://images.pexels.com/photos/5069463/pexels-photo-5069463.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 22915,
+    "sha256": "a92684b0cb65bf5f369d3aa1d06893ba50acec00d8aa9923f7b96acabf36a907"
+  },
+  {
+    "name": "tattoo",
+    "file": "tattoo-service.avif",
+    "author": "Antoni Shkraba",
+    "page": "https://www.pexels.com/photo/a-tattoo-artist-working-on-a-client-7005729/",
+    "source": "https://images.pexels.com/photos/7005729/pexels-photo-7005729.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 38219,
+    "sha256": "15e26d8e75c540328f6c286f0d974cb201c10d16833e71584ac18c910c9651c0"
+  },
+  {
+    "name": "lashes",
+    "file": "lashes-service.avif",
+    "author": "José Antonio Otegui Auzmendi",
+    "page": "https://www.pexels.com/photo/close-up-of-eyelash-extension-application-in-salon-34930118/",
+    "source": "https://images.pexels.com/photos/34930118/pexels-photo-34930118/free-photo-of-close-up-of-eyelash-extension-application-in-salon.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 37210,
+    "sha256": "0d2b380cbfafb3859c8100605755e24e42c70bc497f714b4254b1d0ba5564ce4"
+  },
+  {
+    "name": "barber",
+    "file": "barber-service.avif",
+    "author": "RDNE Stock project",
+    "page": "https://www.pexels.com/photo/a-barber-at-work-7697445/",
+    "source": "https://images.pexels.com/photos/7697445/pexels-photo-7697445.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 50590,
+    "sha256": "c648c8bab5ea708d3ee7dea30dbd19b2c221f26fab5bec53faa927bbcbed0e67"
+  },
+  {
+    "name": "other",
+    "file": "other-service.avif",
+    "author": "MART PRODUCTION",
+    "page": "https://www.pexels.com/photo/assorted-cosmetic-products-on-white-surface-7290178/",
+    "source": "https://images.pexels.com/photos/7290178/pexels-photo-7290178.jpeg?auto=compress&w=1260&h=750&dpr=1",
+    "license": "https://www.pexels.com/license/",
+    "bytes": 70310,
+    "sha256": "494ff58bb634ce24353f91ad7b91297c7890fada04a8b71e8444327423e0d89d"
+  }
+]

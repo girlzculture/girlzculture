@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { businessEntryHref } from "@/lib/businessCategories";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SafeImage from "@/components/site/SafeImage";
@@ -348,7 +349,7 @@ function PromotionCard({
         ) : null}
         {card.href ? (
           <Link
-            href={card.href}
+            href={businessEntryHref(card.href)}
             draggable={false}
             onClick={onNavigate}
             className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-magenta px-3 text-[10px] font-bold text-white sm:mt-3 sm:min-h-10 sm:px-4"

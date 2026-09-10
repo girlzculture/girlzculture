@@ -143,7 +143,7 @@ export default function TrendingVideoPlacement({
           {viewAll && videos.length < total ? <button type="button" disabled={more} onClick={() => void load(videos.length, true)} className="mt-5 min-h-12 w-full rounded-lg border border-magenta bg-white text-sm font-bold text-magenta gc-disabled-control">{more ? "Loading…" : "Load more Trending Picks"}</button> : null}
         </>
       ) : (
-        <Link href="/partner" className="flex min-h-36 items-center gap-4 rounded-[15px] border border-plum/10 bg-[linear-gradient(120deg,#fff,#F5F7F8)] p-6">
+        <Link href="/business/signup" className="flex min-h-36 items-center gap-4 rounded-[15px] border border-plum/10 bg-[linear-gradient(120deg,#fff,#F5F7F8)] p-6">
           <span className="grid h-12 w-12 place-items-center rounded-full bg-plum text-white"><Video aria-hidden="true" /></span>
           <span><b className="font-serif text-xl text-plum">Share your salon’s work with nearby clients.</b><span className="mt-1 block text-xs text-ink/60">Learn about approved Trending Picks placements.</span></span>
         </Link>

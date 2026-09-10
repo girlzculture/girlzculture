@@ -134,8 +134,7 @@ for (const query of ["", "?plan=invalid", "?plan="]) {
     await page.route(`${providerURL}/auth/v1/user`, (route) => route.fulfill({ json: user }));
     await page.goto(`/business/signup${query}`);
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
-    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+    await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
     await page.getByLabel("Email", { exact: true }).fill(user.email);
     await page.getByLabel("Password", { exact: true }).fill("local-fixture-password");
@@ -190,8 +189,7 @@ for (const [plan, price] of [["Starter", 59], ["Growth", 69], ["Premium", 89]] a
     await page.goto("/plans");
     await page.getByRole("link", { name: `Choose ${plan}` }).click();
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
-    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+    await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
     await page.getByLabel("Email", { exact: true }).fill(user.email);
     await page.getByLabel("Password", { exact: true }).fill("local-fixture-password");
