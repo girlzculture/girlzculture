@@ -45,14 +45,6 @@ test("partner redirects permanently to business signup and preserves query inten
   }
 });
 
-test("public business entry CTAs bypass the retired partner page", async ({ page }) => {
-  for (const route of ["/", "/about", "/login"]) {
-    await page.goto(route);
-    await expect(page.locator('a[href="/business/signup"]').first()).toBeAttached();
-    await expect(page.locator('a[href="/partner"], a[href^="/partner?"], a[href^="/partner#"], a[href^="/partner/"]')).toHaveCount(0);
-  }
-});
-
 test("unknown, missing, duplicate or live waitlist categories return to signup", async ({ page }) => {
   for (const query of ["", "?category=invalid", "?category=hair-salon-braiding", "?category=nail-studio&category=barbershop"]) {
     await page.goto(`/business/waitlist${query}`);

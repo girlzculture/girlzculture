@@ -22,18 +22,17 @@ modification. These stock subjects illustrate service activity and are not
 presented as platform members or endorsers. The nails image is the source
 video's standalone poster; the remaining files are photographs.
 
-The hero shows braiding, manicure, facial and tattoo activity. The cards also
-show a massage treatment, lash application, barber at work and cosmetic products.
-Desktop displays four staggered bright panels; phone displays all four in a
-two-by-two composition. The entrance animation ends after 3.5 seconds and is
-disabled for reduced motion.
+The current visual design and final asset choices are not approved. A human
+designer will provide replacements. `src/lib/businessSignupMedia.ts` maps these
+independent files to the cards and existing hero fallback. `BusinessPhoto` permits
+source, alt, object-fit, object-position and aspect-ratio overrides, with centered
+cover as the default. No image transforms or screenshot crops are used.
 
-No real video is shipped. No local approved video was available, and attempts
-to acquire the licensed source clips returned HTTP 403, including browser asset
-export. The implementation uses the founder-authorized improved-image fallback.
-Optional local video slots preserve muted/autoplay/loop/playsInline behavior,
-reduced-motion handling and poster fallback for a later approved clip. There
-are no runtime media hotlinks or added media dependencies.
+No video is shipped or requested. When supplied, the single completed hero video
+belongs at `public/videos/business/business-signup-hero.mp4`. Enable it in
+`BUSINESS_SIGNUP_HERO_VIDEO` with a poster. The renderer supports muted inline
+looping autoplay, poster/error fallback and reduced motion without player UI.
+See `docs/BUSINESS_SIGNUP_DESIGN_HANDOFF.md` for the practical handoff.
 
 `approved-business-reference.png` remains archived as the unchanged founder
 reference for PR #55 (SHA-256

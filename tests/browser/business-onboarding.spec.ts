@@ -119,7 +119,7 @@ for (const [width, height] of [[320, 568], [390, 844], [430, 932], [768, 1024], 
   });
 }
 
-test("reduced motion keeps the approved poster composition without video requests", async ({ page }) => {
+test("reduced motion keeps the image fallback without video requests", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const videos: string[] = [];
   page.on("request", request => { if (request.resourceType() === "media") videos.push(request.url()); });

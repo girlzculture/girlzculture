@@ -19,8 +19,3 @@ export function waitlistCategory(value: unknown): WaitlistCategory | undefined {
 export function businessCategoryHref(category: BusinessCategory, liveHref: string) {
   return category.live ? liveHref : `/business/waitlist?category=${category.slug}`;
 }
-
-/** Canonicalize only the retired public business CTA, retaining its query/hash. */
-export function businessEntryHref(href: string) {
-  return href.replace(/^\/partner\/?(?=[?#]|$)/, "/business/signup");
-}

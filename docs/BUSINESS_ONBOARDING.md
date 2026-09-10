@@ -1,7 +1,10 @@
 # Business onboarding contract
 
-The current focused entry-flow correction starts from main `1b3e5ba`
-(the merged PR #55). Earlier investigation below is historical context. Production release and migration remain founder-controlled.
+PR #56 is an engineering-only correction based on main `1b3e5ba` (merged
+PR #55). The current visual design is not approved and remains for the human
+designer. See [the developer handoff](BUSINESS_SIGNUP_DESIGN_HANDOFF.md) for asset
+replacement and route details. Earlier investigation below is historical context.
+Production release and migration remain founder-controlled.
 
 ## Production Starter banner investigation
 
@@ -25,8 +28,6 @@ This task does not unlock, promote, or deploy production.
 - `/business/login`: stable public business login.
 - `/business/waitlist?category=<slug>`: category-specific interest capture.
 - `/partner`: permanent 308 redirect to `/business/signup`, preserving queries.
-  Visible public business CTAs normalize this retired destination at render time;
-  stored content and discovery behavior are unchanged.
 - `/business/apply`: detailed application and explicit plan/setup selection.
 - `/salon/signup`, `/salon/login`, `/salon/apply`: permanent 308 redirects to
   their business equivalents, preserving the original query.
@@ -86,23 +87,25 @@ Hair Salon & Braiding opens `/business/signup/hair` immediately, preserving only
 an explicitly valid plan supplied to the gateway. The other seven links open
 their category-specific waitlist without carrying a sales plan.
 
-Clear standalone service photos replace enlarged mockup fragments. Four bright,
-staggered hero panels show braiding, manicure, facial and tattoo action. Phones
-show all four in a two-by-two composition. Eight image-led category cards use
-balanced cover crops and compact title areas. Source/author/license/hash records
-are in `public/images/business/media-sources.json` and its accompanying README.
-The archived founder reference is no longer requested by the page.
+Eight independent local service photos replace composite mockup crops. Asset
+source/author/license/hash records are in `public/images/business/media-sources.json`.
+The archived founder reference is not a production media dependency.
+`BusinessPhoto` accepts source, alt text, object-fit, object-position and aspect
+ratio, defaulting to centered cover without zoom or transforms. Existing layout
+is frozen; final images and visual design are intentionally left to the human.
 
-No usable local video was available and source clip exports returned HTTP 403.
-The approved image fallback is implemented; optional local video slots retain
-reduced-motion and failed-playback posters. A brief 3.5-second image entrance
-animation stops automatically and is disabled for reduced motion.
+No completed video is supplied. The existing static fallback remains active.
+The optional single hero video uses `/videos/business/business-signup-hero.mp4`
+with muted inline autoplay, looping, cover sizing and no controls. Its image
+poster remains until playback and on errors or denied autoplay. Reduced motion
+prevents attaching the video source and stops playback when the preference changes.
+The previous image entrance animation and custom crop offsets were removed.
 
-Responsive and WCAG A/AA coverage includes 390x844, 430x932, 768x1024, 1024x1366
-and 1440 desktop, plus narrow/landscape/wide regression sizes. Browser tests
-assert all images load, balanced image/title space, whole-card pointer/keyboard
-navigation, no overflow, no badges/radios and preserved explicit plan consent.
-Chromium, Firefox and WebKit exercise direct card navigation and return/reload.
+Responsive and WCAG A/AA regression checks cover narrow phones through wide
+desktop, with pointer/keyboard navigation, image loading, no overflow and explicit
+plan consent. Chromium, Firefox and WebKit exercise direct card navigation and
+return/reload. The guarded media harness tests configurable image props and
+simulated video events; it does not claim real playback of a final video asset.
 
 ## Category waitlist capture
 
@@ -169,8 +172,9 @@ failure artifacts, matching the main verification workflow.
 
 Open the new PR's actual Netlify Deploy Preview in a fresh browser. Verify the
 plain QR route, all three explicit plan CTAs, legacy redirects, account step,
-mobile/desktop composition and absence of hydration/media errors. Current composition uses the locally hosted service photographs; video clips
-remain optional pending a safely acquired source. Do not submit a
+mobile/desktop usability and absence of hydration/media errors. Current media
+uses local service photographs; final visual design and video are pending the human
+designer. Do not submit a
 preview application to a production-connected database. Repository browser/API
 fixtures and clean PostgreSQL verification cover writes without production data.
 

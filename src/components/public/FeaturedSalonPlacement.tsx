@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { businessEntryHref } from "@/lib/businessCategories";
 import { ArrowLeft, ArrowRight, Megaphone, RotateCcw } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
@@ -207,7 +206,7 @@ export default function FeaturedSalonPlacement({
         </>
       ) : (
         <Link
-          href={businessEntryHref(promo.href)}
+          href={promo.href}
           className="flex min-h-40 items-center gap-5 rounded-[16px] border border-plum/10 bg-[linear-gradient(120deg,#fff,#F5F7F8)] p-6 shadow-[0_6px_20px_rgba(13,17,20,.06)]"
         >
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-plum text-white">
