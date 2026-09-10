@@ -11,7 +11,7 @@ export type BusinessSignupPanel = {
 export const BUSINESS_CATEGORY_PHOTOS = {
   hair: { src: "/images/business/hair-service.avif", position: "50% 48%" },
   nails: { src: "/images/business/nails-service.avif", position: "50% 50%" },
-  massage: { src: "/images/business/massage-service.avif", position: "50% 48%" },
+  massage: { src: "/images/business/massage-service.avif", position: "50% 70%" },
   facial: { src: "/images/business/facial-service.avif", position: "50% 50%" },
   tattoo: { src: "/images/business/tattoo-service.avif", position: "50% 48%" },
   lashes: { src: "/images/business/lashes-service.avif", position: "50% 50%" },
