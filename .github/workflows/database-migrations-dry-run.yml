@@ -1,0 +1,70 @@
+name: Production migration history dry-run only
+
+# Manual verification only. There is no application step in this workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DRY RUN ONLY to inspect the protected production migration plan
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    if: github.repository == 'girlzculture/girlzculture' && github.ref == 'refs/heads/main' && inputs.confirmation == 'DRY RUN ONLY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production-database
+    concurrency:
+      group: girlz-culture-production-database
+      cancel-in-progress: false
+    steps:
+      - name: Check out the reviewed migration files
+        uses: actions/checkout@v6
+        with:
+          # Main including merged PR #56, reviewed for this reconciliation.
+          ref: 2066f90628de300ef434c1ac71f5c33dc7f8f36a
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Confirm the reviewed source and CLI version
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '2066f90628de300ef434c1ac71f5c33dc7f8f36a'
+          test -f supabase/migrations/20260909185351_business_onboarding_explicit_application_choices.sql
+          test -f supabase/migrations/20260910133806_business_signup_content_management.sql
+          npx --yes 'supabase@2.111.0' --version
+      - name: Link production and inspect migrations without applying SQL
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_ID" = 'cuzfockthsqwubupskui'
+
+          # Link writes runner-local project metadata; the password stays in
+          # this protected job. Do not print secrets or upload the CLI cache.
+          npx --yes 'supabase@2.111.0' link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+
+          npx --yes 'supabase@2.111.0' migration list --linked
+
+          # Terminal database command: always keep --dry-run. No repair,
+          # application, seed, SQL execution, or deployment step follows.
+          npx --yes 'supabase@2.111.0' db push --linked --include-all --dry-run --password "$SUPABASE_DB_PASSWORD"
+
+          {
+            echo '### Production migration verification'
+            echo 'Migration list and dry-run completed; no pending migration SQL was applied.'
+            echo 'Reviewed source: 2066f90628de300ef434c1ac71f5c33dc7f8f36a.'
+            echo 'Expected pending file: 20260910133806_business_signup_content_management.sql.'
+            echo 'Review the CLI plan above. Applying it requires separate founder approval.'
+          } >> "$GITHUB_STEP_SUMMARY"
