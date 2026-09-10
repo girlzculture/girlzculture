@@ -48,4 +48,11 @@ select payload->>'slug', payload->>'title', payload->>'hero_title', payload->>'h
 from seed
 on conflict (slug) do nothing;
 
+-- Keep the Engine deployment status aligned with this repository migration.
+update public.engine_settings
+set published_value='"20260910133806"'::jsonb,
+    draft_value='"20260910133806"'::jsonb,
+    updated_at=now()
+where setting_key='integrations.expected_migration';
+
 commit;
