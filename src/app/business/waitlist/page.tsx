@@ -3,8 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import BusinessPhoto from "@/components/business/BusinessPhoto";
 import BusinessWaitlistForm from "@/components/business/BusinessWaitlistForm";
-import { waitlistCategory } from "@/lib/businessCategories";
-import { BUSINESS_CATEGORY_PHOTOS } from "@/lib/businessSignupMedia";
+import { BusinessSignupHeader, businessPhotoAsset } from "@/components/business/BusinessSignupLanding";
+import { interpolateBusinessSignupTemplate } from "@/lib/businessSignupContent";
+import { getBusinessSignupContent } from "@/lib/businessSignupContentServer";
 import "../business-onboarding.css";
 
 export const metadata: Metadata = {
@@ -13,20 +14,22 @@ export const metadata: Metadata = {
 };
 
 export default async function BusinessWaitlistPage({ searchParams }: { searchParams: Promise<{ category?: string | string[] }> }) {
-  const category = waitlistCategory((await searchParams).category);
-  if (!category) redirect("/business/signup");
+  const [query, content] = await Promise.all([searchParams, getBusinessSignupContent()]);
+  const category = typeof query.category === "string" ? content?.categories.find(item => item.id === query.category && item.visible) : null;
+  if (!content || !category) redirect("/business/signup");
+  if (category.mode === "live_application") redirect("/business/signup");
+  const copy = content.waitlist;
+  const image = category.waitlist?.image ?? category.image;
   return <main className="business-onboarding business-waitlist">
-    <header className="business-entry-header">
-      <Link href="/business/signup" className="business-wordmark">Girlz Culture</Link>
-      <div className="business-entry-login"><span>Already have an account?</span><Link href="/business/login">Log In</Link></div>
-    </header>
+    <BusinessSignupHeader content={content.header} homeHref="/business/signup" />
     <div className="business-waitlist-card">
-      <div className="business-waitlist-photo"><BusinessPhoto photo={BUSINESS_CATEGORY_PHOTOS[category.photo]} priority /></div>
+      {image.src ? <div className="business-waitlist-photo"><BusinessPhoto photo={businessPhotoAsset(image)} priority /></div> : null}
       <section className="business-waitlist-content" aria-labelledby="business-waitlist-title">
         <Link href="/business/signup" className="business-back-link">All business types</Link>
-        <h1 id="business-waitlist-title">Join the {category.name} waitlist</h1>
-        <p>Girlz Culture is expanding into {category.name}. Join the waitlist and we’ll reach out when this business category is ready on Girlz Culture.</p>
-        <BusinessWaitlistForm category={category} />
+        {copy.eyebrow ? <p className="business-waitlist-eyebrow">{copy.eyebrow}</p> : null}
+        <h1 id="business-waitlist-title">{interpolateBusinessSignupTemplate(category.waitlist?.heading ?? copy.heading, category.name)}</h1>
+        <p>{interpolateBusinessSignupTemplate(category.waitlist?.description ?? copy.description, category.name)}</p>
+        <BusinessWaitlistForm category={category} copy={copy} />
       </section>
     </div>
   </main>;

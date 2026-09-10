@@ -13,6 +13,8 @@ import {
 import { preparedMediaProfileSnapshot } from "@/lib/mediaUploadProfileSnapshotCore";
 import { expectedMediaRequestFailure } from "@/lib/mediaUploadErrorCore";
 import { isUuid } from "@/lib/mediaUploadProtocol";
+import { BUSINESS_HERO_VIDEO_KIND, BusinessHeroVideoValidationError } from "@/lib/businessHeroVideoCore";
+import { verifyBusinessHeroVideoUpload } from "@/lib/businessHeroVideoUploadServer";
 
 export const runtime = "nodejs";
 
@@ -86,23 +88,25 @@ async function POSTHandler(request: Request) {
     ) {
       throw new Error("The upload session is no longer available.");
     }
-    const profile = preparedMediaProfileSnapshot(
-      session.crop_metadata,
-      String(session.media_kind) as Parameters<
-        typeof preparedMediaProfileSnapshot
-      >[1],
-    );
-    // Sharp is native and platform-specific. Only this final processing path
-    // loads it, keeping profile, prepare, legacy, and cleanup route bundles
-    // independent from the native binary.
-    const processor = await import("@/lib/mediaImageProcessor");
-    const verified = await verifyPreparedMediaObjects(
-      admin,
-      session.expected_objects,
-      session.crop_metadata,
-      profile,
-      processor,
-    );
+    const verified = session.media_kind === BUSINESS_HERO_VIDEO_KIND
+      ? await verifyBusinessHeroVideoUpload(admin, session)
+      : await (async () => {
+        const profile = preparedMediaProfileSnapshot(
+          session.crop_metadata,
+          String(session.media_kind) as Parameters<
+            typeof preparedMediaProfileSnapshot
+          >[1],
+        );
+        // Only image finalization loads the native Sharp processor.
+        const processor = await import("@/lib/mediaImageProcessor");
+        return verifyPreparedMediaObjects(
+          admin,
+          session.expected_objects,
+          session.crop_metadata,
+          profile,
+          processor,
+        );
+      })();
     const result = await admin.rpc("finalize_media_upload_session", {
       p_session_id: uploadId,
       p_verified_objects: verified,
@@ -126,6 +130,7 @@ async function POSTHandler(request: Request) {
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
+    if (error instanceof BusinessHeroVideoValidationError) return Response.json({ error: error.message }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
     const expected = expectedMediaRequestFailure(error);
     if (expected) {
       return Response.json(

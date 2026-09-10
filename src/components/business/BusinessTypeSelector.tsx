@@ -1,21 +1,17 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { BUSINESS_CATEGORIES, businessCategoryHref } from "@/lib/businessCategories";
-import { BUSINESS_CATEGORY_PHOTOS } from "@/lib/businessSignupMedia";
+import { businessSignupCategoryHref, visibleBusinessCategories, type BusinessSignupContent } from "@/lib/businessSignupContent";
 import BusinessPhoto from "./BusinessPhoto";
 
-export default function BusinessTypeSelector({ continueHref, children }: { continueHref: string; children?: ReactNode }) {
-  return <div className="business-selection-flow">
-    <section className="business-type-selector" aria-labelledby="business-selector-title">
-      <h2 id="business-selector-title" className="business-selector-title">Select Your Business Type</h2>
-      <p className="business-selector-description">Choose the category that best describes your business to get started.</p>
+export default function BusinessTypeSelector({ content, plan }: { content: BusinessSignupContent; plan?: unknown }) {
+  return <section className="business-type-selector" aria-labelledby="business-selector-title">
+      <h2 id="business-selector-title" className="business-selector-title">{content.selector.heading}</h2>
+      {content.selector.supportingText ? <p className="business-selector-description">{content.selector.supportingText}</p> : null}
       <div className="business-category-grid">
-        {BUSINESS_CATEGORIES.map(category => <Link key={category.slug} href={businessCategoryHref(category, continueHref)} className={`business-category${category.live ? " business-category-live" : ""}`} data-business-category={category.slug}>
-          <BusinessPhoto photo={BUSINESS_CATEGORY_PHOTOS[category.photo]} />
-          <span className="business-category-name">{category.name}</span>
-        </Link>)}
+        {visibleBusinessCategories(content).map(category => {
+          const href = businessSignupCategoryHref(category, plan);
+          const body = <>{category.image.src ? <BusinessPhoto photo={{ src: category.image.src, alt: category.image.alt, objectFit: category.image.fit, objectPosition: `${category.image.focalX}% ${category.image.focalY}%` }} /> : null}<span className="business-category-name">{category.name}</span></>;
+          return href ? <Link key={category.id} href={href} className="business-category" data-business-category={category.id}>{body}</Link> : <div key={category.id} className="business-category" data-business-category={category.id} aria-disabled="true">{body}</div>;
+        })}
       </div>
-    </section>
-    {children}
-  </div>;
+    </section>;
 }

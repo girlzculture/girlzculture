@@ -1,40 +1,78 @@
-# Business onboarding service photography
+# Business onboarding media
 
-Eight real service photographs are hosted locally as AVIF files, totaling
-346,092 bytes. Each file is the unchanged image exported
-from its source page; layout uses proportional CSS cover crops. No tiny mockup
-thumbnail is enlarged. `media-sources.json` records source URLs, authors,
-licenses, byte sizes and SHA-256 hashes.
+`business-signup-hero.avif` is the clean 2171 x 724 hero photograph derived from
+the user-provided approved desktop and mobile designs on September 10, 2026.
+The built-in imagegen editor removed the reference's text, icons, interface, and
+white lower section while preserving its salon scene, stylist/client identities,
+and broad composition. It is an AI-assisted edit of those references. The image contains no website text
+or controls, so the landing page can render and edit those separately.
 
-| Local asset | Photographer | Original page |
-| --- | --- | --- |
-| `hair-service.avif` | Vurzie Kim | [Source](https://www.pexels.com/photo/a-young-woman-having-her-hair-braided-15576674/) |
-| `nails-service.avif` | Artem Podrez | [Source](https://www.pexels.com/video/person-getting-her-nails-done-4783398/) |
-| `massage-service.avif` | KoolShooters | [Source](https://www.pexels.com/photo/a-woman-having-a-massage-6628599/) |
-| `facial-service.avif` | Anna Shvets | [Source](https://www.pexels.com/photo/focused-cosmetologist-applying-mask-on-female-client-5069463/) |
-| `tattoo-service.avif` | Antoni Shkraba | [Source](https://www.pexels.com/photo/a-tattoo-artist-working-on-a-client-7005729/) |
-| `lashes-service.avif` | José Antonio Otegui Auzmendi | [Source](https://www.pexels.com/photo/close-up-of-eyelash-extension-application-in-salon-34930118/) |
-| `barber-service.avif` | RDNE Stock project | [Source](https://www.pexels.com/photo/a-barber-at-work-7697445/) |
-| `other-service.avif` | MART PRODUCTION | [Source](https://www.pexels.com/photo/assorted-cosmetic-products-on-white-surface-7290178/) |
+The exported AVIF is 105,373 bytes. Sharp converted the generated PNG using AVIF
+quality 68 and effort 6 without cropping or resizing. The AVIF was decoded and
+visually inspected after conversion. The stylist is near 43% of the image width,
+the seated client near 63%, with plant/salon space at the left. CSS can control
+the presentation and overlay without modifying the underlying photo.
 
-The [Pexels license](https://www.pexels.com/license/) permits website use and
-modification. These stock subjects illustrate service activity and are not
-presented as platform members or endorsers. The nails image is the source
-video's standalone poster; the remaining files are photographs.
+The original references are `girlz_culture_beauty_business_platform(1).png`
+(desktop) and `girlz_culture_beauty_platform_mobile_ui(1).png` (mobile), supplied
+by the user from Downloads. `media-sources.json` records their SHA-256 hashes,
+the complete edit prompt, generated PNG identity, conversion, and final asset
+hash. The original generated PNG remains in the local Codex generated-images
+directory as `exec-730f187b-e216-40ec-a6cc-f53d9a80dcf0.png`.
 
-The current visual design and final asset choices are not approved. A human
-designer will provide replacements. `src/lib/businessSignupMedia.ts` maps these
-independent files to the cards and existing hero fallback. `BusinessPhoto` permits
-source, alt, object-fit, object-position and aspect-ratio overrides, with centered
-cover as the default. No image transforms or screenshot crops are used.
+The eight category AVIFs are separate AI-assisted photographic reconstructions
+of the category images in those same approved desktop and mobile references.
+They replace the earlier stock-photo selections to follow the approved subjects
+and composition. Together they total 811,602 bytes. Each was generated
+independently at 1536 x 1024; the page does
+not enlarge a screenshot crop. The assets contain photography only, with no
+titles, buttons, card borders or other interface graphics. They illustrate the
+service categories and are not presented as real platform members or endorsers.
 
-No video is shipped or requested. When supplied, the single completed hero video
-belongs at `public/videos/business/business-signup-hero.mp4`. Enable it in
-`BUSINESS_SIGNUP_HERO_VIDEO` with a poster. The renderer supports muted inline
-looping autoplay, poster/error fallback and reduced motion without player UI.
-See `docs/BUSINESS_SIGNUP_DESIGN_HANDOFF.md` for the practical handoff.
+| Local asset | Reference subject |
+| --- | --- |
+| `hair-service.avif` | Black woman in left profile with long cornrow braids and a black salon cape |
+| `nails-service.avif` | Glossy pink manicure with polish applied to the nail plate |
+| `massage-service.avif` | Relaxed brunette on a white spa bed receiving a fully draped shoulder massage |
+| `facial-service.avif` | Reclined woman in a white towel receiving a facial-mask treatment |
+| `tattoo-service.avif` | Floral forearm tattoo and a professional artist's gloved hands |
+| `lashes-service.avif` | Closed eye, shaped eyebrow and lash tweezers |
+| `barber-service.avif` | Man in left profile receiving a fade haircut |
+| `other-service.avif` | Unbranded makeup brushes and cosmetic bottles on a warm vanity |
+
+The massage composition intentionally uses complete opaque towel coverage. The
+initial ordinary spa-treatment generation was declined by output moderation;
+the accepted retry preserved the category, face placement and calm setting
+with a fully draped service. The manicure received one targeted imagegen edit
+to place the polish brush on the nail plate. No alternate generation tool or
+model was used. These reconstruction details are recorded with the full
+prompts in `media-sources.json` rather than claiming identical source pixels.
+
+Sharp converted every final category PNG to AVIF at quality 68 and effort 6,
+without cropping, resizing, retouching or compositing. Each exported AVIF was
+decoded and visually inspected. `media-sources.json` records every original
+PNG filename, source-reference hash, complete prompt, refinement, dimensions,
+byte size and final SHA-256 hash. The original generated PNGs remain in the
+local Codex generated-images directory. The previous Pexels attributions do
+not apply to these replacements.
+
+`src/lib/businessSignupMedia.ts` maps the eight independent service files to
+their categories. The Business Signup CMS configuration controls editable media
+sources, alt text, fit, and focal point; `BusinessPhoto` also supports aspect-ratio
+overrides. The approved reference screenshots are not live page dependencies.
+
+No video footage is shipped. A future hero MP4 requires a still poster and uses
+the configurable hero media source. The renderer supports muted inline looping
+autoplay, poster/error fallback and reduced motion without player UI. See
+`docs/BUSINESS_SIGNUP_DESIGN_HANDOFF.md` for the practical handoff.
 
 `approved-business-reference.png` remains archived as the unchanged founder
 reference for PR #55 (SHA-256
 `2117890fb18dc3addcafcc7f70d6fee221fde5a5091818b9b873eb32012ba052`).
 The current page does not render or request it.
+
+The default hero also has an independent `business-signup-hero-mobile.avif` source
+for viewports below 768px, reconstructed from the approved mobile reference.
+The picture element preserves both faces without extreme zoom. Uploaded CMS
+images continue to use the platform's canonical mobile/tablet/desktop renditions;
+replacing the default hero does not keep the default mobile photo.

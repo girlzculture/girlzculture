@@ -5,6 +5,9 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowLeft, ArrowUp, Download, Eye, FileSpreadsheet, FileText, Monitor, Plus, Smartphone, Tablet, Trash2, Upload } from "lucide-react";
 import BaseImageUpload from "@/components/ImageUpload";
+import { mergeBusinessSignupDraft } from "@/lib/businessSignupDraftCore";
+import BusinessSignupContentEditor from "@/components/admin/BusinessSignupContentEditor";
+import { BUSINESS_SIGNUP_CONTENT_LABEL, DEFAULT_BUSINESS_SIGNUP_CONTENT, validateBusinessSignupContent } from "@/lib/businessSignupContent";
 import HeroImageFraming from "@/components/admin/HeroImageFraming";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
@@ -18,7 +21,7 @@ import { useAdminListScrollRestoration } from "@/components/admin/useAdminListCo
 type Row = Record<string, any>;
 const asRows = (value: unknown): Row[] => Array.isArray(value) ? value : [];
 const ImageUpload = (props: React.ComponentProps<typeof BaseImageUpload>) => <BaseImageUpload {...props} authScope="admin" />;
-const defaultSlugs = ["home", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "legal"];
+const defaultSlugs = ["home", "business-signup", "salon-profile", "partner", "how-it-works", "about", "press", "testimonials", "help", "safety", "legal"];
 const legalSlugs = ["terms", "privacy", "cookie-notice", "deposit-refund-policy", "salon-partner-agreement", "photo-content-consent", "message-monitoring-disclosure", "do-not-sell-or-share", "accessibility", "community-guidelines"];
 const hiddenSlugs = new Set(["careers", "cancellation-policy"]);
 const sectionPageSlugs = new Set(["about-carousel-one", "about-carousel-two"]);
@@ -96,6 +99,7 @@ function parseContentRecord(recordId?: string): ContentRecord {
 
 function publicPageHref(slug: string) {
   if (slug === "home") return "/";
+  if (slug === "business-signup") return "/business/signup";
   if (sectionPageSlugs.has(slug)) return "/about";
   if (slug === "salon-profile") return "/salons";
   return `/${slug}`;
@@ -309,7 +313,15 @@ export default function AdminContentManager({
       if (verifiedPublication) {
         setPublicationByPage((current) => ({ ...current, [String(data.slug)]: verifiedPublication }));
       }
-    setPage(data);
+    setPage(current => {
+      if (!current || data.slug !== "business-signup" || current.slug !== data.slug) return data;
+      // Uploads already in flight may finish while a save is being verified.
+      // Retain those newer draft edits over the verified save snapshot.
+      const saved = JSON.parse(payload.labels[BUSINESS_SIGNUP_CONTENT_LABEL]);
+      const latest = JSON.parse(current.labels[BUSINESS_SIGNUP_CONTENT_LABEL]);
+      const persistedContent = JSON.parse(data.labels[BUSINESS_SIGNUP_CONTENT_LABEL]);
+      return { ...data, labels: { ...data.labels, [BUSINESS_SIGNUP_CONTENT_LABEL]: JSON.stringify(mergeBusinessSignupDraft(saved, latest, persistedContent)) } };
+    });
     setPages(rows => rows.some(row => row.slug === data.slug) ? rows.map(row => row.slug === data.slug ? data : row) : [...rows, data]);
       const persistedStatus = String(persisted.status || data.status || "Draft");
       setNotice(persistedStatus === "Published"
@@ -588,8 +600,33 @@ function ContentRecordWorkspace({ record, page, post, setPage, setPost, savePage
   if (record.kind !== "page" || !page) return <MissingRecord/>;
   const prepared = ensureEditorSection(page, record.editor);
   const summary = publicationByPage[String(prepared.slug)] || {};
+  if (record.slug === "business-signup") return <BusinessSignupWorkspace key={prepared.slug} page={prepared} setPage={setPage} save={savePage} summary={summary} notice={notice} saving={saving} dismissNotice={dismissNotice} />;
   if (!record.editor) return <PageSectionOverview page={prepared} summary={summary} publicationByPage={publicationByPage}/>;
   return <FocusedPageEditor page={prepared} parentSlug={record.slug} editorId={record.editor} setPage={setPage} save={savePage} linkTargets={linkTargets} summary={summary} notice={notice} saving={saving} dismissNotice={dismissNotice}/>;
+}
+
+function BusinessSignupWorkspace({ page, setPage, save, summary, notice, saving, dismissNotice }: {
+  page: Row; setPage: React.Dispatch<React.SetStateAction<Row | null>>; save: (event: FormEvent<HTMLFormElement>) => void;
+  summary: PublicationSummary; notice: string; saving: boolean; dismissNotice: () => void;
+}) {
+  const [initialError] = useState(() => {
+    try {
+      if (page.labels?.[BUSINESS_SIGNUP_CONTENT_LABEL]) validateBusinessSignupContent(JSON.parse(page.labels[BUSINESS_SIGNUP_CONTENT_LABEL]));
+      return "";
+    } catch (error) { return error instanceof Error ? error.message : "Saved content is invalid."; }
+  });
+  if (initialError) return <div role="alert">{initialError} Reload this content record before editing.</div>;
+  const content = page.labels?.[BUSINESS_SIGNUP_CONTENT_LABEL] ? JSON.parse(page.labels[BUSINESS_SIGNUP_CONTENT_LABEL]) : structuredClone(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+  const publication = resolvedPublicationUi(page, summary);
+  return <div><WorkspaceHeader title="Business Signup Landing Page" publicHref="/business/signup" /><ActionToast message={notice} onDismiss={dismissNotice} />
+    <form onSubmit={save} className="space-y-5" data-testid="business-signup-cms-form">
+      <fieldset disabled={saving} className="min-w-0"><BusinessSignupContentEditor content={content} change={next => setPage(current => ({ ...current, labels: { ...current?.labels, [BUSINESS_SIGNUP_CONTENT_LABEL]: JSON.stringify(mergeBusinessSignupDraft(content, next, current?.labels?.[BUSINESS_SIGNUP_CONTENT_LABEL] ? JSON.parse(current.labels[BUSINESS_SIGNUP_CONTENT_LABEL]) : structuredClone(DEFAULT_BUSINESS_SIGNUP_CONTENT))) } }))} /></fieldset>
+      <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-plum/10 bg-white/95 p-4 shadow-xl">
+        <div className="text-xs text-text-secondary"><b className="block text-plum">{publication.label}</b><span>Saved: {displayTimestamp(summary.saved_version || page.updated_at)} · Public: {displayTimestamp(summary.public_version)}</span></div>
+        <PublicationActions status={String(page.status || "Draft")} scheduledAt={page.scheduled_publish_at} saving={saving} subject="Page" hasPublicVersion={publication.isPublic} />
+      </div>
+    </form>
+  </div>;
 }
 
 function MissingRecord() {

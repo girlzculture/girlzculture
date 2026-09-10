@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { BUSINESS_SIGNUP_HERO_VIDEO, BUSINESS_SIGNUP_MEDIA, type BusinessSignupPanel, type BusinessSignupVideo } from "@/lib/businessSignupMedia";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { type BusinessSignupVideo } from "@/lib/businessSignupMedia";
+import { DEFAULT_BUSINESS_SIGNUP_CONTENT, type BusinessSignupContent, type BusinessSignupImage } from "@/lib/businessSignupContent";
 import BusinessPhoto from "./BusinessPhoto";
 
 function HeroVideo({ source }: { source: BusinessSignupVideo }) {
@@ -42,15 +43,23 @@ function HeroVideo({ source }: { source: BusinessSignupVideo }) {
 
   return <div className="business-hero-video">
     <BusinessPhoto photo={source.poster} priority />
-    <video ref={video} autoPlay muted loop playsInline controls={false} disablePictureInPicture tabIndex={-1} poster={source.poster.src} preload="none" aria-hidden="true" style={{ objectPosition: source.poster.objectPosition ?? "50% 50%" }} />
+    <video ref={video} autoPlay muted loop playsInline controls={false} disablePictureInPicture tabIndex={-1} poster={source.poster.src} preload="none" aria-hidden="true" style={{ objectPosition: source.objectPosition ?? "50% 50%" }} />
   </div>;
 }
 
-export default function BusinessSignupMedia({ panels = BUSINESS_SIGNUP_MEDIA, video = BUSINESS_SIGNUP_HERO_VIDEO }: { panels?: readonly BusinessSignupPanel[]; video?: BusinessSignupVideo }) {
+const photo = (image: BusinessSignupImage) => ({ src: image.src, mobileSrc: image.src === "/images/business/business-signup-hero.avif" ? "/images/business/business-signup-hero-mobile.avif" : undefined, alt: image.alt, objectFit: image.fit, objectPosition: `${image.focalX}% ${image.focalY}%` });
+const motionQuery = "(prefers-reduced-motion: reduce)";
+const subscribeMotion = (callback: () => void) => {
+  const query = window.matchMedia(motionQuery);
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+};
+
+export default function BusinessSignupMedia({ media = DEFAULT_BUSINESS_SIGNUP_CONTENT.hero.media, video }: { media?: BusinessSignupContent["hero"]["media"]; video?: BusinessSignupVideo }) {
+  const reducedMotion = useSyncExternalStore(subscribeMotion, () => window.matchMedia(motionQuery).matches, () => true);
+  const source = video || (media.type === "video" && media.src ? { src: media.src, poster: photo(media.poster), objectPosition: `${media.focalX}% ${media.focalY}%` } : undefined);
+  const still = media.type === "gif" && reducedMotion ? media.poster : media;
   return <div className="business-hero-media" aria-hidden="true">
-    {panels.map(panel => <div key={panel.id} className="business-hero-panel" data-business-media-panel={panel.id} style={video ? { visibility: "hidden" } : undefined}>
-      <BusinessPhoto photo={panel.photo} priority />
-    </div>)}
-    {video ? <HeroVideo key={video.src} source={video} /> : null}
+    {source ? <HeroVideo key={source.src} source={source} /> : media.type !== "none" && still.src ? <BusinessPhoto key={still.src} photo={photo(still)} fallbackSrc={media.poster.src} priority /> : null}
   </div>;
 }

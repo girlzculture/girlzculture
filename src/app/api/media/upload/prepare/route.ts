@@ -10,6 +10,8 @@ import {
 } from "@/lib/mediaUploadServer";
 import { expectedMediaRequestFailure } from "@/lib/mediaUploadErrorCore";
 import type { MediaPrepareRequest } from "@/lib/mediaUploadProtocol";
+import { BUSINESS_HERO_VIDEO_KIND, BusinessHeroVideoValidationError } from "@/lib/businessHeroVideoCore";
+import { prepareBusinessHeroVideoUpload } from "@/lib/businessHeroVideoUploadServer";
 
 export const runtime = "nodejs";
 
@@ -30,7 +32,9 @@ async function POSTHandler(request: Request) {
       );
     }
     admin = getSupabaseAdmin();
-    const prepared = await prepareMediaUpload(request, body);
+    const prepared = body.kind === BUSINESS_HERO_VIDEO_KIND
+      ? await prepareBusinessHeroVideoUpload(request, body)
+      : await prepareMediaUpload(request, body);
     return Response.json(
       {
         upload_id: prepared.uploadId,
@@ -41,6 +45,7 @@ async function POSTHandler(request: Request) {
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
+    if (error instanceof BusinessHeroVideoValidationError) return Response.json({ error: error.message }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
     const expected = expectedMediaRequestFailure(error);
     if (expected) {
       return Response.json(

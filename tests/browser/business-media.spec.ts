@@ -4,6 +4,14 @@ import { test } from "./helpers/hydration";
 
 const harness = "/internal/acceptance/business-media";
 const videoSource = "/videos/business/business-signup-hero.mp4";
+const heroPoster = "/images/business/business-signup-hero.avif";
+const gifSource = "/images/business/acceptance-motion.gif";
+const missingImageSource = "/images/business/acceptance-missing-hero.avif";
+
+// This image exists only in page.route. A production service worker can claim
+// the page before the preference changes and bypass that route with a real 404.
+// Isolate this encoded-image fixture; other media tests keep normal PWA behavior.
+const routedImageTest = test.extend({ serviceWorkers: "block" });
 
 // Exercise the component's browser media lifecycle without shipping footage or
 // claiming real video decoding/playback. The src setter records assignments
@@ -38,9 +46,17 @@ test("business media defaults to independent images with neutral positioning and
   page.on("request", request => { if (request.resourceType() === "media") mediaRequests.push(request.url()); });
   await page.goto("/business/signup");
   const photos = page.locator(".business-photo img");
-  await expect(photos).toHaveCount(12);
-  for (const photo of await photos.all()) {
+  await expect(photos).toHaveCount(9);
+  const hero = page.locator(".business-hero-media img");
+  await expect(hero).toHaveCount(1);
+  await expect(hero).toHaveAttribute("src", heroPoster);
+  const cards = page.locator(".business-category img");
+  await expect(cards).toHaveCount(8);
+  expect(new Set(await cards.evaluateAll(images => images.map(image => image.getAttribute("src")))).size).toBe(8);
+  for (const photo of await cards.all()) {
     await expect(photo).toHaveAttribute("src", /^\/images\/business\/[a-z]+-service\.avif$/);
+  }
+  for (const photo of await photos.all()) {
     await expect(photo).toHaveCSS("object-fit", "cover");
     await expect(photo).toHaveCSS("object-position", "50% 50%");
     await expect(photo).toHaveCSS("transform", "none");
@@ -50,7 +66,48 @@ test("business media defaults to independent images with neutral positioning and
     await expect(frame).toHaveCSS("animation-name", "none");
   }
   await expect(page.locator("video")).toHaveCount(0);
+  await expect.poll(() => photos.evaluateAll(images => images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
   expect(mediaRequests).toEqual([]);
+});
+
+test("missing hero image falls back to its loaded still poster in the real browser", async ({ page }) => {
+  const response = page.waitForResponse(response => new URL(response.url()).pathname === missingImageSource);
+  await page.goto(`${harness}?scenario=image-failure`);
+  expect((await response).status()).toBe(404);
+  const image = page.getByRole("region", { name: "Image fallback fixture" }).locator(".business-hero-media img");
+  await expect(image).toHaveAttribute("src", heroPoster);
+  await expect(image).toHaveAttribute("alt", "Configured hero image fixture");
+  await expect(image).toBeVisible();
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+  await expect(page.locator("video")).toHaveCount(0);
+});
+
+routedImageTest("GIF hero uses its still poster before loading and after live reduced-motion changes", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const gifRequests: string[] = [];
+  page.on("request", request => { if (new URL(request.url()).pathname === gifSource) gifRequests.push(request.url()); });
+  // A two-frame, one-pixel GIF fixture verifies browser decoding and source
+  // selection. It represents no production artwork or video playback.
+  await page.route(`**${gifSource}`, route => route.fulfill({
+    contentType: "image/gif",
+    body: Buffer.from("47494638396101000100800000000000ffffff21ff0b4e45545343415045322e30030100000021f904000a0000002c000000000100010000020244010021f904000a0000002c00000000010001000002024c01003b", "hex"),
+  }));
+  await page.goto(`${harness}?scenario=gif`);
+  const image = page.getByRole("region", { name: "Animated image lifecycle fixture" }).locator(".business-hero-media img");
+  await expect(image).toHaveAttribute("src", heroPoster);
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+  expect(gifRequests).toEqual([]);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(image).toHaveAttribute("src", gifSource);
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth === 1)).toBe(true);
+  await expect(image).toBeVisible();
+  expect(gifRequests).toHaveLength(1);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(image).toHaveAttribute("src", heroPoster);
+  await expect(image).toBeVisible();
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 1)).toBe(true);
+  expect(gifRequests).toHaveLength(1);
+  await expect(page.locator("video")).toHaveCount(0);
 });
 
 test("business image source, accessible alt, fit, position and aspect ratio are configurable", async ({ page }) => {
