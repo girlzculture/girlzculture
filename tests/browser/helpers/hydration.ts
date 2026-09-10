@@ -1,4 +1,5 @@
-import { expect, test as base } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test as base } from "./page";
 
 // Keep console output intact and make hydration regressions fail acceptance.
 export const test = base.extend<{ hydrationAudit: void }>({
