@@ -32,7 +32,20 @@ function json(response, status, body, extraHeaders = {}) {
   response.end(JSON.stringify(body));
 }
 
-const server = createServer((request, response) => {
+// Business CMS browser scenarios use unique records, so their simulated
+// publication state cannot change the default pages used by parallel tests.
+const businessCmsRecords = new Map();
+const businessCmsScope = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function readFixtureJson(request) {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk.toString();
+    if (Buffer.byteLength(body) > 128_000) throw new Error("Acceptance fixture payload is too large");
+  }
+  return JSON.parse(body || "{}");
+}
+
+const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const url = new URL(request.url || "/", `http://${host}:${port}`);
 
@@ -47,6 +60,24 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (url.pathname.startsWith("/__fixtures/business-signup/") && method === "POST") {
+    const scope = url.pathname.slice("/__fixtures/business-signup/".length);
+    if (!businessCmsScope.test(scope) || request.headers["x-acceptance-fixture"] !== "business-signup-cms") {
+      json(response, 400, { error: "Invalid business CMS fixture scope" });
+      return;
+    }
+    try {
+      const body = await readFixtureJson(request);
+      if (body.record === null) businessCmsRecords.delete(scope);
+      else if (body.record && typeof body.record === "object" && !Array.isArray(body.record)) businessCmsRecords.set(scope, body.record);
+      else throw new Error("A published record or null is required");
+      json(response, 200, { ok: true });
+    } catch {
+      json(response, 400, { error: "Invalid business CMS fixture payload" });
+    }
+    return;
+  }
+
   if (url.pathname === "/auth/v1/settings" && method === "GET") {
     json(response, 200, {
       external: {},
@@ -58,6 +89,20 @@ const server = createServer((request, response) => {
   }
 
   if (url.pathname.startsWith("/rest/v1/rpc/") && method === "POST") {
+    if (url.pathname === "/rest/v1/rpc/get_public_content_page") {
+      try {
+        const body = await readFixtureJson(request);
+        const slug = String(body.p_slug || "");
+        const scope = slug.slice("business-signup-acceptance-".length);
+        if (slug.startsWith("business-signup-acceptance-") && businessCmsScope.test(scope)) {
+          json(response, 200, businessCmsRecords.get(scope) ?? null);
+          return;
+        }
+      } catch {
+        json(response, 400, { error: "Invalid public content fixture request" });
+        return;
+      }
+    }
     if (url.pathname === "/rest/v1/rpc/is_salon_profile_public") {
       json(response, 200, true);
       return;

@@ -9,8 +9,7 @@ for (const query of ["", "?plan=garbage", "?plan=", "?plan=%20%20", "?plan=pro",
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
     await expect(page.locator("main")).not.toContainText("Starter");
     expect(new URL(page.url()).search).toBe(query);
-    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+    await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
     await expect(page).toHaveURL(/\/business\/signup\/hair$/);
     await expect(page.getByRole("heading", { name: "Create Your Business Account" })).toBeVisible();
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
@@ -40,75 +39,153 @@ test("legacy fresh browser entry resolves without a plan and canonical login lin
   await expect(page.getByRole("link", { name: "Need an account?" })).toHaveAttribute("href", "/business/signup");
 });
 
-test("only Hair Salon & Braiding can continue; unavailable categories cannot submit", async ({ page }) => {
+test("business cards open the correct flow directly by pointer and keyboard", async ({ page }) => {
   await page.goto("/business/signup");
-  const continueButton = page.getByRole("button", { name: "Continue with Hair Salon & Braiding" });
-  await expect(continueButton).toBeDisabled();
-  for (const category of ["Nail Studio", "Massage & Wellness", "Aesthetics Clinic", "Tattoo Studio", "Lash & Brow Bar", "Barbershop", "Other"]) {
-    const input = page.getByRole("radio", { name: new RegExp(`^${category}`) });
-    await expect(input).toBeDisabled();
-    await input.evaluate((element: HTMLInputElement) => element.click());
-    await expect(input).not.toBeChecked();
-    await expect(continueButton).toBeDisabled();
-  }
-  const hair = page.getByRole("radio", { name: /Hair Salon & Braiding/ });
-  // Photo windows must not intercept the native control in WebKit. Exercise
-  // pointer selection as well as the independent keyboard path below.
-  await hair.check();
-  await expect(hair).toBeChecked();
-  await expect(continueButton).toBeEnabled();
-  await page.reload();
-  await expect(hair).not.toBeChecked();
-  await expect(continueButton).toBeDisabled();
-  await hair.focus();
-  await expect(hair).toBeFocused();
-  await page.keyboard.press("Space");
-  await expect(hair).toBeChecked();
-  await expect(continueButton).toBeEnabled();
-  await continueButton.click();
+  const hair = page.getByRole("link", { name: "Hair Salon & Braiding", exact: true });
+  await expect(hair).toHaveAttribute("href", "/business/signup/hair");
+  await expect(page.locator(".business-category")).toHaveCount(8);
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(page.locator(".business-category button")).toHaveCount(0);
+  await expect(page.locator(".business-type-selector")).not.toContainText(/Available Now|Coming Soon/);
+  await hair.click({ position: { x: 12, y: 12 } });
   await expect(page).toHaveURL(/\/business\/signup\/hair$/);
+  await page.goBack();
+  await expect(hair).toBeVisible();
+  await page.reload();
+  await hair.press("Enter");
+  await expect(page).toHaveURL(/\/business\/signup\/hair$/);
+  await page.goBack();
+  const nails = page.getByRole("link", { name: "Nail Studio", exact: true });
+  await nails.press("Enter");
+  await expect(page).toHaveURL(/\/business\/waitlist\?category=nail-studio$/);
+  await expect(page.getByRole("heading", { name: "Join the Nail Studio Waitlist", exact: true })).toBeVisible();
+});
+
+test("business landing keeps the approved copy, eight direct card routes and no extra controls", async ({ page }) => {
+  await page.goto("/business/signup");
+  const hero = page.locator(".business-hero");
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText("Grow Your Beauty Business");
+  await expect(hero.locator(".business-hero-copy > p")).toHaveText("Get discovered by more clients, manage your business all in one place, and be part of a supportive community built for beauty entrepreneurs.");
+  await expect(hero.locator(".business-wordmark")).toHaveText("Girlz Culture");
+  await expect(hero.getByRole("link", { name: "Log In", exact: true })).toHaveAttribute("href", "/business/login");
+  await expect(hero.locator(".business-entry-login > span")).toHaveText("Already have an account?");
+  await expect(hero.getByRole("link")).toHaveCount(2);
+  await expect(hero.getByRole("button")).toHaveCount(0);
+  await expect(hero.locator("svg, ul, ol")).toHaveCount(0);
+  await expect(hero).not.toContainText(/Beauty • Business • Community|Join as a Business|More Clients\. More Opportunities\. A Bigger You\.|Get More Bookings|Join a Supportive Community|Tools to Grow Your Brand|Built for Beauty Entrepreneurs|Grow Your Brand|Reach New Clients/);
+
+  const selector = page.locator(".business-type-selector");
+  await expect(selector.getByRole("heading")).toHaveText("What’s Your Business?");
+  await expect(selector.locator(":scope > p")).toHaveText("Select the category that best fits your business.");
+  await expect(selector).not.toContainText(/Choose Your Business Type|Select Your Business Type|Available Now|Coming Soon|Continue/);
+  await expect(selector.locator("svg, button, input, [role=radio], [role=checkbox], [role=status]")).toHaveCount(0);
+  await expect(selector).not.toContainText(/[→➜➔✓✔]/);
+  const destinations = [
+    ["Hair Salon & Braiding", "/business/signup/hair"],
+    ["Nail Studio", "/business/waitlist?category=nail-studio"],
+    ["Massage & Wellness", "/business/waitlist?category=massage-wellness"],
+    ["Aesthetics Clinic", "/business/waitlist?category=aesthetics-clinic"],
+    ["Tattoo Studio", "/business/waitlist?category=tattoo-studio"],
+    ["Lash & Brow Bar", "/business/waitlist?category=lash-brow-bar"],
+    ["Barbershop", "/business/waitlist?category=barbershop"],
+    ["Other", "/business/waitlist?category=other"],
+  ];
+  await expect(selector.getByRole("link")).toHaveCount(8);
+  await expect(selector.locator(".business-category-name")).toHaveText(destinations.map(([name]) => name));
+  for (const [name, href] of destinations) {
+    const card = selector.getByRole("link", { name, exact: true });
+    await expect(card).toHaveAttribute("href", href);
+    await expect(card).toHaveText(name);
+    await expect(card.locator(":scope > *")).toHaveCount(2);
+    await expect(card.locator("img")).toHaveCount(1);
+  }
+  const trust = page.getByRole("region", { name: "Built for your business" });
+  await expect(trust.getByRole("heading")).toHaveText(["A Platform Built for You", "Safe & Secure", "More Than a Platform"]);
+  await expect(trust.locator("p")).toHaveText([
+    "Designed for beauty and wellness businesses like yours.",
+    "Your data and business information are always protected.",
+    "Join a growing community of entrepreneurs, creators, and professionals.",
+  ]);
 });
 
 test("explicit plans never bleed into a later plain gateway navigation", async ({ page }) => {
   await page.goto("/business/signup?plan=premium");
-  await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-  await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+  await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
   await expect(page).toHaveURL(/\/business\/signup\/hair\?plan=premium$/);
   await page.goto("/business/signup");
-  await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-  await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+  await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
   await expect(page).toHaveURL(/\/business\/signup\/hair$/);
   await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
 });
 
-for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [844, 390], [1440, 1000], [1920, 1080]]) {
-  test(`business landing is readable, accessible and uses the CTA teal at ${width}x${height}`, async ({ page }, testInfo) => {
+for (const [width, height] of [[390, 844], [430, 932], [768, 1024], [834, 1194], [1024, 768], [1366, 768], [1440, 900], [1920, 1080]]) {
+  test(`business landing is readable, accessible and keeps the approved full-bleed composition at ${width}x${height}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height });
     const failedMedia: string[] = [];
-    page.on("response", response => { if (/\.(?:jpg|webp|mp4|webm)|_next\/image/.test(response.url()) && response.status() >= 400) failedMedia.push(response.url()); });
+    page.on("response", response => { if (/\.(?:jpe?g|png|gif|webp|avif|mp4|webm)|_next\/image/.test(response.url()) && response.status() >= 400) failedMedia.push(response.url()); });
     await page.goto("/business/signup");
-    await expect(page.locator(".business-hero-panel")).toHaveCount(4);
-    await expect(page.locator(".business-hero-panel video")).toHaveCount(0);
+    await expect(page.locator(".business-hero-panel")).toHaveCount(0);
+    await expect(page.locator(".business-hero-media")).toHaveCount(1);
+    await expect(page.locator(".business-hero-media img")).toHaveCount(1);
+    await expect(page.locator(".business-hero-media video")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Log In", exact: true })).toBeVisible();
-    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-    const button = page.getByRole("button", { name: "Continue with Hair Salon & Braiding" });
+    const card = page.getByRole("link", { name: "Hair Salon & Braiding", exact: true });
     const dimensions = await page.evaluate(() => {
       const main = document.querySelector<HTMLElement>(".business-onboarding")!;
       const probe = document.createElement("span");
-      probe.style.backgroundColor = "var(--gc-magenta)";
+      probe.style.backgroundColor = "var(--business-teal-light)";
       main.appendChild(probe);
       const brand = getComputedStyle(probe).backgroundColor;
       probe.remove();
-      return { width: document.documentElement.scrollWidth, viewport: innerWidth, brand, background: getComputedStyle(main).backgroundImage, cta: getComputedStyle(document.querySelector(".business-continue")!).backgroundColor };
+      const hero = document.querySelector<HTMLElement>(".business-hero")!;
+      const media = document.querySelector<HTMLElement>(".business-hero-media")!;
+      const selector = document.querySelector<HTMLElement>(".business-type-selector")!;
+      const image = media.querySelector("img")!;
+      const bounds = (element: Element) => { const box = element.getBoundingClientRect(); return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, height: box.height }; };
+      return {
+        width: document.documentElement.scrollWidth, viewport: innerWidth, brand,
+        accent: getComputedStyle(document.querySelector(".business-hero-copy h1 > span")!).color,
+        hero: bounds(hero), media: bounds(media), image: bounds(image), selector: bounds(selector),
+        gradients: [hero, media].flatMap(element => [getComputedStyle(element).backgroundImage, getComputedStyle(element, "::before").backgroundImage, getComputedStyle(element, "::after").backgroundImage]).join(" "),
+        selectorBackground: getComputedStyle(selector).backgroundColor,
+        mediaRadius: getComputedStyle(media).borderRadius,
+      };
     });
     expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
-    expect(dimensions.cta).toBe(dimensions.brand);
-    expect(dimensions.background).toContain("gradient");
-    expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(dimensions.accent).toBe(dimensions.brand);
+    expect(dimensions.gradients).toContain("gradient");
+    expect(dimensions.selectorBackground).toBe("rgb(255, 255, 255)");
+    expect(dimensions.hero.left).toBeCloseTo(0);
+    expect(dimensions.hero.right).toBeCloseTo(width);
+    expect(dimensions.media).toEqual(dimensions.hero);
+    expect(dimensions.image).toEqual(dimensions.hero);
+    expect(dimensions.mediaRadius).toBe("0px");
+    expect(dimensions.hero.height).toBeGreaterThanOrEqual(260);
+    expect(dimensions.selector.top - dimensions.hero.bottom).toBeLessThanOrEqual(48);
+    expect((await card.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await expect(page.locator(".business-category img")).toHaveCount(8);
-    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 12 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
-    const trust = await page.locator(".business-trust").boundingBox();
-    expect((await button.boundingBox())!.y).toBeGreaterThan(trust!.y + trust!.height);
+    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 9 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+    await expect(page.locator(".business-hero-copy ul")).toHaveCount(0);
+    await expect(page.locator(".business-hero-copy")).not.toContainText(/Get More Bookings|Grow Your Brand|Reach New Clients|Join a Supportive Community/);
+    const cards = await page.locator(".business-category").evaluateAll(elements => elements.map(element => {
+      const card = element.getBoundingClientRect();
+      const image = element.querySelector("img")!;
+      const frame = image.getBoundingClientRect();
+      return { width: card.width, height: card.height, imageHeight: frame.height, naturalWidth: image.naturalWidth, left: card.left, right: card.right, top: card.top };
+    }));
+    for (const geometry of cards) {
+      expect(geometry.width).toBeGreaterThanOrEqual(44);
+      expect(geometry.left).toBeGreaterThanOrEqual(0);
+      expect(geometry.right).toBeLessThanOrEqual(width);
+      expect(geometry.naturalWidth).toBeGreaterThanOrEqual(480);
+      expect(geometry.imageHeight / geometry.height).toBeGreaterThan(.55);
+      expect(geometry.height - geometry.imageHeight).toBeLessThan(76);
+    }
+    const rows = new Set(cards.map(card => Math.round(card.top)));
+    if (width <= 430) expect(rows.size).toBe(4);
+    if (width >= 1366) expect(rows.size).toBe(1);
+    if (width <= 430) for (const row of rows) expect(cards.filter(card => Math.round(card.top) === row)).toHaveLength(2);
+    await expect(page.locator(".business-trust")).toBeVisible();
     expect(failedMedia).toEqual([]);
     const audit = await new AxeBuilder({ page }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
     expect(audit.violations).toEqual([]);
@@ -116,12 +193,16 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [844, 390], 
   });
 }
 
-test("reduced motion keeps the approved poster composition without video requests", async ({ page }) => {
+test("reduced motion keeps the image fallback without video requests", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const videos: string[] = [];
   page.on("request", request => { if (request.resourceType() === "media") videos.push(request.url()); });
   await page.goto("/business/signup");
-  await expect(page.locator(".business-hero-panel img")).toHaveCount(4);
+  const heroImage = page.locator(".business-hero-media img");
+  await expect(heroImage).toHaveCount(1);
+  await expect(heroImage).toHaveAttribute("src", "/images/business/business-signup-hero.avif");
+  await expect.poll(() => heroImage.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(page.locator(".business-hero-media video")).toHaveCount(0);
   expect(videos).toEqual([]);
 });
 

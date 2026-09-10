@@ -317,7 +317,12 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /const normalizedSource = await normalizeImageFile\(input\.source\)[\s\S]*?const uploadFiles: UploadFiles = \{ source: normalizedSource \}/,
+  /const preparedVideo = input\.kind === BUSINESS_HERO_VIDEO_KIND \? await normalizeBusinessHeroVideo\(input\.source\) : null/,
+  "only the scoped hero-video preset may enter video byte validation",
+);
+assert.match(
+  clientSource,
+  /const normalizedSource = preparedVideo\?\.file \|\| await normalizeImageFile\(input\.source\)[\s\S]*?const uploadFiles: UploadFiles = \{ source: normalizedSource \}/,
   "the browser must normalize byte-verified metadata while retaining one source file",
 );
 assert.match(

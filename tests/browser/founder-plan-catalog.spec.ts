@@ -84,16 +84,14 @@ test("each plan CTA carries the normalized selection through the business gatewa
       new RegExp(`/business/signup\\?plan=${plan.toLowerCase()}$`),
     );
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
-    await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-    await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+    await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/business/signup/hair\\?plan=${plan.toLowerCase()}$`));
     await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
   }
 
   await page.goto("/salon/signup?plan=basic");
   await expect(page).toHaveURL(/\/business\/signup\?plan=basic$/);
-  await page.getByRole("radio", { name: /Hair Salon & Braiding/ }).check();
-  await page.getByRole("button", { name: "Continue with Hair Salon & Braiding" }).click();
+  await page.getByRole("link", { name: "Hair Salon & Braiding", exact: true }).click();
   await expect(page).toHaveURL(/\/business\/signup\/hair\?plan=starter$/);
   await expect(page.getByLabel("Selected application plan")).toHaveCount(0);
   await expect(page.getByText("Basic", { exact: true })).toHaveCount(0);

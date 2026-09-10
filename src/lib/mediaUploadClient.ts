@@ -23,6 +23,7 @@ import type {
   ResponsiveImageTransforms,
 } from "@/lib/imageUpload";
 import { normalizeImageFile } from "@/lib/imageUpload";
+import { BUSINESS_HERO_VIDEO_BUCKET, BUSINESS_HERO_VIDEO_FOLDER, BUSINESS_HERO_VIDEO_KIND, normalizeBusinessHeroVideo } from "@/lib/businessHeroVideoCore";
 
 type UploadFiles = Partial<Record<MediaUploadSlot, File>>;
 
@@ -31,15 +32,16 @@ export type DirectMediaUploadInput = {
   session: Session;
   bucket: string;
   folder: string;
-  kind: ImagePresetKey;
   source: File;
-  sourceDimensions: { width: number; height: number };
-  transforms: ResponsiveImageTransforms;
-  attachment?: MediaAttachment | null;
   resumeUploadId?: string | null;
   onFinalizePending?: (uploadId: string | null) => void;
   onProgress?: (progress: number, stage: string) => void;
-};
+} & ({
+  kind: ImagePresetKey;
+  sourceDimensions: { width: number; height: number };
+  transforms: ResponsiveImageTransforms;
+  attachment?: MediaAttachment | null;
+} | { kind: typeof BUSINESS_HERO_VIDEO_KIND });
 
 function descriptor(
   file: File,
@@ -99,8 +101,10 @@ async function finalizePreparedMediaUpload(input: {
   uploadId: string;
   session: Session;
   prepareRequestId?: string;
+  mediaName?: "image" | "video";
   onProgress?: (progress: number, stage: string) => void;
 }) {
+  const failureMessage = input.mediaName === "video" ? "The video uploaded, but could not be saved." : "The image uploaded, but could not be attached.";
   return runBoundedMediaFinalize({
     uploadId: input.uploadId,
     attempt: async (uploadId) => {
@@ -115,7 +119,7 @@ async function finalizePreparedMediaUpload(input: {
       });
       const finalizeBody = (await readApiResponse(
         finalizeResponse,
-        "The image uploaded, but could not be attached.",
+        failureMessage,
       )) as MediaFinalizeResponse;
       if (finalizeResponse.ok && finalizeBody.url) {
         return {
@@ -139,7 +143,7 @@ async function finalizePreparedMediaUpload(input: {
         error: new MediaFinalizeError(
           safeApiError(
             finalizeBody,
-            "The image uploaded, but could not be attached.",
+            failureMessage,
           ),
           failureStatus,
         ),
@@ -148,12 +152,13 @@ async function finalizePreparedMediaUpload(input: {
     onRetry: (nextAttempt) =>
       input.onProgress?.(
         84,
-        `Confirming saved image (attempt ${nextAttempt} of ${MEDIA_FINALIZE_MAX_ATTEMPTS})`,
+        `Confirming saved ${input.mediaName || "image"} (attempt ${nextAttempt} of ${MEDIA_FINALIZE_MAX_ATTEMPTS})`,
       ),
   });
 }
 
 export async function directMediaUpload(input: DirectMediaUploadInput) {
+  const isVideo = input.kind === BUSINESS_HERO_VIDEO_KIND;
   let uploadId = String(input.resumeUploadId || "");
   let prepareRequestId = "";
   let everyObjectUploaded = Boolean(uploadId);
@@ -164,12 +169,14 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
         throw new Error("The saved image reference is invalid. Upload it again.");
       }
       input.onFinalizePending?.(uploadId);
-      input.onProgress?.(78, "Resuming saved image confirmation");
+      input.onProgress?.(78, isVideo ? "Resuming saved video confirmation" : "Resuming saved image confirmation");
     } else {
-      input.onProgress?.(5, "Preparing original image");
-      const normalizedSource = await normalizeImageFile(input.source);
+      input.onProgress?.(5, isVideo ? "Preparing original video" : "Preparing original image");
+      const preparedVideo = input.kind === BUSINESS_HERO_VIDEO_KIND ? await normalizeBusinessHeroVideo(input.source) : null;
+      const normalizedSource = preparedVideo?.file || await normalizeImageFile(input.source);
+      const sourceDimensions = preparedVideo?.metadata || (input.kind !== BUSINESS_HERO_VIDEO_KIND ? input.sourceDimensions : { width: 0, height: 0 });
       const files = {
-        source: descriptor(normalizedSource, input.sourceDimensions),
+        source: descriptor(normalizedSource, sourceDimensions),
       } as MediaPrepareRequest["files"];
       const request: MediaPrepareRequest = {
         bucket: input.bucket,
@@ -177,12 +184,12 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
         kind: input.kind,
         crop_metadata: {
           version: 2,
-          source: input.sourceDimensions,
-          transforms: input.transforms,
-          mode: "server_canonical_crop",
+          source: sourceDimensions,
+          transforms: input.kind !== BUSINESS_HERO_VIDEO_KIND ? input.transforms : undefined,
+          mode: preparedVideo ? "preserved_business_hero_video" : "server_canonical_crop",
         },
         files,
-        attachment: input.attachment || null,
+        attachment: input.kind !== BUSINESS_HERO_VIDEO_KIND ? input.attachment || null : null,
       };
       const prepareResponse = await fetch("/api/media/upload/prepare", {
         method: "POST",
@@ -228,7 +235,7 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
         if (!file) throw new Error(`The ${prepared.slot} image is unavailable.`);
         input.onProgress?.(
           15 + Math.round((index / total) * 65),
-          "Preserving original image",
+          isVideo ? "Preserving original video" : "Preserving original image",
         );
         const result = await input.client.storage
           .from(prepared.bucket)
@@ -243,7 +250,7 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
           );
           const report = await reportClientOperationalFailure({
             status,
-            code: "SIGNED_IMAGE_UPLOAD_FAILED",
+            code: isVideo ? "SIGNED_VIDEO_UPLOAD_FAILED" : "SIGNED_IMAGE_UPLOAD_FAILED",
             operation: `media-upload:${prepared.slot}:${uploadId}`,
             provider: "supabase",
             authorization: `Bearer ${input.session.access_token}`,
@@ -254,11 +261,12 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
       everyObjectUploaded = true;
       input.onFinalizePending?.(uploadId);
     }
-    input.onProgress?.(72, "Creating responsive crops");
+    input.onProgress?.(72, input.kind === BUSINESS_HERO_VIDEO_KIND ? "Verifying hero video" : "Creating responsive crops");
     const finalized = await finalizePreparedMediaUpload({
       uploadId,
       session: input.session,
       prepareRequestId,
+      mediaName: isVideo ? "video" : "image",
       onProgress: input.onProgress,
     });
     input.onFinalizePending?.(null);
@@ -280,6 +288,17 @@ export async function directMediaUpload(input: DirectMediaUploadInput) {
     }
     throw error;
   }
+}
+
+export function directBusinessHeroVideoUpload(input: {
+  client: SupabaseClient;
+  session: Session;
+  source: File;
+  resumeUploadId?: string | null;
+  onFinalizePending?: (uploadId: string | null) => void;
+  onProgress?: (progress: number, stage: string) => void;
+}) {
+  return directMediaUpload({ ...input, bucket: BUSINESS_HERO_VIDEO_BUCKET, folder: BUSINESS_HERO_VIDEO_FOLDER, kind: BUSINESS_HERO_VIDEO_KIND });
 }
 
 export async function persistMediaOrder(input: {

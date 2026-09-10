@@ -25,6 +25,7 @@ export const MEDIA_RENDITION_SLOTS: Array<
 ];
 
 export type MediaUploadSlot = (typeof MEDIA_UPLOAD_SLOTS)[number];
+export type MediaUploadKind = ImagePresetKey | "business_hero_video";
 
 export function isCanonicalDirectUploadPlan(slots: readonly unknown[]) {
   return (
@@ -73,7 +74,7 @@ export type PreparedMediaObject = MediaFileDescriptor & {
 export type MediaPrepareRequest = {
   bucket: string;
   folder: string;
-  kind: ImagePresetKey;
+  kind: MediaUploadKind;
   crop_metadata: {
     version: number;
     source?: { width: number; height: number } | null;

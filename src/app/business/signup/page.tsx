@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { CalendarDays, ChartNoAxesCombined, UsersRound, Heart, Gem, ShieldCheck } from "lucide-react";
-import BusinessSignupMedia from "@/components/business/BusinessSignupMedia";
-import BusinessTypeSelector from "@/components/business/BusinessTypeSelector";
-import { businessOnboardingHref } from "@/lib/businessOnboarding";
+import { notFound } from "next/navigation";
+import BusinessSignupLanding from "@/components/business/BusinessSignupLanding";
+import { getBusinessSignupContent } from "@/lib/businessSignupContentServer";
 import "../business-onboarding.css";
 
 export const metadata: Metadata = {
@@ -13,33 +11,8 @@ export const metadata: Metadata = {
   openGraph: { url: "https://girlzculture.com/business/signup", title: "Grow Your Beauty Business" },
 };
 
-const benefits = [[CalendarDays, "Get More Bookings"], [ChartNoAxesCombined, "Grow Your Brand"], [UsersRound, "Reach New Clients"], [Heart, "Join a Supportive Community"]] as const;
-const trust = [
-  [Gem, "A Platform Built for You", "Designed for beauty and wellness businesses like yours."],
-  [ShieldCheck, "Safe & Secure", "Your data and business information are always protected."],
-  [UsersRound, "More Than a Platform", "Join a growing community of entrepreneurs, creators, and professionals."],
-] as const;
-
 export default async function BusinessSignupPage({ searchParams }: { searchParams: Promise<{ plan?: string | string[] }> }) {
-  const query = await searchParams;
-  return <main className="business-onboarding">
-    <section className="business-hero" aria-labelledby="business-hero-title">
-      <BusinessSignupMedia />
-      <div className="business-hero-shade" />
-      <header className="business-entry-header">
-        <Link href="/" className="business-wordmark">Girlz Culture</Link>
-        <div className="business-entry-login"><span>Already have an account?</span><Link href="/business/login">Log In</Link></div>
-      </header>
-      <div className="business-hero-copy">
-        <h1 id="business-hero-title">Grow Your Beauty Business</h1>
-        <p>Get discovered, attract more clients, manage your business all in one place.</p>
-        <ul>{benefits.map(([Icon, label]) => <li key={label}><Icon size={28} strokeWidth={1.7} aria-hidden="true" /><span>{label}</span></li>)}</ul>
-      </div>
-    </section>
-    <div className="business-lower">
-      <BusinessTypeSelector continueHref={businessOnboardingHref("/business/signup/hair", query.plan)}>
-        <section className="business-trust" aria-label="Built for your business">{trust.map(([Icon, title, description]) => <div key={title}><Icon size={29} strokeWidth={1.5} aria-hidden="true" /><h2>{title}</h2><p>{description}</p></div>)}</section>
-      </BusinessTypeSelector>
-    </div>
-  </main>;
+  const [query, content] = await Promise.all([searchParams, getBusinessSignupContent()]);
+  if (!content) notFound();
+  return <BusinessSignupLanding content={content} plan={query.plan} />;
 }

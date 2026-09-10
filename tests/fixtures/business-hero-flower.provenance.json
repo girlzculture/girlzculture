@@ -1,0 +1,18 @@
+{
+  "file": "business-hero-flower.mp4",
+  "purpose": "Real H.264 decoding, autoplay, natural loop, and reduced-motion browser acceptance tests. Not production business footage.",
+  "source": "https://raw.githubusercontent.com/mdn/interactive-examples/main/live-examples/media/cc0-videos/flower.mp4",
+  "sourcePage": "https://github.com/mdn/interactive-examples/blob/main/live-examples/media/cc0-videos/flower.mp4",
+  "examplePage": "https://interactive-examples.mdn.mozilla.net/pages/tabbed/video.html",
+  "license": "CC0-1.0",
+  "licenseSource": "https://raw.githubusercontent.com/mdn/interactive-examples/main/LICENSE",
+  "retrieved": "2026-09-10",
+  "modified": false,
+  "bytes": 1128375,
+  "sha256": "0cd83d944a6ca7822b4a8306cecc60a36e859b041f6702c6a1ad9ead78924451",
+  "width": 960,
+  "height": 540,
+  "durationSeconds": 5.055,
+  "videoCodec": "H.264 AVC",
+  "delivery": "Playwright intercept serves local bytes for the guarded business-media acceptance route. This file is outside public and is never selected by production defaults."
+}

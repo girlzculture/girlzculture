@@ -1,170 +1,205 @@
 # Business onboarding contract
 
-This correction starts from main `dc3ef437da37fd270e9153fb5a48bc408c72fb62`
-(PR #54). Production release and migration remain founder-controlled.
+PR #56 implements the founder-approved desktop and mobile Business Signup design
+and integrates its content into the existing Platform Admin CMS. The September 10,
+2026 approved references supersede the earlier engineering-only visual freeze.
+The PR remains Draft; production deployment, merging, and production migrations
+are not authorized in this task.
 
-## Production Starter banner investigation
+## Public design and defaults
 
-On September 9, 2026, fresh browser contexts reproduced the Starter banner at
-`https://girlzculture.com/salon/signup` with no query and with an invalid query.
-The served JavaScript still contained `normalizePlan(y.get("plan")||"Starter")`
-and an unconditional banner. `/business/signup` returned 404.
+`/business/signup` renders one full-bleed salon hero, the white business selector,
+eight image/title link cards, and three trust blocks. The hero photograph is
+`/images/business/business-signup-hero.avif`; the eight service photos remain
+independent assets. Their sources, reference hashes, edit prompt and output hashes
+are recorded in `public/images/business/media-sources.json`.
 
-Netlify's published production deploy was `6aa0551fc359c85c425b17b3`, locked,
-from commit `8b57002cfcd78ed1de0307235afd95eae4946645`, before PRs #53 and #54.
-Fresh responses had private/no-store headers, Durable cache bypass and Edge
-cache miss. A fresh page without a controlling service worker also reproduced
-the bug. The source/runtime discrepancy was a stale locked production release,
-not evidence that current source or a cleared browser had deployed successfully.
-This task does not unlock, promote, or deploy production.
+The default wordmark is **Girlz Culture**, without a subtitle. The login area is
+**Already have an account? / Log In**, pointing to `/business/login`.
 
-## Canonical public flow
+The hero heading is **Grow Your Beauty Business**, with the approved teal accent
+and left alignment. Its supporting copy is:
 
-- `/business/signup`: category gateway; no plan or account form by default.
-- `/business/signup/hair`: account creation; never shows a selected-plan banner.
-- `/business/login`: stable public business login.
-- `/business/apply`: detailed application and explicit plan/setup selection.
-- `/salon/signup`, `/salon/login`, `/salon/apply`: permanent 308 redirects to
-  their business equivalents, preserving the original query.
+> Get discovered by more clients, manage your business all in one place, and be part of a supportive community built for beauty entrepreneurs.
 
-Plans CTAs intentionally carry `?plan=starter`, `growth`, or `premium`. An
-explicit historical URL alias `basic` maps to Starter. Missing, empty, invalid,
-or other legacy aliases never invent a plan. Selecting Hair is a category
-choice, not a plan choice. Internal salon roles, tables, APIs, dashboards and
-the existing application-received page retain their compatible names.
+The selector contains only **What’s Your Business?** and **Select the category that
+best fits your business.** Cards contain an image and title. There are no hero
+benefit lists, decorative slogans, extra hero CTA, card arrows, status badges,
+checkmarks, radios, or separate Continue action. The layout uses two columns on
+phones, responsive wrapping on tablets, and one eight-card row where desktop
+width permits it. The three trust blocks retain the approved headings and copy,
+with gem, lock and heart icons.
 
-New account metadata records whether a valid plan was explicitly supplied.
-After email confirmation/later login, only that marked choice may be restored
-for a pending owner without a submitted application. Unmarked historical
-metadata is ambiguous because older builds invented Starter; it cannot supply
-a choice. The applicant can choose again on the application. Existing submitted
-owners still go to Pending; existing subscriptions are not rewritten.
+## Content Management location and storage
 
-## Database and write boundaries
+Open **Platform Admin → Content Management → Business Signup Landing Page**:
+`/admin/content/page-business-signup`.
 
-Forward migration
-`20260909185351_business_onboarding_explicit_application_choices.sql` removes
-the selected-plan default and keeps NOT NULL. Application rows are created at
-final submission, not during account creation. Historical migrations and
-existing application/subscription records remain unchanged.
+This is the existing `content_pages` record with slug `business-signup`, not a
+second admin application or page builder. Its version-1 typed configuration is
+serialized once into `labels.business_signup`. Other page labels and the shared
+`ContentPage.labels` contract remain intact.
 
-New submissions require explicit Starter, Growth, or Premium and an explicit
-`business_setup_type` from:
-
-| Stored value | Applicant label |
+| Editor group | Editable fields |
 | --- | --- |
-| `solo_professional` | Solo professional — just me |
-| `shared_suite_booth` | Shared suite / booth professional |
-| `single_location_staffed` | Single-location business with staff |
-| `multi_location` | Multi-location business |
-| `mobile_on_location` | Mobile / on-location business |
+| Header | Text/image logo mode, text, image, alt text, fit, focal X/Y, visibility, bounded size/alignment; login helper, label, visibility, safe internal destination |
+| Hero | Heading, supporting text, visibility, teal/no accent, overlay intensity, bounded height/alignment, image/GIF/MP4/none, media source, alt, fit, focal X/Y, still poster |
+| Business Selector | Heading and supporting text |
+| Business Categories | Eight stable identities; display name, image/alt/fit/focal point, visibility, order, waitlist/live mode, optional waitlist heading/description/image override |
+| Waitlist | Eyebrow, heading template, description, submit label, success heading/description, privacy text, optional support text |
+| Trust Section | Three stable identities; safe icon, heading, description, visibility, order |
 
-Setup has no default. Historical null values remain valid and display “Not
-provided.” The API validates both choices before persistence. The atomic RPC
-validates before any salon mutation. A table trigger rejects omitted/invalid
-choices on new inserts and invalid explicit changes, while leaving unchanged
-historical values alone. A CHECK constrains setup values. Admin corrections
-validate the same choices; existing revision triggers snapshot the new field.
-Admin review, submission detail and Salon 360 display it.
+Validation accepts bounded text, explicit booleans, finite focal values from 0 to
+100, fixed category/trust identities, and enumerated presentation options. It
+rejects arbitrary HTML, SVG, JavaScript, CSS, external redirects, and unsupported
+media origins. Media URLs use local `/images/` or `/videos/` paths or the configured
+project's public `content-media` storage. Empty optional copy/media and `false`
+visibility remain editable; publication validates required visible content.
 
-Clean-database verification asserts final column defaults/nullability, all 15
-plan/setup combinations through the real RPC, stored rows and revision JSON,
-invalid/omitted writes, and preservation of the existing salon subscription.
-The test rolls back its fixtures in an isolated PostgreSQL database. The new
-migration is not applied to production by this task.
+## Draft, preview, publication and audit
 
-## Landing media, accessibility and caching
+The editor reuses existing **Save Draft**, **Publish**, **Schedule**, **Unpublish**,
+**Archive** and restore behavior. **Preview draft** renders the shared landing
+component inside the authenticated editor; **Preview live** opens the public page.
+The public route never reads a draft preview query parameter.
 
-The landing composition follows the founder's September 9 Image A: four service
-photo panels, a soft dark-to-teal media transition, compact centered benefits,
-an elevated white selector with eight photo cards, a three-column trust row,
-and the rounded Continue CTA below that row. Shading derives from the existing
-`--gc-magenta` / semantic `brand.cta` teal and charcoal; it introduces no separate
-green. The CTA keeps the existing accessible theme color.
+`PUT /api/admin/content` first requires the existing `content` permission and
+validates this page's typed configuration. Publish/schedule also verify active
+hero upload MIME metadata and live application destinations. Existing
+`admin_save_content_record` persists the row and management history atomically,
+checks the active administrator's permission, and rejects stale revisions. A
+draft save retains the prior public snapshot. Anonymous reads use the existing
+`get_public_content_page` published/due-scheduled snapshot projection.
 
-Hair Salon & Braiding is visually emphasized as Available Now on entry, but
-still requires explicit selection. The other seven native radios remain
-disabled with readable Coming Soon pills. No category or plan is automatically
-selected. Keyboard and WCAG A/AA checks cover 320, 390, 768, 844, 1440 and 1920
-pixel widths; desktop has a four-column, two-row photo grid and mobile adapts
-to two columns without dropping imagery.
+The public loader honors an authoritative hidden/missing record. Display fallback
+on a provider/configuration failure is separate from lead intake: waitlist
+submission requires a valid published snapshot and fails closed when it cannot
+verify current content, visibility, or category mode.
 
-`public/images/business/approved-business-reference.png` is the unmodified
-founder-provided Image A. `src/lib/businessSignupMedia.ts` defines clean photo
-windows for the four service scenes and eight category thumbnails.
-`BusinessPhoto` clips those regions proportionally in CSS. All typography,
-controls and layout are live HTML, not part of a screenshot. See the colocated
-asset README for provenance, exact hash, subjects and source limitations. No
-new AI artwork, stock downloads, remote hotlinks or dependencies are introduced.
+## Canonical routes and plan consent
 
-No approved video clips were supplied. The existing optional video behavior
-remains available for future approved standalone posters/clips, including
-reduced-motion and failed-playback fallback. Current rendering uses twelve
-static photo windows with a single cached local image request.
+| Card | Current destination |
+| --- | --- |
+| Hair Salon & Braiding | `/business/signup/hair` |
+| Nail Studio | `/business/waitlist?category=nail-studio` |
+| Massage & Wellness | `/business/waitlist?category=massage-wellness` |
+| Aesthetics Clinic | `/business/waitlist?category=aesthetics-clinic` |
+| Tattoo Studio | `/business/waitlist?category=tattoo-studio` |
+| Lash & Brow Bar | `/business/waitlist?category=lash-brow-bar` |
+| Barbershop | `/business/waitlist?category=barbershop` |
+| Other | `/business/waitlist?category=other` |
 
-Decorative photo windows ignore pointer events so their oversized clipped image
-cannot intercept the native radio's hit area in WebKit. Each invisible native
-radio covers its full card, avoiding one-pixel hit targets that
-Firefox can resolve to the label instead of the input. The category gating
-test exercises both pointer and keyboard selection in Chromium, Firefox and
-WebKit; unavailable categories and the explicit selection requirement remain
-unchanged.
+Cards navigate immediately by pointer or keyboard. Only Hair has a registered
+live application today. A different live mode can be prepared in a draft, but
+cannot be published until a dedicated application destination is registered; it
+never falls back to the Hair application. Visibility and mode also govern direct
+waitlist URLs and submission validation.
 
-The category form uses `autocomplete="off"` so Firefox cannot restore checked
-radios or an enabled Continue button ahead of React's initial unselected state.
-The development release gate reproduced this native restoration as a checked
-radio and a mismatched `disabled` attribute after reload. The reload and
-hydration assertions remain intact. This scope follows
-[Mozilla's documented form-state restoration control](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#description).
+`/partner` returns permanent 308 to `/business/signup`, preserving queries.
+`/salon/signup`, `/salon/login` and `/salon/apply` return permanent 308 to their
+business equivalents with queries intact. `/business/login` and `/business/apply`
+retain their existing behavior.
 
-Firefox also exposes React's successful `console.timeStamp("Hydrated")` event
-to Playwright. Trace evidence and the installed React development source
-identify it as a performance marker. The hydration audit excludes only that
-exact `timeStamp` event; its warning/error matcher, page-error listener and
-empty-error-list assertion remain unchanged. The same category regression
-continues to exercise real reload state and hydration in all three engines.
+A plain gateway never invents a Starter plan. Hair preserves an explicitly valid
+incoming Starter/Growth/Premium choice; the historical explicit `basic` URL alias
+maps to Starter. Missing, empty, duplicate and invalid choices do not select a
+plan. Waitlists never carry sales plans. Account creation does not show a selected
+plan banner; the detailed application requires an explicit plan and setup type.
+Existing marked explicit account metadata may restore that choice for a pending
+owner; ambiguous historical defaults and submitted subscriptions are unchanged.
 
-Business pages render dynamically with private/no-store HTML and an explicit
-Netlify CDN no-store boundary. Worker v4 excludes `/business` and legacy
-application routes; activation clears earlier application cache versions. The
-browser regression seeds stale Starter HTML, verifies old-cache cleanup and
-query isolation, and verifies that sensitive navigation cannot read cached
-onboarding HTML offline. The public offline fallback remains operational.
-Development deliberately unregisters service workers; the regression explicitly
-registers the shipped worker after hydration and also runs on a production build.
+The preserved application setup values are `solo_professional`,
+`shared_suite_booth`, `single_location_staffed`, `multi_location` and
+`mobile_on_location`. Neither plan nor setup is defaulted by this landing page.
 
-## Founder preview acceptance
+Existing dynamic/private HTML, CDN no-store boundaries, service-worker exclusions
+for business/application routes and old-cache cleanup remain in place. Their
+regressions continue to check query isolation and rejection of stale onboarding
+HTML during offline navigation.
 
-The full production browser validation also exposed an intermittent Browse
-Styles Back-navigation race. Instrumented native history events showed the
-correct catalog URL at `popstate`, then the shared customer-location provider's
-synchronous React update committed a pending salon-search URL before Next's
-history listener read the destination. The catalog consequently mounted with
-the salon query and lost its visible filters. Location synchronization now waits
-until the native listeners finish, checks that its captured URL is still current,
-and cancels superseded/unmounted callbacks. The permanent pending-history browser
-test holds real scheduler callbacks across Back to exercise this boundary; it
-failed against the original production build. Existing catalog URL, input,
-filter and scroll assertions remain intact.
+## Waitlist capture
 
-The development release gate then exposed a separate mount-replay defect: Strict
-Mode cleanup aborted the initial salon search while its one-shot intent flag
-remained set. The replay never restarted that request, leaving “Searching…”
-indefinitely. Cleanup now clears the initial/automatic search guards after
-aborting, allowing replay to start the required replacement request. The same
-pending-history regression remains unchanged and covers completed search before
-Back in both development and production. The release workflow now retains browser
-failure artifacts, matching the main verification workflow.
+Each waitlist displays a locked **Business Type** and requires **Business Name**,
+**Business Address**, **Business Phone Number**, and **Business Email**. The CTA is
+**Join the Waitlist**. Defaults use **EARLY ACCESS**, **Join the {businessType}
+Waitlist**, and:
 
-Open the new PR's actual Netlify Deploy Preview in a fresh browser. Verify the
-plain QR route, all three explicit plan CTAs, legacy redirects, account step,
-mobile/desktop composition and absence of hydration/media errors. Current photo composition uses the founder-provided reference; video clips
-remain optional pending approved sources. Do not submit a
-preview application to a production-connected database. Repository browser/API
-fixtures and clean PostgreSQL verification cover writes without production data.
+> We’re opening access to more beauty and wellness businesses in stages. Join the waitlist and we’ll reach out when onboarding opens for {businessType} businesses in your area.
 
-GitHub Actions and all Netlify App checks must be examined separately. A green
-GitHub job does not establish a successful Netlify preview. Exact validation
-results and any provider blockers belong in the PR's current evidence report.
-Stripe configuration, subscription sales, production data and Workstream 2 are
-outside this correction.
+Capture reuses `POST /api/support` and the existing `support_tickets` Partnerships
+inbox. The stable category, name, address, phone and email are validated and
+recorded through the existing moderation, honeypot, rate-limit and monitored
+intake boundary. It creates no new lead table, payment, subscription, or automatic
+email campaign. Success requires an OK JSON response with `ok: true` and a confirmed
+record ID. Failures preserve the form for retry and expose only safe messages and
+validated incident references.
+
+## Media contract
+
+The editor reuses the signed prepare/upload/finalize media pipeline and the
+`content-media` inventory. Images use existing image validation and canonical
+renditions. Hero MP4 uses only the `business_hero_video` preset, with a maximum of
+12 MiB, 120 seconds, and a validated H.264 picture track. Server finalization
+checks the prepared path, MIME, size, MP4 container metadata and stored checksum.
+The completed source is preserved; this feature does not transcode, manufacture
+posters, or claim frame-by-frame decoding validation.
+
+Hero video is muted, looping, inline autoplay with no controls or play button.
+Its still poster remains until `playing` and after errors or autoplay denial.
+Reduced motion prevents attaching the video source, stops an active video, and
+uses a still poster for GIFs. Hero fit defaults to cover with centered focal
+coordinates; bounded CMS focal/fit controls adjust cropping without zoom.
+
+Publish/schedule inspect trusted `media_assets.mime_type`, `source_mime_type`,
+and matching rendition metadata. Generic `.img` filenames cannot disguise GIFs.
+Active logo, category and waitlist-override image fields also reject video sources.
+Image mode rejects a GIF with an instruction to choose GIF; GIF/video fallback
+posters must be verified still images. Unknown or quarantined uploaded hero media
+cannot be published. Draft mode permits incomplete editing without weakening the
+publication gate.
+
+No production footage is shipped. The optional local path remains
+`/videos/business/business-signup-hero.mp4`; the founder can instead upload and
+replace an MP4 through the CMS without changing code. Real playback of founder
+footage still requires that footage and a non-production review environment.
+
+## Database boundary and current verification limits
+
+The new forward migration is
+`20260910133806_business_signup_content_management.sql`. It adds one upload profile,
+extends the existing `media-originals` and `content-media` bucket ceilings to
+support MP4, and seeds the published `business-signup` content page. It creates no
+new tables or upload policies. Both seed inserts use `ON CONFLICT DO NOTHING`, so
+existing founder content/profile configuration is retained. Existing image routes
+continue to enforce their own validation limits.
+
+The row's `published_payload` is the same validated default payload stored in its
+labels. Future admin saves keep existing publication history and attachment
+triggers. Whole-row media reference scanning includes labels and retained
+published/scheduled snapshots; replacing an attached image does not immediately
+remove a still-referenced public object. The initial local-asset seed has no
+administrator actor and does not manufacture an admin history event.
+
+This task has **not applied the migration to production**. Offline migration order
+verification passed for 142 unique migrations, and the publication activation
+verifier passed. The clean-database script reached its explicit missing
+`CLEAN_DATABASE_URL` guard after its offline prerequisite checks. Docker,
+PostgreSQL/psql were unavailable locally, so actual clean-database
+execution remains blocked here; offline checks are not database execution proof.
+
+Focused browser tests exercise the eight required viewports: 390×844, 430×932,
+768×1024, 834×1194, 1024×768, 1366×768, 1440×900 and 1920×1080. The guarded media
+harness includes real missing-file failures and a small GIF fixture; video
+lifecycle stubs are identified as simulated. Current browser/full regression,
+Google Maps, audit, GitHub Actions and Netlify results belong in the PR's latest
+evidence report, not an assumed completion claim in this contract.
+
+The founder must review actual 390/768/1440/1920 screenshots and an immutable
+non-production preview. No preview application may write to production. Stripe,
+subscription sales, production data, marketplace/discovery/location/maps, preserved
+Workstream 1 and unstarted Workstream 2 remain outside this task.
+
+Supabase CLI 2.116.0 generated the forward migration; no remote migration was
+applied. Native video acceptance uses an unchanged local MDN CC0 H.264 clip
+served only through Playwright interception. It is not the production hero or
+founder footage. Exact executed test results are recorded in the PR report.

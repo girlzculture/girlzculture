@@ -1,0 +1,359 @@
+[
+  {
+    "name": "hair",
+    "file": "hair-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-9dd696bb-fb87-4b3b-b72c-7f3b5a0d53a4.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "e5f33f202824713af4d31b81252961b5d3b56f8a8666614a346714ebfee7dabb"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 112104,
+    "sha256": "a13f4907911526a22f1830caca60ed5ff2e389a4de05352fcf75108413cd8a70",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Hair Salon & Braiding\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the Black woman's left-facing profile, closed eyes, shaped eyebrows, small stud earring, warm brown skin, black salon cape, and neat long cornrow braids with subtle warm highlights. Her braided head fills the right-center, her face points left, with warm salon bokeh behind. Show her complete head profile comfortably within the photograph, not a man or beard. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark."
+  },
+  {
+    "name": "nails",
+    "file": "nails-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-9daab8aa-7f82-41fd-9a5c-636d9f8c0383.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "c8163485d3f4267602b736381dc6beb39a0c7552705a373dc457e876f493716a"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 70214,
+    "sha256": "0abbe5fc0def7a7cd96304750aaa7849e2de4b9de62bd0413402ba14ed9904eb",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Nail Studio\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the manicure close-up: a client's light-skinned hand with long oval glossy pastel-pink nails rests across the left/lower center; a technician's hand enters from upper right holding a black nail-polish cap and fine brush that touches a pink nail. Warm cream salon tabletop and softly blurred background. Realistic anatomical hands with correct fingers. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark.",
+    "refinements": [
+      {
+        "input": {
+          "file": "exec-80eb54a4-645f-4725-8948-a6c5e4de2e68.png",
+          "width": 1536,
+          "height": 1024,
+          "sha256": "e28152d9dec4d0e5455d4c935d030586dc5a53544361241dd4a27370cf40238b"
+        },
+        "prompt": "Use case: precise-object-edit. Edit only the attached standalone manicure photograph. Correct one photographic mistake: the polish brush is touching the skin behind the uppermost client's pink nail. Move the technician's black polish cap and its brush slightly down and right so the pink brush bristles clearly contact the center of that glossy pink nail plate, applying polish to the nail rather than the skin. Adjust only the minimum hand/wrist pose needed for physically natural contact. Preserve the same hands, nail shapes, lighting, warm salon bokeh, white towel, camera view, landscape dimensions and framing. Keep all fingers anatomically realistic. No text, logos, UI or new objects. Output only the corrected edge-to-edge photograph.",
+        "purpose": "Corrected the manicure brush to contact the nail plate."
+      }
+    ]
+  },
+  {
+    "name": "massage",
+    "file": "massage-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-377c0683-5788-4117-9cfe-28bf631d153a.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "a938a731f4b37a8517d4bbcea97e15aa981e58cd11e819d693bb65f90ab5e8a2"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 84029,
+    "sha256": "f8da9e14bc1a59044148baa4107350ae5851ba94bc0772a5afb1f6f30cd53efa",
+    "prompt": "Use case: precise-object-edit for an ordinary professional spa-service category image. Image 1 is the approved desktop design; Image 2 the approved mobile design. Use only the Massage & Wellness tile as the subject/composition reference. Produce one standalone realistic 3:2 landscape photograph, 1536 by 1024 preferred: an adult brunette woman lying face-down on a treatment bed, with her relaxed closed-eye face and dark smooth hair visible at the right, and a professional therapist's natural hands at left-center applying a shoulder massage THROUGH a full white spa towel. The woman's body, upper back, chest and shoulders must be completely covered by opaque white towels; only her face and the therapist's hands are visible. Warm calm salon lighting and soft white linens. Match the approved reference's face placement, hair, serene expression, gentle service action and cream color palette as closely as possible within this full-coverage composition. Ordinary professional wellness advertising, fully draped, no nudity, no sensual styling. Retain natural anatomy. Output ONLY the independent edge-to-edge photograph: no UI, text, labels, icons, card border, rounded corners, status bar, collage, watermark or surrounding design.",
+    "referenceVariation": "Full opaque towel coverage replaces the reference's exposed shoulder/back treatment framing. The initial ordinary spa generation was rejected by output moderation; the fully draped retry was accepted."
+  },
+  {
+    "name": "facial",
+    "file": "facial-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-90668be6-adcb-4e67-a2ff-c75af8049977.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "b34707ac8774b113771ca7d63cfc704762836d7e0260f1a79217701eb2bfb5ae"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 86718,
+    "sha256": "f0b89acad8310eb051edfbccb01ececd053f9469640f59e4a53d76d0853b4229",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Aesthetics Clinic\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the adult woman's relaxed face reclined diagonally with her head to the right, eyes closed, dark shaped eyebrows, warm medium skin, a white towel wrapping her hair, and white facial mask cream across her cheeks. A beautician's hand and small soft brush enter from the left applying the mask near her nose/cheek. White spa linen and soft light. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark."
+  },
+  {
+    "name": "tattoo",
+    "file": "tattoo-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-b6c5a6c0-2bf6-4505-a742-628dbc9038d2.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "5ae38fb21c08c832aa5db0c556788fc348b2fbb9313d3f2cbae6d6f5a185e499"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 133684,
+    "sha256": "a10238f4d870987f9ed42f5e45bcf49037b1d4b0b6a2a741c70168c11b45b47f",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Tattoo Studio\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the close-up of a warm brown forearm extending diagonally from upper left to lower right with fine black floral linework tattoo. On the right, black nitrile gloved hands hold a professional black tattoo machine at the lower-right portion of the floral design. Dark softly blurred studio background, crisp glove texture, no blood, no injury, no unrelated people. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark."
+  },
+  {
+    "name": "lashes",
+    "file": "lashes-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-aad922b9-51cc-4166-8b24-758a3b7d237b.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "7d399fd25725cc0fe1ad7e09281cc90d2d8258ba157c7a889254cdcb9c8145a6"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 140363,
+    "sha256": "27899e4a01f40cced894b622115688efc10bf03e83bdfb5a26ba272a9472397d",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Lash & Brow Bar\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the extreme close-up of one closed woman's eye, long curled black eyelashes, shaped brown eyebrow across the top, warm lightly textured skin. Two fine black lash tweezers enter diagonally from the upper right toward the outer lashes. The brow, eyelid and eyelashes stay fully readable; warm peach lighting, photoreal detail, no extra eyes. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark."
+  },
+  {
+    "name": "barber",
+    "file": "barber-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-e0a8b977-a45e-4e32-b3d5-abdc9b68ca6d.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "efb78db7c1b4a06b958ac0f2d9972058ffcff27984ac8cda5c2ac70f67b8c25f"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 98809,
+    "sha256": "3f23e9e882facfcd0f593eb1fbdf659466aaec5d20d2c0266e47d1642735530d",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Barbershop\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the left-facing profile of the adult olive/tan-skinned man with short dark fade haircut, full neatly shaped black beard and small silver stud earring. The black-gloved barber's hand holds electric hair clippers at the side of his head just above/behind the visible ear on the right. Dark salon cape and softly blurred dark barbershop. The whole profile, ear and fade remain readable. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark."
+  },
+  {
+    "name": "other",
+    "file": "other-service.avif",
+    "kind": "AI-assisted independent reconstruction from user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821",
+        "role": "Approved desktop category photograph reference"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e",
+        "role": "Approved mobile category photograph composition reference"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-87af75e7-e7c7-4bd0-ba76-06a27bf3c87d.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "256da7618f0354719647e9fc8f03efd1943fe6c03eadc5c019e5d70063016bc1"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 85681,
+    "sha256": "d25d49c314763f26984adb24b20cf81aeee60f85b9b1bba44585c6478793e806",
+    "prompt": "Use case: precise-object-edit with identity and composition preservation. Asset type: one standalone photographic website category image, approximately 3:2 landscape at high resolution (1536 x 1024 preferred). Image 1 is the approved desktop design; Image 2 is the approved mobile design. The reference role is ONLY the photograph inside the \"Other\" business category card, not the surrounding interface. Reconstruct that exact individual photo at natural photographic resolution, using the wider mobile tile to guide composition and desktop tile for subject detail. Preserve the still life of assorted unbranded beauty tools/products on a warm peach vanity: tall black-bristled makeup brushes with dark and warm metallic handles in a dark holder, white lotion/pump bottles, small amber and copper-toned cosmetic bottles, and a green plant entering at upper right. Match the warm softly lit organized arrangement from the category tile. Absolutely no brand labels or written text. Preserve the reference subject identity, pose, action, relative composition, lighting and background as closely as possible. Expand the photographic surroundings slightly only if needed to make a clean 3:2 full photo; do not aggressively zoom or crop important features. Remove all surrounding UI, card/title area, text, icons, logos, rounded corners, borders, phone frame and status bar. Output only edge-to-edge photography, one image, no montage, no collage, no page mockup, no typography or watermark."
+  },
+  {
+    "name": "business-signup-hero",
+    "file": "business-signup-hero.avif",
+    "kind": "AI-assisted edit of user-provided approved design references",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_business_platform(1).png",
+        "role": "Approved desktop design; primary photographic scene and composition",
+        "width": 1586,
+        "height": 992,
+        "sha256": "e8c2c68ad89e4edd749fd1d2d6e42780671e38be04bb02be175617e1708e9821"
+      },
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "role": "Approved mobile design; supporting stylist and client identity reference",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-730f187b-e216-40ec-a6cc-f53d9a80dcf0.png",
+      "width": 2171,
+      "height": 724,
+      "sha256": "cd38a1bb3ffa8f738a76c83f9dbe1e74f552c31f6164ebb75e3ef030d3affbf5"
+    },
+    "conversion": "Sharp AVIF quality 68, effort 6; no crop, resize, retouching, or compositing after imagegen",
+    "width": 2171,
+    "height": 724,
+    "bytes": 105373,
+    "sha256": "e79f106cb6c6ea325dbbb4b2675cbfe83097f244691e0ee07a17726afb5bafb7",
+    "prompt": "Use case: precise-object-edit with identity preservation. Asset type: a standalone full-bleed website hero photograph, NOT a website mockup. Image 1 is the approved desktop design and primary edit target. Image 2 is the approved mobile design and a supporting reference for the same stylist/client identities only. Extract and reconstruct ONLY the continuous salon photograph occupying the upper hero of Image 1. Remove every word, letter, logo, heading, button, icon, benefit list and other interface graphic by reconstructing the matching photographic background behind it. Remove the entire white lower business-card/trust section; do not include any white panel, card, rounded corner, border, phone frame, status bar or interface. Preserve the exact same two women: same stylist standing behind the client, same faces, skin, hairstyles, clothing, gaze, relaxed expressions, hands braiding at the crown, and same relative positions/scale as in the desktop hero. Preserve the same salon setting, plants, mirror arches, warm lights, dark cinematic photographic tones and teal-tinted lower atmosphere. Do not create a different salon, add people, change poses, or reinterpret the scene. Output a clean wide photographic panorama at approximately 3:1 aspect ratio (ideally 3072 by 1024), corresponding to the desktop hero area alone. The stylist remains near the horizontal center and the seated client's face near the right-center, with the existing plant/salon space at the left. Reconstruct only the small regions obscured by removed graphics. No text, typography, logos, watermarks, icons or decorative gradients added. This output must be an independent media asset containing photography only; all website text and controls will be real HTML."
+  },
+  {
+    "name": "business-signup-hero-mobile",
+    "file": "business-signup-hero-mobile.avif",
+    "kind": "AI-assisted edit of user-provided approved mobile design",
+    "created": "2026-09-10",
+    "tool": "Built-in imagegen image edit",
+    "references": [
+      {
+        "file": "girlz_culture_beauty_platform_mobile_ui(1).png",
+        "role": "Approved mobile design; supporting stylist and client identity reference",
+        "width": 941,
+        "height": 1672,
+        "sha256": "581a7ea1c8c9a5b06b26883cfde13b9738f9f15885875836a782211f595fdc8e"
+      }
+    ],
+    "generatedOriginal": {
+      "file": "exec-bfd3d1cf-cc89-441a-91b8-2de86426326a.png",
+      "sha256": "868784ba095b98858f75ad1789156651453e6327b4862c4d316813175c00c316"
+    },
+    "conversion": "Sharp AVIF quality 63, effort 6; format conversion only, no crop or resize",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 80047,
+    "sha256": "413dd26349d7c5a7d066d966789e9b3352566da1c24e842bc74ca0180e3643b7",
+    "prompts": [
+      "Use case: precise-object-edit. Asset type: clean mobile landing-page hero photograph, landscape 3:2. Input image 1 is the approved mobile page reference and edit target. Extract and faithfully reconstruct ONLY its top braiding photograph as a standalone full-bleed photo. Preserve the same two Black women, the stylist with long dark wavy hair dressed in black standing behind and carefully braiding, her facial appearance and downward gaze, the seated client's face in right-facing profile and neat cornrows, both visible hands actively braiding, their poses, realistic hair texture, skin tones, and warm softly blurred salon background. Remove the entire phone frame, status bar, camera cutout, every word and letter, logo, button, icon, selector panel, white cards and all other interface elements. The output contains only the photograph. Composition: reproduce the scene from the reference's top area, with dark unobtrusive salon negative space on the left and both women together toward the center-right, but fit their FULL faces and the stylist's working hands inside the central 65 percent of the canvas with comfortable right margin. This photo will be center-covered in a 390 by 365 mobile hero, so both complete faces and the braiding action must remain visible when the far left and right edges are cropped; use a slightly wider camera view to allow this without changing the scene. Keep the reference's intimate cinematic natural salon lighting and photographic realism. Do not add any text, graphics, gradients painted across faces, interface, borders, watermarks, extra people, extra hands, jewelry changes, or invented beauty treatments. Return a clean 3:2 landscape photograph.",
+      "Use case: precise-object-edit. The input is a clean photograph extracted from the approved mobile design. Make ONLY a camera framing/composition correction for mobile cover cropping. Preserve these exact two women, faces, expressions, skin, hairstyles, clothing, braiding action and visible hands, warm salon lighting, and background style. Pull the camera back moderately so the subjects occupy less of the frame, and move the whole two-person arrangement LEFT together without changing their relative poses. In the final 3:2 landscape canvas, the stylist's face should be around 50% of canvas width and the seated client's complete face around 70%; the rightmost edge of the client's face must be no farther than 78% of canvas width. Both faces AND both working hands must lie between 20% and 78% of canvas width. Retain dark salon negative space along the leftmost 25%. This is necessary so a centered approximately square crop at 390×365 keeps both complete faces and braiding hands visible; do not place the client's nose near the right edge. Fill newly revealed edges naturally with the same salon. Output only the clean photograph, no text, logos, interface, panels, frames, watermark, new people, added hands, or graphical overlay."
+    ]
+  }
+]

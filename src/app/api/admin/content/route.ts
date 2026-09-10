@@ -10,6 +10,8 @@ import {
 } from "@/lib/homePromotionCore";
 import type { ContentCard } from "@/lib/content";
 import { retainedPublishedVersion } from "@/lib/contentPublicationCore";
+import { validateBusinessSignupMediaForPublication } from "@/lib/businessSignupMediaValidationServer";
+import { BUSINESS_SIGNUP_CONTENT_LABEL, BUSINESS_SIGNUP_CONTENT_SLUG, encodeBusinessSignupContent, validateBusinessSignupContent } from "@/lib/businessSignupContent";
 
 const pageFields = ["slug", "title", "eyebrow", "hero_title", "hero_subtitle", "hero_image_url", "background_image_url", "hero_position_x", "hero_position_y", "hero_zoom", "page_group", "sections", "labels", "seo_title", "seo_description"] as const;
 const postFields = ["id", "slug", "title", "excerpt", "content", "category", "cover_image_url", "author", "featured"] as const;
@@ -387,7 +389,7 @@ async function GETHandler(request: Request) {
         if (page.page_group === "Content Section") return [];
         if (!isPublicPublication(page)) return [];
         const published = resolvedPublicPayload(page);
-        return published ? [{ id: published.slug, type: "Page", label: published.title, href: published.slug === "home" ? "/" : `/${published.slug}`, media_url: published.hero_image_url || "" }] : [];
+        return published ? [{ id: published.slug, type: "Page", label: published.title, href: published.slug === "home" ? "/" : published.slug === "business-signup" ? "/business/signup" : `/${published.slug}`, media_url: published.hero_image_url || "" }] : [];
       }),
     ];
     const diagnosticOptions: HomepagePromotionDiagnosticOptions = {
@@ -477,6 +479,19 @@ async function PUTHandler(request: Request) {
         );
       }
       const sections = sanitizeSections(payload.sections);
+      if (payload.slug === BUSINESS_SIGNUP_CONTENT_SLUG) {
+        try {
+          const labels = payload.labels as Record<string, unknown> | undefined;
+          const serialized = labels?.[BUSINESS_SIGNUP_CONTENT_LABEL];
+          if (typeof serialized !== "string" || serialized.length > 64_000) throw new Error("Business signup content is missing or too large.");
+          const forPublication = publicationAction === "publish" || publicationAction === "schedule";
+          const content = validateBusinessSignupContent(JSON.parse(serialized), { forPublication });
+          if (forPublication) await validateBusinessSignupMediaForPublication(admin, content);
+          payload.labels = { ...labels, [BUSINESS_SIGNUP_CONTENT_LABEL]: encodeBusinessSignupContent(content, { forPublication }) };
+        } catch (error) {
+          return Response.json({ error: error instanceof Error ? error.message : "Business signup content is invalid.", code: "BUSINESS_SIGNUP_CONTENT_INVALID" }, { status: 400 });
+        }
+      }
       if (payload.slug === "home") {
         const promotionRail = sections.find((section) => section.type === "promo_rail");
         if (!promotionRail || promotionRail.cards.length > 200) {

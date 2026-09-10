@@ -18,7 +18,7 @@ const acceptanceEnvironment = {
 
 const publicResponsiveSpec = /public-responsive\.spec\.ts/;
 const crossBrowserSmoke =
-  /homepage shell has no overflow|promotion rail respects reduced motion|only Hair Salon & Braiding can continue/;
+  /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly/;
 const portraitMobileChecks =
   /homepage shell has no overflow|homepage removes the intro|mobile promotion swipe|primary mobile controls|mobile public navigation/;
 const narrowPhoneChecks =
