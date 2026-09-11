@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ImageIcon, Monitor, RotateCcw, Save, Smartphone, Tablet, Upload } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
+import { useRouter } from "next/navigation";
 
 type Asset = {
   asset_key: string;
@@ -42,6 +43,7 @@ async function authHeaders() {
 }
 
 export default function BrandAppearanceManager() {
+  const router = useRouter();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [versions, setVersions] = useState<Version[]>([]);
   const [selectedKey, setSelectedKey] = useState("primary_header_logo");
@@ -150,6 +152,11 @@ export default function BrandAppearanceManager() {
       });
       const body = await readApiResponse(response, "Unable to update this image.");
       if (!response.ok) throw new Error(body.error || "Unable to update this image.");
+      if (selected.asset_key === "favicon" && (kind === "publish" || kind === "restore")) {
+        // Refresh the actual document metadata after the governed publication.
+        // Updating this editor's preview alone does not update the browser tab.
+        router.refresh();
+      }
       setMessage(
         kind === "publish"
           ? "Published. New visits use the cache-busted brand version."

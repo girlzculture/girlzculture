@@ -10,13 +10,14 @@ import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
 import DocumentLocalizationBridge from "@/components/i18n/DocumentLocalizationBridge";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
+import { getPublishedFaviconHref } from "@/lib/brandFavicon";
 import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
 import PublicContentLiveRefresh from "@/components/PublicContentLiveRefresh";
 import OwnerDashboardResponsiveBridge from "@/components/owner/OwnerDashboardResponsiveBridge";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
-  const favicon = assets.favicon?.published_url || "/pwa-icon-192.png";
+  const favicon = getPublishedFaviconHref(assets.favicon);
   const appIcon = assets.app_icon?.published_url || "/pwa-icon-512.png";
   const socialImage = assets.social_share_image?.published_url;
   const description =

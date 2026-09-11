@@ -100,6 +100,13 @@ self.addEventListener("activate", (event) => {
     await Promise.all(keys
       .filter((key) => key.startsWith(APP_CACHE_PREFIX) && key !== CACHE)
       .map((key) => caches.delete(key)));
+    // Older workers could cache the competing static favicon, including its
+    // framework query string. The root URL now resolves the current Engine icon.
+    const current = await caches.open(CACHE);
+    const requests = await current.keys();
+    await Promise.all(requests
+      .filter((request) => new URL(request.url).pathname === "/favicon.ico")
+      .map((request) => current.delete(request)));
     await self.clients.claim();
   })());
 });
@@ -139,6 +146,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || isPrivateOrSensitive(request, url)) return;
+  // The legacy URL is a mutable, no-store redirect, never a cache-first image.
+  if (url.pathname === "/favicon.ico") return;
 
   if (request.mode === "navigate") {
     event.respondWith(navigationResponse(request));

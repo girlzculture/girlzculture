@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:browser": "playwright test",
+    "test:favicon": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/brand-favicon.test.mjs && node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/favicon-service-worker.test.mjs && npx playwright test --config=playwright.favicon.config.ts",
     "test:accessibility": "playwright test tests/browser/workstream-1-accessibility.spec.ts tests/browser/workstream-1-visual-states.spec.ts --project=chromium",
     "test:media-browser": "playwright test tests/browser/media-upload-regression.spec.ts --project=chromium",
     "test:google-maps-provider": "playwright test tests/browser/google-maps-provider.spec.ts --project=chromium",
