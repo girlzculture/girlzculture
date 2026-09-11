@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { test, screenshotCaret } from "./helpers/hydration";
+import { createNetworkOrigin } from "./helpers/network-origin";
 
 for (const query of ["", "?plan=garbage", "?plan=", "?plan=%20%20", "?plan=pro", "?plan=starter&plan=growth"]) {
   test(`fresh business gateway ${query || "without query"} never invents a plan`, async ({ page }) => {
@@ -206,39 +207,41 @@ test("reduced motion keeps the image fallback without video requests", async ({ 
   expect(videos).toEqual([]);
 });
 
-test("service worker clears old versions and cannot resurrect cached onboarding HTML", async ({ page, context }) => {
-  await page.goto("/robots.txt");
-  await page.evaluate(async () => {
-    const old = await caches.open("girlz-culture-public-v3");
-    await old.put("/business/signup", new Response("Selected application plan Starter", { headers: { "content-type": "text/html" } }));
-    await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
-    await navigator.serviceWorker.ready;
-  });
-  await expect.poll(() => page.evaluate(() => caches.keys())).not.toContain("girlz-culture-public-v3");
-  await page.goto("/business/signup?plan=starter");
-  await page.goto("/business/signup");
-  await expect(page.locator("main")).not.toContainText("Starter");
-  const onboardingKeys = await page.evaluate(async () => {
-    const cache = await caches.open("girlz-culture-public-v4");
-    const keys = await cache.keys();
-    for (const path of ["/business/signup", "/business/signup/hair", "/business/login", "/business/apply", "/salon/apply"]) {
-      await cache.put(path, new Response("Selected application plan Starter", { headers: { "content-type": "text/html" } }));
-    }
-    return keys.filter(key => new URL(key.url).pathname.startsWith("/business")).map(key => key.url);
-  });
-  expect(onboardingKeys).toEqual([]);
-  // Development deliberately unregisters workers during React mounting. Register
-  // after hydration so this test exercises the shipped worker in either mode.
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
-    await navigator.serviceWorker.ready;
-  });
-  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
-  await context.setOffline(true);
+test("service worker clears old versions and cannot resurrect cached onboarding HTML", async ({ page, context, baseURL }) => {
+  const network = await createNetworkOrigin(baseURL);
   try {
-    await page.goto("/uncached-public-offline-check", { waitUntil: "domcontentloaded" });
+    await page.goto(network.url("/robots.txt"));
+    await page.evaluate(async () => {
+      const old = await caches.open("girlz-culture-public-v3");
+      await old.put("/business/signup", new Response("Selected application plan Starter", { headers: { "content-type": "text/html" } }));
+      await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      await navigator.serviceWorker.ready;
+    });
+    await expect.poll(() => page.evaluate(() => caches.keys())).not.toContain("girlz-culture-public-v3");
+    await page.goto(network.url("/business/signup?plan=starter"));
+    await page.goto(network.url("/business/signup"));
+    await expect(page.locator("main")).not.toContainText("Starter");
+    const onboardingKeys = await page.evaluate(async () => {
+      const cache = await caches.open("girlz-culture-public-v4");
+      const keys = await cache.keys();
+      for (const path of ["/business/signup", "/business/signup/hair", "/business/login", "/business/apply", "/salon/apply"]) {
+        await cache.put(path, new Response("Selected application plan Starter", { headers: { "content-type": "text/html" } }));
+      }
+      return keys.filter(key => new URL(key.url).pathname.startsWith("/business")).map(key => key.url);
+    });
+    expect(onboardingKeys).toEqual([]);
+    // Development deliberately unregisters workers during React mounting. Register
+    // after hydration so this test exercises the shipped worker in either mode.
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      await navigator.serviceWorker.ready;
+    });
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    await network.disconnect();
+    await expect(context.request.get(network.url("/robots.txt"), { timeout: 5_000 })).rejects.toThrow();
+    await page.goto(network.url("/uncached-public-offline-check"), { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Selected application plan");
-    await expect(page.goto("/business/signup", { waitUntil: "domcontentloaded" })).rejects.toThrow();
-  } finally { await context.setOffline(false); }
+    await expect(page.goto(network.url("/business/signup"), { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  } finally { await network.close(); }
 });
