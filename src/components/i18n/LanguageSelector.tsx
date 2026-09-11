@@ -12,10 +12,11 @@ export default function LanguageSelector({
   compact?: boolean;
   className?: string;
 }) {
-  const { locale, locales, setLocale, t } = useI18n();
+  const { locale, locales, setLocale, t, managedLocalization } = useI18n();
   const handleInput = (event: FormEvent<HTMLSelectElement>) => {
     setLocale(event.currentTarget.value as AppLocale);
   };
+  if (!managedLocalization) return null;
 
   return (
     <label
@@ -52,5 +53,5 @@ export function LocalizedText({
   values?: Record<string, string | number>;
 }) {
   const { t } = useI18n();
-  return <>{t(messageKey, fallback, values)}</>;
+  return <span>{t(messageKey, fallback, values)}</span>;
 }

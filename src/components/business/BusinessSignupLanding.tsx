@@ -4,6 +4,7 @@ import type { BusinessSignupContent, BusinessSignupImage } from "@/lib/businessS
 import BusinessPhoto from "./BusinessPhoto";
 import BusinessSignupMedia from "./BusinessSignupMedia";
 import BusinessTypeSelector from "./BusinessTypeSelector";
+import BusinessSignupSections from "./BusinessSignupSections";
 
 export const businessPhotoAsset = (image: BusinessSignupImage) => ({
   src: image.src, alt: image.alt, objectFit: image.fit, objectPosition: `${image.focalX}% ${image.focalY}%`,
@@ -13,7 +14,7 @@ export function BusinessSignupHeader({ content, homeHref = "/" }: { content: Bus
   const { logo, login } = content;
   return <header className="business-entry-header" data-logo-alignment={logo.alignment}>
     {logo.visible ? <Link href={homeHref} className="business-wordmark" data-logo-size={logo.size} aria-label={logo.mode === "image" ? logo.image.alt || logo.text : undefined}>
-      {logo.mode === "image" ? logo.image.src ? <BusinessPhoto photo={businessPhotoAsset(logo.image)} /> : null : logo.text}
+      {logo.mode === "image" ? <BusinessPhoto photo={businessPhotoAsset(logo.image)} fallbackText={logo.text || logo.image.alt || "Girlz Culture"} /> : logo.text}
     </Link> : <span />}
     {login.visible && login.href ? <div className="business-entry-login">{login.helperText ? <span>{login.helperText}</span> : null}<Link href={login.href}>{login.label}</Link></div> : null}
   </header>;
@@ -29,12 +30,17 @@ export default function BusinessSignupLanding({ content, plan }: { content: Busi
       {hero.visible ? <BusinessSignupMedia media={hero.media} /> : null}
       <BusinessSignupHeader content={content.header} />
       {hero.visible ? <div className="business-hero-copy">
-        <h1 id="business-hero-title" data-accent={hero.accent}>{split ? <>Grow Your <span>Beauty Business</span></> : hero.heading}</h1>
+        {/* Replace the heading host when its accent/text structure changes: a
+            browser translator may have detached its original text children. */}
+        <h1 key={`${hero.heading}:${hero.accent}`} id="business-hero-title" data-accent={hero.accent}>{split ? <>Grow Your <span>Beauty Business</span></> : hero.heading}</h1>
         {hero.supportingText ? <p>{hero.supportingText}</p> : null}
+        {(hero.textBlocks ?? []).filter(block => block.enabled && block.text).sort((a, b) => a.order - b.order).map(block => <p key={block.id} className="business-hero-additional-text" data-hero-text={block.id}>{block.text}</p>)}
       </div> : null}
     </section>
     <div className="business-lower">
+      <BusinessSignupSections sections={content.sections ?? []} placement="after_hero" />
       <BusinessTypeSelector content={content} plan={plan} />
+      <BusinessSignupSections sections={content.sections ?? []} placement="after_selector" />
       <section className="business-trust" aria-label="Built for your business">
         {content.trust.filter(block => block.visible).sort((a, b) => a.order - b.order).map(block => {
           const Icon = icons[block.icon];

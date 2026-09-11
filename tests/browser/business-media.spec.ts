@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "./helpers/hydration";
 
 const harness = "/internal/acceptance/business-media";
@@ -12,6 +14,7 @@ const missingImageSource = "/images/business/acceptance-missing-hero.avif";
 // the page before the preference changes and bypass that route with a real 404.
 // Isolate this encoded-image fixture; other media tests keep normal PWA behavior.
 const routedImageTest = test.extend({ serviceWorkers: "block" });
+const routedVideoTest = test.extend({ serviceWorkers: "block" });
 
 // Exercise the component's browser media lifecycle without shipping footage or
 // claiming real video decoding/playback. The src setter records assignments
@@ -200,4 +203,42 @@ test("missing local hero video returns 404 and preserves its loaded poster in th
   await expect(poster).toBeVisible();
   await expect.poll(() => poster.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
   expect(await video.evaluate((element: HTMLVideoElement) => element.controls)).toBe(false);
+});
+
+routedVideoTest("configured video retains contain framing and accessible media description through real playback and reduced motion", async ({ page }) => {
+  // Reuse the existing CC0 H.264 fixture. No media API methods/events are stubbed;
+  // block only the worker that would otherwise bypass this local network fixture.
+  const encoded = readFileSync(resolve("tests/fixtures/business-hero-flower.mp4"));
+  await page.route(`**${videoSource}`, route => route.fulfill({ contentType: "video/mp4", body: encoded }));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`${harness}?scenario=configured-video`);
+  const video = page.locator(".business-hero-video video");
+  const poster = page.getByRole("img", { name: "Configured business video description", exact: true });
+  await expect(poster).toBeVisible();
+  await expect(video).not.toHaveAttribute("src");
+  await expect(video).toHaveCSS("object-fit", "contain");
+  await expect(video).toHaveCSS("object-position", "25% 75%");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.getVideoPlaybackQuality().totalVideoFrames)).toBeGreaterThan(2);
+  await expect(video).toBeVisible();
+  await expect(video).toHaveCSS("object-fit", "contain");
+  await expect(poster).toHaveAttribute("alt", "Configured business video description");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(video).not.toHaveAttribute("src");
+  await expect(video).toBeHidden();
+  await expect(poster).toBeVisible();
+});
+
+test("optional module headings preserve heading order and long hero text wraps on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${harness}?scenario=content-boundaries`);
+  await expect(page.getByRole("heading", { name: "Independent feature heading", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Independent question heading", level: 2 })).toBeVisible();
+  const paragraph = page.locator('[data-hero-text="long-token"]');
+  await expect(paragraph).toHaveText("A".repeat(600));
+  const dimensions = await paragraph.evaluate(element => ({ width: element.clientWidth, scroll: element.scrollWidth, height: element.clientHeight, lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight) }));
+  expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width);
+  expect(dimensions.height).toBeGreaterThan(dimensions.lineHeight * 2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect((await new AxeBuilder({ page }).include("main").withRules(["heading-order"]).analyze()).violations).toEqual([]);
 });

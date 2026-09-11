@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import BusinessPhoto from "@/components/business/BusinessPhoto";
 import BusinessSignupMedia from "@/components/business/BusinessSignupMedia";
-import { DEFAULT_BUSINESS_SIGNUP_CONTENT } from "@/lib/businessSignupContent";
+import BusinessSignupLanding from "@/components/business/BusinessSignupLanding";
+import { DEFAULT_BUSINESS_SIGNUP_CONTENT, upgradeBusinessSignupContent } from "@/lib/businessSignupContent";
 import "@/app/business/business-onboarding.css";
 
 export default async function BusinessMediaAcceptancePage({ searchParams }: {
@@ -9,6 +10,29 @@ export default async function BusinessMediaAcceptancePage({ searchParams }: {
 }) {
   if (process.env.NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS !== "true") notFound();
   const scenario = (await searchParams).scenario;
+  if (scenario === "configured-video") {
+    return <main>
+      <h1>Configured business media acceptance</h1>
+      <section aria-label="Configured video framing and description" style={{ position: "relative", height: 260 }}>
+        <BusinessSignupMedia decorative={false} media={{
+          ...DEFAULT_BUSINESS_SIGNUP_CONTENT.hero.media,
+          type: "video", src: "/videos/business/business-signup-hero.mp4",
+          alt: "Configured business video description", fit: "contain", focalX: 25, focalY: 75,
+          poster: { ...DEFAULT_BUSINESS_SIGNUP_CONTENT.hero.media.poster, alt: "" },
+        }} />
+      </section>
+    </main>;
+  }
+  if (scenario === "content-boundaries") {
+    const content = upgradeBusinessSignupContent(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+    content.hero.textBlocks = [{ id: "long-token", text: "A".repeat(600), enabled: true, order: 0 }];
+    content.selector.visible = false;
+    content.sections = [
+      { id: "features-without-heading", type: "features", enabled: true, order: 0, placement: "after_hero", heading: "", subheading: "", body: "", variant: "grid", items: [{ id: "feature-one", icon: "heart", heading: "Independent feature heading", body: "Feature details" }] },
+      { id: "faq-without-heading", type: "faq", enabled: true, order: 1, placement: "after_hero", heading: "", subheading: "", body: "", variant: "list", items: [{ id: "question-one", question: "Independent question heading", answer: "A useful answer" }] },
+    ];
+    return <BusinessSignupLanding content={content} />;
+  }
   if (scenario === "image-failure" || scenario === "gif") {
     return <main>
       <h1>Business media acceptance</h1>

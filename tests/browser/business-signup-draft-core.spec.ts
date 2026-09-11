@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DEFAULT_BUSINESS_SIGNUP_CONTENT, type BusinessSignupContent } from "../../src/lib/businessSignupContent";
+import { DEFAULT_BUSINESS_SIGNUP_CONTENT, createBusinessSignupSection, upgradeBusinessSignupContent, type BusinessSignupContent } from "../../src/lib/businessSignupContent";
 import { mergeBusinessSignupDraft } from "../../src/lib/businessSignupDraftCore";
 
 function deferredUpload() {
@@ -98,4 +98,74 @@ test("verifying a saved snapshot retains an upload that finished during the save
   expect(current.hero.heading).toBe("Saved heading");
   expect(current.hero.media.src).toBe("/images/business/facial-service.avif");
   expect(persisted.hero.media.src).toBe(DEFAULT_BUSINESS_SIGNUP_CONTENT.hero.media.src);
+});
+
+test("a delayed module upload cannot restore a deleted module or replace a newly added one", () => {
+  const base = upgradeBusinessSignupContent(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+  base.sections = [createBusinessSignupSection("image_text", "section-original")];
+  const callback = structuredClone(base);
+  if (callback.sections[0].type !== "image_text") throw new Error("Fixture image missing");
+  callback.sections[0].image.src = "/images/business/completed-upload.jpg";
+  const current = structuredClone(base);
+  current.sections = [createBusinessSignupSection("text", "section-new")];
+  current.sections[0].body = "New content created after deleting the old image section.";
+  expect(mergeBusinessSignupDraft(base, callback, current)).toEqual(current);
+});
+
+test("a gallery upload follows stable IDs after reordering and preserves newer alt text", () => {
+  const base = upgradeBusinessSignupContent(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+  const gallery = createBusinessSignupSection("gallery", "section-gallery");
+  if (gallery.type !== "gallery") throw new Error("Fixture gallery missing");
+  gallery.items = ["first-image", "second-image"].map(id => ({ id, image: structuredClone(base.categories[0].image) }));
+  base.sections = [gallery];
+  const callback = structuredClone(base);
+  const changed = callback.sections[0];
+  if (changed.type !== "gallery") throw new Error("Fixture gallery missing");
+  changed.items[0].image.src = "/images/business/new-first-photo.jpg";
+  const current = structuredClone(base);
+  const reordered = current.sections[0];
+  if (reordered.type !== "gallery") throw new Error("Fixture gallery missing");
+  reordered.items.reverse();
+  reordered.items[1].image.alt = "New accessible description";
+  const result = mergeBusinessSignupDraft(base, callback, current).sections?.[0];
+  if (result?.type !== "gallery") throw new Error("Merged gallery missing");
+  expect(result.items.map(item => item.id)).toEqual(["second-image", "first-image"]);
+  expect(result.items[1].image).toMatchObject({ src: "/images/business/new-first-photo.jpg", alt: "New accessible description" });
+  expect(result.items[0].image.src).toBe(base.categories[0].image.src);
+});
+
+test("module uploads retain concurrent additions and do not revive a removed optional quote image", () => {
+  const base = upgradeBusinessSignupContent(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+  const quote = createBusinessSignupSection("quote", "section-quote");
+  if (quote.type !== "quote") throw new Error("Fixture quote missing");
+  quote.image = structuredClone(base.categories[0].image);
+  base.sections = [quote];
+  const callback = structuredClone(base);
+  const uploaded = callback.sections[0];
+  if (uploaded.type !== "quote" || !uploaded.image) throw new Error("Fixture image missing");
+  uploaded.image.src = "/images/business/late-upload.jpg";
+  const current = structuredClone(base);
+  const removed = current.sections[0];
+  if (removed.type !== "quote") throw new Error("Fixture quote missing");
+  delete removed.image;
+  removed.body = "A newer quotation.";
+  current.sections.push(createBusinessSignupSection("faq", "section-faq"));
+  expect(mergeBusinessSignupDraft(base, callback, current)).toEqual(current);
+});
+
+test("a pre-upgrade version 1 callback preserves version 2 modules and hero text created meanwhile", () => {
+  const base = structuredClone(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+  const callback = structuredClone(base);
+  callback.categories[1].image.src = "/images/business/new-nails.jpg";
+  const current = upgradeBusinessSignupContent(base);
+  current.hero.textBlocks = [{ id: "new-line", text: "New introduction", enabled: true, order: 0 }];
+  current.selector.visible = false;
+  current.sections = [createBusinessSignupSection("text", "new-section")];
+  current.sections[0].body = "Added after the image upload began.";
+  const result = mergeBusinessSignupDraft(base, callback, current);
+  expect(result.version).toBe(2);
+  expect(result.sections).toEqual(current.sections);
+  expect(result.hero.textBlocks).toEqual(current.hero.textBlocks);
+  expect(result.selector.visible).toBe(false);
+  expect(result.categories[1].image.src).toBe("/images/business/new-nails.jpg");
 });

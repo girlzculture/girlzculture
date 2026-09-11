@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { responsiveMediaSources } from "@/lib/responsiveMedia";
 import type { BusinessPhotoAsset } from "@/lib/businessSignupMedia";
 
-export default function BusinessPhoto({ photo, priority = false, fallbackSrc }: { photo: BusinessPhotoAsset; priority?: boolean; fallbackSrc?: string }) {
+export default function BusinessPhoto({ photo, priority = false, fallbackSrc, fallbackText }: { photo: BusinessPhotoAsset; priority?: boolean; fallbackSrc?: string; fallbackText?: string }) {
   const image = useRef<HTMLImageElement>(null);
   const [failed, setFailed] = useState("");
   const useFallback = failed === photo.src;
@@ -15,6 +15,9 @@ export default function BusinessPhoto({ photo, priority = false, fallbackSrc }: 
     // Eager SSR media may fail before React attaches its error listener.
     if (image.current?.complete && image.current.naturalWidth === 0) setFailed(photo.src);
   }, [photo.src]);
+  if (fallbackText && (!photo.src || (useFallback && !fallbackSrc))) {
+    return <span className="business-logo-fallback">{fallbackText}</span>;
+  }
   return <span className="business-photo" style={{ position: "relative", display: "block", width: "100%", aspectRatio: photo.aspectRatio, height: photo.aspectRatio ? "auto" : undefined }}>
     {src ? <picture>
       {mobile ? <source media="(max-width: 767px)" srcSet={mobile} /> : null}

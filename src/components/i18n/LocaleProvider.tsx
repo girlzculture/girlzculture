@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   BUNDLED_MESSAGES,
   ENGLISH_MESSAGES,
@@ -19,9 +20,12 @@ import {
 import { resolveSourceTranslation } from "@/lib/localizationCore";
 import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
+import type { DashboardSurface } from "@/lib/hostRouting";
+import { usesManagedLocalization } from "@/lib/publicTranslation";
 
 type I18nContextValue = {
   locale: AppLocale;
+  managedLocalization: boolean;
   locales: LocaleOption[];
   coverage: { published: number; total: number; incomplete: boolean };
   direction: "ltr" | "rtl";
@@ -41,6 +45,7 @@ type I18nContextValue = {
   plural: (count: number, forms: { one: string; other: string }) => string;
 };
 const Context = createContext<I18nContextValue | null>(null);
+const EMPTY_MESSAGES: Record<string, string> = {};
 const FALLBACK_LOCALES: LocaleOption[] = [
   {
     locale: "en",
@@ -93,17 +98,23 @@ function scopeForPath(): AuthScope {
 export default function LocaleProvider({
   children,
   initialLocale = "en",
+  dashboardSurface = "public",
 }: {
   children: React.ReactNode;
   initialLocale?: string;
+  dashboardSurface?: DashboardSurface;
 }) {
-  const [locale, setLocaleState] = useState<AppLocale>(() =>
+  const pathname = usePathname();
+  const managedLocalization = usesManagedLocalization(pathname || "/", dashboardSurface);
+  const [preferredLocale, setLocaleState] = useState<AppLocale>(() =>
     normalizeLocale(initialLocale),
   );
-  const [remote, setRemote] = useState<Record<string, string>>({});
-  const [sourceMessages, setSourceMessages] = useState<Record<string, string>>(
-    {},
-  );
+  // Public copy is authored in English. Saved internal preferences must not
+  // mislabel it or compete with browser translation on the public document.
+  const locale = managedLocalization ? preferredLocale : "en";
+  const [translations, setTranslations] = useState<{ locale: string; messages: Record<string, string>; sources: Record<string, string> }>({ locale: "", messages: {}, sources: {} });
+  const remote = translations.locale === locale ? translations.messages : EMPTY_MESSAGES;
+  const sourceMessages = translations.locale === locale ? translations.sources : EMPTY_MESSAGES;
   const [locales, setLocales] = useState<LocaleOption[]>(FALLBACK_LOCALES);
   const [coverage, setCoverage] = useState({ published: 0, total: 0, incomplete: false });
   const persistAccountLocale = useCallback(async (safe: string) => {
@@ -125,6 +136,7 @@ export default function LocaleProvider({
   }, []);
   const setLocale = useCallback(
     (next: AppLocale) => {
+      if (!managedLocalization) return;
       const safe = normalizeLocale(next);
       if (!locales.some((item) => item.locale === safe)) return;
       setLocaleState(safe);
@@ -139,21 +151,24 @@ export default function LocaleProvider({
       document.cookie = `gc_locale=${safe}; Path=/; Max-Age=31536000; SameSite=Lax`;
       void persistAccountLocale(safe);
     },
-    [locales, persistAccountLocale],
+    [locales, persistAccountLocale, managedLocalization],
   );
   useEffect(() => {
+    if (!managedLocalization) return;
     let saved = "";
     try {
       saved = localStorage.getItem("girlz-culture-locale") || "";
     } catch {}
-    if (!saved || normalizeLocale(saved) === locale) return;
+    if (!saved || normalizeLocale(saved) === preferredLocale) return;
     const timer = window.setTimeout(
       () => setLocaleState(normalizeLocale(saved)),
       0,
     );
     return () => window.clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [managedLocalization]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (!managedLocalization) return;
+    let cancelled = false;
     const timer = window.setTimeout(async () => {
       let saved = "";
       try {
@@ -166,31 +181,30 @@ export default function LocaleProvider({
         const accountLocale = normalizeLocale(
           data.session?.user.user_metadata?.locale,
         );
-        if (data.session?.user.user_metadata?.locale)
+        if (!cancelled && data.session?.user.user_metadata?.locale)
           setLocaleState(accountLocale);
       } catch {}
     }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [managedLocalization]);
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = localeDirection(locale);
+    // Update this on route changes as the root layout persists during client
+    // navigation. Do not observe or rewrite translated public text nodes.
+    if (managedLocalization) document.body.removeAttribute("translate");
+    else document.body.setAttribute("translate", "yes");
     const controller = new AbortController();
     void fetch(`/api/i18n?locale=${encodeURIComponent(locale)}`, {
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
-        setRemote(
-          body?.messages && typeof body.messages === "object"
-            ? body.messages
-            : {},
-        );
-        setSourceMessages(
-          body?.sourceMessages && typeof body.sourceMessages === "object"
-            ? body.sourceMessages
-            : {},
-        );
+        if (controller.signal.aborted) return;
+        setTranslations({ locale,
+          messages: body?.messages && typeof body.messages === "object" ? body.messages : {},
+          sources: body?.sourceMessages && typeof body.sourceMessages === "object" ? body.sourceMessages : {},
+        });
         if (Array.isArray(body?.locales) && body.locales.length) {
           setLocales(body.locales);
           document.documentElement.dir =
@@ -204,12 +218,12 @@ export default function LocaleProvider({
         });
       })
       .catch(() => {
-        setRemote({});
-        setSourceMessages({});
+        if (controller.signal.aborted) return;
+        setTranslations({ locale, messages: {}, sources: {} });
         setCoverage({ published: 0, total: 0, incomplete: locale !== "en" });
       });
     return () => controller.abort();
-  }, [locale]);
+  }, [locale, managedLocalization]);
   const t = useCallback(
     (
       key: string,
@@ -245,6 +259,7 @@ export default function LocaleProvider({
   const value = useMemo<I18nContextValue>(
     () => ({
       locale,
+      managedLocalization,
       locales,
       coverage,
       direction,
@@ -267,7 +282,7 @@ export default function LocaleProvider({
           ? forms.one
           : forms.other,
     }),
-    [locale, locales, coverage, direction, setLocale, t, translateSource],
+    [locale, managedLocalization, locales, coverage, direction, setLocale, t, translateSource],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

@@ -27,8 +27,7 @@ export default function ExpandableSalonDescription({
   return (
     <div className="mt-4 max-w-[760px]">
       <p className="text-sm leading-6 text-ink/80">
-        {visible.join(" ")}
-        {!expanded && hasMore ? "…" : ""}
+        {`${visible.join(" ")}${!expanded && hasMore ? "…" : ""}`}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         {hasMore ? (

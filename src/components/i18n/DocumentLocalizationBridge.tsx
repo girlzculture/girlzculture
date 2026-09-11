@@ -8,13 +8,16 @@ const ATTRIBUTES = ["placeholder", "aria-label", "title"] as const;
 type TranslationState = { original: string; rendered: string };
 
 export default function DocumentLocalizationBridge() {
-  const { locale, translateSource } = useI18n();
+  const { locale, translateSource, managedLocalization } = useI18n();
   const textStates = useRef(new WeakMap<Text, TranslationState>());
   const attributeStates = useRef(
     new WeakMap<Element, Map<string, TranslationState>>(),
   );
 
   useEffect(() => {
+    // Internal first-party localization remains available. Public documents
+    // belong to the browser translator; never scan or overwrite its mutations.
+    if (!managedLocalization) return;
     let frame = 0;
 
     function excluded(element: Element | null) {
@@ -108,7 +111,7 @@ export default function DocumentLocalizationBridge() {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [locale, translateSource]);
+  }, [locale, translateSource, managedLocalization]);
 
   return null;
 }

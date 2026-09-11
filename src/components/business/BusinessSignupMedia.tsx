@@ -5,7 +5,7 @@ import { type BusinessSignupVideo } from "@/lib/businessSignupMedia";
 import { DEFAULT_BUSINESS_SIGNUP_CONTENT, type BusinessSignupContent, type BusinessSignupImage } from "@/lib/businessSignupContent";
 import BusinessPhoto from "./BusinessPhoto";
 
-function HeroVideo({ source }: { source: BusinessSignupVideo }) {
+function HeroVideo({ source }: { source: BusinessSignupVideo & { objectFit?: BusinessSignupImage["fit"] } }) {
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const element = video.current;
@@ -43,7 +43,7 @@ function HeroVideo({ source }: { source: BusinessSignupVideo }) {
 
   return <div className="business-hero-video">
     <BusinessPhoto photo={source.poster} priority />
-    <video ref={video} autoPlay muted loop playsInline controls={false} disablePictureInPicture tabIndex={-1} poster={source.poster.src} preload="none" aria-hidden="true" style={{ objectPosition: source.objectPosition ?? "50% 50%" }} />
+    <video ref={video} autoPlay muted loop playsInline controls={false} disablePictureInPicture tabIndex={-1} poster={source.poster.src} preload="none" aria-hidden="true" style={{ objectFit: source.objectFit ?? "cover", objectPosition: source.objectPosition ?? "50% 50%" }} />
   </div>;
 }
 
@@ -55,11 +55,12 @@ const subscribeMotion = (callback: () => void) => {
   return () => query.removeEventListener("change", callback);
 };
 
-export default function BusinessSignupMedia({ media = DEFAULT_BUSINESS_SIGNUP_CONTENT.hero.media, video }: { media?: BusinessSignupContent["hero"]["media"]; video?: BusinessSignupVideo }) {
+export default function BusinessSignupMedia({ media = DEFAULT_BUSINESS_SIGNUP_CONTENT.hero.media, video, className = "business-hero-media", decorative }: { media?: BusinessSignupContent["hero"]["media"]; video?: BusinessSignupVideo; className?: string; decorative?: boolean }) {
   const reducedMotion = useSyncExternalStore(subscribeMotion, () => window.matchMedia(motionQuery).matches, () => true);
-  const source = video || (media.type === "video" && media.src ? { src: media.src, poster: photo(media.poster), objectPosition: `${media.focalX}% ${media.focalY}%` } : undefined);
-  const still = media.type === "gif" && reducedMotion ? media.poster : media;
-  return <div className="business-hero-media" aria-hidden="true">
+  const poster = { ...media.poster, alt: media.poster.alt || media.alt };
+  const source = video || (media.type === "video" && media.src ? { src: media.src, poster: photo(poster), objectFit: media.fit, objectPosition: `${media.focalX}% ${media.focalY}%` } : undefined);
+  const still = media.type === "gif" && reducedMotion ? poster : media;
+  return <div className={className} aria-hidden={(decorative ?? !media.alt.trim()) ? true : undefined}>
     {source ? <HeroVideo key={source.src} source={source} /> : media.type !== "none" && still.src ? <BusinessPhoto key={still.src} photo={photo(still)} fallbackSrc={media.poster.src} priority /> : null}
   </div>;
 }

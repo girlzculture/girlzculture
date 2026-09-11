@@ -249,10 +249,10 @@ test("responsive menus keep every control inside a scrollable viewport panel", a
     expect(menuAudit.bottom).toBeLessThanOrEqual(menuAudit.viewportHeight + 1);
     expect(["auto", "scroll"]).toContain(menuAudit.overflowY);
 
-    await expect(menu.getByLabel("Select language")).toBeAttached();
+    await expect(menu.getByLabel("Select language")).toHaveCount(0);
     for (const name of [
       "Browse Styles",
-      "Find Salons",
+      "Businesses",
       "How It Works",
       "About Us",
       "Blog",
