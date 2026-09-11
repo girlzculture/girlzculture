@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "file": "girlz-culture-favicon-source.e126237f476a8d5e.png",
+    "sha256": "e126237f476a8d5e82b495db754961c090bbfb57c1ed692bd42ae301d5f6d4bd",
+    "width": 1254,
+    "height": 1254,
+    "origin": "User-supplied ChatGPT Image Sep 11, 2026, 05_55_27 PM.png",
+    "preservedOriginalBytes": true
+  },
+  "conversion": {
+    "operation": "Full-image Lanczos3 downsample; lossless PNG RGBA frames in ICO; no crop, redraw or recolor",
+    "sharp": "0.35.4",
+    "libvips": "8.18.6",
+    "png": "1.6.58",
+    "compressionLevel": 9,
+    "adaptiveFiltering": false,
+    "palette": false
+  },
+  "output": {
+    "file": "girlz-culture-favicon.4ebd6933f8981c9a.ico",
+    "sha256": "4ebd6933f8981c9add98a678c3412bd08eb4ba64af038f6be1342818f7d33553",
+    "bytes": 58513,
+    "frames": [
+      {
+        "width": 16,
+        "height": 16,
+        "pngSha256": "60016f8b946ff479090f820723beb4292fdaa28e934b8a16a429e5ebeee31065",
+        "bytes": 761
+      },
+      {
+        "width": 32,
+        "height": 32,
+        "pngSha256": "6f0732be7fa31ecea9b66861428a33e07711824cfd8545fd5da17489d60c3e41",
+        "bytes": 1925
+      },
+      {
+        "width": 48,
+        "height": 48,
+        "pngSha256": "12ec856111433e26aa784614a1d2d1320d46cd9e625ff0b8dbf76cd7faeba307",
+        "bytes": 3314
+      },
+      {
+        "width": 64,
+        "height": 64,
+        "pngSha256": "ed3551dad41079867b54e167f7097913f901f48202830d0cb0023c2df509795c",
+        "bytes": 4917
+      },
+      {
+        "width": 256,
+        "height": 256,
+        "pngSha256": "89f988845418f7d6e4519a2d057fdfa61e5a3e02332c9de13a2f1ea60549f95f",
+        "bytes": 47510
+      }
+    ]
+  },
+  "reproduce": "node scripts/generate-favicon.mjs",
+  "verify": "node scripts/generate-favicon.mjs --check"
+}

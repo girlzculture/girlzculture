@@ -32,6 +32,8 @@ const tabletLandscapeChecks =
 
 export default defineConfig({
   testDir: "./tests/browser",
+  // Global Engine branding has its own isolated provider and sequential runner.
+  testIgnore: /brand-favicon\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: true,

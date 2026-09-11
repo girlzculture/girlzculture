@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Local acceptance favicon observer",
+  "version": "1.0.0",
+  "description": "Reads browser-owned favicon state only for disposable loopback acceptance tabs.",
+  "permissions": ["favicon"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": { "service_worker": "observer.js" },
+  "incognito": "spanning"
+}
