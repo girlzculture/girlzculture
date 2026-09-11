@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { BusinessSignupContentValidationError, type BusinessSignupContent } from "./businessSignupContent";
+import { BusinessSignupContentValidationError, type BusinessSignupContent, type BusinessSignupMedia } from "./businessSignupContent";
 
 type MediaKind = "still" | "gif" | "video";
 type MediaField = { path: string; src: string; role: "hero" | "poster" | "image" };
@@ -63,18 +63,29 @@ function registeredKind(asset: RegisteredMedia, path: string): MediaKind {
 /** Call after content/auth validation, only when publishing or scheduling this page. */
 export async function validateBusinessSignupMediaForPublication(admin: SupabaseClient, content: BusinessSignupContent): Promise<void> {
   const { hero } = content;
-  const media = hero.media;
-  const heroActive = hero.visible && media.type !== "none" && Boolean(media.src);
   const fields: MediaField[] = [];
-  if (heroActive) {
-    fields.push({ path: "hero.media.src", src: media.src, role: "hero" });
-    if (media.poster.src) fields.push({ path: "hero.media.poster.src", src: media.poster.src, role: "poster" });
+  const activeMedia: { path: string; media: BusinessSignupMedia }[] = [];
+  function addMedia(media: BusinessSignupMedia, path: string) {
+    if (media.type === "none" || !media.src) return;
+    activeMedia.push({ path, media });
+    fields.push({ path: `${path}.src`, src: media.src, role: "hero" });
+    if (media.poster.src) fields.push({ path: `${path}.poster.src`, src: media.poster.src, role: "poster" });
   }
+  function addImage(src: string | undefined, path: string) {
+    if (src) fields.push({ path, src, role: "image" });
+  }
+  if (hero.visible) addMedia(hero.media, "hero.media");
   const logo = content.header.logo;
   if (logo.visible && logo.mode === "image" && logo.image.src) fields.push({ path: "header.logo.image.src", src: logo.image.src, role: "image" });
   for (const category of content.categories.filter(category => category.visible)) {
     if (category.image.src) fields.push({ path: `categories.${category.id}.image.src`, src: category.image.src, role: "image" });
     if (category.mode === "waitlist" && category.waitlist?.image?.src) fields.push({ path: `categories.${category.id}.waitlist.image.src`, src: category.waitlist.image.src, role: "image" });
+  }
+  for (const section of (content.sections ?? []).filter(section => section.enabled)) {
+    const path = `sections.${section.id}`;
+    if (section.type === "image_text" || section.type === "quote") addImage(section.image?.src, `${path}.image.src`);
+    if (section.type === "gallery") for (const item of section.items) addImage(item.image.src, `${path}.items.${item.id}.image.src`);
+    if (section.type === "media") addMedia(section.media, `${path}.media`);
   }
   const uploadedUrls = [...new Set(fields.filter(field => !field.src.startsWith("/")).map(field => canonicalUrl(field.src).href))];
   const registered = new Map<string, RegisteredMedia>();
@@ -99,12 +110,13 @@ export async function validateBusinessSignupMediaForPublication(admin: SupabaseC
     }
     if (field.role === "image" && kinds.get(field.path) === "video") invalid(field.path, "This field displays an image. Choose a still image or GIF, not a video.");
   }
-  if (!heroActive) return;
-  const sourceKind = kinds.get("hero.media.src");
-  if (media.type === "image" && sourceKind === "gif") invalid("hero.media.type", "This upload is a GIF. Choose GIF and provide a still poster so reduced motion is respected.");
-  if (media.type === "image" && sourceKind !== "still") invalid("hero.media.src", "Image mode requires a still JPG, PNG, or AVIF image.");
-  if (media.type === "gif" && sourceKind !== "gif") invalid("hero.media.src", "GIF mode requires a verified GIF image. Choose Image for a still photo.");
-  if (media.type === "video" && sourceKind !== "video") invalid("hero.media.src", "Video mode requires a verified MP4 video.");
-  if (media.poster.src && kinds.get("hero.media.poster.src") !== "still") invalid("hero.media.poster.src", "Use a still JPG, PNG, or AVIF poster. Animated GIFs and videos cannot be reduced-motion fallbacks.");
-  if ((media.type === "gif" || media.type === "video") && !media.poster.src) invalid("hero.media.poster.src", "Choose a still poster before publishing animated hero media.");
+  for (const { path, media } of activeMedia) {
+    const sourceKind = kinds.get(`${path}.src`);
+    if (media.type === "image" && sourceKind === "gif") invalid(`${path}.type`, "This upload is a GIF. Choose GIF and provide a still poster so reduced motion is respected.");
+    if (media.type === "image" && sourceKind !== "still") invalid(`${path}.src`, "Image mode requires a still JPG, PNG, or AVIF image.");
+    if (media.type === "gif" && sourceKind !== "gif") invalid(`${path}.src`, "GIF mode requires a verified GIF image. Choose Image for a still photo.");
+    if (media.type === "video" && sourceKind !== "video") invalid(`${path}.src`, "Video mode requires a verified MP4 video.");
+    if (media.poster.src && kinds.get(`${path}.poster.src`) !== "still") invalid(`${path}.poster.src`, "Use a still JPG, PNG, or AVIF poster. Animated GIFs and videos cannot be reduced-motion fallbacks.");
+    if ((media.type === "gif" || media.type === "video") && !media.poster.src) invalid(`${path}.poster.src`, "Choose a still poster before publishing animated media.");
+  }
 }

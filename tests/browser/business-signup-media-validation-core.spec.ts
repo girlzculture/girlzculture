@@ -241,3 +241,59 @@ test("existing local SVG and WebP remain valid ordinary images without certifyin
   content.hero.media.poster.src = "/images/logo.svg";
   await expect(helper.validate(content)).rejects.toThrow("Choose a supported local");
 });
+
+test("all enabled module image slots share the trusted registry check and reject videos", async () => {
+  for (const type of ["image_text", "quote", "gallery"] as const) {
+    const content = contentCore.upgradeBusinessSignupContent(defaults());
+    content.hero.visible = false;
+    const section = contentCore.createBusinessSignupSection(type, "section-image");
+    const image = { ...content.categories[0].image, src: source };
+    if (section.type === "image_text" || section.type === "quote") section.image = image;
+    if (section.type === "gallery") section.items = [{ id: "gallery-photo", image }];
+    content.sections = [section];
+    await expect(isolatedValidation([asset(source, "video/mp4")]).validate(content)).rejects.toThrow("This field displays an image");
+    await expect(isolatedValidation().validate(content)).rejects.toThrow("no verified upload record");
+    const helper = isolatedValidation([asset(source, "image/png")]);
+    await helper.validate(content);
+    expect(helper.queriedUrls).toEqual([[source]]);
+    section.enabled = false;
+    const disabled = isolatedValidation();
+    await disabled.validate(content);
+    expect(disabled.queriedUrls).toEqual([]);
+  }
+});
+
+test("module animation uses the exact hero MIME and still-poster publication boundary", async () => {
+  const content = contentCore.upgradeBusinessSignupContent(defaults());
+  content.hero.visible = false;
+  const section = contentCore.createBusinessSignupSection("media", "section-media");
+  if (section.type !== "media") throw new Error("Fixture media missing");
+  content.sections = [section];
+  section.media = { ...content.hero.media, type: "image", src: source, poster: { ...content.hero.media.poster, src: poster } };
+  await expect(isolatedValidation([asset(source, "image/gif"), asset(poster, "image/png")]).validate(content)).rejects.toThrow("sections.section-media.media.type");
+  for (const [type, mime] of [["gif", "image/gif"], ["video", "video/mp4"]] as const) {
+    section.media.type = type;
+    const helper = isolatedValidation([asset(source, mime), asset(poster, "image/png")]);
+    await helper.validate(content);
+    expect(helper.queriedUrls).toEqual([[source, poster]]);
+    await expect(isolatedValidation([asset(source, mime), asset(poster, "image/gif")]).validate(content)).rejects.toThrow("sections.section-media.media.poster.src");
+  }
+  section.enabled = false;
+  await expect(isolatedValidation().validate(content)).resolves.toBeUndefined();
+});
+
+test("hero and multiple module references are verified in one deduplicated registry lookup", async () => {
+  const content = contentCore.upgradeBusinessSignupContent(defaults());
+  content.hero.media.src = source;
+  content.hero.media.poster.src = poster;
+  const section = contentCore.createBusinessSignupSection("gallery", "section-gallery");
+  if (section.type !== "gallery") throw new Error("Fixture gallery missing");
+  section.items = [
+    { id: "first-image", image: { ...content.categories[0].image, src: source } },
+    { id: "second-image", image: { ...content.categories[0].image, src: `${poster}?cache=latest` } },
+  ];
+  content.sections = [section];
+  const helper = isolatedValidation([asset(source, "image/png"), asset(poster, "image/jpeg")]);
+  await helper.validate(content);
+  expect(helper.queriedUrls).toEqual([[source, poster]]);
+});

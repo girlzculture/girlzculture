@@ -3,6 +3,7 @@ import { businessSignupCategoryHref, visibleBusinessCategories, type BusinessSig
 import BusinessPhoto from "./BusinessPhoto";
 
 export default function BusinessTypeSelector({ content, plan }: { content: BusinessSignupContent; plan?: unknown }) {
+  if (content.selector.visible === false) return null;
   return <section className="business-type-selector" aria-labelledby="business-selector-title">
       <h2 id="business-selector-title" className="business-selector-title">{content.selector.heading}</h2>
       {content.selector.supportingText ? <p className="business-selector-description">{content.selector.supportingText}</p> : null}

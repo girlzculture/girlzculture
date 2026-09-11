@@ -4,7 +4,7 @@ import PwaRegistration from "@/components/PwaRegistration";
 import InlineFormValidation from "@/components/InlineFormValidation";
 import CustomerLocationProvider from "@/components/location/CustomerLocationProvider";
 import LocaleProvider from "@/components/i18n/LocaleProvider";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { localeDirection, normalizeLocale } from "@/i18n/catalog";
 import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
@@ -13,6 +13,7 @@ import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
 import PublicContentLiveRefresh from "@/components/PublicContentLiveRefresh";
 import OwnerDashboardResponsiveBridge from "@/components/owner/OwnerDashboardResponsiveBridge";
+import { DASHBOARD_SURFACE_HEADER, RENDER_PATH_HEADER, dashboardSurfaceFromHeader, usesManagedLocalization } from "@/lib/publicTranslation";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
@@ -71,7 +72,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = normalizeLocale((await cookies()).get("gc_locale")?.value);
+  const preferredLocale = normalizeLocale((await cookies()).get("gc_locale")?.value);
+  const requestHeaders = await headers();
+  const dashboardSurface = dashboardSurfaceFromHeader(requestHeaders.get(DASHBOARD_SURFACE_HEADER));
+  const managedLocalization = usesManagedLocalization(requestHeaders.get(RENDER_PATH_HEADER) || "/", dashboardSurface);
+  const locale = managedLocalization ? preferredLocale : "en";
   const brand = await getEngineBrandTheme();
   const headingFont = `"${brand.headingFont}", Georgia, "Times New Roman", serif`;
   const bodyFont = `"${brand.bodyFont}", Arial, Helvetica, sans-serif`;
@@ -108,8 +113,8 @@ export default async function RootLayout({
         } as CSSProperties
       }
     >
-      <body className="min-h-full flex flex-col">
-        <LocaleProvider initialLocale={locale}>
+      <body className="min-h-full flex flex-col" translate={managedLocalization ? undefined : "yes"}>
+        <LocaleProvider initialLocale={preferredLocale} dashboardSurface={dashboardSurface}>
           <CustomerLocationProvider>
             {children}
             <PublicContentLiveRefresh />

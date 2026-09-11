@@ -19,6 +19,8 @@ const acceptanceEnvironment = {
 const publicResponsiveSpec = /public-responsive\.spec\.ts/;
 const crossBrowserSmoke =
   /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly/;
+const crossBrowserHubAndTranslation =
+  /(?:Businesses keeps salon discovery, Browse Styles and browser history connected|translated salon description expands and collapses after its original text nodes are removed)$/;
 const portraitMobileChecks =
   /homepage shell has no overflow|homepage removes the intro|mobile promotion swipe|primary mobile controls|mobile public navigation/;
 const narrowPhoneChecks =
@@ -68,14 +70,14 @@ export default defineConfig({
     },
     {
       name: "firefox",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/],
-      grep: crossBrowserSmoke,
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /businesses\.spec\.ts/, /public-translation\.spec\.ts/],
+      grep: [crossBrowserSmoke, crossBrowserHubAndTranslation],
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/],
-      grep: crossBrowserSmoke,
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /businesses\.spec\.ts/, /public-translation\.spec\.ts/],
+      grep: [crossBrowserSmoke, crossBrowserHubAndTranslation],
       use: { ...devices["Desktop Safari"] },
     },
     {

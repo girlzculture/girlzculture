@@ -20,10 +20,9 @@ import {
   getVisibleLegalLinks,
   type NavigationItem,
 } from "@/lib/content";
-import LanguageSelector, {
-  LocalizedText,
-} from "@/components/i18n/LanguageSelector";
+import { LocalizedText } from "@/components/i18n/LanguageSelector";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
+import { publicDiscoveryNavigation } from "@/lib/publicDiscoveryNavigation";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
@@ -83,9 +82,9 @@ const defaultHeader: NavigationItem[] = [
     surface: "header",
     group_key: "main",
     item_key: "salons",
-    label: "Find Salons",
-    translation_key: "nav.salons",
-    href: "/salons",
+    label: "Businesses",
+    translation_key: "nav.businesses",
+    href: "/businesses",
     sort_order: 20,
   },
   {
@@ -146,7 +145,7 @@ const defaultMobileMenu: NavigationItem[] = [
 export async function PublicHeader({
   active,
 }: {
-  active?: "styles" | "salons" | "how" | "about" | "blog";
+  active?: "styles" | "salons" | "businesses" | "how" | "about" | "blog";
 }) {
   const [headerItems, mobileItems] = await Promise.all([
     getNavigationItems("header", defaultHeader),
@@ -156,12 +155,13 @@ export async function PublicHeader({
     <header
       role="banner"
       data-public-header
-      data-language-selector-host
+      translate="yes"
+      data-public-translation="true"
       className="gc-brand-header relative z-[90] border-b border-plum/[0.08] backdrop-blur-xl"
     >
       <div data-public-header-layout className="mx-auto flex h-16 w-full max-w-[1760px] items-center gap-2 px-3 sm:px-6 lg:px-10 xl:px-12 2xl:px-10 min-[1700px]:px-16">
         <div data-public-header-zone="brand" className="flex min-w-0 shrink-0 items-center gap-1">
-          <MobilePublicMenu links={mobileItems} />
+          <MobilePublicMenu links={publicDiscoveryNavigation(mobileItems)} />
           <Wordmark compact />
         </div>
 
@@ -170,12 +170,12 @@ export async function PublicHeader({
           data-public-header-zone="navigation"
           className="hidden min-w-0 flex-1 items-center justify-center gap-5 whitespace-nowrap text-[13px] font-semibold text-ink 2xl:flex min-[1700px]:gap-8"
         >
-          {headerItems.map((item) => (
+          {publicDiscoveryNavigation(headerItems).map((item) => (
             <Link
               key={item.item_key}
               href={item.href}
               className={`inline-flex items-center gap-2 border-b-2 py-5 transition-colors hover:text-magenta ${
-                active === item.item_key
+                active === item.item_key || (active === "businesses" && item.href === "/businesses")
                   ? "border-magenta text-magenta"
                   : "border-transparent"
               }`}
@@ -196,9 +196,6 @@ export async function PublicHeader({
         </nav>
 
         <div data-public-header-zone="actions" className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
-          <div className="hidden 2xl:block">
-            <LanguageSelector compact />
-          </div>
           <HeaderStyleSearch />
           <Link
             href="/account?tab=favorites"
@@ -244,9 +241,9 @@ export async function CustomerBottomNav({
       surface: "mobile_bottom",
       group_key: "main",
       item_key: "search",
-      label: "Search",
-      translation_key: "nav.search",
-      href: "/salons",
+      label: "Businesses",
+      translation_key: "nav.businesses",
+      href: "/businesses",
       sort_order: 20,
     },
     {
@@ -285,7 +282,7 @@ export async function CustomerBottomNav({
     profile: UserRound,
   };
   const records = await getNavigationItems("mobile_bottom", fallback);
-  const items = records.slice(0, 5).map((item) => ({
+  const items = publicDiscoveryNavigation(records).slice(0, 5).map((item) => ({
     ...item,
     id: item.item_key as ActiveTab,
     key: item.translation_key || `navigation.${item.item_key}`,
@@ -300,6 +297,8 @@ export async function CustomerBottomNav({
       />
       <nav
         aria-label="Customer navigation"
+        translate="yes"
+        data-public-translation="true"
         className="gc-customer-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-5">
@@ -525,7 +524,7 @@ export async function PublicFooter({
   // item in an otherwise successful read means the founder disabled it.
   const mobileLegalItem = footerItems.find((item) => item.item_key === "legal-policies");
   return (
-    <footer className="gc-brand-footer overflow-x-clip text-white">
+    <footer translate="yes" data-public-translation="true" className="gc-brand-footer overflow-x-clip text-white">
       <div className="mx-auto hidden w-full max-w-[1760px] grid-cols-2 gap-8 px-5 py-9 sm:px-8 md:grid lg:px-10 xl:grid-cols-[1.05fr_.65fr_.65fr_.7fr_1.55fr_1.2fr] xl:px-12 2xl:px-16">
         <div className="min-w-0">
           {footerLogo?.published_url ? (
