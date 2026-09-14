@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 22519)
+Total output lines: 683
+
 /* eslint-disable @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 "use client";
 
@@ -26,6 +29,7 @@ import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
 import AdminSubscriptionsDashboard from "@/components/admin/AdminSubscriptionsDashboard";
 import ActionToast from "@/components/ActionToast";
 import AdminRecordWorkspace from "@/components/admin/AdminRecordWorkspace";
+import AdminMarketplacePreviewButton from "@/components/admin/AdminMarketplacePreviewButton";
 import { displayStoredPlan, PLAN_ORDER } from "@/lib/plans";
 import {
   rememberAdminListScroll,
@@ -265,7 +269,7 @@ function AdminShell({ section, children, access, inboxCounts, acceptance = false
       <div className="mt-3 flex-none space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br/><span className="gc-text-on-dark-muted">Contact support</span></Link>{acceptance ? null : <RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm gc-text-on-dark hover:bg-white/10"/>}</div>
     </aside>
     <main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8">
-      <header className="mb-5 flex items-center justify-between lg:justify-end"><DashboardMobileMenu ariaLabel="platform admin navigation" items={visibleNavigation.map(([id, label, Icon]) => ({ id, label, icon: Icon, href: id === "overview" ? "/admin" : `/admin/${id}`, active: section === id, count: navCount(id) }))}/><b className="font-serif text-xl text-plum lg:hidden">Girlz Culture</b><div className="flex items-center gap-2">{acceptance ? <span className="rounded-full bg-blush px-3 py-1 text-[10px] font-bold text-plum">Acceptance fixture</span> : <><DashboardNotificationCenter scope="admin" onCounts={handleNotificationCounts}/><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden"/></>}</div></header>
+      <header className="mb-5 flex items-center justify-between lg:justify-end"><DashboardMobileMenu ariaLabel="platform admin navigation" items={visibleNavigation.map(([id, label, Icon]) => ({ id, label, icon: Icon, href: id === "overview" ? "/admin" : `/admin/${id}`, active: section === id, count: navCount(id) }))}/><b className="font-serif text-xl text-plum lg:hidden">Girlz Culture</b><div className="flex items-center gap-2">{acceptance ? <span className="rounded-full bg-blush px-3 py-1 text-[10px] font-bold text-plum">Acceptance fixture</span> : <><AdminMarketplacePreviewButton/><DashboardNotificationCenter scope="admin" onCounts={handleNotificationCounts}/><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden"/></>}</div></header>
       {children}
     </main>
     <nav className="gc-brand-header fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`relative flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19}/>{label}{navCount(id) ? <span className="absolute right-1 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[8px] text-white">{Math.min(navCount(id), 99)}</span> : null}</Link>)}</nav>
@@ -388,70 +392,7 @@ function Customers(p: any) {
   const term = query.trim().toLowerCase();
   const visible = p.customers.filter((customer: Row) => (!term || [customer.name, customer.email].some((value) => String(value || "").toLowerCase().includes(term))) && (status === "all" || String(customer.status || "Active").toLowerCase() === status));
   const returnPath = `/admin/customers?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status !== "all" ? { status } : {}) })}`.replace(/\?$/, "");
-  return <Panel title="Customer accounts"><div data-admin-record-landing><div className="mb-4 flex flex-wrap gap-2"><label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs sm:min-w-72"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer name or email" className="min-w-0 flex-1 outline-none"/></label><select aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visible.length ? visible.map((customer: Row) => { const count = p.bookings.filter((booking: Row) => booking.customer_id === customer.id || String(booking.guest_email || "").toLowerCase() === String(customer.email || "").toLowerCase()).length; return <Link key={customer.id} href={`/admin/customers/${customer.id}?return=${encodeURIComponent(returnPath)}`} className="rounded-xl border border-plum/10 p-4 transition hover:border-magenta hover:bg-blush/20"><div className="flex items-start justify-between gap-3"><div><h3 className="font-serif text-lg text-plum">{customer.name || "Customer"}</h3><p className="mt-1 break-all text-xs text-ink/55">{customer.email}</p></div><Badge value={customer.status || "Active"}/></div><div className="mt-4 flex items-center justify-between text-xs"><span>Joined {date(customer.created_at)}</span><b>{count} booking{count === 1 ? "" : "s"}</b></div><span className="mt-3 inline-flex text-xs font-bold text-magenta">Open customer record →</span></Link>; }) : <div className="col-span-full"><EmptyState title="No customer accounts" body={term ? "No customers match the current search and status filters." : "Customer accounts will appear here after registration or booking."}/></div>}</div></div></Panel>;
-}
-
-function Bookings(p: any) {
-  const { query, setQuery, status, setStatus } = useAdminListContext();
-  const [fromDate, setFromDate] = useAdminQueryParam("from", "");
-  const [toDate, setToDate] = useAdminQueryParam("to", "");
-  const [salonFilter, setSalonFilter] = useAdminQueryParam("salon", "all");
-  const [paymentFilter, setPaymentFilter] = useAdminQueryParam("payment", "all");
-  const normalizedQuery=query.trim().toLowerCase();
-  const visible=p.bookings.filter((booking:Row)=>{
-    const matchesQuery = !normalizedQuery || [
-      booking.public_reference,
-      booking.confirmation_code,
-      booking.id,
-      booking.guest_name,
-      booking.guest_email,
-    ].some((value)=>String(value||"").toLowerCase().includes(normalizedQuery));
-    const appointmentDate = String(booking.appointment_datetime || "").slice(0, 10);
-    const paymentState = String(booking.payment_status || booking.deposit_status || booking.financial_status || (Number(booking.deposit_amount || 0) > 0 ? "deposit paid" : "unpaid")).toLowerCase();
-    return matchesQuery &&
-      (status === "all" || String(booking.status || "Pending").toLowerCase() === status) &&
-      (salonFilter === "all" || String(booking.salon_id) === salonFilter) &&
-      (paymentFilter === "all" || paymentState === paymentFilter) &&
-      (!fromDate || appointmentDate >= fromDate) &&
-      (!toDate || appointmentDate <= toDate);
-  });
-  const bookingStatuses = [...new Set<string>(p.bookings.map((booking: Row) => String(booking.status || "Pending")))].sort();
-  const paymentStates = [...new Set<string>(p.bookings.map((booking: Row) => String(booking.payment_status || booking.deposit_status || booking.financial_status || (Number(booking.deposit_amount || 0) > 0 ? "deposit paid" : "unpaid")).toLowerCase()))].filter(Boolean).sort();
-  const returnPath = `/admin/bookings?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status !== "all" ? { status } : {}), ...(fromDate ? { from: fromDate } : {}), ...(toDate ? { to: toDate } : {}), ...(salonFilter !== "all" ? { salon: salonFilter } : {}), ...(paymentFilter !== "all" ? { payment: paymentFilter } : {}) })}`.replace(/\?$/, "");
-  return <><div className="mb-4 flex flex-wrap justify-between gap-3"><div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_150px_170px_160px_145px_145px]"><label className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs"><Search size={15}/><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search reference, UUID, or customer" className="min-w-0 flex-1 outline-none"/></label><select aria-label="Booking status" value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{bookingStatuses.map((value) => <option key={value} value={value.toLowerCase()}>{value}</option>)}</select><select aria-label="Salon" value={salonFilter} onChange={(event)=>setSalonFilter(event.target.value)} className="min-h-11 min-w-0 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All salons</option>{p.salons.map((salon: Row)=><option key={salon.id} value={String(salon.id)}>{salon.name || "Salon"}</option>)}</select><select aria-label="Payment state" value={paymentFilter} onChange={(event)=>setPaymentFilter(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All payment states</option>{paymentStates.map((value)=><option key={value}>{value}</option>)}</select><input aria-label="Appointments from" type="date" value={fromDate} onChange={(event)=>setFromDate(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"/><input aria-label="Appointments through" type="date" value={toDate} onChange={(event)=>setToDate(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"/></div><Link href={`/admin/bookings/new?return=${encodeURIComponent(returnPath)}`} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-magenta px-5 text-sm font-bold text-white">Create booking manually</Link></div><Panel title="Booking queue"><div data-admin-record-landing><p className="mb-3 text-xs text-ink/50">{visible.length} matching booking{visible.length === 1 ? "" : "s"}</p><div className="grid gap-3 lg:grid-cols-2">{visible.length ? visible.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <Link key={booking.id} href={`/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}`} className="rounded-xl border border-plum/10 p-4 transition hover:border-magenta hover:bg-blush/20"><div className="flex flex-wrap items-start justify-between gap-2"><div><b className="text-sm text-plum">{bookingReference(booking)}</b><p className="mt-1 text-xs text-ink/55">{salon?.name || "Salon unavailable"} · {booking.guest_name || "Customer"}</p></div><Badge value={booking.status}/></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs gc-text-primary"><span>{dateTime(booking.appointment_datetime, salon?.time_zone)}</span><span className="text-right">Deposit {money(Number(booking.deposit_amount || 0))}</span></div><span className="mt-3 inline-flex text-xs font-bold text-magenta">Open booking record →</span></Link>; }) : <div className="col-span-full"><EmptyState title="No bookings found" body="No bookings match the current search, salon, date, payment, and status filters."/></div>}</div></div></Panel></>;
-}
-
-function Quality(p: any) {
-  const [stateFilter, setStateFilter] = useAdminQueryParam("state", "all");
-  const [marketFilter, setMarketFilter] = useAdminQueryParam("market", "all");
-  const [marketplaceStatus, setMarketplaceStatus] = useAdminQueryParam("status", "all");
-  const states = [...new Set<string>(p.salons.map((salon: Row) => String(salon.state || "")).filter(Boolean))].sort();
-  const markets = [...new Set<string>(p.salons.filter((salon: Row) => stateFilter === "all" || String(salon.state || "") === stateFilter).map((salon: Row) => String(salon.city || salon.neighborhood || "")).filter(Boolean))].sort();
-  const filteredSalons = p.salons.filter((salon: Row) =>
-    (stateFilter === "all" || String(salon.state || "") === stateFilter) &&
-    (marketFilter === "all" || String(salon.city || salon.neighborhood || "") === marketFilter) &&
-    (marketplaceStatus === "all" || String(salon.status || "").toLowerCase() === marketplaceStatus),
-  );
-  const returnPath = `/admin/quality?${new URLSearchParams({ ...(stateFilter !== "all" ? { state: stateFilter } : {}), ...(marketFilter !== "all" ? { market: marketFilter } : {}), ...(marketplaceStatus !== "all" ? { status: marketplaceStatus } : {}) })}`.replace(/\?$/, "");
-  const rated = filteredSalons.filter((salon: Row) => Number(salon.review_count || 0) > 0);
-  const average = rated.length ? rated.reduce((sum: number, salon: Row) => sum + Number(salon.rating_overall || 0), 0) / rated.length : 0;
-  const visibleReviews = p.reviews.filter((review: Row) => review.moderation_status === "Published" && review.dispute_status !== "Removed");
-  const lateness = visibleReviews.filter((review: Row) => /late|wait|delay/i.test(review.written_review || ""));
-  const qualitySeries = dailySeries(visibleReviews, "created_at", (review) => Number(review.rating_overall || 0));
-  const setting=p.settings.find((item:Row)=>item.key==="quality_thresholds");
-  const storedThreshold=Number(setting?.value?.salon_cancellation_rate_percent||10);
-  const [threshold,setThreshold]=useState<number|"">(storedThreshold);
-  const effectiveThreshold=threshold===""?storedThreshold:threshold;
-  const metricBySalon=new Map(p.qualityMetrics.map((metric:Row)=>[String(metric.salon_id),metric]));
-  const metrics=filteredSalons.map((salon:Row)=>{
-    const metric=metricBySalon.get(String(salon.id)) as Row | undefined;
-    const totalBookings=Number(metric?.total_bookings||0);
-    const salonCancellations=Number(metric?.salon_cancellations||0);
-    const cancellationRate=totalBookings?Number(metric?.cancellation_rate_percent||0):0;
-    const onTimeRate=Number(metric?.on_time_measured||0)>0?Number(metric?.on_time_rate_percent||0):null;
-    const activeComplaints=Number(metric?.active_complaints||0);
-    const qualityScore=metric?.composite_quality_score==null?null:Number(metric.composite_quality_score);
-    return {...salon,totalBookings,completedBookings:Number(metric?.completed_bookings||0),salonCancellations,cancellationRate,onTimeRate,activeComplaints,qualityScore,flagged:totalBookings>0&&cancellationRate>effectiveThreshold};
+  return <Panel title="Customer accounts"><div data-admin-record-landing><div className="mb-4 flex flex-wrap gap-2"><label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs sm:min-w-72"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer name or email" className="min-w-0 flex-1 outline-none"/></label><select aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option…2519 tokens truncated…hreshold};
   });
   const ranked=[...metrics].filter((salon:Row)=>salon.qualityScore!==null).sort((left:Row,right:Row)=>Number(right.qualityScore)-Number(left.qualityScore));
   const flagged=metrics.filter((salon:Row)=>salon.flagged);

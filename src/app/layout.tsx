@@ -13,6 +13,11 @@ import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
 import PublicContentLiveRefresh from "@/components/PublicContentLiveRefresh";
 import OwnerDashboardResponsiveBridge from "@/components/owner/OwnerDashboardResponsiveBridge";
+import MarketplacePreviewBanner from "@/components/site/MarketplacePreviewBanner";
+import {
+  MARKETPLACE_PREVIEW_COOKIE,
+  verifyMarketplacePreviewGrant,
+} from "@/lib/marketplacePreviewGrant";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
@@ -71,7 +76,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = normalizeLocale((await cookies()).get("gc_locale")?.value);
+  const cookieStore = await cookies();
+  const locale = normalizeLocale(cookieStore.get("gc_locale")?.value);
+  const marketplacePreview = await verifyMarketplacePreviewGrant(
+    cookieStore.get(MARKETPLACE_PREVIEW_COOKIE)?.value,
+  );
   const brand = await getEngineBrandTheme();
   const headingFont = `"${brand.headingFont}", Georgia, "Times New Roman", serif`;
   const bodyFont = `"${brand.bodyFont}", Arial, Helvetica, sans-serif`;
@@ -111,6 +120,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <LocaleProvider initialLocale={locale}>
           <CustomerLocationProvider>
+            {marketplacePreview ? <MarketplacePreviewBanner /> : null}
             {children}
             <PublicContentLiveRefresh />
           </CustomerLocationProvider>
