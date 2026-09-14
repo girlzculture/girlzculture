@@ -25,6 +25,17 @@ async function signIn(page: Page) {
   await expect(page.locator('[data-owner-workspace]')).toBeVisible();
 }
 
+async function signOut(page: Page) {
+  // Logout owns its redirect. Do not install another actor or race page.goto
+  // against that in-flight navigation after the click promise resolves.
+  await Promise.all([
+    page.waitForURL(/\/(?:business|salon)\/login(?:[?#].*)?$/, { waitUntil: 'load' }),
+    page.getByRole('main').getByRole('button', { name: logoutLabel, exact: true }).click(),
+  ]);
+  await expect(page.locator('[data-owner-workspace]')).toHaveCount(0);
+  await expect(page.locator('input[type=email]')).toBeVisible();
+}
+
 test('P0 account locale survives sign-out/sign-in and a clean device without leaking to another user', async ({ page, browser }) => {
   test.setTimeout(90_000);
   const owner = await loginFixture(page);
@@ -34,9 +45,7 @@ test('P0 account locale survives sign-out/sign-in and a clean device without lea
   await expect.poll(owner.accountLocale).toBe('fr');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
-  await page.getByRole('main').getByRole('button', { name: logoutLabel, exact: true }).click();
-  await expect(page).toHaveURL(/\/(?:business|salon)\/login/);
-  await expect(page.locator('[data-owner-workspace]')).toHaveCount(0);
+  await signOut(page);
   await signIn(page);
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
 
@@ -52,7 +61,7 @@ test('P0 account locale survives sign-out/sign-in and a clean device without lea
 
   // A different authenticated user in the original storage partition uses their
   // own account preference; the first user's French cache remains non-authority.
-  await page.getByRole('main').getByRole('button', { name: logoutLabel, exact: true }).click();
+  await signOut(page);
   const teammate = await loginFixture(page, 'es', '11000000-0000-4000-8000-000000000002');
   await signIn(page);
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
