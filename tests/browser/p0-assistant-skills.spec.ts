@@ -120,7 +120,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     await page.screenshot({ path: `${gallery}/class-five-controlled-workflow.png`, ...screenshotCaret });
     next = { unavailable: true };
     await ask(bookingQuestions[locale]);
-    await expect(dialog.getByRole('status').last()).toHaveText(t('GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.'));
+    await expect(dialog.getByRole('status', { name: t('GC Assistant status'), exact: true })).toHaveText(t('GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.'));
     await expect(dialog.getByText('P0-PROVIDER-FIXTURE', { exact: true })).toBeVisible();
     await page.screenshot({ path: `${gallery}/provider-unavailable.png`, ...screenshotCaret });
     next = reads[3];

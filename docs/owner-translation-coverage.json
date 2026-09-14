@@ -1,7 +1,7 @@
 {
   "status": "AUTOMATED ONLY",
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 1945,
+  "candidate_count": 1955,
   "excluded_code_count": 135,
   "intentional_untranslated": [
     "Girlz Culture",
@@ -88,32 +88,32 @@
   ],
   "locales": {
     "en": {
-      "source_count": 1740,
-      "covered": 1740,
+      "source_count": 1750,
+      "covered": 1750,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 1740,
-      "covered": 1740,
+      "source_count": 1750,
+      "covered": 1750,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 1740,
-      "covered": 1740,
+      "source_count": 1750,
+      "covered": 1750,
       "missing_count": 0,
       "missing": []
     },
     "es": {
-      "source_count": 1740,
-      "covered": 1740,
+      "source_count": 1750,
+      "covered": 1750,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 1740,
-      "covered": 1740,
+      "source_count": 1750,
+      "covered": 1750,
       "missing_count": 0,
       "missing": []
     }

@@ -21,9 +21,9 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
       ['get_customers', range, { customers: [{ name: 'Sheila' }] }],
       ['get_professionals', { query: '' }, { professionals: [{ name: 'Danielle' }] }],
       ['get_products', { query: '' }, { products: [{ name: 'Conditioner', price: 25 }] }],
-      ['get_booking_messages', { booking_id: fixture.ids.booking }, { messages: [{ original_body: 'Private original' }] }],
+      ['get_booking_messages', { booking_id: fixture.ids.booking }, { messages: [{ original_body: 'Private original', sender_role: 'salon' }] }],
       ['get_reviews', range, { reviews: [{ rating_overall: 5, written_review: 'Original review' }] }],
-      ['get_promotions', {}, { promotions: [{ title: 'Autumn' }] }],
+      ['get_promotions', {}, { promotions: [{ title: 'Autumn', promotion_type: 'percentage' }] }],
       ['get_plan_status', {}, { subscription: { tier: 'Premium', status: 'active' } }],
       ['get_profile_completion', {}, { profile_completion: 85 }],
       ['get_earnings_summary', range, { completed_booking_value: 180 }],
@@ -59,6 +59,10 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
       await expect(dialog.locator('article').last().getByRole('status')).toHaveText(t('Current business information'));
       await expect(dialog.locator('article').last().locator('dl')).not.toHaveCount(0);
       expect(writes).toBe(0);
+      const last = dialog.locator('article').last();
+      if (tool === 'get_plan_status') await expect(last).toContainText(t('Active'));
+      if (tool === 'get_booking_messages') await expect(last).toContainText(t('Business'));
+      if (tool === 'get_promotions') await expect(last).toContainText(t('Percentage discount'));
     }
     for (const [index, [tool, args]] of drafts.entries()) {
       next = { tool, args }; await ask(); const article = dialog.locator('article').last();

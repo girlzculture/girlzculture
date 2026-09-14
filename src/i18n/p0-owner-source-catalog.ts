@@ -1779,6 +1779,14 @@ export const P0_OWNER_TRANSLATION_ROWS: TranslationRow[] = [
   ["Not collected by Girlz Culture","Non encaissé par Girlz Culture","No cobrado por Girlz Culture","Girlz Culture jotul fay gi","Girlz Culture 未收款"],
   ["Not accepted through Girlz Culture","Non accepté via Girlz Culture","No aceptado a través de Girlz Culture","Nanguwuñu ko jaarale ci Girlz Culture","未通过 Girlz Culture 同意政策"],
   ["All time","Depuis le début","Desde el inicio","Li weesu lépp","全部时间"],
+  ["Incomplete and expired","Incomplet et expiré","Incompleto y vencido","Matul te jeex na","未完成且已过期"],
+  ["Past due","Paiement en retard","Pago vencido","Fay gi yées na waxtuwi","付款逾期"],
+  ["Platform support","Assistance de la plateforme","Soporte de la plataforma","Ndimbalu plateforme bi","平台支持"],
+  ["System","Système","Sistema","Sistem bi","系统"],
+  ["Trialing","Période d’essai","En período de prueba","Mi ngi ci natt","试用中"],
+  ["Unpaid","Non payé","Sin pagar","Fayeesul","未付款"],
+  ["GC Assistant status","État de GC Assistant","Estado de GC Assistant","Nekkinu GC Assistant","GC Assistant 状态"],
+  ["Dictation status","État de la dictée","Estado del dictado","Nekkinu wax ngir bind","听写状态"],
 ];
 export const P0_OWNER_SOURCE_MESSAGES: Record<string, Record<string, string>> = Object.fromEntries(
   ["fr", "es", "wo", "zh-CN"].map((locale, index) => [locale, Object.fromEntries(P0_OWNER_TRANSLATION_ROWS.map(row => [row[0], row[index + 1]]))]),

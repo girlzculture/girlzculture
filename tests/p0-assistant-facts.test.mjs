@@ -5,7 +5,7 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 function fixture() {
   const dates = [];
   const { Facts } = typescriptLoader(process.cwd(), {
-    '@/components/i18n/LocaleProvider': { useI18n: () => ({ translateSource: value => ({ Confirmed: 'Confirmé', Tuesday: 'mardi', Welcome: 'Bienvenue', Waist: 'Taille' })[value] || value, formatNumber: String, formatCurrency: value => `USD ${value}`, formatDate: (value, options) => { dates.push({ value, ...options }); return 'date affichée'; } }) },
+    '@/components/i18n/LocaleProvider': { useI18n: () => ({ translateSource: value => ({ Confirmed: 'Confirmé', Active: 'Actif', Business: 'Entreprise', 'Percentage discount': 'Réduction en pourcentage', Tuesday: 'mardi', Welcome: 'Bienvenue', Waist: 'Taille' })[value] || value, formatNumber: String, formatCurrency: value => `USD ${value}`, formatDate: (value, options) => { dates.push({ value, ...options }); return 'date affichée'; } }) },
     '@/lib/supabase': {}, 'next/link': { default: 'a' },
   })('src/components/owner/GcAssistant.tsx');
   function render(node) {
@@ -50,4 +50,9 @@ test('new refund choices and booking source codes render labels while private pr
   const app=fixture();const rendered=app.render({policy:{refund_satisfaction:'case_by_case',refund_terms:'case_by_case'},source_breakdown:{phone:2,walk_in:1},profile_views_period:'all_time'});
   assert.match(rendered,/Requests reviewed individually/);assert.match(rendered,/Phone 2/);assert.match(rendered,/Walk-in 1/);assert.match(rendered,/All time/);
   assert.match(rendered,/Business refund and satisfaction terms case_by_case/);
+});
+
+test('expanded subscription, sender and promotion enums are localized without changing original prose',()=>{
+  const app=fixture();const rendered=app.render({subscription:{status:'active'},messages:[{sender_role:'salon',original_body:'active'}],promotions:[{promotion_type:'percentage'}]});
+  assert.match(rendered,/Status Actif/);assert.match(rendered,/Sender Entreprise/);assert.match(rendered,/Offer type Réduction en pourcentage/);assert.match(rendered,/Original message active/);
 });

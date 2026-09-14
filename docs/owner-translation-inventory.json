@@ -1105,7 +1105,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 136,
+          "line": 142,
           "kind": "template",
           "context": "4a8f22706efcfd0e8128df455bb7c95e8f3ae1e4faea539addae070aeb65b158"
         },
@@ -1298,7 +1298,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 136,
+          "line": 142,
           "kind": "template",
           "context": "a17a59c835113a569a26e4d034dba0a16b50a6d45f09ceb367170ad63ff4d462"
         },
@@ -1451,7 +1451,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 50,
+          "line": 53,
           "kind": "template",
           "context": "d4f67c4fc2de50283458a226fb960a94c6615cd34670b33e498ba82ee6e55aab"
         },
@@ -1690,7 +1690,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 49,
+          "line": 52,
           "kind": "template",
           "context": "e77caf8d15c869518133b533c682a99c38d8ee83967192bec542e313c59a0a5e"
         }
@@ -2065,6 +2065,12 @@
           "line": 28,
           "kind": "literal",
           "context": "ceef92cd6e616957084c8acc19af06662b90f9ab34403d3f8da0f307e856aa68"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "4846df1918b6e72fcb4b91e412b18335250db2e1f629a78c804ae2d9f7fdc3a2"
         },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
@@ -3085,7 +3091,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 51,
+          "line": 54,
           "kind": "literal",
           "context": "55ac7234751965a3794d49ec3588e7137908ab01477bf1cef127c2b6450f9205"
         }
@@ -3131,13 +3137,13 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 40,
           "kind": "literal",
           "context": "87abb4c5e6c140c9bddfeb2bb39c9f5a79df32214bca572209edb9889211b9d4"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 130,
+          "line": 136,
           "kind": "literal",
           "context": "96c6aae72096127b721aa6f063483bd9de5624c006303d6e3c92526b108254cb"
         },
@@ -3531,6 +3537,12 @@
       "source": "Archived",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "7d328bf3385a0776765b2cb2f1dd54d0328461ec27141bc2cb2c08d04b74d311"
+        },
+        {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "line": 2743,
           "kind": "jsx-text",
@@ -3571,7 +3583,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 128,
+          "line": 134,
           "kind": "localized-source",
           "context": "0f799907518dfdce9eed0ef04228ad2cfc048bf28d7ed25693b26df54cc10cb0"
         }
@@ -3582,7 +3594,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 136,
+          "line": 142,
           "kind": "localized-source",
           "context": "40a660ab0c40eb68fe12dab0cd45f24f7f7a2af475baeb485dbacadb7eb01206"
         }
@@ -4911,6 +4923,24 @@
           "line": 5,
           "kind": "literal",
           "context": "513f27534b31b4298c77a9d28bfa97267748454bc7a73016158ea6a1cae21d5c"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 36,
+          "kind": "literal",
+          "context": "a667651a7a539fedf24c151f96e5fb50e6d81c1f5e408a7bdb3162f6998553c8"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 36,
+          "kind": "literal",
+          "context": "f98ce55401848cd4fed6d99748c33cf7b21bad807d32524abf4fb37baf41a0e4"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 36,
+          "kind": "literal",
+          "context": "fde47a603710045d1a40812c4229208e32d04394cb46f56bb23e3ff065898782"
         }
       ]
     },
@@ -5064,7 +5094,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 53,
+          "line": 56,
           "kind": "literal",
           "context": "c290f49ae805dd6ac758229b1e8db814630f520885c412e080048c1ca34925bb"
         },
@@ -5342,6 +5372,12 @@
       "source": "Canceled",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "53c8729e30bdae3d2252120241d776d3736bdb57deec6d7a6d3ecfaef1655f3c"
+        },
+        {
           "file": "src/components/owner/SalonProductOrders.tsx",
           "line": 18,
           "kind": "literal",
@@ -5449,6 +5485,17 @@
           "line": 1320,
           "kind": "jsx-text",
           "context": "a29138f6742c80257789571df228e7066359b7379399bd3fc8bcf94f553f1824"
+        }
+      ]
+    },
+    "a1bf92eff40d": {
+      "source": "Cancelled",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "af27dd80b4916395aabfeff87d4118704c4c371a5242d4874211afc4bf5c5827"
         }
       ]
     },
@@ -5755,7 +5802,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 63,
+          "line": 69,
           "kind": "literal",
           "context": "e993535787abd2f9a017d623ef256a8a5320dfc0d7f1101ed27e920abc4b316b"
         }
@@ -5832,7 +5879,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 68,
+          "line": 74,
           "kind": "literal",
           "context": "fa164d4cf8006ddf9f72746166edc5ea754769c5759f132eb485848d7402091e"
         }
@@ -6275,7 +6322,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 127,
+          "line": 133,
           "kind": "localized-source",
           "context": "3bb78b91e06604c98d2f346833b56508541a9ec13f8ea7a81059bfc9ce537f03"
         }
@@ -6475,6 +6522,17 @@
         }
       ]
     },
+    "1798b3ba42ee": {
+      "source": "Completed",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "23c6a267ff491b2467c5def55a5915d905137c68c9cd4d4b1d2e81d63121f3e9"
+        }
+      ]
+    },
     "343691090113": {
       "source": "Completed Booking Value",
       "occurrences": [
@@ -6580,7 +6638,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 132,
+          "line": 138,
           "kind": "literal",
           "context": "972e2e00d4ce2db4ec168a38254b55d6aa2f7e0bd65d0e37ee17b3a54c4f2f9a"
         },
@@ -6597,7 +6655,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 132,
+          "line": 138,
           "kind": "literal",
           "context": "972e2e00d4ce2db4ec168a38254b55d6aa2f7e0bd65d0e37ee17b3a54c4f2f9a"
         }
@@ -6606,6 +6664,12 @@
     "8cc7acb8f360": {
       "source": "Confirmed",
       "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "6c721114281e6fc4317b9917d96d8dc56d8dc0433101cda9a8453dec65c50b33"
+        },
         {
           "file": "src/components/owner/ManualAppointmentEditor.tsx",
           "line": 68,
@@ -6909,7 +6973,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 97,
+          "line": 103,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
@@ -7379,7 +7443,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 132,
+          "line": 138,
           "kind": "literal",
           "context": "d7955d7455b572f662e3967a5ab6ec639a940cb1cc163e6cc27e3a10d5b9c7d6"
         }
@@ -7390,7 +7454,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 130,
+          "line": 136,
           "kind": "localized-source",
           "context": "7aaeba7cd35c01c19231fca22312576a75a5539769b12cd97d84068081363e90"
         }
@@ -7489,6 +7553,12 @@
           "line": 31,
           "kind": "literal",
           "context": "0d0bd08f77ddd7cdc5ec79288ffd319e949ae29b4a60d1ee4b12016dbc2ffad3"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 36,
+          "kind": "literal",
+          "context": "dfe9abd9092f05ce5335540ad5e1a284291a663aa2578c2949f5f6f019087efa"
         },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
@@ -8028,7 +8098,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 67,
+          "line": 73,
           "kind": "literal",
           "context": "e2d9f52556fd604e5cc93cd849529a5cd7ccec6c4291f6d97cd9b6384e4c0784"
         }
@@ -8168,6 +8238,12 @@
       "source": "Descriptive offer",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 37,
+          "kind": "literal",
+          "context": "9a55ccaccd5ad622c957aced0e2ec74c508d7a04595ff4d55a8c72fc8f238e61"
+        },
+        {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
           "line": 119,
           "kind": "jsx-text",
@@ -8244,6 +8320,17 @@
           "line": 33,
           "kind": "literal",
           "context": "b5aac834c51a26fb1786327742c1f7d2fadb2981962ed13a9abd32b67d193b49"
+        }
+      ]
+    },
+    "6e6c202a9b46": {
+      "source": "Dictation status",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantDictation.tsx",
+          "line": 53,
+          "kind": "localized-source",
+          "context": "ba1cec2f929c05a310dae69ecc323af55cd8fc3fda8ea03cfdfbde48e109cc4b"
         }
       ]
     },
@@ -8389,6 +8476,12 @@
           "line": 32,
           "kind": "literal",
           "context": "851f598844034c1c61f83973f7ad192e97e5321c3284d148461d17c513148d7f"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "efe800ed19636c22431d82f60c068f7da76bd58ea5de3f783d3c3e6f91fd58e4"
         },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
@@ -9059,6 +9152,12 @@
       "source": "Ended",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "5279f8ceff1e87b6276b478e966fd0fbd81f0de7777ee161ff806dd72aeb2e21"
+        },
+        {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "line": 5050,
           "kind": "literal",
@@ -9494,7 +9593,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 55,
+          "line": 61,
           "kind": "literal",
           "context": "729b26b80a2d16728fbab78d06b4e7d1cc7f1a9dad371579cabe2ae6d6085c53"
         }
@@ -9558,6 +9657,12 @@
     "42695908def8": {
       "source": "Fixed discount",
       "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 37,
+          "kind": "literal",
+          "context": "f3b2ac97b57d82be266a42fe469c47e30c3c55ddf59f7b367f0e9280d55bda36"
+        },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
           "line": 119,
@@ -9642,6 +9747,12 @@
       "source": "Free eligible add-on",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 37,
+          "kind": "literal",
+          "context": "ec5f95fcf8bd784869c8d08613ec966b099774d87f536e9ed5315c949f789d06"
+        },
+        {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
           "line": 119,
           "kind": "jsx-text",
@@ -9652,6 +9763,12 @@
     "26bf71853242": {
       "source": "Free eligible service",
       "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 37,
+          "kind": "literal",
+          "context": "2ad540fbf873599af33a7870b1b76be61b163c6ca52da99690342747b259346a"
+        },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
           "line": 119,
@@ -9705,13 +9822,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "adea5f5986e29a21dd759b9ff7a24b8b1f60cf991f60c126d41049cea3aecd92"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "6725dc02dab75415652858dda0cf8adfc8e068067a318a16f3a261b58c842e19"
         }
@@ -9884,7 +10001,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 127,
+          "line": 133,
           "kind": "jsx-text",
           "context": "669c6eeb1d47f1bcf9d98ed4f0e3fab838aa118d506c59476c8a66a740b24558"
         }
@@ -9895,9 +10012,20 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 109,
+          "line": 115,
           "kind": "literal",
           "context": "32180692ed6b12f14217880f9adc591058fb36c440a1b581d6a665025bd782fb"
+        }
+      ]
+    },
+    "29d8a1b1f5b9": {
+      "source": "GC Assistant status",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 139,
+          "kind": "localized-source",
+          "context": "c441d2a3c029a6861b332d444ddc69d473cd53879b4a81eb18c1ac56e1cf56f0"
         }
       ]
     },
@@ -10022,13 +10150,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "cd50efc73b869d53f7dfc98eff06741f3a479c72cc9b0aaf8bc7f74cb5d5b1aa"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 53,
+          "line": 56,
           "kind": "literal",
           "context": "c290f49ae805dd6ac758229b1e8db814630f520885c412e080048c1ca34925bb"
         },
@@ -10505,7 +10633,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 101,
+          "line": 107,
           "kind": "localized-source",
           "context": "607b543ac6db478c5e5db1b31e44e43bbd17d038016667547e614111d1cebd48"
         }
@@ -10595,7 +10723,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 63,
+          "line": 69,
           "kind": "literal",
           "context": "66a93113fdc2206b26b64228731afa23336e8b9593a5c0ee7ae7d1fa3b941855"
         },
@@ -10730,7 +10858,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 131,
+          "line": 137,
           "kind": "localized-source",
           "context": "bd3465b1cc98f4f0ca16a068e1398af54814101e9b3646fb2ebbcfd15783b8fd"
         }
@@ -10980,6 +11108,12 @@
       "source": "Incomplete",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "0aab8f55971c54b6f5dc0d8e75102a89d4a663f2b5db45966042d172bf181e1c"
+        },
+        {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "line": 1825,
           "kind": "literal",
@@ -10990,6 +11124,17 @@
           "line": 2027,
           "kind": "literal",
           "context": "ea3513fa3e565c723ec83fc2da6a00083bbf6deaa18d58101ba2e820da84ce4b"
+        }
+      ]
+    },
+    "d9a91d162c06": {
+      "source": "Incomplete and expired",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "5be4c6f21686264b4b0a809fa9cd595ba502a82089c6af096378503a1ed19e87"
         }
       ]
     },
@@ -11015,7 +11160,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "8e4bf5fb9dd4a3e5c497f447119b779e955abe78f048965e6aeba48595f839e6"
         },
@@ -12814,13 +12959,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "34d9adca42495e0426070690f15a10be46e98dde5255a036eb5311fb3fe94772"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "3bc541c0d0041898c5ab532194a915b43527039ab51ecfd96f7517ea2e050877"
         }
@@ -12975,7 +13120,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 128,
+          "line": 134,
           "kind": "literal",
           "context": "785fba59ae345bf99b2acc952aee01f520678acb0ca985838e83bca82853f3e8"
         }
@@ -12986,7 +13131,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 128,
+          "line": 134,
           "kind": "literal",
           "context": "5cac782c6278a89e5cb069e55cc3d7bd58c76182c6ab883c90c9bd510c2b8924"
         }
@@ -13026,7 +13171,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 128,
+          "line": 134,
           "kind": "literal",
           "context": "9cfe83711a484e1e3b78eacfc9b740a89e86b7a1d0d139c844f6dc505414ebbb"
         }
@@ -13043,7 +13188,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 44,
+          "line": 47,
           "kind": "literal",
           "context": "ceb92fda6bc4a591f0eeed1bd8721370bbf36cae0c341b17f16ffd4765984d8a"
         },
@@ -13423,7 +13568,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 47,
+          "line": 50,
           "kind": "literal",
           "context": "577d71de58f0338189b82b893a7718e554fd247a30e85f836fd5457930f191a5"
         }
@@ -13793,7 +13938,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 44,
           "kind": "localized-source",
           "context": "e70c7aa3f85087e270d90e67e1c406c81c5f7c91a32c1fd0f8f38ff62220f827"
         }
@@ -13976,7 +14121,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 40,
+          "line": 43,
           "kind": "localized-source",
           "context": "a7b0011ec6150b4035b9c13495c06f7c59eeee12bcd612a31a09b6d30806c61a"
         }
@@ -14555,7 +14700,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 66,
+          "line": 72,
           "kind": "literal",
           "context": "a2741d936da0c7f3d28632c3a532af76cb8beb7409ba17ae2450e17c12c48201"
         }
@@ -14815,13 +14960,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "f2193f4ecaa36181191126aa932038fd4ef812df338aa17cc10e1e3f39a01ad0"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "cf484031983fa3ea00e9baead4becc2c2757dff88bc29b13f6b318d57674041a"
         },
@@ -15164,6 +15309,17 @@
         }
       ]
     },
+    "629c555fb7f8": {
+      "source": "Past due",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "e7f0d5ec284de3bacd929e9f015d144b7013a50599cf9db9942cee3410bc5015"
+        }
+      ]
+    },
     "781961bc81c2": {
       "source": "Pause",
       "occurrences": [
@@ -15200,6 +15356,12 @@
     "c7dfb6f1d9c5": {
       "source": "Paused",
       "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "b85b4df5b7c216f156d615c0483737b60e18a51146172f2775f27d43a48ae7c5"
+        },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
           "line": 79,
@@ -15359,6 +15521,12 @@
       "source": "Pending",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "674b3f0ea31701f22d29c884d5a74eeafe3cd52bd8257fa11e7000e6cfb12bf4"
+        },
+        {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "line": 663,
           "kind": "literal",
@@ -15439,6 +15607,12 @@
       "source": "Percentage discount",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 37,
+          "kind": "literal",
+          "context": "9756d5994dcacd07d7828871863ebf96e6857613dc9bfda64ecfd8a476f24bab"
+        },
+        {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
           "line": 119,
           "kind": "jsx-text",
@@ -15474,7 +15648,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "c824cf07d2c53845b7fed03ea0bce1fe5eca98a15920f12f66527daad25a881c"
         },
@@ -15723,6 +15897,17 @@
           "line": 34,
           "kind": "literal",
           "context": "767e0d8c10a1355c964bdea203ad5996aa87e1f42fa7e8f9350fe6e0dd076fef"
+        }
+      ]
+    },
+    "9d9cbb3d4d8a": {
+      "source": "Platform support",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 36,
+          "kind": "literal",
+          "context": "c21cf72ee25c0a373ba30bc8e391917e5b59399395d4301b3986b56a5bef032f"
         }
       ]
     },
@@ -16980,6 +17165,12 @@
           "context": "eebace46e89859c250044762aec2779275b90fccfd77efb138e9d274a0a861cd"
         },
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "2ee44a96dab566a234598a31028877f1a76fd5f4ade5f59bbc7e11d9d5a011c6"
+        },
+        {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "line": 1829,
           "kind": "literal",
@@ -18036,6 +18227,12 @@
       "source": "Requested",
       "occurrences": [
         {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "450683314bd8133b05d323ae4c19792b92ece3dfa19b8f9d49f4054a86215e59"
+        },
+        {
           "file": "src/components/owner/ManualAppointmentEditor.tsx",
           "line": 68,
           "kind": "literal",
@@ -18451,7 +18648,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 130,
+          "line": 136,
           "kind": "localized-source",
           "context": "faf5f25ad6fca66a3d19b4ac4718eb238a7f088a8d10fb3161015b557ca72cc9"
         },
@@ -19031,13 +19228,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "240fcec8a27fad82b85482f7e825db294bba507878196c07e7e962286f71e3aa"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "79805bd277fc071a509ecaf5c05182aed9a7ea9bd8d4f9c8ed9ac7c65241cd57"
         }
@@ -20262,7 +20459,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 128,
+          "line": 134,
           "kind": "localized-source",
           "context": "845bc04282ce8962dfb0df27033b4e400587eaaad33a0d2246366ac309c55471"
         }
@@ -20436,7 +20633,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 44,
           "kind": "localized-source",
           "context": "bb261d0313ed15660469924535dd50a757ca4eecd700e801330d05bc2a7c9480"
         }
@@ -20491,7 +20688,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 65,
+          "line": 71,
           "kind": "literal",
           "context": "019af3b90c852eb728afa02c9e7bb4023a2cbb0c46582394e2f69b62ddc4d80c"
         }
@@ -21796,13 +21993,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "5a465416da56777d7ec4bcd89d9bd78667374c3590538b6e6937700322bea189"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "3f5c6a48f25c93b366f1ddf1fa1bd190175aa6c718cd7f8f272c5690e9cf70fa"
         }
@@ -21859,7 +22056,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 134,
+          "line": 140,
           "kind": "localized-source",
           "context": "08a301f9040c4e1e80436cb32750013695eea153936eec51c09f8156ef652341"
         },
@@ -21907,6 +22104,17 @@
           "line": 140,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
+        }
+      ]
+    },
+    "bc0792d8dc81": {
+      "source": "System",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 36,
+          "kind": "literal",
+          "context": "c5b101f06c406abe8aa649d29cdb8f37edc9d784e300245696f170c3374ca2f4"
         }
       ]
     },
@@ -22130,7 +22338,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 63,
+          "line": 69,
           "kind": "literal",
           "context": "1bafcfc078938f26088d4c7c9717821e305f74029969466e7b302d1d28032a9f"
         },
@@ -22147,7 +22355,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 68,
+          "line": 74,
           "kind": "literal",
           "context": "b8c11617c7f1bf42e8ce1a2be5c658feebe4c076e5e0559abc84e38fe9d1ffe4"
         }
@@ -22241,7 +22449,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 122,
+          "line": 128,
           "kind": "literal",
           "context": "4e7b6c42dc913cfc712a7f5677b4d4dd72485875ec03be78ce745c368e1b7bf4"
         }
@@ -22481,7 +22689,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 121,
+          "line": 127,
           "kind": "literal",
           "context": "ec600c15e064f895583a2ef8163f6ee18500dadbf258742cf6e57cd5d0bdba80"
         }
@@ -22825,7 +23033,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 69,
+          "line": 75,
           "kind": "literal",
           "context": "1df98ec76d018d62094e57b9674ff55e78e3eb188ed58ec08047f7d0fdb950d8"
         }
@@ -22847,7 +23055,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 63,
+          "line": 69,
           "kind": "literal",
           "context": "c0157cabae469e1adb8c2bd43d2e552fac253ea0a83082bfffeb7a88df92216d"
         }
@@ -23031,7 +23239,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 66,
+          "line": 72,
           "kind": "literal",
           "context": "fa8085de105dbe90d27c37f666204dc648368a08c4db9aa6811bd65a8331ca47"
         },
@@ -23158,7 +23366,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 67,
+          "line": 73,
           "kind": "literal",
           "context": "ec01ee64032c9e1eab2c6b0b792b51a7c0bfac09c105ec2c26aa4ab72f8d05a6"
         }
@@ -23268,7 +23476,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 130,
+          "line": 136,
           "kind": "localized-source",
           "context": "3c125cfc49a2f92bc14aa9d1063dedb8a54b5db87621a0fba439b2912721372f"
         }
@@ -23290,7 +23498,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 130,
+          "line": 136,
           "kind": "localized-source",
           "context": "bdd77e4ca4413365f8a50b6d0b06d4cf9a8e47f108a5e8bd1de71b9e79e40b84"
         }
@@ -23374,13 +23582,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "b2b1023efad92018ec7f71631b61d88dc3080ad2239ae8cb9e92a94ca7332e5e"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "964c37ce34fb87a572ede208390cd8c40f0fd152c9a5e1c89e3ca3535fe6fcfe"
         }
@@ -23843,6 +24051,17 @@
         }
       ]
     },
+    "519b9a58c35f": {
+      "source": "Trialing",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "0fd24304b929f7d929e22d917fe1dc984af338353d0f902bbc12967c3ec456c9"
+        }
+      ]
+    },
     "3e2b88464fec": {
       "source": "Trust information",
       "occurrences": [
@@ -23893,13 +24112,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "f4e13d56fbaa143607bdbda6c692be794b35fc48f5ae1b4a9ec6c5de147f5e7d"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "8f95b5a7e547641c2c682d3715469a1d0af92591817867d245b25e0461d0a90e"
         }
@@ -24450,6 +24669,17 @@
           "line": 256,
           "kind": "literal",
           "context": "8be192609a37c72df56cafa67ca812a5a5a50077ff90ab39228aaa40280c8be0"
+        }
+      ]
+    },
+    "50cc12f69e8f": {
+      "source": "Unpaid",
+      "occurrences": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "line": 35,
+          "kind": "literal",
+          "context": "71b9542fc3a98be1bce6f93f3d2c29df7c46d27538074196318824c5566ff3dd"
         }
       ]
     },
@@ -25483,7 +25713,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "3c309cad34e4a7ba3350ac5fa2efad4d784e829d7df700dc866b7392764ce0c4"
         },
@@ -25686,13 +25916,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "cd582e02c1348b22801890f9c1ab6d7656910c243f52f46fab71695933d1aac7"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 39,
           "kind": "literal",
           "context": "1b3ebb30098961ece07218fc1d9a77536edc163dfc5c87f57f4f37aefdc586b4"
         }
@@ -25758,7 +25988,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 136,
+          "line": 142,
           "kind": "localized-source",
           "context": "95593de1fa16f750ef6a24e91b8ff1d8c39610de1c64cb437b35fe5344924f5e"
         }
@@ -25791,7 +26021,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 52,
+          "line": 55,
           "kind": "literal",
           "context": "ce41b4d278f283c138b4d19a29c74087c7e8e0eae9b750e52f18adab10b0d0da"
         },
@@ -25819,7 +26049,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 63,
+          "line": 69,
           "kind": "literal",
           "context": "7703eac981acc7f90c1a1be2f849f665bb1c3802be6bfde589a45e823b92f158"
         },
@@ -25836,7 +26066,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 63,
+          "line": 69,
           "kind": "literal",
           "context": "aa1e78060f94e02fef80a309793d91f3a2712c06ec6e6b72437dc73a34ad82ac"
         },
@@ -25982,7 +26212,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 133,
+          "line": 139,
           "kind": "literal",
           "context": "b405b986ff5daedd8ef5a5f9c9d6750fad99f8f9c5e008ebb1f2f5316d12e69e"
         },
@@ -26121,7 +26351,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 47,
+          "line": 50,
           "kind": "literal",
           "context": "577d71de58f0338189b82b893a7718e554fd247a30e85f836fd5457930f191a5"
         }
@@ -26143,7 +26373,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 65,
+          "line": 71,
           "kind": "literal",
           "context": "0241356a41842ffdef750df4429c7b82de566cba8146ee180ff07349694bb6f0"
         },
@@ -26294,7 +26524,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 119,
+          "line": 125,
           "kind": "literal",
           "context": "d3e78725950300210475fac17897767feca7f9e66ffe68792b98b2c8ece80b25"
         }
