@@ -28,6 +28,10 @@ for (const width of [390, 768, 1440]) test(`P0 public policy survives review, re
     });
     await page.goto(`/salon/${slug}`);
     const publicPolicy = page.locator('#business-policies');
+    // Navigation load can precede React moving streamed markup out of hidden
+    // S:0. Require one visible policy and no retained duplicate before reading it.
+    await expect(publicPolicy.filter({ visible: true })).toHaveCount(1);
+    await expect(publicPolicy).toHaveCount(1);
     await expect(publicPolicy).toContainText('P0 Policy Fixture — Business policies');
     await expect(publicPolicy).toContainText('Refund & Service Satisfaction Policy');
     await expect(publicPolicy).toContainText('Cancellation notice (hours): 24');
@@ -71,6 +75,8 @@ for (const width of [390, 768, 1440]) test(`P0 public policy survives review, re
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await evidence.screenshot({ path: `${gallery}/confirmed-original-policy.png`, ...screenshotCaret });
     await page.goto(`/salon/${slug}`);
+    await expect(publicPolicy.filter({ visible: true })).toHaveCount(1);
+    await expect(publicPolicy).toHaveCount(1);
     await expect(page.locator('#business-policies')).toContainText('Cancellation notice (hours): 72');
     await expect(page.locator('#business-policies')).toContainText('Version 2');
   } finally { expect((await seed(null)).ok()).toBe(true); }

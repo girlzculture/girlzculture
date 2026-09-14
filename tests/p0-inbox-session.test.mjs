@@ -5,7 +5,7 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
-function inboxHarness() {
+function inboxHarness(translateSource = value => value) {
   const slots = []; let cursor = 0; let effects = []; let dirty = true; let tree; let changeAuth = () => {};
   let session = { user: { id: 'customer-a' }, access_token: 'local-a' }; let sessionWait;
   const requests = []; const responses = [];
@@ -17,7 +17,7 @@ function inboxHarness() {
   const Component = typescriptLoader(process.cwd(), {
     react, 'next/link': { default: 'a' }, 'lucide-react': { Languages: 'i', MessageSquare: 'i', Send: 'i' },
     '@/components/booking/MessageDisplay': { default: 'message-display' }, '@/components/booking/BookingWelcome': { default: 'booking-welcome' }, '@/components/booking/BookingPolicyEvidence': { default: 'policy-evidence' },
-    '@/components/i18n/LocaleProvider': { useI18n: () => ({ locale: 'fr', translateSource: value => value, formatDate: value => value }) },
+    '@/components/i18n/LocaleProvider': { useI18n: () => ({ locale: 'fr', translateSource, formatDate: value => value }) },
     '@/lib/supabase': {
       getSessionForScope: async () => sessionWait ? sessionWait.promise : session,
       getSupabaseForScope: () => ({ auth: { onAuthStateChange: callback => { changeAuth = callback; callback('INITIAL_SESSION', session); return { data: { subscription: { unsubscribe() {} } } }; } } }),
@@ -31,7 +31,7 @@ function inboxHarness() {
     switchActor(id) { session = id ? { user: { id }, access_token: `local-${id}` } : null; changeAuth(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); render(); },
     holdSession() { return sessionWait = deferred(); },
     draft(text) { find(node => node.type === 'textarea').props.onChange({ target: { value: text } }); render(); },
-    async ready() { await settle(); responses[0].resolve(Response.json({ threads: [{ booking: { id: 'booking-a', guest_name: 'PRIVATE A', appointment_datetime: '2026-09-13T12:00:00Z' }, messages: [] }], role: 'customer' })); await settle(); responses[1].resolve(Response.json({ booking: { id: 'booking-a', guest_name: 'PRIVATE A', appointment_datetime: '2026-09-13T12:00:00Z' }, messages: [], role: 'customer' })); await settle(); },
+    async ready(messages = []) { await settle(); responses[0].resolve(Response.json({ threads: [{ booking: { id: 'booking-a', guest_name: 'PRIVATE A', appointment_datetime: '2026-09-13T12:00:00Z' }, messages: [] }], role: 'customer' })); await settle(); responses[1].resolve(Response.json({ booking: { id: 'booking-a', guest_name: 'PRIVATE A', appointment_datetime: '2026-09-13T12:00:00Z' }, messages, role: 'customer' })); await settle(); },
   };
 }
 
@@ -61,4 +61,14 @@ test('a successful old send does not erase a newer draft', async () => {
   void app.find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); await app.settle();
   app.draft('New unsent draft'); app.responses[2].resolve(Response.json({ message: { id: 'saved' } })); await app.settle();
   assert.equal(app.find(node => node.type === 'textarea').props.value, 'New unsent draft');
+});
+
+test('message sender labels are localized on render without a later DOM translation scan', async () => {
+  const labels = { Customer: 'Client', Business: 'Entreprise', 'Girlz Culture Support': 'Assistance Girlz Culture' };
+  for (const [role, source] of [['customer', 'Customer'], ['salon', 'Business'], ['platform_admin', 'Girlz Culture Support']]) {
+    const app = inboxHarness(value => labels[value] || value);
+    await app.ready([{ id: 'message-a', sender_role: role, original_body: 'Business', created_at: '2026-09-13T12:00:00Z' }]);
+    assert.equal(app.find(node => node.type === 'small' && node.props.children?.[1] === ' · ').props.children[0], labels[source]);
+    assert.equal(app.find(node => node.props.messageId === 'message-a').props.original, 'Business');
+  }
 });
