@@ -40,7 +40,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: true,
-  workers: process.env.CI ? 1 : undefined,
+  // Normal CI runs the full expanded collection with two workers. Independent
+  // release-candidate shards keep their existing single-worker allocation.
+  workers: process.env.PLAYWRIGHT_CI_WORKERS === "2" ? 2 : process.env.CI ? 1 : undefined,
   retries: 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {

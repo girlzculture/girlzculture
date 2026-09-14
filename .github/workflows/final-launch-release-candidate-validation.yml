@@ -13,6 +13,8 @@ on:
       - "e2e/**"
       - "package.json"
       - "package-lock.json"
+      - "playwright*.ts"
+      - ".github/workflows/database-migrations.yml"
       - ".github/workflows/final-launch-release-candidate-validation.yml"
   workflow_dispatch:
 
