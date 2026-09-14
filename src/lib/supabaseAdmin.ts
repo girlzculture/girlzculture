@@ -770,7 +770,7 @@ export async function processBookingReminders(){
   const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const now=Date.now();const results:Array<Record<string,unknown>>=[];
   for(const reminderHours of notification.reminderHours){
     const{from,to}=bookingReminderDueWindow({now,reminderHours});
-    const{data:bookings,error}=await admin.from("bookings").select("id,appointment_datetime").eq("status","Confirmed").gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(250);
+    const{data:bookings,error}=await admin.from("bookings").select("id,appointment_datetime").eq("booking_origin","marketplace").eq("status","Confirmed").gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(250);
     if(error){
       const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"load_due_bookings",actorRole:"system",provider:"supabase",safeMessage:"Due booking reminders could not be loaded."});
       results.push({reminderHours,status:"failed",stage:"load_due_bookings",request_id:reference});

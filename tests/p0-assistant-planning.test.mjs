@@ -55,7 +55,7 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [] });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation });
   return { run, calls, requests, updates };
 }
 
@@ -105,7 +105,7 @@ test('all five locales are explicit in governed planning, with untrusted input k
 test('disabled, unconfigured, unauthorized and out-of-budget planning never calls the provider', async () => {
   for (const [options, code] of [
     [{ enabled: false }, 'ASSISTANT_UNAVAILABLE'], [{ configured: false }, 'ASSISTANT_UNAVAILABLE'],
-    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'styles'] }, 'ASSISTANT_ACCESS_DENIED'],
+    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'styles', 'stylists', 'products', 'reviews', 'promotions', 'earnings'] }, 'ASSISTANT_ACCESS_DENIED'],
     [{ budget: false }, 'ASSISTANT_BUDGET_LIMIT'],
   ]) {
     const f = fixture(options); await assert.rejects(f.run(), new RegExp(code)); assert.equal(f.requests.length, 0);
@@ -139,4 +139,23 @@ test('provider failure records safe failure and conservatively retains its budge
   assert.equal(f.updates[0].outcome, 'failed');
   assert.equal(f.updates[0].safe_error_code, 'PLANNER_FAILED');
   assert.equal(JSON.stringify(f.updates).includes('provider failure'), false);
+});
+
+test('a clarification answer retains bounded conversational intent without authorizing execution', async()=>{
+  const conversation=[{role:'user',text:'Book Sheila Thursday at 1 PM.'},{role:'assistant',text:'Which service does Sheila need?'}];
+  const f=fixture({conversation});await f.run('en','Medium knotless braids');
+  const input=JSON.parse(f.requests[0].input);
+  assert.deepEqual(input.conversation,conversation);
+  assert.equal(f.calls.some(row=>['save_gc_assistant_request','confirm_gc_assistant_request'].includes(row.name)),false);
+});
+
+test('expanded history never replays private notes, manual contacts or financial booking details',async()=>{
+  const f=fixture({history:[
+    {tool:'prepare_booking_note',permission:'bookings',arguments:{note:'Private follow-up'},result:null},
+    {tool:'prepare_manual_appointment',permission:'bookings',arguments:{guest_phone:'private-phone',notes:'Private follow-up'},result:null},
+    {tool:'get_upcoming_appointments',permission:'bookings',arguments:{},result:{bookings:[{...booking,guest_email:'private-email',estimated_total:9123,customer_id:'private-customer'}]}},
+  ]});await f.run();const input=JSON.parse(f.requests[0].input);
+  assert.equal(input.previous[0].arguments,null);assert.equal(input.previous[1].arguments,null);
+  assert.equal(JSON.parse(input.previous[2].result).bookings[0].id,booking.id);
+  assert.doesNotMatch(f.requests[0].input,/Private follow-up|private-phone|private-email|9123|private-customer/);
 });

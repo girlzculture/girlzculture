@@ -9,6 +9,7 @@ import MessageDisplay from "@/components/booking/MessageDisplay";
 import BookingWelcome from "@/components/booking/BookingWelcome";
 import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
 import { useI18n } from "@/components/i18n/LocaleProvider";
+import { LOCALE_NAMES } from "@/i18n/catalog";
 import { bookingReference } from "@/lib/bookingReference";
 import { OwnerActionError, ownerResponseError } from "@/lib/ownerActionError";
 
@@ -32,12 +33,15 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   const [selectedId, setSelectedId] = useState(initialBookingId);
   const [messages, setMessages] = useState<Row[]>([]);
   const [role, setRole] = useState("");
+  const [messageLocale, setMessageLocale] = useState<string>(locale);
+  const currentLocale = useRef(locale);
+  useEffect(() => { currentLocale.current = locale; }, [locale]);
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
   const [reference, setReference] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const sendAttempt = useRef<{ bookingId: string; body: string; id: string } | null>(null);
+  const sendAttempt = useRef<{ bookingId: string; body: string; sourceLocale: string; id: string } | null>(null);
   const conversationGeneration = useRef(0);
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
@@ -96,7 +100,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
         actorGeneration.current++; conversationGeneration.current++; operation.current++;
         draftGeneration.current++; previewGeneration.current++; actor.current = nextActor; busy.current = false;
         setThreads([]); setMessages([]); setWelcome(null); setRole(""); setSelectedId("");
-        setDraft(""); setTranslationPreview(null); sendAttempt.current = null;
+        setDraft(""); setMessageLocale(currentLocale.current); setTranslationPreview(null); sendAttempt.current = null;
         setNotice(""); setReference(""); setSending(false); setLoading(Boolean(nextActor));
       }
       setActorId(nextActor);
@@ -137,7 +141,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   async function send(event: FormEvent) {
     event.preventDefault();
     if (busy.current || !selectedId || !draft.trim()) return;
-    if (sendAttempt.current?.bookingId !== selectedId || sendAttempt.current?.body !== draft) sendAttempt.current = { bookingId: selectedId, body: draft, id: crypto.randomUUID() };
+    if (sendAttempt.current?.bookingId !== selectedId || sendAttempt.current?.body !== draft || sendAttempt.current?.sourceLocale !== messageLocale) sendAttempt.current = { bookingId: selectedId, body: draft, sourceLocale: messageLocale, id: crypto.randomUUID() };
     const identity = actorGeneration.current;
     const conversation = conversationGeneration.current;
     const revision = draftGeneration.current;
@@ -156,6 +160,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
           booking_id: selectedId,
           body: draft,
           client_request_id: requestId,
+          source_locale: messageLocale === "unknown" ? null : messageLocale,
           translated_body:
             translationPreview?.original === draft
               ? translationPreview.translated
@@ -233,6 +238,6 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
     <div className="flex min-h-[520px] flex-col"><header className="border-b border-plum/10 p-5"><h3 className="font-serif text-xl text-plum"><span data-no-translate>{bookingLabel(selected.booking)}</span></h3><p className="mt-1 text-[11px] text-ink/55"><span data-no-translate>{bookingReference(selected.booking)} · {role === "customer" ? selected.booking.salon?.name : selected.booking.guest_name}</span> · {formatDate(selected.booking.appointment_datetime, { dateStyle: "medium", timeStyle: "short", timeZone: selected.booking.salon?.time_zone || "America/New_York" })}</p></header><div className="flex-1 space-y-3 overflow-y-auto bg-cream/35 p-5">{welcome ? <BookingWelcome facts={welcome}/> : null}<BookingPolicyEvidence booking={selected.booking}/>{messages.map((message, index) => {
       const mine = message.sender_role === role;
       return <article key={message.id} className={`max-w-[82%] rounded-[14px] px-4 py-3 text-sm ${mine ? "ml-auto bg-plum text-white" : "bg-white text-ink shadow-sm"}`}><MessageDisplay messageId={message.id} bookingId={selectedId} original={message.original_body || message.body} scope={scope} autoTranslate={index >= messages.length - 5}/><small className={`mt-2 block text-[9px] ${mine ? "gc-text-on-dark-muted" : "text-ink/40"}`}>{message.sender_role === "customer" ? "Customer" : message.sender_role === "salon" ? "Business" : "Girlz Culture Support"} · {formatDate(message.created_at, { dateStyle: "medium", timeStyle: "short" })}</small></article>;
-    })}{!messages.length ? <p className="py-20 text-center text-sm gc-text-primary">No messages yet. Ask a question about this appointment.</p> : null}</div>{scope !== "admin" ? <form onSubmit={send} className="border-t border-plum/10 p-4"><label className="sr-only" htmlFor="booking-message">Message</label><div className="flex gap-2"><textarea id="booking-message" value={draft} onChange={(event) => { draftGeneration.current++; previewGeneration.current++; setDraft(event.target.value.slice(0, 2000)); setTranslationPreview(null); }} rows={2} placeholder="Type a private booking message…" className="min-w-0 flex-1 resize-none rounded-[10px] border border-plum/15 p-3 text-sm outline-none focus:border-magenta" /><button disabled={sending || !draft.trim()} className="grid w-14 place-items-center rounded-[10px] bg-magenta text-white gc-disabled-control" aria-label={translationPreview ? "Send original and previewed translation" : "Send message"}><Send size={19} /></button></div><div className="mt-2 flex flex-wrap items-center gap-2"><select value={targetLocale} onChange={(event) => { previewGeneration.current++; setTargetLocale(event.target.value); setTranslationPreview(null); }} aria-label="Translation language" className="min-h-9 rounded-lg border border-plum/15 bg-white px-2 text-[10px]"><option value="fr">French</option><option value="es">Spanish</option><option value="wo">Wolof</option><option value="zh-CN">中文（简体）</option><option value="en">English</option></select><button type="button" disabled={sending || !draft.trim()} onClick={() => void previewTranslation()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta gc-disabled-control"><Languages size={13}/>Preview translation</button><span className="text-[9px] gc-text-primary">The original is always preserved. Nothing translated is sent until you preview and press Send.</span></div>{translationPreview?.original === draft ? <div className="mt-3 grid gap-2 rounded-[10px] border border-magenta/20 bg-blush/25 p-3 sm:grid-cols-2"><div><b className="text-[9px] uppercase gc-text-muted">Original</b><p className="mt-1 whitespace-pre-wrap text-xs"><span data-no-translate>{translationPreview.original}</span></p></div><div><b className="text-[9px] uppercase text-magenta">Translation preview · {translationPreview.locale}</b><p className="mt-1 whitespace-pre-wrap text-xs"><span data-no-translate>{translationPreview.translated}</span></p></div></div> : null}</form> : <p className="border-t border-plum/10 p-4 text-center text-xs text-ink/50">Admin read-only view for support and safety.</p>}{notice ? <p className="border-t border-red-200 bg-red-50 p-3 text-xs gc-text-danger">{t(notice)}{reference ? <><br/>{t("Support reference")}: <span data-no-translate>{reference}</span></> : null}</p> : null}</div>
+    })}{!messages.length ? <p className="py-20 text-center text-sm gc-text-primary">No messages yet. Ask a question about this appointment.</p> : null}</div>{scope !== "admin" ? <form onSubmit={send} className="border-t border-plum/10 p-4"><label className="sr-only" htmlFor="booking-message">Message</label><label className="mb-2 block text-xs">{t("Message language")}<select value={messageLocale} onChange={event => { previewGeneration.current++; setTranslationPreview(null); setMessageLocale(event.target.value); }} className="ml-2 min-h-11 rounded-lg border bg-white px-2">{["en", "fr", "wo", "es", "zh-CN"].map(code => <option key={code} value={code} data-no-translate>{LOCALE_NAMES[code]}</option>)}<option value="unknown">{t("Mixed or unknown language")}</option></select></label><div className="flex gap-2"><textarea id="booking-message" value={draft} onChange={(event) => { draftGeneration.current++; previewGeneration.current++; setDraft(event.target.value.slice(0, 2000)); setTranslationPreview(null); }} rows={2} placeholder="Type a private booking message…" className="min-w-0 flex-1 resize-none rounded-[10px] border border-plum/15 p-3 text-sm outline-none focus:border-magenta" /><button disabled={sending || !draft.trim()} className="grid w-14 place-items-center rounded-[10px] bg-magenta text-white gc-disabled-control" aria-label={translationPreview ? "Send original and previewed translation" : "Send message"}><Send size={19} /></button></div><div className="mt-2 flex flex-wrap items-center gap-2"><select value={targetLocale} onChange={(event) => { previewGeneration.current++; setTargetLocale(event.target.value); setTranslationPreview(null); }} aria-label="Translation language" className="min-h-9 rounded-lg border border-plum/15 bg-white px-2 text-[10px]"><option value="fr">French</option><option value="es">Spanish</option><option value="wo">Wolof</option><option value="zh-CN">中文（简体）</option><option value="en">English</option></select><button type="button" disabled={sending || !draft.trim()} onClick={() => void previewTranslation()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta gc-disabled-control"><Languages size={13}/>Preview translation</button><span className="text-[9px] gc-text-primary">The original is always preserved. Nothing translated is sent until you preview and press Send.</span></div>{translationPreview?.original === draft ? <div className="mt-3 grid gap-2 rounded-[10px] border border-magenta/20 bg-blush/25 p-3 sm:grid-cols-2"><div><b className="text-[9px] uppercase gc-text-muted">Original</b><p className="mt-1 whitespace-pre-wrap text-xs"><span data-no-translate>{translationPreview.original}</span></p></div><div><b className="text-[9px] uppercase text-magenta">Translation preview · {translationPreview.locale}</b><p className="mt-1 whitespace-pre-wrap text-xs"><span data-no-translate>{translationPreview.translated}</span></p></div></div> : null}</form> : <p className="border-t border-plum/10 p-4 text-center text-xs text-ink/50">Admin read-only view for support and safety.</p>}{notice ? <p className="border-t border-red-200 bg-red-50 p-3 text-xs gc-text-danger">{t(notice)}{reference ? <><br/>{t("Support reference")}: <span data-no-translate>{reference}</span></> : null}</p> : null}</div>
   </section></>;
 }

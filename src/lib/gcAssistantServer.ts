@@ -2,6 +2,8 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { AssistantError, stableJson, validateTool, serviceLengthOptions, type AssistantTool } from "@/lib/gcAssistantCore";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
+import { readOwnerOperation } from "@/lib/ownerReadServer";
+import { prepareOwnerOperation } from "@/lib/ownerOperationalServer";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { isSubscriptionActive } from "@/lib/plans";
@@ -35,29 +37,24 @@ async function readTool(context: Context, tool: AssistantTool, args: Row): Promi
     if (result.error) throw result.error;
     return { services: result.data || [], total: result.count, capped_at: 100, currency: "USD" };
   }
-  if (tool === "get_availability") {
+  if (tool === "get_availability" && args.style_id) {
     if (args.stylist_id) { const stylist = await admin.from("stylists").select("id").eq("id", args.stylist_id).eq("salon_id", salon.id).maybeSingle(); if (stylist.error || !stylist.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404); }
     const available = await bookingAvailability({ salonId: salon.id, styleId: String(args.style_id), stylistId: args.stylist_id ? String(args.stylist_id) : null, date: String(args.date) });
     return { date: args.date, time_zone: available.timeZone, duration_minutes: available.durationMinutes, buffer_minutes: available.bufferMinutes, slots: available.slots.map(slot => ({ time: slot.value, stylist_id: slot.stylistId || null, professional_name: slot.stylistId ? slot.stylistName : null })) };
   }
-  if (tool === "get_bookings" || tool === "get_business_summary") {
-    // Summary exposes counts, not a new invented revenue definition. Detailed
-    // customer fields are returned only by the bookings-permission tool.
-    const fields = tool === "get_bookings" ? "id,public_reference,appointment_datetime,status,guest_name,style:styles(name),stylist:stylists(name)" : "status";
+  if (tool === "get_bookings") {
+    const fields = "id,public_reference,appointment_datetime,status,guest_name,booking_origin,source,style:styles(name),stylist:stylists(name)";
     const result = await admin.from("bookings").select(fields, { count: "exact" }).eq("salon_id", salon.id).gte("appointment_datetime", args.start).lt("appointment_datetime", args.end).order("appointment_datetime").limit(300);
     if (result.error) throw result.error;
-    if (tool === "get_bookings") return { bookings: result.data, total: result.count, time_zone: salon.time_zone, capped_at: 300 };
-    if ((result.count || 0) > 300) return { bookings: result.count, start: args.start, end: args.end, time_zone: salon.time_zone, breakdown_unavailable: true };
-    const byStatus: Record<string, number> = {};
-    for (const item of result.data || []) { const row = item as unknown as Row; const key = String(row.status); byStatus[key] = (byStatus[key] || 0) + 1; }
-    return { bookings: result.count || 0, by_status: byStatus, start: args.start, end: args.end, time_zone: salon.time_zone };
+    return { bookings: result.data, total: result.count, time_zone: salon.time_zone, capped_at: 300 };
   }
-  throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
+  return readOwnerOperation(context, tool, args);
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
   const { admin, salon } = context;
-  let before: Row = {}; let payload: Row = {}; const notices: string[] = [];
+  const operation = await prepareOwnerOperation(context, tool, args);
+  let before: Row = operation.before; let payload: Row = operation.payload; const notices: string[] = operation.notices;
   if (tool === "prepare_business_profile_update") {
     before = selected(salon, [String(args.field)]);
     if (args.field === "hours") payload = { hours: Object.fromEntries(Object.entries(args.hours as Row).map(([day, value]) => [day.slice(0, 3), value])) };
@@ -88,15 +85,16 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     notices.push("SERVICE_SAVED_AS_DRAFT");
   }
   if (tool === "prepare_customer_message") {
-    const booking = await admin.from("bookings").select("id,status,appointment_datetime,public_reference,guest_name,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id).maybeSingle();
+    const booking = await admin.from("bookings").select("id,status,appointment_datetime,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id).maybeSingle();
     if (booking.error) throw booking.error;
     if (!booking.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
     before = selected(booking.data, ["id", "status", "appointment_datetime"]);
+    if (booking.data.booking_origin === "business_added" && !booking.data.customer_id) throw new AssistantError("ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED", 409);
     const customer = booking.data.customer as unknown as { name?: string } | null;
     payload = { customer_name: booking.data.guest_name || customer?.name || null, public_reference: booking.data.public_reference, time_zone: salon.time_zone };
   }
   if (tool === "prepare_business_policy_update") { validateBusinessPolicy(args.policy); before = { revision_id: salon.business_policy_revision_id || null }; notices.push("POLICY_REVIEW_REQUIRED"); }
-  const prose = tool === "prepare_customer_message" ? String(args.body) : tool === "prepare_business_profile_update" ? String(args.text || "") : tool === "prepare_business_policy_update" ? `${(args.policy as Row).preparation}\n${(args.policy as Row).notes}` : String(args.name || "");
+  const prose = tool === "prepare_customer_message" ? String(args.body) : tool === "prepare_business_profile_update" ? String(args.text || "") : tool === "prepare_business_policy_update" ? `${(args.policy as Row).preparation}\n${(args.policy as Row).notes}\n${(args.policy as Row).refund_terms || ""}` : String(args.name || args.title || "") + "\n" + String(args.description || args.bio || "");
   const moderation = await moderatePublicContent(admin, { body: prose });
   if (!moderation.allowed) throw new AssistantError("ASSISTANT_CONTENT_REVIEW_REQUIRED");
   return { before, payload, notices };
@@ -142,5 +140,5 @@ export async function confirmAssistantTool(context: Context, requestId: string, 
     throw new AssistantError(code, code.includes("ACCESS") ? 403 : 409);
   }
   if (result.data?.verified !== true) throw new AssistantError(result.data?.code || "ASSISTANT_ACTION_FAILED", 409);
-  return result.data;
+  return { ...result.data, tool: checked.tool };
 }

@@ -51,6 +51,20 @@ function fixture(options = {}) {
 const send = (f, body = {}) => f.route.POST(new Request('http://localhost/api/messages', { method: 'POST', headers: { authorization: 'Bearer fixture-only', 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: bookingId, body: '  Bonjour — $180, GC123  ', client_request_id: requestId, ...body }) }));
 const read = f => f.route.GET(new Request(`http://localhost/api/messages?booking_id=${bookingId}`, { headers: { authorization: 'Bearer fixture-only' } }));
 
+test('normal message sends record the explicitly selected source without changing original text', async () => {
+  for (const source_locale of ['en','fr','wo','es','zh-CN',null]) {
+    const f = fixture(); const response = await send(f,{source_locale}); assert.equal(response.status,200);
+    const saved=f.mutations.find(row=>row.table==='booking_messages').payload;
+    assert.equal(saved.source_locale,source_locale);assert.equal(saved.source_locale_provenance,source_locale?'sender_selected':'unknown');
+    assert.equal(saved.original_body,'  Bonjour — $180, GC123  ');assert.equal(saved.body,saved.original_body);
+  }
+});
+test('invalid provenance and manual guests never create a customer conversation or notification',async()=>{
+  const invalid=fixture();assert.equal((await send(invalid,{source_locale:'invented'})).status,400);assert.deepEqual(invalid.mutations,[]);
+  const manual=fixture({booking:{booking_origin:'business_added',customer_id:null}});const response=await send(manual,{source_locale:'fr'});
+  assert.equal(response.status,409);assert.equal((await response.json()).code,'MESSAGE_CUSTOMER_PARTICIPANT_REQUIRED');assert.deepEqual(manual.mutations,[]);assert.deepEqual(manual.deliveries,[]);
+});
+
 for (const [name, options] of [
   ['disabled identity', { canonical: { status: 'Disabled' } }],
   ['changed identity email', { canonical: { email_normalized: 'changed@example.test' } }],

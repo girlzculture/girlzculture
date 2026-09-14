@@ -12,7 +12,7 @@ type Row = Record<string, unknown>;
 type HoursRange = { open: string; close: string; closed: boolean };
 type AvailabilityInput = {
   salonId: string;
-  styleId: string;
+  styleId?: string | null;
   stylistId?: string | null;
   customerId?: string | null;
   guestEmail?: string | null;
@@ -92,10 +92,11 @@ function overlaps(
 }
 
 function assertResult(
-  result: { data: unknown; error?: { message?: string } | null },
+  result: { data: unknown; count?: number | null; error?: { message?: string } | null },
   label: string,
 ) {
   if (result.error) throw new Error(`${label.toUpperCase()}_QUERY_FAILED`);
+  if (result.count != null && result.count > ((result.data || []) as Row[]).length) throw new Error(`${label.toUpperCase()}_RESULT_TRUNCATED`);
   return (result.data || []) as Row[];
 }
 
@@ -113,17 +114,17 @@ async function loadAvailabilityData(
       )
       .eq("id", input.salonId)
       .single(),
-    admin
+    input.styleId ? admin
       .from("styles")
       .select("id,salon_id,duration_min_hours,buffer_minutes")
       .eq("id", input.styleId)
       .eq("salon_id", input.salonId)
-      .single(),
+      .single() : Promise.resolve({ data: {}, error: null }),
     admin
       .from("stylists")
-      .select("id,name,availability,is_active")
+      .select("id,name,availability,is_active", { count: "exact" })
       .eq("salon_id", input.salonId)
-      .eq("is_active", true),
+      .eq("is_active", true).is("archived_at", null),
   ]);
   if (salonResult.error || styleResult.error)
     throw new Error("SALON_OR_STYLE_QUERY_FAILED");
@@ -148,14 +149,14 @@ async function loadAvailabilityData(
   ] = await Promise.all([
     admin
       .from("bookings")
-      .select("id,stylist_id,appointment_datetime,blocked_until,status")
+      .select("id,stylist_id,appointment_datetime,blocked_until,status", { count: "exact" })
       .eq("salon_id", input.salonId)
       .lt("appointment_datetime", rangeEnd.toISOString())
       .gt("blocked_until", rangeStart.toISOString()),
     admin
       .from("booking_checkout_intents")
       .select(
-        "id,stylist_id,appointment_datetime,blocked_until,status,expires_at",
+        "id,stylist_id,appointment_datetime,blocked_until,status,expires_at", { count: "exact" },
       )
       .eq("salon_id", input.salonId)
       .eq("status", "Pending")
@@ -164,7 +165,7 @@ async function loadAvailabilityData(
       .gt("blocked_until", rangeStart.toISOString()),
     admin
       .from("salon_blockouts")
-      .select("id,stylist_id,starts_at,ends_at")
+      .select("id,stylist_id,starts_at,ends_at", { count: "exact" })
       .eq("salon_id", input.salonId)
       .is("released_at", null)
       .lt("starts_at", rangeEnd.toISOString())
@@ -388,4 +389,37 @@ export async function nextAvailableSlot(
     cursor = addMinutesToLocal(cursor, "00:00", 24 * 60).date;
   }
   return null;
+}
+
+/** Owner calendar query: no service or marketplace visibility is required.
+ * The same hours, resources, bookings, checkout holds and overrides feed both
+ * this operational view and the public service-fit query above. */
+export async function calendarAvailability(input: { salonId: string; date: string; stylistId?: string | null; excludeBookingId?: string | null }) {
+  const data = await loadAvailabilityData(input, input.date, 1);
+  const day = dayName(input.date);
+  const hours = hoursRange((data.salon.hours as Row | null)?.[day]);
+  const gaps: { start: string; end: string; stylist_id: string | null; professional_name: string | null }[] = [];
+  if (!hours || hours.closed || isSalonClosedOn(data.salon, input.date)) return { date: input.date, time_zone: data.timeZone, gaps };
+  const resources = data.roster.length ? data.roster : [{ id: null, name: null, availability: {} }];
+  for (const resource of resources) {
+    const id = resource.id ? String(resource.id) : null;
+    if (input.stylistId && input.stylistId !== id) continue;
+    const own = id ? hoursRange((resource.availability as Row | null)?.[day]) : hours;
+    if (!own || own.closed) continue;
+    const open = Math.max(minutes(hours.open)!, minutes(own.open)!);
+    const close = Math.min(minutes(hours.close)!, minutes(own.close)!);
+    if (close <= open) continue;
+    const left = Math.max(zonedLocalToUtc(input.date + "T" + hhmm(open), data.timeZone).getTime(), Math.ceil(Date.now() / 60000) * 60000);
+    const right = zonedLocalToUtc(input.date + "T" + hhmm(close), data.timeZone).getTime();
+    let free = left < right ? [[left, right]] : [];
+    const busy = [...data.bookings.map(row => ({ ...row, starts_at: row.appointment_datetime, ends_at: row.blocked_until })), ...data.intents.map(row => ({ ...row, starts_at: row.appointment_datetime, ends_at: row.blocked_until })), ...data.blockouts] as Row[];
+    for (const row of busy) {
+      if (row.stylist_id && id && row.stylist_id !== id) continue;
+      const start = Date.parse(String(row.starts_at)), end = Date.parse(String(row.ends_at));
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) throw new Error("INVALID_CALENDAR_OCCUPANCY");
+      free = free.flatMap(([a,b]) => end <= a || start >= b ? [[a,b]] : [...(a < start ? [[a,start]] : []), ...(end < b ? [[end,b]] : [])]);
+    }
+    for (const [start,end] of free) gaps.push({ start: new Date(start).toISOString(), end: new Date(end).toISOString(), stylist_id: id, professional_name: resource.name ? String(resource.name) : null });
+  }
+  return { date: input.date, time_zone: data.timeZone, gaps };
 }

@@ -55,7 +55,7 @@ const money = (value: number) => `$${value.toFixed(2)}`;
 function localDateOffset(days:number){const date=new Date();date.setDate(date.getDate()+days);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`}
 
 export default function SalonBookingWizard({ salon, styles, stylists,depositPercentage,maximumAdvanceDays,clientNotesMaxLength,cancellationGraceMinutes }: Props) {
-  const { locale } = useI18n();
+  const { locale, translateSource: t } = useI18n();
   const closedToday = isSalonClosedToday(salon);
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
@@ -77,6 +77,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const [salonPromotion, setSalonPromotion] = useState<SalonPromotion | null>(null);
   const [salonPromotionMessage, setSalonPromotionMessage] = useState("");
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
+  const [businessConsent, setBusinessConsent] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState(searchParams.get("payment") === "cancelled" ? "Checkout was cancelled. Your appointment was not booked." : closedToday ? "This salon is closed today. You can still choose a future date." : "");
   const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({});
@@ -230,6 +231,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     if (!guest.name.trim()) errors.name="This field is required";
     if (!guest.email.trim()) errors.email="This field is required"; else if(!isValidEmail(guest.email))errors.email="Enter a valid email address";
     if (!guest.phone.trim()) errors.phone="This field is required"; else if(!isValidUsPhone(guest.phone))errors.phone="Enter a valid US phone number";
+    if (salon.business_policy?.id && businessConsent !== salon.business_policy.id) errors.business_consent = "This confirmation is required";
     if (!consent) errors.consent="This confirmation is required";
     if (!date || !time || !slots.some((slot) => slot.value === time)) errors.date_time="Choose an available appointment time";
     if(Object.keys(errors).length){setFieldErrors(errors);setMessage("Check the highlighted fields and try again.");setStep(errors.date_time?3:4);return;}
@@ -269,6 +271,8 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
           shipping_address: productCart?.shippingAddress || {},
           product_promotion_id: productCart?.promotionId || null,
           checkout_idempotency_key: checkoutIdempotencyKey,
+          platform_policy_acknowledged: consent,
+          business_policy_acknowledged: Boolean(salon.business_policy?.id && businessConsent === salon.business_policy.id),
           business_policy_revision_id: salon.business_policy?.id || null,
         }),
       });
@@ -304,7 +308,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion }} />,
     <StylistPanel key="stylist" stylists={stylists} value={stylistId} setValue={setStylistId} />,
     <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested, fieldErrors, setFieldErrors, minimumBookingDate, maximumBookingDate }} />,
-    <div key="review"><BusinessPolicyDisclosure revision={salon.business_policy || null}/><ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, cancellationGraceMinutes, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} />{productCart?.items.length ? <CombinedProductSummary cart={productCart} /> : null}<PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
+    <div key="review"><BusinessPolicyDisclosure businessName={salon.name} revision={salon.business_policy || null}/>{salon.business_policy?.id ? <div className="my-4 rounded-xl border bg-white p-4"><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={businessConsent === salon.business_policy.id} onChange={event => { setBusinessConsent(event.target.checked ? salon.business_policy.id : null); setFieldErrors(current => ({ ...current, business_consent: "" })); }}/><span>{t("I have read and agree to {value0}'s Business Policies, including its Refund & Service Satisfaction Policy. These policies are set by the business and are separate from Girlz Culture's platform policies and protections.", { value0: salon.name })}</span></label><a className="mt-2 inline-flex min-h-11 items-center text-sm underline" href="#business-policies" onClick={() => { const details = document.querySelector<HTMLDetailsElement>("#business-policies details"); if (details) details.open = true; }}>{t("Read the full business policy")}</a>{fieldErrors.business_consent ? <p role="alert" className="text-sm gc-text-danger">{t(fieldErrors.business_consent)}</p> : null}</div> : null}<ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, cancellationGraceMinutes, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} />{productCart?.items.length ? <CombinedProductSummary cart={productCart} /> : null}<PromoField {...{ promoCode, setPromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];
 

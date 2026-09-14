@@ -51,7 +51,7 @@ test('an inbox send awaiting authentication cannot execute with the next account
 test('a delayed translation cannot reappear after the target language changes', async () => {
   const app = inboxHarness(); await app.ready(); app.draft('Original A');
   const translate = app.find(node => node.type === 'button' && node.props.children?.includes?.('Preview translation')).props.onClick(); await app.settle();
-  app.find(node => node.type === 'select').props.onChange({ target: { value: 'es' } }); app.render();
+  app.find(node => node.type === 'select' && node.props['aria-label'] === 'Translation language').props.onChange({ target: { value: 'es' } }); app.render();
   app.responses[2].resolve(Response.json({ preview: { original: 'Original A', translated: 'Traduction privée A', locale: 'fr', provider: 'test' } })); await translate; await app.settle();
   assert.equal(JSON.stringify(app.render()).includes('Traduction privée A'), false);
 });

@@ -143,6 +143,7 @@ async function POSTHandler(request: Request) {
     if (messageBody.length > 2000 || !messageBody.trim()) return Response.json({ code: "MESSAGE_INVALID", error: "Enter a message of up to 2,000 characters." }, { status: 400 });
     if (!bookingId || !messageBody) throw new Error("Enter a message before sending.");
     const access = await accessForBooking(admin, user.id, user.email || "", bookingId);
+    if (access.booking.booking_origin === "business_added" && !access.booking.customer_id) return Response.json({ code: "MESSAGE_CUSTOMER_PARTICIPANT_REQUIRED" }, { status: 409 });
     const moderation = await moderatePublicContent(admin, { body: messageBody });
     if (!moderation.allowed) {
       return Response.json(
@@ -193,12 +194,16 @@ async function POSTHandler(request: Request) {
       previewed: body.translation_previewed === true,
       now,
     });
+    const sourceLocale = body.source_locale ?? null;
+    if (sourceLocale !== null && !["en", "fr", "wo", "es", "zh-CN"].includes(String(sourceLocale))) return Response.json({ code: "MESSAGE_INVALID" }, { status: 400 });
     const inserted = await admin.from("booking_messages").insert({
       booking_id: bookingId,
       salon_id: access.booking.salon_id,
       sender_user_id: user.id,
       sender_role: access.role,
       client_request_id: clientRequestId,
+      source_locale: sourceLocale,
+      source_locale_provenance: sourceLocale ? "sender_selected" : "unknown",
       ...translatedFields,
       ...(access.role === "customer" ? { read_by_customer_at: now } : { read_by_salon_at: now }),
     }).select().single();
@@ -208,7 +213,7 @@ async function POSTHandler(request: Request) {
     if (error?.code === "23505" && clientRequestId) {
       const prior = await admin.from("booking_messages").select("*").eq("sender_user_id", user.id).eq("client_request_id", clientRequestId).maybeSingle();
       if (prior.error) throw prior.error;
-      if (prior.data?.booking_id !== bookingId || prior.data?.original_body !== messageBody) return Response.json({ code: "MESSAGE_IDEMPOTENCY_CONFLICT" }, { status: 409 });
+      if (prior.data?.booking_id !== bookingId || prior.data?.original_body !== messageBody || (prior.data?.source_locale ?? null) !== sourceLocale) return Response.json({ code: "MESSAGE_IDEMPOTENCY_CONFLICT" }, { status: 409 });
       message = prior.data; replayed = true;
     }
     if (error && !replayed) throw error;

@@ -20,12 +20,16 @@ for (const width of [390, 768, 1440]) test(`P0 public policy survives review, re
     await page.route('**/api/booking-availability?**', route => route.fulfill({ json: { slots: [{ value: '13:00', label: '1:00 PM', stylistId: null }], timeZone: 'America/New_York' } }));
     await page.route('**/api/stripe/booking-checkout', route => {
       const payload = route.request().postDataJSON(); checkoutCalls++;
+      expect(payload.platform_policy_acknowledged).toBe(true);
+      expect(payload.business_policy_acknowledged).toBe(true);
       expect(payload.business_policy_revision_id).toBe(originalRevision);
       expect(payload.salon_id).toBe(id);
       return route.fulfill({ json: { verified: true, booking: { id, public_reference: 'GC123', status: 'Confirmed', appointment_datetime: payload.appointment_datetime, business_policy_revision_id: originalRevision, business_policy_version: 1, business_policy_snapshot: { ...POLICY_DEFAULTS, notes: 'Original business policy GC123' } } } });
     });
     await page.goto(`/salon/${slug}`);
     const publicPolicy = page.locator('#business-policies');
+    await expect(publicPolicy).toContainText('P0 Policy Fixture — Business policies');
+    await expect(publicPolicy).toContainText('Refund & Service Satisfaction Policy');
     await expect(publicPolicy).toContainText('Cancellation notice (hours): 24');
     await publicPolicy.locator('summary').click();
     await expect(publicPolicy).toContainText('Original business policy GC123');
@@ -48,7 +52,12 @@ for (const width of [390, 768, 1440]) test(`P0 public policy survives review, re
     await page.getByPlaceholder('Full Name', { exact: true }).filter({ visible: true }).fill('Fixture Customer');
     await page.getByPlaceholder('name@example.com', { exact: true }).filter({ visible: true }).fill('fixture@example.test');
     await page.getByPlaceholder('+1 (555) 123-4567', { exact: true }).filter({ visible: true }).fill('3055550123');
-    await page.getByRole('checkbox').filter({ visible: true }).check();
+    const agreements = page.getByRole('checkbox').filter({ visible: true });
+    await expect(agreements).toHaveCount(2);
+    await expect(agreements.nth(0)).not.toBeChecked();
+    await expect(agreements.nth(1)).not.toBeChecked();
+    await agreements.nth(0).check();
+    await agreements.nth(1).check();
     if (width < 1280) await page.getByRole('button', { name: 'Continue', exact: true }).filter({ visible: true }).click();
     await page.getByRole('button', { name: 'Confirm Booking — No Deposit', exact: true }).filter({ visible: true }).click();
     await expect(page.getByRole('heading', { name: 'You’re All Set!', exact: true }).filter({ visible: true })).toBeVisible();

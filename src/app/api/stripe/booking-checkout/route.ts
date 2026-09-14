@@ -48,6 +48,8 @@ async function POSTHandler(request: Request) {
     const policyAtCheckout = await currentBusinessPolicy(admin, salonId);
     if ((body.business_policy_revision_id || null) !== (policyAtCheckout?.id || null)) return Response.json({ code: "BUSINESS_POLICY_CHANGED", error: "The business policy changed. Refresh the booking page and review it before continuing." }, { status: 409 });
 
+    if (body.platform_policy_acknowledged !== true || (policyAtCheckout && body.business_policy_acknowledged !== true)) return Response.json({ code: "BOOKING_POLICY_ACKNOWLEDGEMENT_REQUIRED", error: "Review and acknowledge the business and Girlz Culture policies before continuing." }, { status: 400 });
+
     const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,subscription_tier,time_zone,stripe_account_id,address_street,address_city,address_state,address_zip").eq("id", salonId).single();
     if (salonError) throw new Error(`Unable to verify the salon: ${salonError.message}`);
     if (!salon || salon.status !== "Active" || salon.is_discoverable !== true || salon.accepting_bookings === false || !["active", "trialing"].includes(String(salon.subscription_status).toLowerCase())) throw new Error("This salon is not currently accepting marketplace bookings.");
@@ -190,6 +192,10 @@ async function POSTHandler(request: Request) {
     const payload: Record<string, unknown> = {
       business_policy_revision_id: policyAtCheckout?.id || null,
       business_policy_captured_at: new Date().toISOString(),
+      business_policy_accepted_at: policyAtCheckout ? new Date().toISOString() : null,
+      business_policy_acceptance_kind: policyAtCheckout ? (customerId ? "customer" : "guest") : "no_published_policy",
+      business_policy_acceptance_evidence: { user_id: customerId, guest_name: guestName, guest_email: guestEmail, locale: preferredLocale, channel: "marketplace_checkout", acknowledgement_version: "business-policy-v1" },
+      platform_policy_accepted_at: new Date().toISOString(),
       customer_id: customerId,
       salon_id: salonId,
       style_id: styleId,
@@ -433,6 +439,7 @@ async function POSTHandler(request: Request) {
       commerceTotals = taxUpdate.data as Record<string, unknown>;
     }
     intentId = String(reservationId);
+    payload.origin_checkout_intent_id = intentId;
     if (salonPromotionId) {
       const promotionReservation = await admin.rpc("reserve_salon_promotion", {
         p_promotion_id: salonPromotionId,

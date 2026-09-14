@@ -70,6 +70,24 @@ test('a replaced business policy blocks checkout before any payment or booking w
   assert.equal(stripeCalls, 0);
 });
 
+test('marketplace checkout requires separate explicit acknowledgements before payment dependencies',async()=>{
+  for (const acknowledgements of [{},{platform_policy_acknowledged:true},{business_policy_acknowledged:true}]) {
+    let downstream=0;
+    const route=loadModule('src/app/api/stripe/booking-checkout/route.ts',name=>{
+      if(name==='node:crypto')return{randomUUID,createHash};
+      if(name==='@/lib/marketplaceLaunchCore')return{customerMarketplaceLive:()=>true};
+      if(name==='@/lib/marketplaceEligibilityServer')return{rejectRegisteredTestCheckout:async()=>null};
+      if(name==='@/lib/businessPolicyServer')return{currentBusinessPolicy:async()=>({id:'revision'})};
+      if(name==='@/lib/operationalMonitoring')return{withOperationalMonitoring:(_p,h)=>h,routeMonitoringProfile:()=>({}),noteOperationalFailure(){}};
+      if(name==='@/lib/requestSecurity')return{cleanText:v=>String(v||'').trim(),enforceRateLimit(){},rejectBot(){}};
+      if(name==='@/lib/supabaseAdmin')return{getSupabaseAdmin:()=>({})};
+      return new Proxy({},{get:()=>()=>{downstream++;throw Error('Unaccepted policies reached downstream');}});
+    });
+    const response=await route.POST(new Request('http://localhost/api/stripe/booking-checkout',{method:'POST',body:JSON.stringify({salon_id:'business',style_id:'service',business_policy_revision_id:'revision',...acknowledgements})}));
+    assert.equal(response.status,400);assert.equal((await response.json()).code,'BOOKING_POLICY_ACKNOWLEDGEMENT_REQUIRED');assert.equal(downstream,0);
+  }
+});
+
 for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation']) {
   test(`${path} fails closed before database access or Stripe session creation`, async () => {
     let providerCalls = 0;

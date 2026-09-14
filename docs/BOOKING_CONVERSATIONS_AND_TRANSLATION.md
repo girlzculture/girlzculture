@@ -12,6 +12,10 @@ Messages preserve exact original body and whitespace. Sender/request UUID unique
 
 Every API request checks the authenticated user, canonical active identity/email/role and current booking membership. Active team membership requires booking permission. Invitation, revocation, a different tenant or a support-less admin cannot read/send. Unexpected authorization-query errors fail closed with JSON and a protected reference. This does not rely on the model to decide access.
 
+Normal message composers now let the sender identify the original language using the five supported locales or mixed/unknown. This defaults to the current owner/viewer locale but is an explicit editable choice; the server never guesses that an account locale proves the message language. Source locale and sender_selected/assistant_selected/unknown provenance are immutable alongside the exact original body. Retry identity includes the original language. Changing the source clears a prior translated preview. Same-language display bypasses translation, while translated display identifies the recorded source and offers Show original. Private booking notes use a separate business-only table and never invoke message notifications; verified tool identity selects that boundary.
+
+Business-added guests have no fabricated authenticated participant or automatic conversation welcome. The normal message send path and Assistant send path reject such a missing customer participant. Operational notes stay available to authorized business staff.
+
 ## Recipient display translation
 
 The viewer's chosen locale determines display translation independently for each recipient. The API fetches the authorized original itself; it does not trust client-supplied source text. A source hash and unique message/locale cache retain display text separately. Translation jobs use a bounded lease and the existing Engine translation provider, spend reservation, timeout and audit mechanisms.

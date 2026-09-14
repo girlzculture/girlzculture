@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-14. This inventory covers 126 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-14. This inventory covers 127 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -112,6 +112,7 @@ Updated: 2026-09-14. This inventory covers 126 API route files and is enforced b
 | `/api/salon/application/documents/prepare` | POST | provider-backed | Covered |
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/notes` | GET | provider-backed | Covered |
 | `/api/salon/bookings/[id]/reschedule` | GET, POST | provider-backed | Covered |
 | `/api/salon/bookings/[id]/service` | POST | provider-backed | Covered |
 | `/api/salon/bootstrap` | POST | protected | Covered |

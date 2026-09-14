@@ -145,9 +145,14 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(migration, /delete\s+from|truncate\s+|drop\s+table/i);
 
-assert.match(saveRoute, /enforcePlanAllowance/);
-assert.match(saveRoute, /entitlements\.productListings\.limit/);
-assert.match(saveRoute, /entitlements\.customerPromotions\.limit/);
+const entitlements = readFileSync(new URL("../src/lib/salonRecordEntitlements.ts", import.meta.url), "utf8");
+assert.match(saveRoute, /await validateSalonRecordEntitlements\(/);
+assert.match(readFileSync(new URL("../src/lib/ownerOperationalServer.ts", import.meta.url), "utf8"), /await validateSalonRecordEntitlements\(/);
+assert.match(entitlements, /await enforcePlanAllowance\(/);
+assert.match(entitlements, /isSubscriptionActive/);
+assert.match(entitlements, /restrictivePlanForLimits/);
+assert.match(entitlements, /entitlements\.productListings\.limit/);
+assert.match(entitlements, /entitlements\.customerPromotions\.limit/);
 assert.match(saveRoute, /status:\s*409/);
 
 assert.match(subscriptionChange, /enforceDowngradePlanLimits/);
@@ -175,9 +180,9 @@ assert.match(
   /PLAN_DOWNGRADE_PRODUCT_LIMIT_EXCEEDED[\s\S]*?PLAN_DOWNGRADE_PROMOTION_LIMIT_EXCEEDED[\s\S]*?409/,
 );
 
-assert.match(salonRecordSave, /restrictivePlanForLimits/);
+assert.match(salonRecordSave, /await validateSalonRecordEntitlements\(/);
 assert.match(
-  salonRecordSave,
+  entitlements,
   /select\("tier,status,current_period_end,scheduled_tier"\)/,
 );
 

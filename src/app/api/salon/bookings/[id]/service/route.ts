@@ -63,7 +63,7 @@ async function POSTHandler(
     const { data: booking, error: bookingError } = await context.admin
       .from("bookings")
       .select(
-        "id,salon_id,stylist_id,status,guest_name,guest_email,customer_id,public_reference,confirmation_code,appointment_datetime,checked_in_at,service_started_at,service_completed_at",
+        "id,salon_id,stylist_id,booking_origin,status,guest_name,guest_email,customer_id,public_reference,confirmation_code,appointment_datetime,checked_in_at,service_started_at,service_completed_at",
       )
       .eq("id", id)
       .eq("salon_id", context.salon.id)
@@ -166,7 +166,7 @@ async function POSTHandler(
       throw transitionError;
     }
     const warnings: Array<{ message: string; request_id: string }> = [];
-    if (action === "complete") {
+    if (action === "complete" && booking.booking_origin !== "business_added") {
       const reference = String(
         (updated as Record<string, unknown>)?.public_reference ||
           booking.confirmation_code ||

@@ -432,7 +432,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </section>
       </div>
 
-        <div className="mx-auto max-w-6xl px-4"><BusinessPolicyDisclosure revision={await currentBusinessPolicy(supabase, salon.id)} /></div>
+        <div className="mx-auto max-w-6xl px-4"><BusinessPolicyDisclosure businessName={salon.name} revision={await currentBusinessPolicy(supabase, salon.id)} /></div>
         <CustomerBottomNav active="home" />
     </main>
   );

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { runInNewContext } from 'node:vm';
@@ -15,7 +15,7 @@ export function typescriptLoader(root, overrides = {}, globals = {}) {
     runInNewContext(code, { exports, require: name => {
       if (Object.hasOwn(overrides, name)) return overrides[name];
       if (name === 'server-only') return {};
-      if (name.startsWith('@/')) return load(`src/${name.slice(2)}.ts`);
+      if (name.startsWith('@/')) return load(`src/${name.slice(2)}${existsSync(path.resolve(root, `src/${name.slice(2)}.tsx`)) ? ".tsx" : ".ts"}`);
       return require(name);
     }, Request, Response, URL, AbortSignal, Buffer, structuredClone, setTimeout, clearTimeout, process, ...globals });
     return exports;

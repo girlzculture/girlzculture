@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/i18n/LocaleProvider";
+import { LOCALE_NAMES } from "@/i18n/catalog";
 import { getSessionForScope, type AuthScope } from "@/lib/supabase";
 
 type MessageDisplayProps = { messageId: string; bookingId: string; original: string; scope: AuthScope; autoTranslate?: boolean };
@@ -13,7 +14,7 @@ export default function MessageDisplay(props: MessageDisplayProps) {
 
 function TranslatedMessage({ messageId, bookingId, original, scope, autoTranslate = true }: MessageDisplayProps) {
   const { locale, translateSource: t } = useI18n();
-  const [translation, setTranslation] = useState<{ locale: string; text: string; reviewed: boolean } | null>(null);
+  const [translation, setTranslation] = useState<{ locale: string; text: string; reviewed: boolean; sourceLocale: string | null } | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -26,11 +27,11 @@ function TranslatedMessage({ messageId, bookingId, original, scope, autoTranslat
         const response = await fetch("/api/messages", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "translate_display", booking_id: bookingId, message_id: messageId, locale }), signal: controller.signal });
         const result = await response.json(); if (controller.signal.aborted) return;
         if (!response.ok || !result.translation?.translated_body) { setUnavailable(true); return; }
-        setTranslation({ locale, text: result.translation.translated_body, reviewed: result.translation.reviewed === true }); setUnavailable(false);
+        setTranslation({ locale, text: result.translation.translated_body, sourceLocale: result.translation.source_locale || null, reviewed: result.translation.reviewed === true }); setUnavailable(false);
       } catch { if (!controller.signal.aborted) setUnavailable(true); }
     })();
     return () => controller.abort();
   }, [locale, messageId, bookingId, scope, attempt, autoTranslate]);
   const current = translation?.locale === locale && translation.text !== original ? translation : null;
-  return <div><p data-no-translate className="whitespace-pre-wrap break-words">{current && !showOriginal ? current.text : original}</p>{current ? <div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><span>{t(current.reviewed ? "Reviewed translation" : "Automatic translation")}</span><button type="button" onClick={() => setShowOriginal(!showOriginal)} className="min-h-11 underline">{t(showOriginal ? "Show translation" : "Show original")}</button></div> : <div className="mt-2 text-xs">{unavailable ? <span>{t("Translation unavailable. Showing the original message.")}</span> : null}{!autoTranslate && attempt === 0 ? <button type="button" onClick={() => setAttempt(1)} className="min-h-11 underline">{t("Translate for me")}</button> : null}</div>}</div>;
+  return <div><p data-no-translate className="whitespace-pre-wrap break-words">{current && !showOriginal ? current.text : original}</p>{current ? <div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><span>{current.sourceLocale && LOCALE_NAMES[current.sourceLocale] ? <>{t("Translated from {value0}", { value0: LOCALE_NAMES[current.sourceLocale] })} · </> : null}{t(current.reviewed ? "Reviewed translation" : "Automatic translation")}</span><button type="button" onClick={() => setShowOriginal(!showOriginal)} className="min-h-11 underline">{t(showOriginal ? "Show translation" : "Show original")}</button></div> : <div className="mt-2 text-xs">{unavailable ? <span>{t("Translation unavailable. Showing the original message.")}</span> : null}{!autoTranslate && attempt === 0 ? <button type="button" onClick={() => setAttempt(1)} className="min-h-11 underline">{t("Translate for me")}</button> : null}</div>}</div>;
 }

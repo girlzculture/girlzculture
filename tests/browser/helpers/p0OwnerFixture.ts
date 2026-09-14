@@ -62,6 +62,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (path === "/api/i18n") return route.continue();
     if (path === "/api/i18n/preference") { accountLocale = req.postDataJSON().locale; return respond({ locale: accountLocale }); }
     if (path === "/api/salon/workspace") return respond({ salon: business, isOwner: true, isTeamMember: false, permissions: {}, records });
+    if (req.method() === "GET" && /^\/api\/salon\/bookings\/[^/]+\/notes$/.test(path)) return respond({ notes: [] });
     if (path === "/api/salon/actionable-booking-count") return respond({ count: 0 });
     if (req.method() === "GET" && path === "/api/salon/profile") return respond({ salon: business, vanity_request: null });
     if (req.method() === "GET" && path === `/api/salon/bookings/${ids.booking}/reschedule`) return respond({ proposals: [] });
@@ -84,7 +85,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
         return respond({ translation: { translated_body: translations[input.locale], reviewed: false } });
       }
       if (!input.action) {
-        const message = { id: input.client_request_id, booking_id: ids.booking, original_body: input.body, body: input.body, source_locale: accountLocale, sender_role: 'salon', created_at: new Date().toISOString() };
+        const message = { id: input.client_request_id, booking_id: ids.booking, original_body: input.body, body: input.body, source_locale: input.source_locale ?? null, source_locale_provenance: input.source_locale ? 'sender_selected' : 'unknown', sender_role: 'salon', created_at: new Date().toISOString() };
         if (!conversationMessages.some(row => row.id === message.id)) conversationMessages.push(message);
         return respond({ message });
       }

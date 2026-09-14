@@ -45,3 +45,9 @@ test('Assistant translates policy enums and canonical lengths without interpreti
   assert.match(rendered, /Name Taille/);
   assert.match(rendered, /Name Waist/);
 });
+
+test('new refund choices and booking source codes render labels while private prose stays original',()=>{
+  const app=fixture();const rendered=app.render({policy:{refund_satisfaction:'case_by_case',refund_terms:'case_by_case'},source_breakdown:{phone:2,walk_in:1},profile_views_period:'all_time'});
+  assert.match(rendered,/Requests reviewed individually/);assert.match(rendered,/Phone 2/);assert.match(rendered,/Walk-in 1/);assert.match(rendered,/All time/);
+  assert.match(rendered,/Business refund and satisfaction terms case_by_case/);
+});

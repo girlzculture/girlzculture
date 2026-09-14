@@ -6,6 +6,9 @@ import { intlLocale } from "@/i18n/catalog";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import BookingNotes from "@/components/owner/BookingNotes";
+import ManualAppointmentEditor from "@/components/owner/ManualAppointmentEditor";
+import { ownerBusinessMetrics, profileCompletion, isBusinessAdded, BOOKING_SOURCE_LABELS } from "@/lib/ownerBusinessMetrics";
 import {
   BadgeCheck,
   CalendarDays,
@@ -1608,43 +1611,12 @@ function MiniLine() {
 }
 
 function Overview({ c }: { c: Ctx }) {
-  const completed = c.bookings.filter(
-    (b) => String(b.status).toLowerCase() === "completed",
-  );
-  const revenue = completed.reduce(
-    (sum, b) => sum + Number(b.estimated_total || 0),
-    0,
-  );
   const [renderedAt] = useState(() => Date.now());
-  const upcoming = c.bookings
-    .filter(
-      (b) =>
-        new Date(String(b.appointment_datetime || 0)).getTime() > renderedAt &&
-        !/cancelled/i.test(String(b.status || "")),
-    )
-    .slice(0, 3);
-  const completion = Math.round(
-    ([
-      c.salon.name,
-      c.salon.description,
-      c.salon.phone,
-      c.salon.address_street,
-      c.salon.cover_photo_url,
-      c.styles.length,
-      c.stylists.length,
-    ].filter(Boolean).length /
-      7) *
-      100,
-  );
-  const salonCancellations = c.bookings.filter(
-    (booking) =>
-      String(
-        booking.cancelled_by || booking.cancellation_initiated_by || "",
-      ).toLowerCase() === "salon",
-  ).length;
-  const cancellationRate = c.bookings.length
-    ? (salonCancellations / c.bookings.length) * 100
-    : 0;
+  const metrics = ownerBusinessMetrics(c.bookings, renderedAt);
+  const revenue = metrics.completed_booking_value;
+  const upcoming = metrics.upcoming.slice(0, 3);
+  const completion = profileCompletion(c.salon, c.styles.length, c.stylists.length);
+  const cancellationRate = metrics.cancellation_rate * 100;
   const quickActions = (
     [
       ["Add Photos", "photos", ImagePlus],
@@ -1678,19 +1650,13 @@ function Overview({ c }: { c: Ctx }) {
           value={Number(c.salon.profile_views || 0)}
         />
         <Metric
-          label="Total Bookings"
-          value={c.bookings.length}
+          label="Total Appointments"
+          value={metrics.total_appointments}
           icon={CalendarDays}
         />
         <Metric
           label="New Customers"
-          value={
-            new Set(
-              c.bookings
-                .map((b) => b.customer_id || b.guest_email)
-                .filter(Boolean),
-            ).size
-          }
+          value={metrics.customers}
           icon={UsersRound}
         />
         <Metric
@@ -1704,6 +1670,7 @@ function Overview({ c }: { c: Ctx }) {
           icon={Clock3}
         />
       </div>
+<p className="mt-3 text-sm">{c.translateSource("{value0} appointments — {value1} from Girlz Culture, {value2} added by your business.", { value0: c.formatNumber(metrics.total_appointments), value1: c.formatNumber(metrics.marketplace_bookings), value2: c.formatNumber(metrics.business_added_appointments) })}</p>
       <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1.5fr_.8fr]">
         <Panel>
           <h2 className="font-serif text-xl text-plum">Profile Completion</h2>
@@ -1742,14 +1709,14 @@ function Overview({ c }: { c: Ctx }) {
             {upcoming.map((booking, index) => (
               <Link
                 href={`/salon/dashboard/bookings/${booking.id}`}
-                key={booking.id || index}
+                key={String(booking.id || index)}
                 className="grid grid-cols-[85px_1fr_auto] gap-3 py-3 text-xs"
               >
                 <span>
                   {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
                 </span>
                 <span>
-                  <b>{styleName(c, booking.style_id)}</b>
+                  <b>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</b>
                   <br />
                   <span className="text-ink/55">
                     {stylistName(c, booking.stylist_id)}
@@ -3076,7 +3043,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           subtitle={`Choose one scheduling workspace. Appointments are shown in ${timeZone.replaceAll("_", " ")}.`}
         />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <OwnerSectionCard href="/salon/dashboard/availability/calendar" icon={CalendarDays} title="Appointment calendar" description="Review the weekly calendar and open individual appointment details." meta={c.translateSource("Active bookings: {value0}", { value0: c.formatNumber(activeBookings.length) })} status="Live" />
+          <OwnerSectionCard href="/salon/dashboard/bookings/new" icon={CalendarDays} title="Add an appointment" description="Record appointments received by your business."/><OwnerSectionCard href="/salon/dashboard/availability/calendar" icon={CalendarDays} title="Appointment calendar" description="Review the weekly calendar and open individual appointment details." meta={c.translateSource("Active bookings: {value0}", { value0: c.formatNumber(activeBookings.length) })} status="Live" />
           <OwnerSectionCard href="/salon/dashboard/availability/hours" icon={Clock3} title="Store hours" description="Set the salon's regular weekly opening and closing schedule." meta={`${Object.keys(hours).length} days configured`} />
           <OwnerSectionCard href="/salon/dashboard/availability/slots" icon={BadgeCheck} title="Bookable time slots" description="Choose appointment intervals and the default buffer between services." meta={`${Number(settings.slot_minutes || 30)} min slots · ${Number(settings.buffer_minutes || 15)} min buffer`} />
           <OwnerSectionCard href="/salon/dashboard/availability/stylists" icon={UsersRound} title="Per-stylist availability" description="Maintain each team member's customer-facing working hours." meta={c.translateSource("Professionals: {value0}", { value0: c.formatNumber(c.stylists.length) })} />
@@ -3089,7 +3056,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   if (!workspace) {
     return <>
       <OwnerDetailHeader title={booking ? "Calendar appointment" : blockout ? "Availability override" : "Availability details"} subtitle={booking ? `Booking #${bookingReference(booking)}` : blockout ? `Blocked until ${dateText(blockout.ends_at, timeZone, c.locale)}` : "This record could not be found."} fallbackHref="/salon/dashboard/availability" status={booking ? String(booking.status || "Confirmed") : blockout ? (blockout.released_at ? "Released" : "Active override") : "Unavailable"}/>
-      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone, c.locale)}<br/>{styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone, c.locale)} – {dateText(blockout.ends_at, timeZone, c.locale)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
+      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone, c.locale)}<br/>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone, c.locale)} – {dateText(blockout.ends_at, timeZone, c.locale)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
     </>;
   }
 
@@ -3474,7 +3441,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
 }
 
 function CalendarBookingButton({ booking, c, timeZone }: { booking: Row; c: Ctx; timeZone: string; onOpen: (booking: Row) => void }) {
-  return <Link href={`/salon/dashboard/availability/${booking.id}`} className="block w-full rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-left text-[9px] leading-4 transition hover:border-magenta focus-visible:outline-2 focus-visible:outline-magenta"><b className="block text-plum">{bookingTime(booking.appointment_datetime, timeZone, c.locale)}</b><span className="font-semibold">{styleName(c, booking.style_id)}</span><span className="block text-ink/60">{stylistName(c, booking.stylist_id)}</span></Link>;
+  return <Link href={`/salon/dashboard/availability/${booking.id}`} className="block w-full rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-left text-[9px] leading-4 transition hover:border-magenta focus-visible:outline-2 focus-visible:outline-magenta"><b className="block text-plum">{bookingTime(booking.appointment_datetime, timeZone, c.locale)}</b><span className="font-semibold">{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</span><span className="block text-ink/60">{stylistName(c, booking.stylist_id)}</span></Link>;
 }
 
 const BOOKING_GROUPS = ["Upcoming", "In Progress", "Needs Resolution", "All"] as const;
@@ -3592,13 +3559,14 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const activeSelected =
     selected &&
     !/cancelled|completed|refunded/i.test(String(selected.status || ""));
+  const marketplaceSelectedId = selected && !isBusinessAdded(selected) ? selectedId : "";
   useEffect(() => {
-    if (!selectedId) return;
+    if (!marketplaceSelectedId) return;
     let active = true;
     getSessionForScope("salon")
       .then((session) =>
         session
-          ? fetch(`/api/salon/bookings/${selectedId}/reschedule`, {
+          ? fetch(`/api/salon/bookings/${marketplaceSelectedId}/reschedule`, {
               headers: { Authorization: `Bearer ${session.access_token}` },
               cache: "no-store",
             })
@@ -3617,11 +3585,11 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     return () => {
       active = false;
     };
-  }, [selectedId]);
+  }, [marketplaceSelectedId]);
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
-      if (!selectedId || !rescheduleDate) {
+      if (!marketplaceSelectedId || !rescheduleDate) {
         setRescheduleSlots([]);
         setSelectedRescheduleSlots([]);
         setAvailabilityMessage("");
@@ -3633,7 +3601,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         .then((session) =>
           session
             ? fetch(
-                `/api/salon/bookings/${selectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
+                `/api/salon/bookings/${marketplaceSelectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
                 {
                   headers: {
                     Authorization: `Bearer ${session.access_token}`,
@@ -3683,7 +3651,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [rescheduleDate, selectedId]);
+  }, [rescheduleDate, marketplaceSelectedId]);
   async function serviceAction(
     action: "check_in" | "start" | "complete",
     exception?: CheckInExceptionAnswer,
@@ -3892,6 +3860,8 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       setBusy(false);
     }
   }
+  if (recordId === "new") return <><OwnerDetailHeader title="Add an appointment" subtitle="Record appointments received by your business." fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(c.salon.id)} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => { c.setBookings(current => [row, ...current.filter(item => item.id !== row.id)]); router.push(`/salon/dashboard/bookings/${row.id}`); }}/></>;
+  if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingNotes bookingId={String(selected.id)}/></>;
   return (
     <>
       {!recordId ? <Title
@@ -3903,6 +3873,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         fallbackHref={bookingListHref}
         status={selected ? String(selected.status || "Confirmed") : "Unavailable"}
       />}
+      {!recordId ? <Link href="/salon/dashboard/bookings/new" className="mb-4 inline-flex min-h-11 items-center rounded-full bg-plum px-5 text-sm text-white">Add an appointment</Link> : null}
       {!recordId ? <Panel className="mb-4">
         <form
           onSubmit={(event) => {
@@ -3976,17 +3947,17 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <div className="space-y-3 lg:hidden">
             {visible.map((booking) => (
               <button
-                key={booking.id}
+                key={String(booking.id)}
                 onClick={() => router.push(bookingDetailHref(booking.id))}
                 className={`w-full rounded-[10px] border p-4 text-left ${selectedId === booking.id ? "border-magenta bg-blush/25" : "border-plum/10"}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <span>
                     <b className="font-serif text-lg text-plum">
-                      <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span>
+                      <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span>
                     </b>
                     <span className="mt-1 block text-xs">
-                      {styleName(c, booking.style_id)} ·{" "}
+                      {booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} ·{" "}
                       {stylistName(c, booking.stylist_id)}
                     </span>
                   </span>
@@ -4037,13 +4008,13 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
             <tbody>
               {visible.map((booking) => (
                 <tr
-                  key={booking.id}
+                  key={String(booking.id)}
                   className={`border-b border-plum/10 ${selectedId === booking.id ? "bg-blush/25" : ""}`}
                 >
                   <td className="px-3 py-3">
-                    <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span>
+                    <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span>
                   </td>
-                  <td className="px-3">{styleName(c, booking.style_id)}</td>
+                  <td className="px-3">{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</td>
                   <td className="px-3">{stylistName(c, booking.stylist_id)}</td>
                   <td className="px-3">
                     {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
@@ -4090,7 +4061,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
               </div>
-              <BookingPolicyEvidence booking={selected}/>
+              <BookingNotes bookingId={String(selected.id)}/><BookingPolicyEvidence booking={selected}/>
               <div className="mt-5 space-y-3 text-xs">
                 <p>
                   <b className="block text-ink/50">Customer</b>
@@ -4744,7 +4715,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const timeZone = String(c.salon.time_zone || "America/New_York");
   const styles = new Map(c.styles.map((row) => [String(row.id), row]));
   const stylists = new Map(c.stylists.map((row) => [String(row.id), row]));
-  const transactions = c.bookings.map((booking) =>
+  const transactions = c.bookings.filter(booking => !isBusinessAdded(booking)).map((booking) =>
     bookingTransaction(
       booking,
       c.salon,

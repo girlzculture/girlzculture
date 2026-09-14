@@ -12,16 +12,42 @@ const range = { start: { ...string(30), pattern: "^\\d{4}-\\d{2}-\\d{2}T" }, end
 const clockTime: ToolSchema = { ...string(5), pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" };
 const hours = object(Object.fromEntries(
   ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    .map(day => [day, object({ closed: { type: "boolean" }, open: clockTime, close: clockTime })]),
+    .map(day => [day, object({ closed: { type: "boolean" }, open: { ...clockTime, pattern: "^([01][0-9]|2[0-3]):(00|15|30|45)$" }, close: { ...clockTime, pattern: "^([01][0-9]|2[0-3]):(00|15|30|45)$" } })]),
 ));
-const policy = object({ cancellation_hours: { type: "integer", minimum: 0, maximum: 168 }, rescheduling_hours: { type: "integer", minimum: 0, maximum: 168 }, grace_minutes: { type: "integer", minimum: 0, maximum: 60 }, no_show: enumeration("contact_business", "reschedule_request"), late_arrival: enumeration("contact_business", "reschedule_request"), deposit_treatment: enumeration("platform_rules"), balance_due: enumeration("after_service"), satisfaction: enumeration("contact_business"), guests: enumeration("welcome", "ask_first", "appointment_only"), children: enumeration("welcome", "ask_first", "appointment_only"), walk_ins: enumeration("welcome", "ask_first", "appointment_only"), preparation: string(1200), notes: string(1200) });
+const policy = object({ refund_satisfaction: enumeration("contact_business", "case_by_case", "redo_or_refund"), refund_terms: string(1200), cancellation_hours: { type: "integer", minimum: 0, maximum: 168 }, rescheduling_hours: { type: "integer", minimum: 0, maximum: 168 }, grace_minutes: { type: "integer", minimum: 0, maximum: 60 }, no_show: enumeration("contact_business", "reschedule_request"), late_arrival: enumeration("contact_business", "reschedule_request"), deposit_treatment: enumeration("platform_rules"), balance_due: enumeration("after_service"), satisfaction: enumeration("contact_business"), guests: enumeration("welcome", "ask_first", "appointment_only"), children: enumeration("welcome", "ask_first", "appointment_only"), walk_ins: enumeration("welcome", "ask_first", "appointment_only"), preparation: string(1200), notes: string(1200) });
+const date = { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" };
+const manualAppointment = {
+  guest_name: { ...string(120), minLength: 1 }, guest_phone: string(40), guest_email: string(254),
+  style_id: nullableId, service_name: string(120), duration_minutes: { type: ["integer", "null"], minimum: 15, maximum: 1440 } as ToolSchema,
+  stylist_id: nullableId, date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
+};
 export const ASSISTANT_TOOLS = {
   get_business_summary: { risk: 1, permission: "overview", schema: object(range) },
   get_bookings: { risk: 1, permission: "bookings", schema: object(range) },
-  get_availability: { risk: 1, permission: "availability", schema: object({ style_id: uuid, stylist_id: nullableId, date: { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" } }) },
+  get_availability: { risk: 1, permission: "availability", schema: object({ style_id: nullableId, stylist_id: nullableId, date: { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" } }) },
   get_business_profile: { risk: 1, permission: "my_page", schema: object({}) },
   get_services_and_prices: { risk: 1, permission: "styles", schema: object({ query: string(120) }) },
   get_business_policies: { risk: 1, permission: "my_page", schema: object({}) },
+  get_customers: { risk: 1, permission: "bookings", schema: object(range) },
+  get_professionals: { risk: 1, permission: "stylists", schema: object({ query: string(120) }) },
+  get_products: { risk: 1, permission: "products", schema: object({ query: string(120) }) },
+  get_booking_messages: { risk: 1, permission: "bookings", schema: object({ booking_id: uuid }) },
+  get_reviews: { risk: 1, permission: "reviews", schema: object(range) },
+  get_promotions: { risk: 1, permission: "promotions", schema: object({}) },
+  get_plan_status: { risk: 1, permission: "overview", schema: object({}) },
+  get_profile_completion: { risk: 1, permission: "overview", schema: object({}) },
+  get_earnings_summary: { risk: 1, permission: "earnings", schema: object(range) },
+  get_upcoming_appointments: { risk: 1, permission: "bookings", schema: object(range) },
+  get_calendar_gaps: { risk: 1, permission: "availability", schema: object({ date, stylist_id: nullableId }) },
+  prepare_manual_appointment: { risk: 3, permission: "bookings", schema: object(manualAppointment) },
+  prepare_manual_reschedule: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, date, time: clockTime, stylist_id: nullableId }) },
+  prepare_manual_cancellation: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, reason: { ...string(300), minLength: 1 } }) },
+  prepare_business_hours: { risk: 3, permission: "availability", schema: object({ hours }) },
+  prepare_service_edit: { risk: 3, permission: "styles", schema: object({ style_id: uuid, name: { ...string(120), minLength: 1 }, price: number(0, 100000), duration_hours: number(0.25, 24), buffer_minutes: { type: "integer", minimum: 0, maximum: 180 } }) },
+  prepare_professional_draft: { risk: 3, permission: "stylists", schema: object({ id: nullableId, name: { ...string(120), minLength: 1 }, bio: string(500), specialties: { type: "array", items: string(80), maxItems: 20 }, years_experience: { type: ["number", "null"], minimum: 0, maximum: 70 } }) },
+  prepare_product_draft: { risk: 3, permission: "products", schema: object({ id: nullableId, name: { ...string(120), minLength: 1 }, description: string(1000), price: number(0, 100000) }) },
+  prepare_promotion_draft: { risk: 3, permission: "promotions", schema: object({ id: nullableId, title: { ...string(160), minLength: 1 }, description: string(1000), promotion_type: enumeration("percentage", "fixed", "descriptive"), discount_value: number(0, 100000), ...range, time_zone: string(80) }) },
+  prepare_booking_note: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, note: { ...string(1200), minLength: 1 } }) },
   prepare_business_profile_update: { risk: 4, permission: "my_page", schema: object({ field: enumeration("description", "hours", "tiktok_url", "instagram_url"), text: { type: ["string", "null"], maxLength: 1200 }, hours: { ...hours, type: ["object", "null"] } }) },
   prepare_availability_block: { risk: 3, permission: "availability", schema: object({ ...range, time_zone: string(80), stylist_id: nullableId, reason: string(180) }) },
   prepare_service: { risk: 3, permission: "styles", schema: object({ master_style_id: uuid, name: { ...string(120), minLength: 1 }, price: number(0, 100000), duration_hours: number(0.25, 24), requested_deposit: { type: ["number", "null"], minimum: 0, maximum: 100000 }, length_addons: { type: "array", maxItems: 10, items: object({ name: string(80), price: number(0, 10000) }) } }) },
@@ -64,13 +90,17 @@ export function assertSchema(value: unknown, schema: ToolSchema, depth = 0): voi
 export function validateTool(name: unknown, input: unknown) {
   if (typeof name !== "string" || !Object.hasOwn(ASSISTANT_TOOLS, name)) throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
   const tool = name as AssistantTool;
-  assertSchema(input, ASSISTANT_TOOLS[tool].schema);
+  const schema: ToolSchema = ASSISTANT_TOOLS[tool].schema;
+  const candidate = tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object" && !Object.hasOwn(input.policy, "refund_satisfaction") && !Object.hasOwn(input.policy, "refund_terms")
+    ? { ...input, policy: { ...input.policy, refund_satisfaction: "contact_business", refund_terms: "" } } : input;
+  assertSchema(candidate, schema);
   const args = input as Record<string, unknown>;
   if ("start" in args) {
     const start = Date.parse(String(args.start)); const end = Date.parse(String(args.end));
     if (!validCalendarDate(String(args.start)) || !validCalendarDate(String(args.end)) || !Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 31 * 86400_000 || !/Z$|[+-]\d{2}:\d{2}$/.test(String(args.start)) || !/Z$|[+-]\d{2}:\d{2}$/.test(String(args.end))) throw new AssistantError("ASSISTANT_INVALID_DATE_RANGE");
   }
-  if (tool === "get_availability" && !validCalendarDate(String(args.date))) throw new AssistantError("ASSISTANT_INVALID_DATE_RANGE");
+  if ("date" in args && !validCalendarDate(String(args.date))) throw new AssistantError("ASSISTANT_INVALID_DATE_RANGE");
+  if (tool === "prepare_business_hours") for (const day of Object.values(args.hours as Record<string, { closed: boolean; open: string; close: string }>)) if (!day.closed && day.close <= day.open) throw new AssistantError("ASSISTANT_INVALID_INPUT");
   if (tool === "prepare_service") serviceLengthOptions(args.length_addons as { name: string; price: number }[]);
   if (tool === "prepare_business_policy_update") validateBusinessPolicy(args.policy);
   if (tool === "prepare_business_profile_update") {

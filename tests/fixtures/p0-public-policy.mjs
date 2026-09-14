@@ -2,7 +2,7 @@
 // replacements never change another test or the legacy acceptance salon.
 const records = new Map();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const policy = { cancellation_hours: 24, rescheduling_hours: 24, grace_minutes: 15, no_show: 'contact_business', late_arrival: 'contact_business', deposit_treatment: 'platform_rules', balance_due: 'after_service', satisfaction: 'contact_business', preparation: 'Original preparation GC123', guests: 'ask_first', children: 'ask_first', walk_ins: 'ask_first', notes: 'Original business policy GC123' };
+const policy = { refund_satisfaction: 'case_by_case', refund_terms: 'Contact the business about payments handled directly by it.', cancellation_hours: 24, rescheduling_hours: 24, grace_minutes: 15, no_show: 'contact_business', late_arrival: 'contact_business', deposit_treatment: 'platform_rules', balance_due: 'after_service', satisfaction: 'contact_business', preparation: 'Original preparation GC123', guests: 'ask_first', children: 'ask_first', walk_ins: 'ask_first', notes: 'Original business policy GC123' };
 
 export async function p0PublicPolicyFixture(request, response, url, json, readJson) {
   if (url.pathname.startsWith('/__fixtures/p0-public-policy/') && request.method === 'POST') {
