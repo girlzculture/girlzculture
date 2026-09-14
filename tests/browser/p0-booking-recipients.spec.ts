@@ -70,10 +70,12 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
       await expect(page.locator('article').filter({ hasText: translated[locale].trim() }).last()).toBeVisible();
       const evidence = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: t('Policy recorded for this booking') }) }).first();
       await evidence.locator(':scope > summary').click();
+      await expect(evidence).toHaveJSProperty('open', true);
       await expect(evidence).toContainText(t('Cancellation notice (hours)') + ': 24');
       const fullPolicy = evidence.locator('details');
       await expect(fullPolicy.locator('summary')).toContainText(t('Version') + ' 1');
       await fullPolicy.locator('summary').click();
+      await expect(fullPolicy).toHaveJSProperty('open', true);
       await expect(fullPolicy).toContainText(t('Rescheduling notice (hours)'));
       await expect(evidence).toContainText(t('Deposits follow platform rules. The remaining balance is due after the service. Contact the business for satisfaction concerns; platform refund and Care protections still apply.'));
       await page.screenshot({ path: `${gallery}/${locale}-translated-policy.png`, fullPage: true, ...screenshotCaret });

@@ -52,6 +52,24 @@ test('live marketplace eligibility preserves genuine businesses and fails closed
   await assert.rejects(helper.rejectRegisteredTestCheckout(fixture({ data: null, error: { message: 'fixture unavailable' } }), 'genuine-fixture'), /MARKETPLACE_ELIGIBILITY_UNAVAILABLE/);
 });
 
+test('a replaced business policy blocks checkout before any payment or booking work', async () => {
+  let stripeCalls = 0;
+  const route = loadModule('src/app/api/stripe/booking-checkout/route.ts', name => {
+    if (name === 'node:crypto') return { randomUUID, createHash };
+    if (name === '@/lib/marketplaceLaunchCore') return { customerMarketplaceLive: () => true };
+    if (name === '@/lib/marketplaceEligibilityServer') return { rejectRegisteredTestCheckout: async () => null };
+    if (name === '@/lib/businessPolicyServer') return { currentBusinessPolicy: async () => ({ id: 'published-version-2' }) };
+    if (name === '@/lib/operationalMonitoring') return { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile: () => ({}), noteOperationalFailure() {} };
+    if (name === '@/lib/requestSecurity') return { cleanText: value => String(value || '').trim(), enforceRateLimit() {}, rejectBot() {} };
+    if (name === '@/lib/supabaseAdmin') return { getSupabaseAdmin: () => ({}) };
+    if (name === '@/lib/stripeServer') return { stripeRequest() { stripeCalls++; throw Error('Stale policy reached payment'); } };
+    return new Proxy({}, { get: () => () => { throw Error('Stale policy reached a downstream dependency'); } });
+  });
+  const response = await route.POST(new Request('http://localhost/api/stripe/booking-checkout', { method: 'POST', body: JSON.stringify({ salon_id: 'fixture-business', style_id: 'fixture-service', business_policy_revision_id: 'published-version-1' }) }));
+  assert.equal(response.status, 409); assert.equal((await response.json()).code, 'BUSINESS_POLICY_CHANGED');
+  assert.equal(stripeCalls, 0);
+});
+
 for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation']) {
   test(`${path} fails closed before database access or Stripe session creation`, async () => {
     let providerCalls = 0;

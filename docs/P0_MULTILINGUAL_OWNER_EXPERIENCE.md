@@ -10,6 +10,8 @@ P0 extends `LocaleProvider`, the published Engine source/key translations, `Lang
 
 The authenticated account's preference takes precedence over the per-account local cache and the anonymous preference. Saves are serialized and bound to the requesting account/scope. Aborted translation fetches and responses for a different locale cannot overwrite the selected language. `lang`, `dir`, and the existing Intl formatters follow the selection. Language is a user preference, not a tenant permission or a business-wide setting.
 
+Screenshot review reproduced a generic-template collision: `Choose {value0}` consumed the full scheduling sentence and preserved its remaining English as a value. Template resolution now prefers the candidate with the most literal interface wording. Actual-catalog unit assertions and explicit full-sentence browser assertions cover all five locales and preserve the original timezone. Source coverage alone could not detect this partially translated output.
+
 ## Route inventory and acceptance
 
 The 38 audited routes use the prefix `/salon/dashboard`:

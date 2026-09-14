@@ -31,6 +31,11 @@ function translatedTemplate(source: string, catalog: Record<string, string>) {
       if (names.length > 12 || parts.slice(1, -1).some(part => !part)) return [];
       return [{ parts, names, target }];
     });
+    // A broad prefix such as "Choose {value0}" must not swallow a complete
+    // cataloged sentence and preserve the rest of its English as a value.
+    // Prefer the template with the most literal interface wording; stable
+    // sorting keeps catalog precedence for equally specific candidates.
+    templates.sort((a, b) => b.parts.join('').length - a.parts.join('').length);
     templateCache.set(catalog, templates);
   }
   for (const template of templates) {

@@ -4,6 +4,7 @@ import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { untranslatedOwnerCopy } from './helpers/ownerLocaleCoverage';
 import { mkdir, writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
+import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 
 // Keep every request inside the local page.route fixture in WebKit.
 test.use({ serviceWorkers: 'block' });
@@ -39,6 +40,11 @@ for (const width of [390, 768, 1440]) {
         await expect(page.locator('html')).toHaveAttribute('lang', locale);
         // Wait for the localization observer's scheduled scan after route mount.
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        if (route === 'availability') {
+          const source = 'Choose one scheduling workspace. Appointments are shown in {value0}.';
+          const expected = (DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source).replace('{value0}', 'America/New York');
+          await expect(page.getByText(expected, { exact: true })).toBeVisible();
+        }
         const untranslated = await untranslatedOwnerCopy(page, locale);
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
         const audit = await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();

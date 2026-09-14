@@ -145,49 +145,49 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 167,
+          "line": 175,
           "kind": "template",
           "context": "b315d7d485aa2e8c4c6f8f57452e179983017b0e4bf0aa2b8eb5ce44a51a0c66"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 216,
+          "line": 224,
           "kind": "template",
           "context": "b315d7d485aa2e8c4c6f8f57452e179983017b0e4bf0aa2b8eb5ce44a51a0c66"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 227,
+          "line": 235,
           "kind": "template",
           "context": "b315d7d485aa2e8c4c6f8f57452e179983017b0e4bf0aa2b8eb5ce44a51a0c66"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "template",
           "context": "b315d7d485aa2e8c4c6f8f57452e179983017b0e4bf0aa2b8eb5ce44a51a0c66"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 283,
+          "line": 291,
           "kind": "template",
           "context": "3ca2f66dbda8abe94541bd4b20bcf60f7e17aa276f75e2611514b80b68a051ff"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 289,
+          "line": 297,
           "kind": "template",
           "context": "3ca2f66dbda8abe94541bd4b20bcf60f7e17aa276f75e2611514b80b68a051ff"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 308,
+          "line": 316,
           "kind": "template",
           "context": "3ca2f66dbda8abe94541bd4b20bcf60f7e17aa276f75e2611514b80b68a051ff"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "template",
           "context": "3ca2f66dbda8abe94541bd4b20bcf60f7e17aa276f75e2611514b80b68a051ff"
         }
@@ -670,7 +670,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "template",
           "context": "106aa2f64293efbd78945e7674a6ad9fbecc234bb1948f25376cc2d3cdb4ae21"
         }
@@ -962,7 +962,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "template",
           "context": "b1f69d3716f22b90427b25080b258ff89c719678d318f01776d36fc65f23326a"
         }
@@ -1333,7 +1333,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "template",
           "context": "86215bcbc3127e8c45c73cd928b1b1c30c92b1bf303fc9526dc4f4e1e7f54984"
         }
@@ -1453,7 +1453,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 121,
+          "line": 122,
           "kind": "literal",
           "context": "d85ccc22424b2606e7ce01993d61989f5fc4452485ac09c553a62b83373a2abe"
         }
@@ -2089,37 +2089,37 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "77eda68a9cb9eac501f65d8febeb60a0e9b060e16ff67d8e9c5f9a4fb64f53ca"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "b542f8595ffbc26216af1cca92118a0b15ef0cfdb32ef14401d069ad17956ecf"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "4856ee121fbfcef51cb80ea6e54d84c8fb62ec7ab96e8b981407b2a8e5ad6230"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-text",
           "context": "77eda68a9cb9eac501f65d8febeb60a0e9b060e16ff67d8e9c5f9a4fb64f53ca"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "a6cc7c14d2d7672d9e9bbbf15381604a1acdf29758883a05946c24cfed29f82e"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "4856ee121fbfcef51cb80ea6e54d84c8fb62ec7ab96e8b981407b2a8e5ad6230"
         }
@@ -2186,7 +2186,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "ee94b6e92c24db2e759c9111739d44b54b64c7496cffb02ca98f05c1c94b5c2c"
         }
@@ -2264,7 +2264,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-text",
           "context": "2ed8c6b121c3e30bb45a1baf456d5013d8eb022ba1f04438e6366a3e750eed71"
         }
@@ -2342,13 +2342,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "literal",
           "context": "3767662dc3e0def7ab61549b0aef5900481ada04dfd04fbd0a845b6d069d3abc"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "literal",
           "context": "3767662dc3e0def7ab61549b0aef5900481ada04dfd04fbd0a845b6d069d3abc"
         }
@@ -2359,7 +2359,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 227,
+          "line": 235,
           "kind": "jsx-text",
           "context": "d76e63842e78f6f69ef9a8a6e0d83595ad2dc4ae05999fdd8219a299c08db244"
         }
@@ -2387,13 +2387,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "fe90c0137c823d5b7330f883132ac1d1bb2250bf481c9b8c9301de5532b55ade"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "fe90c0137c823d5b7330f883132ac1d1bb2250bf481c9b8c9301de5532b55ade"
         }
@@ -2422,7 +2422,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 311,
+          "line": 319,
           "kind": "jsx-text",
           "context": "854992e5c64b636b1898c71975b8b1144040066835f61cb200c9eecf159abdc7"
         }
@@ -2484,7 +2484,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "216965a1dc767d8fb0ec2a969f262d36dd55da9b98be5ab7cc0b3d7bdd117f45"
         }
@@ -2495,7 +2495,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "678f114f1bbdc04690d3e1aea893383f0f52ed7b97d978968c5d766914909e4b"
         }
@@ -2922,7 +2922,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-text",
           "context": "b30eacc719aae49fa13f3e35f2af604260e5224068675598a8885adfcca55d48"
         }
@@ -2933,7 +2933,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "128a1cd9c617b32a6e76878ff4f38e052966d446f0a490ab4074f49c993c9e2a"
         }
@@ -2977,7 +2977,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "5d31a732a449a77c75951076d3f74f76537125c3605e0b9316853b8da7ae786e"
         }
@@ -3006,13 +3006,13 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "cc2d97bf114919f972a9822346527a2fce348cc484a3ba1acabedce847bf0cd0"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-text",
           "context": "cc2d97bf114919f972a9822346527a2fce348cc484a3ba1acabedce847bf0cd0"
         }
@@ -3410,7 +3410,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 250,
+          "line": 258,
           "kind": "jsx-text",
           "context": "faf5761d35343e70398886cabb06ed4a95c0efd4a5bc0e349bbe7e9ae47a4892"
         }
@@ -3421,7 +3421,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "fe105f0781d3cb5a755801f3dc8e64b0a0a8c8eb344759bbea74238157213c06"
         }
@@ -3698,7 +3698,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "dfc45963c1057f946df6e338c68fb9e197e7c48d8a9ee76e18a8cfc329b28fc7"
         }
@@ -3720,7 +3720,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "dfc45963c1057f946df6e338c68fb9e197e7c48d8a9ee76e18a8cfc329b28fc7"
         }
@@ -3949,7 +3949,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "ba9c97c2e4682d32c5cc98eb0e4413165180b6b0c5c6c96bb72bdb34250dc0d6"
         }
@@ -4130,7 +4130,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "c5d2a6de8a1a7f72388d5a03bc1e9f2c5115f731010232b625e9c1a021e7478e"
         }
@@ -5232,7 +5232,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "jsx-text",
           "context": "3aa8284db0cbf711e62cd6cf051db88ac72e246cfb212024e9c2d3b2467d8987"
         }
@@ -5436,7 +5436,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 179,
+          "line": 187,
           "kind": "literal",
           "context": "fe08ab7b12fff3638a54b0868023767fd193e610fc9ddb7fd790b58d3928c79e"
         }
@@ -5640,7 +5640,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "38a863396b908cfa16b85ff33f543086d8fbe1ca78034999a064da20acc556aa"
         }
@@ -5761,7 +5761,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "4bf0d2e58e6efa1aa37c65b2c2983bf2bfb890024f86f87f15c66fde3472a788"
         }
@@ -5867,7 +5867,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "22d1fd96ba70daca225e42eee2aca462dac462585442bc02ce022343ae79e59b"
         }
@@ -7730,13 +7730,13 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-text",
           "context": "452d4be28a6ab655592b396ec69c5f70c6df08864a6c28708d85f5ff70cb2a50"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "237056aa10997a799a0bdbd24ad92f523cbe4da7fcc7bae4fb85c6259308034c"
         }
@@ -8118,7 +8118,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "1cfb8c01f186dc64b57458b1c0b05f37934aae7608fd0ec0e657f176e4683207"
         }
@@ -8140,7 +8140,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "ef0c688c4eaa0b6c665c36d6d84f123e818cb5ad411912ae64bd73d2fb6750ce"
         }
@@ -8275,25 +8275,25 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "template",
           "context": "3767662dc3e0def7ab61549b0aef5900481ada04dfd04fbd0a845b6d069d3abc"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "template",
           "context": "3767662dc3e0def7ab61549b0aef5900481ada04dfd04fbd0a845b6d069d3abc"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "template",
           "context": "fe90c0137c823d5b7330f883132ac1d1bb2250bf481c9b8c9301de5532b55ade"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "template",
           "context": "fe90c0137c823d5b7330f883132ac1d1bb2250bf481c9b8c9301de5532b55ade"
         }
@@ -8631,7 +8631,7 @@
       "occurrences": [
         {
           "file": "src/lib/localizationCore.ts",
-          "line": 97,
+          "line": 102,
           "kind": "literal",
           "context": "3fc40524d767a2a7cef44f3bc53cf0623092a2e99eea302bc1525d2747c9123f"
         }
@@ -8692,7 +8692,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "literal",
           "context": "62a868e7bc72b6116d8f2cf37c4f6fa2bb2d486d1a19677d2067c77d4a44a0cf"
         }
@@ -8703,7 +8703,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 182,
+          "line": 190,
           "kind": "literal",
           "context": "f00fbf1769e3e5c9035d75f179867a80e030c354f8ef719eda1d8db2be435c16"
         }
@@ -8714,7 +8714,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 181,
+          "line": 189,
           "kind": "literal",
           "context": "b7ba75671632d16042c2f38095a4025fc16687500b244912767e0946c393ea28"
         }
@@ -9215,7 +9215,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "313a39ac143733083a7b585810e0750bbb9b654b7b598248585e90a173ae6813"
         }
@@ -9403,7 +9403,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "47f4d05f6f0b15f0cb349f069a62283292525f94b669e22ae95beff46e4759c3"
         }
@@ -9675,13 +9675,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 153,
+          "line": 157,
           "kind": "literal",
           "context": "4b6d480d4dd9d2aa655e79fdbf949bfc0f062e2616ca7df456d0c00f9b78d49c"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 223,
+          "line": 231,
           "kind": "literal",
           "context": "f99fb5e36f3fed99488f8ffeb2c175d8d053bc7dfacf97831880553a75fefa6b"
         },
@@ -9862,7 +9862,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-text",
           "context": "ea9374cd37a05672fa15669f874518c1f8e73197f72a7c27d04f2271f067f70b"
         }
@@ -10007,7 +10007,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "localized-source",
           "context": "d19c146dabcc51f4509791d15ee45d9676e6625d4210d2ff18819a892ed01fe2"
         }
@@ -10353,13 +10353,13 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-text",
           "context": "518e6d1d5b353f1249581e1d706ae96ca690809c7baf21e240a13e028d44783c"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "a6cc7c14d2d7672d9e9bbbf15381604a1acdf29758883a05946c24cfed29f82e"
         }
@@ -10370,13 +10370,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "08c7ff650979151d95b822fba70201df77e2b2d59ab69942c7f1e72ee5cf029d"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "b542f8595ffbc26216af1cca92118a0b15ef0cfdb32ef14401d069ad17956ecf"
         }
@@ -10702,7 +10702,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "jsx-attribute",
           "context": "c09660b488040a70130531de620fee4ed2161d022d5001ed3c557ee88696d031"
         }
@@ -11006,7 +11006,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 244,
+          "line": 252,
           "kind": "jsx-attribute",
           "context": "7004ec00ff1e22d847a7404deb0d1e011e0b33c053c2024f8d59264655da588d"
         }
@@ -11223,7 +11223,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-attribute",
           "context": "9cc0beb6f3f25a1a0863f195ae0bfae187c68d50820c4de4c835db79f04e9091"
         }
@@ -11405,7 +11405,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-attribute",
           "context": "5933ae26d42a13f962d914c2da8a6b5724094b081248d868b5dbc6e322acbd09"
         }
@@ -11471,7 +11471,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 311,
+          "line": 319,
           "kind": "jsx-attribute",
           "context": "3d79badf85e8c9bff8249b45e33db0e35f07e831b4f33f34d5b88dbb3d6e827d"
         }
@@ -11676,7 +11676,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "localized-source",
           "context": "1956c7335e53f32dbc0c5eb2d8d85644e3b5c0075b5dce726fc8c99e1be2958a"
         }
@@ -11687,7 +11687,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "localized-source",
           "context": "9a02bc1eb976bc0bda9345314362ec0c2a86e9495d30526de067d4efcf8cc3f7"
         }
@@ -11698,7 +11698,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-attribute",
           "context": "2cd272827ef6013ef949d8f90dfd26ed8569fb86b0826df1d642fe5625179bb5"
         }
@@ -11709,7 +11709,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "a3140239ba7a2a7cc0faa121ebc845a657fdba299ba3b589af6f9798eb0e53c3"
         }
@@ -11731,7 +11731,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 183,
+          "line": 191,
           "kind": "literal",
           "context": "fb7846d7b088e6d7b869742f93e4163884182a6a9318cac40ebaaa42dab6f789"
         }
@@ -11764,7 +11764,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 185,
+          "line": 193,
           "kind": "literal",
           "context": "e6228a6811133aae9f894e806fcc5995cb9ddd7790fedbc69df3d5bef39a52ad"
         }
@@ -12366,7 +12366,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "7729f19fffd1a61b5bbc69a976cfcea71ed14b90d449898bc22ce3c9916e96db"
         }
@@ -12667,7 +12667,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "literal",
           "context": "dd5305ab06953a4e2e5a0a6001f8bcafdf470948fd748dd0a1c94b1acf9efda7"
         }
@@ -12678,13 +12678,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "f9093074be5b589f029289453242e97b038e730d58102717ac97115388ef4aab"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "ee94b6e92c24db2e759c9111739d44b54b64c7496cffb02ca98f05c1c94b5c2c"
         }
@@ -12927,7 +12927,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-attribute",
           "context": "45bc0f1796b4ca3afe9799c2ecdb6ec76ed49ae430d062653a7e48390bba0ee7"
         }
@@ -13142,7 +13142,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "1442a3797cb7596beacc8c24e787314d6bb1f7cd91dfebc7a148b4c0d371982b"
         }
@@ -13153,7 +13153,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "216965a1dc767d8fb0ec2a969f262d36dd55da9b98be5ab7cc0b3d7bdd117f45"
         }
@@ -13186,7 +13186,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "f4a39f2ad7e5711ef20de46d8384bffaea09dafe4a3dac9e7dedf5ddb2d2080c"
         }
@@ -13208,7 +13208,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "678f114f1bbdc04690d3e1aea893383f0f52ed7b97d978968c5d766914909e4b"
         }
@@ -13677,7 +13677,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 248,
+          "line": 256,
           "kind": "jsx-text",
           "context": "ba2ed8a53d67bb9cb73ef4fee7a56a52328910d9fdb62304a236683305bb0522"
         }
@@ -15341,7 +15341,7 @@
       "occurrences": [
         {
           "file": "src/lib/localizationCore.ts",
-          "line": 99,
+          "line": 104,
           "kind": "literal",
           "context": "ad19441dad28510c511eb5ad826154e8aa08ed0a7afac84e5b24d8b306d1c916"
         }
@@ -15701,7 +15701,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-attribute",
           "context": "ce81615aea88e1e756287bc06a943f4eb185c8659078ba9028cb9754e93d19dd"
         }
@@ -16127,7 +16127,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "literal",
           "context": "dd5305ab06953a4e2e5a0a6001f8bcafdf470948fd748dd0a1c94b1acf9efda7"
         }
@@ -16199,7 +16199,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-attribute",
           "context": "0890ea355b4fb7057c2fc1d6399c5c5611fac35fdbc56aa44ac7a7a587e9f35d"
         }
@@ -16830,7 +16830,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "jsx-text",
           "context": "87228469b8f0bc4aca47945a9bf8b7811ae5f15d1c5919593303858086c7512c"
         }
@@ -17894,7 +17894,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 287,
+          "line": 295,
           "kind": "template",
           "context": "d59a14d6b00b027227c1cbe2c1c50f58e0564f6a8b9db57d6ae9fb29d834dcbd"
         }
@@ -18127,7 +18127,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 249,
+          "line": 257,
           "kind": "literal",
           "context": "f55ced87fede73382477f2f7930339e5b3749511158b1f09b3200d656b8d7b33"
         }
@@ -18149,7 +18149,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "f9167bb9891abf176748a89c970e3f5f75107b8c3bf678f88386ff69d1bb8c10"
         }
@@ -18171,7 +18171,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 248,
+          "line": 256,
           "kind": "jsx-text",
           "context": "fc02d4c0dfce4f255cc93fdabccec3a3968401825963f76c33df511973bc4161"
         }
@@ -18182,7 +18182,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "52feae33dedc2784cc3374575ecb8aec308c4a8751484517794bf36df5f1d76d"
         }
@@ -18193,7 +18193,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "f083005e0870a8bbfe131e7d9d7aabc2fda9fd1db02015bfe2dbb1bdd8c62530"
         }
@@ -18289,7 +18289,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 249,
+          "line": 257,
           "kind": "literal",
           "context": "f55ced87fede73382477f2f7930339e5b3749511158b1f09b3200d656b8d7b33"
         },
@@ -18345,7 +18345,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-text",
           "context": "09eebd9d8038d624ff0de2bf9c2e23cf6f3f2ea2ad66255ed0f39d44af4fa833"
         }
@@ -18356,7 +18356,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-text",
           "context": "7e1bf19442e2f2d9e5dc6a5f837137bb47295b206b6e16fd8cbf77bb6a5b6eac"
         }
@@ -18483,7 +18483,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-attribute",
           "context": "33bd2b3b9344fcb28e0c7315380b11b5e72edd250450dff35cb32a01e696a3c2"
         }
@@ -18527,13 +18527,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-attribute",
           "context": "01056c881516e5a4b01b60f963cfd43b5b20369ba7d8da77d5ed40c18312252c"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-attribute",
           "context": "03716277b485ba26d45fe250b119841bda163d4e699a40abb3b75c8de1a88e35"
         }
@@ -18544,7 +18544,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-attribute",
           "context": "561db172960b12c1047ebd344fb551cd4e99ebbf8b94b3e7402d707d6c3c7e44"
         }
@@ -18628,7 +18628,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "7a95ac769cf41446da27dbe44476e6c8cb2a7870ea8d83bf5123f8389c22582f"
         }
@@ -18656,7 +18656,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "52feae33dedc2784cc3374575ecb8aec308c4a8751484517794bf36df5f1d76d"
         }
@@ -18774,7 +18774,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "e15c892c15b5563c063621a2571ed6fa1a4665144ef216a50ba725866fb1c58a"
         }
@@ -18847,13 +18847,13 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "2591da39741674452d60316ae8ca303230b1574531e4a7d46eafaf311af1059e"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "literal",
           "context": "584683eabc5a2968e23e6f5a6b3db30bd5cf4c5ebcfdab83819e20da1c56fa0d"
         },
@@ -18898,7 +18898,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-attribute",
           "context": "ae559c702d9d6524a924fd6aa0eea6c7401afa4283ffbb63548a512ae1bd162e"
         }
@@ -18920,7 +18920,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 242,
+          "line": 250,
           "kind": "jsx-text",
           "context": "8f8de044e6bcbc3fec00d85d58ea0d3a1e8f73817e2cd4bf6e3406498521025f"
         }
@@ -18937,13 +18937,13 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-attribute",
           "context": "50a132211ad93d6ef30417f9e865cb70b26ee0905411afe7992a1bef636f35f8"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "0039c92df204bda971d1ae6d67e72f22b1eb541295390d26f503f610494152d3"
         }
@@ -18954,7 +18954,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 248,
+          "line": 256,
           "kind": "jsx-text",
           "context": "f29b0150c6efc974df36150e6ab6a0ce8bce2e3643432e599b2e98182fdfdede"
         }
@@ -18976,7 +18976,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "literal",
           "context": "42fd6e77e67d5a4f63f16caf96bfafc888355abf5df437b156cfa0348a380e3a"
         }
@@ -19020,7 +19020,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-attribute",
           "context": "8fa779bdf571ebd2631c9e89720d2e7d2d84b33c8b538c173be0ced526d43c47"
         }
@@ -19365,7 +19365,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 244,
+          "line": 252,
           "kind": "jsx-attribute",
           "context": "76c39257ac565437bbe9e9cffde04a4c8abd0930ce2ebee3956041edfa264417"
         }
@@ -19520,7 +19520,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "ef9ff5cec14ed15753aa07dc744cd82aecce55ddb252e50542eaa33f1b716a5c"
         }
@@ -19542,7 +19542,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "1f527e2b372cc1b5b52a5310d3892d2267f88e8d4f257b6cec21d32219be8dc6"
         }
@@ -19721,7 +19721,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "c19634e0c7f6e13867ff6959d7066e4de4c792f86d13d74752c7662d0c27254f"
         }
@@ -20218,7 +20218,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 227,
+          "line": 235,
           "kind": "jsx-attribute",
           "context": "fab994b68e10a169f8c933b8d5ad9e22889babfaa58cd248dfbb3d0077bb145a"
         }
@@ -20229,7 +20229,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 248,
+          "line": 256,
           "kind": "template",
           "context": "e5e2c97512c89d1545ca5f4af73c031f1c08956e4ced35d2467084780761dbaf"
         }
@@ -20264,7 +20264,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "literal",
           "context": "24aa125ee06f6f5c072e3d9909142201a16ddfd6b268c08ee19b81994f85a402"
         },
@@ -20281,7 +20281,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-attribute",
           "context": "22bd37984ae4da969798995caa59c49826aea2ccfd47e3726037c13c569b8bdd"
         }
@@ -20292,7 +20292,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-text",
           "context": "0680e442f7148d7c8bca1ca2b630ea4b8444a1a740ed809ebaf5657efe5c3565"
         }
@@ -20325,7 +20325,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "jsx-attribute",
           "context": "19fb33f9b4f76dcffbe8c4efebdb44da496f8b858422524be07e56b4b85a2ddf"
         }
@@ -20376,7 +20376,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 311,
+          "line": 319,
           "kind": "jsx-attribute",
           "context": "4804b2bf7c28ae9822d0a3cb90f889f900f69254d1944163482e1be7d2ea4ec3"
         }
@@ -20393,7 +20393,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "template",
           "context": "f68ff8c4c109922aad84a01cfe0e94054b379b2d36b89a063b34f185d2b84139"
         }
@@ -20410,7 +20410,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "template",
           "context": "86215bcbc3127e8c45c73cd928b1b1c30c92b1bf303fc9526dc4f4e1e7f54984"
         }
@@ -21440,7 +21440,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 125,
+          "line": 126,
           "kind": "literal",
           "context": "f4e0bc201d174de0eb161ac974ec567d4c095ec12ffa64cbf7cb68e2ccf03c50"
         }
@@ -21518,7 +21518,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 273,
+          "line": 281,
           "kind": "literal",
           "context": "1187bd8cd1e050340e4de1120898874d7e59af62660cfaf58fe8c49191a9938c"
         }
@@ -22296,7 +22296,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 243,
+          "line": 251,
           "kind": "jsx-attribute",
           "context": "c113b1718a078f1b12ac43ff0155df9464cd52e91dc884223e100373710c54bf"
         }
@@ -23493,7 +23493,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 248,
+          "line": 256,
           "kind": "jsx-attribute",
           "context": "3113a2db7cb9b77499f047750d91ec859cc659190e32d257cb0fdd0922ab30fe"
         }
@@ -23504,7 +23504,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "literal",
           "context": "f083005e0870a8bbfe131e7d9d7aabc2fda9fd1db02015bfe2dbb1bdd8c62530"
         }
@@ -23649,7 +23649,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 227,
+          "line": 235,
           "kind": "jsx-attribute",
           "context": "73a8b359de1aad7b29228b85f0f6ed4d3694243309fa6ee965de4c03e5a09905"
         }
@@ -24196,7 +24196,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 116,
+          "line": 117,
           "kind": "literal",
           "context": "edf15cffa8e007e0f5d2f72eeb4985c1a045f8bb02ac5c1e3e9f501264a68fad"
         }
@@ -24207,19 +24207,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 150,
+          "line": 154,
           "kind": "literal",
           "context": "7e5f181679095e6a5cffb27a522f5f81bf47b82ff158e0286165ff8aea571c02"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 151,
+          "line": 155,
           "kind": "literal",
           "context": "42a5af7ce889a1800ffd8bfba364d68df4da4a18b62d96a349998fbbfbdb03ab"
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 154,
+          "line": 158,
           "kind": "literal",
           "context": "b4d422e21df071209cbc0e9c96f2353454677df876f752895382d12ba01dfa13"
         }
@@ -24354,7 +24354,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 245,
+          "line": 253,
           "kind": "localized-source",
           "context": "6d29d0a6f8e311b9156cba1cccbde1b275701352c2fb5ab4bbad00ea0bb2da88"
         }
@@ -24426,7 +24426,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 247,
+          "line": 255,
           "kind": "jsx-text",
           "context": "195a25a4d0c4db5f8625e25b304d48faba95bf02c25fe3cc17058a49ef6b8943"
         }
@@ -24571,7 +24571,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-attribute",
           "context": "b7bdf8dfd2006e3ae446994bc2cb982f539dc460e1b4ac186275e8e67f8283d8"
         }
@@ -24688,7 +24688,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 313,
+          "line": 321,
           "kind": "jsx-attribute",
           "context": "0176ea342828941d115724e3a337c853f7316f82840ac682e65766cf5d5b8e3b"
         }
@@ -24699,7 +24699,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 312,
+          "line": 320,
           "kind": "localized-source",
           "context": "0f232fe0fdfbac83009b65d5095458680b10a8a5d6039a523342cd43e2c1937e"
         }
@@ -25051,7 +25051,7 @@
         },
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 148,
+          "line": 152,
           "kind": "literal",
           "context": "8e9ceff8b94fa1229d75429ed959ac6d80e4f82a5ff4a5f2cad5c3b62c3927a2"
         }
@@ -25101,7 +25101,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/StructuredCatalogEditors.tsx",
-          "line": 241,
+          "line": 249,
           "kind": "jsx-text",
           "context": "1b81ac18051fb2421b06f65d6f23195f309ee9bb10755f17d7ca21306fefb425"
         }

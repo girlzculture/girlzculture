@@ -40,6 +40,19 @@ test('an explicitly cataloged template retains empty optional values', () => {
   assert.equal(resolveSourceTranslation('1 active booking', {}, { '{value0} active booking{value1}': 'Réservations actives : {value0}{value1}' }), 'Réservations actives : 1');
 });
 
+test('specific interface templates win over generic prefixes regardless of catalog order', () => {
+  const catalog = { 'Choose {value0}': 'Choisir {value0}', 'Choose one scheduling workspace. Appointments are shown in {value0}.': 'Les rendez-vous sont affichés selon {value0}.' };
+  assert.equal(resolveSourceTranslation('Choose one scheduling workspace. Appointments are shown in America/New York.', {}, catalog), 'Les rendez-vous sont affichés selon America/New York.');
+});
+
+test('the actual availability subtitle translates fully in every owner locale and preserves its timezone', () => {
+  const source = 'Choose one scheduling workspace. Appointments are shown in {value0}.';
+  for (const locale of ['fr', 'wo', 'es', 'zh-CN']) {
+    const catalog = DASHBOARD_SOURCE_MESSAGES[locale];
+    assert.equal(resolveSourceTranslation(source.replace('{value0}', 'America/New York'), {}, catalog), catalog[source].replace('{value0}', 'America/New York'), locale);
+  }
+});
+
 test('template matching leaves ambiguous adjacent values and long prose untouched', () => {
   const prose = 'a'.repeat(20_000) + ' end';
   assert.equal(resolveSourceTranslation(prose, {}, { '{value0} text {value1} end': 'Texte {value0} {value1}' }), prose);

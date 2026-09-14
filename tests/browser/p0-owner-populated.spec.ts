@@ -9,6 +9,46 @@ import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catal
 // Real service workers have their own suite; they bypass page.route in WebKit.
 test.use({ serviceWorkers: 'block' });
 
+for (const width of [390, 1440]) test(`P0 populated owner service edits survive late Engine defaults at ${width}px`, async ({ page }) => {
+  const fixture = await p0OwnerFixture(page, { populated: true });
+  let releaseConfig!: () => void;
+  let configReady = new Promise<void>(resolve => { releaseConfig = resolve; });
+  await page.route('**/api/config?keys=catalog.size_options**', async route => {
+    await configReady;
+    await route.fulfill({ json: { config: { 'booking.default_buffer_minutes': 60 } } });
+  });
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+  await page.goto(`/salon/dashboard/styles/${fixture.ids.service}`);
+  const description = page.getByLabel('Description', { exact: true });
+  await expect(description).toHaveValue('Original service prose — $180 GCABC12');
+  await description.fill('Original draft GC123');
+  await expect(description).toHaveValue('Original draft GC123');
+  const defaultsResponse = page.waitForResponse(response => response.url().includes('/api/config?keys=catalog.size_options'));
+  releaseConfig();
+  await defaultsResponse;
+  await page.getByRole('button', { name: 'Save Service', exact: true }).click();
+  await expect(page.getByText('Saved and verified.', { exact: true })).toBeVisible();
+  await expect(description).toHaveValue('Original draft GC123');
+  expect(fixture.records.styles[0].description).toBe('Original draft GC123');
+  expect(fixture.records.styles[0].buffer_minutes).toBe(15);
+  await page.reload();
+  await expect(description).toHaveValue('Original draft GC123');
+  configReady = new Promise<void>(resolve => { releaseConfig = resolve; });
+  await page.goto('/salon/dashboard/styles/new');
+  await description.fill('New original draft GC123');
+  const buffer = page.getByLabel('Cleanup buffer', { exact: true });
+  await buffer.selectOption('30');
+  const newDefaults = page.waitForResponse(response => response.url().includes('/api/config?keys=catalog.size_options'));
+  releaseConfig();
+  await newDefaults;
+  await expect(description).toHaveValue('New original draft GC123');
+  await expect(buffer).toHaveValue('30');
+  // An untouched new record still adopts the Engine's configured default.
+  await page.reload();
+  await expect(buffer).toHaveValue('60');
+  await expect(description).toHaveValue('');
+});
+
 test('P0 Assistant launcher leaves ordinary owner controls unobscured', async ({ page }) => {
   await p0OwnerFixture(page, { populated: true });
   await page.setViewportSize({ width: 390, height: 844 });

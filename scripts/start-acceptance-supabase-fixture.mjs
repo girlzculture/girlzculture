@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { p0PublicPolicyFixture } from "../tests/fixtures/p0-public-policy.mjs";
 
 const host = "127.0.0.1";
 const port = Number(
@@ -59,6 +60,8 @@ const server = createServer(async (request, response) => {
     json(response, 200, { ok: true, fixture: "girlz-culture-browser-acceptance" });
     return;
   }
+
+  if (await p0PublicPolicyFixture(request, response, url, json, readFixtureJson)) return;
 
   if (url.pathname.startsWith("/__fixtures/business-signup/") && method === "POST") {
     const scope = url.pathname.slice("/__fixtures/business-signup/".length);

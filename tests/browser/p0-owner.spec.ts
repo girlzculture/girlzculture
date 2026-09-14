@@ -11,6 +11,25 @@ import { screenshotCaret } from "./helpers/hydration";
 // local API fixture; the dedicated PWA suite exercises real service workers.
 test.use({ serviceWorkers: 'block' });
 
+for (const width of [390, 768, 1440]) test(`P0 owner core language flow translates complete scheduling sentences at ${width}px`, async ({ page }, info) => {
+  const fixture = await p0OwnerFixture(page);
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+  await page.goto('/salon/dashboard/availability');
+  await expect(page.locator('[data-owner-workspace]')).toBeVisible();
+  const source = 'Choose one scheduling workspace. Appointments are shown in {value0}.';
+  const gallery = `docs/screenshots/p0/${info.project.name}`;
+  await mkdir(gallery, { recursive: true });
+  for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+    await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
+    await expect.poll(fixture.accountLocale).toBe(locale);
+    const expected = (DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source).replace('{value0}', 'America/New York');
+    await expect(page.getByText(expected, { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.screenshot({ path: `${gallery}/specific-availability-${locale}-${width}.png`, ...screenshotCaret });
+  }
+  expect(fixture.unexpected).toEqual([]);
+});
+
 test("P0 owner core language flow retains account preference and original business text", async ({ page }) => {
   test.setTimeout(90_000);
   const fixture = await p0OwnerFixture(page);
