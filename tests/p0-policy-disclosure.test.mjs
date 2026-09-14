@@ -28,3 +28,20 @@ test('a published policy retains its exact revision and original notes', async (
   const admin = client({ salons: { data: { business_policy_revision_id: revision.id }, error: null }, business_policy_revisions: { data: revision, error: null } });
   assert.equal(JSON.stringify(await currentBusinessPolicy(admin, 'local-fixture')), JSON.stringify(revision));
 });
+
+test('policy prose matching a structured choice remains exact original text', () => {
+  const { PolicySummary } = typescriptLoader(process.cwd(), {
+    '@/components/i18n/LocaleProvider': { useI18n: () => ({ translateSource: value => ({ Welcome: 'Bienvenue' })[value] || value, formatNumber: String }) },
+    '@/lib/supabase': {}, 'next/link': { default: 'a' },
+  })('src/components/owner/BusinessPolicies.tsx');
+  function render(node) {
+    if (node == null) return '';
+    if (Array.isArray(node)) return node.map(render).join(' ');
+    if (typeof node !== 'object') return String(node);
+    return typeof node.type === 'function' ? render(node.type(node.props)) : render(node.props?.children);
+  }
+  const text = render(PolicySummary({ policy: { ...POLICY_DEFAULTS, notes: 'welcome', preparation: 'contact_business', guests: 'welcome' } }));
+  assert.match(text, /Additional business notes welcome/);
+  assert.match(text, /Before your appointment contact_business/);
+  assert.match(text, /Guests Bienvenue/);
+});

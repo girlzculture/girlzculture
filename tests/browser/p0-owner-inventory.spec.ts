@@ -5,6 +5,9 @@ import { untranslatedOwnerCopy } from './helpers/ownerLocaleCoverage';
 import { mkdir, writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 
+// Keep every request inside the local page.route fixture in WebKit.
+test.use({ serviceWorkers: 'block' });
+
 // Real owner route components, not the illustrative /internal acceptance page.
 export const ownerRoutes = [
   '', 'my-page', 'my-page/business', 'my-page/description', 'my-page/address',

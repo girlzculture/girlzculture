@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
+import { randomUUID, createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
 function loadModule(file, dependencies, env = {}) {
@@ -13,6 +14,43 @@ function loadModule(file, dependencies, env = {}) {
   runInNewContext(source, { exports, require: dependencies, Response, Request, URL, Set, process: { env } });
   return exports;
 }
+
+for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation']) {
+  test(`${path} rejects a registered test business even with marketplace live`, async () => {
+    let stripeCalls = 0;
+    const queries = [];
+    const salonId = '22000000-0000-4000-8000-000000000001';
+    const productId = '33000000-0000-4000-8000-000000000006';
+    const admin = { from(table) {
+      assert.equal(table, 'test_data_registry', 'Demo rejection must precede booking, payment and catalog work');
+      const filters = []; queries.push({ table, filters });
+      return { select(value) { assert.equal(value, 'id'); return this; }, eq(...args) { filters.push(args); return this; }, async limit(value) { assert.equal(value, 1); return { data: [{ id: 'registered-demo' }], error: null }; } };
+    } };
+    const dependencies = name => {
+      if (name === 'node:crypto') return { randomUUID, createHash };
+      if (name === '@/lib/marketplaceLaunchCore') return loadModule('src/lib/marketplaceLaunchCore.ts', () => { throw new Error('Unexpected launch dependency'); }, { CUSTOMER_MARKETPLACE_LIVE: 'true' });
+      if (name === '@/lib/marketplaceEligibilityServer') return loadModule('src/lib/marketplaceEligibilityServer.ts', value => { assert.equal(value, 'server-only'); return {}; });
+      if (name === '@/lib/operationalMonitoring') return { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile: () => ({}), noteOperationalFailure() {} };
+      if (name === '@/lib/requestSecurity') return { cleanText: value => String(value || '').trim(), cleanEmail: value => value, cleanUsPhone: value => value, enforceRateLimit() {}, rejectBot() {} };
+      if (name === '@/lib/supabaseAdmin') return { getSupabaseAdmin: () => admin };
+      if (name === '@/lib/stripeServer') return { stripeRequest() { stripeCalls++; throw new Error('Demo must not reach Stripe'); } };
+      return new Proxy({}, { get: () => () => { throw new Error(`Unexpected provider dependency ${name}`); } });
+    };
+    const route = loadModule(`src/app/api/stripe/${path}/route.ts`, dependencies);
+    const response = await route.POST(new Request(`https://girlzculture.test/api/stripe/${path}`, { method: 'POST', body: JSON.stringify({ salon_id: salonId, style_id: productId, product_id: productId, quantity: 1, guest_name: 'Fixture customer', guest_email: 'fixture@example.test', guest_phone: '+13055550123', items: [{ product_id: productId, quantity: 1 }] }) }));
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).code, 'BUSINESS_NOT_AVAILABLE');
+    assert.equal(stripeCalls, 0);
+    assert.deepEqual(JSON.parse(JSON.stringify(queries)), [{ table: 'test_data_registry', filters: [['record_type', 'salon'], ['record_id', salonId]] }]);
+  });
+}
+
+test('live marketplace eligibility preserves genuine businesses and fails closed on registry lookup errors', async () => {
+  const helper = loadModule('src/lib/marketplaceEligibilityServer.ts', name => { assert.equal(name, 'server-only'); return {}; });
+  const fixture = result => ({ from: () => ({ select() { return this; }, eq() { return this; }, limit: async () => result }) });
+  assert.equal(await helper.rejectRegisteredTestCheckout(fixture({ data: [], error: null }), 'genuine-fixture'), null);
+  await assert.rejects(helper.rejectRegisteredTestCheckout(fixture({ data: null, error: { message: 'fixture unavailable' } }), 'genuine-fixture'), /MARKETPLACE_ELIGIBILITY_UNAVAILABLE/);
+});
 
 for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation']) {
   test(`${path} fails closed before database access or Stripe session creation`, async () => {

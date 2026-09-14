@@ -6,13 +6,13 @@ import { IMAGE_UPLOAD_PROFILES, type ImagePresetKey } from "../../../src/lib/ima
 
 /** Browser-only API fixture. The real owner components render real route/state
  * transitions; database authorization/mutation is separately tested in SQL. */
-export async function p0OwnerFixture(page: Page, options: { planning?: boolean; populated?: boolean } = {}) {
+export async function p0OwnerFixture(page: Page, options: { planning?: boolean; populated?: boolean; seedSession?: boolean; locale?: string; actorId?: string; role?: "salon_owner" | "salon_team" | "customer" | "admin" } = {}) {
   const provider = process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || "http://127.0.0.1:3105";
   if (!["127.0.0.1", "localhost"].includes(new URL(provider).hostname)) throw new Error("P0 browser fixture requires localhost");
-  let accountLocale = "en";
-  const user = { id: "11000000-0000-4000-8000-000000000001", aud: "authenticated", role: "authenticated", email: "p0-browser@example.test", app_metadata: { provider: "email" }, user_metadata: { role: "salon_owner", locale: "en" }, created_at: "2026-09-01T00:00:00Z" };
+  let accountLocale = options.locale || "en";
+  const user = { id: options.actorId || "11000000-0000-4000-8000-000000000001", aud: "authenticated", role: "authenticated", email: "p0-browser@example.test", app_metadata: { provider: "email" }, user_metadata: { role: options.role || "salon_owner", locale: accountLocale }, created_at: "2026-09-01T00:00:00Z" };
   const session = { access_token: `${Buffer.from('{"alg":"none"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: user.id, exp: 2147483647 })).toString('base64url')}.fixture`, refresh_token: "p0-local-fixture", expires_at: 2147483647, expires_in: 3600, token_type: "bearer", user };
-  await page.addInitScript(({ key, session }) => { if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, JSON.stringify(session)); }, { key: buildAuthStorageKeys(provider).salon, session });
+  if (options.seedSession !== false) await page.addInitScript(({ key, session }) => { if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, JSON.stringify(session)); }, { key: buildAuthStorageKeys(provider).salon, session });
   await page.route(`${provider}/auth/v1/user**`, route => route.fulfill({ json: { ...user, user_metadata: { ...user.user_metadata, locale: accountLocale } } }));
   await page.routeWebSocket(`${provider.replace('http', 'ws')}/realtime/**`, socket => {
     socket.onMessage(raw => {
@@ -143,5 +143,5 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     unexpected.push(`${req.method()} ${path}`);
     return respond({ code: "P0_FIXTURE_UNEXPECTED" }, 501);
   });
-  return { business, revisions, records, ids, conversationMessages, actions, unexpected, accountLocale: () => accountLocale, failNextSave: () => { failNextSave = true; } };
+  return { business, revisions, records, ids, conversationMessages, actions, unexpected, session, provider, accountLocale: () => accountLocale, failNextSave: () => { failNextSave = true; } };
 }

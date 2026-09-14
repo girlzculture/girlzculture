@@ -102,3 +102,12 @@ test('unknown actions fail validation before persistence', async () => {
   const f = fixture(); const result = await send(f, { action: 'run_sql' });
   assert.equal(result.status, 400); assert.deepEqual(f.mutations, []);
 });
+
+test('blocked message moderation returns its stable code without saving or notifying', async () => {
+  const f = fixture({ moderationBlocked: true });
+  const response = await send(f);
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, 'MESSAGE_CONTENT_REVIEW_REQUIRED');
+  assert.deepEqual(f.mutations, []);
+  assert.deepEqual(f.deliveries, []);
+});

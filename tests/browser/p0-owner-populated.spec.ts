@@ -6,6 +6,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 
+// Real service workers have their own suite; they bypass page.route in WebKit.
+test.use({ serviceWorkers: 'block' });
+
 test('P0 Assistant launcher leaves ordinary owner controls unobscured', async ({ page }) => {
   await p0OwnerFixture(page, { populated: true });
   await page.setViewportSize({ width: 390, height: 844 });

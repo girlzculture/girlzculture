@@ -16,7 +16,7 @@ Owner request → Engine-governed intent planning → fixed strict tool schema �
 | `get_business_profile` | my_page | 1, immediate read |
 | `get_services_and_prices` | styles | 1, immediate read |
 | `get_business_policies` | my_page | 1, immediate read |
-| `prepare_business_profile_update` | my_page | 4 for public changes; explicit immediate confirmation |
+| `prepare_business_profile_update` | my_page; availability for hours; owner-only social links | 4 for public changes; explicit immediate confirmation |
 | `prepare_availability_block` | availability | 3; exact interval/time zone/scope preview and confirmation |
 | `prepare_service` | styles | 3; service draft preview and confirmation |
 | `prepare_customer_message` | bookings | 4; original message and booking preview, explicit send confirmation |
@@ -26,6 +26,8 @@ The registry in `gcAssistantCore.ts` is authoritative for field-level schemas an
 
 Request UUIDs, proposal digests, stored before-state, expiry and SQL row locks protect confirmation. Confirmation revalidates normalized execution payload and authoritative state; an expired, revoked, conflicting or stale preview cannot write. Duplicate confirmation returns the committed result. Mutations and their audit events share a transaction; failure records retain safe codes. Audit metadata is visible in the existing Platform Admin AI manager; private payload inspection requires support access.
 
+Rejections before proposal persistence or before SQL execution also use the existing protected Engine error/event system. They record the authenticated actor/business, locale, request ID, stage, known tool/risk, argument digest and stable failure code. Rejected private prose and raw prompts are not copied into monitoring. A failed confirmation's request ID links to its already-persisted normalized arguments and before-state. The response body and X-Request-ID use the exact canonical Engine reference. Rate-limit rejections preserve Retry-After without producing an incident-write amplification loop; the existing rate limiter remains authoritative.
+
 The launcher occupies a dedicated owner toolbar rather than overlapping ordinary controls. The shared dashboard-layout provider preserves the conversation across routes. Account changes clear private in-memory history. Long returned lists disclose their remaining results through an expandable section. Service-name filtering happens before the database cap; literal percent/underscore input cannot become wildcard search authority. Availability retains canonical professional IDs for subsequent scoped actions while presenting human names and local times.
 
 ## Provider governance and languages
@@ -33,6 +35,8 @@ The launcher occupies a dedicated owner toolbar rather than overlapping ordinary
 The Engine feature starts disabled. The existing approved provider/model governance must explicitly permit it and supply positive configured input/output cost rates. Before a request, a conservative cost reservation checks per-user rate and global daily/monthly budgets under a shared lock. Calls have bounded context/output, a 20-second timeout and `store: false`. Failed providers cannot bypass budgets or issue writes. No unnecessary raw provider payloads are retained.
 
 Planning is instructed to use the selected `en`, `fr`, `wo`, `es` or `zh-CN` locale, ask concise clarifications when needed and treat business/customer prose as untrusted data. Browser fixtures prove presentation and confirmation behavior, not real natural-language understanding. Live five-language/code-switching acceptance is still required with an approved provider.
+
+The five-locale Chromium/WebKit skill journey exercises all six reads and five preview/confirm actions, verifies unchanged state before confirmation, checks each resulting fixture record, and covers setup clarification, Class 5 navigation and provider fallback. Independent server tests and real disposable PostgreSQL assertions verify the authoritative execution boundary. These complementary tests do not claim that a scripted planner is a real model. Facts rendering translates only structured enum fields and canonical length choices; user names/prose that happen to match an enum remain original.
 
 Follow-up planning may use at most 30 booking selection records from a prior authorized read, filtered by the actor's freshly checked permission. These include identity, reference, name, appointment and status; they exclude contacts, payment details and private message bodies. This lets a request such as “tell Sarah” resolve an already-authorized identity. Ambiguity still requires clarification, and confirmation rechecks the displayed customer identity. Prior prepared message bodies are not replayed to the planner.
 

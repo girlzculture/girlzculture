@@ -7,6 +7,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { mkdir } from "node:fs/promises";
 import { screenshotCaret } from "./helpers/hydration";
 
+// WebKit service-worker fetches bypass page.route. This suite owns an explicit
+// local API fixture; the dedicated PWA suite exercises real service workers.
+test.use({ serviceWorkers: 'block' });
+
 test("P0 owner core language flow retains account preference and original business text", async ({ page }) => {
   test.setTimeout(90_000);
   const fixture = await p0OwnerFixture(page);

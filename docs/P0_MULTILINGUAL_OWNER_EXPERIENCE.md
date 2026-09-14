@@ -1,6 +1,6 @@
 # P0 multilingual owner experience
 
-Status: **AUTOMATED ONLY — source coverage passes; the expanded production-browser matrix is running.** This document is not a release approval.
+Status: **AUTOMATED ONLY** for local fixture evidence. Source coverage passes; final browser execution totals are recorded in the Draft PR validation report. This document is not a release approval.
 
 The source of authority is the founder's `Girlz_Culture_P0_Single_Authoritative_Codex_Brief.docx`. This branch starts at `b7dbc88ad31ab22f55018e0603ead8483fd33924`; PRs 59 and 60 are independent and parked.
 
@@ -12,11 +12,25 @@ The authenticated account's preference takes precedence over the per-account loc
 
 ## Route inventory and acceptance
 
-Owner routes reachable from `/salon/dashboard` include overview, my-page, photos, styles, stylists, products, availability, bookings, messages, reviews, earnings, promotions, subscription and settings. Detail/editor routes share `[section]/[recordId]`. The business-policy editor is `/salon/dashboard/my-page/business-policies`; shared Assistant access comes from the dashboard layout. Setup/onboarding and help links remain reachable.
+The 38 audited routes use the prefix `/salon/dashboard`:
+
+| Area | Exact suffixes (root means no suffix) |
+| --- | --- |
+| Overview | root |
+| My Page | `/my-page`, `/my-page/business`, `/my-page/description`, `/my-page/address`, `/my-page/social`, `/my-page/identity`, `/my-page/policies`, `/my-page/business-policies` |
+| Photos | `/photos`, `/photos/cover`, `/photos/logo`, `/photos/gallery` |
+| Catalog/team | `/styles`, `/styles/new`, `/stylists`, `/stylists/new`, `/products`, `/products/new` |
+| Availability | `/availability`, `/availability/calendar`, `/availability/hours`, `/availability/slots`, `/availability/stylists`, `/availability/overrides` |
+| Operations | `/bookings`, `/messages`, `/reviews`, `/earnings`, `/promotions`, `/subscription` |
+| Settings | `/settings`, `/settings/account`, `/settings/notifications`, `/settings/marketplace`, `/settings/team`, `/settings/member-new`, `/settings/security` |
+
+Populated coverage additionally opens existing fixture `/styles/:id`, `/stylists/:id`, `/products/:id`, `/bookings/:id`, `/messages/:bookingId` and `/reviews/:id` editors/details. Shared Assistant access comes from the dashboard layout. Setup/onboarding and help links remain reachable.
 
 The machine-readable candidate inventory is `owner-translation-inventory.json`; regenerate it with `node scripts/inventory-owner-translations.mjs`. It follows 67 reachable files from the owner shell, dashboard, Assistant and policy editor. All 1,660 inventoried interface sources, including dynamic/error templates, have entries in en/fr/wo/es/zh-CN. The 1,863 candidates also contain 134 reviewed non-copy values and 69 intentional proper-name exceptions. Non-copy exemptions bind the exact source context and cannot silently exempt a new UI use. `owner-translation-coverage.json` is generated and checked in CI; source coverage does not establish linguistic approval.
 
-`tests/browser/p0-owner-inventory.spec.ts` lists 38 concrete routes, while `p0-owner-populated.spec.ts` adds real service/professional/product/booking/review/message details and save/validation/error/original-message journeys. Both cover five locales at 390/768/1440 in Chromium and WebKit. The policy/Assistant suite covers publication and confirmation; Firefox covers the core locale/reload flow. The 390px empty/editor inventory and focused populated French journeys have passed; the full compiled-server run is still in progress. Browser-only API fixtures are separate from actual PostgreSQL mutation assertions and do not prove cross-device hosted persistence.
+`tests/browser/p0-owner-inventory.spec.ts` lists 38 concrete routes, while `p0-owner-populated.spec.ts` adds real service/professional/product/booking/review/message details and save/validation/error/original-message journeys. Both cover five locales at 390/768/1440 in Chromium and WebKit. The policy/Assistant suite covers publication and confirmation; Firefox covers the core locale/reload flow. Account-lifecycle browser tests use actual sign-out/sign-in controls and a fresh browser context, proving fixture preference persistence and isolation from a second user. Browser-only API fixtures are separate from actual PostgreSQL mutation assertions and do not prove cross-device hosted persistence.
+
+WebKit service-worker requests were bypassing Playwright's explicit page-route fixtures and reaching the unrelated localhost fixture backend. P0 API-mocked suites now block service workers within those tests only; PWA/real-provider tests retain their behavior. No assertion, skip, retry or per-action timeout was used to conceal that failure. The expanded serial CI suite receives a 60-minute total step budget for 1,140 route visits plus 630 populated visits and other regressions; individual assertions/timeouts and retries=0 remain unchanged.
 
 ## Original content and review
 
@@ -24,4 +38,4 @@ Names, references, addresses, URLs and user-authored prose are authoritative in 
 
 New policy/payment/legal wording in Wolof and Simplified Chinese is **not native/founder reviewed**. It requires that review before sensitive wording is treated as final. The policy publication UI requires review of the original and acknowledgment that platform rules prevail. Unreviewed translated text is not legal advice.
 
-Remaining: complete the expanded runtime/role/account-lifecycle matrix, review the resulting gallery and sensitive wording, and validate hosted account preference persistence when an isolated backend is assigned. See `P0_IMPLEMENTATION_STATUS.md` for exact evidence and blockers; do not infer acceptance from a translated navigation bar or source totals alone.
+Remaining live gates: native/founder sensitive-language review and hosted account preference persistence when an isolated backend is assigned. See `P0_IMPLEMENTATION_STATUS.md` and the Draft PR validation report for execution evidence and blockers; do not infer acceptance from a translated navigation bar or source totals alone.

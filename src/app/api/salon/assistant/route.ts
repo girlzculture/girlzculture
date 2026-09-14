@@ -1,6 +1,7 @@
 import { requireSalonOwner, deliverBookingMessageNotifications } from "@/lib/supabaseAdmin";
 import { enforceRateLimit, RateLimitError } from "@/lib/requestSecurity";
-import { AssistantError, assertSchema } from "@/lib/gcAssistantCore";
+import { AssistantError, ASSISTANT_TOOLS, assertSchema, stableJson, type AssistantTool } from "@/lib/gcAssistantCore";
+import { createHash } from "node:crypto";
 import { executeAssistantTool, confirmAssistantTool } from "@/lib/gcAssistantServer";
 import { planOwnerRequest } from "@/lib/gcAssistantPlanningServer";
 import { PolicyInputError } from "@/lib/businessPolicyCore";
@@ -11,14 +12,30 @@ const headers = { "Cache-Control": "private, no-store" };
 const validId = (value: unknown) => assertSchema(value, { type: "string", maxLength: 36, pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" });
 async function POSTHandler(request: Request) {
   let admin;
+  let actorId: string | undefined;
+  let salonId: string | undefined;
+  const audit: Record<string, unknown> = {};
+  function noteTool(tool: unknown, args: unknown) {
+    if (typeof tool !== "string" || !Object.hasOwn(ASSISTANT_TOOLS, tool)) return;
+    audit.proposed_tool = tool;
+    audit.risk_class = ASSISTANT_TOOLS[tool as AssistantTool].risk;
+    // Failed preparation must not copy rejected private prose into monitoring.
+    // Persisted proposals already retain normalized arguments; their ID links
+    // confirmation failures to that protected audit, while this digest lets
+    // support correlate an attempted payload without recording its raw text.
+    audit.arguments_sha256 = createHash("sha256").update(stableJson(args) ?? "null").digest("hex");
+  }
   try {
     const context = await requireSalonOwner(request); admin = context.admin;
+    actorId = context.user.id; salonId = context.salon.id;
     enforceRateLimit(request, `gc-assistant:${context.user.id}`, 25, 60_000);
     const raw = await request.text();
     if (raw.length > 18000) throw new AssistantError("ASSISTANT_INPUT_TOO_LONG", 413);
     const body = JSON.parse(raw);
     if (!body || typeof body !== "object" || Array.isArray(body) || !["en", "fr", "wo", "es", "zh-CN"].includes(body.locale)) throw new AssistantError("ASSISTANT_INVALID_INPUT");
     validId(body.request_id);
+    audit.assistant_request_id = body.request_id; audit.locale = body.locale;
+    if (["tool", "plan", "confirm"].includes(body.action)) audit.stage = body.action;
     const allowed = body.action === "confirm" ? ["action", "request_id", "locale", "digest", "confirm", "policy_reviewed"] : body.action === "plan" ? ["action", "request_id", "locale", "text", "previous_request_ids"] : ["action", "request_id", "locale", "tool", "args"];
     if (Object.keys(body).some(key => !allowed.includes(key))) throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if (body.action === "confirm") {
@@ -36,16 +53,21 @@ async function POSTHandler(request: Request) {
       body.previous_request_ids.forEach(validId);
       const planned = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids });
       if (!planned.plan) return Response.json(planned, { headers });
+      noteTool(planned.plan.tool, planned.plan.args);
       return Response.json(await executeAssistantTool(context, { requestId: body.request_id, locale: body.locale, tool: planned.plan.tool, args: planned.plan.args }), { headers });
     }
     if (body.action !== "tool") throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    noteTool(body.tool, body.args);
     return Response.json(await executeAssistantTool(context, { requestId: body.request_id, locale: body.locale, tool: body.tool, args: body.args }), { headers });
   } catch (error) {
     if (error instanceof RateLimitError) return Response.json({ code: "ASSISTANT_RATE_LIMIT" }, { status: 429, headers: { ...headers, "Retry-After": String(error.retryAfter) } });
-    if (error instanceof AssistantError || error instanceof PolicyInputError) return Response.json({ code: error.code }, { status: error instanceof AssistantError ? error.status : 400, headers });
+    if (error instanceof AssistantError || error instanceof PolicyInputError) {
+      const reference = await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "owner-request-rejected", actorRole: "salon", actorId, salonId, severity: "low", safeMessage: "GC Assistant could not complete this request.", metadata: { ...audit, failure_code: error.code } });
+      return Response.json({ code: error.code, request_id: reference }, { status: error instanceof AssistantError ? error.status : 400, headers: { ...headers, "X-Request-ID": reference } });
+    }
     if (error instanceof SyntaxError) return Response.json({ code: "ASSISTANT_INVALID_INPUT" }, { status: 400, headers });
     if (error instanceof Error && /Unauthorized|Forbidden/.test(error.message)) return Response.json({ code: /Unauthorized/.test(error.message) ? "AUTH_REQUIRED" : "ASSISTANT_ACCESS_DENIED" }, { status: /Unauthorized/.test(error.message) ? 401 : 403, headers });
-    const reference = await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "owner-request", actorRole: "salon", safeMessage: "GC Assistant is temporarily unavailable." });
+    const reference = await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "owner-request", actorRole: "salon", actorId, salonId, metadata: { ...audit, failure_code: "ASSISTANT_UNAVAILABLE" }, safeMessage: "GC Assistant is temporarily unavailable." });
     return safeFailure("GC Assistant is temporarily unavailable.", reference);
   }
 }

@@ -1,8 +1,10 @@
 # Booking conversations and translation
 
-Status: **AUTOMATED ONLY** for database/API boundaries. Full recipient browser workflows and live notification/provider acceptance remain outstanding.
+Status: **AUTOMATED ONLY** for local database/API and recipient browser workflows. Hosted persistence and live notification/provider acceptance are **BLOCKED** by missing isolated configuration.
 
 Each real booking is the conversation identity; there is no second chat subsystem. An immutable `booking_conversation_events` welcome record captures booking facts once per booking. The customer post-booking link selects `/account?tab=inbox&booking=<id>`; owners use `/salon/dashboard/messages/<id>`. Authorized support sees the conversation and the exact booking policy snapshot without changing customer/business read receipts.
+
+The support conversation is embedded in the existing `/admin/bookings/<id>` editor, subject to the existing page permission and the message API's fresh support authorization. The conversation is read-only for support; existing controlled booking-management actions retain their separate permissions and audit requirements. Browser coverage includes customer, permitted team and support views in five locales at 390/768/1440, saved policy/version detail, exact original display/reply, refresh and no support composer. Role-specific fixtures are explicit; real authorization is separately asserted at the API/database boundary.
 
 ## Original content and delivery
 
