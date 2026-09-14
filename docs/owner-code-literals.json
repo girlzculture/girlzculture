@@ -1,0 +1,1865 @@
+{
+  "purpose": "Reviewed non-copy source contexts, separate from the proper-name-only untranslated UI allowlist. New or changed uses require review or translation, not automatic exemption by string value.",
+  "entries": [
+    {
+      "source": ":{value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/salonOpenStatus.ts",
+          "context": "13a3a3a558467297cd911710022c081ef076e37ad2fe58bb5b662fc95bbc0f17"
+        }
+      ]
+    },
+    {
+      "source": "?{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "be9a644175f1caa646410a7fa49d8430b18ec4fa8dd0e3f8b7842f8b2153504a"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "1cf5bfd1ebdee9f59b8c40b25ceed2e8c12123011f81d622ec3accb96aaf8b61"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "2ab33494bf00f8557adab63e39dea495e4d2e838d27f1593a67f3dca05be8c9a"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "bdbc999456e22705e977556ec5c78f720a98ad95fa09c3063360404072c9694e"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "b315d7d485aa2e8c4c6f8f57452e179983017b0e4bf0aa2b8eb5ce44a51a0c66"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "3ca2f66dbda8abe94541bd4b20bcf60f7e17aa276f75e2611514b80b68a051ff"
+        }
+      ]
+    },
+    {
+      "source": ".{value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "789daf1e7fbb203f2e44a550842d54b9ba9815c984c96b53be335f468db84752"
+        },
+        {
+          "file": "src/lib/numericInput.ts",
+          "context": "82bc2fab8d746941c988c429787005c7300ac87b9dec930635316c1ed27c2d4f"
+        }
+      ]
+    },
+    {
+      "source": ".supabase.co",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "9e2eb8050cb2ea9a42849f6087f05d048868c0b5eb9c64cf3f590db353e31898"
+        }
+      ]
+    },
+    {
+      "source": ".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonSpreadsheetPanel.tsx",
+          "context": "53997b60b40791895fcea2ac36e62fc90191ed3f2e6d7577b0184457c7a16c5e"
+        }
+      ]
+    },
+    {
+      "source": "· {value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonVanityManager.tsx",
+          "context": "6a035a83b4bf92ecdd07ce3ae2cc193ef24253ffb1ab94ddc3118db2cd6076d0"
+        }
+      ]
+    },
+    {
+      "source": "'{value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/financeLedgerCore.ts",
+          "context": "9e9af1c04b6e8e81b4c65901f2da8966b24b80ecfcb3aa52977f8a2cd10249bb"
+        }
+      ]
+    },
+    {
+      "source": "\"{value0}\"",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/financeLedgerCore.ts",
+          "context": "8e3a158550025a18a3ce1f3f7eb6017bf134ae8406f33fddb4004f0d9839fba2"
+        }
+      ]
+    },
+    {
+      "source": "(display-mode: standalone)",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/notifications/PushSetup.tsx",
+          "context": "5435a8c8ff3b9be23a197905806902cb14c822ec8944e4698d464e27808e997a"
+        }
+      ]
+    },
+    {
+      "source": "(max-width: 1023px)",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/MobileRecordEditor.tsx",
+          "context": "8002f7f04d19beb59f01baf2ab21a418c2792d664715eca816144d3efcdd0975"
+        }
+      ]
+    },
+    {
+      "source": "(max-width: 767px)",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/site/SafeImage.tsx",
+          "context": "ebd796ebe7978fad4bdf22b4318abdba4c73b5829ce9ce658ae9b460bae1a9bd"
+        }
+      ]
+    },
+    {
+      "source": "(min-width: 768px) and (max-width: 1199px)",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/site/SafeImage.tsx",
+          "context": "5a979349ef1bd8dc129f388231f097d941661157ede61833be9a7af993ed876a"
+        }
+      ]
+    },
+    {
+      "source": "[a-z0-9]+(?:-[a-z0-9]+)*",
+      "reason": "Validation regular expression for slugs, phone numbers or email addresses. The associated validation messages are included in translated copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonVanityManager.tsx",
+          "context": "bd8b761afaad9479dbf664101a67789943c95e9d2ea23fa0005d2c027411d578"
+        }
+      ]
+    },
+    {
+      "source": "{value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "b4fc43f97115531828a7aa94e04f086abc47694a571cc4bd2600a2c783ac9909"
+        }
+      ]
+    },
+    {
+      "source": "{value0} – {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "4a0e334d639148a5b19ee42e7d6edf1e95a5375d4406efc252e6e14931885464"
+        }
+      ]
+    },
+    {
+      "source": "{value0} · {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "7cb3fdcbca514f74cb0f093390917713f73edddd1b3088789021820f41db3b8d"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "097bd4fc1f382132058a7db477bbf66c1c6b8a7920aec8496b1edc4366fe5c99"
+        }
+      ]
+    },
+    {
+      "source": "{value0} {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/businessPolicyCore.ts",
+          "context": "444696a91661dc7ad0d3e9b315eec5a322b26c07590a1eebafb26d9a38e38781"
+        },
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "fbc8c57ef4a38c228a13ada9cbce1a8b41ed8b9870814a46053012b34665d20d"
+        }
+      ]
+    },
+    {
+      "source": "{value0} {value1} {value2}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "ff7b23c29509fd16234d7edf96d986edf50dbaf4e8cff471c26f90ffc0560cd7"
+        },
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "c5f27ce54c1b014953a4f0bba4137929b3aca8a9ec77ed2f6d6b2a9bd914a9e7"
+        }
+      ]
+    },
+    {
+      "source": "{value0} / {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "243810637e3b7e76cdb514bbabd138dfffe3850d3caa8981cc5ddf5343868da4"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "fd05b96ab8c1d98b4bcb22b6505d53a69888c22962a61caa425c9d3e239e0255"
+        }
+      ]
+    },
+    {
+      "source": "{value0}_close",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "d5ec789a09606a3743af51f85416fe366d7351ba187757cc5ccea07427394924"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "1088bc7f96d269da4e745763f9d2f5e8b6339021fec9fae6d87973e489587784"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "d295f0deda0a07286906d749997cdd792e724fc7ff497e55a34ad1a7132aba39"
+        }
+      ]
+    },
+    {
+      "source": "{value0}_closed",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "f83880225c58a2627794be39fb082bb58f68ad8d369858d14a18cd9471a9634d"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "c10501f45434408268028e237050559f60e4fc5fa09b9dd530f18b4cf2688743"
+        }
+      ]
+    },
+    {
+      "source": "{value0}_open",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "15d486acdb475357281f146c1267e08d24c77f3176f9dd7fcfe463ae085f4d8c"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "b6764e6b340cfbb32bc334bcca26e893203b51b157069af71bcc1dcb8038add4"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "20123ca2ec7494f92e5453c987700884edc1d0f7ce60ae1ec0795f89a3f177c9"
+        }
+      ]
+    },
+    {
+      "source": "{value0}_working",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "9c8b643e234952bcfe87318964823bd7ffa79fcac7afb72cb1754d3a46b77f0c"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "d70917411f9c30379b6f3e6234cf289b4076a6a46aef67b0b1dccc97c9cd8f9f"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "101fdfad71e98727b52e693d4007ba736919ad06bc828521fc44be66aa6234f8"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "87cc8e0d46ca6f09182307be1deedbc988db8317dae4d7271a91d7f370b32576"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "b1f69d3716f22b90427b25080b258ff89c719678d318f01776d36fc65f23326a"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-{value1}-{value2}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "10ca4dd2c7f4b001adb8ebc8e2bc9810c0e19e2670d78e0be9512bf6f6e8cbf5"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-{value1}-{value2}T{value3}:{value4}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "e1fca7c7f1aa7b1424f5a0eb2f504c46bc5a60037f49cc6c884657ce3c5d2b24"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-admin",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "09d23d48d2a3263c41a5cf35df5a6da5f72cbe781b2e45c8fe27b0ce5751d334"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-code-verifier",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "160c191f349a25ab5c836ca46c0aacd73e23711cbf7bd0ae78d451d39ff02617"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "7861256b3a9fb587bfbf74c84e5285355dcc760d27895da36bffa60211e20323"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-customer",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "28802ba534458f79735c71939c40487f026834ec67e668f771d47a1709a8bcad"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-panel",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/DashboardMobileMenu.tsx",
+          "context": "ce7dcb75c63f943cda1fc87736390c57f7016d27914900ab9925a0b8c09d9efc"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-salon",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "1f73d496ecbbc2a14036fe02b274243305e89a170219eb98029280718171695a"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-user",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "160c191f349a25ab5c836ca46c0aacd73e23711cbf7bd0ae78d451d39ff02617"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "04c0c4ecaa45cc6a36124da6acbaa9882bb94b23706a903ae654d248ae061b77"
+        }
+      ]
+    },
+    {
+      "source": "{value0}:{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "dfa6ee6d6b879ddb33c94e143f96ba46c3b65a05b31e75518c981353a0de5c28"
+        },
+        {
+          "file": "src/components/owner/OwnerRealtimeAlertBridge.tsx",
+          "context": "fa18b8ac569da6dd44ebbb98fc6b2cb6cb4efe0d4eb662b202ca482177e334a5"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "c0262f3f3987eeb72a177b17c4ca872c777f351fe8cd3a4eee5f686f0cd9efc8"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "525dfce91d37c0ec9e1298ef2971159dd3a208b96dbd06caadba19544b8ba32c"
+        },
+        {
+          "file": "src/lib/salonPresets.ts",
+          "context": "9fdc1c2ff9ce6396040c82e99b590ca4856e9f4426f1a9da0f9f5759a971f85d"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "b38f3c87a2e245a35876f2c91de05f27615e1c58b59ef6bd859fa4f318899a68"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "5d19a17b50338ae0a55f06dca923e47f5600f88bb2366244e58765cdfb834729"
+        }
+      ]
+    },
+    {
+      "source": "{value0}:{value1} {value2}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "ad57bb891dc82a74317951fec5297fc155730c91fc9b537cfaaa7f75cb3993e6"
+        },
+        {
+          "file": "src/lib/salonPresets.ts",
+          "context": "f376155bc4b72b881be8ce62e4aae65da6e955579322ace8bf9133c1ca8eb0eb"
+        }
+      ]
+    },
+    {
+      "source": "{value0}:{value1}:{value2}:{value3}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "a6b5df829dee9383ced78eb9d183d680bb43f8d0fe37600dc39da1d159146254"
+        }
+      ]
+    },
+    {
+      "source": "{value0}?id={value1}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/auth/TeamUserManager.tsx",
+          "context": "05806ca4857cb4782540c3087fb64e85cbb42d46fd8d60461221d6640367cadc"
+        }
+      ]
+    },
+    {
+      "source": "{value0}.{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "6c0ae66bb94ccaff7fc6cd9321a1f730310884db26b8e7bad1c1be0949d5c437"
+        },
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "937e6ea2aeee4d694dd8c52be05803fd89115b0cd78f6248d02a709cf80d2256"
+        }
+      ]
+    },
+    {
+      "source": "{value0}.mp4",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/businessHeroVideoCore.ts",
+          "context": "ea75349beec57ae6b0e98a1920a0580878c962eecb167d61144a6b5ca95e810f"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonVanityManager.tsx",
+          "context": "9b45ba77e7e74150100dcfada804871e7eda96ac66d424910a5992f56b2b2ac8"
+        },
+        {
+          "file": "src/lib/numericInput.ts",
+          "context": "f09ad40698b0dbfe90c7b5d3a929da0f483b63a335186a71bca53c4849049a48"
+        },
+        {
+          "file": "src/lib/plans.ts",
+          "context": "ba772abe6ba90d50bff62defe474d93e680f0fab138875d8ce99611e78ecb66c"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1} {value2}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/salonOpenStatus.ts",
+          "context": "5c830abb32a570ebb73a1645e99e56cebd150bcd0d078c9a4304291ea773bfa1"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1}-mobile-{value2}{value3}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/responsiveMedia.ts",
+          "context": "ca15cdf6b8e127f8269c5a78d871cf5dc3b6228d87e8e335181d197cf0628de6"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1}-tablet-{value2}{value3}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/responsiveMedia.ts",
+          "context": "3f6554aa816fa5193b5bff08c2e372f68e0096a29d7280e88836a68a28e222f3"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1}-thumbnail-{value2}{value3}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/responsiveMedia.ts",
+          "context": "cb9914663a13d603eb14b31d296e5b5dfa167648da7c4c4e81de3e2e9769f800"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1}{value2}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/numericInput.ts",
+          "context": "e80485f4456a11760b5a09311ac39033077a1f44205a8c9b3f902fb6c76c663a"
+        },
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "066dc081663fdb567de9b207dc836d7f79c6ea28e4acd8776b7113ddc66f3e12"
+        }
+      ]
+    },
+    {
+      "source": "{value0}{value1}/{value2}-{value3}-{value4}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "6eeded7e6ef8d7f3992b21898ce7f7f5cf3eeb566ee2829189059943f327a950"
+        }
+      ]
+    },
+    {
+      "source": "{value0}/",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/hostRouting.ts",
+          "context": "996b42e921c005ad52a015fc403c3c475f730a0a1946486b71541846b11b2b7a"
+        },
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "77d93b75d02aba905480a700229acc812360ca1cf5a041be1277078e462fd0b2"
+        }
+      ]
+    },
+    {
+      "source": "{value0}/portfolio",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "86215bcbc3127e8c45c73cd928b1b1c30c92b1bf303fc9526dc4f4e1e7f54984"
+        }
+      ]
+    },
+    {
+      "source": "{value0}%",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "61e99279c66dae290da347e2e9e285713d5eaf7d04551dbe1e46d2450f39b42d"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "5ecb74b0c2d67de0a07eb29960651c01bdb3dcf7e366e9703194ad8f1f83b91f"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "f52cbe1722958e5e14ae6b1052bbd0561eb0bf68f22d08ff211febd781a7632c"
+        },
+        {
+          "file": "src/lib/plans.ts",
+          "context": "49e02967d823b25de7ad30272c31731ec68e6b56e7101e67c4d20b6f4bd76234"
+        },
+        {
+          "file": "src/lib/plans.ts",
+          "context": "b5991d5dedca2493503c853f841198e73a8ea8d279a5f159db6c317c6bbce02f"
+        }
+      ]
+    },
+    {
+      "source": "{value0}× {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "dc876b9fc53e8b7c507c32d75d1b4b72acae1620424a136b0d55434fa1750901"
+        }
+      ]
+    },
+    {
+      "source": "{value0}|{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "deebd2467d70d4cd34a899b49081843cdec092e68b67b52f17b61bfb67023650"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "075e20641823166092aa29c01fc83ebc0966311176200de7b1a7819a541373f9"
+        }
+      ]
+    },
+    {
+      "source": "{value0}T{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "2d0122175f130e5b3fbdc81e36606fdcf83cc74fbc391b6df82e699d3f01dc3c"
+        },
+        {
+          "file": "src/lib/financeLedgerCore.ts",
+          "context": "5d8d7dab9a89f28c74818d7c9a9e14812ef574dd9b01ac8942dff629d5958b38"
+        }
+      ]
+    },
+    {
+      "source": "{value0}T12:00:00Z",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "d4f67c4fc2de50283458a226fb960a94c6615cd34670b33e498ba82ee6e55aab"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "4236295705f0b9051f5b7a90c64fbf57461e5fc041e7a4b71892857cd9f6f889"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "56799538b87497362527e9f3a4a9b9ab3b97aefa84a948e7ae021fc3fe51af53"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "3a82c3a368acc2986f41daba7b73d36285a6a987661a4672a6672922f0f4ae5b"
+        }
+      ]
+    },
+    {
+      "source": "*,service_category:service_categories(id,name,slug),service_group:service_groups(id,name,category_id)",
+      "reason": "Supabase select projection, including relation and column identifiers. Not rendered text.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "d85ccc22424b2606e7ce01993d61989f5fc4452485ac09c553a62b83373a2abe"
+        }
+      ]
+    },
+    {
+      "source": "#ffffff",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "23340d9bd39a10f7681b36f729fc763f1db9cfd2e34654134e93cef2191c6ce4"
+        }
+      ]
+    },
+    {
+      "source": "^(?:\\+?1[ .\\-]?)?(?:\\([2-9]\\d{2}\\)|[2-9]\\d{2})[ .\\-]?\\d{3}[ .\\-]?\\d{4}$",
+      "reason": "Validation regular expression for slugs, phone numbers or email addresses. The associated validation messages are included in translated copy.",
+      "contexts": [
+        {
+          "file": "src/lib/validation.ts",
+          "context": "6ccc4740a0384491459a696657a83f1b789fdf098b5a8ece73f2f3a0c2ea65e1"
+        }
+      ]
+    },
+    {
+      "source": "^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$",
+      "reason": "Validation regular expression for slugs, phone numbers or email addresses. The associated validation messages are included in translated copy.",
+      "contexts": [
+        {
+          "file": "src/lib/validation.ts",
+          "context": "aced88040a2dda01dbec4b5a0974b34ba293a0cf8d26bc18856692e28ade5795"
+        }
+      ]
+    },
+    {
+      "source": "+1 ({value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/validation.ts",
+          "context": "b045965388deee0bbf54bcd760964389b1219caa0acd4770bc09c6f73a7081bf"
+        }
+      ]
+    },
+    {
+      "source": "+1 ({value0}) {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/validation.ts",
+          "context": "ae241171b248ac2e7c37b89b9c1d8610cdfa87ca22496cd1eeab2ed395f7a2d8"
+        }
+      ]
+    },
+    {
+      "source": "+1 ({value0}) {value1}-{value2}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/validation.ts",
+          "context": "2a1e65f585e5b261eeb6c32f5937bd054cc618c3f099e0892f117d84cc10d095"
+        }
+      ]
+    },
+    {
+      "source": "+1{value0}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/validation.ts",
+          "context": "74fcaa0b09d1dd844b6cfc6926a1a3e8dcdc39c3121eee2b631760d2ebe66a03"
+        }
+      ]
+    },
+    {
+      "source": "|{value0}|",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "be6d00cd2b45c3b42e10ee178b386cef72ce44760150f2b1ad8028bc793d984c"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "13aab7c90c46ab10ebf529867265f7efe4a87d5446e7c482d925942226bad42f"
+        }
+      ]
+    },
+    {
+      "source": "${value0} {value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/plans.ts",
+          "context": "7b4214a7354069180bd549478da1882fd413ea3aca3595d13b800451775de8e3"
+        }
+      ]
+    },
+    {
+      "source": "America/New_York",
+      "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
+      "contexts": [
+        {
+          "file": "src/components/BookingInbox.tsx",
+          "context": "d0d7e247faf311547345320b67951e3e37ebdb02998f1d82fb0e182b4a66b789"
+        },
+        {
+          "file": "src/components/BookingInbox.tsx",
+          "context": "85fb55def416736f481bcd520a89d5214f68e96cbe4edcef163edc9c21facc1a"
+        },
+        {
+          "file": "src/components/booking/BookingWelcome.tsx",
+          "context": "a672100b237cc8e21784d32d635c0c65cabdf463b13624c4aa12dcdce50775c1"
+        },
+        {
+          "file": "src/components/owner/BookingCheckInExceptionForm.tsx",
+          "context": "7b530e10b1ee6c1a97e1c88e15db3fc25007f609ac4f8cc714b5ac74261dfc6b"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "87abb4c5e6c140c9bddfeb2bb39c9f5a79df32214bca572209edb9889211b9d4"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "96c6aae72096127b721aa6f063483bd9de5624c006303d6e3c92526b108254cb"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "d8f0abb26eae88097aae1f98d0a77fea54f9ba38af05f00b4a80e7388e78f13a"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "87abb4c5e6c140c9bddfeb2bb39c9f5a79df32214bca572209edb9889211b9d4"
+        },
+        {
+          "file": "src/components/owner/SalonPromotionsManager.tsx",
+          "context": "24102a9c8bdcab6546d8bd37a4782a81d8211e0d3ae31a6bdc378d55875f39f0"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "8b48b6e3451343827a8a3dccc73431dba6438027665a70410bfb06c6eda1aae4"
+        },
+        {
+          "file": "src/lib/financeLedgerCore.ts",
+          "context": "87abb4c5e6c140c9bddfeb2bb39c9f5a79df32214bca572209edb9889211b9d4"
+        },
+        {
+          "file": "src/lib/salonOpenStatus.ts",
+          "context": "dbef423f702ea2543b31f8cb33ef1618c9278afb23e6521595610bae11975dc6"
+        },
+        {
+          "file": "src/lib/salonOpenStatus.ts",
+          "context": "08e9aa79b27eee8521ef69b9ca0971607a1ed143d3edf76b6ae3862c5b8d8f3d"
+        }
+      ]
+    },
+    {
+      "source": "API response is not an object.",
+      "reason": "Internal response-shape exception caught inside parseScopedApiResponse and replaced by the covered user-facing invalid-response message.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "5d4e44434b54aa3e1f9e20431df351f275e1d694a809eef7e33a872b992ba8b1"
+        }
+      ]
+    },
+    {
+      "source": "applicationId",
+      "reason": "Structured operational-monitoring field identifier; the safe support reference and user-facing failure message are rendered separately.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "56fdaedf85e889316f36e5afe571277b3c0964b5adbc86f1eb788b99955be401"
+        }
+      ]
+    },
+    {
+      "source": "Authorization",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "37bfc4493b2b80dba754e40390211fcf677dcf8c9fbe93e89c84f773becd7ea2"
+        }
+      ]
+    },
+    {
+      "source": "avcC",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/businessHeroVideoCore.ts",
+          "context": "e2d2aaae6c59dd184b339f9bd889ed525b3f86dc75ac7f376e9b12b650e88817"
+        }
+      ]
+    },
+    {
+      "source": "Booking reference sequence values must be positive integers.",
+      "reason": "Developer invariant in formatBookingReferenceSequence; not used as an owner form-validation message. Booking references remain immutable identifiers.",
+      "contexts": [
+        {
+          "file": "src/lib/bookingReference.ts",
+          "context": "67a7d8e906e2a8cf92d7dfdb86de6b3053cc6eafe154f2bd6cfb82898e235457"
+        }
+      ]
+    },
+    {
+      "source": "bookingId",
+      "reason": "Structured operational-monitoring field identifier; the safe support reference and user-facing failure message are rendered separately.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "56fdaedf85e889316f36e5afe571277b3c0964b5adbc86f1eb788b99955be401"
+        }
+      ]
+    },
+    {
+      "source": "business-policy-{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessPolicies.tsx",
+          "context": "8b178a944443c8a2774f534b8c0423955257d966b511703c5445e6c44aca2a04"
+        }
+      ]
+    },
+    {
+      "source": "Cache-Control",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "3970c4ce4b290a632fb33e73e29b0fe82307945cb4518a4de63f7fd66e381304"
+        }
+      ]
+    },
+    {
+      "source": "Content-Type",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/components/BookingInbox.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/auth/TeamUserManager.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/booking/MessageDisplay.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/notifications/DashboardNotificationCenter.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/notifications/PushSetup.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/BusinessPolicies.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/SalonDescriptionEditor.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/SalonOpenStatusControl.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/SalonVanityManager.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/lib/mediaUploadClient.ts",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        }
+      ]
+    },
+    {
+      "source": "delete:{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "207d1bb085039c7e6e83c29775f42e69004a8b068f221fc9409fa0e9ef437f18"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "bee428df7441ecc26ebe551b0907a83302e0cab64e69ca1f7cdb67541e62656d"
+        }
+      ]
+    },
+    {
+      "source": "en-US",
+      "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "106ca8c8144574e97159e84a19d590e8ac9669063fa71536403c1bfbb2188668"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "6341510217f6d245139d4a1c781c6e4c114be67d247ce2b0a8a855b0b0d669ec"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "8c210cbddfac55dc0d682e34f455ffae469db388be2bf1f126b762a6dc9558d2"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "f106bdd61e0be5815dfbcdcfbd2a7ad5a3eed6baed7e174a4f05ddf9e614c817"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "bbb2aa6089e30b309b38c85dcd84f059571f959f9717973cab98a467c202ca82"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "98f4c7b32db4b0c3442d159c30fe76830d8f01025bf273e7a6564ac8eb91881a"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "f0e00da57ba84989276db8c167eb4a3678dca3df02a2d5e84455d88718cc44ce"
+        },
+        {
+          "file": "src/lib/dateTime.ts",
+          "context": "ca87d6960651c8c44442827866c63022a1588a0c101229fa9ec01b3300757cce"
+        },
+        {
+          "file": "src/lib/financeLedgerCore.ts",
+          "context": "193a232797cd7c42b38a13b399d0a01070eea8111bd82e27ff86e08a78c2785d"
+        },
+        {
+          "file": "src/lib/salonOpenStatus.ts",
+          "context": "835797a427ba0627599f3621cf1702f03e4105bad6fd331a19307153742e162e"
+        }
+      ]
+    },
+    {
+      "source": "es-US",
+      "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "a92c5fce03ece21debb1d184ecbda8d9f4b0113af3bd90f9c7fe14acea6a268c"
+        }
+      ]
+    },
+    {
+      "source": "Escape",
+      "reason": "KeyboardEvent key identifier for Escape handling. Not an accessible label or visible copy.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/DashboardMobileMenu.tsx",
+          "context": "e3c6a89e6aa3685b68d6257445461609123eab070ca974e43dfecb372c54f9aa"
+        },
+        {
+          "file": "src/components/notifications/DashboardNotificationCenter.tsx",
+          "context": "e3c6a89e6aa3685b68d6257445461609123eab070ca974e43dfecb372c54f9aa"
+        },
+        {
+          "file": "src/components/owner/MobileRecordEditor.tsx",
+          "context": "e3c6a89e6aa3685b68d6257445461609123eab070ca974e43dfecb372c54f9aa"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "e3c6a89e6aa3685b68d6257445461609123eab070ca974e43dfecb372c54f9aa"
+        }
+      ]
+    },
+    {
+      "source": "fr-FR",
+      "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "09113c076e47698596a7b5df48b3c368fcc52022383f27c9ee6eef7a45a6120f"
+        }
+      ]
+    },
+    {
+      "source": "gc_locale={value0}; Path=/; Max-Age=31536000; SameSite=Lax",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "55f8ab7646d203245c6269fbc2ca5b9658827c49abde9b1ab1a0d06b8a6ff578"
+        }
+      ]
+    },
+    {
+      "source": "GC{value0}{value1}",
+      "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
+      "contexts": [
+        {
+          "file": "src/lib/bookingReference.ts",
+          "context": "89882ad24d7bc0860c000ca9a7c6c26d2bc0cc9f0046e33b8974c8618f0ebe0f"
+        }
+      ]
+    },
+    {
+      "source": "GIF87a",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "e66828079082b2ab6ec6f56168c15c348662a8bb9bfca1c2779cfddeac4e81aa"
+        }
+      ]
+    },
+    {
+      "source": "GIF89a",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/imageUpload.ts",
+          "context": "2cacbc4af6d3222124445e81a3ee0bdc414c8ec23b7008b4acd20ee7532c8590"
+        }
+      ]
+    },
+    {
+      "source": "girlz-culture-auth-v{value0}-{value1}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "1f14625b74f2ea1a41740ca4f17d4a03c9d5b2d970ec643a71e4759e0d45e699"
+        }
+      ]
+    },
+    {
+      "source": "girlz-culture-locale:{value0}:{value1}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/localePreferenceCore.ts",
+          "context": "aaf123fb7d6325ba661970130be1fb024aef60bd6e30c8b1b981e2c10b9ecbdd"
+        }
+      ]
+    },
+    {
+      "source": "girlz-culture-salon-{value0}-{value1}.xlsx",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonSpreadsheetPanel.tsx",
+          "context": "8242de1b14bf0727a3ad1a79b6ef6c32f19647441a07131bb8841b5abbea63c2"
+        }
+      ]
+    },
+    {
+      "source": "girlz-culture-salon-{value0}-template.xlsx",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonSpreadsheetPanel.tsx",
+          "context": "8242de1b14bf0727a3ad1a79b6ef6c32f19647441a07131bb8841b5abbea63c2"
+        }
+      ]
+    },
+    {
+      "source": "girlz-culture-salon-ledger-{value0}.csv",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "24346794e2c362622bb27f362b4cc3732e312e3ca9ce57699f3efde0ffd0f59c"
+        }
+      ]
+    },
+    {
+      "source": "girlz-culture-signed-out:{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/auth/RoleLogoutButton.tsx",
+          "context": "a2f50e8a5a2ae8ac39b10ec3d8499867964f716ba6646a11c5109c21b3adabbd"
+        },
+        {
+          "file": "src/components/auth/RoleLogoutButton.tsx",
+          "context": "e3f2b01e2f1d6af9f861f933f8eb3cdac9d9c9492b104a06e93a353ea0480553"
+        }
+      ]
+    },
+    {
+      "source": "GirlzCultureAdmin",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "70713501068d8bea73daddc55a59d4ad7df35c469f3e50784f437a6f1a58d2ad"
+        }
+      ]
+    },
+    {
+      "source": "GirlzCultureAuthMigration",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "5568714d70ed896550b6d73e132353a6c02c2e0c2863d0cb7a1424eafd38fe6c"
+        }
+      ]
+    },
+    {
+      "source": "GirlzCultureCustomer",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "70713501068d8bea73daddc55a59d4ad7df35c469f3e50784f437a6f1a58d2ad"
+        }
+      ]
+    },
+    {
+      "source": "GirlzCultureSalon",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "95250ca7963d611ea02de622cd3837ea68a650d66dd50dd70e72ffb715614fff"
+        }
+      ]
+    },
+    {
+      "source": "grid gap-4",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "f90a53c717755493b96092157412064481edf31188e49b7976af615d7db74200"
+        }
+      ]
+    },
+    {
+      "source": "HTTP_{value0}",
+      "reason": "Exception name or machine-readable error/status code used for comparisons and diagnostics. Its visible error message has separate translation coverage.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "0a68a7fde7455391ad937d15262b51def83e75f0a3e1d10b59ac29b7dcf124ea"
+        },
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "3a93fe0dfad96fa777e091e5efb8942fe25d81b071e82d4c7ed552c46e999af9"
+        },
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "b40e21472a323056ed20f3364d9f33137b587b0f76231f41395be4267fc19b3b"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "ba652d897978fc7804093595130e22d35251a30a2be160ff93e22aff7768164d"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "efeb0df027edd53e4bd38ce3580cc6a9694a66a9c0d819f62e87748b128f5da1"
+        }
+      ]
+    },
+    {
+      "source": "id=eq.{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/ownerRealtime.ts",
+          "context": "d9fda6554979063b6901027f2b8baf7020eeee2461f28b4c50ba3ff75cad3cbf"
+        }
+      ]
+    },
+    {
+      "source": "media-upload:{value0}:{value1}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/mediaUploadClient.ts",
+          "context": "adaae63a279aedec322433625bedd0c338387a30eea2b581243dc10b76d3039e"
+        }
+      ]
+    },
+    {
+      "source": "MediaFinalizeError",
+      "reason": "Exception name or machine-readable error/status code used for comparisons and diagnostics. Its visible error message has separate translation coverage.",
+      "contexts": [
+        {
+          "file": "src/lib/mediaUploadClient.ts",
+          "context": "322b4ed94e23bbf64ef39db101d205d5e3639a8b28e34f306af6a53d7910b657"
+        }
+      ]
+    },
+    {
+      "source": "member-",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "ed9452d6da0efa3a6cac6f7e2a83a5b0a64080a9f6a22b3b6847e500dde42d8d"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "df0c3957bcaad2425825746aa6b648da07ba56543036318ee3713c22f304eee4"
+        }
+      ]
+    },
+    {
+      "source": "Missing Supabase environment variables.",
+      "reason": "Client initialization invariant for missing Supabase configuration. This stops initialization, rather than serving as owner interface copy. No credential values appear in the message.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "e04088bbc4f456f9182e606f364fd7eef62f4baf8e4f17585a857be866200307"
+        }
+      ]
+    },
+    {
+      "source": "ml-1 {value0}",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "818b8340d31c94f279a2f4cad8ccc2f7dec56aa4da519c35c7db90234692d7bc"
+        }
+      ]
+    },
+    {
+      "source": "mt-4 grid gap-4 {value0}",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "04bf7cae08bcd5875175e3b34726bb700e6bdd720df050a3f891dd0f8d1e1953"
+        }
+      ]
+    },
+    {
+      "source": "owner-live-{value0}-{value1}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/ownerRealtime.ts",
+          "context": "fc95f3d82c5db23c6c57894c571a64c282651c14da450f3a1ddaefb033a00c82"
+        }
+      ]
+    },
+    {
+      "source": "permission_{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/auth/TeamUserManager.tsx",
+          "context": "3269b828f1c0563b129a505e313f37005cb7f54aa15961d77c04e00a6daf201c"
+        },
+        {
+          "file": "src/components/auth/TeamUserManager.tsx",
+          "context": "f5d8d69ef0ff7f95e175d78efa107f2561d6cdf55618d7562c1a0296248807c5"
+        }
+      ]
+    },
+    {
+      "source": "positionX",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "0452d02ed25dc66e0178b56ea990a19bb16e1481056aa40fc04be74069e5dfe7"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "93a2852644fa06dcfb8e50c7dfaa138808bd53208d4b6482f33bf8b23d2d29a6"
+        }
+      ]
+    },
+    {
+      "source": "positionY",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "b9eb12ff46ea4de8a4e404d3ed7673a0a3dbdf8e628959e3c313b99744e9560a"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "52a55d709ac3990deafc5ed6198b8994501e3ba552469f59e91e3b8296e60961"
+        }
+      ]
+    },
+    {
+      "source": "private, no-store",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "3970c4ce4b290a632fb33e73e29b0fe82307945cb4518a4de63f7fd66e381304"
+        }
+      ]
+    },
+    {
+      "source": "PushManager",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/components/notifications/PushSetup.tsx",
+          "context": "7837c67884cd44f9793b15e1908e218eaa4845ff96d2cb735439f5ed4233e3ea"
+        }
+      ]
+    },
+    {
+      "source": "REALTIME_{value0}",
+      "reason": "Exception name or machine-readable error/status code used for comparisons and diagnostics. Its visible error message has separate translation coverage.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "f2cc5ceb2afe0d57ede338276e0745fe86914466398f1212bac87c361d8c424d"
+        }
+      ]
+    },
+    {
+      "source": "recordId",
+      "reason": "Structured operational-monitoring field identifier; the safe support reference and user-facing failure message are rendered separately.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "56fdaedf85e889316f36e5afe571277b3c0964b5adbc86f1eb788b99955be401"
+        }
+      ]
+    },
+    {
+      "source": "salon_id=eq.{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/ownerRealtime.ts",
+          "context": "df936ca130b37310ceb6a6262092c5bfdfa3ca3f742bc7764826ba28cdec1648"
+        }
+      ]
+    },
+    {
+      "source": "salonId",
+      "reason": "Structured operational-monitoring field identifier; the safe support reference and user-facing failure message are rendered separately.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "56fdaedf85e889316f36e5afe571277b3c0964b5adbc86f1eb788b99955be401"
+        }
+      ]
+    },
+    {
+      "source": "salons/{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "adcdc4e3726da4964d237059eb1273d6dea46788924ab154bd46c95e5260aaf1"
+        }
+      ]
+    },
+    {
+      "source": "salons/{value0}/gallery",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "08bb150191f3bf568bf3921e992c4651235ab1dda443b429e95b21043cded887"
+        }
+      ]
+    },
+    {
+      "source": "salons/{value0}/logo",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "9874e6ec67b854ce31308a6b3076b8b37a7ced92708888d1942d495dcbe66c27"
+        }
+      ]
+    },
+    {
+      "source": "salons/{value0}/products",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "404e9335ba6cfb4f0420473ea4189d7cd33cc829959249195266c188f4eb7972"
+        }
+      ]
+    },
+    {
+      "source": "salons/{value0}/staging/stylist-{value1}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "d59a14d6b00b027227c1cbe2c1c50f58e0564f6a8b9db57d6ae9fb29d834dcbd"
+        }
+      ]
+    },
+    {
+      "source": "sb-{value0}-auth-token",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/lib/authSessionCore.ts",
+          "context": "3dbd42b4fc724f86a56cc5cf172118cd10aa28b869c0e719d73ea1c84d46da88"
+        }
+      ]
+    },
+    {
+      "source": "ScopedApiError",
+      "reason": "Exception name or machine-readable error/status code used for comparisons and diagnostics. Its visible error message has separate translation coverage.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "f9d0eec8518bc728c01cf6fa4b89d8d67591969d1d65c4b6ebf999be67ea82eb"
+        }
+      ]
+    },
+    {
+      "source": "ScopedSessionProviderError",
+      "reason": "Exception name or machine-readable error/status code used for comparisons and diagnostics. Its visible error message has separate translation coverage.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "fb41e916d4e634f704dad97c6612f8e2f78b93c19c8b6249a4e8de8f9e961656"
+        }
+      ]
+    },
+    {
+      "source": "serviceWorker",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/components/notifications/PushSetup.tsx",
+          "context": "23fa6c23980df00e3e3d97e0e230318c03e5307e4678e8be45240544880694ec"
+        }
+      ]
+    },
+    {
+      "source": "styleId",
+      "reason": "Structured operational-monitoring field identifier; the safe support reference and user-facing failure message are rendered separately.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "56fdaedf85e889316f36e5afe571277b3c0964b5adbc86f1eb788b99955be401"
+        }
+      ]
+    },
+    {
+      "source": "styles/{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "e5e2c97512c89d1545ca5f4af73c031f1c08956e4ced35d2467084780761dbaf"
+        }
+      ]
+    },
+    {
+      "source": "stylistId",
+      "reason": "Structured operational-monitoring field identifier; the safe support reference and user-facing failure message are rendered separately.",
+      "contexts": [
+        {
+          "file": "src/lib/operationalMonitoringCore.ts",
+          "context": "56fdaedf85e889316f36e5afe571277b3c0964b5adbc86f1eb788b99955be401"
+        }
+      ]
+    },
+    {
+      "source": "stylists/{value0}",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "de9fab8dacd7d340130bcfac1633315b0ee6b82bc6f869d66926af3aa21d7bd0"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "f68ff8c4c109922aad84a01cfe0e94054b379b2d36b89a063b34f185d2b84139"
+        }
+      ]
+    },
+    {
+      "source": "stylists/{value0}/portfolio",
+      "reason": "URL, file/storage path, HTML/form identifier, authentication storage key, realtime subscription/filter or upload operation identifier. Translating the identifier would break its protocol; visible labels have their own translated source entries.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "836ad246c4c082a071e2506ba107bcf0bb657ffae084b36302c85b84f1ad2812"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "86215bcbc3127e8c45c73cd928b1b1c30c92b1bf303fc9526dc4f4e1e7f54984"
+        }
+      ]
+    },
+    {
+      "source": "text/csv;charset=utf-8",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "eddd95acf719fac787e01f7c8aa3da22c03b4def9643851152ea1ad632bde408"
+        }
+      ]
+    },
+    {
+      "source": "TimeoutError",
+      "reason": "Exception name or machine-readable error/status code used for comparisons and diagnostics. Its visible error message has separate translation coverage.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "cef5b182ac9979fc1c900fec6db19dfdcdfc8633f01f92e02a561142ce762a16"
+        }
+      ]
+    },
+    {
+      "source": "url({value0})",
+      "reason": "CSS class, color, media query or image background expression; not visible or accessible interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "df292c1cfed1f9df5d3b735e7512a79d37de6f5a272fcdb52d0fc7ea8ea6dffd"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "add76522fe7ebee6439167b7940359393d52c76870df78b96b28118371ac9c17"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "bb3c9bea05ccf0ec38020c631d0cf502bfd5a26cf38cd727c62012824b1d91a7"
+        }
+      ]
+    },
+    {
+      "source": "use client",
+      "reason": "Next.js module directive, not rendered copy.",
+      "contexts": [
+        {
+          "file": "src/components/ActionToast.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/BookingInbox.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/ImageUpload.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/auth/RoleLogoutButton.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/auth/TeamUserManager.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/BookingPolicyEvidence.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/BookingWelcome.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/BusinessPolicyDisclosure.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/MessageDisplay.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/dashboard/DashboardMobileMenu.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/forms/NumericInput.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/i18n/LanguageSelector.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/notifications/DashboardNotificationCenter.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/notifications/PushSetup.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BookingCheckInExceptionForm.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessPolicies.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/MobileRecordEditor.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardShell.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/OwnerRealtimeAlertBridge.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/OwnerSetupGuideLink.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/OwnerWorkflowUi.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SalonDescriptionEditor.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SalonOpenStatusControl.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SalonPromotionsManager.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SalonSpreadsheetPanel.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SalonVanityManager.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/StylistSectionFallbackEditor.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/site/SafeImage.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/lib/scopedApiClient.ts",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        }
+      ]
+    },
+    {
+      "source": "useI18n must be used inside LocaleProvider.",
+      "reason": "React context-provider invariant for a component mounted outside LocaleProvider, not owner interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "57b705a2c06870fe8992676ba562de9e3beb0ff8fcff91cdf90b054a17e0eed0"
+        }
+      ]
+    },
+    {
+      "source": "wo-SN",
+      "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "ea34179c6ca3c1f252a6323e3f94e692f6cf0677016e322e73eadd5285c6df6e"
+        }
+      ]
+    },
+    {
+      "source": "X-Request-ID",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "70b1b644b2c3c04c60484d63926fcbbd845eadd9c897d06d65f06ab9d0e71f05"
+        }
+      ]
+    },
+    {
+      "source": "X-Requested-With",
+      "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/lib/scopedApiCore.ts",
+          "context": "c3803acccb5e28949d2b44f8f69109c364cd0cee32337c08c0992ef4559fc614"
+        },
+        {
+          "file": "src/lib/supabase.ts",
+          "context": "5568714d70ed896550b6d73e132353a6c02c2e0c2863d0cb7a1424eafd38fe6c"
+        }
+      ]
+    },
+    {
+      "source": "zh-CN",
+      "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
+      "contexts": [
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "5e0326e2de225021443e0d46ad8f635a70349dbdcdf1a9f940f8d812254bf882"
+        },
+        {
+          "file": "src/components/i18n/LocaleProvider.tsx",
+          "context": "6e07190c9b19f5878fea2cf195f5c70b1319c2fab5f7bf55f47b25aab195a6d1"
+        }
+      ]
+    },
+    {
+      "source": "1970-01-01T{value0}:00Z",
+      "reason": "Date-construction literal passed only to the localized date formatter. It is not displayed as interface text.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "e77caf8d15c869518133b533c682a99c38d8ee83967192bec542e313c59a0a5e"
+        }
+      ]
+    }
+  ]
+}

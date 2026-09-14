@@ -1,4 +1,5 @@
 import "server-only";
+import { customerMarketplaceLive } from "@/lib/marketplaceLaunchCore";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   canonicalDiscoveryResults,
@@ -41,6 +42,7 @@ export type DiscoveryQuery = {
 };
 
 export async function discoverNearbySalons(query: DiscoveryQuery) {
+  if (!customerMarketplaceLive()) return { salons: [] as PublicSalonResult[], total: 0 };
   if (!validCoordinates(query.origin)) return { salons: [] as PublicSalonResult[], total: 0 };
   const allResults = query.limit === "all";
   const requestedLimit = typeof query.limit === "number" ? query.limit : 20;

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 import {
   type DragEvent,
@@ -156,6 +157,7 @@ export default function ImageUpload({
   attachment,
   onPersisted,
 }: ImageUploadProps) {
+  const { translateSource: t, formatNumber } = useI18n();
   const supabase = getSupabaseForScope(authScope);
   const inputRef = useRef<HTMLInputElement>(null);
   const queueRef = useRef<QueueItem[]>([]);
@@ -516,7 +518,7 @@ export default function ImageUpload({
     setDevice("desktop");
     if (fileList.length > candidates.length) {
       setError(
-        `${fileList.length - candidates.length} image${fileList.length - candidates.length === 1 ? " was" : "s were"} not added because this gallery is full.`,
+        t("Images not added because this gallery is full: {value0}.", { value0: formatNumber(fileList.length - candidates.length) }),
       );
     }
     if (inputRef.current) inputRef.current.value = "";
@@ -623,7 +625,7 @@ export default function ImageUpload({
     const { completed, failed } = await runMediaUploadQueue(ids, uploadOne);
     setStatus(
       completed
-        ? `${completed} image${completed === 1 ? "" : "s"} saved${failed ? `; ${failed} still needs attention` : ""}.`
+        ? t("Images saved: {value0}. {value1}", { value0: formatNumber(completed), value1: failed ? t("Images still needing attention: {value0}.", { value0: formatNumber(failed) }) : "" })
         : "",
     );
     if (failed && !completed) {
@@ -811,6 +813,7 @@ export default function ImageUpload({
       <input
         ref={inputRef}
         type="file"
+        aria-label={multiple ? "Choose images" : "Choose image"}
         disabled={locked}
         multiple={multiple}
         accept={

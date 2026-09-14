@@ -1,0 +1,330 @@
+{
+  "schema_version": 1,
+  "scope": "Intentional proper names only. User-authored content is excluded at its rendering boundary, never by adding it here.",
+  "entries": [
+    {
+      "source": "Girlz Culture",
+      "reason": "Platform brand name"
+    },
+    {
+      "source": "Girlz",
+      "reason": "First line of the responsive platform wordmark"
+    },
+    {
+      "source": "Culture",
+      "reason": "Second line of the responsive platform wordmark"
+    },
+    {
+      "source": "GC Assistant",
+      "reason": "Founder-specified product name"
+    },
+    {
+      "source": "Girlz Culture Care",
+      "reason": "Platform protection product name"
+    },
+    {
+      "source": "Stripe",
+      "reason": "Payment provider name"
+    },
+    {
+      "source": "Google Business",
+      "reason": "External product name"
+    },
+    {
+      "source": "Google Maps",
+      "reason": "External mapping product name"
+    },
+    {
+      "source": "Instagram",
+      "reason": "External service name"
+    },
+    {
+      "source": "TikTok",
+      "reason": "External service name"
+    },
+    {
+      "source": "Facebook",
+      "reason": "External service name"
+    },
+    {
+      "source": "WhatsApp",
+      "reason": "External service name"
+    },
+    {
+      "source": "Excel",
+      "reason": "Spreadsheet product name"
+    },
+    {
+      "source": "CSV",
+      "reason": "File format identifier"
+    },
+    {
+      "source": "SMS",
+      "reason": "Message channel abbreviation"
+    },
+    {
+      "source": "USD",
+      "reason": "ISO currency identifier, never translated"
+    },
+    {
+      "source": "Gold",
+      "reason": "Existing plan product name"
+    },
+    {
+      "source": "Silver",
+      "reason": "Existing plan product name"
+    },
+    {
+      "source": "Platinum",
+      "reason": "Existing plan product name"
+    },
+    {
+      "source": "Basic",
+      "reason": "Legacy plan product name"
+    },
+    {
+      "source": "girlzculture.com/",
+      "reason": "Canonical public URL prefix"
+    },
+    {
+      "source": "SKU",
+      "reason": "Stock keeping unit: technical identifier, never translated."
+    },
+    {
+      "source": "aminata-braids",
+      "reason": "Example of a literal public URL slug; preserve its exact identifier."
+    },
+    {
+      "source": "https://g.page/...",
+      "reason": "Literal Google Business URL format example."
+    },
+    {
+      "source": "https://instagram.com/...",
+      "reason": "Literal Instagram URL format example."
+    },
+    {
+      "source": "https://tiktok.com/@...",
+      "reason": "Literal TikTok URL format example."
+    },
+    {
+      "source": "Alabama",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Alaska",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Arizona",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Arkansas",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "California",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Colorado",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Connecticut",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Delaware",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Florida",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Georgia",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Hawaii",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Idaho",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Illinois",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Indiana",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Iowa",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Kansas",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Kentucky",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Louisiana",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Maine",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Maryland",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Massachusetts",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Michigan",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Minnesota",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Mississippi",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Missouri",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Montana",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Nebraska",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Nevada",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "New Hampshire",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "New Jersey",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "New Mexico",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "New York",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "North Carolina",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "North Dakota",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Ohio",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Oklahoma",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Oregon",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Pennsylvania",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Rhode Island",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "South Carolina",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "South Dakota",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Tennessee",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Texas",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Utah",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Vermont",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Virginia",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Washington",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "West Virginia",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Wisconsin",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Wyoming",
+      "reason": "Official US state proper name in the mailing-address selector; stored postal codes remain unchanged."
+    },
+    {
+      "source": "Starter",
+      "reason": "Existing subscription plan product name; feature descriptions and actions require localization."
+    },
+    {
+      "source": "Growth",
+      "reason": "Existing subscription plan product name; feature descriptions and actions require localization."
+    },
+    {
+      "source": "Premium",
+      "reason": "Existing subscription plan product name; feature descriptions and actions require localization."
+    },
+    {
+      "source": "Español",
+      "reason": "Native language autonym retained in the language selector so speakers can identify their language."
+    },
+    {
+      "source": "Français",
+      "reason": "Native language autonym retained in the language selector so speakers can identify their language."
+    }
+  ]
+}

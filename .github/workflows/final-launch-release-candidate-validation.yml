@@ -35,7 +35,68 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  owner-localization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Enforce owner source inventory and locale coverage
+        run: npm run verify:owner-localization
+      - name: Exercise strict P0 tool, policy, message and launch boundaries
+        if: ${{ !cancelled() }}
+        run: npm run test:p0:core
+
+  browser-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3105
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3104
+      GIRLZ_CULTURE_ACCEPTANCE_MODE: "true"
+      NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
+      CUSTOMER_MARKETPLACE_LIVE: "true"
+      PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Build with isolated browser fixture configuration
+        run: npm run build
+      - name: Exercise every browser test across three independent shards
+        run: npx playwright test --shard=${{ matrix.shard }}/3
+      - name: Upload fixture gallery and browser evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: p0-browser-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            docs/screenshots/p0
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 14
+
   release-candidate:
+    needs: [owner-localization, browser-acceptance]
     runs-on: ubuntu-latest
     timeout-minutes: 75
     services:
@@ -55,7 +116,7 @@ jobs:
 
     steps:
       - name: Close only accidental duplicate PRs created for this exact branch
-        if: github.repository == 'girlzculture/girlzculture'
+        if: github.repository == 'girlzculture/girlzculture' && (github.head_ref == 'agent/final-launch-mobile-realtime-admin-corrections' || github.ref_name == 'agent/final-launch-mobile-realtime-admin-corrections')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -123,16 +184,20 @@ jobs:
       - name: Build the release candidate
         run: npm run build
 
-      - name: Exercise responsive browser workflows
-        shell: bash
-        run: |
-          set -euo pipefail
-          if find . -maxdepth 3 -type f \( -name 'playwright.config.ts' -o -name 'playwright.config.js' -o -name 'playwright.config.mjs' -o -name 'playwright.config.cjs' \) | grep -q .; then
-            npx playwright install --with-deps chromium firefox webkit
-            npx playwright test
-          else
-            echo "No Playwright configuration is present; browser acceptance remains covered by the repository's dedicated browser workflow."
-          fi
+      - name: Install browsers for the separate prelaunch server
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Exercise prelaunch routes without a customer launch flag
+        run: npm run test:p0:prelaunch
+
+      - name: Upload P0 fixture review gallery
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: p0-review-gallery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: docs/screenshots/p0
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload browser failure report
         if: ${{ failure() }}

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { bookingReference } from "@/lib/bookingReference";
+import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
 
 type Row = Record<string, unknown>;
 type Proposal = Row & { options?: Row[] };
@@ -199,6 +200,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
   return (
     <div className="mx-auto grid w-full max-w-[1180px] gap-5 lg:grid-cols-[1.35fr_.65fr]">
       <main className="space-y-5">
+        <BookingPolicyEvidence booking={data.booking}/>
         <section className="rounded-2xl border border-plum/10 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

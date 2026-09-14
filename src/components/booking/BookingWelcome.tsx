@@ -1,0 +1,6 @@
+"use client";
+import { useI18n } from "@/components/i18n/LocaleProvider";
+export default function BookingWelcome({ facts }: { facts: Record<string, unknown> }) {
+  const { translateSource: t, formatDate } = useI18n();
+  return <aside className="rounded-xl border border-plum/15 bg-white p-4 text-sm"><h3 className="font-semibold">{t("Your booking conversation")}</h3><p className="mt-2">{t("This private conversation connects the customer and business for appointment questions and updates.")}</p><dl className="mt-3 grid gap-2 sm:grid-cols-2">{[["Customer", facts.customer_name], ["Business", facts.business_name], ["Booking reference", facts.reference], ["Service", facts.service_name]].map(([label, value]) => <div key={String(label)}><dt className="text-xs font-semibold">{t(String(label))}</dt><dd data-no-translate className="break-words">{String(value || "")}</dd></div>)}<div><dt className="text-xs font-semibold">{t("Appointment")}</dt><dd>{formatDate(String(facts.appointment_datetime), { dateStyle: "medium", timeStyle: "short", timeZone: String(facts.time_zone || "America/New_York") })} <span data-no-translate>{String(facts.time_zone || "")}</span></dd></div><div><dt className="text-xs font-semibold">{t("Status when booked")}</dt><dd>{t(String(facts.status || ""))}</dd></div></dl></aside>;
+}

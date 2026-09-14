@@ -1,0 +1,11 @@
+# Customer GC Concierge — next workstream
+
+The current public Beauty Concierge is **not accepted as complete**. Its one-shot natural-language search/cards are not evidence of a persistent two-way customer assistant. This P0 preserves safe primitives and gates public access; it does not claim to implement the next workstream.
+
+The next product must retain conversational context and let the customer refine a search naturally across turns. Separate MUST constraints (for example actual location, time, required service and hard budget) from PREFER preferences. Ask one concise clarification for material ambiguity. Explain why a real eligible business matches; do not invent services, prices, availability, ratings, demand or booking certainty. Only authorized, launch-eligible, non-demo database records may become recommendations.
+
+Refinements must update the existing intent and results instead of restarting disconnected searches. The selected business/service/professional/time must retain stable identity through review and booking. Prices, availability, policy version and final customer intent must be revalidated at the deterministic booking boundary. Offer a clear correction when a slot or price changes. Payment handoff uses established secure checkout; chat must never collect raw card data or claim payment success before authoritative confirmation.
+
+Reusable P0 primitives include fixed tool schemas, server-resolved identity and tenant scope, read/prepare/confirm separation, digest/expiry/idempotency checks, transactional mutation audit, protected incident references, Engine-governed provider budgets/timeouts, per-user locales, original-preserving message translation, immutable booking policy/welcome evidence and the prelaunch/test-data gate. Customer permissions and tool registry must be separately scoped; never reuse an owner's authority for a customer request.
+
+This workstream precedes SEO/keyword acquisition and broad public indexing. Required future acceptance includes multi-turn clarification/refinement, truthful MUST/PREFER matching, unavailable-provider and no-match states, injection/tenant isolation, fresh booking revalidation, secure checkout handoff, all supported customer locales and accessible mobile/tablet/desktop layouts.

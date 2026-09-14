@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { rejectRegisteredTestCheckout } from "@/lib/marketplaceEligibilityServer";
 import {
   routeMonitoringProfile,
   withOperationalMonitoring,
@@ -79,6 +80,7 @@ function expectedPickupError(error: unknown) {
 }
 
 async function POSTHandler(request: Request) {
+  if (!customerMarketplaceLive()) return marketplaceUnavailable();
   const admin = getSupabaseAdmin();
   let intentId = "";
   try {
@@ -119,6 +121,8 @@ async function POSTHandler(request: Request) {
     const { data: authData } = token
       ? await admin.auth.getUser(token)
       : { data: { user: null } };
+    const testBusiness = await rejectRegisteredTestCheckout(admin, salonId);
+    if (testBusiness) return testBusiness;
     const { data: salon, error: salonError } = await admin
       .from("salons")
       .select(
@@ -291,3 +295,4 @@ export const POST = withOperationalMonitoring(
   }),
   POSTHandler,
 );
+import { customerMarketplaceLive, marketplaceUnavailable } from "@/lib/marketplaceLaunchCore";

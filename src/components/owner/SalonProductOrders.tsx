@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PackageCheck, RefreshCw, Truck } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 type Row = Record<string, unknown>;
 
@@ -31,6 +32,7 @@ export default function SalonProductOrders({
   onFromDateChange?: (value: string) => void;
   onToDateChange?: (value: string) => void;
 }) {
+  const { formatDate, formatCurrency, translateSource: t } = useI18n();
   const [orders, setOrders] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -110,7 +112,7 @@ export default function SalonProductOrders({
     if (
       ["Canceled", "Not collected"].includes(status) &&
       !window.confirm(
-        `${status} this reservation? Inventory will be released.`,
+        t(status === "Canceled" ? "Cancel this reservation? Inventory will be released." : "Mark this reservation as not collected? Inventory will be released."),
       )
     ) {
       return;
@@ -121,8 +123,8 @@ export default function SalonProductOrders({
       let carrier = "";
       let tracking = "";
       if (status === "Shipped") {
-        carrier = window.prompt("Shipping carrier (for example, USPS)") || "";
-        tracking = window.prompt("Tracking number") || "";
+        carrier = window.prompt(t("Shipping carrier (for example, USPS)")) || "";
+        tracking = window.prompt(t("Tracking number")) || "";
         if (!carrier || !tracking) {
           setMessage(
             "Carrier and tracking number are required to mark shipped.",
@@ -192,8 +194,8 @@ export default function SalonProductOrders({
       {mode === "finance" ? (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Orders</span><b className="mt-1 block text-xl text-charcoal">{visibleOrders.length}</b></div>
-          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Paid product sales</span><b className="mt-1 block text-xl text-charcoal">${paidSales.toFixed(2)}</b></div>
-          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Succeeded refunds</span><b className="mt-1 block text-xl text-charcoal">${refunds.toFixed(2)}</b></div>
+          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Paid product sales</span><b className="mt-1 block text-xl text-charcoal">{formatCurrency(paidSales)}</b></div>
+          <div className="rounded-xl bg-light-gray p-4"><span className="text-[10px] font-bold uppercase text-charcoal/55">Succeeded refunds</span><b className="mt-1 block text-xl text-charcoal">{formatCurrency(refunds)}</b></div>
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-light-gray p-3"><label className="text-[9px] font-bold text-charcoal/60">From<input aria-label="Product sales start date" type="date" value={fromDate} onChange={(event)=>onFromDateChange?.(event.target.value)} className="mt-1 min-h-9 w-full rounded-lg border border-mist bg-white px-2 text-[10px] font-normal"/></label><label className="text-[9px] font-bold text-charcoal/60">To<input aria-label="Product sales end date" type="date" value={toDate} onChange={(event)=>onToDateChange?.(event.target.value)} className="mt-1 min-h-9 w-full rounded-lg border border-mist bg-white px-2 text-[10px] font-normal"/></label></div>
         </div>
       ) : null}
@@ -242,7 +244,7 @@ export default function SalonProductOrders({
                 </div>
                 <div className="text-right">
                   <b className="block text-sm text-charcoal">
-                    ${Number(order.total_amount || 0).toFixed(2)}
+                    {formatCurrency(Number(order.total_amount || 0))}
                   </b>
                   <span className="text-[10px] font-bold text-teal">
                     {displayStatus}
@@ -253,20 +255,18 @@ export default function SalonProductOrders({
                 <div className="mt-3 grid gap-2 rounded-lg bg-light-gray p-3 text-[11px] text-charcoal sm:grid-cols-3">
                   <p>
                     Deposit{" "}
-                    <b>${Number(order.deposit_amount || 0).toFixed(2)}</b>
+                    <b>{formatCurrency(Number(order.deposit_amount || 0))}</b>
                   </p>
                   <p>
                     Balance at pickup{" "}
                     <b>
-                      ${Number(order.remaining_balance || 0).toFixed(2)}
+                      {formatCurrency(Number(order.remaining_balance || 0))}
                     </b>
                   </p>
                   <p>
                     Pickup by{" "}
                     <b>
-                      {new Date(
-                        String(order.pickup_deadline),
-                      ).toLocaleString()}
+                      {formatDate(String(order.pickup_deadline), { dateStyle: "medium", timeStyle: "short" })}
                     </b>
                   </p>
                 </div>
@@ -310,7 +310,7 @@ export default function SalonProductOrders({
           );
         })}
         {!loading && !visibleOrders.length ? (
-          <p className="py-8 text-center text-sm text-charcoal/50">
+          <p className="py-8 text-center text-sm gc-text-secondary">
             {fromDate || toDate ? "No product orders match this date range." : "No product orders yet."}
           </p>
         ) : null}

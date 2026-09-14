@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Archive, Eye, Pause, Pencil, Play, Plus, Tag } from "lucide-react";
 import NumericInput from "@/components/forms/NumericInput";
 import { OwnerDetailHeader } from "@/components/owner/OwnerWorkflowUi";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 type Row = Record<string, unknown> & { id?: string };
 type Props = {
@@ -24,6 +25,8 @@ const localDateTime = (value: unknown) => value ? new Date(String(value)).toISOS
 const values = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
 
 export default function SalonPromotionsManager({ promotions, styles, products, setPromotions, saveRecord, removeRecord, recordId = "" }: Props) {
+  const { formatDate, translateSource: t } = useI18n();
+  const dateText = (value: unknown) => !value ? t("No date") : Number.isNaN(Date.parse(String(value))) ? t("Invalid date") : formatDate(String(value), { dateStyle: "medium", timeStyle: "short" });
   const router = useRouter();
   const routedPromotion = recordId && recordId !== "new"
     ? promotions.find((promotion) => promotion.id === recordId) || null
@@ -140,7 +143,6 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
 
 function Label({ text, children }: { text: string; children: React.ReactNode }) { return <label><span className="text-[10px] font-bold">{text}</span>{children}</label>; }
 function Status({ value }: { value: string }) { const color = value === "Active" ? "bg-green-100 gc-text-success" : value === "Paused" ? "bg-amber/20 gc-text-warning" : "bg-blush text-plum"; return <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${color}`}>{value}</span>; }
-function dateText(value: unknown) { if (!value) return "No date"; const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? "Invalid date" : date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }); }
 function scopeLabel(scope: string) { return ({ salon: "Entire salon", services: "Selected services", service_groups: "Selected service groups", master_styles: "Selected styles", products: "Selected products", addons: "Selected add-ons" } as Record<string, string>)[scope] || scope; }
 function uniqueTargets(rows: Row[], idKey: string, labelKey: string) { const map = new Map<string, string>(); for (const row of rows) { const id = String(row[idKey] || ""); if (id) map.set(id, String(row[labelKey] || "Service group")); } return [...map].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)); }
 function uniqueAddons(styles: Row[]) { const map = new Map<string, string>(); for (const style of styles) for (const addon of Array.isArray(style.addons) ? style.addons as Row[] : []) { const id = String(addon.value || addon.label || addon.name || ""); if (id) map.set(id, String(addon.label || addon.name || addon.value)); } return [...map].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)); }

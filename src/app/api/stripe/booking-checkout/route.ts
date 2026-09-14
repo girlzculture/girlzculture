@@ -14,6 +14,9 @@ import {
   estimateStripeCommerceTax,
 } from "@/lib/commerceCheckoutServer";
 import { hasPlanFeature } from "@/lib/plans";
+import { customerMarketplaceLive, marketplaceUnavailable } from "@/lib/marketplaceLaunchCore";
+import { rejectRegisteredTestCheckout } from "@/lib/marketplaceEligibilityServer";
+import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -22,6 +25,7 @@ type ServiceOptionGroup = { id?: string; label?: string; selection?: string; req
 const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(value) ? value as ServiceOptionGroup[] : [];
 
 async function POSTHandler(request: Request) {
+  if (!customerMarketplaceLive()) return marketplaceUnavailable();
   const admin = getSupabaseAdmin();
   let intentId = "";
   let commerceIntentId = "";
@@ -39,6 +43,10 @@ async function POSTHandler(request: Request) {
     const salonId = cleanText(body.salon_id, 50);
     const styleId = cleanText(body.style_id, 50);
     if (!salonId || !styleId) throw new Error("The salon or style selection is missing. Please return to the salon page and try again.");
+    const testBusiness = await rejectRegisteredTestCheckout(admin, salonId);
+    if (testBusiness) return testBusiness;
+    const policyAtCheckout = await currentBusinessPolicy(admin, salonId);
+    if ((body.business_policy_revision_id || null) !== (policyAtCheckout?.id || null)) return Response.json({ code: "BUSINESS_POLICY_CHANGED", error: "The business policy changed. Refresh the booking page and review it before continuing." }, { status: 409 });
 
     const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,subscription_tier,time_zone,stripe_account_id,address_street,address_city,address_state,address_zip").eq("id", salonId).single();
     if (salonError) throw new Error(`Unable to verify the salon: ${salonError.message}`);
@@ -180,6 +188,8 @@ async function POSTHandler(request: Request) {
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload: Record<string, unknown> = {
+      business_policy_revision_id: policyAtCheckout?.id || null,
+      business_policy_captured_at: new Date().toISOString(),
       customer_id: customerId,
       salon_id: salonId,
       style_id: styleId,
@@ -328,7 +338,7 @@ async function POSTHandler(request: Request) {
             admin
               .from("bookings")
               .select(
-                "id,public_reference,confirmation_code,status,appointment_datetime",
+                "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
               )
               .eq("id", String(commerceTotals.booking_id))
               .single(),
@@ -498,7 +508,7 @@ async function POSTHandler(request: Request) {
         stripe_processing_fee: 0,
         net_amount_owed_salon: deposit,
         payout_status: "Not required",
-      }).select("id,public_reference,confirmation_code,status,appointment_datetime").single();
+      }).select("id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
       if (intentError) throw intentError;
@@ -576,7 +586,7 @@ async function POSTHandler(request: Request) {
         ? await admin
             .from("bookings")
             .select(
-              "id,public_reference,confirmation_code,status,appointment_datetime",
+              "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
             )
             .eq("id", completion.bookingId)
             .single()

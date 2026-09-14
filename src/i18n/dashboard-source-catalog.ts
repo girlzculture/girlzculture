@@ -4,6 +4,7 @@
  * salon content is never added here and therefore remains in its original
  * language unless a dedicated translated content record exists.
  */
+import { P0_OWNER_SOURCE_MESSAGES } from "@/i18n/p0-owner-source-catalog";
 type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
@@ -202,8 +203,9 @@ const wo: SourceCatalog = {
 };
 
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {
-  es,
-  fr,
-  wo,
+  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es },
+  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr },
+  wo: { ...P0_OWNER_SOURCE_MESSAGES.wo, ...wo },
+  "zh-CN": P0_OWNER_SOURCE_MESSAGES["zh-CN"],
 };
 

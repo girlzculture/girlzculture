@@ -12,7 +12,7 @@ export default function LanguageSelector({
   compact?: boolean;
   className?: string;
 }) {
-  const { locale, locales, setLocale, t } = useI18n();
+  const { locale, locales, setLocale, t, translateSource, preferenceError } = useI18n();
   const handleInput = (event: FormEvent<HTMLSelectElement>) => {
     setLocale(event.currentTarget.value as AppLocale);
   };
@@ -29,15 +29,15 @@ export default function LanguageSelector({
         aria-label={t("common.select_language", "Select language")}
         value={locale}
         onChange={handleInput}
-        onInput={handleInput}
         className="max-w-36 bg-transparent outline-none"
       >
         {locales.map((item) => (
-          <option key={item.locale} value={item.locale}>
+          <option data-no-translate key={item.locale} value={item.locale}>
             {item.native_name}
           </option>
         ))}
       </select>
+      {preferenceError ? <span role="status">{translateSource("Language changed on this device. Your account preference could not be saved; please try again.")}</span> : null}
     </label>
   );
 }

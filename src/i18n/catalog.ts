@@ -1,8 +1,8 @@
-export const SUPPORTED_LOCALES = ["en", "es", "fr", "wo"] as const;
+export const SUPPORTED_LOCALES = ["en", "es", "fr", "wo", "zh-CN"] as const;
 export type AppLocale = string;
 export type LocaleOption = { locale:string;display_name:string;native_name:string;intl_locale:string;text_direction:"ltr"|"rtl";is_default?:boolean;sort_order?:number };
-export const LOCALE_NAMES: Record<string,string> = { en:"English", es:"Español", fr:"Français", wo:"Wolof" };
-export const INTL_LOCALES: Record<string,string> = { en:"en-US", es:"es-US", fr:"fr-FR", wo:"wo-SN" };
+export const LOCALE_NAMES: Record<string,string> = { en:"English", es:"Español", fr:"Français", wo:"Wolof", "zh-CN":"中文（简体）" };
+export const INTL_LOCALES: Record<string,string> = { en:"en-US", es:"es-US", fr:"fr-FR", wo:"wo-SN", "zh-CN":"zh-CN" };
 export const RTL_LANGUAGE_CODES = new Set(["ar","fa","he","ur"]);
 
 export const ENGLISH_MESSAGES: Record<string,string> = {

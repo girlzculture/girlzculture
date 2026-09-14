@@ -14,11 +14,14 @@ const acceptanceEnvironment = {
   NEXT_PUBLIC_SUPABASE_URL: acceptanceSupabaseURL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "acceptance-fixture-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "acceptance-fixture-service-role-key",
+  // Existing marketplace suites exercise the live-state contract using local
+  // fixtures. The separate prelaunch suite exercises the missing/off flag.
+  CUSTOMER_MARKETPLACE_LIVE: "true",
 };
 
 const publicResponsiveSpec = /public-responsive\.spec\.ts/;
 const crossBrowserSmoke =
-  /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly/;
+  /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow/;
 const portraitMobileChecks =
   /homepage shell has no overflow|homepage removes the intro|mobile promotion swipe|primary mobile controls|mobile public navigation/;
 const narrowPhoneChecks =
@@ -32,6 +35,8 @@ const tabletLandscapeChecks =
 
 export default defineConfig({
   testDir: "./tests/browser",
+  // The off-state suite starts its own server without the launch flag.
+  testIgnore: /p0-prelaunch\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: true,
@@ -68,14 +73,14 @@ export default defineConfig({
     },
     {
       name: "firefox",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/],
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/],
       grep: crossBrowserSmoke,
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/],
-      grep: crossBrowserSmoke,
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-owner-inventory\.spec\.ts/, /p0-owner-populated\.spec\.ts/],
+      grep: /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 policy publication|P0 owner route inventory|P0 populated owner|P0 booking composer|P0 original service|P0 Assistant launcher/,
       use: { ...devices["Desktop Safari"] },
     },
     {

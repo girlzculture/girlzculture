@@ -21,3 +21,11 @@
 
 [functions."pickup-reservation-cleanup"]
   schedule = "*/15 * * * *"
+
+# Founder requires this review branch to remain undeployed. A branch context
+# overrides both branch deploys and PR previews without changing main or other
+# branches. The failing command also stops a build-hook attempt that ignores
+# the normal ignore check. Remove only after separate deployment approval.
+[context."codex/p0-multilingual-business-os-assistant"]
+  ignore = "exit 0"
+  command = "node -e \"console.error('P0 review branch is intentionally undeployed'); process.exit(1)\""

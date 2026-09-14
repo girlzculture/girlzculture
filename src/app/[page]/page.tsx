@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { customerMarketplaceLive } from "@/lib/marketplaceLaunchCore";
+import PrelaunchPage from "@/app/prelaunch/page";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
@@ -50,6 +52,7 @@ export default async function InfoPage({
   const { page: slug } = await params;
   const fallback = pages[slug];
   if (!fallback) {
+    if (!customerMarketplaceLive()) return <PrelaunchPage />;
     const admin = getSupabaseAdmin();
     const vanity = await admin
       .from("salons")

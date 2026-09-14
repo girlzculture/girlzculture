@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { customerMarketplaceLive } from "@/lib/marketplaceLaunchCore";
+import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
+import PrelaunchPage from "@/app/prelaunch/page";
+import BusinessPolicyDisclosure from "@/components/booking/BusinessPolicyDisclosure";
+import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
@@ -210,6 +215,7 @@ export async function generateMetadata({
 }
 
 export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  if (!customerMarketplaceLive()) return <PrelaunchPage />;
   const supabase = getSupabaseAdmin();
   const { slug } = await params;
   const incomingQuery = await searchParams;
@@ -232,6 +238,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
     notFound();
   }
+  if (await isRegisteredTestBusiness(supabase, salon.id)) notFound();
   const profileVisibility = await supabase.rpc("is_salon_profile_public", {
     target_salon_id: salon.id,
   });
@@ -425,7 +432,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </section>
       </div>
 
-      <CustomerBottomNav active="home" />
+        <div className="mx-auto max-w-6xl px-4"><BusinessPolicyDisclosure revision={await currentBusinessPolicy(supabase, salon.id)} /></div>
+        <CustomerBottomNav active="home" />
     </main>
   );
 }

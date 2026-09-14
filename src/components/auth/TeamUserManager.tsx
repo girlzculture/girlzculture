@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -18,6 +19,7 @@ const adminPermissions = [["overview","Overview"],["submissions","Submissions"],
 const salonPermissions = [["overview","Overview"],["my_page","My Page"],["photos","Photos"],["styles","Styles & Pricing"],["stylists","Stylists"],["products","Products"],["availability","Availability & Calendar"],["bookings","Bookings"],["reviews","Reviews"],["earnings","Earnings & Payouts"],["promotions","Promotions"],["settings","Settings & Team"]] as const;
 
 export default function TeamUserManager({ scope, initialUserId, showBackLink = true }: { scope: TeamScope; initialUserId?: string; showBackLink?: boolean }) {
+  const { translateSource: t } = useI18n();
   const router = useRouter();
   const options = scope === "admin" ? adminPermissions : salonPermissions;
   const endpoint = `/api/${scope}/team`;
@@ -85,7 +87,7 @@ export default function TeamUserManager({ scope, initialUserId, showBackLink = t
   }
 
   async function remove(user: TeamUser) {
-    if (!window.confirm(`Remove access for ${user.email}?`)) return;
+    if (!window.confirm(t("Remove access for {value0}?", { value0: user.email }))) return;
     try {
       const response = await fetch(`${endpoint}?id=${encodeURIComponent(user.id)}`, { method: "DELETE", headers: await auth() });
       const body = await response.json();
@@ -101,7 +103,7 @@ export default function TeamUserManager({ scope, initialUserId, showBackLink = t
 
   async function adminAction(user: TeamUser, action: AdminAction) {
     if (scope !== "admin") return;
-    if (["suspend", "revoke"].includes(action) && !window.confirm(`${action === "suspend" ? "Suspend" : "Revoke"} access for ${user.email}?`)) return;
+    if (["suspend", "revoke"].includes(action) && !window.confirm(t(action === "suspend" ? "Suspend access for {value0}?" : "Revoke access for {value0}?", { value0: user.email }))) return;
     setMessage("");
     try {
       const response = await fetch(endpoint, { method: "PATCH", headers: { "Content-Type": "application/json", ...(await auth()) }, body: JSON.stringify({ id: user.id, action }) });

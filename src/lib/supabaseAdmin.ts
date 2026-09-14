@@ -16,6 +16,7 @@ import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
 import { getPublishedBrandAsset } from "@/lib/brandAssets";
 import { assertRoleSurfaceHost } from "@/lib/hostRouting";
 import { bookingReference } from "@/lib/bookingReference";
+import { authorizedMessageRecipients } from "@/lib/bookingMessageRecipientsServer";
 import {
   accessibleSurfaceColor,
   accessibleTextColor,
@@ -549,6 +550,53 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
     results.push({ recipientType: task.recipientType, channel: task.channel, status, ...(reference ? { request_id: reference } : {}) });
   }
   return results;
+}
+
+/** Share the established per-event delivery claim/lease for typed and
+ * Assistant messages. A retry can retry a failed channel without resending a
+ * successfully delivered channel or creating another message. */
+export async function deliverBookingMessageNotifications(messageId: string) {
+  const admin = getSupabaseAdmin();
+  const messageResult = await admin.from("booking_messages").select("id,booking_id,sender_role,original_body,body").eq("id", messageId).single();
+  if (messageResult.error) throw messageResult.error;
+  const message = messageResult.data;
+  const { booking, salon, customerLocale, salonLocale } = await bookingNotificationContext(message.booking_id);
+  const recipientRole = message.sender_role === "customer" ? "salon" : "customer";
+  const notification = await bookingNotificationSettings(admin, [recipientRole === "salon" ? salonLocale : customerLocale]);
+  const original = String(message.original_body || message.body);
+  const preview = original.length > 140 ? `${original.slice(0, 137)}…` : original;
+  const root = (process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
+  let email = String(salon.email || ""), phone = String(salon.phone || "");
+  let recipientIds = [String(salon.user_id || "")].filter(Boolean);
+  let path = `/salon/dashboard/messages/${message.booking_id}`;
+  if (recipientRole === "customer") {
+    email = String(booking.guest_email || ""); phone = String(booking.guest_phone || "");
+    recipientIds = booking.customer_id ? [String(booking.customer_id)] : [];
+    path = `/account?tab=inbox&booking=${message.booking_id}`;
+    if (booking.customer_id) {
+      const customer = await admin.from("customers").select("email,phone").eq("id", booking.customer_id).maybeSingle();
+      if (customer.error) throw customer.error;
+      email = String(customer.data?.email || email); phone = String(customer.data?.phone || phone);
+    } else {
+      // Guest replies remain in the established secure management/contact flow.
+      path = (await issueGuestBookingToken(admin, message.booking_id, { reason: "Booking message notification", rootUrl: root })).url;
+    }
+  } else {
+    const team = await admin.from("salon_team_members").select("user_id,permissions").eq("salon_id", booking.salon_id).eq("status", "Active");
+    if (team.error) throw team.error;
+    recipientIds.push(...(team.data || []).filter(row => Boolean(row.permissions?.bookings)).map(row => String(row.user_id || "")).filter(Boolean));
+    recipientIds = await authorizedMessageRecipients(admin, String(booking.salon_id), recipientIds);
+    if (!recipientIds.includes(String(salon.user_id || ""))) { email = ""; phone = ""; }
+  }
+  const url = path.startsWith("https://") ? path : `${root}${path}`;
+  const title = renderNotificationText(notification.translations, recipientRole === "salon" ? salonLocale : customerLocale, "notification.booking.message.title", "New booking message");
+  const tasks: DeliveryTask[] = [
+    { recipientType: recipientRole, channel: "email", destination: email, run: () => sendEmail(email, title, `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(preview)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(bookingReference(booking))}</a></p>`, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) },
+    { recipientType: recipientRole, channel: "sms", destination: phone, run: () => sendSms(phone, `Girlz Culture: ${preview} ${url}`) },
+    { recipientType: recipientRole, channel: "push", destination: recipientIds.join(","), run: () => sendPushToUsers(recipientIds, { title, body: preview, url: path, tag: `message-${message.booking_id}` }) },
+  ];
+  const deliveries = await runDeliveries(message.booking_id, `booking_message:${message.id}`, tasks.filter(task => notification.channels.has(task.channel) && Boolean(task.destination)));
+  return { warnings: [...notification.warningReferences, ...deliveries.flatMap(item => item.request_id ? [item.request_id] : [])].map(request_id => ({ code: "MESSAGE_NOTIFICATION_FAILED", request_id })), deliveries };
 }
 
 export async function deliverBookingNotifications(
