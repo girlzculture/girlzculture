@@ -9,6 +9,7 @@ import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const FALLBACK_LOCALES = [
+  { locale: "zh-CN", display_name: "Chinese (Simplified)", native_name: "中文（简体）", intl_locale: "zh-CN", text_direction: "ltr", is_default: false, sort_order: 5 },
   {
     locale: "en",
     display_name: "English",

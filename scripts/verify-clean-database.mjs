@@ -1224,6 +1224,13 @@ const onboardingOutput = runPsql(
   "Explicit business onboarding database assertions",
 );
 if (onboardingOutput) process.stdout.write(`${onboardingOutput}\n`);
+const p0Output = runPsql(
+  ["--file", path.join(root, "scripts", "sql", "verify-p0-business-os.sql")],
+  "P0 business policy, Assistant and conversation database assertions",
+);
+const operationalOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-p0-operational-calendar.sql")], "P0 operational calendar assertions");
+if (operationalOutput) process.stdout.write(`${operationalOutput}\n`);
+if (p0Output) process.stdout.write(`${p0Output}\n`);
 const deployedMigration = runPsql(
   [
     "--tuples-only",

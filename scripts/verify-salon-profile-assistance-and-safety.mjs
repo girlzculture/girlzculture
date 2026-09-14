@@ -150,7 +150,10 @@ assert.match(migration, /Use only a reviewed open-source HTTPS service/);
 assert.match(migration, /"20260804200000"/);
 
 assert.match(messageRoute, /moderatePublicContent\(admin, \{ body: messageBody \}\)/);
-assert.match(messageRoute, /Please revise the message/);
+// The API now returns a stable code; the existing interface localizes its
+// explanation. Require both sides instead of English prose in the API.
+assert.match(messageRoute, /if \(!moderation\.allowed\)[\s\S]*code: "MESSAGE_CONTENT_REVIEW_REQUIRED"/);
+assert.match(read("src/components/BookingInbox.tsx"), /MESSAGE_CONTENT_REVIEW_REQUIRED: "Please revise the message/);
 assert.match(profileRoute, /Please revise the public salon content/);
 assert.match(recordRoute, /\["styles", "stylists", "salon_products", "salon_promotions"\]/);
 assert.match(supportRoute, /content_moderation_status: moderation\.allowed \? "Clear" : "Flagged"/);

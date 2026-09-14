@@ -23,7 +23,7 @@ export default function DocumentLocalizationBridge() {
         SKIP_TAGS.has(element.tagName) ||
         Boolean(
           element.closest(
-            '[data-no-translate="true"],[translate="no"],[contenteditable="true"]',
+            '[data-no-translate],[translate="no"],[contenteditable="true"]',
           ),
         )
       );
@@ -31,6 +31,8 @@ export default function DocumentLocalizationBridge() {
 
     function translateText(node: Text) {
       if (excluded(node.parentElement)) return;
+      // Textarea child text is its original/default value, not interface copy.
+      if (node.parentElement?.closest("textarea, input")) return;
       const current = node.nodeValue || "";
       let state = textStates.current.get(node);
       if (!state || current !== state.rendered) {
@@ -96,6 +98,27 @@ export default function DocumentLocalizationBridge() {
     }
 
     scan(document.body);
+    // Native browser validation follows the browser's own UI language, which
+    // can differ from an owner's account language. Keep the validity rules and
+    // localize their presentation only within the owner workspace.
+    const validationMessages = new Map<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, string>();
+    function invalid(event: Event) {
+      const field = event.target;
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) || !field.closest('[data-owner-workspace]')) return;
+      const validity = field.validity;
+      const source = validationMessages.get(field) || (validity.customError ? field.validationMessage : "");
+      validationMessages.set(field, source);
+      const message = source || (validity.valueMissing ? "Complete this required field." : validity.typeMismatch ? "Enter a valid email address or URL." : validity.rangeOverflow || validity.rangeUnderflow ? "Enter a value within the allowed range." : validity.stepMismatch || validity.badInput ? "Enter a valid number." : validity.tooLong || validity.tooShort ? "Check the length of this entry." : "Use the required format for this field.");
+      field.setCustomValidity(translateSource(message));
+    }
+    function clearValidation(event: Event) {
+      const field = event.target as HTMLInputElement;
+      if (!validationMessages.has(field)) return;
+      field.setCustomValidity(""); validationMessages.delete(field);
+    }
+    document.body.addEventListener("invalid", invalid, true);
+    document.body.addEventListener("input", clearValidation, true);
+    document.body.addEventListener("change", clearValidation, true);
     const observer = new MutationObserver(schedule);
     observer.observe(document.body, {
       subtree: true,
@@ -105,6 +128,10 @@ export default function DocumentLocalizationBridge() {
       attributeFilter: [...ATTRIBUTES],
     });
     return () => {
+      document.body.removeEventListener("invalid", invalid, true);
+      document.body.removeEventListener("input", clearValidation, true);
+      document.body.removeEventListener("change", clearValidation, true);
+      for (const [field, original] of validationMessages) field.setCustomValidity(original);
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };

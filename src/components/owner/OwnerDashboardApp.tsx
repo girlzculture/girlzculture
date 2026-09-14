@@ -1,8 +1,14 @@
 "use client";
+import BusinessPolicies from "@/components/owner/BusinessPolicies";
+import { useI18n } from "@/components/i18n/LocaleProvider";
+import { intlLocale } from "@/i18n/catalog";
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import BookingNotes from "@/components/owner/BookingNotes";
+import ManualAppointmentEditor from "@/components/owner/ManualAppointmentEditor";
+import { ownerBusinessMetrics, profileCompletion, isBusinessAdded, BOOKING_SOURCE_LABELS } from "@/lib/ownerBusinessMetrics";
 import {
   BadgeCheck,
   CalendarDays,
@@ -81,6 +87,7 @@ import {
 } from "@/lib/usStates";
 import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
+import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
@@ -186,6 +193,7 @@ export default function OwnerDashboardApp({
   initialBookingId?: string;
   initialRecordId?: string;
 }) {
+  const i18n = useI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -233,6 +241,7 @@ export default function OwnerDashboardApp({
   useEffect(() => {
     let live = true;
     let removeRealtime: (() => Promise<void>) | null = null;
+    let removeAssistantRefresh: (() => void) | null = null;
     let hadRealtimeFailure = false;
 
     async function loadDashboard() {
@@ -341,6 +350,10 @@ export default function OwnerDashboardApp({
             if (refreshed.salon) setSalon(refreshed.salon);
             setBookings(refreshedRecords.bookings || []);
             setReviews(refreshedRecords.reviews || []);
+            setStyles(refreshedRecords.styles || []);
+            setStylists(refreshedRecords.stylists || []);
+            setProducts(refreshedRecords.salon_products || []);
+            setBlockouts(refreshedRecords.salon_blockouts || []);
             setNotifications(refreshedRecords.notifications || []);
             return "ready";
           } catch (error) {
@@ -365,6 +378,11 @@ export default function OwnerDashboardApp({
         return liveRefresh;
       };
 
+      const afterAssistantSave = () => { void refreshLiveWorkspace(); };
+      if (live) {
+        window.addEventListener("gc-assistant-saved", afterAssistantSave);
+        removeAssistantRefresh = () => window.removeEventListener("gc-assistant-saved", afterAssistantSave);
+      }
       removeRealtime = subscribeToOwnerUpdates({
         client: supabase,
         salonId,
@@ -432,6 +450,7 @@ export default function OwnerDashboardApp({
     return () => {
       live = false;
       if (removeRealtime) void removeRealtime();
+      removeAssistantRefresh?.();
     };
   }, [initialRecordId, section]);
 
@@ -586,7 +605,7 @@ export default function OwnerDashboardApp({
   ) {
     if (
       !window.confirm(
-        "Remove this record from the public salon experience? Booking history will be preserved.",
+        i18n.translateSource("Remove this record from the public salon experience? Booking history will be preserved."),
       )
     )
       return;
@@ -738,6 +757,10 @@ export default function OwnerDashboardApp({
       </OwnerDashboardShell>
     );
   const context = {
+    locale: intlLocale(i18n.locale),
+    translateSource: i18n.translateSource,
+    formatCurrency: i18n.formatCurrency,
+    formatNumber: i18n.formatNumber,
     salon,
     bookings,
     reviews,
@@ -843,6 +866,10 @@ export default function OwnerDashboardApp({
 }
 
 type Ctx = {
+  locale: string;
+  translateSource: ReturnType<typeof useI18n>["translateSource"];
+  formatCurrency: ReturnType<typeof useI18n>["formatCurrency"];
+  formatNumber: ReturnType<typeof useI18n>["formatNumber"];
   salon: Salon;
   bookings: Row[];
   reviews: Row[];
@@ -1122,7 +1149,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
     }
   }
   const previewMoney = (value: number, currency: string) =>
-    (Number(value || 0) / 100).toLocaleString("en-US", {
+    (Number(value || 0) / 100).toLocaleString(c.locale, {
       style: "currency",
       currency: String(currency || "usd").toUpperCase(),
     });
@@ -1191,7 +1218,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
               ],
               [
                 "Renewal date",
-                dateText(upgradePreview.preview.renewalDate),
+                dateText(upgradePreview.preview.renewalDate, c.salon.time_zone, c.locale),
               ],
             ].map(([label, value]) => (
               <div
@@ -1257,7 +1284,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 Effective date
               </p>
               <p className="mt-1 text-xs font-bold">
-                {dateText(scheduledEffective)}
+                {dateText(scheduledEffective, c.salon.time_zone, c.locale)}
               </p>
             </div>
             <div>
@@ -1294,7 +1321,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           </h2>
           <p className="mt-2 text-sm text-ink/70">
             Your current plan and access remain active through{" "}
-            <b>{dateText(paidThrough)}</b>. You will not be charged again.
+            <b>{dateText(paidThrough, c.salon.time_zone, c.locale)}</b>. You will not be charged again.
           </p>
           <button
             disabled={Boolean(busy)}
@@ -1427,7 +1454,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           ) : null}
         </div>
       ) : null}
-      <Panel className="mt-5 overflow-x-auto">
+      <Panel className="mt-5 overflow-x-auto" role="region" aria-label="Stripe billing history" tabIndex={0}>
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-serif text-xl text-plum">
@@ -1438,7 +1465,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
               received through the signed Stripe webhook.
             </p>
           </div>
-          <span className="text-[9px] font-bold uppercase text-amber">
+          <span className="text-[9px] font-bold uppercase gc-text-secondary">
             Test mode
           </span>
         </div>
@@ -1464,7 +1491,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           <tbody>
             {c.billingEvents.map((event) => (
               <tr key={event.id} className="border-b border-plum/10">
-                <td className="py-3 pr-3">{dateText(event.event_date)}</td>
+                <td className="py-3 pr-3">{dateText(event.event_date, c.salon.time_zone, c.locale)}</td>
                 <td className="pr-3">
                   <b>{String(event.event_type || "Billing event")}</b>
                   {event.failure_reason ? (
@@ -1479,13 +1506,13 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                     .join(" → ") || "—"}
                 </td>
                 <td className="pr-3">
-                  ${(Number(event.amount_collected || 0) / 100).toFixed(2)}
+                  {c.formatCurrency(Number(event.amount_collected || 0) / 100)}
                 </td>
                 <td className="pr-3">
-                  ${(Number(event.amount_refunded || 0) / 100).toFixed(2)}
+                  {c.formatCurrency(Number(event.amount_refunded || 0) / 100)}
                 </td>
                 <td className="pr-3">
-                  ${(Number(event.amount_credited || 0) / 100).toFixed(2)}
+                  {c.formatCurrency(Number(event.amount_credited || 0) / 100)}
                 </td>
                 <td className="pr-3">
                   <Status
@@ -1537,12 +1564,14 @@ function Title({
 function Panel({
   children,
   className = "",
+  ...props
 }: {
   children: React.ReactNode;
   className?: string;
-}) {
+} & React.HTMLAttributes<HTMLElement>) {
   return (
     <section
+      {...props}
       className={`min-w-0 rounded-[13px] border border-plum/10 bg-white/70 p-4 shadow-[0_5px_18px_rgba(13,17,20,.035)] sm:p-5 ${className}`}
     >
       {children}
@@ -1582,43 +1611,12 @@ function MiniLine() {
 }
 
 function Overview({ c }: { c: Ctx }) {
-  const completed = c.bookings.filter(
-    (b) => String(b.status).toLowerCase() === "completed",
-  );
-  const revenue = completed.reduce(
-    (sum, b) => sum + Number(b.estimated_total || 0),
-    0,
-  );
   const [renderedAt] = useState(() => Date.now());
-  const upcoming = c.bookings
-    .filter(
-      (b) =>
-        new Date(String(b.appointment_datetime || 0)).getTime() > renderedAt &&
-        !/cancelled/i.test(String(b.status || "")),
-    )
-    .slice(0, 3);
-  const completion = Math.round(
-    ([
-      c.salon.name,
-      c.salon.description,
-      c.salon.phone,
-      c.salon.address_street,
-      c.salon.cover_photo_url,
-      c.styles.length,
-      c.stylists.length,
-    ].filter(Boolean).length /
-      7) *
-      100,
-  );
-  const salonCancellations = c.bookings.filter(
-    (booking) =>
-      String(
-        booking.cancelled_by || booking.cancellation_initiated_by || "",
-      ).toLowerCase() === "salon",
-  ).length;
-  const cancellationRate = c.bookings.length
-    ? (salonCancellations / c.bookings.length) * 100
-    : 0;
+  const metrics = ownerBusinessMetrics(c.bookings, renderedAt);
+  const revenue = metrics.completed_booking_value;
+  const upcoming = metrics.upcoming.slice(0, 3);
+  const completion = profileCompletion(c.salon, c.styles.length, c.stylists.length);
+  const cancellationRate = metrics.cancellation_rate * 100;
   const quickActions = (
     [
       ["Add Photos", "photos", ImagePlus],
@@ -1652,32 +1650,27 @@ function Overview({ c }: { c: Ctx }) {
           value={Number(c.salon.profile_views || 0)}
         />
         <Metric
-          label="Total Bookings"
-          value={c.bookings.length}
+          label="Total Appointments"
+          value={metrics.total_appointments}
           icon={CalendarDays}
         />
         <Metric
           label="New Customers"
-          value={
-            new Set(
-              c.bookings
-                .map((b) => b.customer_id || b.guest_email)
-                .filter(Boolean),
-            ).size
-          }
+          value={metrics.customers}
           icon={UsersRound}
         />
         <Metric
           label="Completed Booking Value"
-          value={`$${revenue.toLocaleString()}`}
+          value={c.formatCurrency(revenue)}
           icon={CircleDollarSign}
         />
         <Metric
           label="Salon Cancellation Rate"
-          value={`${cancellationRate.toFixed(1)}%`}
+          value={c.formatNumber(cancellationRate / 100, { style: "percent", maximumFractionDigits: 1 })}
           icon={Clock3}
         />
       </div>
+<p className="mt-3 text-sm">{c.translateSource("{value0} appointments — {value1} from Girlz Culture, {value2} added by your business.", { value0: c.formatNumber(metrics.total_appointments), value1: c.formatNumber(metrics.marketplace_bookings), value2: c.formatNumber(metrics.business_added_appointments) })}</p>
       <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1.5fr_.8fr]">
         <Panel>
           <h2 className="font-serif text-xl text-plum">Profile Completion</h2>
@@ -1716,14 +1709,14 @@ function Overview({ c }: { c: Ctx }) {
             {upcoming.map((booking, index) => (
               <Link
                 href={`/salon/dashboard/bookings/${booking.id}`}
-                key={booking.id || index}
+                key={String(booking.id || index)}
                 className="grid grid-cols-[85px_1fr_auto] gap-3 py-3 text-xs"
               >
                 <span>
-                  {dateText(booking.appointment_datetime, c.salon.time_zone)}
+                  {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
                 </span>
                 <span>
-                  <b>{styleName(c, booking.style_id)}</b>
+                  <b>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</b>
                   <br />
                   <span className="text-ink/55">
                     {stylistName(c, booking.stylist_id)}
@@ -1747,7 +1740,7 @@ function Overview({ c }: { c: Ctx }) {
               <Stars value={Number(review.rating_overall || 0)} />
               {review.written_review ? (
                 <p className="mt-2 line-clamp-3">
-                  {String(review.written_review)}
+                  <span data-no-translate>{String(review.written_review)}</span>
                 </p>
               ) : null}
             </div>
@@ -1810,6 +1803,7 @@ function Overview({ c }: { c: Ctx }) {
 }
 
 function MyPage({ c, focus }: { c: Ctx; focus: string }) {
+  if (focus === "business-policies") return <BusinessPolicies />;
   if (!focus) {
     const trustCount = Object.values(c.salon.trust_info || {}).filter(Boolean).length;
     return (
@@ -1827,13 +1821,14 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
           }
         />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <OwnerSectionCard href="/salon/dashboard/my-page/business" icon={UserRound} title="Business information" description="Salon name, contact details, languages, and trust information." meta={`${trustCount} trust item${trustCount === 1 ? "" : "s"} enabled`} status="Public" />
+          <OwnerSectionCard href="/salon/dashboard/my-page/business" icon={UserRound} title="Business information" description="Salon name, contact details, languages, and trust information." meta={c.translateSource("Enabled trust items: {value0}", { value0: c.formatNumber(trustCount) })} status="Public" />
           <OwnerSectionCard href="/salon/dashboard/my-page/description" icon={Sparkles} title="Description" description="Tell customers what makes your salon and services distinctive." meta={c.salon.description ? `${String(c.salon.description).length} characters` : "Description needed"} status={c.salon.description ? "Ready" : "Incomplete"} />
           <OwnerSectionCard href="/salon/dashboard/my-page/address" icon={Info} title="Address" description="Keep the marketplace location and map position accurate." meta={c.salon.formatted_address || [c.salon.address_city, c.salon.address_state].filter(Boolean).join(", ") || "Address needed"} status={c.salon.address_needs_review ? "Needs review" : "Verified"} />
           <OwnerSectionCard href="/salon/dashboard/availability" icon={Clock3} title="Hours" description="Manage store hours, calendar availability, and scheduling rules." meta={`${Object.keys(c.salon.hours || {}).length} days configured`} />
           <OwnerSectionCard href="/salon/dashboard/my-page/social" icon={ExternalLink} title="Social links" description="Connect your Instagram, TikTok, and Google Business profiles." meta={[c.salon.instagram_url, c.salon.tiktok_url, c.salon.google_business_url].filter(Boolean).length ? "Links added" : "No links added"} />
           <OwnerSectionCard href="/salon/dashboard/photos" icon={ImagePlus} title="Cover, logo & gallery" description="Manage the visual media customers see on your salon profile." meta={`${Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos.length : 0} gallery items`} status={c.salon.cover_photo_url ? "Published" : "Cover needed"} />
-          <OwnerSectionCard href="/salon/dashboard/my-page/policies" icon={BadgeCheck} title="Policies" description="Review booking, deposit, privacy, and customer-safety policies." meta="Platform policies" />
+          <OwnerSectionCard href="/salon/dashboard/my-page/business-policies" icon={BadgeCheck} title="Your Business Policies" description="Set appointment expectations, review drafts, and publish policies for future bookings." />
+          <OwnerSectionCard href="/salon/dashboard/my-page/policies" icon={BadgeCheck} title="Girlz Culture Policies" description="Read platform booking, deposit, privacy, and customer-safety protections." meta="Platform policies" />
           {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/my-page/identity" icon={Crown} title="Public identity" description="Manage your requested public URL and verified identity links." meta={c.salon.vanity_slug || c.salon.slug || "Standard URL"} /> : null}
         </div>
       </>
@@ -1843,7 +1838,7 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
   if (focus === "policies") {
     return (
       <>
-        <OwnerDetailHeader title="Salon policies" subtitle="These marketplace-wide protections are shown consistently to every customer." fallbackHref="/salon/dashboard/my-page" status="Managed by Girlz Culture" />
+        <OwnerDetailHeader title="Girlz Culture Policies" subtitle="These marketplace-wide protections are shown consistently to every customer." fallbackHref="/salon/dashboard/my-page" status="Managed by Girlz Culture" />
         <Panel>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
@@ -2200,7 +2195,7 @@ function Styles({ c }: { c: Ctx }) {
                     className="h-16 w-16 rounded-[8px] object-cover"
                   />
                   <span>
-                    <b className="font-serif text-base">{style.name}</b>
+                    <b data-no-translate className="font-serif text-base">{style.name}</b>
                     <span className="mt-1 block text-[10px] text-ink/55">
                       {String(style.category || "Uncategorized")} • {duration}
                     </span>
@@ -2387,7 +2382,7 @@ function Stylists({ c }: { c: Ctx }) {
                 alt={stylist.name || "Stylist"}
                 className="h-16 w-16 rounded-full object-cover"
               />
-              <p className="mt-2 font-serif text-lg">{stylist.name}</p>
+              <p data-no-translate className="mt-2 font-serif text-lg">{stylist.name}</p>
               {rating > 0 ? (
                 <Stars value={rating} />
               ) : (
@@ -2597,7 +2592,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         </span>
       </div> : null}
       <div className="block">
-        {!recordId ? <div className="mb-4 grid gap-2 rounded-xl border border-plum/10 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4"><input aria-label="Search products" value={productQuery} onChange={(event)=>setProductQuery(event.target.value)} placeholder="Search name or SKU" className="min-h-10 rounded-lg border border-plum/15 px-3 text-xs"/><select aria-label="Product status" value={productStatus} onChange={(event)=>setProductStatus(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{[...new Set(c.products.map((product)=>String(product.product_status || "Draft")))].map((value)=><option key={value} value={value.toLowerCase()}>{value}</option>)}</select><select aria-label="Fulfillment" value={fulfillment} onChange={(event)=>setFulfillment(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All fulfillment</option><option value="pickup">Pickup enabled</option><option value="shipping">Shipping enabled</option><option value="in_person">In-person only</option></select><select aria-label="Promotion state" value={promotionFilter} onChange={(event)=>setPromotionFilter(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All promotion states</option><option value="promoted">Promotion attached</option><option value="standard">No promotion</option></select><p className="sm:col-span-2 xl:col-span-4 text-[10px] text-ink/50">{visibleProducts.length} matching product{visibleProducts.length === 1 ? "" : "s"}</p></div> : null}
+        {!recordId ? <div className="mb-4 grid gap-2 rounded-xl border border-plum/10 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4"><input aria-label="Search products" value={productQuery} onChange={(event)=>setProductQuery(event.target.value)} placeholder="Search name or SKU" className="min-h-10 rounded-lg border border-plum/15 px-3 text-xs"/><select aria-label="Product status" value={productStatus} onChange={(event)=>setProductStatus(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{[...new Set(c.products.map((product)=>String(product.product_status || "Draft")))].map((value)=><option key={value} value={value.toLowerCase()}>{value}</option>)}</select><select aria-label="Fulfillment" value={fulfillment} onChange={(event)=>setFulfillment(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All fulfillment</option><option value="pickup">Pickup enabled</option><option value="shipping">Shipping enabled</option><option value="in_person">In-person only</option></select><select aria-label="Promotion state" value={promotionFilter} onChange={(event)=>setPromotionFilter(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All promotion states</option><option value="promoted">Promotion attached</option><option value="standard">No promotion</option></select><p className="sm:col-span-2 xl:col-span-4 text-[10px] text-ink/50">{c.translateSource("Matching products: {value0}", { value0: c.formatNumber(visibleProducts.length) })}</p></div> : null}
         {!recordId ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {visibleProducts.map((product) => (
             <button
@@ -2622,23 +2617,23 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 )}
               </div>
               <div className="p-2.5">
-                <b className="line-clamp-1 text-xs">{product.name}</b>
+                <b data-no-translate className="line-clamp-1 text-xs">{product.name}</b>
                 <p className="mt-1 line-clamp-1 text-[9px] text-ink/60">
-                  {String(product.description || "")}
+                  <span data-no-translate>{String(product.description || "")}</span>
                 </p>
                 <p className="mt-2 text-sm font-semibold">
                   {product.sale_price !== null &&
                   product.sale_price !== undefined ? (
                     <>
                       <span className="mr-1 text-[10px] gc-text-secondary line-through">
-                        ${Number(product.price || 0).toFixed(2)}
+                        {c.formatCurrency(Number(product.price || 0))}
                       </span>
                       <span className="text-magenta">
-                        ${Number(product.sale_price || 0).toFixed(2)}
+                        {c.formatCurrency(Number(product.sale_price || 0))}
                       </span>
                     </>
                   ) : (
-                    `$${Number(product.price || 0).toFixed(2)}`
+                    c.formatCurrency(Number(product.price || 0))
                   )}
                 </p>
                 <p className="mt-1 text-[9px] font-semibold text-ink/50">
@@ -2647,7 +2642,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     ? ` · ${Number(product.inventory_quantity || 0)} in stock`
                     : " · stock not tracked"}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1 text-[8px] font-bold"><span className={`rounded-full px-2 py-1 ${product.pickup_enabled ? "bg-emerald-100 gc-text-success" : "bg-cream gc-text-disabled"}`}>{product.pickup_enabled ? "Pickup" : "No pickup"}</span><span className={`rounded-full px-2 py-1 ${product.shipping_enabled ? "bg-blue-100 gc-text-link" : "bg-cream gc-text-disabled"}`}>{product.shipping_enabled ? "Shipping" : "No shipping"}</span>{hasPromotion(product) ? <span className="rounded-full bg-blush px-2 py-1 text-magenta">Promotion</span> : null}</div>
+                <div className="mt-2 flex flex-wrap gap-1 text-[8px] font-bold"><span className={`rounded-full px-2 py-1 ${product.pickup_enabled ? "bg-white gc-text-success" : "bg-cream gc-text-disabled"}`}>{product.pickup_enabled ? "Pickup" : "No pickup"}</span><span className={`rounded-full px-2 py-1 ${product.shipping_enabled ? "bg-blue-100 gc-text-link" : "bg-cream gc-text-disabled"}`}>{product.shipping_enabled ? "Shipping" : "No shipping"}</span>{hasPromotion(product) ? <span className="rounded-full bg-blush px-2 py-1 text-magenta">Promotion</span> : null}</div>
               </div>
             </button>
           ))}
@@ -2842,7 +2837,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const timeZone = c.salon.time_zone || "America/New_York";
   const [weekOffset, setWeekOffset] = useState(0);
   const [calendarBooking, setCalendarBooking] = useState<Row | null>(null);
-  const week = salonWeek(timeZone, weekOffset);
+  const week = salonWeek(timeZone, weekOffset, c.locale);
   const activeBookings = c.bookings.filter(
     (booking) =>
       !["cancelled", "declined", "refunded"].includes(
@@ -2936,7 +2931,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         : until;
     if (
       !window.confirm(
-        `Block new bookings for ${scope} until ${expiration}? Existing appointments will not be cancelled.`,
+        c.translateSource("Block new bookings for {value0} until {value1}? Existing appointments will not be cancelled.", { value0: targetStylistId ? activeStylist?.name || c.translateSource("this stylist") : c.translateSource("the whole salon"), value1: mode.endsWith("_today") || mode === "stylist_three_hours" ? c.translateSource(expiration) : expiration }),
       )
     ) return;
     setBusy(`${mode}:${targetStylistId || "salon"}`);
@@ -3015,7 +3010,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     calendar: {
       title: "Appointment calendar",
       subtitle: `Review the week in ${timeZone.replaceAll("_", " ")} and open an appointment without losing calendar context.`,
-      status: `${activeBookings.length} active booking${activeBookings.length === 1 ? "" : "s"}`,
+      status: c.translateSource("Active bookings: {value0}", { value0: c.formatNumber(activeBookings.length) }),
     },
     hours: {
       title: "Store hours",
@@ -3030,12 +3025,12 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     stylists: {
       title: "Per-stylist availability",
       subtitle: "Choose a team member and maintain the hours customers can book them.",
-      status: `${c.stylists.length} stylist${c.stylists.length === 1 ? "" : "s"}`,
+      status: c.translateSource("Professionals: {value0}", { value0: c.formatNumber(c.stylists.length) }),
     },
     overrides: {
       title: "Availability overrides",
       subtitle: "Temporarily stop salon or stylist bookings, then reopen availability when ready.",
-      status: `${activeBlockouts.length} active override${activeBlockouts.length === 1 ? "" : "s"}`,
+      status: c.translateSource("Active overrides: {value0}", { value0: c.formatNumber(activeBlockouts.length) }),
     },
   };
   const workspace = workspaces[recordId];
@@ -3048,11 +3043,11 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           subtitle={`Choose one scheduling workspace. Appointments are shown in ${timeZone.replaceAll("_", " ")}.`}
         />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <OwnerSectionCard href="/salon/dashboard/availability/calendar" icon={CalendarDays} title="Appointment calendar" description="Review the weekly calendar and open individual appointment details." meta={`${activeBookings.length} active booking${activeBookings.length === 1 ? "" : "s"}`} status="Live" />
+          <OwnerSectionCard href="/salon/dashboard/bookings/new" icon={CalendarDays} title="Add an appointment" description="Record appointments received by your business."/><OwnerSectionCard href="/salon/dashboard/availability/calendar" icon={CalendarDays} title="Appointment calendar" description="Review the weekly calendar and open individual appointment details." meta={c.translateSource("Active bookings: {value0}", { value0: c.formatNumber(activeBookings.length) })} status="Live" />
           <OwnerSectionCard href="/salon/dashboard/availability/hours" icon={Clock3} title="Store hours" description="Set the salon's regular weekly opening and closing schedule." meta={`${Object.keys(hours).length} days configured`} />
           <OwnerSectionCard href="/salon/dashboard/availability/slots" icon={BadgeCheck} title="Bookable time slots" description="Choose appointment intervals and the default buffer between services." meta={`${Number(settings.slot_minutes || 30)} min slots · ${Number(settings.buffer_minutes || 15)} min buffer`} />
-          <OwnerSectionCard href="/salon/dashboard/availability/stylists" icon={UsersRound} title="Per-stylist availability" description="Maintain each team member's customer-facing working hours." meta={`${c.stylists.length} stylist${c.stylists.length === 1 ? "" : "s"}`} />
-          <OwnerSectionCard href="/salon/dashboard/availability/overrides" icon={LockKeyhole} title="Overrides & blockouts" description="Mark the salon full, block a stylist, or release an active override." meta={`${activeBlockouts.length} active override${activeBlockouts.length === 1 ? "" : "s"}`} status={activeBlockouts.length ? "Attention" : "Clear"} />
+          <OwnerSectionCard href="/salon/dashboard/availability/stylists" icon={UsersRound} title="Per-stylist availability" description="Maintain each team member's customer-facing working hours." meta={c.translateSource("Professionals: {value0}", { value0: c.formatNumber(c.stylists.length) })} />
+          <OwnerSectionCard href="/salon/dashboard/availability/overrides" icon={LockKeyhole} title="Overrides & blockouts" description="Mark the salon full, block a stylist, or release an active override." meta={c.translateSource("Active overrides: {value0}", { value0: c.formatNumber(activeBlockouts.length) })} status={activeBlockouts.length ? "Attention" : "Clear"} />
         </div>
       </>
     );
@@ -3060,8 +3055,8 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
 
   if (!workspace) {
     return <>
-      <OwnerDetailHeader title={booking ? "Calendar appointment" : blockout ? "Availability override" : "Availability details"} subtitle={booking ? `Booking #${bookingReference(booking)}` : blockout ? `Blocked until ${dateText(blockout.ends_at, timeZone)}` : "This record could not be found."} fallbackHref="/salon/dashboard/availability" status={booking ? String(booking.status || "Confirmed") : blockout ? (blockout.released_at ? "Released" : "Active override") : "Unavailable"}/>
-      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b>{String(booking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone)}<br/>{styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone)} – {dateText(blockout.ends_at, timeZone)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
+      <OwnerDetailHeader title={booking ? "Calendar appointment" : blockout ? "Availability override" : "Availability details"} subtitle={booking ? `Booking #${bookingReference(booking)}` : blockout ? `Blocked until ${dateText(blockout.ends_at, timeZone, c.locale)}` : "This record could not be found."} fallbackHref="/salon/dashboard/availability" status={booking ? String(booking.status || "Confirmed") : blockout ? (blockout.released_at ? "Released" : "Active override") : "Unavailable"}/>
+      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone, c.locale)}<br/>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone, c.locale)} – {dateText(blockout.ends_at, timeZone, c.locale)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
     </>;
   }
 
@@ -3115,7 +3110,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-serif text-xl text-plum">Appointment calendar</h2>
-              <p className="mt-1 text-[10px] text-ink/55">{weekRangeLabel(week)} · {timeZone.replaceAll("_", " ")}</p>
+              <p className="mt-1 text-[10px] text-ink/55">{weekRangeLabel(week, c.locale)} · {timeZone.replaceAll("_", " ")}</p>
             </div>
             <div className="flex items-center overflow-hidden rounded-[9px] border border-plum/15 bg-white">
               <button type="button" aria-label="Previous week" onClick={() => setWeekOffset((value) => value - 1)} className="grid min-h-11 min-w-11 place-items-center border-r border-plum/10 text-plum"><ChevronLeft size={17}/></button>
@@ -3129,7 +3124,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               return <section key={date.key} className="rounded-[10px] border border-plum/10 bg-white p-3"><header className="flex items-center justify-between"><b className="text-xs uppercase tracking-wide text-plum">{date.label}</b><span className="font-serif text-base">{date.day}</span></header><div className="mt-2 space-y-2">{dayBookings.map((booking, index) => <CalendarBookingButton key={String(booking.id || index)} booking={booking} c={c} timeZone={timeZone} onOpen={setCalendarBooking}/>)}{!dayBookings.length?<p className="py-2 text-center text-[10px] text-ink/40">No appointments</p>:null}</div></section>;
             })}
           </div>
-          <div className="hidden max-w-full overflow-x-auto md:block">
+          <div className="hidden max-w-full overflow-x-auto md:block" role="region" aria-label="Appointment calendar" tabIndex={0}>
             <div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">
               {week.map((date) => (
               <section
@@ -3197,7 +3192,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   >
                     <b>{day}</b>
                     <select
-                      aria-label={`${day} opening time`}
+                      aria-label={c.translateSource("{value0} opening time", { value0: c.translateSource(day) })}
                       name={`${day}_open`}
                       defaultValue={String(value?.open || "09:00")}
                       className="min-w-0 rounded-[6px] border border-plum/10 bg-white px-1"
@@ -3209,7 +3204,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                       ))}
                     </select>
                     <select
-                      aria-label={`${day} closing time`}
+                      aria-label={c.translateSource("{value0} closing time", { value0: c.translateSource(day) })}
                       name={`${day}_close`}
                       defaultValue={String(value?.close || "17:00")}
                       className="min-w-0 rounded-[6px] border border-plum/10 bg-white px-1"
@@ -3290,13 +3285,13 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               </p>
             </div>
             {c.stylists.length ? (
-              <select
+              <select aria-label="Professional"
                 value={stylistId}
                 onChange={(event) => setStylistId(event.target.value)}
                 className="min-h-10 rounded-[8px] border border-plum/15 px-3 text-xs"
               >
                 {c.stylists.map((stylist) => (
-                  <option key={stylist.id} value={stylist.id}>
+                  <option data-no-translate key={stylist.id} value={stylist.id}>
                     {stylist.name}
                   </option>
                 ))}
@@ -3327,19 +3322,20 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                       <b>{day}</b>
                       <input
                         type="checkbox"
+                        aria-label={c.translateSource("{value0} working day", { value0: c.translateSource(day) })}
                         name={`${day}_working`}
                         defaultChecked={working}
                         className="accent-magenta"
                       />
                       <input
-                        aria-label={`${day} opening time`}
+                        aria-label={c.translateSource("{value0} opening time", { value0: c.translateSource(day) })}
                         type="time"
                         name={`${day}_open`}
                         defaultValue={String(schedule?.open || "09:00")}
                         className="min-w-0 rounded-[6px] border border-plum/10 p-2"
                       />
                       <input
-                        aria-label={`${day} closing time`}
+                        aria-label={c.translateSource("{value0} closing time", { value0: c.translateSource(day) })}
                         type="time"
                         name={`${day}_close`}
                         defaultValue={String(schedule?.close || "17:00")}
@@ -3349,7 +3345,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   );
                 })}
                 <button className="min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
-                  Save {activeStylist.name || "stylist"} schedule
+                  {c.translateSource("Save {value0} schedule", { value0: activeStylist.name || c.translateSource("Professional") })}
                 </button>
               </form>
             </>
@@ -3376,13 +3372,13 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </p>
               </div>
               {c.stylists.length ? (
-                <select
+                <select aria-label="Professional"
                   value={stylistId}
                   onChange={(event) => setStylistId(event.target.value)}
                   className="min-h-10 rounded-[8px] border border-plum/15 px-3 text-xs"
                 >
                   {c.stylists.map((stylist) => (
-                    <option key={stylist.id} value={stylist.id}>{stylist.name}</option>
+                    <option data-no-translate key={stylist.id} value={stylist.id}>{stylist.name}</option>
                   ))}
                 </select>
               ) : null}
@@ -3419,7 +3415,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   <span>
                     <Link href={`/salon/dashboard/availability/${blockout.id}`} className="font-bold text-plum underline-offset-2 hover:text-magenta hover:underline">{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</Link>
                     <span className="mt-1 block text-ink/55">
-                      Until {dateText(blockout.ends_at, timeZone)}
+                      Until {dateText(blockout.ends_at, timeZone, c.locale)}
                     </span>
                   </span>
                   <button
@@ -3439,13 +3435,13 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           </Panel>
         </div> : null}
       </div>
-      {calendarBooking ? <div className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/55 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarBooking(null); }}><section role="dialog" aria-modal="true" aria-labelledby="calendar-booking-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[16px] bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><h2 id="calendar-booking-title" className="font-serif text-2xl text-plum">Appointment details</h2><p className="mt-1 text-[10px] text-ink/50">#{bookingReference(calendarBooking)}</p></div><button type="button" autoFocus aria-label="Close appointment details" onClick={() => setCalendarBooking(null)} className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/10 text-plum"><X size={18}/></button></div><div className="mt-5 space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b>{String(calendarBooking.guest_name || "Customer")}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(calendarBooking.appointment_datetime, timeZone)}<br/>{styleName(c, calendarBooking.style_id)} · {stylistName(c, calendarBooking.stylist_id)}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Status</b><Status value={String(calendarBooking.status || "Confirmed")}/></p><div className="grid grid-cols-2 gap-3 rounded-[10px] bg-cream p-3 text-xs"><p>Deposit paid<b className="mt-1 block gc-text-success">${Number(calendarBooking.deposit_amount || 0).toFixed(2)}</b></p><p>Balance due<b className="mt-1 block text-magenta">${Number(calendarBooking.balance_due || 0).toFixed(2)}</b></p></div><Link href={`/salon/dashboard/bookings/${encodeURIComponent(String(calendarBooking.id || ""))}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-[9px] bg-magenta text-xs font-bold text-white">Open booking</Link></div></section></div> : null}
+      {calendarBooking ? <div className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/55 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarBooking(null); }}><section role="dialog" aria-modal="true" aria-labelledby="calendar-booking-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[16px] bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><h2 id="calendar-booking-title" className="font-serif text-2xl text-plum">Appointment details</h2><p className="mt-1 text-[10px] text-ink/50">#{bookingReference(calendarBooking)}</p></div><button type="button" autoFocus aria-label="Close appointment details" onClick={() => setCalendarBooking(null)} className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/10 text-plum"><X size={18}/></button></div><div className="mt-5 space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={calendarBooking.guest_name ? true : undefined}>{String(calendarBooking.guest_name || "Customer")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(calendarBooking.appointment_datetime, timeZone, c.locale)}<br/>{styleName(c, calendarBooking.style_id)} · {stylistName(c, calendarBooking.stylist_id)}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Status</b><Status value={String(calendarBooking.status || "Confirmed")}/></p><div className="grid grid-cols-2 gap-3 rounded-[10px] bg-cream p-3 text-xs"><p>Deposit paid<b className="mt-1 block gc-text-success">{c.formatCurrency(Number(calendarBooking.deposit_amount || 0))}</b></p><p>Balance due<b className="mt-1 block text-magenta">{c.formatCurrency(Number(calendarBooking.balance_due || 0))}</b></p></div><Link href={`/salon/dashboard/bookings/${encodeURIComponent(String(calendarBooking.id || ""))}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-[9px] bg-magenta text-xs font-bold text-white">Open booking</Link></div></section></div> : null}
     </>
   );
 }
 
 function CalendarBookingButton({ booking, c, timeZone }: { booking: Row; c: Ctx; timeZone: string; onOpen: (booking: Row) => void }) {
-  return <Link href={`/salon/dashboard/availability/${booking.id}`} className="block w-full rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-left text-[9px] leading-4 transition hover:border-magenta focus-visible:outline-2 focus-visible:outline-magenta"><b className="block text-plum">{bookingTime(booking.appointment_datetime, timeZone)}</b><span className="font-semibold">{styleName(c, booking.style_id)}</span><span className="block text-ink/60">{stylistName(c, booking.stylist_id)}</span></Link>;
+  return <Link href={`/salon/dashboard/availability/${booking.id}`} className="block w-full rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-left text-[9px] leading-4 transition hover:border-magenta focus-visible:outline-2 focus-visible:outline-magenta"><b className="block text-plum">{bookingTime(booking.appointment_datetime, timeZone, c.locale)}</b><span className="font-semibold">{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</span><span className="block text-ink/60">{stylistName(c, booking.stylist_id)}</span></Link>;
 }
 
 const BOOKING_GROUPS = ["Upcoming", "In Progress", "Needs Resolution", "All"] as const;
@@ -3563,13 +3559,14 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const activeSelected =
     selected &&
     !/cancelled|completed|refunded/i.test(String(selected.status || ""));
+  const marketplaceSelectedId = selected && !isBusinessAdded(selected) ? selectedId : "";
   useEffect(() => {
-    if (!selectedId) return;
+    if (!marketplaceSelectedId) return;
     let active = true;
     getSessionForScope("salon")
       .then((session) =>
         session
-          ? fetch(`/api/salon/bookings/${selectedId}/reschedule`, {
+          ? fetch(`/api/salon/bookings/${marketplaceSelectedId}/reschedule`, {
               headers: { Authorization: `Bearer ${session.access_token}` },
               cache: "no-store",
             })
@@ -3588,11 +3585,11 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     return () => {
       active = false;
     };
-  }, [selectedId]);
+  }, [marketplaceSelectedId]);
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
-      if (!selectedId || !rescheduleDate) {
+      if (!marketplaceSelectedId || !rescheduleDate) {
         setRescheduleSlots([]);
         setSelectedRescheduleSlots([]);
         setAvailabilityMessage("");
@@ -3604,7 +3601,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         .then((session) =>
           session
             ? fetch(
-                `/api/salon/bookings/${selectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
+                `/api/salon/bookings/${marketplaceSelectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
                 {
                   headers: {
                     Authorization: `Bearer ${session.access_token}`,
@@ -3654,7 +3651,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [rescheduleDate, selectedId]);
+  }, [rescheduleDate, marketplaceSelectedId]);
   async function serviceAction(
     action: "check_in" | "start" | "complete",
     exception?: CheckInExceptionAnswer,
@@ -3863,6 +3860,8 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       setBusy(false);
     }
   }
+  if (recordId === "new") return <><OwnerDetailHeader title="Add an appointment" subtitle="Record appointments received by your business." fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(c.salon.id)} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => { c.setBookings(current => [row, ...current.filter(item => item.id !== row.id)]); router.push(`/salon/dashboard/bookings/${row.id}`); }}/></>;
+  if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingNotes bookingId={String(selected.id)}/></>;
   return (
     <>
       {!recordId ? <Title
@@ -3874,6 +3873,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         fallbackHref={bookingListHref}
         status={selected ? String(selected.status || "Confirmed") : "Unavailable"}
       />}
+      {!recordId ? <Link href="/salon/dashboard/bookings/new" className="mb-4 inline-flex min-h-11 items-center rounded-full bg-plum px-5 text-sm text-white">Add an appointment</Link> : null}
       {!recordId ? <Panel className="mb-4">
         <form
           onSubmit={(event) => {
@@ -3947,43 +3947,43 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <div className="space-y-3 lg:hidden">
             {visible.map((booking) => (
               <button
-                key={booking.id}
+                key={String(booking.id)}
                 onClick={() => router.push(bookingDetailHref(booking.id))}
                 className={`w-full rounded-[10px] border p-4 text-left ${selectedId === booking.id ? "border-magenta bg-blush/25" : "border-plum/10"}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <span>
                     <b className="font-serif text-lg text-plum">
-                      {String(booking.guest_name || "Customer")}
+                      <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span>
                     </b>
                     <span className="mt-1 block text-xs">
-                      {styleName(c, booking.style_id)} ·{" "}
+                      {booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} ·{" "}
                       {stylistName(c, booking.stylist_id)}
                     </span>
                   </span>
                   <Status value={String(booking.status || "Confirmed")} />
                 </div>
                 <p className="mt-3 text-xs font-semibold">
-                  {dateText(booking.appointment_datetime, c.salon.time_zone)}
+                  {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
                 </p>
                 <div className="mt-3 flex justify-between text-xs">
                   <span>
                     Deposit{" "}
                     <b className="gc-text-success">
-                      ${Number(booking.deposit_amount || 0).toFixed(2)}
+                      {c.formatCurrency(Number(booking.deposit_amount || 0))}
                     </b>
                   </span>
                   <span>
                     Balance{" "}
                     <b className="text-magenta">
-                      ${Number(booking.balance_due || 0).toFixed(2)}
+                      {c.formatCurrency(Number(booking.balance_due || 0))}
                     </b>
                   </span>
                 </div>
               </button>
             ))}
             {!visible.length ? (
-              <Empty text={`No bookings match ${group}${query ? ` and “${query}”` : ""}${filter !== "All" ? ` with status ${filter}` : ""}.`} />
+              <Empty text={c.translateSource("No bookings match {value0}. {value1} {value2}", { value0: c.translateSource(group), value1: query ? c.translateSource("Search: “{value0}”.", { value0: query }) : "", value2: filter !== "All" ? c.translateSource("Status: {value0}.", { value0: c.translateSource(filter) }) : "" })} />
             ) : null}
           </div>
           <table className="hidden w-full min-w-[850px] text-left text-xs lg:table">
@@ -4008,22 +4008,22 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
             <tbody>
               {visible.map((booking) => (
                 <tr
-                  key={booking.id}
+                  key={String(booking.id)}
                   className={`border-b border-plum/10 ${selectedId === booking.id ? "bg-blush/25" : ""}`}
                 >
                   <td className="px-3 py-3">
-                    {String(booking.guest_name || "Customer")}
+                    <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span>
                   </td>
-                  <td className="px-3">{styleName(c, booking.style_id)}</td>
+                  <td className="px-3">{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</td>
                   <td className="px-3">{stylistName(c, booking.stylist_id)}</td>
                   <td className="px-3">
-                    {dateText(booking.appointment_datetime, c.salon.time_zone)}
+                    {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
                   </td>
                   <td className="px-3 gc-text-success">
-                    ${Number(booking.deposit_amount || 0).toFixed(2)}
+                    {c.formatCurrency(Number(booking.deposit_amount || 0))}
                   </td>
                   <td className="px-3 text-magenta">
-                    ${Number(booking.balance_due || 0).toFixed(2)}
+                    {c.formatCurrency(Number(booking.balance_due || 0))}
                   </td>
                   <td className="px-3">
                     <Status value={String(booking.status || "Confirmed")} />
@@ -4042,7 +4042,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           </table>
           {!visible.length ? (
             <div className="hidden lg:block">
-              <Empty text={`No bookings match ${group}${query ? ` and “${query}”` : ""}${filter !== "All" ? ` with status ${filter}` : ""}.`} />
+              <Empty text={c.translateSource("No bookings match {value0}. {value1} {value2}", { value0: c.translateSource(group), value1: query ? c.translateSource("Search: “{value0}”.", { value0: query }) : "", value2: filter !== "All" ? c.translateSource("Status: {value0}.", { value0: c.translateSource(filter) }) : "" })} />
             </div>
           ) : null}
         </Panel> : null}
@@ -4061,10 +4061,11 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
               </div>
+              <BookingNotes bookingId={String(selected.id)}/><BookingPolicyEvidence booking={selected}/>
               <div className="mt-5 space-y-3 text-xs">
                 <p>
                   <b className="block text-ink/50">Customer</b>
-                  {String(selected.guest_name || "Customer")}
+                  <span data-no-translate={selected.guest_name ? true : undefined}>{String(selected.guest_name || "Customer")}</span>
                   <br />
                   {String(selected.guest_phone || "")}
                   <br />
@@ -4072,7 +4073,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </p>
                 <p>
                   <b className="block text-ink/50">Appointment</b>
-                  {dateText(selected.appointment_datetime, c.salon.time_zone)}
+                  {dateText(selected.appointment_datetime, c.salon.time_zone, c.locale)}
                   <br />
                   {styleName(c, selected.style_id)} ·{" "}
                   {stylistName(c, selected.stylist_id)}
@@ -4082,13 +4083,13 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 <p className="flex justify-between">
                   <span>Deposit paid</span>
                   <b className="gc-text-success">
-                    ${Number(selected.deposit_amount || 0).toFixed(2)}
+                    {c.formatCurrency(Number(selected.deposit_amount || 0))}
                   </b>
                 </p>
                 <p className="flex justify-between">
                   <span>Remaining balance</span>
                   <b className="text-magenta">
-                    ${Number(selected.balance_due || 0).toFixed(2)}
+                    {c.formatCurrency(Number(selected.balance_due || 0))}
                   </b>
                 </p>
               </div>
@@ -4166,7 +4167,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                         Checked in{" "}
                         {dateText(
                           selected.checked_in_at,
-                          c.salon.time_zone,
+                          c.salon.time_zone, c.locale,
                         )}
                       </p>
                     ) : null}
@@ -4175,7 +4176,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                         Service started{" "}
                         {dateText(
                           selected.service_started_at,
-                          c.salon.time_zone,
+                          c.salon.time_zone, c.locale,
                         )}
                       </p>
                     ) : null}
@@ -4196,7 +4197,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                           {String(proposalSummary.status || "Pending")}
                         </b>
                         <p className="mt-1 text-ink/60">
-                          {String(proposalSummary.reason || "")}
+                          <span data-no-translate>{String(proposalSummary.reason || "")}</span>
                         </p>
                       </div>
                     ) : null}
@@ -4316,7 +4317,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                       This refunds the deposit, releases the slot, notifies the
                       customer, and affects your cancellation rate.
                     </p>
-                    <select
+                    <select aria-label="Cancellation reason"
                       value={reason}
                       onChange={(event) => setReason(event.target.value)}
                       className="mt-3 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
@@ -4329,7 +4330,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-ink/55">
                       Customer-safe reason
                     </p>
-                    <select
+                    <select aria-label="Customer-safe reason"
                       value={customerReason}
                       onChange={(event) =>
                         setCustomerReason(event.target.value)
@@ -4485,7 +4486,7 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         subtitle="See what clients are saying about your salon."
       /> : <OwnerDetailHeader
         title="Review details"
-        subtitle={selectedReview ? `Received ${dateText(selectedReview.created_at)}` : "This review could not be found."}
+        subtitle={selectedReview ? `Received ${dateText(selectedReview.created_at, c.salon.time_zone, c.locale)}` : "This review could not be found."}
         fallbackHref={reviewListHref}
         status={selectedReview ? reviewState(selectedReview).replace(/^./, (letter) => letter.toUpperCase()) : "Unavailable"}
       />}
@@ -4548,7 +4549,7 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               <Panel key={review.id || index}>
                 <div className="flex justify-between">
                   <div>
-                    <b>{String(review.display_name || "Verified Client")}</b>
+                    <b data-no-translate={review.display_name ? true : undefined}>{String(review.display_name || "Verified Client")}</b>
                     <span className="ml-2 rounded-full bg-blush px-2 py-1 text-[8px] text-magenta">
                       Verified
                     </span>
@@ -4558,12 +4559,12 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     </span>
                   </div>
                   <span className="text-[10px] text-ink/50">
-                    {dateText(review.created_at)}
+                    {dateText(review.created_at, c.salon.time_zone, c.locale)}
                   </span>
                 </div>
                 {review.written_review ? (
                   <p className="mt-3 text-sm">
-                    {String(review.written_review)}
+                    <span data-no-translate>{String(review.written_review)}</span>
                   </p>
                 ) : null}
                 {!recordId ? <Link href={reviewHref(review.id)} className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Open review</Link> : null}
@@ -4578,9 +4579,9 @@ function Reviews({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                     Flag / Dispute
                   </button>
                 </div> : null}
-                {recordId ? (review.salon_reply ? <div className="mt-4 rounded-lg bg-blush/25 p-4 text-sm"><b className="text-plum">Salon reply</b><p className="mt-2 leading-6 text-ink/70">{String(review.salon_reply)}</p></div> : reviewState(review) === "removed" ? <div className="mt-4 rounded-lg border border-plum/10 bg-cream p-4 text-xs text-ink/65">This review was removed by Platform Admin. It remains in your audit history, but cannot receive a public salon reply.</div> : <div className="mt-4 rounded-lg border border-plum/10 p-4"><label className="block text-xs font-bold text-plum">Reply as the salon<textarea value={replyText} onChange={(event)=>setReplyText(event.target.value.slice(0,2000))} rows={4} className="mt-2 w-full rounded-lg border border-plum/15 p-3 font-normal text-ink" placeholder="Thank the customer or address their experience professionally."/></label><button type="button" disabled={replySaving || !replyText.trim()} onClick={()=>void saveReply(review)} className="mt-3 min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control">{replySaving ? "Saving reply…" : "Save reply"}</button></div>) : null}
+                {recordId ? (review.salon_reply ? <div className="mt-4 rounded-lg bg-blush/25 p-4 text-sm"><b className="text-plum">Salon reply</b><p className="mt-2 leading-6 text-ink/70"><span data-no-translate>{String(review.salon_reply)}</span></p></div> : reviewState(review) === "removed" ? <div className="mt-4 rounded-lg border border-plum/10 bg-cream p-4 text-xs text-ink/65">This review was removed by Platform Admin. It remains in your audit history, but cannot receive a public salon reply.</div> : <div className="mt-4 rounded-lg border border-plum/10 p-4"><label className="block text-xs font-bold text-plum">Reply as the salon<textarea value={replyText} onChange={(event)=>setReplyText(event.target.value.slice(0,2000))} rows={4} className="mt-2 w-full rounded-lg border border-plum/15 p-3 font-normal text-ink" placeholder="Thank the customer or address their experience professionally."/></label><button type="button" disabled={replySaving || !replyText.trim()} onClick={()=>void saveReply(review)} className="mt-3 min-h-11 rounded-lg bg-magenta px-5 text-xs font-bold text-white gc-disabled-control">{replySaving ? "Saving reply…" : "Save reply"}</button></div>) : null}
                 {recordId ? <div className="mt-4 grid gap-3 rounded-xl border border-plum/10 bg-cream/55 p-4 text-xs sm:grid-cols-2"><div><b className="text-plum">Moderation status</b><p className="mt-1 text-ink/65">{String(review.moderation_status || "Published")}</p></div><div><b className="text-plum">Dispute status</b><p className="mt-1 text-ink/65">{String(review.dispute_status || "None")}</p></div>{review.moderation_reason ? <div className="sm:col-span-2"><b className="text-plum">Platform decision</b><p className="mt-1 leading-5 text-ink/65">{String(review.moderation_reason)}</p></div> : null}</div> : null}
-                {recordId ? <div className="mt-4 rounded-xl border border-plum/10 p-4"><b className="text-plum">Audit history</b><div className="mt-3 space-y-2">{([...(Array.isArray(review.moderation_events) ? review.moderation_events as Row[] : []), ...(Array.isArray(review.dispute_events) ? review.dispute_events as Row[] : [])]).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))).map((event)=><div key={String(event.id)} className="rounded-lg bg-cream px-3 py-2 text-xs"><span className="font-semibold">{String(event.action || "Updated")}</span><span className="ml-2 text-ink/50">{dateText(event.created_at)}</span>{event.reason ? <p className="mt-1 text-ink/65">{String(event.reason)}</p> : null}</div>)}{!(Array.isArray(review.moderation_events) && review.moderation_events.length) && !(Array.isArray(review.dispute_events) && review.dispute_events.length) ? <p className="text-ink/50">No later moderation action has been recorded.</p> : null}</div></div> : null}
+                {recordId ? <div className="mt-4 rounded-xl border border-plum/10 p-4"><b className="text-plum">Audit history</b><div className="mt-3 space-y-2">{([...(Array.isArray(review.moderation_events) ? review.moderation_events as Row[] : []), ...(Array.isArray(review.dispute_events) ? review.dispute_events as Row[] : [])]).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))).map((event)=><div key={String(event.id)} className="rounded-lg bg-cream px-3 py-2 text-xs"><span className="font-semibold">{String(event.action || "Updated")}</span><span className="ml-2 text-ink/50">{dateText(event.created_at, c.salon.time_zone, c.locale)}</span>{event.reason ? <p className="mt-1 text-ink/65">{String(event.reason)}</p> : null}</div>)}{!(Array.isArray(review.moderation_events) && review.moderation_events.length) && !(Array.isArray(review.dispute_events) && review.dispute_events.length) ? <p className="text-ink/50">No later moderation action has been recorded.</p> : null}</div></div> : null}
                 {recordId && disputeId === review.id ? (
                   <form
                     className="mt-4 rounded-xl border border-magenta/20 bg-blush/30 p-4"
@@ -4714,7 +4715,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const timeZone = String(c.salon.time_zone || "America/New_York");
   const styles = new Map(c.styles.map((row) => [String(row.id), row]));
   const stylists = new Map(c.stylists.map((row) => [String(row.id), row]));
-  const transactions = c.bookings.map((booking) =>
+  const transactions = c.bookings.filter(booking => !isBusinessAdded(booking)).map((booking) =>
     bookingTransaction(
       booking,
       c.salon,
@@ -4749,7 +4750,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     ),
   ].sort();
   const money = (value: unknown) =>
-    new Intl.NumberFormat("en-US", {
+    new Intl.NumberFormat(c.locale, {
       style: "currency",
       currency: "USD",
     }).format(Number(value || 0));
@@ -4777,7 +4778,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     `/salon/dashboard/earnings/${encodeURIComponent(String(bookingId))}${ledgerParams.size ? `?${ledgerParams}` : ""}`;
   if (recordId) {
     return <>
-      <OwnerDetailHeader title={selectedTransaction ? `Transaction ${String(selectedTransaction.public_reference || "")}` : "Transaction details"} subtitle={selectedTransaction ? `${String(selectedTransaction.customer)} · ${dateText(selectedTransaction.date, timeZone)}` : "This transaction could not be found."} fallbackHref={ledgerReturnHref} status={selectedTransaction ? String(selectedTransaction.financial_status || selectedTransaction.payout_status || "Recorded") : "Unavailable"}/>
+      <OwnerDetailHeader title={selectedTransaction ? `Transaction ${String(selectedTransaction.public_reference || "")}` : "Transaction details"} subtitle={selectedTransaction ? `${String(selectedTransaction.customer)} · ${dateText(selectedTransaction.date, timeZone, c.locale)}` : "This transaction could not be found."} fallbackHref={ledgerReturnHref} status={selectedTransaction ? String(selectedTransaction.financial_status || selectedTransaction.payout_status || "Recorded") : "Unavailable"}/>
       <Panel>{selectedTransaction ? <><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Deposit collected" value={money(selectedTransaction.deposit_collected)} icon={CircleDollarSign}/><Metric label="Refund" value={money(selectedTransaction.refund_amount)} icon={CircleDollarSign}/><Metric label="Balance due" value={money(selectedTransaction.balance_due)} icon={Clock3}/><Metric label="Net owed to salon" value={money(selectedTransaction.net_amount_owed_salon)} icon={BadgeCheck}/></div><LedgerEvidence row={selectedTransaction} money={money}/></> : <Empty text="The transaction is unavailable or outside this salon."/>}</Panel>
     </>;
   }
@@ -4870,17 +4871,17 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <div><h2 className="font-serif text-xl text-plum">Transaction ledger</h2><p className="mt-1 text-xs gc-text-secondary">Authoritative booking, refund, transfer, and payout evidence. Totals above follow these filters.</p></div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(170px,1fr)_150px_145px_145px_auto]">
             <input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search customer or reference" className="min-h-11 rounded-lg border border-plum/15 px-3 text-xs"/>
-            <select value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{statuses.map((value)=><option key={value}>{value}</option>)}</select>
+            <select aria-label="Transaction status" value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{statuses.map((value)=><option key={value}>{value}</option>)}</select>
             <label className="text-[10px] font-bold text-plum">From<input aria-label="Ledger start date" type="date" value={fromDate} onChange={(event)=>setFromDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal text-ink"/></label>
             <label className="text-[10px] font-bold text-plum">To<input aria-label="Ledger end date" type="date" value={toDate} onChange={(event)=>setToDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3 text-xs font-normal text-ink"/></label>
             <button type="button" onClick={exportLedger} className="min-h-11 rounded-lg border border-magenta px-4 text-xs font-bold text-magenta">Export CSV</button>
           </div>
         </div>
         <div className="mt-4 space-y-3 md:hidden">
-          {visible.map((row)=><Link key={String(row.booking_id)} href={transactionHref(row.booking_id)} className="block rounded-xl border border-plum/10 bg-white p-4"><span className="flex items-start justify-between gap-3"><span><b>{String(row.public_reference||"Booking")}</b><small className="mt-1 block text-ink/55">{String(row.customer)} · {dateText(row.date,timeZone)}</small></span><Status value={String(row.financial_status||row.payout_status)}/></span><span className="mt-3 inline-block text-xs font-bold text-magenta">View transaction</span></Link>)}
+          {visible.map((row)=><Link key={String(row.booking_id)} href={transactionHref(row.booking_id)} className="block rounded-xl border border-plum/10 bg-white p-4"><span className="flex items-start justify-between gap-3"><span><b>{String(row.public_reference||"Booking")}</b><small className="mt-1 block text-ink/55">{String(row.customer)} · {dateText(row.date,timeZone, c.locale)}</small></span><Status value={String(row.financial_status||row.payout_status)}/></span><span className="mt-3 inline-block text-xs font-bold text-magenta">View transaction</span></Link>)}
           {!visible.length?<Empty text="No transactions match these filters."/>:null}
         </div>
-        <div className="mt-4 hidden overflow-x-auto md:block"><table className="w-full min-w-[1180px] text-left text-xs">
+        <div className="mt-4 hidden overflow-x-auto md:block" role="region" aria-label="Transaction ledger" tabIndex={0}><table className="w-full min-w-[1180px] text-left text-xs">
           <thead>
             <tr>
               {[
@@ -4903,7 +4904,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           <tbody>
             {visible.map((row) => (
               <tr key={String(row.booking_id)} className="border-b border-plum/10 align-top">
-                <td className="py-3 pr-3">{dateText(row.date,timeZone)}<b className="mt-1 block">{String(row.public_reference)}</b></td>
+                <td className="py-3 pr-3">{dateText(row.date,timeZone, c.locale)}<b className="mt-1 block">{String(row.public_reference)}</b></td>
                 <td className="pr-3">{String(row.customer)}<span className="mt-1 block text-ink/50">{String(row.transaction_type)}</span></td>
                 <td className="pr-3">{money(row.original_service_value)}<span className="mt-1 block text-ink/50">− {money(row.discount)}</span></td>
                 <td className="pr-3">{money(row.deposit_collected)}<span className="mt-1 block gc-text-primary">Balance {money(row.balance_due)}</span></td>
@@ -5043,7 +5044,7 @@ function Promotions({ c }: { c: Ctx }) {
               <span>
                 <b>{String(p.title || "Promotion")}</b>
                 <span className="block text-ink/50">
-                  {dateText(p.starts_at)} – {dateText(p.ends_at)}
+                  {dateText(p.starts_at, c.salon.time_zone, c.locale)} – {dateText(p.ends_at, c.salon.time_zone, c.locale)}
                 </span>
               </span>
               <Status value={p.is_active ? "Active" : "Ended"} />
@@ -5436,7 +5437,7 @@ function Empty({ text }: { text: string }) {
     </div>
   );
 }
-function salonWeek(timeZone: string, offsetWeeks = 0) {
+function salonWeek(timeZone: string, offsetWeeks = 0, locale = "en-US") {
   const today = dateKeyInTimeZone(new Date(), timeZone);
   const cursor = new Date(`${today}T12:00:00Z`);
   const daysFromMonday = (cursor.getUTCDay() + 6) % 7;
@@ -5447,11 +5448,11 @@ function salonWeek(timeZone: string, offsetWeeks = 0) {
     date.setUTCDate(cursor.getUTCDate() + index);
     return {
       key: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString("en-US", {
+      label: date.toLocaleDateString(locale, {
         weekday: "short",
         timeZone: "UTC",
       }),
-      day: date.toLocaleDateString("en-US", {
+      day: date.toLocaleDateString(locale, {
         month: "short",
         day: "numeric",
         timeZone: "UTC",
@@ -5459,29 +5460,29 @@ function salonWeek(timeZone: string, offsetWeeks = 0) {
     };
   });
 }
-function weekRangeLabel(week: Array<{ key: string; label: string; day: string }>) {
+function weekRangeLabel(week: Array<{ key: string; label: string; day: string }>, locale = "en-US") {
   if (!week.length) return "";
   const start = new Date(`${week[0].key}T12:00:00Z`);
   const end = new Date(`${week[week.length - 1].key}T12:00:00Z`);
-  return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+  return `${start.toLocaleDateString(locale, { month: "short", day: "numeric", timeZone: "UTC" })} – ${end.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
 }
-function bookingTime(value: unknown, timeZone: string) {
+function bookingTime(value: unknown, timeZone: string, locale = "en-US") {
   if (!value) return "Time not set";
   const date = new Date(String(value));
   return Number.isNaN(date.getTime())
     ? "Time not set"
-    : date.toLocaleTimeString("en-US", {
+    : date.toLocaleTimeString(locale, {
         hour: "numeric",
         minute: "2-digit",
         timeZone,
       });
 }
-function dateText(value: unknown, timeZone = "America/New_York") {
+function dateText(value: unknown, timeZone = "America/New_York", locale = "en-US") {
   if (!value) return "—";
   const d = new Date(String(value));
   return Number.isNaN(d.getTime())
     ? String(value)
-    : d.toLocaleString("en-US", {
+    : d.toLocaleString(locale, {
         month: "short",
         day: "numeric",
         hour: "numeric",
@@ -5490,10 +5491,12 @@ function dateText(value: unknown, timeZone = "America/New_York") {
       });
 }
 function styleName(c: Ctx, id: unknown) {
-  return String(c.styles.find((s) => s.id === id)?.name || "Braiding Service");
+  const name = c.styles.find((s) => s.id === id)?.name;
+  return name ? <span data-no-translate>{String(name)}</span> : "Braiding Service";
 }
 function stylistName(c: Ctx, id: unknown) {
-  return String(c.stylists.find((s) => s.id === id)?.name || "Any stylist");
+  const name = c.stylists.find((s) => s.id === id)?.name;
+  return name ? <span data-no-translate>{String(name)}</span> : "Any stylist";
 }
 function optionText(value: unknown) {
   if (!Array.isArray(value)) return "";

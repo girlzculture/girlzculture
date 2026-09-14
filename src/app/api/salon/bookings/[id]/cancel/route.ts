@@ -26,6 +26,7 @@ async function POSTHandler(request: Request, context: { params: Promise<{ id: st
     if (String(booking.status).toLowerCase() === "cancelled") return Response.json({ ok: true, booking, already_cancelled: true });
     if (["completed", "refunded"].includes(String(booking.status).toLowerCase())) throw new Error("This booking can no longer be cancelled.");
 
+    if (booking.booking_origin === "business_added") return Response.json({ code: "MANUAL_APPOINTMENT_WORKFLOW_REQUIRED", error: "Use the business-added appointment preview to cancel this appointment." }, { status: 409 });
     const refund = await requestBookingDepositRefund({
       admin,
       booking,

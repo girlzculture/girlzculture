@@ -1,0 +1,95 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { typescriptLoader } from './helpers/load-typescript.mjs';
+const business = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', actor = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const service = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', professional = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const manual = { guest_name: 'Sheila', guest_phone: '', guest_email: '', style_id: service, service_name: '', duration_minutes: null, stylist_id: null, date: '2030-09-24', time: '13:00', source: 'phone', notes: 'Private original note' };
+function fixture(overrides = {}) {
+  const calls = [];
+  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], ...overrides.tables };
+  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
+    const filters = []; let one = false, first = 0, last = Infinity;
+    const q = { select() { return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
+  } };
+  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/contentModerationServer': { moderatePublicContent: async()=>({allowed:true}) }, '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
+  const server = load('src/lib/gcAssistantServer.ts');
+  const context = { admin, salon: { id: business, subscription_status:'active',time_zone:'America/New_York',profile_views:29 }, user:{id:actor},isOwner:!overrides.teamMember, teamMember:overrides.teamMember };
+  return { calls, load, run:(tool,args)=>server.executeAssistantTool(context,{tool,args,locale:'en',requestId:professional}) };
+}
+test('manual preparation derives duration and buffer from authoritative service and does not write a booking',async()=>{
+  const f=fixture(); const result=await f.run('prepare_manual_appointment',manual);
+  assert.equal(result.request.execution_payload.duration_minutes,60); assert.equal(result.request.execution_payload.buffer_minutes,15);
+  assert.equal(result.request.execution_payload.appointment_datetime,'2030-09-24T17:00:00.000Z');
+  assert.equal(result.request.execution_payload.payment_status,'Not collected by Girlz Culture');
+  assert.equal(f.calls.filter(row=>row.name==='save_gc_assistant_request').length,1);
+  assert.ok(f.calls.some(row=>row.calendar?.salonId===business));
+});
+test('missing service and variable duration require one precise clarification',async()=>{
+  await assert.rejects(fixture().run('prepare_manual_appointment',{...manual,style_id:null}),/ASSISTANT_SERVICE_CLARIFICATION_REQUIRED/);
+  await assert.rejects(fixture({tables:{styles:[{id:service,salon_id:business,name:'Braids',duration_min_hours:1,duration_max_hours:3,buffer_minutes:15}]}}).run('prepare_manual_appointment',manual),/ASSISTANT_DURATION_CLARIFICATION_REQUIRED/);
+});
+test('multiple professionals are not silently assigned and foreign professional identities are rejected',async()=>{
+  const f=fixture({tables:{stylists:[{id:professional,salon_id:business,is_active:true},{id:service,salon_id:business,is_active:true}]}});
+  await assert.rejects(f.run('prepare_manual_appointment',manual),/ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED/);
+  await assert.rejects(f.run('prepare_manual_appointment',{...manual,stylist_id:actor}),/ASSISTANT_RECORD_NOT_FOUND/);
+});
+test('occupied time, foreign services, revoked access and invented durations never create proposals',async()=>{
+  for (const [options,args,error] of [[{conflict:true},manual,/ASSISTANT_AVAILABILITY_CONFLICT/],[{}, {...manual,style_id:actor},/ASSISTANT_RECORD_NOT_FOUND/],[{allowed:false},manual,/ASSISTANT_ACCESS_DENIED/],[{}, {...manual,duration_minutes:120},/ASSISTANT_INVALID_DURATION/]]) {
+    const f=fixture(options); await assert.rejects(f.run('prepare_manual_appointment',args),error);assert.equal(f.calls.filter(row=>row.name==='save_gc_assistant_request').length,0);
+  }
+});
+test('explicit noncatalog service and duration create no master style or fake customer',async()=>{
+  const result=await fixture().run('prepare_manual_appointment',{...manual,style_id:null,service_name:'Phone consultation',duration_minutes:30});
+  assert.equal(result.request.execution_payload.service_facts,null);assert.equal(result.request.arguments.style_id,null);
+  assert.equal(result.request.execution_payload.duration_minutes,30);
+});
+test('existing marketplace bookings cannot be changed with manual-only actions',async()=>{
+  const f=fixture({tables:{bookings:[{id:service,salon_id:business,booking_origin:'marketplace',status:'Confirmed'}]}});
+  await assert.rejects(f.run('prepare_manual_cancellation',{booking_id:service,reason:'Phone call'}),/ASSISTANT_MANUAL_APPOINTMENT_REQUIRED/);
+});
+test('shared dashboard metrics separate workload from marketplace credit without inventing revenue',()=>{
+  const {ownerBusinessMetrics}=fixture().load('src/lib/ownerBusinessMetrics.ts');
+  const result=ownerBusinessMetrics([{booking_origin:'marketplace',estimated_total:100,status:'Completed',guest_email:'a@example.test'},{booking_origin:'business_added',source:'phone',estimated_total:999,status:'Completed',guest_email:'b@example.test'},{booking_origin:'business_added',source:'whatsapp',estimated_total:999,status:'Cancelled',cancelled_by:'salon'}]);
+  assert.equal(result.total_appointments,3);assert.equal(result.marketplace_bookings,1);assert.equal(result.business_added_appointments,2);assert.equal(result.completed_booking_value,100);assert.equal(result.customers,1);assert.equal(result.cancellation_rate,0);
+});
+
+test('stylist-linked team members cannot prepare another professional appointment or private note',async()=>{
+  const f=fixture({teamMember:{stylist_id:professional},tables:{bookings:[{id:service,salon_id:business,booking_origin:'business_added',status:'Confirmed',stylist_id:actor}]}});
+  await assert.rejects(f.run('prepare_booking_note',{booking_id:service,note:'Private'}),/ASSISTANT_ACCESS_DENIED/);
+  await assert.rejects(f.run('prepare_manual_cancellation',{booking_id:service,reason:'Phone'}),/ASSISTANT_ACCESS_DENIED/);
+  await assert.rejects(f.run('prepare_manual_appointment',manual),/ASSISTANT_ACCESS_DENIED/);
+});
+
+test('broader reads use business filters and safe authoritative fields',async()=>{
+  const range={start:'2030-09-24T00:00:00Z',end:'2030-09-25T00:00:00Z'};
+  const rows=[{id:service,salon_id:business,name:'Owned',title:'Owned',created_at:range.start,appointment_datetime:'2030-09-24T17:00:00Z',status:'Completed',booking_origin:'marketplace',estimated_total:100,guest_name:'Sheila',guest_email:'private@example.test'},{id:actor,salon_id:actor,name:'Foreign',title:'Foreign',created_at:range.start,appointment_datetime:'2030-09-24T17:00:00Z',status:'Completed',estimated_total:900}];
+  const f=fixture({tables:{stylists:rows,salon_products:rows,salon_promotions:rows,reviews:rows,bookings:rows,booking_messages:[{id:professional,salon_id:business,booking_id:service,body:'Original'}]}});
+  for(const [tool,args,key] of [['get_professionals',{query:''},'professionals'],['get_products',{query:''},'products'],['get_promotions',{},'promotions'],['get_reviews',range,'reviews'],['get_customers',range,'customers'],['get_booking_messages',{booking_id:service},'messages']]) {
+    const result=(await f.run(tool,args)).request.result;assert.equal(result[key].length,1,tool);assert.equal(JSON.stringify(result).includes('Foreign'),false,tool);
+  }
+  const earnings=(await f.run('get_earnings_summary',range)).request.result;
+  assert.equal(earnings.completed_booking_value,100);assert.equal(earnings.cash_revenue,null);
+  const summary=(await f.run('get_business_summary',range)).request.result;
+  assert.equal(summary.total_appointments,1);assert.equal(summary.profile_views,29);assert.ok(summary.calendar_gaps);
+  assert.equal(JSON.stringify(summary).includes('Sheila'),false);assert.equal(JSON.stringify(summary).includes('private@example.test'),false);
+  assert.ok((await f.run('get_profile_completion',{})).request.result.profile_completion>=0);
+  assert.equal((await f.run('get_plan_status',{})).request.result.billing_changes_require_subscription_workflow,true);
+  assert.ok((await f.run('get_upcoming_appointments',range)).request.result.bookings.length===1);
+  assert.ok((await f.run('get_availability',{date:manual.date,style_id:null,stylist_id:null})).request.result.gaps.length);
+});
+
+test('catalog and hours preparations share dashboard validation and never publish records',async()=>{
+  const f=fixture({tables:{styles:[{id:service,salon_id:business,is_draft:true}],stylists:[],salon_products:[],salon_promotions:[]}});
+  for(const [tool,args,table] of [
+    ['prepare_service_edit',{style_id:service,name:'Braids',price:180,duration_hours:2,buffer_minutes:15},'styles'],
+    ['prepare_professional_draft',{id:null,name:'Danielle',bio:'Original bio',specialties:['Braids'],years_experience:5},'stylists'],
+    ['prepare_product_draft',{id:null,name:'Conditioner',description:'Original description',price:25},'salon_products'],
+    ['prepare_promotion_draft',{id:null,title:'Autumn',description:'Original offer',promotion_type:'percentage',discount_value:10,start:'2030-09-24T00:00:00Z',end:'2030-09-25T00:00:00Z',time_zone:'America/New_York'},'salon_promotions'],
+  ]) {
+    const result=(await f.run(tool,args)).request;assert.equal(result.execution_payload.table,table);
+    assert.equal(result.risk_class,3);assert.equal(result.result,null);assert.equal(result.execution_payload.values.is_active===true,false);
+  }
+  const hours=Object.fromEntries(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day=>[day,{open:'09:00',close:'18:00',closed:false}]));
+  assert.equal((await f.run('prepare_business_hours',{hours})).request.execution_payload.hours.Mon.close,'18:00');
+  await assert.rejects(fixture().run('prepare_service_edit',{style_id:service,name:'Braids',price:180,duration_hours:2,buffer_minutes:15}),/ASSISTANT_DRAFT_REQUIRED/);
+});

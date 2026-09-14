@@ -42,6 +42,7 @@ type Draft = {
   safety_flags: string[];
   created_at: string;
 };
+type AssistantAudit = { id: string; salon_id: string; requested_by: string; locale: string; tool: string; risk_class: number; permission: string; confirmed_at: string | null; failure_code: string | null; created_at: string };
 
 function featureConfigurationState(
   feature: Feature,
@@ -80,6 +81,7 @@ export default function AiAutomationManager() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [usage, setUsage] = useState<Usage[]>([]);
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [assistantAudit, setAssistantAudit] = useState<AssistantAudit[]>([]);
   const [killSwitch, setKillSwitch] = useState(true);
   const [selectedKey, setSelectedKey] = useState("");
   const [input, setInput] = useState("");
@@ -107,6 +109,7 @@ export default function AiAutomationManager() {
       setProviders(Array.isArray(body.providers) ? body.providers : []);
       setUsage(Array.isArray(body.usage) ? body.usage : []);
       setDrafts(Array.isArray(body.drafts) ? body.drafts : []);
+      setAssistantAudit(Array.isArray(body.assistantAudit) ? body.assistantAudit : []);
       setKillSwitch(body.killSwitch !== false);
       setSelectedKey((current) => current || rows[0]?.feature_key || "");
     } catch (error) {
@@ -474,6 +477,11 @@ export default function AiAutomationManager() {
           </div>
         </section>
       ) : null}
+      <section className="rounded-2xl border border-plum/10 bg-white p-5">
+        <h3 className="font-serif text-xl text-plum">GC Assistant execution audit</h3>
+        <p className="mt-2 text-xs gc-text-secondary">Latest 100 requests. Business and user references identify each authorized action. Customer message text and private tool content are excluded from this operator view.</p>
+        <div className="mt-4 space-y-3">{assistantAudit.map(row => <article key={row.id} className="break-words rounded-xl border p-3 text-xs"><p className="font-semibold">{row.tool} · Risk {row.risk_class} · {row.locale}</p><dl className="mt-2 space-y-1"><div><dt className="inline font-semibold">Request: </dt><dd className="inline">{row.id}</dd></div><div><dt className="inline font-semibold">Business: </dt><dd className="inline">{row.salon_id}</dd></div><div><dt className="inline font-semibold">Requested by: </dt><dd className="inline">{row.requested_by}</dd></div><div><dt className="inline font-semibold">Result: </dt><dd className="inline">{row.failure_code || (row.confirmed_at ? `Confirmed ${new Date(row.confirmed_at).toLocaleString()}` : row.risk_class === 1 ? "Read recorded" : "Awaiting confirmation")}</dd></div></dl></article>)}{!assistantAudit.length ? <p className="text-sm">No GC Assistant requests recorded.</p> : null}</div>
+      </section>
       {message ? (
         <p role="status" className="rounded-lg bg-blush p-3 text-xs text-plum">
           {message}

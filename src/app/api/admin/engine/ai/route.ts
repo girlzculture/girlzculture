@@ -16,7 +16,11 @@ async function GETHandler(request: Request) {
     ]);
     if (error) throw error;
     const providers = approvedAiProviders().map((key) => ({ key, configured: aiProviderConfigured(key), models: approvedAiModels(key) }));
-    return Response.json({ features: features || [], prompts: prompts || [], usage: usage || [], drafts: drafts || [], providers, killSwitch: kill?.published_value !== false });
+    // Engine operators see execution evidence without private message bodies,
+    // profile prose, raw tool arguments or provider payloads.
+    const assistantAudit = await admin.from("gc_assistant_requests").select("id,salon_id,requested_by,locale,tool,risk_class,permission,confirmed_at,failure_code,created_at").order("created_at", { ascending: false }).limit(100);
+    if (assistantAudit.error) throw assistantAudit.error;
+    return Response.json({ features: features || [], prompts: prompts || [], usage: usage || [], drafts: drafts || [], providers, killSwitch: kill?.published_value !== false, assistantAudit: assistantAudit.data || [] }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     noteOperationalFailure("AI Engine load failed", error);
     return errorResponse(error, "Unable to load AI and automation controls.");

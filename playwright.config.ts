@@ -14,11 +14,14 @@ const acceptanceEnvironment = {
   NEXT_PUBLIC_SUPABASE_URL: acceptanceSupabaseURL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "acceptance-fixture-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "acceptance-fixture-service-role-key",
+  // Existing marketplace suites exercise the live-state contract using local
+  // fixtures. The separate prelaunch suite exercises the missing/off flag.
+  CUSTOMER_MARKETPLACE_LIVE: "true",
 };
 
 const publicResponsiveSpec = /public-responsive\.spec\.ts/;
 const crossBrowserSmoke =
-  /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly/;
+  /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 operational calendar/;
 const portraitMobileChecks =
   /homepage shell has no overflow|homepage removes the intro|mobile promotion swipe|primary mobile controls|mobile public navigation/;
 const narrowPhoneChecks =
@@ -32,10 +35,14 @@ const tabletLandscapeChecks =
 
 export default defineConfig({
   testDir: "./tests/browser",
+  // The off-state suite starts its own server without the launch flag.
+  testIgnore: /p0-prelaunch\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: true,
-  workers: process.env.CI ? 1 : undefined,
+  // Normal CI runs the full expanded collection with two workers. Independent
+  // release-candidate shards keep their existing single-worker allocation.
+  workers: process.env.PLAYWRIGHT_CI_WORKERS === "2" ? 2 : process.env.CI ? 1 : undefined,
   retries: 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
@@ -68,14 +75,14 @@ export default defineConfig({
     },
     {
       name: "firefox",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/],
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-operational-calendar\.spec\.ts/],
       grep: crossBrowserSmoke,
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/],
-      grep: crossBrowserSmoke,
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-owner-inventory\.spec\.ts/, /p0-owner-populated\.spec\.ts/, /p0-assistant-skills\.spec\.ts/, /p0-locale-lifecycle\.spec\.ts/, /p0-booking-recipients\.spec\.ts/, /p0-public-policy\.spec\.ts/, /p0-operational-calendar\.spec\.ts/],
+      grep: /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 policy publication|P0 owner route inventory|P0 populated owner|P0 booking composer|P0 original service|P0 Assistant launcher|P0 Assistant all skills|P0 account locale|P0 booking recipient|P0 public policy|P0 operational calendar/,
       use: { ...devices["Desktop Safari"] },
     },
     {

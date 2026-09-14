@@ -1,10 +1,20 @@
 import fs from "node:fs";
+import assert from "node:assert/strict";
+import { resolveInterfaceMessage } from "../src/lib/localizationCore.ts";
+
+// Execute fallback precedence instead of pinning one source-code spelling.
+const sample = { locale: "en", key: "sample", remote: {}, english: { sample: "English baseline" } };
+assert.equal(resolveInterfaceMessage(sample), "English baseline");
+assert.equal(resolveInterfaceMessage({ ...sample, fallback: "Founder copy" }), "Founder copy");
+assert.equal(resolveInterfaceMessage({ ...sample, fallback: "Founder copy", remote: { sample: "Published copy" } }), "Published copy");
+assert.equal(resolveInterfaceMessage({ ...sample, key: "unknown" }), "");
+assert.equal(resolveInterfaceMessage({ ...sample, locale: "fr", sourceCatalog: { "English baseline": "Texte français" } }), "Texte français");
 
 const read = (path) => fs.readFileSync(path, "utf8");
 const checks = [
   ["dynamic locale registry", read("src/app/api/i18n/route.ts"), /supported_locales/],
   ["broad locale seed", read("supabase/migrations/20260721100000_engine_localization_ai_system.sql"), /'ht','Haitian Creole'/],
-  ["safe English fallback", read("src/components/i18n/LocaleProvider.tsx"), /ENGLISH_MESSAGES\[key\]\s*\|\|\s*fallback\s*\|\|\s*""/],
+  ["tested safe English fallback", read("src/components/i18n/LocaleProvider.tsx"), /resolveInterfaceMessage\(\{ locale, key, fallback, remote, english: ENGLISH_MESSAGES/],
   ["persistent locale cookie", read("src/components/i18n/LocaleProvider.tsx"), /gc_locale=/],
   ["account preference", read("src/components/i18n/LocaleProvider.tsx"), /persistAccountLocale/],
   ["right-to-left runtime", read("src/components/i18n/LocaleProvider.tsx"), /document\.documentElement\.dir/],

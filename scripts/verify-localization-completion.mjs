@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { DASHBOARD_SOURCE_MESSAGES } from "../src/i18n/dashboard-source-catalog.ts";
+import { typescriptLoader } from "../tests/helpers/load-typescript.mjs";
+// Execute the same alias-importing application module used by the client.
+const { DASHBOARD_SOURCE_MESSAGES } = typescriptLoader(process.cwd())("src/i18n/dashboard-source-catalog.ts");
 import {
   canGenerateTranslationDraft,
   resolveSourceTranslation,
@@ -82,8 +84,8 @@ assert.deepEqual(
     now,
   }),
   {
-    body: "See you tomorrow",
-    original_body: "See you tomorrow",
+    body: " See you tomorrow ",
+    original_body: " See you tomorrow ",
     translated_body: "À demain",
     translation_locale: "fr",
     translation_provider: "openai",

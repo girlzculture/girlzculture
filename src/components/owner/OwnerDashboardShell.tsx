@@ -25,6 +25,7 @@ import RoleLogoutButton, {
   RoleSessionBoundary,
 } from "@/components/auth/RoleLogoutButton";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import { GcAssistantLauncher } from "@/components/owner/GcAssistant";
 import DashboardNotificationCenter, {
   type DashboardNotification,
 } from "@/components/notifications/DashboardNotificationCenter";
@@ -241,10 +242,10 @@ export default function OwnerDashboardShell({
           />
           <Link
             href={homeHref}
-            className="font-serif text-[27px] font-bold text-plum lg:block"
+            className="shrink-0 font-serif text-[22px] font-bold leading-none text-plum sm:text-[27px] lg:block"
           >
             Girlz
-            <span className="ml-1 text-[9px] uppercase tracking-[0.22em] text-amber">
+            <span className="mt-1 block text-[8px] uppercase tracking-[0.22em] text-amber sm:ml-1 sm:mt-0 sm:inline sm:text-[9px]">
               Culture
             </span>
           </Link>
@@ -262,7 +263,7 @@ export default function OwnerDashboardShell({
               initialNotifications={notifications}
               onCounts={handleNotificationCounts}
             />
-            <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-blush text-plum">
+            <div className="hidden h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-blush text-plum sm:grid">
               {avatar ? (
                 <SafeImage
                   src={avatar}
@@ -274,7 +275,7 @@ export default function OwnerDashboardShell({
                 <UserRound aria-hidden="true" size={19} />
               )}
             </div>
-            <span className="hidden max-w-44 truncate text-xs font-semibold sm:block">
+            <span data-no-translate className="hidden max-w-44 truncate text-xs font-semibold sm:block">
               {salonName}
             </span>
             <ChevronDown
@@ -284,7 +285,10 @@ export default function OwnerDashboardShell({
             />
           </div>
         </header>
-        <main className="min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">
+        <div className="flex justify-end border-b border-plum/10 bg-white px-4 py-2 sm:px-6 lg:px-8">
+          <GcAssistantLauncher />
+        </div>
+        <main data-owner-workspace className="min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">
           {children}
         </main>
       </div>

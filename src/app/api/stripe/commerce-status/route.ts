@@ -36,7 +36,7 @@ async function GETHandler(request: Request) {
         ? admin
             .from("bookings")
             .select(
-              "public_reference,confirmation_code,status,appointment_datetime",
+              "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
             )
             .eq("id", intent.booking_id)
             .single()

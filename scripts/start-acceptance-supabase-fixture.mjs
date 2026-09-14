@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { p0PublicPolicyFixture } from "../tests/fixtures/p0-public-policy.mjs";
 
 const host = "127.0.0.1";
 const port = Number(
@@ -60,6 +61,8 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (await p0PublicPolicyFixture(request, response, url, json, readFixtureJson)) return;
+
   if (url.pathname.startsWith("/__fixtures/business-signup/") && method === "POST") {
     const scope = url.pathname.slice("/__fixtures/business-signup/".length);
     if (!businessCmsScope.test(scope) || request.headers["x-acceptance-fixture"] !== "business-signup-cms") {
@@ -93,6 +96,12 @@ const server = createServer(async (request, response) => {
       try {
         const body = await readFixtureJson(request);
         const slug = String(body.p_slug || "");
+        // Only the separate prelaunch fixture seeds published legal routes.
+        // This is fixture copy, never legal advice or a production policy.
+        if (process.env.P0_PRELAUNCH_FIXTURE === "true" && ["terms", "privacy"].includes(slug)) {
+          json(response, 200, { slug, title: slug === "terms" ? "Terms of Service" : "Privacy Policy", status: "Published", is_enabled: true, sections: [{ type: "text", title: "Local fixture only", body: "Published legal-page fixture for route reachability. Not a legal document." }] });
+          return;
+        }
         const scope = slug.slice("business-signup-acceptance-".length);
         if (slug.startsWith("business-signup-acceptance-") && businessCmsScope.test(scope)) {
           json(response, 200, businessCmsRecords.get(scope) ?? null);

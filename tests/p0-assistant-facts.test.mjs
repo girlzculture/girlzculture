@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { typescriptLoader } from './helpers/load-typescript.mjs';
+
+function fixture() {
+  const dates = [];
+  const { Facts } = typescriptLoader(process.cwd(), {
+    '@/components/i18n/LocaleProvider': { useI18n: () => ({ translateSource: value => ({ Confirmed: 'Confirmé', Active: 'Actif', Business: 'Entreprise', 'Percentage discount': 'Réduction en pourcentage', Tuesday: 'mardi', Welcome: 'Bienvenue', Waist: 'Taille' })[value] || value, formatNumber: String, formatCurrency: value => `USD ${value}`, formatDate: (value, options) => { dates.push({ value, ...options }); return 'date affichée'; } }) },
+    '@/lib/supabase': {}, 'next/link': { default: 'a' },
+  })('src/components/owner/GcAssistant.tsx');
+  function render(node) {
+    if (node == null || typeof node === 'boolean') return '';
+    if (Array.isArray(node)) return node.map(render).join(' ');
+    if (typeof node !== 'object') return String(node);
+    if (typeof node.type === 'function') return render(node.type(node.props));
+    return render(node.props?.children);
+  }
+  return { dates, render: value => render(Facts({ value })) };
+}
+test('Assistant nested booking facts retain the business timezone, localized status and original customer name', () => {
+  const app = fixture(); const rendered = app.render({ time_zone: 'Asia/Shanghai', bookings: [{ guest_name: 'Save {value1} $180', appointment_datetime: '2026-09-13T16:00:00Z', status: 'Confirmed' }] });
+  assert.match(rendered, /Save \{value1\} \$180/); assert.match(rendered, /Confirmé/);
+  assert.equal(app.dates[0].timeZone, 'Asia/Shanghai');
+});
+test('Assistant hours and option prices are formatted without leaking database keys or changing original names', () => {
+  const app = fixture(); const rendered = app.render({ hours: { Tue: { open: '09:00', close: '19:00', closed: false } }, services: [{ name: 'Save', length_options: [{ label: 'Owner original', price_add: 25 }] }], unknown_internal_column: 'hidden' });
+  assert.match(rendered, /mardi/); assert.match(rendered, /USD 25/); assert.match(rendered, /Owner original/);
+  assert.doesNotMatch(rendered, /unknown_internal_column|price_add|hidden/);
+  assert.equal(app.dates.length, 2); assert.ok(app.dates.every(date => date.timeZone === 'UTC'));
+});
+
+test('Assistant provides an explicit expansion for returned records beyond the initial thirty', () => {
+  const app = fixture();
+  const rendered = app.render({ bookings: Array.from({ length: 31 }, (_, index) => ({ guest_name: `Original person ${index}` })) });
+  assert.match(rendered, /Show \{value0\} more results/);
+  assert.match(rendered, /Original person 30/);
+});
+
+test('Assistant translates policy enums and canonical lengths without interpreting a matching user name or prose as an enum', () => {
+  const app = fixture();
+  const rendered = app.render({ name: 'welcome', description: 'contact_business', policy: { guests: 'welcome' }, length_options: [{ label: 'Waist', price_add: 40 }], services: [{ name: 'Waist' }] });
+  assert.match(rendered, /Name welcome/);
+  assert.match(rendered, /Description contact_business/);
+  assert.match(rendered, /Guests Bienvenue/);
+  assert.match(rendered, /Name Taille/);
+  assert.match(rendered, /Name Waist/);
+});
+
+test('new refund choices and booking source codes render labels while private prose stays original',()=>{
+  const app=fixture();const rendered=app.render({policy:{refund_satisfaction:'case_by_case',refund_terms:'case_by_case'},source_breakdown:{phone:2,walk_in:1},profile_views_period:'all_time'});
+  assert.match(rendered,/Requests reviewed individually/);assert.match(rendered,/Phone 2/);assert.match(rendered,/Walk-in 1/);assert.match(rendered,/All time/);
+  assert.match(rendered,/Business refund and satisfaction terms case_by_case/);
+});
+
+test('expanded subscription, sender and promotion enums are localized without changing original prose',()=>{
+  const app=fixture();const rendered=app.render({subscription:{status:'active'},messages:[{sender_role:'salon',original_body:'active'}],promotions:[{promotion_type:'percentage'}]});
+  assert.match(rendered,/Status Actif/);assert.match(rendered,/Sender Entreprise/);assert.match(rendered,/Offer type Réduction en pourcentage/);assert.match(rendered,/Original message active/);
+});

@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -16,14 +17,17 @@ import {
   type AppLocale,
   type LocaleOption,
 } from "@/i18n/catalog";
-import { resolveSourceTranslation } from "@/lib/localizationCore";
+import { resolveSourceTranslation, resolveInterfaceMessage, interpolateInterfaceValues } from "@/lib/localizationCore";
 import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
+import { usePathname } from "next/navigation";
+import { localeStorageKey, preferredLocale, localeAuthScope } from "@/lib/localePreferenceCore";
 
 type I18nContextValue = {
   locale: AppLocale;
   locales: LocaleOption[];
   coverage: { published: number; total: number; incomplete: boolean };
+  preferenceError: boolean;
   direction: "ltr" | "rtl";
   setLocale: (locale: AppLocale) => void;
   t: (
@@ -31,7 +35,7 @@ type I18nContextValue = {
     fallback?: string,
     values?: Record<string, string | number>,
   ) => string;
-  translateSource: (source: string) => string;
+  translateSource: (source: string, values?: Record<string, string | number>) => string;
   formatDate: (
     value: Date | string | number,
     options?: Intl.DateTimeFormatOptions,
@@ -75,21 +79,8 @@ const FALLBACK_LOCALES: LocaleOption[] = [
     text_direction: "ltr",
     sort_order: 4,
   },
+  { locale: "zh-CN", display_name: "Chinese (Simplified)", native_name: "中文（简体）", intl_locale: "zh-CN", text_direction: "ltr", sort_order: 5 },
 ];
-function scopeForPath(): AuthScope {
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname.startsWith("/admin")
-  )
-    return "admin";
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname.startsWith("/salon/")
-  )
-    return "salon";
-  return "customer";
-}
-
 export default function LocaleProvider({
   children,
   initialLocale = "en",
@@ -97,6 +88,12 @@ export default function LocaleProvider({
   children: React.ReactNode;
   initialLocale?: string;
 }) {
+  const pathname = usePathname();
+  const scope: AuthScope = localeAuthScope(pathname || "/", typeof window === "undefined" ? "" : window.location.hostname);
+  const actor = useRef<string | null>(null);
+  const selection = useRef(0);
+  const saves = useRef(Promise.resolve());
+  const [preferenceError, setPreferenceError] = useState(false);
   const [locale, setLocaleState] = useState<AppLocale>(() =>
     normalizeLocale(initialLocale),
   );
@@ -106,12 +103,12 @@ export default function LocaleProvider({
   );
   const [locales, setLocales] = useState<LocaleOption[]>(FALLBACK_LOCALES);
   const [coverage, setCoverage] = useState({ published: 0, total: 0, incomplete: false });
-  const persistAccountLocale = useCallback(async (safe: string) => {
+  const persistAccountLocale = useCallback(async (safe: string, version: number, targetActor: string | null) => {
     try {
-      const client = getSupabaseForScope(scopeForPath());
+      const client = getSupabaseForScope(scope);
       const { data } = await client.auth.getSession();
-      if (!data.session) return;
-      await fetch("/api/i18n/preference", {
+      if (!data.session || data.session.user.id !== targetActor) return;
+      const response = await fetch("/api/i18n/preference", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${data.session.access_token}`,
@@ -119,14 +116,17 @@ export default function LocaleProvider({
         },
         body: JSON.stringify({ locale: safe }),
       });
-    } catch (error) {
-      void error;
+      if (!response.ok) throw new Error("LOCALE_SAVE_FAILED");
+      if (version === selection.current) setPreferenceError(false);
+    } catch {
+      if (version === selection.current) setPreferenceError(true);
     }
-  }, []);
+  }, [scope]);
   const setLocale = useCallback(
     (next: AppLocale) => {
       const safe = normalizeLocale(next);
       if (!locales.some((item) => item.locale === safe)) return;
+      const version = ++selection.current;
       setLocaleState(safe);
       const direction =
         locales.find((item) => item.locale === safe)?.text_direction ||
@@ -134,44 +134,40 @@ export default function LocaleProvider({
       document.documentElement.lang = safe;
       document.documentElement.dir = direction;
       try {
-        localStorage.setItem("girlz-culture-locale", safe);
+        localStorage.setItem(localeStorageKey(scope, actor.current), safe);
       } catch {}
       document.cookie = `gc_locale=${safe}; Path=/; Max-Age=31536000; SameSite=Lax`;
-      void persistAccountLocale(safe);
+      const targetActor = actor.current;
+      saves.current = saves.current.then(() => persistAccountLocale(safe, version, targetActor));
     },
-    [locales, persistAccountLocale],
+    [locales, persistAccountLocale, scope],
   );
   useEffect(() => {
-    let saved = "";
-    try {
-      saved = localStorage.getItem("girlz-culture-locale") || "";
-    } catch {}
-    if (!saved || normalizeLocale(saved) === locale) return;
-    const timer = window.setTimeout(
-      () => setLocaleState(normalizeLocale(saved)),
-      0,
-    );
-    return () => window.clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const timer = window.setTimeout(async () => {
-      let saved = "";
+    let active = true; let generation = 0;
+    const client = getSupabaseForScope(scope);
+    async function restore() {
+      const serial = ++generation; const version = selection.current;
       try {
-        saved = localStorage.getItem("girlz-culture-locale") || "";
+        const { data } = await client.auth.getSession();
+        const userId = data.session?.user.id || null;
+        const fresh = userId ? await client.auth.getUser() : null;
+        if (!active || serial !== generation || version !== selection.current) return;
+        actor.current = userId;
+        const accountLocale = fresh?.data.user?.user_metadata?.locale || data.session?.user.user_metadata?.locale;
+        let cached: string | null = null; try { cached = localStorage.getItem(localeStorageKey(scope, userId)); } catch {}
+        setLocaleState(preferredLocale({ userId, accountLocale, accountCachedLocale: userId ? cached : null, anonymousLocale: userId ? null : cached, fallback: userId ? "en" : initialLocale }));
+        setPreferenceError(false);
       } catch {}
-      if (saved) return;
-      try {
-        const { data } =
-          await getSupabaseForScope(scopeForPath()).auth.getSession();
-        const accountLocale = normalizeLocale(
-          data.session?.user.user_metadata?.locale,
-        );
-        if (data.session?.user.user_metadata?.locale)
-          setLocaleState(accountLocale);
-      } catch {}
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+    }
+    const timer = window.setTimeout(() => void restore(), 0);
+    const listener = client.auth.onAuthStateChange((event, session) => {
+      // Schedule outside Supabase's auth lock; never await auth in its callback.
+      if (event === "TOKEN_REFRESHED" && actor.current === session?.user.id) return;
+      if (actor.current !== (session?.user.id || null)) { actor.current = session?.user.id || null; selection.current++; }
+      window.setTimeout(() => { if (active) void restore(); }, 0);
+    });
+    return () => { active = false; generation++; window.clearTimeout(timer); listener.data.subscription.unsubscribe(); };
+  }, [scope, initialLocale]);
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = localeDirection(locale);
@@ -181,13 +177,17 @@ export default function LocaleProvider({
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
+        if (controller.signal.aborted) return;
+        // Never apply an English/default response or an earlier request over
+        // the language the user has just selected.
+        const sameLocale = !body?.locale || body.locale === locale;
         setRemote(
-          body?.messages && typeof body.messages === "object"
+          sameLocale && body?.messages && typeof body.messages === "object"
             ? body.messages
             : {},
         );
         setSourceMessages(
-          body?.sourceMessages && typeof body.sourceMessages === "object"
+          sameLocale && body?.sourceMessages && typeof body.sourceMessages === "object"
             ? body.sourceMessages
             : {},
         );
@@ -204,6 +204,7 @@ export default function LocaleProvider({
         });
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
         setRemote({});
         setSourceMessages({});
         setCoverage({ published: 0, total: 0, incomplete: locale !== "en" });
@@ -221,25 +222,21 @@ export default function LocaleProvider({
       // This keeps editable navigation and labels from being hidden by the
       // code fallback catalog. Other locales continue to prefer reviewed
       // translations and then use their safe bundled/English fallbacks.
-      let text = locale === "en"
-        ? remote[key] || fallback || ENGLISH_MESSAGES[key] || ""
-        : remote[key] || BUNDLED_MESSAGES[locale]?.[key] || ENGLISH_MESSAGES[key] || fallback || "";
-      for (const [name, value] of Object.entries(values))
-        text = text.replaceAll(`{${name}}`, String(value));
-      return text;
+      const text = resolveInterfaceMessage({ locale, key, fallback, remote, english: ENGLISH_MESSAGES, bundled: BUNDLED_MESSAGES[locale], sourceMessages, sourceCatalog: DASHBOARD_SOURCE_MESSAGES[locale] });
+      return interpolateInterfaceValues(text, values);
     },
-    [locale, remote],
+    [locale, remote, sourceMessages],
   );
   const direction =
     locales.find((item) => item.locale === locale)?.text_direction ||
     localeDirection(locale);
   const translateSource = useCallback(
-    (source: string) =>
-      resolveSourceTranslation(
+    (source: string, values: Record<string, string | number> = {}) =>
+      interpolateInterfaceValues(resolveSourceTranslation(
         source,
         sourceMessages,
         DASHBOARD_SOURCE_MESSAGES[locale],
-      ),
+      ), values),
     [locale, sourceMessages],
   );
   const value = useMemo<I18nContextValue>(
@@ -247,6 +244,7 @@ export default function LocaleProvider({
       locale,
       locales,
       coverage,
+      preferenceError,
       direction,
       setLocale,
       t,
@@ -267,7 +265,7 @@ export default function LocaleProvider({
           ? forms.one
           : forms.other,
     }),
-    [locale, locales, coverage, direction, setLocale, t, translateSource],
+    [locale, locales, coverage, preferenceError, direction, setLocale, t, translateSource],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

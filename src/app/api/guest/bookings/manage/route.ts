@@ -68,7 +68,7 @@ async function loadManagedBooking(
   const { data: booking, error } = await admin
     .from("bookings")
     .select(
-      "id,public_reference,confirmation_code,status,created_at,payment_verified_at,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,refund_funding_state,stripe_payment_id,stripe_transfer_id,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancelled_by,cancellation_reason,cancellation_customer_reason,cancellation_customer_message,cancellation_initiated_by",
+      "business_policy_revision_id,business_policy_version,business_policy_snapshot,id,public_reference,confirmation_code,status,created_at,payment_verified_at,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,refund_funding_state,stripe_payment_id,stripe_transfer_id,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancelled_by,cancellation_reason,cancellation_customer_reason,cancellation_customer_message,cancellation_initiated_by",
     )
     .eq("id", bookingId)
     .single();

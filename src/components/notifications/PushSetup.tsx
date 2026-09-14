@@ -104,7 +104,7 @@ export default function PushSetup({
       setPermission(result);
       if (result !== "granted") throw new Error("Notifications are blocked. Allow them in your browser or device settings, then try again.");
       const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
-      if (!publicKey) throw new Error("Web Push is not configured yet. Add NEXT_PUBLIC_VAPID_PUBLIC_KEY in Netlify.");
+      if (!publicKey) throw new Error("Booking alerts are not configured. Contact support.");
       const registration = await navigator.serviceWorker.ready;
       const existing = await registration.pushManager.getSubscription();
       const subscription = existing || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });

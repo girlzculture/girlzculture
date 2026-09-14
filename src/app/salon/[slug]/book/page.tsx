@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
 import SalonBookingWizard from "@/components/SalonBookingWizard";
 import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome";
 import { getEngineNumber } from "@/lib/engineConfigServer";
@@ -67,7 +68,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     throw salonError;
   }
 
-  if (!salonRecord) {
+  if (!salonRecord?.id) {
     notFound();
   }
 
@@ -88,6 +89,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     address_state: salonRecord.address_state,
     address_zip: salonRecord.address_zip,
     description: salonRecord.description,
+    business_policy: await currentBusinessPolicy(admin, salonRecord.id),
   };
 
   const [stylesResult, stylistsResult] = await Promise.all([

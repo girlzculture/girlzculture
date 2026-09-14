@@ -22,6 +22,7 @@ async function contextFor(request: Request, bookingId: string) {
     .eq("salon_id", context.salon.id)
     .maybeSingle();
   if (error) throw error;
+  if (booking?.booking_origin === "business_added") throw new RescheduleInputError("Use the business-added appointment preview to reschedule this appointment.");
   if (!booking) throw new RescheduleInputError("Booking not found.");
   if (
     context.teamMember?.stylist_id &&

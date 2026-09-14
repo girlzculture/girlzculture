@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-08-26. This inventory is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-14. This inventory covers 127 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -15,6 +15,8 @@ Updated: 2026-08-26. This inventory is enforced by `scripts/verify-operational-m
 
 | Route | Methods | Classification | Coverage |
 |---|---|---|---|
+| `/api/salon/assistant` | POST | protected | Covered |
+| `/api/salon/policies` | GET, POST | protected | Covered |
 | `/api/admin/bookings/[id]` | GET, PATCH | protected | Covered |
 | `/api/admin/bookings` | GET, POST | protected | Covered |
 | `/api/admin/catalog-spreadsheet` | GET, POST | protected | Covered |
@@ -110,6 +112,7 @@ Updated: 2026-08-26. This inventory is enforced by `scripts/verify-operational-m
 | `/api/salon/application/documents/prepare` | POST | provider-backed | Covered |
 | `/api/salon/availability/block` | POST, DELETE | protected | Covered |
 | `/api/salon/bookings/[id]/cancel` | POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/notes` | GET | provider-backed | Covered |
 | `/api/salon/bookings/[id]/reschedule` | GET, POST | provider-backed | Covered |
 | `/api/salon/bookings/[id]/service` | POST | provider-backed | Covered |
 | `/api/salon/bootstrap` | POST | protected | Covered |
@@ -161,7 +164,7 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 | Supabase Storage/media | `/api/media/*`, direct signed image transfer, signed application media, cleanup function | Prepare/finalize/sync routes are provider-backed and monitored; direct browser Storage failures use the sanitized client-provider bridge, and route/function events include release, environment, operation and safe record identifiers |
 | Booking/availability | availability, admin booking, salon cancellation/blocking, checkout | Unexpected overlap/query/provider failures are monitored; normal unavailable slots remain 409 responses |
 | Stripe | checkout, portal, subscription lifecycle/change, webhook | Provider failures and 5xx responses are monitored; invalid webhook signatures remain expected 400 responses |
-| OpenAI/AI | concierge and Engine AI sandbox | Timeout/provider/5xx failures are monitored; normal clarification/fallback is not an incident |
+| OpenAI/AI | concierge, Engine AI sandbox and GC Assistant planning | Timeout/provider/5xx failures are monitored; normal clarification/fallback is not an incident |
 | Email/SMS/push | messages, complaints, booking notifications, support, applications | Route failures are monitored; partial delivery failures create Engine references returned as warnings where a user request still succeeds |
 | Geocoding | salon address/application flows | Provider failures are monitored while intentionally deferred geocoding is recorded without exposing provider payloads |
 | Scheduled Netlify work | booking reminders and media cleanup | Function wrapper persists sanitized events and returns the same reference in body/header |
@@ -175,6 +178,7 @@ No Next.js server actions (files containing a top-level `use server` directive) 
 | `src/lib/commerceCheckoutServer.ts` | Stripe Tax, combined checkout reconciliation, order receipts and product-order notifications | provider-backed | Tax/payment provider failures flow through monitored checkout routes; partial receipt/notification failures create sanitized Engine references without exposing provider payloads |
 | `src/lib/beautyConciergeServer.ts` | OpenAI intent extraction, AI usage accounting, discovery and availability enrichment | provider-backed/public | OpenAI and secondary availability failures create Engine events; deterministic fallback responses include the same warning references |
 | `src/lib/aiAutomationServer.ts` | governed AI sandbox and usage accounting | provider-backed/protected | Every database result is checked; unexpected failures flow through `/api/admin/engine/ai` |
+| `src/lib/gcAssistantPlanningServer.ts` | governed owner intent planning and reserved usage accounting | provider-backed/protected | Bounded provider calls, stable error codes and usage outcomes flow through the monitored `/api/salon/assistant` route; confirmation and mutation audit share the existing protected request path |
 | `src/lib/webPushServer.ts` | Web Push delivery, subscription revocation and reachability | provider-backed | Provider bodies are not retained; non-expiry failures create sanitized Engine events and returned warning references |
 | `src/lib/geocodingServer.ts` | Google geocoding and salon location persistence | provider-backed/protected | Provider failures use status-only codes; every database write/read is checked and the route returns the matching reference |
 | `src/lib/teamInvite.ts` | Supabase Auth admin invitations and identity audit | provider-backed/protected | Invitation provider failure is not disguised as validation; it flows through the admin/salon team wrapper |

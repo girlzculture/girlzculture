@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,6 +49,7 @@ export default function DashboardNotificationCenter({
   onCounts?: (counts: Record<string, number>) => void;
 }) {
   const router = useRouter();
+  const { translateSource: t, formatNumber } = useI18n();
   const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
@@ -219,7 +221,7 @@ export default function DashboardNotificationCenter({
   return <div ref={root} className="relative">
     <button
       type="button"
-      aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
+      aria-label={unread ? t("Notifications: {value0} unread", { value0: formatNumber(unread) }) : t("Notifications")}
       aria-expanded={open}
       onClick={() => setOpen((value) => !value)}
       className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-blush/50"

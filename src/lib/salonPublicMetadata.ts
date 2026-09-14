@@ -3,6 +3,8 @@ import "server-only";
 import type { Metadata } from "next";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { customerMarketplaceLive } from "@/lib/marketplaceLaunchCore";
+import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
 
 type PublicSalonMetadataRow = {
   id: string;
@@ -19,6 +21,7 @@ export async function getSalonPublicMetadata(
   value: string,
   field: "slug" | "vanity_slug",
 ): Promise<Metadata | null> {
+  if (!customerMarketplaceLive()) return null;
   try {
     const admin = getSupabaseAdmin();
     const result = await admin
@@ -34,6 +37,7 @@ export async function getSalonPublicMetadata(
     if (!result.data) return null;
 
     const salon = result.data;
+    if (await isRegisteredTestBusiness(admin, salon.id)) return null;
     const visibility = await admin.rpc("is_salon_profile_public", {
       target_salon_id: salon.id,
     });

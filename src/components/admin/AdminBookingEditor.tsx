@@ -5,6 +5,7 @@ import { CalendarClock, X } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import { bookingReference } from "@/lib/bookingReference";
 import { formatZonedDateTime } from "@/lib/dateTime";
+import BookingInbox from "@/components/BookingInbox";
 
 type Row = Record<string, unknown> & { id?: string; name?: string };
 
@@ -149,15 +150,15 @@ export default function AdminBookingEditor({
             </p>
             <h2 className="mt-1 font-serif text-3xl text-plum">
               {booking?.guest_name
-                ? String(booking.guest_name)
+                ? <span data-no-translate>{String(booking.guest_name)}</span>
                 : "Booking details"}
             </h2>
             <p className="mt-1 text-sm text-ink/65">
-              {String(salon?.name || "Girlz Culture salon")}
+              {salon?.name ? <span data-no-translate>{String(salon.name)}</span> : "Girlz Culture salon"}
             </p>
             {booking ? (
               <p className="mt-1 text-xs font-bold text-magenta">
-                {bookingReference(booking)}
+                <span data-no-translate>{bookingReference(booking)}</span>
               </p>
             ) : null}
           </div>
@@ -217,7 +218,7 @@ export default function AdminBookingEditor({
                   className="mt-2 w-full rounded-lg border border-plum/15 bg-white p-3 font-normal"
                 >
                   {styles.map((style) => (
-                    <option value={style.id} key={style.id}>
+                    <option data-no-translate value={style.id} key={style.id}>
                       {style.name}
                     </option>
                   ))}
@@ -232,7 +233,7 @@ export default function AdminBookingEditor({
                 >
                   <option value="">Any available stylist</option>
                   {stylists.map((stylist) => (
-                    <option value={stylist.id} key={stylist.id}>
+                    <option data-no-translate value={stylist.id} key={stylist.id}>
                       {stylist.name}
                     </option>
                   ))}
@@ -361,6 +362,7 @@ export default function AdminBookingEditor({
             ) : null}
           </form>
         )}
+        {booking ? <div className="mt-7"><BookingInbox scope="admin" initialBookingId={bookingId} focused/></div> : null}
         <section className="mt-7 border-t border-plum/10 pt-5">
           <h3 className="font-serif text-xl text-plum">Audit Trail</h3>
           {audit.length ? (
