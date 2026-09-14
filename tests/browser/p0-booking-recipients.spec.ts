@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { buildAuthStorageKeys } from '../../src/lib/authSessionCore';
@@ -8,6 +8,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 
 test.use({ serviceWorkers: 'block' });
+
+async function clickPolicySummary(summary: Locator) {
+  // Finish positioning before clicking. WebKit/Firefox auto-scroll previously
+  // lost clicks when a summary started behind the fixed owner navigation.
+  await summary.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await summary.click();
+}
 
 for (const recipient of ['customer', 'team', 'support'] as const) {
   test(`P0 booking recipient ${recipient} retains welcome, policy and original in all locales`, async ({ page }, testInfo) => {
@@ -69,12 +76,14 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
       }
       await expect(page.locator('article').filter({ hasText: translated[locale].trim() }).last()).toBeVisible();
       const evidence = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: t('Policy recorded for this booking') }) }).first();
-      await evidence.locator(':scope > summary').click();
+      await expect(evidence).toHaveJSProperty('open', false);
+      await clickPolicySummary(evidence.locator(':scope > summary'));
       await expect(evidence).toHaveJSProperty('open', true);
       await expect(evidence).toContainText(t('Cancellation notice (hours)') + ': 24');
       const fullPolicy = evidence.locator('details');
       await expect(fullPolicy.locator('summary')).toContainText(t('Version') + ' 1');
-      await fullPolicy.locator('summary').click();
+      await expect(fullPolicy).toHaveJSProperty('open', false);
+      await clickPolicySummary(fullPolicy.locator('summary'));
       await expect(fullPolicy).toHaveJSProperty('open', true);
       await expect(fullPolicy).toContainText(t('Rescheduling notice (hours)'));
       await expect(evidence).toContainText(t('Deposits follow platform rules. The remaining balance is due after the service. Contact the business for satisfaction concerns; platform refund and Care protections still apply.'));
@@ -91,8 +100,10 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
         expect(audit.violations).toEqual([]);
         await page.screenshot({ path: `${gallery}/${locale}-${width}.png`, fullPage: true, ...screenshotCaret });
       }
-      await fullPolicy.locator('summary').click();
-      await evidence.locator(':scope > summary').click();
+      await clickPolicySummary(fullPolicy.locator('summary'));
+      await expect(fullPolicy).toHaveJSProperty('open', false);
+      await clickPolicySummary(evidence.locator(':scope > summary'));
+      await expect(evidence).toHaveJSProperty('open', false);
     }
     if (recipient === 'support') {
       await expect(page.locator('#booking-message')).toHaveCount(0);
