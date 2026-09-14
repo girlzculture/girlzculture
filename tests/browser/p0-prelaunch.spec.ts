@@ -2,6 +2,12 @@ import { expect } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
+import {
+  MARKETPLACE_PREVIEW_COOKIE,
+  issueMarketplacePreviewGrant,
+} from '../../src/lib/marketplacePreviewGrant';
+
+const previewSecret = 'p0-private-preview-acceptance-secret';
 
 for (const width of [390, 768, 1440]) test(`prelaunch public routes fail closed at ${width}px`, async ({ page }, info) => {
   test.setTimeout(150_000);
@@ -35,4 +41,37 @@ test('business signup, owner login and help remain reachable before marketplace 
     await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toHaveCount(0);
     await expect(page.locator('main')).toBeVisible();
   }
+});
+
+test('a signed Platform Admin grant opens only the private read-only marketplace preview', async ({ page }) => {
+  const originalSecret = process.env.INTERNAL_API_SECRET;
+  process.env.INTERNAL_API_SECRET = previewSecret;
+  try {
+    const grant = await issueMarketplacePreviewGrant('22000000-0000-4000-8000-000000000001');
+    await page.context().addCookies([{ name: MARKETPLACE_PREVIEW_COOKIE, value: grant.value, url: 'http://127.0.0.1:3108' }]);
+  } finally {
+    if (originalSecret === undefined) delete process.env.INTERNAL_API_SECRET;
+    else process.env.INTERNAL_API_SECRET = originalSecret;
+  }
+
+  const homepage = await page.goto('/?marketplace_preview=1');
+  expect(homepage?.status()).toBe(200);
+  await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
+  await expect(page.getByText('Private Platform Admin preview.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toHaveCount(0);
+  expect(homepage?.headers()['x-robots-tag']).toContain('noindex');
+
+  const profile = await page.goto('/salon/acceptance-salon');
+  expect(profile?.status()).toBe(200);
+  await expect(page.getByRole('heading', { name: 'Acceptance Salon', exact: true })).toBeVisible();
+
+  const bookingPage = await page.goto('/salon/acceptance-salon/book');
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
+  expect(bookingPage?.headers()['x-robots-tag']).toContain('noindex');
+
+  const checkout = await page.request.post('/api/stripe/booking-checkout', {
+    data: { salon_id: '11111111-1111-4111-8111-111111111111' },
+  });
+  expect(checkout.status()).toBe(503);
+  expect((await checkout.json()).code).toBe('CUSTOMER_MARKETPLACE_NOT_LIVE');
 });
