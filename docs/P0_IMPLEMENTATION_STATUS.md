@@ -21,7 +21,7 @@ This branch is a **Draft implementation, not a launch approval**. Local fixtures
 
 ## Validation record
 
-The source-level record at preparation of this commit is: **113 core tests passed, zero failed/skipped**; source localization 1,660/1,660 for en/fr/wo/es/zh-CN; TypeScript and production fixture build passed; lint zero errors / 19 warnings; design-system source/fixtures and 14 contrast tests passed. Both npm audit thresholds reported zero vulnerabilities without changing the lockfile. The complete **143-migration clean database chain** and **64 P0 SQL assertions** passed in a disposable local PostgreSQL database.
+The source-level record at preparation of this commit is: **115 core tests passed, zero failed/skipped**; source localization 1,660/1,660 for en/fr/wo/es/zh-CN; TypeScript and production fixture build passed; lint zero errors / 19 warnings; design-system source/fixtures and 14 contrast tests passed. Both npm audit thresholds reported zero vulnerabilities without changing the lockfile. The complete **143-migration clean database chain** and **64 P0 SQL assertions** passed in a disposable local PostgreSQL database.
 
 Focused browser evidence includes the 18 Assistant/recipient/account-lifecycle journeys, plus the strengthened recipient policy/name regression rerun. Full-suite exact totals, the final tested head and screenshot review are recorded in the PR's final validation report/checks, rather than inferred from source coverage. Earlier failed/aborted attempts are retained in local logs; they are not reported as successful complete runs. The real Maps test passed with the repository's existing CI test credential; missing local credentials are reported as a failed prerequisite, never converted to a skip.
 

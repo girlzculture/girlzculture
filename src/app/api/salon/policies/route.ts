@@ -11,8 +11,10 @@ const locales = new Set(["en", "fr", "wo", "es", "zh-CN"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const policyDigest = (policy: unknown) => createHash("sha256").update(JSON.stringify(validateBusinessPolicy(policy))).digest("hex");
 async function handle(request: Request) {
+  let context: Awaited<ReturnType<typeof requireSalonPermission>> | undefined;
   try {
-    const { admin, salon, user } = await requireSalonPermission(request, "my_page");
+    context = await requireSalonPermission(request, "my_page");
+    const { admin, salon, user } = context;
     if (request.method === "GET") {
       const result = await admin.from("business_policy_revisions").select("id,policy,source_locale,version,created_at,published_at").eq("salon_id", salon.id).order("created_at", { ascending: false }).limit(30);
       if (result.error) throw result.error;
@@ -47,8 +49,8 @@ async function handle(request: Request) {
     const message = error instanceof Error ? error.message : String((error as { message?: string })?.message || "");
     if (message === "PLAN_ACCESS_REQUIRED") return Response.json({ code: message }, { status: 403, headers });
     if (/Unauthorized|Forbidden|POLICY_PREVIEW_STALE|POLICY_NOT_FOUND|FORBIDDEN/.test(message)) return Response.json({ code: /Unauthorized/.test(message) ? "AUTH_REQUIRED" : /STALE/.test(message) ? "POLICY_PREVIEW_STALE" : "ACCESS_DENIED" }, { status: /Unauthorized/.test(message) ? 401 : /STALE/.test(message) ? 409 : 403, headers });
-    const reference = await capturePlatformError({ request, error, feature: "business-policies", action: request.method.toLowerCase(), actorRole: "salon", safeMessage: "Business policies are temporarily unavailable." });
-    return safeFailure("Business policies are temporarily unavailable.", reference);
+    const reference = await capturePlatformError({ request, admin: context?.admin, actorId: context?.user.id, salonId: context?.salon.id, error, feature: "business-policies", action: request.method.toLowerCase(), actorRole: "salon", safeMessage: "Business policies are temporarily unavailable." });
+    return safeFailure("Business policies are temporarily unavailable.", reference, 500, { code: "POLICY_UNAVAILABLE" });
   }
 }
 export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/salon/policies", "GET"), handle);
