@@ -36,11 +36,12 @@ for (const width of [390, 1440]) test(`P0 populated owner service edits survive 
   configReady = new Promise<void>(resolve => { releaseConfig = resolve; });
   await page.goto('/salon/dashboard/styles/new');
   await description.fill('New original draft GC123');
-  const buffer = page.getByLabel('Cleanup buffer', { exact: true });
+  const buffer = page.getByRole('combobox', { name: 'Cleanup buffer', exact: true });
   await buffer.selectOption('30');
   const newDefaults = page.waitForResponse(response => response.url().includes('/api/config?keys=catalog.size_options'));
   releaseConfig();
   await newDefaults;
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(description).toHaveValue('New original draft GC123');
   await expect(buffer).toHaveValue('30');
   // An untouched new record still adopts the Engine's configured default.
