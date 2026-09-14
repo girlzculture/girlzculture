@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { customerMarketplaceLive } from "@/lib/marketplaceLaunchCore";
+import {
+  marketplaceBrowsingAvailable,
+  marketplaceHomeHref,
+  siteAccessActive,
+} from "@/lib/marketplaceAccessServer";
 import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
 import PrelaunchPage from "@/app/prelaunch/page";
 import BusinessPolicyDisclosure from "@/components/booking/BusinessPolicyDisclosure";
@@ -215,7 +219,11 @@ export async function generateMetadata({
 }
 
 export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  if (!customerMarketplaceLive()) return <PrelaunchPage />;
+  if (!(await marketplaceBrowsingAvailable())) return <PrelaunchPage />;
+  const [siteAccess, homeHref] = await Promise.all([
+    siteAccessActive(),
+    marketplaceHomeHref(),
+  ]);
   const supabase = getSupabaseAdmin();
   const { slug } = await params;
   const incomingQuery = await searchParams;
@@ -238,16 +246,20 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
     notFound();
   }
-  if (await isRegisteredTestBusiness(supabase, salon.id)) notFound();
-  const profileVisibility = await supabase.rpc("is_salon_profile_public", {
-    target_salon_id: salon.id,
-  });
-  if (profileVisibility.error) throw profileVisibility.error;
+  if (!siteAccess && await isRegisteredTestBusiness(supabase, salon.id)) notFound();
+  let publiclyVisible = true;
+  if (!siteAccess) {
+    const profileVisibility = await supabase.rpc("is_salon_profile_public", {
+      target_salon_id: salon.id,
+    });
+    if (profileVisibility.error) throw profileVisibility.error;
+    publiclyVisible = profileVisibility.data === true;
+  }
   if (
     slug.startsWith("pending-")
     || salon.status !== "Active"
     || salon.is_discoverable !== true
-    || profileVisibility.data !== true
+    || !publiclyVisible
   ) notFound();
 
   const now = new Date().toISOString();
@@ -307,8 +319,10 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const rating = typeof salon.rating_overall === "number" ? salon.rating_overall : 0;
   const closedToday = isSalonClosedToday(salon);
   const acceptingBookings = salon.accepting_bookings !== false;
-  const canBook = acceptingBookings && !closedToday;
-  const statusLabel = !acceptingBookings
+  const canBook = !siteAccess && acceptingBookings && !closedToday;
+  const statusLabel = siteAccess
+    ? "Demo browsing only"
+    : !acceptingBookings
     ? "Bookings paused"
     : getSalonStatusLabel(salon);
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
@@ -332,7 +346,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
 
       <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16">
         <nav aria-label="Breadcrumb" className="hidden items-center gap-2 py-4 text-[10px] text-ink/55 md:flex">
-          <Link href="/" className="hover:text-magenta">Home</Link><span>›</span><Link href="/search" className="hover:text-magenta">Salons</Link><span>›</span><span className="text-ink/75">{salon.name || "Salon"}</span>
+          <Link href={homeHref} className="hover:text-magenta">Home</Link><span>›</span><Link href="/search" className="hover:text-magenta">Salons</Link><span>›</span><span className="text-ink/75">{salon.name || "Salon"}</span>
         </nav>
 
         <section className="grid gap-5 pb-5 pt-3 md:pt-0 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8">
@@ -350,7 +364,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             {salon.description?.trim() ? <ExpandableSalonDescription description={salon.description} aiAssisted={salon.description_ai_assisted === true} /> : null}
 
             <div className="mt-4 flex items-center gap-2">
-              {canBook ? <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link> : <span aria-disabled="true" data-visual-state="disabled" className="gc-state-disabled inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] border px-6 text-[12px] font-semibold">{closedToday ? "Closed today" : "Bookings paused"}</span>}
+              {canBook ? <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link> : <span aria-disabled="true" data-visual-state="disabled" className="gc-state-disabled inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] border px-6 text-[12px] font-semibold">{siteAccess ? "Demo browsing only" : closedToday ? "Closed today" : "Bookings paused"}</span>}
               <SalonProfileActions
                 salonId={salon.id}
                 salonName={salon.name || "Salon"}
@@ -374,7 +388,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
                   <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-ink/65">{promotion.description || promotionLabel(promotion)}</p>
                   <p className="mt-2 text-[10px] font-bold text-magenta">{promotionLabel(promotion)}{(promotion.restrictions as Record<string,unknown> | null)?.terms ? ` · ${String((promotion.restrictions as Record<string,unknown>).terms)}` : ""}</p>
                   <p className="mt-2 line-clamp-1 text-[10px] leading-5 text-ink/60"><b>Eligible:</b> {[...eligibleStyles.map((item) => item.name), ...eligibleProducts.map((item) => item.name)].filter(Boolean).join(", ")}</p>
-                  <Link href={href} className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-magenta px-3 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>
+                  {siteAccess ? <span aria-disabled="true" className="gc-state-disabled mt-2 inline-flex min-h-9 items-center rounded-lg border px-3 text-[10px] font-bold">Demo browsing only</span> : <Link href={href} className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-magenta px-3 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>}
                 </article>
               ))}
             </div>

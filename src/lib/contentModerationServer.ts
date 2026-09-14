@@ -9,6 +9,7 @@ import {
   type ModerationDecision,
 } from "@/lib/contentModerationCore";
 import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
+import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
 
 type ModerationFeature = {
   is_enabled?: boolean;
@@ -77,11 +78,11 @@ export async function moderatePublicContent(
       Math.min(Math.max(Number(feature.timeout_ms || 8_000), 1_000), 15_000),
     );
     try {
-      const response = await fetch("https://api.openai.com/v1/moderations", {
+      const response = await fetch(openAiApiUrl("moderations"), {
         method: "POST",
         signal: controller.signal,
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${openAiApiKey()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

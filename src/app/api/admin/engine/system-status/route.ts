@@ -20,6 +20,7 @@ import {
 } from "@/lib/videoTranscoderServer";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { REPOSITORY_MIGRATION_HEAD } from "@/generated/repositoryMetadata";
+import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -266,9 +267,9 @@ function providerSpecs(
         detail:
           "AI assistance remains optional and deterministic fallback stays active when no provider is configured.",
         required: false,
-        envNames: ["OPENAI_API_KEY"],
+        envNames: ["OPENAI_API_KEY", "OPENAI_BASE_URL"],
         setup:
-          "Add a server-only provider key, keep Engine assistance disabled until reviewed, and set explicit budgets and use-case gates.",
+          "Use Netlify AI Gateway or add a server-only provider key, keep Engine assistance disabled until reviewed, and set explicit budgets and use-case gates.",
         canTest: true,
       },
       history.get("openai"),
@@ -518,9 +519,9 @@ async function testIntegration(
     return;
   }
   if (key === "openai") {
-    if (!process.env.OPENAI_API_KEY) throw new Error("NOT_CONFIGURED");
-    const response = await safeFetch("https://api.openai.com/v1/models", {
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    if (!openAiApiKey()) throw new Error("NOT_CONFIGURED");
+    const response = await safeFetch(openAiApiUrl("models"), {
+      headers: { Authorization: `Bearer ${openAiApiKey()}` },
     });
     if (!response.ok) throw new Error("PROVIDER_CONNECTION_FAILED");
     return;

@@ -702,7 +702,7 @@ export default function AdminSubmissionDetail({
                       value={overrideReason}
                       onChange={(event) => setOverrideReason(event.target.value)}
                       rows={3}
-                      placeholder="Specific founding-pilot override reason"
+                      placeholder="Specific pilot override reason"
                       className="rounded-[8px] border border-plum/15 bg-white p-3 text-sm outline-none focus:border-magenta"
                     />
                     <button
