@@ -51,7 +51,7 @@ export default function AdminMarketplacePreviewButton() {
         {loading ? "Opening preview…" : "Preview marketplace"}
       </button>
       {error ? (
-        <p role="alert" className="absolute right-0 top-12 z-50 w-72 rounded-lg border border-red-200 bg-white p-3 text-xs text-red-700 shadow-lg">
+        <p role="alert" className="absolute right-0 top-12 z-50 w-72 rounded-lg border border-red-200 bg-white p-3 text-xs gc-text-danger shadow-lg">
           {error}
         </p>
       ) : null}
