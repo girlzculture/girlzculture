@@ -129,37 +129,41 @@ export default function AdminDashboard({ section, recordId, returnTo, acceptance
       return;
     }
     setDenied(false);
-    const dataParams = new URLSearchParams({ section });
-    if (recordId) dataParams.set("record_id", recordId);
-    const response = await fetch(`/api/admin/data?${dataParams}`, { headers, cache: "no-store" });
-    const body = await readApiResponse(response, "Unable to load admin data.");
-    if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
-    const next: DataState = {
-      salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
-      bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
-      subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
-      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events), reviewModerationEvents: rows(body.review_moderation_events), reviewContentQueue: rows(body.review_content_moderation_queue), reviewReplyQueue: rows(body.review_reply_moderation_queue),
-      favorites: rows(body.customer_favorites), bookingAudits: rows(body.booking_audit_log), adminSecurityEvents: rows(body.admin_security_events), qualityMetrics: rows(body.quality_metrics),
-    };
-    setData(next);
-    setDataMeta(body.admin_data_meta && typeof body.admin_data_meta === "object" ? body.admin_data_meta as AdminDataMeta : {});
-    setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
-    if (section === "overview") {
-      const metricsResponse = await fetch("/api/admin/overview-metrics", {
-        headers,
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      const metricsBody = await readApiResponse(
-        metricsResponse,
-        "Unable to load authoritative platform totals.",
-      ) as { metrics?: OverviewMetrics; error?: string };
-      if (!metricsResponse.ok || !metricsBody.metrics) {
-        throw new Error(metricsBody.error || "Unable to load authoritative platform totals.");
+    // Embedded workspaces load their own authorized, paginated records. The
+    // shell still verifies this section's permission before rendering them.
+    if (!children) {
+      const dataParams = new URLSearchParams({ section });
+      if (recordId) dataParams.set("record_id", recordId);
+      const response = await fetch(`/api/admin/data?${dataParams}`, { headers, cache: "no-store" });
+      const body = await readApiResponse(response, "Unable to load admin data.");
+      if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
+      const next: DataState = {
+        salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
+        bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
+        subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
+        promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events), reviewModerationEvents: rows(body.review_moderation_events), reviewContentQueue: rows(body.review_content_moderation_queue), reviewReplyQueue: rows(body.review_reply_moderation_queue),
+        favorites: rows(body.customer_favorites), bookingAudits: rows(body.booking_audit_log), adminSecurityEvents: rows(body.admin_security_events), qualityMetrics: rows(body.quality_metrics),
+      };
+      setData(next);
+      setDataMeta(body.admin_data_meta && typeof body.admin_data_meta === "object" ? body.admin_data_meta as AdminDataMeta : {});
+      setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
+      if (section === "overview") {
+        const metricsResponse = await fetch("/api/admin/overview-metrics", {
+          headers,
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const metricsBody = await readApiResponse(
+          metricsResponse,
+          "Unable to load authoritative platform totals.",
+        ) as { metrics?: OverviewMetrics; error?: string };
+        if (!metricsResponse.ok || !metricsBody.metrics) {
+          throw new Error(metricsBody.error || "Unable to load authoritative platform totals.");
+        }
+        setOverviewMetrics(metricsBody.metrics);
+      } else {
+        setOverviewMetrics(null);
       }
-      setOverviewMetrics(metricsBody.metrics);
-    } else {
-      setOverviewMetrics(null);
     }
     if (verifiedAccess === null || verifiedAccess.support || verifiedAccess.complaints) {
       const countsResponse = await fetch("/api/admin/inbox-counts", { headers, cache: "no-store" });
@@ -390,14 +394,16 @@ function Customers(p: any) {
   const { query, setQuery, status, setStatus } = useAdminListContext();
   const term = query.trim().toLowerCase();
   const visible = p.customers.filter((customer: Row) => (!term || [customer.name, customer.email].some(value => String(value || "").toLowerCase().includes(term))) && (status === "all" || String(customer.status || "Active").toLowerCase() === status));
-  const returnPath = "/admin/customers?" + new URLSearchParams({ q: query, status });
+  const returnParams = new URLSearchParams({ ...(query ? { q: query } : {}), ...(status !== "all" ? { status } : {}) });
+  const returnPath = `/admin/customers${returnParams.size ? `?${returnParams}` : ""}`;
   return <Panel title="Customer accounts"><div data-admin-record-landing>
     <div className="mb-5 flex flex-wrap gap-3"><input aria-label="Search customers" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search customer name or email" className="min-h-11 min-w-0 flex-1 rounded-lg border px-3"/><select aria-label="Customer status" value={status} onChange={event => setStatus(event.target.value)} className="min-h-11 rounded-lg border px-3"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select></div>
     <p className="mb-3 text-sm">{visible.length} matching accounts · Booking counts cover loaded records</p>
     <DataTable headers={["Customer", "Email", "Joined", "Status", "Bookings", "Details"]}>
       {visible.map((customer: Row) => {
         const count = p.bookings.filter((booking: Row) => booking.customer_id === customer.id || (customer.email && String(booking.guest_email || "").toLowerCase() === String(customer.email).toLowerCase())).length;
-        return <tr key={customer.id}><Td><b>{customer.name || "Customer"}</b></Td><Td>{customer.email || "Not provided"}</Td><Td>{date(customer.created_at)}</Td><Td><Badge value={customer.status || "Active"}/></Td><Td>{count}</Td><Td><Link className="font-semibold text-magenta" href={`/admin/customers/${customer.id}?return=${encodeURIComponent(returnPath)}`}>Open customer record →</Link></Td></tr>;
+        const recordHref = `/admin/customers/${customer.id}?return=${encodeURIComponent(returnPath)}`;
+        return <tr key={customer.id}><Td><Link className="inline-flex min-h-11 items-center font-bold text-magenta" href={recordHref}>{customer.name || "Customer"}</Link></Td><Td>{customer.email || "Not provided"}</Td><Td>{date(customer.created_at)}</Td><Td><Badge value={customer.status || "Active"}/></Td><Td>{count}</Td><Td><Link className="inline-flex min-h-11 items-center font-semibold text-magenta" href={recordHref}>Open customer record →</Link></Td></tr>;
       })}
       {!visible.length ? <EmptyTable columns={6} text="No customer accounts match these filters."/> : null}
     </DataTable>
@@ -435,7 +441,7 @@ function Bookings(p: any) {
   <div className="space-y-6"><WorkspaceCalendar title="Platform booking calendar" timeZone={p.salons.find((row: Row) => row.id === salonFilter)?.time_zone || "UTC"} events={visible.map((booking: Row) => ({ id: String(booking.id), start: String(booking.appointment_datetime), title: String(booking.guest_name || "Customer"), subtitle: String(p.salons.find((row: Row) => row.id === booking.salon_id)?.name || "Business unavailable"), status: booking.status, href: `/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}` }))}/>
   <Panel title="Booking queue"><div data-admin-record-landing><p className="mb-4 text-sm">{visible.length} matching loaded bookings · Date filters use UTC. Appointment times below use each business’s time zone.</p><DataTable headers={["Reference", "Customer", "Business / location", "Appointment", "Status", "Payment state", "Deposit recorded", "Actions"]}>{visible.map((booking: Row) => {
     const salon = p.salons.find((row: Row) => row.id === booking.salon_id);
-    return <tr key={booking.id}><Td><b>{bookingReference(booking)}</b></Td><Td><b>{booking.guest_name || "Customer"}</b><span className="mt-1 block break-all">{booking.guest_email || ""}</span></Td><Td><b>{salon?.name || "Business unavailable"}</b><span className="mt-1 block">{[salon?.address_city || salon?.city, salon?.address_state || salon?.state].filter(Boolean).join(", ")}</span></Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}<span className="mt-1 block">{salon?.time_zone || "UTC"}</span></Td><Td><Badge value={booking.status}/></Td><Td>{booking.payment_status || booking.deposit_status || booking.financial_status || "Not recorded"}</Td><Td>{booking.deposit_amount == null ? "Not recorded" : money(Number(booking.deposit_amount))}</Td><Td><Link href={`/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}`} className="inline-flex min-h-11 items-center whitespace-nowrap font-bold text-magenta">Open booking record →</Link></Td></tr>;
+    return <tr key={booking.id}><Td><b>{bookingReference(booking)}</b></Td><Td><b>{booking.guest_name || "Customer"}</b><span className="mt-1 block break-all">{booking.guest_email || ""}</span></Td><Td><b>{salon?.name || "Business unavailable"}</b><span className="mt-1 block">{[salon?.address_city || salon?.city, salon?.address_state || salon?.state].filter(Boolean).join(", ")}</span></Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}<span className="mt-1 block">{salon?.time_zone || "UTC"}</span></Td><Td><Badge value={booking.status}/></Td><Td>{booking.payment_status || booking.deposit_status || booking.financial_status || "Not recorded"}</Td><Td>{booking.deposit_amount == null ? "Not recorded" : `Deposit ${money(Number(booking.deposit_amount))}`}</Td><Td><Link href={`/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}`} className="inline-flex min-h-11 items-center whitespace-nowrap font-bold text-magenta">Open booking record →</Link></Td></tr>;
   })}{!visible.length ? <EmptyTable columns={8} text="No bookings match these filters."/> : null}</DataTable></div></Panel></div></>;
 }
 

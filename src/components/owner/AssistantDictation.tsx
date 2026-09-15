@@ -88,6 +88,10 @@ export default function AssistantDictation({ disabled, sessionKey, value, onChan
       return;
     }
     setListening(false);
+    if (value.length >= maxLength) {
+      setNotice("The message limit was reached. Review and send this part before continuing.");
+      return;
+    }
     const Speech = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
     if (!Speech) {
       setNotice("Dictation is unavailable in this browser. You can type your request.");
@@ -104,9 +108,19 @@ export default function AssistantDictation({ disabled, sessionKey, value, onChan
     current.onresult = event => {
       if (active !== generation.current) return;
       const speech = Array.from(event.results).map(result => result[0]?.transcript || "").join(" ").replace(/\s+/gu, " ").trim();
-      const composed = `${startingText.current}${startingText.current && speech ? " " : ""}${speech}`.slice(0, maxLength);
+      const transcript = `${startingText.current}${startingText.current && speech ? " " : ""}${speech}`;
+      const composed = transcript.slice(0, maxLength);
       deliveredText.current = composed;
       onChange(composed);
+      if (transcript.length >= maxLength) {
+        generation.current++;
+        recognition.current = null;
+        clearMaximumTimer();
+        current.abort();
+        setListening(false);
+        setNotice("The message limit was reached. Review and send this part before continuing.");
+        return;
+      }
       setNotice(Array.from(event.results).every(result => result.isFinal)
         ? "Transcript ready. You can stop recording, review it, and send when ready."
         : "Listening. Your words are appearing in the message box.");

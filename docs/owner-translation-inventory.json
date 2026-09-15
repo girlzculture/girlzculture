@@ -1363,9 +1363,9 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 107,
+          "line": 111,
           "kind": "template",
-          "context": "42bdfda18ac39ae2c1fcf3aa5ab4567c887efa933cef3edede6a3b59a061f02a"
+          "context": "061f56da300e9458e5172db05e3e068eb72171771a4f928973e527f0c95d2589"
         },
         {
           "file": "src/lib/numericInput.ts",
@@ -8441,13 +8441,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 118,
+          "line": 132,
           "kind": "literal",
           "context": "dbdead906d2acb147c8753af5070ce9980a420593d7f340b0c569692879eb3bb"
         },
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 139,
+          "line": 153,
           "kind": "literal",
           "context": "e1942d9f1990baa6b00a039b3f08537a9dac2fd9d1c9c4e304e27fb54173a15b"
         }
@@ -8458,7 +8458,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 93,
+          "line": 97,
           "kind": "literal",
           "context": "b5aac834c51a26fb1786327742c1f7d2fadb2981962ed13a9abd32b67d193b49"
         }
@@ -8480,7 +8480,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 155,
+          "line": 169,
           "kind": "localized-source",
           "context": "ba1cec2f929c05a310dae69ecc323af55cd8fc3fda8ea03cfdfbde48e109cc4b"
         }
@@ -9179,7 +9179,7 @@
         },
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 101,
+          "line": 105,
           "kind": "literal",
           "context": "8b54099b718130e5c876654b81ff043727ced7501386865edb01ea2ea3f2d45d"
         },
@@ -12237,7 +12237,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 130,
+          "line": 144,
           "kind": "literal",
           "context": "159b8dbadad5681ee2bc55df258852a2ce40e0302adcf1807fe8ae0aca66e530"
         }
@@ -12248,7 +12248,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 112,
+          "line": 126,
           "kind": "literal",
           "context": "8dbe6ef6d8fecf9ae4eb6ab74207f39e193fc3ec15499e0bd5626300648d33b4"
         }
@@ -13206,7 +13206,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 117,
+          "line": 131,
           "kind": "literal",
           "context": "dbdead906d2acb147c8753af5070ce9980a420593d7f340b0c569692879eb3bb"
         }
@@ -21879,13 +21879,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 148,
+          "line": 162,
           "kind": "literal",
           "context": "c33b14f74020ff28795073d46943fda4e48f237b79ff5d1df845d2c784a43066"
         },
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 150,
+          "line": 164,
           "kind": "literal",
           "context": "c33b14f74020ff28795073d46943fda4e48f237b79ff5d1df845d2c784a43066"
         }
@@ -22131,13 +22131,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 148,
+          "line": 162,
           "kind": "literal",
           "context": "c33b14f74020ff28795073d46943fda4e48f237b79ff5d1df845d2c784a43066"
         },
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 150,
+          "line": 164,
           "kind": "literal",
           "context": "c33b14f74020ff28795073d46943fda4e48f237b79ff5d1df845d2c784a43066"
         }
@@ -23524,6 +23524,23 @@
         }
       ]
     },
+    "9465b10e35d2": {
+      "source": "The message limit was reached. Review and send this part before continuing.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantDictation.tsx",
+          "line": 92,
+          "kind": "literal",
+          "context": "1b9a97560a32d4fb45d8e6caa5710b0de4902b006e7c2131c25a8059361da6a5"
+        },
+        {
+          "file": "src/components/owner/AssistantDictation.tsx",
+          "line": 121,
+          "kind": "literal",
+          "context": "1b9a97560a32d4fb45d8e6caa5710b0de4902b006e7c2131c25a8059361da6a5"
+        }
+      ]
+    },
     "aa5d3e2d2226": {
       "source": "The message was saved, but a notification could not be delivered.",
       "occurrences": [
@@ -23823,7 +23840,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 133,
+          "line": 147,
           "kind": "literal",
           "context": "1fd2c0627ad07f75e028f6678517d2644c52b9a6f24897953a14bf139e7571f0"
         }
@@ -24818,7 +24835,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/AssistantDictation.tsx",
-          "line": 111,
+          "line": 125,
           "kind": "literal",
           "context": "8dbe6ef6d8fecf9ae4eb6ab74207f39e193fc3ec15499e0bd5626300648d33b4"
         }

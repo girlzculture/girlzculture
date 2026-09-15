@@ -6,6 +6,7 @@ import {
   isCustomerMarketplacePage,
   isSiteAccessMarketplaceApi,
   isSiteAccessMarketplacePage,
+  isSiteAccessPrefetch,
   marketplaceUnavailable,
   SITE_ACCESS_COOKIE,
   SITE_ACCESS_COOKIE_VALUE,
@@ -52,6 +53,10 @@ export function proxy(request: NextRequest) {
     const marketplaceLive = customerMarketplaceLive();
 
     if (pathname === SITE_ACCESS_EXIT_PATH) {
+      // A speculative request must not end a visitor's demonstration session.
+      if (isSiteAccessPrefetch(request.headers)) {
+        return protectSiteAccessResponse(new NextResponse(null, { status: 204 }));
+      }
       const target = request.nextUrl.clone();
       target.pathname = "/";
       target.search = "";

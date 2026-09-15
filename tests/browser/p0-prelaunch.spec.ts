@@ -30,6 +30,16 @@ test('the unlisted site-access doorway exposes browsing but never transactions',
   await expect(page.getByLabel('Marketplace demonstration notice')).toContainText('booking and payment are unavailable');
   await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toHaveCount(0);
 
+  // Next Link prefetches production routes before a click. Speculatively
+  // visiting the cookie-clearing exit must never close the demo marketplace.
+  const speculativeExit = await page.request.get('/site-access/exit', {
+    headers: { 'next-router-prefetch': '1' }, maxRedirects: 0,
+  });
+  expect(speculativeExit.status()).toBe(204);
+  expect(speculativeExit.headers()['set-cookie']).toBeUndefined();
+  const firstDiscovery = await page.request.get('/api/discovery/salons?lat=40.7&lng=-74');
+  expect(firstDiscovery.status()).toBe(200);
+
   const salons = await page.goto('/salons');
   expect(salons?.status()).toBeLessThan(400);
   expect(salons?.headers()['x-robots-tag']).toContain('noindex');
@@ -53,8 +63,9 @@ test('the unlisted site-access doorway exposes browsing but never transactions',
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
 
   await page.goto('/site-access');
-  await page.goto('/site-access/exit');
+  await page.getByRole('link', { name: 'Exit demonstration', exact: true }).click();
   await expect(page).toHaveURL('/');
+  await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
   await page.goto('/salons');
   await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
 });

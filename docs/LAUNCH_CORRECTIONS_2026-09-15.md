@@ -1,6 +1,6 @@
 # Girlz Culture launch corrections — 15 September 2026
 
-Status: **PR #66 OPEN. CI IN PROGRESS. NOT RELEASED. Live acceptance is BLOCKED.**
+Status: **PR #66 OPEN. VERIFICATION IN PROGRESS. Browser failures are under correction. NOT RELEASED. Live acceptance is BLOCKED.**
 Branch: `fix/conversational-gc-assistant-dashboard`.
 Base: `bb3b93b` (the existing #65 release).
 
@@ -18,7 +18,7 @@ The code now supplies reviewed prices only for that exact approved pilot model. 
 | --- | --- | --- |
 | Conversational business assistant | Short natural-language answers; authorized reads followed by an answer to the actual question; bounded follow-up context; no raw recursive record dump for read actions | AUTOMATED ONLY |
 | Business knowledge and tools | Published CMS help/FAQ retrieval; existing business tools remain permission-scoped; changes are prepared for explicit review/confirmation, never silently applied | AUTOMATED ONLY |
-| Microphone | Icon start/stop; live transcript; editing aborts the old recognizer; late events cannot overwrite corrections; ten-minute timer; language/session cleanup | AUTOMATED ONLY |
+| Microphone | Icon start/stop; live transcript; editing aborts the old recognizer; late events cannot overwrite corrections; ten-minute timer; explicit stop/notice at the existing message-length limit; language/session cleanup | AUTOMATED ONLY |
 | Real voice capture on devices | Browser speech service with a typing fallback and processing disclosure; actual microphone permission, transcription quality and ten-minute device run remain untested | BLOCKED |
 | Shared dashboard design | Scoped readable sans-serif/dark text, white surfaces, teal navigation, larger small text, consistent cards/tables/focus states, breadcrumbs and page search | AUTOMATED ONLY |
 | Admin submissions/customers/bookings | Structured tables, existing operational actions retained, current/original submission details, customer search/status filters, booking calendar | AUTOMATED ONLY |
@@ -31,7 +31,7 @@ The code now supplies reviewed prices only for that exact approved pilot model. 
 | Flexible service/product import | Own workbook/CSV headings; sheet/header selection; explicit column and duration-unit mapping; validation and paged review before save; original heading metadata retained | AUTOMATED ONLY |
 | Imported service order after save | Transactional wrapper stores order; owner reload and public profile sort on persisted order | AUTOMATED ONLY — PostgreSQL import/reorder/audit/permission tests passed; browser persistence pending |
 | Populated business demonstration | Isolated read-only **Girlz Culture Demo Studio**, with clearly fictional September 2026 figures, staff, services and appointments; not seeded into Isha Five Stars | AUTOMATED ONLY |
-| Public/demo separation | Existing public onboarding and unlisted marketplace entry preserved; sample workspace at /site-access/business-demo; demo banner links to it; no indexing; no sample payments/bookings | AUTOMATED ONLY — not newly published |
+| Public/demo separation | Existing public onboarding and unlisted marketplace entry preserved; sample workspace at /site-access/business-demo; demo banner links to it; cookie-clearing exit uses deliberate navigation and ignores speculative prefetch; no indexing; no sample payments/bookings | AUTOMATED ONLY — first-visit failure reproduced live; correction not yet published |
 | Existing route build errors | Removed unsupported constant exports from the two team API route modules, without changing their permission lists | AUTOMATED ONLY |
 
 The ten state shortcuts are navigation aids, not declarations that those states have launched. Blank metrics are not filled with fabricated business results. Filtered loaded-record counts are labeled where the underlying endpoint is bounded.
@@ -39,11 +39,12 @@ The ten state shortcuts are navigation aids, not declarations that those states 
 ## Local verification
 
 - 216 Node regression tests passed, including the three new dictation lifecycle tests.
+- A fourth dictation regression now passes: reaching the message-length limit stops capture, preserves the current text and explains how to continue; late speech cannot overwrite it.
 - TypeScript passed.
 - ESLint passed for all 63 changed code files.
 - Next.js production build passed with webpack and the existing local acceptance-data fixture. This is not a Netlify production deployment or a production-data test.
 - Launch design-system source audit passed.
-- Owner source translation coverage passed for all 1,833 inventoried UI strings in English, French, Wolof, Spanish and Simplified Chinese. This is source coverage, not native-language review or customer-wide browser acceptance.
+- Owner source translation coverage passed for all 1,834 inventoried UI strings in English, French, Wolof, Spanish and Simplified Chinese. This is source coverage, not native-language review or customer-wide browser acceptance.
 - Migration ordering passed: 149 unique migrations, head `20260915133423`.
 - Spreadsheet parser/catalog/invalid-row/template/export/role checks passed.
 - Admin directory, authoritative overview metrics, featured campaign, concierge, search/location, decision enrichment and automatic-location checks passed.
@@ -58,7 +59,10 @@ No test result above substitutes for authenticated live acceptance.
 - GitHub executed all 149 migrations in PostgreSQL 17 and passed the database assertions after fixing the final Engine schema marker and an actual numeric/double-precision mismatch in the new directory RPC. Evidence: [CI run 34988317660](https://github.com/girlzculture/girlzculture/actions/runs/34988317660). That run subsequently stopped at an outdated submissions UI-label assertion; the assertion was corrected for the current table headings.
 - The database tests now execute custom-heading service imports, nonalphabetical order, reordered imports without duplication, stored source-layout audit evidence, tenant/team denials, category/state/city filters, pagination totals and revoked admin permissions.
 - GitHub owner localization and P0 core checks passed. The full latest-commit browser/release gates remain in progress.
+- Browser run 34989037379 found a missing customer-name link, noncanonical customer return addresses, and incomplete test adapters for the newly shared submissions shell and CMS market query. Accessibility run 34989037055 also caught the changed deposit label. The source and adapters were corrected without removing the existing browser assertions; a new test checks that an unassigned admin cannot load an embedded submission record. The final browser rerun remains required.
 - Netlify built the initial PR source successfully. Browser inspection confirmed the demo overview, service and team navigation, and month/week calendar switching. This does not establish production publication or authenticated workflow acceptance.
+- The review deployment's marketplace shell loaded, but its business/trending data requests failed. The displayed reference `a42c1759-f48b-4956-8ec6-766ddfca917a` was not found in the connected production Engine events. The cause is unconfirmed, and review-deploy marketplace data is not marked as passing.
+- Live `/site-access` reproduced an initial discovery launch-gate error twice, while returning from a demo business profile restored nearby/featured results. The exit control used Next Link, whose production prefetch could call the cookie-clearing exit before a click. The exit is now a full-navigation anchor, and speculative requests return 204 without changing cookies. A browser regression explicitly prefetches the exit, then checks discovery remains available, and tests the actual exit click. Existing transaction gates remain closed. Live post-release verification is still required.
 
 ## Exact remaining blockers
 
@@ -67,6 +71,7 @@ No test result above substitutes for authenticated live acceptance.
 3. Local Postgres/Docker was unavailable; GitHub has now executed the complete migration chain and new RPC tests successfully. The full normal CI must still pass on the final PR commit and then the exact merged main commit before production migration.
 4. No authenticated acceptance session is available for Isha Five Stars, a restricted business-team member, platform admin and customer. Real AI replies, denial paths, save/refresh, logout/login and cross-device persistence still need these sessions.
 5. The founder authorized pushing this batch and proceeding through the protected production deployment workflow once the required checks pass. Publication has not yet been performed; required CI and production database gates remain in force.
+6. The connected deployment controls do not expose Netlify production locking/specific-deploy publication or GitHub workflow dispatch/environment approval. Netlify CLI is not authenticated. Those controls must be available before completing the documented protected release; authorization alone does not provide the missing provider capability.
 
 ## Migration/release order — do not bypass the gate
 

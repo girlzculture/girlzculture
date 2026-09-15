@@ -561,6 +561,13 @@ const rows: readonly (readonly [string, string, string, string, string])[] = [
     "助手建议操作"
   ],
   [
+    "The message limit was reached. Review and send this part before continuing.",
+    "Se alcanzó el límite del mensaje. Revisa y envía esta parte antes de continuar.",
+    "La limite du message est atteinte. Vérifiez et envoyez cette partie avant de continuer.",
+    "Agsi na ci kemu bataaxal bi. Seet te yónnee dogu mbind mii bala ngay wéy.",
+    "已达到消息长度上限。请检查并发送这一部分，然后继续。"
+  ],
+  [
     "The ten-minute recording limit was reached. Review the transcript and send when ready.",
     "Se alcanzó el límite de diez minutos. Revisa la transcripción y envíala cuando esté lista.",
     "La limite de dix minutes est atteinte. Vérifiez la transcription et envoyez-la quand elle est prête.",

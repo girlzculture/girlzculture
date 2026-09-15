@@ -14,12 +14,14 @@ export default function SiteAccessBanner() {
       <Link href="/site-access/business-demo" className="underline underline-offset-4">
         Explore the sample business dashboard
       </Link>
-      <Link
+      {/* This route clears a cookie. A normal navigation must replace the
+          layout and must never be automatically prefetched by Next Link. */}
+      <a
         href={SITE_ACCESS_EXIT_PATH}
         className="underline decoration-white/60 underline-offset-4 hover:decoration-white"
       >
         Exit demonstration
-      </Link>
+      </a>
     </aside>
   );
 }

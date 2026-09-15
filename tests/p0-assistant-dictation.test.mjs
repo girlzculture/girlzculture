@@ -78,3 +78,20 @@ test('disabling the composer or switching language aborts the old recognizer', (
   assert.equal(app.instances[1].aborted, true);
   assert.equal(app.mic().props.disabled, true);
 });
+
+test('the message limit stops capture and reports the limit instead of silently discarding continued speech', () => {
+  const app = harness(); app.mic().props.onClick();
+  const lateResult = app.instances[0].onresult;
+  app.hear('a'.repeat(2401));
+  assert.equal(app.text().length, 2400);
+  assert.equal(app.instances[0].aborted, true);
+  assert.equal(app.mic().props['aria-pressed'], false);
+  assert.match(app.render().props.children[1].props.children, /message limit was reached/);
+  lateResult({ results: [{ 0: { transcript: 'late speech' }, isFinal: true }] });
+  assert.equal(app.text(), 'a'.repeat(2400));
+  app.mic().props.onClick();
+  assert.equal(app.instances.length, 1);
+  app.edit('A shorter reviewed request');
+  app.mic().props.onClick(); app.hear('with another detail');
+  assert.equal(app.text(), 'A shorter reviewed request with another detail');
+});

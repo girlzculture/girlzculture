@@ -41,6 +41,16 @@ test('site access admits marketplace presentation pages and rejects transaction 
   ]) assert.equal(access.isSiteAccessMarketplacePage(path), false, path);
 });
 
+test('site access exit distinguishes speculative requests from deliberate navigation', () => {
+  for (const headers of [
+    { 'next-router-prefetch': '1' },
+    { purpose: 'prefetch' },
+    { 'sec-purpose': 'prefetch;prerender' },
+  ]) assert.equal(access.isSiteAccessPrefetch(new Headers(headers)), true);
+  assert.equal(access.isSiteAccessPrefetch(new Headers()), false);
+  assert.equal(access.isSiteAccessPrefetch(new Headers({ 'sec-fetch-mode': 'navigate' })), false);
+});
+
 test('site access API allowlist contains searches only', () => {
   for (const path of [
     '/api/discovery',
