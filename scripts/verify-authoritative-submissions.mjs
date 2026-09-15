@@ -79,8 +79,8 @@ assert.match(
   /We have received your application\. Our team will review and get back to you within 2–4 business days/,
 );
 
-assert.match(workspace, /Current salon address/);
-assert.match(workspace, /Submitted snapshot/);
+assert.match(workspace, /Current location/);
+assert.match(workspace, /Submitted location/);
 assert.match(workspace, /Active/);
 assert.match(workspace, /Archived/);
 assert.match(workspace, /Load more/);

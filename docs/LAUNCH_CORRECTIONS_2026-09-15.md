@@ -1,10 +1,10 @@
 # Girlz Culture launch corrections — 15 September 2026
 
-Status: **NOT RELEASED. Live acceptance is BLOCKED.**
+Status: **PR #66 OPEN. CI IN PROGRESS. NOT RELEASED. Live acceptance is BLOCKED.**
 Branch: `fix/conversational-gc-assistant-dashboard`.
 Base: `bb3b93b` (the existing #65 release).
 
-This is an implementation and verification handoff, not a declaration that every launch-critical workflow works in production. No commits were pushed, no PR was merged, no production deployment or migration was performed, and no real business/customer records, payments or messages were changed.
+This is an implementation and verification handoff, not a declaration that every launch-critical workflow works in production. The founder authorized pushing this batch and proceeding through the protected release workflow after its checks pass. The batch is pushed to [PR #66](https://github.com/girlzculture/girlzculture/pull/66); no PR was merged, no production deployment or migration was performed, and no real business/customer records, payments or messages were changed.
 
 ## Observed original assistant failure
 
@@ -22,14 +22,14 @@ The code now supplies reviewed prices only for that exact approved pilot model. 
 | Real voice capture on devices | Browser speech service with a typing fallback and processing disclosure; actual microphone permission, transcription quality and ten-minute device run remain untested | BLOCKED |
 | Shared dashboard design | Scoped readable sans-serif/dark text, white surfaces, teal navigation, larger small text, consistent cards/tables/focus states, breadcrumbs and page search | AUTOMATED ONLY |
 | Admin submissions/customers/bookings | Structured tables, existing operational actions retained, current/original submission details, customer search/status filters, booking calendar | AUTOMATED ONLY |
-| Business directory | Category workspaces, ten state shortcuts plus all-state selector, city and existing operational filters; SQL filters precede counts and pagination | BLOCKED — new RPC not executed against a database |
+| Business directory | Category workspaces, ten state shortcuts plus all-state selector, city and existing operational filters; SQL filters precede counts and pagination | AUTOMATED ONLY — real PostgreSQL RPC tests passed; signed-in acceptance pending |
 | Location-specific content/marketing | State/city/neighborhood workspaces, saved homepage placement inventory, market-filtered content editing, featured-campaign state and radius inspection | AUTOMATED ONLY — not publication proof |
 | Calendar | Day/week/month, date navigation, search and timezone-aware display using recorded appointments/overrides | AUTOMATED ONLY — visual/device acceptance pending |
 | Customer workspace | Shared visual system, real loaded-record counts, appointment filtering/calendar, corrected navigation, assistant dialog | AUTOMATED ONLY |
 | Customer assistant | Conversational discovery criteria, published-help lookup, microphone and account booking/message links; does not gain business-admin tools or execute private account changes | AUTOMATED ONLY |
 | New York / Harlem | NYC aliases; explicit neighborhood overrides stale location/GPS; qualified geocoder fallback; unresolved places no longer use a random business location | AUTOMATED ONLY — real geocoder/device acceptance pending |
 | Flexible service/product import | Own workbook/CSV headings; sheet/header selection; explicit column and duration-unit mapping; validation and paged review before save; original heading metadata retained | AUTOMATED ONLY |
-| Imported service order after save | Transactional wrapper stores order; owner reload and public profile sort on persisted order | BLOCKED — database/save-refresh acceptance pending |
+| Imported service order after save | Transactional wrapper stores order; owner reload and public profile sort on persisted order | AUTOMATED ONLY — PostgreSQL import/reorder/audit/permission tests passed; browser persistence pending |
 | Populated business demonstration | Isolated read-only **Girlz Culture Demo Studio**, with clearly fictional September 2026 figures, staff, services and appointments; not seeded into Isha Five Stars | AUTOMATED ONLY |
 | Public/demo separation | Existing public onboarding and unlisted marketplace entry preserved; sample workspace at /site-access/business-demo; demo banner links to it; no indexing; no sample payments/bookings | AUTOMATED ONLY — not newly published |
 | Existing route build errors | Removed unsupported constant exports from the two team API route modules, without changing their permission lists | AUTOMATED ONLY |
@@ -52,11 +52,19 @@ The ten state shortcuts are navigation aids, not declarations that those states 
 
 No test result above substitutes for authenticated live acceptance.
 
-## Exact blockers
+## GitHub and review-build verification
+
+- The uploaded source tree was verified byte-for-byte against the local commit.
+- GitHub executed all 149 migrations in PostgreSQL 17 and passed the database assertions after fixing the final Engine schema marker and an actual numeric/double-precision mismatch in the new directory RPC. Evidence: [CI run 34988317660](https://github.com/girlzculture/girlzculture/actions/runs/34988317660). That run subsequently stopped at an outdated submissions UI-label assertion; the assertion was corrected for the current table headings.
+- The database tests now execute custom-heading service imports, nonalphabetical order, reordered imports without duplication, stored source-layout audit evidence, tenant/team denials, category/state/city filters, pagination totals and revoked admin permissions.
+- GitHub owner localization and P0 core checks passed. The full latest-commit browser/release gates remain in progress.
+- Netlify built the initial PR source successfully. Browser inspection confirmed the demo overview, service and team navigation, and month/week calendar switching. This does not establish production publication or authenticated workflow acceptance.
+
+## Exact remaining blockers
 
 1. The automated Playwright Chromium executable is missing. The official browser download timed out. Tests could not launch; they did not prove success or failure of the application UI.
 2. Starting the local web server for manual inspection failed with `uv_interface_addresses` / operating-system error 1 in this workspace. No networking restrictions were bypassed.
-3. No supported local Postgres/Docker runtime was available to execute the three new migrations. They must pass the existing database CI gates before release.
+3. Local Postgres/Docker was unavailable; GitHub has now executed the complete migration chain and new RPC tests successfully. The full normal CI must still pass on the final PR commit and then the exact merged main commit before production migration.
 4. No authenticated acceptance session is available for Isha Five Stars, a restricted business-team member, platform admin and customer. Real AI replies, denial paths, save/refresh, logout/login and cross-device persistence still need these sessions.
 5. The founder authorized pushing this batch and proceeding through the protected production deployment workflow once the required checks pass. Publication has not yet been performed; required CI and production database gates remain in force.
 
