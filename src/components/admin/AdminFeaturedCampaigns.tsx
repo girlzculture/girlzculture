@@ -117,7 +117,7 @@ export default function AdminFeaturedCampaigns() {
       response,
       "Unable to load eligible businesses.",
     )) as { salons?: Row[]; error?: string };
-    if (!response.ok) throw new Error(body.error || "Unable to load eligible businesss.");
+    if (!response.ok) throw new Error(body.error || "Unable to load eligible businesses.");
     if (version === salonVersion.current) setSalons(Array.isArray(body.salons) ? body.salons : []);
   }, [workspaceState]);
 
@@ -402,7 +402,7 @@ export default function AdminFeaturedCampaigns() {
         <form key={editing?.id || "new"} onSubmit={submit} className="mt-5 space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="relative text-[10px] font-bold md:col-span-2">
-              Eligible salon
+              Eligible business
               <input
                 type="search"
                 disabled={Boolean(editing)}

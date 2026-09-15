@@ -43,4 +43,11 @@ $$;
 revoke all on function public.import_salon_catalog_ordered(text,uuid,uuid,text,jsonb,jsonb) from public,anon,authenticated;
 grant execute on function public.import_salon_catalog_ordered(text,uuid,uuid,text,jsonb,jsonb) to service_role;
 
+-- Publish the completed schema version only after all preceding changes succeed.
+update public.engine_settings
+set published_value = '"20260915133423"'::jsonb,
+    draft_value = '"20260915133423"'::jsonb,
+    updated_at = now()
+where setting_key = 'integrations.expected_migration';
+
 commit;
