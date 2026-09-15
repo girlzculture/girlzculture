@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
+import AdminMarketWorkspaces, { type MarketWorkspaceArea } from "@/components/admin/AdminMarketWorkspaces";
+import { useAdminQueryParam } from "@/components/admin/useAdminListContext";
+import { distanceMiles } from "@/lib/location";
 
 type Row = Record<string, any>;
 type PlacementBasis = "paid" | "platform_credit" | "complimentary_admin";
@@ -11,7 +14,7 @@ type PlacementBasis = "paid" | "platform_credit" | "complimentary_admin";
 const defaultSettings = {
   empty_title: "Own a business? Get featured here.",
   empty_body:
-    "Put your salon in front of nearby clients with a clearly labeled featured placement.",
+    "Put your business in front of nearby clients with a clearly labeled featured placement.",
   empty_href: "/partner",
 };
 const statusTabs = [
@@ -54,6 +57,8 @@ async function headers(json = false) {
 
 export default function AdminFeaturedCampaigns() {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const loadVersion = useRef(0);
+  const salonVersion = useRef(0);
   const [campaigns, setCampaigns] = useState<Row[]>([]);
   const [settings, setSettings] = useState<Row>(defaultSettings);
   const [salons, setSalons] = useState<Row[]>([]);
@@ -68,6 +73,10 @@ export default function AdminFeaturedCampaigns() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
+  const [workspaceState] = useAdminQueryParam("state");
+  const [workspaceMarket] = useAdminQueryParam("market");
+  const [audience, setAudience] = useState<MarketWorkspaceArea | null>(null);
+  const [campaignQuery, setCampaignQuery] = useState("");
   const [newWindow] = useState(() => ({
     start: localDateTime(),
     end: localDateTime(
@@ -75,60 +84,66 @@ export default function AdminFeaturedCampaigns() {
     ),
   }));
 
-  async function load() {
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/featured-campaigns", {
+      const response = await fetch(`/api/admin/featured-campaigns?state=${encodeURIComponent(workspaceState)}`, {
         headers: await headers(),
         cache: "no-store",
       });
       const body = (await readApiResponse(
         response,
-        "Unable to load Featured Salon campaigns.",
+        "Unable to load Featured Business campaigns.",
       )) as { campaigns?: Row[]; settings?: Row; error?: string };
       if (!response.ok) {
-        throw new Error(body.error || "Unable to load Featured Salon campaigns.");
+        throw new Error(body.error || "Unable to load Featured Business campaigns.");
       }
+      if (version !== loadVersion.current) return;
       setCampaigns(Array.isArray(body.campaigns) ? body.campaigns : []);
       setSettings(body.settings || defaultSettings);
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
-  }
+  }, [workspaceState]);
 
-  async function loadSalons(query = "") {
+  const loadSalons = useCallback(async (query = "", signal?: AbortSignal) => {
+    const version = ++salonVersion.current;
     const response = await fetch(
-      `/api/admin/featured-campaigns?mode=salons&page_size=200&q=${encodeURIComponent(query)}`,
-      { headers: await headers(), cache: "no-store" },
+      `/api/admin/featured-campaigns?mode=salons&page_size=200&state=${encodeURIComponent(workspaceState)}&q=${encodeURIComponent(query)}`,
+      { headers: await headers(), cache: "no-store", signal },
     );
     const body = (await readApiResponse(
       response,
-      "Unable to load eligible salons.",
+      "Unable to load eligible businesses.",
     )) as { salons?: Row[]; error?: string };
-    if (!response.ok) throw new Error(body.error || "Unable to load eligible salons.");
-    setSalons(Array.isArray(body.salons) ? body.salons : []);
-  }
+    if (!response.ok) throw new Error(body.error || "Unable to load eligible businesss.");
+    if (version === salonVersion.current) setSalons(Array.isArray(body.salons) ? body.salons : []);
+  }, [workspaceState]);
 
   useEffect(() => {
+    let active = true;
+    const currentLoadVersion = loadVersion;
+    const currentSalonVersion = salonVersion;
     const timer = window.setTimeout(() => {
       void Promise.all([load(), loadSalons()]).catch((error) =>
-        setNotice(error instanceof Error ? error.message : "Unable to load campaigns."),
+        active && setNotice(error instanceof Error ? error.message : "Unable to load campaigns."),
       );
     }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+    return () => { active = false; ++currentLoadVersion.current; ++currentSalonVersion.current; window.clearTimeout(timer); };
+  }, [load, loadSalons]);
 
   useEffect(() => {
     if (editing) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      void loadSalons(salonQuery.trim()).catch(() => undefined);
+      void loadSalons(salonQuery.trim(), controller.signal).catch(() => undefined);
     }, 180);
     return () => {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [editing, salonQuery]);
+  }, [editing, salonQuery, loadSalons]);
 
   const visibleCampaigns = useMemo(
     () =>
@@ -138,6 +153,13 @@ export default function AdminFeaturedCampaigns() {
       ),
     [campaigns, statusTab],
   );
+  const areaCampaigns = visibleCampaigns.filter(campaign => {
+    if (campaignQuery.trim() && ![campaign.salon?.name, campaign.salon?.address_city, campaign.salon?.address_state].join(" ").toLowerCase().includes(campaignQuery.trim().toLowerCase())) return false;
+    if (workspaceState && campaign.salon?.address_state !== workspaceState) return false;
+    if (!workspaceMarket) return true;
+    if (!audience || audience.id !== workspaceMarket || campaign.salon?.latitude == null || campaign.salon?.longitude == null) return false;
+    return distanceMiles({ lat: Number(audience.center_latitude), lng: Number(audience.center_longitude) }, { lat: Number(campaign.salon.latitude), lng: Number(campaign.salon.longitude) }) <= Number(campaign.radius_miles || 25);
+  });
 
   function resetEditor() {
     setEditing(null);
@@ -171,7 +193,7 @@ export default function AdminFeaturedCampaigns() {
     const form = new FormData(formElement);
     const salonId = editing?.salon_id || selectedSalon?.id;
     if (!salonId) {
-      setNotice("Choose an eligible salon.");
+      setNotice("Choose an eligible business.");
       return;
     }
     const requestedStatus = String(form.get("status") || "Draft");
@@ -216,10 +238,10 @@ export default function AdminFeaturedCampaigns() {
       });
       const body = (await readApiResponse(
         response,
-        "Unable to save the Featured Salon campaign.",
+        "Unable to save the Featured Business campaign.",
       )) as { error?: string };
       if (!response.ok) {
-        throw new Error(body.error || "Unable to save the Featured Salon campaign.");
+        throw new Error(body.error || "Unable to save the Featured Business campaign.");
       }
       await load();
       resetEditor();
@@ -231,7 +253,7 @@ export default function AdminFeaturedCampaigns() {
       setNotice(
         error instanceof Error
           ? error.message
-          : "Unable to save the Featured Salon campaign.",
+          : "Unable to save the Featured Business campaign.",
       );
     } finally {
       setBusy("");
@@ -344,6 +366,7 @@ export default function AdminFeaturedCampaigns() {
 
   return (
     <div className="space-y-5">
+      <AdminMarketWorkspaces scope="marketing" onSelectionChange={setAudience}/>
       {notice ? (
         <p
           role="status"
@@ -357,10 +380,10 @@ export default function AdminFeaturedCampaigns() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-serif text-xl text-plum sm:text-2xl">
-              {editing ? "Edit Featured Salon campaign" : "Create Featured Salon campaign"}
+              {editing ? "Edit Featured Business campaign" : "Create Featured Business campaign"}
             </h2>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-ink/60">
-              Select a salon, choose the placement basis, and publish the schedule.
+              Select a business, choose the placement basis, and publish the schedule.
               Platform credit and complimentary Admin placement do not require an
               internal reason or a manually entered reference.
             </p>
@@ -531,9 +554,12 @@ export default function AdminFeaturedCampaigns() {
             </p>
           </div>
           <span className="text-xs text-ink/50">
-            {visibleCampaigns.length} matching campaign{visibleCampaigns.length === 1 ? "" : "s"}
+            {areaCampaigns.length} matching loaded campaigns
           </span>
         </div>
+        <label className="mt-4 block text-sm font-bold">Find business, city or state<input value={campaignQuery} onChange={event => setCampaignQuery(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border px-3" placeholder="Search loaded campaigns"/></label>
+        {campaigns.length >= 500 ? <p role="status" className="mt-2 text-sm">Showing the latest 500 campaigns for this state. These filtered counts are not platform totals.</p> : null}
+        {workspaceMarket ? <p className="mt-2 text-sm">Showing campaigns whose configured radius reaches the selected area center. Eligibility and publication are checked separately.</p> : null}
         <div role="group" className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Campaign status filters">
           {statusTabs.map((status) => (
             <button
@@ -552,12 +578,12 @@ export default function AdminFeaturedCampaigns() {
         </div>
 
         <div className="mt-4 grid gap-3 xl:grid-cols-2">
-          {visibleCampaigns.map((campaign) => (
+          {areaCampaigns.map((campaign) => (
             <article key={campaign.id} className="min-w-0 rounded-xl border border-plum/10 bg-cream/25 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="truncate font-serif text-lg text-plum">
-                    {campaign.salon?.name || "Salon unavailable"}
+                    {campaign.salon?.name || "Business unavailable"}
                   </h3>
                   <p className="mt-1 text-[10px] leading-4 text-ink/50">
                     {displayDate(campaign.starts_at)} → {displayDate(campaign.ends_at)}
@@ -628,7 +654,7 @@ export default function AdminFeaturedCampaigns() {
               </div>
             </article>
           ))}
-          {!loading && !visibleCampaigns.length ? (
+          {!loading && !areaCampaigns.length ? (
             <p className="rounded-xl border border-dashed border-plum/15 p-8 text-center text-xs text-ink/50 xl:col-span-2">
               No campaigns match this status.
             </p>
@@ -642,7 +668,7 @@ export default function AdminFeaturedCampaigns() {
       <section className="rounded-2xl border border-plum/10 bg-white p-4 sm:p-5">
         <h2 className="font-serif text-xl text-plum sm:text-2xl">Zero-result promotional card</h2>
         <p className="mt-1 text-xs text-ink/55">
-          This editable card appears only when no eligible Featured Salon campaign
+          This editable card appears only when no eligible Featured Business campaign
           qualifies for the customer.
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">

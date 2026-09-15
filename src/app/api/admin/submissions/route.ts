@@ -51,6 +51,8 @@ async function GETHandler(request: Request) {
     const params = new URL(request.url).searchParams;
     const view = params.get("view") === "archived" ? "archived" : "active";
     const queryText = safeSearchTerm(cleanText(params.get("q"), 120));
+    const state = cleanText(params.get("state"), 2).toUpperCase();
+    const status = cleanText(params.get("status"), 40);
     const limit = boundedLimit(params.get("limit"));
     const offset = decodeCursor(params.get("cursor"));
 
@@ -67,6 +69,8 @@ async function GETHandler(request: Request) {
       view === "archived"
         ? query.not("archived_at", "is", null)
         : query.is("archived_at", null);
+    if (/^[A-Z]{2}$/.test(state)) query = query.eq("state", state);
+    if (["Pending", "Approved", "Rejected", "Needs Changes", "Offboarded"].includes(status)) query = query.eq("status", status);
     if (queryText) {
       const pattern = `%${queryText}%`;
       query = query.or(

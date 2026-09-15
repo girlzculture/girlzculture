@@ -14,6 +14,8 @@ import {
   buildSalonServiceExportWorkbook,
   buildSalonServiceTemplateWorkbook,
   parseSalonProductSpreadsheet,
+  inspectSalonSpreadsheet,
+  type SpreadsheetColumnMapping,
   parseSalonServiceSpreadsheet,
   resolveSalonServiceCatalogRows,
   type SalonCatalogReference,
@@ -21,6 +23,7 @@ import {
   type SpreadsheetValidationError,
 } from "@/lib/salonCatalogSpreadsheet";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
+import { sortCatalogRecords } from "@/lib/catalogOrdering";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -339,13 +342,22 @@ async function POSTHandler(request: Request) {
     monitoringAdmin = context.admin;
     salonId = context.salon.id;
     const bytes = Buffer.from(await file.arrayBuffer());
+    const mode = normalized(form.get("mode")) || "save";
+    if (!["inspect", "preview", "save"].includes(mode)) rejectRequest("Choose inspect, preview or save.");
+    if (mode === "inspect") {
+      const sheet = normalized(form.get("heading_sheet"));
+      const inspection = await inspectSalonSpreadsheet(bytes, file.name, kind, sheet ? { sheet, row: Number(form.get("heading_row")) } : undefined);
+      const catalog = kind === "services" ? (await loadPlatformCatalog(context.admin)).reference : null;
+      return Response.json({ ...inspection, catalog }, { headers: { "Cache-Control": "private, no-store" } });
+    }
+    const rawMapping = form.get("mapping");
+    if (typeof rawMapping === "string" && rawMapping.length > 12000) rejectRequest("Column mapping is too large.");
+    const mapping = typeof rawMapping === "string" && rawMapping ? JSON.parse(rawMapping) as SpreadsheetColumnMapping : undefined;
+    if (mapping && (typeof mapping !== "object" || Array.isArray(mapping) || typeof mapping.sheet !== "string")) rejectRequest("Review the worksheet and column mapping.");
 
-    let rpcName:
-      | "import_salon_services_spreadsheet"
-      | "import_salon_products_spreadsheet";
     let rows: Array<Record<string, unknown>>;
     if (kind === "services") {
-      const parsed = await parseSalonServiceSpreadsheet(bytes, file.name);
+      const parsed = await parseSalonServiceSpreadsheet(bytes, file.name, mapping);
       if (parsed.errors.length) return validationResponse(parsed.errors);
       const catalog = await loadPlatformCatalog(context.admin);
       const resolved = resolveSalonServiceCatalogRows(
@@ -354,19 +366,20 @@ async function POSTHandler(request: Request) {
       );
       if (resolved.errors.length) return validationResponse(resolved.errors);
       rows = resolved.rows as Array<Record<string, unknown>>;
-      rpcName = "import_salon_services_spreadsheet";
     } else {
-      const parsed = await parseSalonProductSpreadsheet(bytes, file.name);
+      const parsed = await parseSalonProductSpreadsheet(bytes, file.name, mapping);
       if (parsed.errors.length) return validationResponse(parsed.errors);
       rows = parsed.rows as Array<Record<string, unknown>>;
-      rpcName = "import_salon_products_spreadsheet";
     }
 
-    const result = await context.admin.rpc(rpcName, {
+    if (mode === "preview") return Response.json({ preview: rows, count: rows.length, source_layout: mapping || null }, { headers: { "Cache-Control": "private, no-store" } });
+    const result = await context.admin.rpc("import_salon_catalog_ordered", {
+      p_kind: kind,
       p_salon_id: salonId,
       p_actor_user_id: context.user.id,
       p_file_name: file.name.slice(0, 255),
       p_rows: rows,
+      p_source_layout: mapping || {},
     });
     if (result.error) {
       if (/SALON_IMPORT_|invalid|required|constraint/i.test(result.error.message)) {
@@ -402,7 +415,7 @@ async function POSTHandler(request: Request) {
         ok: true,
         kind,
         result: result.data,
-        records: records.data || [],
+        records: sortCatalogRecords(records.data || []),
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );

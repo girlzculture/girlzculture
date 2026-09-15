@@ -55,5 +55,6 @@ export function isSiteAccessMarketplaceApi(path: string, method: string) {
     "/api/discovery/decision-search",
     "/api/discovery/availability",
     "/api/concierge/search",
+    "/api/concierge/knowledge",
   ].includes(path);
 }

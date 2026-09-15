@@ -5,6 +5,7 @@
  * language unless a dedicated translated content record exists.
  */
 import { P0_OWNER_SOURCE_MESSAGES } from "@/i18n/p0-owner-source-catalog";
+import { LAUNCH_WORKSPACE_SOURCE_MESSAGES } from "@/i18n/launch-workspace-source-catalog";
 type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
@@ -203,9 +204,8 @@ const wo: SourceCatalog = {
 };
 
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {
-  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es },
-  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr },
-  wo: { ...P0_OWNER_SOURCE_MESSAGES.wo, ...wo },
-  "zh-CN": P0_OWNER_SOURCE_MESSAGES["zh-CN"],
+  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es },
+  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr },
+  wo: { ...P0_OWNER_SOURCE_MESSAGES.wo, ...wo, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.wo },
+  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"] },
 };
-

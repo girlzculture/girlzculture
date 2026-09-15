@@ -3,6 +3,7 @@ import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 import AxeBuilder from '@axe-core/playwright';
+import { presentAssistantResult } from "../../src/lib/gcAssistantPresentation";
 import { validateTool } from '../../src/lib/gcAssistantCore';
 import { mkdir } from 'node:fs/promises';
 
@@ -56,13 +57,10 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     async function ask() { await dialog.locator('textarea').fill('Business request'); await dialog.getByRole('button', { name: t('Ask GC Assistant'), exact: true }).click(); }
     for (const [tool, args, result] of reads) {
       next = { tool, args, result }; await ask();
-      await expect(dialog.locator('article').last().getByRole('status')).toHaveText(t('Current business information'));
-      await expect(dialog.locator('article').last().locator('dl')).not.toHaveCount(0);
+      await expect(dialog.locator('article').last()).toContainText(presentAssistantResult(tool, result, locale).message);
+      await expect(dialog.locator('article').last().locator('dl')).toHaveCount(0);
       expect(writes).toBe(0);
-      const last = dialog.locator('article').last();
-      if (tool === 'get_plan_status') await expect(last).toContainText(t('Active'));
-      if (tool === 'get_booking_messages') await expect(last).toContainText(t('Business'));
-      if (tool === 'get_promotions') await expect(last).toContainText(t('Percentage discount'));
+      expect(presentAssistantResult(tool, result, locale).message.length).toBeLessThan(900);
     }
     for (const [index, [tool, args]] of drafts.entries()) {
       next = { tool, args }; await ask(); const article = dialog.locator('article').last();
@@ -146,7 +144,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     await page.goto('/salon/dashboard');
     await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'GC Assistant' });
-    await dialog.getByRole('button', { name: t('Dictate a request') }).click();
+    await dialog.getByRole('button', { name: t('Start dictation') }).click();
     const language = await page.evaluate(() => {
       const speech = (window as unknown as { fixtureSpeech: { lang: string; onresult: (event: unknown) => void; onend: () => void } }).fixtureSpeech;
       speech.onresult({ results: [{ isFinal: true, 0: { transcript: 'Sheila spoken draft' } }] }); speech.onend(); return speech.lang;
@@ -162,7 +160,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     await expect(dialog.locator('article').last()).toContainText(t('Your change was saved and verified.'));
     expect(writes).toBe(1);
     await page.evaluate(() => { Object.assign(window, { SpeechRecognition: undefined, webkitSpeechRecognition: undefined }); });
-    await dialog.getByRole('button', { name: t('Dictate a request') }).click();
+    await dialog.getByRole('button', { name: t('Start dictation') }).click();
     await expect(dialog).toContainText(t('Dictation is unavailable in this browser. You can type your request.'));
     await dialog.locator('textarea').fill('Typed fallback remains editable');
     await expect(dialog.locator('textarea')).toHaveValue('Typed fallback remains editable');

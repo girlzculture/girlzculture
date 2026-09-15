@@ -11,6 +11,9 @@ export default function SiteAccessBanner() {
         Girlz Culture demonstration — sample marketplace content is visible;
         booking and payment are unavailable.
       </span>
+      <Link href="/site-access/business-demo" className="underline underline-offset-4">
+        Explore the sample business dashboard
+      </Link>
       <Link
         href={SITE_ACCESS_EXIT_PATH}
         className="underline decoration-white/60 underline-offset-4 hover:decoration-white"

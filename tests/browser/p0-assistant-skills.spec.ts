@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
+import { presentAssistantResult } from "../../src/lib/gcAssistantPresentation";
 import { validateTool } from '../../src/lib/gcAssistantCore';
 import { POLICY_DEFAULTS } from '../../src/lib/businessPolicyCore';
 import AxeBuilder from '@axe-core/playwright';
@@ -75,7 +76,8 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     for (const read of reads) {
       next = read;
       await ask(bookingQuestions[locale]);
-      await expect(dialog.locator('article').last().getByRole('status')).toHaveText(t('Current business information'));
+      await expect(dialog.locator('article').last()).toContainText(presentAssistantResult(read.tool, read.result, locale).message);
+      await expect(dialog.locator('article').last().locator('dl')).toHaveCount(0);
       expect(mutations).toHaveLength(0);
     }
     await page.screenshot({ path: `${gallery}/conversation.png`, ...screenshotCaret });

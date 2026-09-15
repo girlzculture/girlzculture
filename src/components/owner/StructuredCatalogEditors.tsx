@@ -173,7 +173,7 @@ export function StructuredStylesEditor({ c, recordId = "" }: { c: Context; recor
   const availableAddons=catalogAddons.filter((addon)=>addon.category_id===categoryId).map((addon)=>String(addon.name));
   const listParams = new URLSearchParams({ ...(serviceQuery ? { q: serviceQuery } : {}), ...(serviceCategory !== "all" ? { category: serviceCategory } : {}), ...(serviceGroup !== "all" ? { group: serviceGroup } : {}), ...(serviceStatus !== "all" ? { status: serviceStatus } : {}) });
   const stylesListHref = `/salon/dashboard/styles${listParams.toString() ? `?${listParams}` : ""}`;
-  const visibleStyles = c.styles.filter((style) => {
+  const visibleStyles = sortCatalogRecords(c.styles).filter((style) => {
     const needle = serviceQuery.trim().toLowerCase();
     const status = style.is_active === false || style.is_draft === true ? "inactive" : "active";
     return (!needle || [style.name, style.category, masters.find((master) => master.id === style.master_style_id)?.name].some((value) => String(value || "").toLowerCase().includes(needle))) &&

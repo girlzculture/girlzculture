@@ -11,6 +11,7 @@ function fixture(options = {}) {
     async rpc(name, args) {
       calls.push({ name, args });
       if (name === 'p0_actor_has_permission') return { data: options.allowed !== false };
+      if (name === 'get_public_content_pages') return { data: options.knowledge || [] };
       if (name === 'save_gc_assistant_request') { saved.push(args.p_request); return { data: args.p_request }; }
       if (name === 'confirm_gc_assistant_request') return { data: { verified: true, result: {} } };
       throw Error(`Unexpected RPC ${name}`);
@@ -71,6 +72,15 @@ test('availability retains canonical professional identity for a subsequent scop
   assert.equal(slot.stylist_id, actor);
   assert.equal(slot.professional_name, 'Save');
   assert.equal(slot.time, '13:00');
+});
+
+test('published knowledge is searched as bounded source material and answered conversationally', async () => {
+  const f = fixture({ knowledge: [{ slug: 'help', title: 'Help Center', sections: [{ title: 'Payments', body: 'How do deposits work?::Girlz Culture applies the platform deposit shown at checkout.\nHow do I book?::Choose a business and an available time.' }] }] });
+  const response = await f.run('search_platform_knowledge', { query: 'deposits' });
+  assert.equal(response.request.result.matches.length, 1);
+  assert.equal(response.request.result.matches[0].question, 'How do deposits work?');
+  assert.match(response.assistant_message, /base de connaissances Girlz Culture/i);
+  assert.doesNotMatch(response.assistant_message, /sections|published_payload/);
 });
 
 test('revoked permission and expired subscription stop reads and proposal saves', async () => {
