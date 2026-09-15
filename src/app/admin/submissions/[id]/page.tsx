@@ -1,4 +1,5 @@
 import AdminSubmissionDetail from "@/components/admin/AdminSubmissionDetail";
+import AdminDashboard from "@/components/AdminDashboard";
 
 export default async function AdminApplicationPage({
   params,
@@ -13,5 +14,5 @@ export default async function AdminApplicationPage({
   const returnTo = requestedReturn?.startsWith("/admin/submissions")
     ? requestedReturn
     : "/admin/submissions";
-  return <AdminSubmissionDetail id={id} returnTo={returnTo} />;
+  return <AdminDashboard section="submissions" recordId={id}><AdminSubmissionDetail id={id} returnTo={returnTo} /></AdminDashboard>;
 }

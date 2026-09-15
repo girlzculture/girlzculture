@@ -52,10 +52,28 @@ export function proxy(request: NextRequest) {
     const marketplaceLive = customerMarketplaceLive();
 
     if (pathname === SITE_ACCESS_EXIT_PATH) {
-      const target = request.nextUrl.clone();
-      target.pathname = "/";
-      target.search = "";
-      const response = NextResponse.redirect(target, 307);
+      // Next.js strips Flight prefetch headers before Proxy runs. Reads must
+      // therefore never clear the cookie, even without a prefetch marker.
+      if (request.method === "GET" || request.method === "HEAD") {
+        return protectSiteAccessResponse(new NextResponse(null, { status: 204 }));
+      }
+      if (request.method !== "POST") {
+        return protectSiteAccessResponse(NextResponse.json(
+          { error: "Use the Exit demonstration control to end this session." },
+          { status: 405, headers: { Allow: "GET, HEAD, POST" } },
+        ));
+      }
+      // Preserve the browser's host: NextURL normalizes loopback IPs to
+      // "localhost", which is a different origin and cookie scope.
+      const origin = request.headers.get("origin");
+      if (origin !== `${request.nextUrl.protocol}//${forwardedHost}`) {
+        return protectSiteAccessResponse(NextResponse.json(
+          { error: "The demonstration can only be closed from this site." },
+          { status: 403 },
+        ));
+      }
+      const target = new URL("/", origin);
+      const response = NextResponse.redirect(target, 303);
       response.cookies.set(SITE_ACCESS_COOKIE, "", {
         ...siteAccessCookieOptions(request),
         maxAge: 0,

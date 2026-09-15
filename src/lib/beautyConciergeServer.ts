@@ -7,6 +7,9 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEngineNumber } from "@/lib/engineConfigServer";
 import { aiProviderConfigured, approvedAiModels, approvedAiProviders } from "@/lib/aiAutomationServer";
 import { capturePlatformError } from "@/lib/platformErrors";
+import { matchDecisionLocationMarket } from "@/lib/decisionSearchIntentCore";
+import { decisionExplicitLocationRequest } from "@/lib/decisionSearchEnrichmentCore";
+import { resolveSearchPlace } from "@/lib/searchPlaceServer";
 import {
   openAiApiKey,
   openAiApiUrl,
@@ -219,7 +222,7 @@ async function openAiIntent(text: string, language: string, model: string, timeo
   } finally { clearTimeout(timer); }
 }
 
-async function resolveStyleAndLocation(prompt: string, intent: ConciergeIntent, suppliedOrigin: Coordinates | null) {
+export async function resolveStyleAndLocation(prompt: string, intent: ConciergeIntent, suppliedOrigin: Coordinates | null) {
   const admin = getSupabaseAdmin();
   const [mastersResult, rulesResult, marketsResult] = await Promise.all([
     admin.from("master_styles").select("id,name").eq("is_active", true).order("name").limit(1_000),
@@ -245,31 +248,23 @@ async function resolveStyleAndLocation(prompt: string, intent: ConciergeIntent, 
       intent.style = "Braids";
     }
   }
-  if (!intent.location) {
-    const normalizedPrompt = prompt.toLocaleLowerCase();
-    const market = (knownMarkets || []).find((candidate) => {
-      const name = String(candidate.name || "").toLocaleLowerCase();
-      return name.length > 2 && normalizedPrompt.includes(name);
-    });
-    if (market) intent.location = [market.name, market.state_code].filter(Boolean).join(", ");
-  }
-  if (suppliedOrigin && validCoordinates(suppliedOrigin)) return { origin: suppliedOrigin, intent };
-  if (!intent.location) return { origin: null, intent };
+  const explicit = decisionExplicitLocationRequest(prompt);
+  if (explicit?.phrase) intent.location = explicit.phrase;
+  const directMarket = matchDecisionLocationMarket(prompt, knownMarkets);
+  if (!explicit && directMarket) intent.location = [directMarket.market.name, directMarket.market.state_code].filter(Boolean).join(", ");
+  const marketMatch = matchDecisionLocationMarket(intent.location || prompt, knownMarkets);
+  if (!intent.location && marketMatch) intent.location = [marketMatch.market.name, marketMatch.market.state_code].filter(Boolean).join(", ");
+  if (!intent.location) return { origin: suppliedOrigin && validCoordinates(suppliedOrigin) ? suppliedOrigin : null, intent };
   const location = intent.location.replace(/[^\p{L}\p{N}\s,.'-]/gu, "").trim().slice(0, 80);
-  const locationTerm = location.split(",")[0].trim();
-  const market = (knownMarkets || []).find((candidate) => String(candidate.name || "").toLocaleLowerCase().includes(locationTerm.toLocaleLowerCase()));
-  if (market) return { origin: { lat: Number(market.center_latitude), lng: Number(market.center_longitude) }, intent };
-  const [boroughResult, cityResult] = await Promise.all([
-    admin.from("salons").select("latitude,longitude").eq("status", "Active").eq("is_discoverable", true).ilike("borough", `%${locationTerm}%`).not("latitude", "is", null).not("longitude", "is", null).limit(1),
-    admin.from("salons").select("latitude,longitude").eq("status", "Active").eq("is_discoverable", true).ilike("address_city", `%${locationTerm}%`).not("latitude", "is", null).not("longitude", "is", null).limit(1),
-  ]);
-  if (boroughResult.error) throw boroughResult.error;
-  if (cityResult.error) throw cityResult.error;
-  const salon = (boroughResult.data || [])[0] || (cityResult.data || [])[0];
-  return { origin: salon ? { lat: Number(salon.latitude), lng: Number(salon.longitude) } : null, intent };
+  const market = matchDecisionLocationMarket(location, knownMarkets)?.market;
+  const neighborhoodMoreSpecific = /\bharlem\b/i.test(location) && !/\bharlem\b/i.test(market?.name || "");
+  if (market && !neighborhoodMoreSpecific) return { origin: { lat: Number(market.center_latitude), lng: Number(market.center_longitude) }, intent };
+  const place = await resolveSearchPlace(location);
+  if (place) return { origin: place.origin, intent: { ...intent, location: place.label } };
+  return { origin: null, intent };
 }
 
-export async function runBeautyConcierge(input: { prompt: string; language: string; origin: Coordinates | null; request?: Request }) {
+export async function runBeautyConcierge(input: { prompt: string; language: string; origin: Coordinates | null; request?: Request; previousIntent?: ConciergeIntent }) {
   const admin = getSupabaseAdmin();
   const started = Date.now();
   const featureResult = await admin.from("ai_automation_features").select("*").eq("feature_key", "beauty_concierge").maybeSingle();
@@ -279,6 +274,16 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
   if (killResult.error) throw killResult.error;
   const kill = killResult.data;
   let intent = deterministicConciergeIntent(input.prompt, input.language);
+  const modelPrompt = input.previousIntent ? `Previous search criteria (context only): ${JSON.stringify(input.previousIntent)}\nLatest message: ${input.prompt}\nRetain still-relevant search criteria. The latest message replaces or removes earlier criteria when requested.` : input.prompt;
+  if (input.previousIntent) {
+    const current = intent;
+    intent = { ...input.previousIntent, ...Object.fromEntries(Object.entries(current).filter(([, value]) => value !== null && value !== false && value !== "any" && value !== "distance")), needs_clarification: false, clarifying_question: null } as ConciergeIntent;
+    if (/\b(?:any price|no budget|remove.*(?:price|budget))\b/i.test(input.prompt)) intent.maximum_price = null;
+    if (/\b(?:any day|any date|remove.*date)\b/i.test(input.prompt)) { intent.date = null; intent.availability_required = false; }
+    if (/\b(?:not just offers|all offers|remove.*(?:offers|promotions))\b/i.test(input.prompt)) intent.promotion_only = false;
+    const nextLocation = decisionExplicitLocationRequest(input.prompt);
+    if (nextLocation) intent.location = nextLocation.phrase;
+  }
   let mode: "openai" | "deterministic" = "deterministic";
   let safeError: string | null = null;
   const warningReferences: string[] = [];
@@ -307,7 +312,7 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     deterministic_fallback: true,
   });
   if (canReserveAi) {
-    const reservedCostCents = conciergeReservationCostCents(input.prompt, input.language);
+    const reservedCostCents = conciergeReservationCostCents(modelPrompt, input.language);
     const reservation = await admin.rpc("reserve_governed_ai_usage", {
       p_feature: "beauty_concierge",
       p_user: null,
@@ -335,7 +340,7 @@ export async function runBeautyConcierge(input: { prompt: string; language: stri
     } else {
       const reservationId = String(reservation.data);
       try {
-        const parsed = await openAiIntent(input.prompt, input.language, model, Number(feature.timeout_ms || 8_000));
+        const parsed = await openAiIntent(modelPrompt, input.language, model, Number(feature.timeout_ms || 8_000));
         const usageWrite = await admin.from("ai_usage_events").update({
           outcome: "completed",
           input_units: Number(parsed.usage.input_tokens || 0),

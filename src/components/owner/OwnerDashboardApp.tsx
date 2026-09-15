@@ -1,4 +1,6 @@
 "use client";
+import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
+import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import BusinessPolicies from "@/components/owner/BusinessPolicies";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { intlLocale } from "@/i18n/catalog";
@@ -13,8 +15,6 @@ import {
   BadgeCheck,
   CalendarDays,
   Check,
-  ChevronLeft,
-  ChevronRight,
   CircleDollarSign,
   Clock3,
   Crown,
@@ -32,7 +32,6 @@ import {
   UserPlus,
   UserRound,
   UsersRound,
-  X,
 } from "lucide-react";
 import { getSessionForScope, reportClientOperationalFailure, reportClientOperationalRecovery, salonSupabase as supabase } from "@/lib/supabase";
 import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
@@ -70,7 +69,6 @@ import {
   normalizeUsPhone,
   US_PHONE_PATTERN,
 } from "@/lib/validation";
-import { dateKeyInTimeZone } from "@/lib/dateTime";
 import { STORE_TIME_OPTIONS } from "@/lib/salonPresets";
 import {
   StructuredStylesEditor,
@@ -283,9 +281,9 @@ export default function OwnerDashboardApp({
         loadedProducts = records.salon_products || [];
       setBookings(loadedBookings);
       setReviews(loadedReviews);
-      setStyles(loadedStyles);
+      setStyles(sortCatalogRecords(loadedStyles));
       setStylists(loadedStylists);
-      setProducts(loadedProducts);
+      setProducts(sortCatalogRecords(loadedProducts));
       setPromotions(records.salon_promotions || []);
       setSubscription((records.subscriptions || [])[0] || null);
       setBillingEvents(records.billing_events || []);
@@ -350,9 +348,9 @@ export default function OwnerDashboardApp({
             if (refreshed.salon) setSalon(refreshed.salon);
             setBookings(refreshedRecords.bookings || []);
             setReviews(refreshedRecords.reviews || []);
-            setStyles(refreshedRecords.styles || []);
+            setStyles(sortCatalogRecords(refreshedRecords.styles || []));
             setStylists(refreshedRecords.stylists || []);
-            setProducts(refreshedRecords.salon_products || []);
+            setProducts(sortCatalogRecords(refreshedRecords.salon_products || []));
             setBlockouts(refreshedRecords.salon_blockouts || []);
             setNotifications(refreshedRecords.notifications || []);
             return "ready";
@@ -2835,9 +2833,6 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const hours = c.salon.hours || {};
   const settings = c.salon.booking_settings || {};
   const timeZone = c.salon.time_zone || "America/New_York";
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [calendarBooking, setCalendarBooking] = useState<Row | null>(null);
-  const week = salonWeek(timeZone, weekOffset, c.locale);
   const activeBookings = c.bookings.filter(
     (booking) =>
       !["cancelled", "declined", "refunded"].includes(
@@ -2855,14 +2850,6 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       !blockout.released_at &&
       new Date(String(blockout.ends_at || 0)).getTime() > renderedAt,
   );
-  useEffect(() => {
-    if (!calendarBooking) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCalendarBooking(null);
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [calendarBooking]);
 
   async function saveHours(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -2921,9 +2908,6 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     c.setNotice(`${activeStylist.name || "Stylist"} availability saved.`);
   }
   async function block(mode: string, targetStylistId?: string) {
-    const scope = targetStylistId
-      ? `${activeStylist?.name || "this stylist"}`
-      : "the whole salon";
     const expiration = mode.endsWith("_today")
       ? "the end of today"
       : mode === "stylist_three_hours"
@@ -3106,71 +3090,10 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         </div>
       </Panel> : null}
       <div className="grid gap-4">
-        {recordId === "calendar" ? <Panel>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-serif text-xl text-plum">Appointment calendar</h2>
-              <p className="mt-1 text-[10px] text-ink/55">{weekRangeLabel(week, c.locale)} · {timeZone.replaceAll("_", " ")}</p>
-            </div>
-            <div className="flex items-center overflow-hidden rounded-[9px] border border-plum/15 bg-white">
-              <button type="button" aria-label="Previous week" onClick={() => setWeekOffset((value) => value - 1)} className="grid min-h-11 min-w-11 place-items-center border-r border-plum/10 text-plum"><ChevronLeft size={17}/></button>
-              <button type="button" onClick={() => setWeekOffset(0)} disabled={weekOffset === 0} className="min-h-11 px-4 text-xs font-bold text-magenta gc-disabled-control">Today</button>
-              <button type="button" aria-label="Next week" onClick={() => setWeekOffset((value) => value + 1)} className="grid min-h-11 min-w-11 place-items-center border-l border-plum/10 text-plum"><ChevronRight size={17}/></button>
-            </div>
-          </div>
-          <div className="space-y-2 md:hidden">
-            {week.map((date) => {
-              const dayBookings = activeBookings.filter((booking) => dateKeyInTimeZone(String(booking.appointment_datetime || ""), timeZone) === date.key).sort((a, b) => String(a.appointment_datetime).localeCompare(String(b.appointment_datetime)));
-              return <section key={date.key} className="rounded-[10px] border border-plum/10 bg-white p-3"><header className="flex items-center justify-between"><b className="text-xs uppercase tracking-wide text-plum">{date.label}</b><span className="font-serif text-base">{date.day}</span></header><div className="mt-2 space-y-2">{dayBookings.map((booking, index) => <CalendarBookingButton key={String(booking.id || index)} booking={booking} c={c} timeZone={timeZone} onOpen={setCalendarBooking}/>)}{!dayBookings.length?<p className="py-2 text-center text-[10px] text-ink/40">No appointments</p>:null}</div></section>;
-            })}
-          </div>
-          <div className="hidden max-w-full overflow-x-auto md:block" role="region" aria-label="Appointment calendar" tabIndex={0}>
-            <div className="grid min-w-[760px] grid-cols-7 overflow-hidden rounded-[12px] border border-plum/10">
-              {week.map((date) => (
-              <section
-                key={date.key}
-                className="min-h-[430px] border-r border-plum/10 bg-cream/20 last:border-r-0"
-              >
-                <header className="border-b border-plum/10 bg-white/80 px-2 py-3 text-center">
-                  <b className="block text-[10px] uppercase tracking-wide text-plum">
-                    {date.label}
-                  </b>
-                  <span className="mt-1 block font-serif text-lg">
-                    {date.day}
-                  </span>
-                </header>
-                <div className="space-y-2 p-2">
-                  {activeBookings
-                    .filter(
-                      (booking) =>
-                        dateKeyInTimeZone(
-                          String(booking.appointment_datetime || ""),
-                          timeZone,
-                        ) === date.key,
-                    )
-                    .sort((a, b) =>
-                      String(a.appointment_datetime).localeCompare(
-                        String(b.appointment_datetime),
-                      ),
-                    )
-                    .map((booking, index) => <CalendarBookingButton key={String(booking.id || index)} booking={booking} c={c} timeZone={timeZone} onOpen={setCalendarBooking}/>)}
-                  {!activeBookings.some(
-                    (booking) =>
-                      dateKeyInTimeZone(
-                        String(booking.appointment_datetime || ""),
-                        timeZone,
-                      ) === date.key,
-                  ) ? (
-                    <p className="py-5 text-center text-[9px] text-ink/35">
-                      No appointments
-                    </p>
-                  ) : null}
-                </div>
-              </section>
-              ))}
-            </div>
-          </div>
-        </Panel> : null}
+        {recordId === "calendar" ? <WorkspaceCalendar timeZone={timeZone} events={[
+          ...activeBookings.map(booking => ({ id: String(booking.id), start: String(booking.appointment_datetime), title: String(booking.guest_name || "Appointment"), subtitle: `${styleName(c, booking.style_id)} · ${stylistName(c, booking.stylist_id)}`, status: String(booking.status), href: `/salon/dashboard/bookings/${booking.id}` })),
+          ...activeBlockouts.map(block => ({ id: String(block.id), start: String(block.starts_at), title: String(block.reason || "Unavailable"), status: "Availability override", kind: "unavailable" as const, href: `/salon/dashboard/availability/${block.id}` })),
+        ]}/> : null}
         {recordId === "hours" || recordId === "slots" ? <div className="mx-auto w-full max-w-3xl space-y-4">
           {recordId === "hours" ? <Panel>
             <h2 className="font-serif text-xl text-plum">Store Hours</h2>
@@ -3435,14 +3358,10 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           </Panel>
         </div> : null}
       </div>
-      {calendarBooking ? <div className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/55 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarBooking(null); }}><section role="dialog" aria-modal="true" aria-labelledby="calendar-booking-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[16px] bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><h2 id="calendar-booking-title" className="font-serif text-2xl text-plum">Appointment details</h2><p className="mt-1 text-[10px] text-ink/50">#{bookingReference(calendarBooking)}</p></div><button type="button" autoFocus aria-label="Close appointment details" onClick={() => setCalendarBooking(null)} className="grid min-h-11 min-w-11 place-items-center rounded-full border border-plum/10 text-plum"><X size={18}/></button></div><div className="mt-5 space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={calendarBooking.guest_name ? true : undefined}>{String(calendarBooking.guest_name || "Customer")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(calendarBooking.appointment_datetime, timeZone, c.locale)}<br/>{styleName(c, calendarBooking.style_id)} · {stylistName(c, calendarBooking.stylist_id)}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Status</b><Status value={String(calendarBooking.status || "Confirmed")}/></p><div className="grid grid-cols-2 gap-3 rounded-[10px] bg-cream p-3 text-xs"><p>Deposit paid<b className="mt-1 block gc-text-success">{c.formatCurrency(Number(calendarBooking.deposit_amount || 0))}</b></p><p>Balance due<b className="mt-1 block text-magenta">{c.formatCurrency(Number(calendarBooking.balance_due || 0))}</b></p></div><Link href={`/salon/dashboard/bookings/${encodeURIComponent(String(calendarBooking.id || ""))}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-[9px] bg-magenta text-xs font-bold text-white">Open booking</Link></div></section></div> : null}
     </>
   );
 }
 
-function CalendarBookingButton({ booking, c, timeZone }: { booking: Row; c: Ctx; timeZone: string; onOpen: (booking: Row) => void }) {
-  return <Link href={`/salon/dashboard/availability/${booking.id}`} className="block w-full rounded-[8px] border border-magenta/25 bg-blush/70 p-2 text-left text-[9px] leading-4 transition hover:border-magenta focus-visible:outline-2 focus-visible:outline-magenta"><b className="block text-plum">{bookingTime(booking.appointment_datetime, timeZone, c.locale)}</b><span className="font-semibold">{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</span><span className="block text-ink/60">{stylistName(c, booking.stylist_id)}</span></Link>;
-}
 
 const BOOKING_GROUPS = ["Upcoming", "In Progress", "Needs Resolution", "All"] as const;
 type BookingGroup = (typeof BOOKING_GROUPS)[number];
@@ -5436,46 +5355,6 @@ function Empty({ text }: { text: string }) {
       {text}
     </div>
   );
-}
-function salonWeek(timeZone: string, offsetWeeks = 0, locale = "en-US") {
-  const today = dateKeyInTimeZone(new Date(), timeZone);
-  const cursor = new Date(`${today}T12:00:00Z`);
-  const daysFromMonday = (cursor.getUTCDay() + 6) % 7;
-  cursor.setUTCDate(cursor.getUTCDate() - daysFromMonday);
-  cursor.setUTCDate(cursor.getUTCDate() + offsetWeeks * 7);
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(cursor);
-    date.setUTCDate(cursor.getUTCDate() + index);
-    return {
-      key: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString(locale, {
-        weekday: "short",
-        timeZone: "UTC",
-      }),
-      day: date.toLocaleDateString(locale, {
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      }),
-    };
-  });
-}
-function weekRangeLabel(week: Array<{ key: string; label: string; day: string }>, locale = "en-US") {
-  if (!week.length) return "";
-  const start = new Date(`${week[0].key}T12:00:00Z`);
-  const end = new Date(`${week[week.length - 1].key}T12:00:00Z`);
-  return `${start.toLocaleDateString(locale, { month: "short", day: "numeric", timeZone: "UTC" })} – ${end.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
-}
-function bookingTime(value: unknown, timeZone: string, locale = "en-US") {
-  if (!value) return "Time not set";
-  const date = new Date(String(value));
-  return Number.isNaN(date.getTime())
-    ? "Time not set"
-    : date.toLocaleTimeString(locale, {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone,
-      });
 }
 function dateText(value: unknown, timeZone = "America/New_York", locale = "en-US") {
   if (!value) return "—";

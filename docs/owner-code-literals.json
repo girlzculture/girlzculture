@@ -2,6 +2,46 @@
   "purpose": "Reviewed non-copy source contexts, separate from the proper-name-only untranslated UI allowlist. New or changed uses require review or translation, not automatic exemption by string value.",
   "entries": [
     {
+      "source": "Enter",
+      "reason": "Reviewed punctuation-only interpolation of already formatted values; contains no first-party words. Rendered content and dates remain separately localized.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "0c3a3db56abf76e0817a2800dfa1ddc945353ead72a4b7c0755529e24f64a7f2"
+        }
+      ]
+    },
+    {
+      "source": "{value0}:",
+      "reason": "Reviewed punctuation-only interpolation of already formatted values; contains no first-party words. Rendered content and dates remain separately localized.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "f1493ed9370b339fa65f8423c057f44f1b097bf5895aa319ff280fd5b19437d7"
+        }
+      ]
+    },
+    {
+      "source": "{value0}–{value1}",
+      "reason": "Reviewed punctuation-only interpolation of already formatted values; contains no first-party words. Rendered content and dates remain separately localized.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonSpreadsheetPanel.tsx",
+          "context": "e0af11bfe816534093bf1bc15ed690ed3c0227a4a4ecae9e678bd530e08b9b9f"
+        }
+      ]
+    },
+    {
+      "source": "({value0})",
+      "reason": "Reviewed punctuation-only interpolation of already formatted values; contains no first-party words. Rendered content and dates remain separately localized.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "0b2f781f5e4eaeec6c325b314ac5fbcee3cffb8f914f8e763552cccb3260550d"
+        }
+      ]
+    },
+    {
       "source": ":{value0}",
       "reason": "Value or identifier formatting, with no first-party words: punctuation, date/time keys, phone/reference/currency components. Rendered dates, money and original content are verified separately. This classification does not exempt wording interpolated into these values.",
       "contexts": [
@@ -186,6 +226,10 @@
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "context": "097bd4fc1f382132058a7db477bbf66c1c6b8a7920aec8496b1edc4366fe5c99"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "be5b293c55fc4ae5b58a68f15cc36a10df4141e5fd1aa12e69e5be810def158e"
         }
       ]
     },
@@ -512,6 +556,14 @@
         {
           "file": "src/lib/plans.ts",
           "context": "ba772abe6ba90d50bff62defe474d93e680f0fab138875d8ce99611e78ecb66c"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "6acf101601951d1deb2b861fb3731c3b705deaaad35c0be2470ba8f38f004416"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "0ecda632196f8675e148476493dbf90c652dbf1df3435d869e2605bf1ff18580"
         }
       ]
     },
@@ -570,6 +622,10 @@
         {
           "file": "src/components/owner/GcAssistant.tsx",
           "context": "a17a59c835113a569a26e4d034dba0a16b50a6d45f09ceb367170ad63ff4d462"
+        },
+        {
+          "file": "src/components/owner/AssistantDictation.tsx",
+          "context": "061f56da300e9458e5172db05e3e068eb72171771a4f928973e527f0c95d2589"
         }
       ]
     },
@@ -690,6 +746,10 @@
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "context": "3a82c3a368acc2986f41daba7b73d36285a6a987661a4672a6672922f0f4ae5b"
+        },
+        {
+          "file": "src/components/dashboard/WorkspaceCalendar.tsx",
+          "context": "a5dc254a56b1b744fe7234983b58fd0ef839cc609662b906633c0212b96ca1d0"
         }
       ]
     },
@@ -1078,6 +1138,14 @@
         {
           "file": "src/components/owner/AssistantDictation.tsx",
           "context": "8b54099b718130e5c876654b81ff043727ced7501386865edb01ea2ea3f2d45d"
+        },
+        {
+          "file": "src/components/dashboard/WorkspaceCalendar.tsx",
+          "context": "0d4c4da5b1a271c74957f5acebf4d4b7dc65163a01c779f9d203a64ff0eae5cc"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "e6ab1befa2577d5c2acb006e14edcc624855d8a288164da6e00bc2626f8f0b86"
         }
       ]
     },
@@ -1109,6 +1177,10 @@
         },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "e3c6a89e6aa3685b68d6257445461609123eab070ca974e43dfecb372c54f9aa"
+        },
+        {
+          "file": "src/components/dashboard/WorkspaceToolbar.tsx",
           "context": "e3c6a89e6aa3685b68d6257445461609123eab070ca974e43dfecb372c54f9aa"
         }
       ]
@@ -1829,6 +1901,14 @@
         },
         {
           "file": "src/components/owner/ManualAppointmentEditor.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/dashboard/WorkspaceCalendar.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/dashboard/WorkspaceToolbar.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]

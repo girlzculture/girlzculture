@@ -38,6 +38,13 @@ for (const width of [390, 768, 1440]) {
         await page.goto(`/salon/dashboard${route ? `/${route}` : ''}`);
         await expect(page.locator('[data-owner-workspace]')).toBeVisible();
         await expect(page.locator('html')).toHaveAttribute('lang', locale);
+        if (route === 'settings/member-new') {
+          // The team editor loads its own authorized data after the workspace
+          // mounts. Animation frames alone cannot wait for that response or
+          // the following localization scan; assert the actual form is ready.
+          const heading = DASHBOARD_SOURCE_MESSAGES[locale]?.['Add User'] || 'Add User';
+          await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+        }
         // Wait for the localization observer's scheduled scan after route mount.
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         if (route === 'availability') {

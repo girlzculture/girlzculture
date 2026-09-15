@@ -1,0 +1,49 @@
+/* Operational workspaces use semantic launch colors and readable sans-serif. */
+.gc-dashboard {
+  --gc-text-primary: var(--gc-charcoal);
+  --gc-text-secondary: var(--gc-charcoal);
+  --gc-text-muted: var(--gc-charcoal);
+  --gc-text-placeholder: var(--gc-charcoal);
+  --gc-page: var(--gc-white);
+  --gc-card: var(--gc-white);
+  --gc-muted: var(--gc-charcoal);
+  color: var(--gc-text-primary);
+  background: var(--gc-white);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  font-weight: 500;
+}
+.gc-dashboard :is(h1,h2,h3,h4,.font-serif) { font-family: var(--font-inter), Arial, Helvetica, sans-serif; font-weight: 700; letter-spacing: -.025em; }
+.gc-dashboard h1 { font-size: clamp(1.5rem, 2.4vw, 2.15rem); line-height: 1.25; }
+.gc-dashboard h2 { line-height: 1.35; }
+.gc-dashboard :is(.text-xs,[class~="text-[8px]"],[class~="text-[9px]"],[class~="text-[10px]"],[class~="text-[11px]"]) { font-size: .8125rem; line-height: 1.5; }
+.gc-dashboard :is([class*="text-ink/"],.gc-text-secondary,.gc-text-muted,.text-text-secondary,.text-text-muted) { color: var(--gc-text-primary) !important; }
+.gc-dashboard :is(input,select,textarea)::placeholder { color: var(--gc-text-placeholder); }
+.gc-dashboard :is(input,select,textarea) { border-color: color-mix(in srgb, var(--gc-teal) 28%, var(--gc-white)); border-radius: 9px; }
+.gc-dashboard :is(button,a,input,select,textarea):focus-visible { outline: 3px solid var(--gc-focus); outline-offset: 3px; }
+.gc-dashboard :is(section,article)[class*="border-plum/"] { border-color: var(--gc-mist-gray); background-color: var(--gc-white); }
+.gc-dashboard :is([class~="bg-white/75"],[class~="bg-white/80"]) { background: var(--gc-white); }
+.gc-dashboard .gc-workspace-sidebar { background: linear-gradient(165deg,color-mix(in srgb, var(--gc-strong-surface) 68%, var(--gc-charcoal)),var(--gc-strong-surface)); color: var(--gc-text-on-dark); }
+.gc-dashboard .gc-workspace-sidebar :is(a,p,h2) { color: inherit; }
+.gc-dashboard .gc-workspace-sidebar a[aria-current="page"] { background: var(--gc-teal); box-shadow: inset 3px 0 var(--gc-white); }
+.gc-dashboard .gc-workspace-sidebar nav a { min-height: 44px; font-weight: 600; }
+.gc-dashboard .gc-workspace-sidebar :is(.gc-text-on-dark-muted,.gc-text-on-dark) { color: var(--gc-text-on-dark); }
+.gc-dashboard table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .875rem; }
+.gc-dashboard th { padding: 14px 16px; text-align: left; background: color-mix(in srgb, var(--gc-teal) 6%, var(--gc-white)); color: var(--gc-text-primary); font-weight: 700; border-bottom: 1px solid var(--gc-mist-gray); white-space: nowrap; }
+.gc-dashboard tbody th { background: transparent; vertical-align: top; white-space: normal; }
+.gc-dashboard td { padding: 16px; vertical-align: top; color: var(--gc-text-primary); border-bottom: 1px solid var(--gc-mist-gray); }
+.gc-dashboard tbody tr:hover { background: color-mix(in srgb, var(--gc-teal) 4%, var(--gc-white)); }
+.gc-dashboard table :is(button,a) { min-height: 36px; }
+.gc-dashboard [data-gc-assistant-launcher] { background: var(--gc-strong-surface); border-radius: 12px; }
+.gc-dashboard .gc-panel { border: 1px solid var(--gc-mist-gray); border-radius: 16px; background: var(--gc-white); padding: 22px; box-shadow: 0 4px 20px rgb(13 17 20 / .025); }
+.gc-dashboard .gc-stat { border: 1px solid var(--gc-mist-gray); border-radius: 14px; background: var(--gc-white); padding: 20px; }
+.gc-dashboard .gc-stat strong { display: block; font-size: 1.8rem; line-height: 1.25; margin-top: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gc-dashboard .gc-stat p { font-size: .875rem; font-weight: 600; }
+.gc-table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--gc-mist-gray); border-radius: 14px; }
+.gc-table-scroll table { min-width: 720px; }
+.gc-dashboard .gc-workspace-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid var(--gc-mist-gray); }
+@media (max-width: 640px) {
+  .gc-dashboard .gc-panel { padding: 16px; }
+  .gc-dashboard .gc-stat { padding: 15px; }
+  .gc-dashboard .gc-stat strong { font-size: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) { .gc-dashboard * { scroll-behavior: auto; animation-duration: .01ms !important; } }

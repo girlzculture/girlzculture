@@ -46,8 +46,10 @@ test("P0 owner core language flow retains account preference and original busine
     await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'GC Assistant' });
     await dialog.getByRole('button', { name: t('My business profile'), exact: true }).click();
-    await expect(dialog.getByText('Original owner description', { exact: true }).last()).toBeVisible();
-    await expect(dialog.locator('[data-no-translate]').filter({ hasText: /^Save$/ }).last()).toHaveText('Save');
+    const reply = dialog.locator('article').last().locator('[data-no-translate]').last();
+    await expect(reply).toContainText('Original owner description');
+    await expect(reply).toContainText(/\bSave\b/);
+    await expect(dialog.locator('article').last().locator('dl')).toHaveCount(0);
     await dialog.getByRole('button', { name: t('Close GC Assistant') }).click();
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('lang', locale);

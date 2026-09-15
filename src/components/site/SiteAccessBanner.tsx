@@ -11,12 +11,19 @@ export default function SiteAccessBanner() {
         Girlz Culture demonstration — sample marketplace content is visible;
         booking and payment are unavailable.
       </span>
-      <Link
-        href={SITE_ACCESS_EXIT_PATH}
-        className="underline decoration-white/60 underline-offset-4 hover:decoration-white"
-      >
-        Exit demonstration
+      <Link href="/site-access/business-demo" className="underline underline-offset-4">
+        Explore the sample business dashboard
       </Link>
+      {/* A native form requires deliberate submission and replaces the layout.
+          GET/HEAD requests, including prefetch, cannot end the session. */}
+      <form action={SITE_ACCESS_EXIT_PATH} method="post">
+        <button
+          type="submit"
+          className="cursor-pointer underline decoration-white/60 underline-offset-4 hover:decoration-white"
+        >
+          Exit demonstration
+        </button>
+      </form>
     </aside>
   );
 }

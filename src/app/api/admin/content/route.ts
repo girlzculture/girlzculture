@@ -378,8 +378,11 @@ async function GETHandler(request: Request) {
     const governedTargets = Array.isArray(targetResult.data)
       ? targetResult.data as Array<{ id?: unknown; salon_id?: unknown; type: string; label: unknown; href?: unknown; media_url?: unknown; body?: unknown; target_latitude?: unknown; target_longitude?: unknown }>
       : [];
+    const markets = await admin.from("location_markets").select("id,name,state_code,center_latitude,center_longitude").eq("is_active", true).order("state_code").order("name").limit(1000);
+    if (markets.error) throw markets.error;
     const linkTargets: Array<{ id?: unknown; salon_id?: unknown; type: string; label: unknown; href?: unknown; media_url?: unknown; body?: unknown; target_latitude?: unknown; target_longitude?: unknown }> = [
-      ...governedTargets,
+      ...governedTargets.filter(target => target.type !== "Market"),
+      ...(markets.data || []).map(market => ({ id: market.id, type: "Market", label: `${market.name}, ${market.state_code}`, target_latitude: market.center_latitude, target_longitude: market.center_longitude })),
       ...(posts.data || []).flatMap((post) => {
         if (!isPublicPublication(post)) return [];
         const published = resolvedPublicPayload(post);

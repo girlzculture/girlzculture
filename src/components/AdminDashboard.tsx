@@ -23,6 +23,8 @@ import { formatZonedDate, formatZonedDateTime } from "@/lib/dateTime";
 import NumericInput from "@/components/forms/NumericInput";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
+import WorkspaceToolbar from "@/components/dashboard/WorkspaceToolbar";
+import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
 import AdminSubscriptionsDashboard from "@/components/admin/AdminSubscriptionsDashboard";
 import ActionToast from "@/components/ActionToast";
 import AdminRecordWorkspace from "@/components/admin/AdminRecordWorkspace";
@@ -72,7 +74,7 @@ const normalizedData = (value?: AdminAcceptanceData): DataState => ({
   favorites: rows(value?.favorites), bookingAudits: rows(value?.bookingAudits), adminSecurityEvents: rows(value?.adminSecurityEvents), qualityMetrics: rows(value?.qualityMetrics),
 });
 const navigation: Array<[AdminSection, string, typeof Home]> = [
-  ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Salons", Building2],
+  ["overview", "Overview", Home], ["submissions", "Submissions", ClipboardList], ["salons", "Businesses", Building2],
   ["customers", "Customers", UsersRound], ["bookings", "Bookings", CalendarDays], ["quality", "Quality & Performance", Star],
   ["reviews", "Reviews", MessageSquare], ["finance", "Payments & Finance", CircleDollarSign], ["marketing", "Marketing & Promotions", BarChart3],
   ["content", "Content Management", FileText], ["support", "Customer Support", Headphones], ["complaints", "Complaints", Flag], ["subscriptions", "Subscriptions", CreditCard],
@@ -83,7 +85,7 @@ const navigation: Array<[AdminSection, string, typeof Home]> = [
 const permissionForSection = (section: AdminSection) => section;
 type InboxCounts = { support: number; complaints: number };
 
-export default function AdminDashboard({ section, recordId, returnTo, acceptanceData }: { section: AdminSection; preview?: boolean; recordId?: string; returnTo?: string; acceptanceData?: AdminAcceptanceData }) {
+export default function AdminDashboard({ section, recordId, returnTo, acceptanceData, children }: { section: AdminSection; preview?: boolean; recordId?: string; returnTo?: string; acceptanceData?: AdminAcceptanceData; children?: React.ReactNode }) {
   const acceptance = Boolean(acceptanceData);
   const [loading, setLoading] = useState(!acceptance);
   const [error, setError] = useState("");
@@ -127,37 +129,41 @@ export default function AdminDashboard({ section, recordId, returnTo, acceptance
       return;
     }
     setDenied(false);
-    const dataParams = new URLSearchParams({ section });
-    if (recordId) dataParams.set("record_id", recordId);
-    const response = await fetch(`/api/admin/data?${dataParams}`, { headers, cache: "no-store" });
-    const body = await readApiResponse(response, "Unable to load admin data.");
-    if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
-    const next: DataState = {
-      salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
-      bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
-      subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
-      promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events), reviewModerationEvents: rows(body.review_moderation_events), reviewContentQueue: rows(body.review_content_moderation_queue), reviewReplyQueue: rows(body.review_reply_moderation_queue),
-      favorites: rows(body.customer_favorites), bookingAudits: rows(body.booking_audit_log), adminSecurityEvents: rows(body.admin_security_events), qualityMetrics: rows(body.quality_metrics),
-    };
-    setData(next);
-    setDataMeta(body.admin_data_meta && typeof body.admin_data_meta === "object" ? body.admin_data_meta as AdminDataMeta : {});
-    setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
-    if (section === "overview") {
-      const metricsResponse = await fetch("/api/admin/overview-metrics", {
-        headers,
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      const metricsBody = await readApiResponse(
-        metricsResponse,
-        "Unable to load authoritative platform totals.",
-      ) as { metrics?: OverviewMetrics; error?: string };
-      if (!metricsResponse.ok || !metricsBody.metrics) {
-        throw new Error(metricsBody.error || "Unable to load authoritative platform totals.");
+    // Embedded workspaces load their own authorized, paginated records. The
+    // shell still verifies this section's permission before rendering them.
+    if (!children) {
+      const dataParams = new URLSearchParams({ section });
+      if (recordId) dataParams.set("record_id", recordId);
+      const response = await fetch(`/api/admin/data?${dataParams}`, { headers, cache: "no-store" });
+      const body = await readApiResponse(response, "Unable to load admin data.");
+      if (!response.ok) throw new Error(body.error || "Unable to load admin data.");
+      const next: DataState = {
+        salons: rows(body.salons), applications: rows(body.salon_applications), customers: rows(body.customers),
+        bookings: rows(body.bookings), reviews: rows(body.reviews), tickets: rows(body.support_tickets),
+        subscriptions: rows(body.subscriptions), complaints: rows(body.complaints_log), admins: rows(body.admin_users),
+        promotions: rows(body.salon_promotions), posts: rows(body.blog_posts), settings: rows(body.admin_settings), billingEvents: rows(body.billing_events), identityConflicts: rows(body.identity_conflict_queue), changeRequests: rows(body.subscription_change_requests), reviewEvents: rows(body.review_dispute_events), reviewModerationEvents: rows(body.review_moderation_events), reviewContentQueue: rows(body.review_content_moderation_queue), reviewReplyQueue: rows(body.review_reply_moderation_queue),
+        favorites: rows(body.customer_favorites), bookingAudits: rows(body.booking_audit_log), adminSecurityEvents: rows(body.admin_security_events), qualityMetrics: rows(body.quality_metrics),
+      };
+      setData(next);
+      setDataMeta(body.admin_data_meta && typeof body.admin_data_meta === "object" ? body.admin_data_meta as AdminDataMeta : {});
+      setSelected((current) => current ? next.applications.find((item) => item.id === current.id) || null : next.applications[0] || null);
+      if (section === "overview") {
+        const metricsResponse = await fetch("/api/admin/overview-metrics", {
+          headers,
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const metricsBody = await readApiResponse(
+          metricsResponse,
+          "Unable to load authoritative platform totals.",
+        ) as { metrics?: OverviewMetrics; error?: string };
+        if (!metricsResponse.ok || !metricsBody.metrics) {
+          throw new Error(metricsBody.error || "Unable to load authoritative platform totals.");
+        }
+        setOverviewMetrics(metricsBody.metrics);
+      } else {
+        setOverviewMetrics(null);
       }
-      setOverviewMetrics(metricsBody.metrics);
-    } else {
-      setOverviewMetrics(null);
     }
     if (verifiedAccess === null || verifiedAccess.support || verifiedAccess.complaints) {
       const countsResponse = await fetch("/api/admin/inbox-counts", { headers, cache: "no-store" });
@@ -240,7 +246,7 @@ export default function AdminDashboard({ section, recordId, returnTo, acceptance
     <ActionToast message={notice} onDismiss={() => setNotice("")} />
     <AdminDataBoundaryNotice meta={dataMeta}/>
     <div onClickCapture={rememberAdminListScroll}>
-      <AdminSectionView section={section} recordId={recordId} returnTo={returnTo} data={data} overviewMetrics={overviewMetrics} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} onTicketRead={(mode) => setInboxCounts((counts) => ({ ...counts, [mode]: Math.max(0, counts[mode] - 1) }))} />
+      {children || <AdminSectionView section={section} recordId={recordId} returnTo={returnTo} data={data} overviewMetrics={overviewMetrics} selected={selected} setSelected={setSelected} decide={decide} update={update} onCreated={load} onTicketRead={(mode) => setInboxCounts((counts) => ({ ...counts, [mode]: Math.max(0, counts[mode] - 1) }))} />}
     </div>
   </AdminShell>;
 }
@@ -258,14 +264,15 @@ function AdminShell({ section, children, access, inboxCounts, acceptance = false
     const notificationCount=id==="bookings"?notificationCounts.bookings:id==="finance"?notificationCounts.payments:id==="support"?notificationCounts.support:id==="submissions"?notificationCounts.lifecycle:id==="engine"||id==="overview"?notificationCounts.errors:0;
     return Number(notificationCount||0)+(id==="support"?inboxCounts.support:id==="complaints"?inboxCounts.complaints:0);
   };
-  return <div data-admin-acceptance={acceptance || undefined} className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_1fr]">
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col bg-charcoal p-4 text-white lg:flex">
+  return <div data-admin-acceptance={acceptance || undefined} className="gc-dashboard min-h-screen bg-white text-ink lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+    <aside className="gc-workspace-sidebar fixed inset-y-0 left-0 z-40 hidden w-[240px] flex-col p-4 text-white lg:flex">
       <Link href={homeHref} className="block flex-none px-3 py-4 font-serif text-2xl font-bold">Girlz Culture</Link>
-      <nav className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto pb-3">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "gc-text-on-dark hover:bg-white/10"}`}><Icon size={17}/>{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{Math.min(navCount(id), 99)}</span> : null}</Link>)}</nav>
+      <nav className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto pb-3">{visibleNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} aria-current={section === id ? "page" : undefined} className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-[11px] ${section === id ? "bg-magenta text-white" : "gc-text-on-dark hover:bg-white/10"}`}><Icon size={17}/>{label}{navCount(id) ? <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-magenta">{Math.min(navCount(id), 99)}</span> : null}</Link>)}</nav>
       <div className="mt-3 flex-none space-y-2"><Link href="/contact" className="block rounded-[10px] border border-white/20 p-3 text-xs">Need help?<br/><span className="gc-text-on-dark-muted">Contact support</span></Link>{acceptance ? null : <RoleLogoutButton scope="admin" className="flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm gc-text-on-dark hover:bg-white/10"/>}</div>
     </aside>
     <main className="min-w-0 px-4 pb-24 pt-5 sm:px-6 lg:col-start-2 lg:px-8 lg:pb-8">
       <header className="mb-5 flex items-center justify-between lg:justify-end"><DashboardMobileMenu ariaLabel="platform admin navigation" items={visibleNavigation.map(([id, label, Icon]) => ({ id, label, icon: Icon, href: id === "overview" ? "/admin" : `/admin/${id}`, active: section === id, count: navCount(id) }))}/><b className="font-serif text-xl text-plum lg:hidden">Girlz Culture</b><div className="flex items-center gap-2">{acceptance ? <span className="rounded-full bg-blush px-3 py-1 text-[10px] font-bold text-plum">Acceptance fixture</span> : <><DashboardNotificationCenter scope="admin" onCounts={handleNotificationCounts}/><RoleLogoutButton scope="admin" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden"/></>}</div></header>
+      <WorkspaceToolbar homeHref={homeHref} homeLabel="Overview" current={navigation.find(([id]) => id === section)?.[1] || "Workspace"} destinations={visibleNavigation.map(([id, label]) => ({ label, href: id === "overview" ? "/admin" : `/admin/${id}` }))}/>
       {children}
     </main>
     <nav className="gc-brand-header fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 p-2 lg:hidden">{mobileNavigation.map(([id, label, Icon]) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} className={`relative flex min-w-14 flex-col items-center gap-1 text-[9px] ${section === id ? "text-magenta" : ""}`}><Icon size={19}/>{label}{navCount(id) ? <span className="absolute right-1 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[8px] text-white">{Math.min(navCount(id), 99)}</span> : null}</Link>)}</nav>
@@ -304,7 +311,7 @@ function AdminSectionView({ section, recordId, returnTo, data, overviewMetrics, 
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
-  return <article className="rounded-[14px] border border-plum/10 bg-white/75 p-4"><p className="text-[10px] font-semibold text-ink/60">{label}</p><b className="mt-2 block font-serif text-2xl text-ink">{value}</b></article>;
+  return <article className="gc-stat"><p>{label}</p><strong>{value}</strong></article>;
 }
 
 function AdminDataBoundaryNotice({ meta }: { meta: AdminDataMeta }) {
@@ -330,7 +337,7 @@ function Overview(p: DataState & { metrics: OverviewMetrics | null }) {
     completed_booking_value: completedRevenue,
     deposits_collected: deposits,
   };
-  return <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["Total Salons", metrics.total_salons], ["Active Salons", metrics.active_salons], ["Pending Submissions", metrics.pending_submissions], ["Total Customers", metrics.total_customers], ["Total Bookings", metrics.total_bookings], ["Completed Booking Value", money(metrics.completed_booking_value)], ["Deposits Collected", money(metrics.deposits_collected)]].map(([label, value]) => <Stat key={label as string} label={label as string} value={value as string | number} />)}</div><div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr_1fr]"><Panel title="Recent Activity">{activity.length ? activity.map((item) => <Line key={item.key} label={item.label} meta={dateTime(item.at)} />) : <EmptyState title="No activity yet" body="Applications, bookings, reviews, and registrations will appear here." />}</Panel><Panel title="Alerts"><Line label={`${metrics.pending_submissions} pending submissions`} meta="Require review" /><Line label={`${p.reviews.filter((review) => review.dispute_status && review.dispute_status !== "None").length} disputed reviews`} meta="Need attention" /><Line label={`${p.salons.filter((salon) => Number(salon.review_count || 0) > 0 && Number(salon.rating_overall) < 3.5).length} salons below threshold`} meta="Based on reviews" /></Panel><Panel title="Quick Actions"><div className="grid grid-cols-2 gap-3"><QuickLink href="/admin/submissions" label="Review submissions" /><QuickLink href="/admin/salons" label="Manage salons" /><QuickLink href="/admin/content/blog-new" label="Create blog post" /><QuickLink href="/admin/quality" label="View reports" /></div></Panel></div><div className="mt-5 grid gap-5 xl:grid-cols-2"><DataChart title="Bookings Overview" values={bookingSeries} empty="No booking activity yet." /><DataChart title="Completed Booking Value" values={revenueSeries} empty="Completed bookings will create this report." moneyValues /></div></>;
+  return <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["Total Businesses", metrics.total_salons], ["Active Businesses", metrics.active_salons], ["Pending Submissions", metrics.pending_submissions], ["Total Customers", metrics.total_customers], ["Total Bookings", metrics.total_bookings], ["Completed Booking Value", money(metrics.completed_booking_value)], ["Deposits Collected", money(metrics.deposits_collected)]].map(([label, value]) => <Stat key={label as string} label={label as string} value={value as string | number} />)}</div><div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr_1fr]"><Panel title="Recent Activity">{activity.length ? activity.map((item) => <Line key={item.key} label={item.label} meta={dateTime(item.at)} />) : <EmptyState title="No activity yet" body="Applications, bookings, reviews, and registrations will appear here." />}</Panel><Panel title="Alerts"><Line label={`${metrics.pending_submissions} pending submissions`} meta="Require review" /><Line label={`${p.reviews.filter((review) => review.dispute_status && review.dispute_status !== "None").length} disputed reviews`} meta="Need attention" /><Line label={`${p.salons.filter((salon) => Number(salon.review_count || 0) > 0 && Number(salon.rating_overall) < 3.5).length} businesses below threshold`} meta="Based on reviews" /></Panel><Panel title="Quick Actions"><div className="grid grid-cols-2 gap-3"><QuickLink href="/admin/submissions" label="Review submissions" /><QuickLink href="/admin/salons" label="Manage businesses" /><QuickLink href="/admin/content/blog-new" label="Create blog post" /><QuickLink href="/admin/quality" label="View reports" /></div></Panel></div><div className="mt-5 grid gap-5 xl:grid-cols-2"><DataChart title="Bookings Overview" values={bookingSeries} empty="No booking activity yet." /><DataChart title="Completed Booking Value" values={revenueSeries} empty="Completed bookings will create this report." moneyValues /></div></>;
 }
 
 // Retained temporarily for rollback comparison while the focused submission
@@ -386,9 +393,21 @@ function Submissions(p: any) {
 function Customers(p: any) {
   const { query, setQuery, status, setStatus } = useAdminListContext();
   const term = query.trim().toLowerCase();
-  const visible = p.customers.filter((customer: Row) => (!term || [customer.name, customer.email].some((value) => String(value || "").toLowerCase().includes(term))) && (status === "all" || String(customer.status || "Active").toLowerCase() === status));
-  const returnPath = `/admin/customers?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status !== "all" ? { status } : {}) })}`.replace(/\?$/, "");
-  return <Panel title="Customer accounts"><div data-admin-record-landing><div className="mb-4 flex flex-wrap gap-2"><label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs sm:min-w-72"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer name or email" className="min-w-0 flex-1 outline-none"/></label><select aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visible.length ? visible.map((customer: Row) => { const count = p.bookings.filter((booking: Row) => booking.customer_id === customer.id || String(booking.guest_email || "").toLowerCase() === String(customer.email || "").toLowerCase()).length; return <Link key={customer.id} href={`/admin/customers/${customer.id}?return=${encodeURIComponent(returnPath)}`} className="rounded-xl border border-plum/10 p-4 transition hover:border-magenta hover:bg-blush/20"><div className="flex items-start justify-between gap-3"><div><h3 className="font-serif text-lg text-plum">{customer.name || "Customer"}</h3><p className="mt-1 break-all text-xs text-ink/55">{customer.email}</p></div><Badge value={customer.status || "Active"}/></div><div className="mt-4 flex items-center justify-between text-xs"><span>Joined {date(customer.created_at)}</span><b>{count} booking{count === 1 ? "" : "s"}</b></div><span className="mt-3 inline-flex text-xs font-bold text-magenta">Open customer record →</span></Link>; }) : <div className="col-span-full"><EmptyState title="No customer accounts" body={term ? "No customers match the current search and status filters." : "Customer accounts will appear here after registration or booking."}/></div>}</div></div></Panel>;
+  const visible = p.customers.filter((customer: Row) => (!term || [customer.name, customer.email].some(value => String(value || "").toLowerCase().includes(term))) && (status === "all" || String(customer.status || "Active").toLowerCase() === status));
+  const returnParams = new URLSearchParams({ ...(query ? { q: query } : {}), ...(status !== "all" ? { status } : {}) });
+  const returnPath = `/admin/customers${returnParams.size ? `?${returnParams}` : ""}`;
+  return <Panel title="Customer accounts"><div data-admin-record-landing>
+    <div className="mb-5 flex flex-wrap gap-3"><input aria-label="Search customers" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search customer name or email" className="min-h-11 min-w-0 flex-1 rounded-lg border px-3"/><select aria-label="Customer status" value={status} onChange={event => setStatus(event.target.value)} className="min-h-11 rounded-lg border px-3"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select></div>
+    <p className="mb-3 text-sm">{visible.length} matching accounts · Booking counts cover loaded records</p>
+    <DataTable headers={["Customer", "Email", "Joined", "Status", "Bookings", "Details"]}>
+      {visible.map((customer: Row) => {
+        const count = p.bookings.filter((booking: Row) => booking.customer_id === customer.id || (customer.email && String(booking.guest_email || "").toLowerCase() === String(customer.email).toLowerCase())).length;
+        const recordHref = `/admin/customers/${customer.id}?return=${encodeURIComponent(returnPath)}`;
+        return <tr key={customer.id}><Td><Link className="inline-flex min-h-11 items-center font-bold text-magenta" href={recordHref}>{customer.name || "Customer"}</Link></Td><Td>{customer.email || "Not provided"}</Td><Td>{date(customer.created_at)}</Td><Td><Badge value={customer.status || "Active"}/></Td><Td>{count}</Td><Td><Link className="inline-flex min-h-11 items-center font-semibold text-magenta" href={recordHref}>Open customer record →</Link></Td></tr>;
+      })}
+      {!visible.length ? <EmptyTable columns={6} text="No customer accounts match these filters."/> : null}
+    </DataTable>
+  </div></Panel>;
 }
 
 function Bookings(p: any) {
@@ -407,7 +426,7 @@ function Bookings(p: any) {
       booking.guest_email,
     ].some((value)=>String(value||"").toLowerCase().includes(normalizedQuery));
     const appointmentDate = String(booking.appointment_datetime || "").slice(0, 10);
-    const paymentState = String(booking.payment_status || booking.deposit_status || booking.financial_status || (Number(booking.deposit_amount || 0) > 0 ? "deposit paid" : "unpaid")).toLowerCase();
+    const paymentState = String(booking.payment_status || booking.deposit_status || booking.financial_status || "not recorded").toLowerCase();
     return matchesQuery &&
       (status === "all" || String(booking.status || "Pending").toLowerCase() === status) &&
       (salonFilter === "all" || String(booking.salon_id) === salonFilter) &&
@@ -416,9 +435,14 @@ function Bookings(p: any) {
       (!toDate || appointmentDate <= toDate);
   });
   const bookingStatuses = [...new Set<string>(p.bookings.map((booking: Row) => String(booking.status || "Pending")))].sort();
-  const paymentStates = [...new Set<string>(p.bookings.map((booking: Row) => String(booking.payment_status || booking.deposit_status || booking.financial_status || (Number(booking.deposit_amount || 0) > 0 ? "deposit paid" : "unpaid")).toLowerCase()))].filter(Boolean).sort();
+  const paymentStates = [...new Set<string>(p.bookings.map((booking: Row) => String(booking.payment_status || booking.deposit_status || booking.financial_status || "not recorded").toLowerCase()))].filter(Boolean).sort();
   const returnPath = `/admin/bookings?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status !== "all" ? { status } : {}), ...(fromDate ? { from: fromDate } : {}), ...(toDate ? { to: toDate } : {}), ...(salonFilter !== "all" ? { salon: salonFilter } : {}), ...(paymentFilter !== "all" ? { payment: paymentFilter } : {}) })}`.replace(/\?$/, "");
-  return <><div className="mb-4 flex flex-wrap justify-between gap-3"><div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_150px_170px_160px_145px_145px]"><label className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs"><Search size={15}/><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search reference, UUID, or customer" className="min-w-0 flex-1 outline-none"/></label><select aria-label="Booking status" value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{bookingStatuses.map((value) => <option key={value} value={value.toLowerCase()}>{value}</option>)}</select><select aria-label="Salon" value={salonFilter} onChange={(event)=>setSalonFilter(event.target.value)} className="min-h-11 min-w-0 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All salons</option>{p.salons.map((salon: Row)=><option key={salon.id} value={String(salon.id)}>{salon.name || "Salon"}</option>)}</select><select aria-label="Payment state" value={paymentFilter} onChange={(event)=>setPaymentFilter(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All payment states</option>{paymentStates.map((value)=><option key={value}>{value}</option>)}</select><input aria-label="Appointments from" type="date" value={fromDate} onChange={(event)=>setFromDate(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"/><input aria-label="Appointments through" type="date" value={toDate} onChange={(event)=>setToDate(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"/></div><Link href={`/admin/bookings/new?return=${encodeURIComponent(returnPath)}`} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-magenta px-5 text-sm font-bold text-white">Create booking manually</Link></div><Panel title="Booking queue"><div data-admin-record-landing><p className="mb-3 text-xs text-ink/50">{visible.length} matching booking{visible.length === 1 ? "" : "s"}</p><div className="grid gap-3 lg:grid-cols-2">{visible.length ? visible.map((booking: Row) => { const salon = p.salons.find((row: Row) => row.id === booking.salon_id); return <Link key={booking.id} href={`/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}`} className="rounded-xl border border-plum/10 p-4 transition hover:border-magenta hover:bg-blush/20"><div className="flex flex-wrap items-start justify-between gap-2"><div><b className="text-sm text-plum">{bookingReference(booking)}</b><p className="mt-1 text-xs text-ink/55">{salon?.name || "Salon unavailable"} · {booking.guest_name || "Customer"}</p></div><Badge value={booking.status}/></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs gc-text-primary"><span>{dateTime(booking.appointment_datetime, salon?.time_zone)}</span><span className="text-right">Deposit {money(Number(booking.deposit_amount || 0))}</span></div><span className="mt-3 inline-flex text-xs font-bold text-magenta">Open booking record →</span></Link>; }) : <div className="col-span-full"><EmptyState title="No bookings found" body="No bookings match the current search, salon, date, payment, and status filters."/></div>}</div></div></Panel></>;
+  return <><div className="mb-4 flex flex-wrap justify-between gap-3"><div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_150px_170px_160px_145px_145px]"><label className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg border border-plum/15 bg-white px-3 text-xs"><Search size={15}/><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search reference, UUID, or customer" className="min-w-0 flex-1 outline-none"/></label><select aria-label="Booking status" value={status} onChange={(event)=>setStatus(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{bookingStatuses.map((value) => <option key={value} value={value.toLowerCase()}>{value}</option>)}</select><select aria-label="Business" value={salonFilter} onChange={(event)=>setSalonFilter(event.target.value)} className="min-h-11 min-w-0 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All businesses</option>{p.salons.map((salon: Row)=><option key={salon.id} value={String(salon.id)}>{salon.name || "Business"}</option>)}</select><select aria-label="Payment state" value={paymentFilter} onChange={(event)=>setPaymentFilter(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All payment states</option>{paymentStates.map((value)=><option key={value}>{value}</option>)}</select><input aria-label="Appointments from (UTC)" type="date" value={fromDate} onChange={(event)=>setFromDate(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"/><input aria-label="Appointments through (UTC)" type="date" value={toDate} onChange={(event)=>setToDate(event.target.value)} className="min-h-11 rounded-lg border border-plum/15 bg-white px-3 text-xs"/></div><Link href={`/admin/bookings/new?return=${encodeURIComponent(returnPath)}`} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-magenta px-5 text-sm font-bold text-white">Create booking manually</Link></div>
+  <div className="space-y-6"><WorkspaceCalendar title="Platform booking calendar" timeZone={p.salons.find((row: Row) => row.id === salonFilter)?.time_zone || "UTC"} events={visible.map((booking: Row) => ({ id: String(booking.id), start: String(booking.appointment_datetime), title: String(booking.guest_name || "Customer"), subtitle: String(p.salons.find((row: Row) => row.id === booking.salon_id)?.name || "Business unavailable"), status: booking.status, href: `/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}` }))}/>
+  <Panel title="Booking queue"><div data-admin-record-landing><p className="mb-4 text-sm">{visible.length} matching loaded bookings · Date filters use UTC. Appointment times below use each business’s time zone.</p><DataTable headers={["Reference", "Customer", "Business / location", "Appointment", "Status", "Payment state", "Deposit recorded", "Actions"]}>{visible.map((booking: Row) => {
+    const salon = p.salons.find((row: Row) => row.id === booking.salon_id);
+    return <tr key={booking.id}><Td><b>{bookingReference(booking)}</b></Td><Td><b>{booking.guest_name || "Customer"}</b><span className="mt-1 block break-all">{booking.guest_email || ""}</span></Td><Td><b>{salon?.name || "Business unavailable"}</b><span className="mt-1 block">{[salon?.address_city || salon?.city, salon?.address_state || salon?.state].filter(Boolean).join(", ")}</span></Td><Td>{dateTime(booking.appointment_datetime, salon?.time_zone)}<span className="mt-1 block">{salon?.time_zone || "UTC"}</span></Td><Td><Badge value={booking.status}/></Td><Td>{booking.payment_status || booking.deposit_status || booking.financial_status || "Not recorded"}</Td><Td>{booking.deposit_amount == null ? "Not recorded" : `Deposit ${money(Number(booking.deposit_amount))}`}</Td><Td><Link href={`/admin/bookings/${booking.id}?return=${encodeURIComponent(returnPath)}`} className="inline-flex min-h-11 items-center whitespace-nowrap font-bold text-magenta">Open booking record →</Link></Td></tr>;
+  })}{!visible.length ? <EmptyTable columns={8} text="No bookings match these filters."/> : null}</DataTable></div></Panel></div></>;
 }
 
 function Quality(p: any) {
@@ -631,7 +655,7 @@ function FinanceSelect({label,value,onChange,options}:{label:string;value:string
 
 function Marketing(p: any) {
   const featured = p.salons.filter((salon: Row) => Number(salon.featured_weight || 0) > 0);
-  const overview = <div className="grid gap-5 lg:grid-cols-3"><Panel title="Legacy placement weights">{featured.length ? featured.map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Legacy weight ${salon.featured_weight}`} />) : <EmptyState title="No legacy weights" body="Use Featured Salon campaigns for scheduled placements." />}<Link href="/admin/salons" className="mt-4 block w-full rounded-lg border border-magenta py-2 text-center text-magenta">Manage salons</Link></Panel><Panel title="Salon promotions">{p.promotions.length ? p.promotions.slice(0,5).map((promotion: Row) => <Line key={promotion.id} label={promotion.title || "Promotion"} meta={promotion.status || "Draft"} />) : <EmptyState title="No promotions" body="Salon-created promotions will appear here." />}</Panel><Panel title="Editorial promotions">{p.posts.length ? p.posts.slice(0,5).map((post: Row) => <Line key={post.id} label={post.title} meta={post.status} />) : <EmptyState title="No blog posts" body="Create and publish posts in Content Management." />}<Link href="/admin/content" className="mt-4 block w-full rounded-lg bg-magenta py-3 text-center font-bold text-white">Open Content Management</Link></Panel></div>;
+  const overview = <div className="grid gap-5 lg:grid-cols-3"><Panel title="Legacy placement weights">{featured.length ? featured.map((salon: Row) => <Line key={salon.id} label={salon.name} meta={`Legacy weight ${salon.featured_weight}`} />) : <EmptyState title="No legacy weights" body="Use Featured Business campaigns for scheduled placements." />}<Link href="/admin/salons" className="mt-4 block w-full rounded-lg border border-magenta py-2 text-center text-magenta">Manage salons</Link></Panel><Panel title="Business promotions">{p.promotions.length ? p.promotions.slice(0,5).map((promotion: Row) => <Line key={promotion.id} label={promotion.title || "Promotion"} meta={promotion.status || "Draft"} />) : <EmptyState title="No promotions" body="Business-created promotions will appear here." />}</Panel><Panel title="Editorial promotions">{p.posts.length ? p.posts.slice(0,5).map((post: Row) => <Line key={post.id} label={post.title} meta={post.status} />) : <EmptyState title="No blog posts" body="Create and publish posts in Content Management." />}<Link href="/admin/content" className="mt-4 block w-full rounded-lg bg-magenta py-3 text-center font-bold text-white">Open Content Management</Link></Panel></div>;
   return <AdminMarketingWorkspace overview={overview}/>;
 }
 

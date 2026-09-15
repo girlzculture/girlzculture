@@ -73,9 +73,9 @@ assert.match(home,/homepage\.featured_card_count/);
 assert.match(placement,/Own a business\? Get featured here/);
 assert.doesNotMatch(placement,/subscription_tier|Premium|Growth|Basic/);
 for (const requirement of [
-  /Create Featured Salon campaign/,
+  /Create Featured Business campaign/,
   /Create campaign/,
-  /Eligible salon/,
+  /Eligible business/,
   /mode=salons/,
   /Until I change it/,
   /Platform credit/,

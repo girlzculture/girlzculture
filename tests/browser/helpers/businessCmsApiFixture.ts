@@ -29,6 +29,7 @@ export function createBusinessCmsApiFixture(scope: string) {
         select: () => query,
         order: () => query,
         eq: () => query,
+        limit: () => query,
         maybeSingle: async () => ({ data: table === "content_pages" ? structuredClone(record) : null, error: null }),
         then: (fulfill: (value: { data: Row[]; error: null }) => unknown) => Promise.resolve({ data: table === "content_pages" ? [structuredClone(record)] : [], error: null }).then(fulfill),
       };

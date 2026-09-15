@@ -1,5 +1,5 @@
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
-import { runBeautyConcierge } from "@/lib/beautyConciergeServer";
+import { runBeautyConcierge, parseConciergeIntent } from "@/lib/beautyConciergeServer";
 import { validCoordinates } from "@/lib/location";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
 import { cleanText, enforceRateLimit, errorResponse, RateLimitError, rejectBot } from "@/lib/requestSecurity";
@@ -12,14 +12,20 @@ async function POSTHandler(request: Request) {
   try {
     admin = getSupabaseAdmin();
     enforceRateLimit(request, "beauty-concierge", 12, 60_000);
-    const body = await request.json() as Record<string, unknown>;
+    const raw = await request.text();
+    if (raw.length > 8000) rejectRequest("Keep your search request short.", 413);
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(raw); } catch { rejectRequest("Send a valid search request."); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) rejectRequest("Send a valid search request.");
     rejectBot(body);
     const prompt = cleanText(body.prompt, 600);
     if (prompt.length < 3) rejectRequest("Describe the style, location, or appointment you want.");
     const coordinates = { lat: Number(body.latitude), lng: Number(body.longitude) };
-    const origin = validCoordinates(coordinates) ? coordinates : null;
+    const origin = body.latitude != null && body.longitude != null && validCoordinates(coordinates) ? coordinates : null;
     const language = cleanText(body.language, 20) || "en";
-    const result = await runBeautyConcierge({ prompt, language, origin, request });
+    let previousIntent;
+    try { previousIntent = body.previous_intent ? parseConciergeIntent(body.previous_intent) : undefined; } catch { rejectRequest("Start a new conversation; the previous search details are invalid."); }
+    const result = await runBeautyConcierge({ prompt, language, origin, request, previousIntent });
     return Response.json(result, { headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" } });
   } catch (error) {
     if (error instanceof RateLimitError) return errorResponse(error, error.message);

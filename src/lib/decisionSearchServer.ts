@@ -1,4 +1,5 @@
 import "server-only";
+import { resolveSearchPlace } from "@/lib/searchPlaceServer";
 
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import {
@@ -245,7 +246,9 @@ async function resolveOrigin(
     center_longitude: Number(row.center_longitude),
   })));
   const market = marketMatch?.market;
-  if (market) {
+  const explicitLocation = decisionExplicitLocationRequest(normalizedQuery);
+  const neighborhoodMoreSpecific = /\bharlem\b/i.test(explicitLocation?.phrase || "") && !/\bharlem\b/i.test(market?.name || "");
+  if (market && !neighborhoodMoreSpecific) {
     return {
       origin: {
         lat: Number(market.center_latitude),
@@ -258,7 +261,6 @@ async function resolveOrigin(
       unresolvedLocationPhrase: null,
     };
   }
-  const explicitLocation = decisionExplicitLocationRequest(normalizedQuery);
   const zip = explicitLocation?.kind === "zip" ? explicitLocation.phrase : null;
   if (zip) {
     const salon = await admin
@@ -291,6 +293,8 @@ async function resolveOrigin(
     }
   }
   if (explicitLocation) {
+    const place = await resolveSearchPlace(explicitLocation.phrase);
+    if (place) return { origin: place.origin, locationLabel: place.label, matchedLocationPhrase: explicitLocation.phrase, unresolvedLocationPhrase: null };
     return {
       origin: null,
       locationLabel: null,

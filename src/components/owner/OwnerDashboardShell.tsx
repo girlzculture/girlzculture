@@ -31,6 +31,7 @@ import DashboardNotificationCenter, {
 } from "@/components/notifications/DashboardNotificationCenter";
 import DashboardMobileMenu from "@/components/dashboard/DashboardMobileMenu";
 import OwnerRealtimeAlertBridge from "@/components/owner/OwnerRealtimeAlertBridge";
+import WorkspaceToolbar from "@/components/dashboard/WorkspaceToolbar";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
@@ -163,10 +164,10 @@ export default function OwnerDashboardShell({
             : 0;
 
   return (
-    <div className="min-h-screen bg-cream text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
+    <div className="gc-dashboard min-h-screen bg-white text-ink lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <RoleSessionBoundary scope="salon" />
       <OwnerRealtimeAlertBridge />
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] overflow-y-auto bg-charcoal px-4 py-5 text-white lg:block">
+      <aside className="gc-workspace-sidebar fixed inset-y-0 left-0 z-50 hidden w-[240px] overflow-y-auto px-4 py-5 text-white lg:block">
         <Link
           href={homeHref}
           className="block px-3 font-serif text-[31px] font-bold leading-none"
@@ -289,6 +290,7 @@ export default function OwnerDashboardShell({
           <GcAssistantLauncher />
         </div>
         <main data-owner-workspace className="min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">
+          <WorkspaceToolbar homeHref={homeHref} homeLabel="Overview" current={nav.find(([id]) => id === section)?.[1] || "Workspace"} destinations={visibleNav.map(([id, label]) => ({ label, href: hrefFor(id) }))}/>
           {children}
         </main>
       </div>

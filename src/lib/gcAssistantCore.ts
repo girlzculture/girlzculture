@@ -28,6 +28,7 @@ export const ASSISTANT_TOOLS = {
   get_business_profile: { risk: 1, permission: "my_page", schema: object({}) },
   get_services_and_prices: { risk: 1, permission: "styles", schema: object({ query: string(120) }) },
   get_business_policies: { risk: 1, permission: "my_page", schema: object({}) },
+  search_platform_knowledge: { risk: 1, permission: "overview", schema: object({ query: { ...string(240), minLength: 2 } }) },
   get_customers: { risk: 1, permission: "bookings", schema: object(range) },
   get_professionals: { risk: 1, permission: "stylists", schema: object({ query: string(120) }) },
   get_products: { risk: 1, permission: "products", schema: object({ query: string(120) }) },
