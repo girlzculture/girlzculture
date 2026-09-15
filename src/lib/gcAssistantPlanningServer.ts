@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { approvedAiModels, approvedAiProviders, aiProviderConfigured, redactSensitiveText } from "@/lib/aiAutomationServer";
 import { ASSISTANT_TOOLS, AssistantError, validateTool } from "@/lib/gcAssistantCore";
-import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
+import { openAiApiKey, openAiApiUrl, openAiChatCompletionText } from "@/lib/openAiServer";
 
 const choices = Object.entries(ASSISTANT_TOOLS).map(([name, definition]) => ({
   type: "object", additionalProperties: false,
@@ -75,16 +75,27 @@ export async function planOwnerRequest(input: {
   if (reservation.error || !reservation.data) throw new AssistantError("ASSISTANT_BUDGET_LIMIT", 429);
   let outcome = "failed";
   try {
-    const response = await fetch(openAiApiUrl("responses"), {
+    const response = await fetch(openAiApiUrl("chat/completions"), {
       method: "POST", headers: { Authorization: `Bearer ${openAiApiKey()}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(Math.min(Math.max(Number(feature.timeout_ms), 1000), 20000)),
-      body: JSON.stringify({ model: feature.model_key, instructions, input: userData, store: false, max_output_tokens: 1800, text: { format: { type: "json_schema", name: "gc_owner_plan", strict: true, schema: actorSchema } } }),
+      body: JSON.stringify({
+        model: feature.model_key,
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: userData },
+        ],
+        store: false,
+        max_completion_tokens: 1800,
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "gc_owner_plan", strict: true, schema: actorSchema },
+        },
+      }),
     });
     if (!response.ok) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
     const responseBody = await response.text();
     if (responseBody.length > 64000) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
-    const payload = JSON.parse(responseBody) as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> };
-    const text = payload.output_text || (payload.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("");
+    const text = openAiChatCompletionText(JSON.parse(responseBody));
     if (text.length > 16000) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
     const plan = JSON.parse(text);
     if (!plan || typeof plan !== "object" || Object.keys(plan).length !== 3 || !["plan", "clarification", "navigate"].every(key => Object.hasOwn(plan, key)) || [plan.plan, plan.clarification, plan.navigate].filter(value => value !== null).length !== 1) throw new AssistantError("ASSISTANT_INVALID_PLAN", 502);

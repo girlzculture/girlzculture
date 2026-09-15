@@ -73,11 +73,11 @@ test('OpenAI REST URLs support Netlify AI Gateway without duplicating v1', () =>
   const previous = process.env.OPENAI_BASE_URL;
   try {
     process.env.OPENAI_BASE_URL = 'https://gateway.example.test/team/site';
-    assert.equal(openAi.openAiApiUrl('responses'), 'https://gateway.example.test/team/site/v1/responses');
+    assert.equal(openAi.openAiApiUrl('chat/completions'), 'https://gateway.example.test/team/site/v1/chat/completions');
     process.env.OPENAI_BASE_URL = 'https://gateway.example.test/team/site/v1/';
     assert.equal(openAi.openAiApiUrl('/models'), 'https://gateway.example.test/team/site/v1/models');
     process.env.OPENAI_BASE_URL = 'http://gateway.example.test';
-    assert.throws(() => openAi.openAiApiUrl('responses'), /OPENAI_BASE_URL_INVALID/);
+    assert.throws(() => openAi.openAiApiUrl('chat/completions'), /OPENAI_BASE_URL_INVALID/);
   } finally {
     if (previous === undefined) delete process.env.OPENAI_BASE_URL;
     else process.env.OPENAI_BASE_URL = previous;

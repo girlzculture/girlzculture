@@ -42,7 +42,7 @@ test('budget is reserved atomically before either provider request', () => {
   assert.ok(conciergeReservation > -1 && conciergeProvider > conciergeReservation);
 
   const ownerReservation = ownerPlanner.indexOf('admin.rpc("reserve_gc_assistant_usage"');
-  const ownerProvider = ownerPlanner.indexOf('fetch(openAiApiUrl("responses")', ownerReservation);
+  const ownerProvider = ownerPlanner.indexOf('fetch(openAiApiUrl("chat/completions")', ownerReservation);
   assert.ok(ownerReservation > -1 && ownerProvider > ownerReservation);
 });
 
