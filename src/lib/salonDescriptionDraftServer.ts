@@ -5,6 +5,7 @@ import {
   approvedAiProviders,
   redactSensitiveText,
 } from "@/lib/aiAutomationServer";
+import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
 
 type Feature = {
   feature_key: string;
@@ -209,11 +210,11 @@ export async function createSalonDescriptionDraft(
     Math.min(Math.max(Number(feature.timeout_ms || 12_000), 1_000), 30_000),
   );
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch(openAiApiUrl("responses"), {
       method: "POST",
       signal: controller.signal,
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${openAiApiKey()}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

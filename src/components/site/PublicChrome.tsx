@@ -24,16 +24,23 @@ import LanguageSelector, {
   LocalizedText,
 } from "@/components/i18n/LanguageSelector";
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
+import {
+  marketplaceHomeHref,
+  siteAccessActive,
+} from "@/lib/marketplaceAccessServer";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
 export async function Wordmark({ compact = false }: { compact?: boolean }) {
-  const assets = await getPublishedBrandAssets();
+  const [assets, homeHref] = await Promise.all([
+    getPublishedBrandAssets(),
+    marketplaceHomeHref(),
+  ]);
   const desktop = assets.primary_header_logo || assets.dark_logo;
   const mobile = assets.mobile_logo || desktop;
   return (
     <Link
-      href="/"
+      href={homeHref}
       aria-label="Girlz Culture home"
       className={`inline-flex shrink-0 items-center font-serif font-bold tracking-[-0.045em] text-plum ${
         compact ? "text-[22px] md:text-[30px]" : "text-[30px]"
@@ -148,9 +155,10 @@ export async function PublicHeader({
 }: {
   active?: "styles" | "salons" | "how" | "about" | "blog";
 }) {
-  const [headerItems, mobileItems] = await Promise.all([
+  const [headerItems, mobileItems, siteAccess] = await Promise.all([
     getNavigationItems("header", defaultHeader),
     getNavigationItems("mobile_menu", defaultMobileMenu),
+    siteAccessActive(),
   ]);
   return (
     <header
@@ -200,25 +208,25 @@ export async function PublicHeader({
             <LanguageSelector compact />
           </div>
           <HeaderStyleSearch />
-          <Link
+          {!siteAccess ? <Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
             className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta 2xl:inline-flex"
           >
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
-          </Link>
-          <Link
+          </Link> : null}
+          {!siteAccess ? <Link
             href="/login"
             className="hidden min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta 2xl:inline-flex"
           >
             <LocalizedText messageKey="nav.login" fallback="Log in" />
-          </Link>
-          <Link
+          </Link> : null}
+          {!siteAccess ? <Link
             href="/login"
             className="gc-brand-primary-action hidden min-h-11 items-center whitespace-nowrap rounded-[10px] bg-magenta px-4 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 2xl:inline-flex min-[1700px]:px-5"
           >
             <LocalizedText messageKey="nav.signup" fallback="Sign up" />
-          </Link>
+          </Link> : null}
         </div>
       </div>
     </header>
@@ -284,9 +292,23 @@ export async function CustomerBottomNav({
     social: Share2,
     profile: UserRound,
   };
-  const records = await getNavigationItems("mobile_bottom", fallback);
+  const [records, homeHref, siteAccess] = await Promise.all([
+    getNavigationItems("mobile_bottom", fallback),
+    marketplaceHomeHref(),
+    siteAccessActive(),
+  ]);
   const items = records.slice(0, 5).map((item) => ({
     ...item,
+    href:
+      item.item_key === "home" || item.href === "/"
+        ? homeHref
+        : siteAccess && ["bookings", "profile"].includes(item.item_key)
+          ? homeHref
+          : item.href,
+    label:
+      siteAccess && ["bookings", "profile"].includes(item.item_key)
+        ? "Demo"
+        : item.label,
     id: item.item_key as ActiveTab,
     key: item.translation_key || `navigation.${item.item_key}`,
     icon: iconMap[item.item_key as keyof typeof iconMap] || Home,
@@ -320,7 +342,11 @@ export async function CustomerBottomNav({
                   size={20}
                   strokeWidth={isActive ? 2.4 : 1.8}
                 />
-                <LocalizedText messageKey={item.key} fallback={item.label} />
+                {siteAccess && ["bookings", "profile"].includes(item.id) ? (
+                  item.label
+                ) : (
+                  <LocalizedText messageKey={item.key} fallback={item.label} />
+                )}
               </Link>
             );
           })}

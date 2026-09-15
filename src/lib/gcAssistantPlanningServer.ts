@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { approvedAiModels, approvedAiProviders, aiProviderConfigured, redactSensitiveText } from "@/lib/aiAutomationServer";
 import { ASSISTANT_TOOLS, AssistantError, validateTool } from "@/lib/gcAssistantCore";
+import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
 
 const choices = Object.entries(ASSISTANT_TOOLS).map(([name, definition]) => ({
   type: "object", additionalProperties: false,
@@ -74,8 +75,8 @@ export async function planOwnerRequest(input: {
   if (reservation.error || !reservation.data) throw new AssistantError("ASSISTANT_BUDGET_LIMIT", 429);
   let outcome = "failed";
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    const response = await fetch(openAiApiUrl("responses"), {
+      method: "POST", headers: { Authorization: `Bearer ${openAiApiKey()}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(Math.min(Math.max(Number(feature.timeout_ms), 1000), 20000)),
       body: JSON.stringify({ model: feature.model_key, instructions, input: userData, store: false, max_output_tokens: 1800, text: { format: { type: "json_schema", name: "gc_owner_plan", strict: true, schema: actorSchema } } }),
     });

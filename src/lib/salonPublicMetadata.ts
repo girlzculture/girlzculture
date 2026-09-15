@@ -3,7 +3,10 @@ import "server-only";
 import type { Metadata } from "next";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { customerMarketplaceLive } from "@/lib/marketplaceLaunchCore";
+import {
+  marketplaceBrowsingAvailable,
+  siteAccessActive,
+} from "@/lib/marketplaceAccessServer";
 import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
 
 type PublicSalonMetadataRow = {
@@ -21,8 +24,9 @@ export async function getSalonPublicMetadata(
   value: string,
   field: "slug" | "vanity_slug",
 ): Promise<Metadata | null> {
-  if (!customerMarketplaceLive()) return null;
+  if (!(await marketplaceBrowsingAvailable())) return null;
   try {
+    const siteAccess = await siteAccessActive();
     const admin = getSupabaseAdmin();
     const result = await admin
       .from("salons")
@@ -37,12 +41,14 @@ export async function getSalonPublicMetadata(
     if (!result.data) return null;
 
     const salon = result.data;
-    if (await isRegisteredTestBusiness(admin, salon.id)) return null;
-    const visibility = await admin.rpc("is_salon_profile_public", {
-      target_salon_id: salon.id,
-    });
-    if (visibility.error) throw visibility.error;
-    if (visibility.data !== true) return null;
+    if (!siteAccess) {
+      if (await isRegisteredTestBusiness(admin, salon.id)) return null;
+      const visibility = await admin.rpc("is_salon_profile_public", {
+        target_salon_id: salon.id,
+      });
+      if (visibility.error) throw visibility.error;
+      if (visibility.data !== true) return null;
+    }
 
     const title = salon.name || "Salon";
     const location = [salon.address_city, salon.address_state]
@@ -61,6 +67,9 @@ export async function getSalonPublicMetadata(
     return {
       title,
       description,
+      ...(siteAccess
+        ? { robots: { index: false, follow: false, noarchive: true } }
+        : {}),
       alternates: { canonical },
       openGraph: {
         type: "website",

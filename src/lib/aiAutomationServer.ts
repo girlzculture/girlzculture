@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
+import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
 
 type AiFeature = {
   feature_key: string;
@@ -41,7 +42,7 @@ export function approvedAiModels(provider: string) {
 
 export function aiProviderConfigured(provider: string) {
   if (provider === "test") return true;
-  if (provider === "openai") return Boolean(process.env.OPENAI_API_KEY);
+  if (provider === "openai") return Boolean(openAiApiKey());
   if (provider === "anthropic") return Boolean(process.env.ANTHROPIC_API_KEY);
   if (provider === "google") return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
   return false;
@@ -170,11 +171,11 @@ export async function generateTranslationDraft(
       Math.min(Math.max(Number(feature.timeout_ms || 20_000), 1_000), options.messageDisplay ? 20_000 : 120_000),
     );
     try {
-      const response = await fetch("https://api.openai.com/v1/responses", {
+      const response = await fetch(openAiApiUrl("responses"), {
         method: "POST",
         signal: controller.signal,
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${openAiApiKey()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

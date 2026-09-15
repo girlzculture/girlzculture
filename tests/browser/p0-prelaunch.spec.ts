@@ -11,14 +11,52 @@ for (const width of [390, 768, 1440]) test(`prelaunch public routes fail closed 
   for (const path of ['/', '/salons', '/styles', '/salon/p0-demo', '/salon/p0-demo/book']) {
     const response = await page.goto(path);
     await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
-    await expect(page.getByText('Customer booking and payment are not available yet.', { exact: false })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Join as a founding business', exact: true })).toHaveAttribute('href', '/business/signup');
+    await expect(page.getByText('Girlz Culture is onboarding beauty and wellness businesses as we prepare to launch our marketplace. Submit your application to join now.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Join as a business', exact: true })).toHaveAttribute('href', '/business/signup');
     expect(response?.headers()['x-robots-tag']).toContain('noindex');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(audit.violations).toEqual([]);
     await page.screenshot({ path: `${directory}/prelaunch-${path.replaceAll('/', '_') || 'home'}-${width}.png`, fullPage: true, ...screenshotCaret });
   }
+});
+test('the unlisted site-access doorway exposes browsing but never transactions', async ({ page }) => {
+  test.setTimeout(150_000);
+  const entry = await page.goto('/site-access');
+  expect(entry?.status()).toBeLessThan(400);
+  expect(entry?.headers()['x-robots-tag']).toContain('noindex');
+  expect(entry?.headers()['netlify-cdn-cache-control']).toContain('no-store');
+  await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
+  await expect(page.getByLabel('Marketplace demonstration notice')).toContainText('booking and payment are unavailable');
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toHaveCount(0);
+
+  const salons = await page.goto('/salons');
+  expect(salons?.status()).toBeLessThan(400);
+  expect(salons?.headers()['x-robots-tag']).toContain('noindex');
+  await expect(page.getByLabel('Marketplace demonstration notice')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toHaveCount(0);
+
+  const salon = await page.goto('/salon/acceptance-salon');
+  expect(salon?.status()).toBeLessThan(400);
+  await expect(page.getByRole('heading', { name: 'Acceptance Salon', exact: true })).toBeVisible();
+  await expect(page.getByText('Demo browsing only', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Book Appointment', exact: true })).toHaveCount(0);
+
+  const blocked = await page.request.post('/api/stripe/booking-checkout', {
+    data: { salon_id: 'p0-demo', style_id: 'p0-style' },
+  });
+  expect(blocked.status()).toBe(503);
+  expect((await blocked.json()).code).toBe('CUSTOMER_MARKETPLACE_NOT_LIVE');
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
+
+  await page.goto('/site-access');
+  await page.goto('/site-access/exit');
+  await expect(page).toHaveURL('/');
+  await page.goto('/salons');
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
 });
 test('direct public API entry points are closed without a launch flag', async ({ request }) => {
   for (const path of ['/api/stripe/booking-checkout', '/api/stripe/commerce-checkout', '/api/stripe/pickup-reservation', '/api/guest/bookings/manage', '/api/concierge']) {

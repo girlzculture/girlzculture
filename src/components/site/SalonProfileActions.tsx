@@ -15,6 +15,8 @@ import {
 import { salonPublicPath } from "@/lib/salonVanity";
 import { getSupabaseForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
+import { useSiteAccess } from "@/components/site/SiteAccessProvider";
+import { SITE_ACCESS_ENTRY_PATH } from "@/lib/marketplaceLaunchCore";
 
 type Props = {
   salonId: string;
@@ -45,6 +47,7 @@ export default function SalonProfileActions({
   tiktokUrl,
   googleBusinessUrl,
 }: Props) {
+  const siteAccess = useSiteAccess();
   const [favorite, setFavorite] = useState(false);
   const [shared, setShared] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -54,9 +57,11 @@ export default function SalonProfileActions({
   const google = safeSocialUrl(googleBusinessUrl);
 
   const publicPath = salonPublicPath(salonSlug, vanitySlug);
-  const publicUrl = () => `${window.location.origin}${publicPath}`;
+  const publicUrl = () =>
+    `${window.location.origin}${siteAccess ? SITE_ACCESS_ENTRY_PATH : publicPath}`;
 
   useEffect(() => {
+    if (siteAccess) return;
     let active = true;
     void (async () => {
       const client = getSupabaseForScope("customer");
@@ -73,7 +78,7 @@ export default function SalonProfileActions({
       if (active) setFavorite(Array.isArray(body.salons) && body.salons.some((salon: { id?: string }) => salon.id === salonId));
     })();
     return () => { active = false; };
-  }, [salonId]);
+  }, [salonId, siteAccess]);
 
   const toggleFavorite = async () => {
     setFavoriteMessage("");
@@ -128,7 +133,7 @@ export default function SalonProfileActions({
       >
         {shared ? <Check size={19} /> : <Share2 size={19} />}
       </button>
-      {vanitySlug ? (
+      {vanitySlug && !siteAccess ? (
         <button
           type="button"
           onClick={() => setShowShare((value) => !value)}
@@ -140,7 +145,7 @@ export default function SalonProfileActions({
           <QrCode size={19} />
         </button>
       ) : null}
-      <button
+      {!siteAccess ? <button
         type="button"
         onClick={() => void toggleFavorite()}
         aria-label={
@@ -150,7 +155,7 @@ export default function SalonProfileActions({
         className={actionClass}
       >
         <Heart size={20} fill={favorite ? "currentColor" : "none"} />
-      </button>
+      </button> : null}
       {favoriteMessage ? <p role="status" className="absolute right-0 top-14 z-20 w-64 rounded-lg border border-plum/10 bg-white p-3 text-[10px] leading-4 text-plum shadow-lg">{favoriteMessage} <a href={`/login?next=${encodeURIComponent(publicPath)}`} className="font-bold text-magenta">Sign in</a></p> : null}
       {showShare && vanitySlug ? (
         <section className="absolute right-0 top-14 z-30 w-[min(82vw,280px)] rounded-[14px] border border-plum/10 bg-white p-4 shadow-[0_18px_50px_rgba(13,17,20,.18)]">

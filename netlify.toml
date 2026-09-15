@@ -13,6 +13,18 @@
   # output remains scanned normally.
   SECRETS_SCAN_OMIT_PATHS = ".netlify/.next/cache/turbopack/**"
 
+[context.production.environment]
+  # Non-secret, fail-closed production allowlists and cost-ledger rates for the
+  # founder-approved $50 AI pilot. Netlify AI Gateway injects OPENAI_API_KEY and
+  # OPENAI_BASE_URL at runtime; neither secret is stored in this file.
+  AI_APPROVED_PROVIDERS = "openai"
+  AI_APPROVED_MODELS = "{\"openai\":[\"gpt-5.4-nano\"]}"
+  OPENAI_CONCIERGE_MODEL = "gpt-5.4-nano"
+  OPENAI_CONCIERGE_INPUT_USD_PER_MILLION = "0.20"
+  OPENAI_CONCIERGE_OUTPUT_USD_PER_MILLION = "1.25"
+  AI_OWNER_INPUT_USD_PER_MILLION = "0.20"
+  AI_OWNER_OUTPUT_USD_PER_MILLION = "1.25"
+
 [functions."booking-reminders"]
   schedule = "*/15 * * * *"
 

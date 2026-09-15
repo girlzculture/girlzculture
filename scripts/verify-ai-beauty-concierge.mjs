@@ -9,6 +9,7 @@ const decisionSearchSource = fs.readFileSync("src/lib/decisionSearchServer.ts", 
 const routeSource = fs.readFileSync("src/app/api/concierge/search/route.ts", "utf8");
 const uiSource = fs.readFileSync("src/components/public/BeautyConcierge.tsx", "utf8");
 const managerSource = fs.readFileSync("src/components/admin/AiAutomationManager.tsx", "utf8");
+const openAiSource = fs.readFileSync("src/lib/openAiServer.ts", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20260722130000_beauty_concierge_engine.sql", "utf8");
 
 const compiled = ts.transpileModule(serverSource, {
@@ -22,12 +23,13 @@ const sandbox = {
   require: () => ({}),
   process: { env: {} },
   console,
+  Buffer,
   setTimeout,
   clearTimeout,
   fetch: () => { throw new Error("Provider calls are disabled in this deterministic test."); },
 };
 vm.runInNewContext(compiled, sandbox, { filename: serverPath });
-const { deterministicConciergeIntent, parseConciergeIntent, conciergeClarification } = compiledModule.exports;
+const { deterministicConciergeIntent, parseConciergeIntent, conciergeClarification, conciergeReservationCostCents } = compiledModule.exports;
 
 assert.equal(typeof deterministicConciergeIntent, "function");
 const natural = deterministicConciergeIntent("Find highly rated salons with discounts within 2 miles under $180 this Saturday morning", "en");
@@ -53,19 +55,25 @@ assert.throws(() => parseConciergeIntent({ ...validIntent, sql: "select * from p
 assert.throws(() => parseConciergeIntent({ ...validIntent, radius_miles: 1000 }), /AI_INTENT_INVALID/);
 assert.match(conciergeClarification("es", "location"), /ciudad|vecindario/i);
 assert.match(conciergeClarification("pt-BR", "style"), /estilo|serviço/i);
+assert.equal(conciergeReservationCostCents("Knotless braids near Harlem", "en"), 1);
 
 for (const token of [
   'additionalProperties: false',
-  'https://api.openai.com/v1/responses',
+  'openAiApiUrl("responses")',
   'type: "json_schema"',
   'strict: true',
   'runDecisionSearch',
   'promotionOnly: intent.promotion_only',
   'maximumPrice: intent.maximum_price',
   'approvedAiModels("openai")',
+  'admin.rpc("reserve_governed_ai_usage"',
+  'p_feature: "beauty_concierge"',
+  'Math.max(reservedCostCents, estimatedOpenAiCostCents(parsed.usage))',
   'estimated_cost_cents',
   'fallback',
 ]) assert.ok(serverSource.includes(token), `Concierge server is missing ${token}`);
+for (const token of ["OPENAI_BASE_URL", '`${configuredBase}/v1`', "OPENAI_BASE_URL_INVALID"])
+  assert.ok(openAiSource.includes(token), `OpenAI Gateway adapter is missing ${token}`);
 
 for (const token of ["enforceRateLimit", "rejectBot", "monitoredRouteFailure", "private, no-store"])
   assert.ok(routeSource.includes(token), `Concierge route is missing ${token}`);

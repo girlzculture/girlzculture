@@ -37,7 +37,12 @@ expect(organic.includes('latitude === null || latitude === ""'), "organic discov
 for (const route of ["featured-campaigns", "trending-campaigns"]) {
   const source = read(`src/app/api/admin/${route}/route.ts`);
   expect(source.includes("boundedNumber"), `${route} validates numeric campaign inputs server-side`);
-  expect(source.includes("endTime <= startTime"), `${route} validates campaign date order server-side`);
+  expect(
+    (source.includes("Date.parse(endsAt) <= Date.parse(startsAt") ||
+      source.includes("endTime <= startTime")) &&
+      source.includes("Campaign end time must be after its start time."),
+    `${route} validates campaign date order server-side`,
+  );
   expect(source.includes("validTimezone"), `${route} validates campaign timezone server-side`);
 }
 
