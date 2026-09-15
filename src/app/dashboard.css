@@ -23,7 +23,7 @@
 .gc-dashboard :is(section,article)[class*="border-plum/"] { border-color: var(--gc-mist-gray); background-color: var(--gc-white); }
 .gc-dashboard :is([class~="bg-white/75"],[class~="bg-white/80"]) { background: var(--gc-white); }
 .gc-dashboard .gc-workspace-sidebar { background: linear-gradient(165deg,color-mix(in srgb, var(--gc-strong-surface) 68%, var(--gc-charcoal)),var(--gc-strong-surface)); color: var(--gc-text-on-dark); }
-.gc-dashboard .gc-workspace-sidebar :is(a,p,span,h2) { color: inherit; }
+.gc-dashboard .gc-workspace-sidebar :is(a,p,h2) { color: inherit; }
 .gc-dashboard .gc-workspace-sidebar a[aria-current="page"] { background: var(--gc-teal); box-shadow: inset 3px 0 var(--gc-white); }
 .gc-dashboard .gc-workspace-sidebar nav a { min-height: 44px; font-weight: 600; }
 .gc-dashboard .gc-workspace-sidebar :is(.gc-text-on-dark-muted,.gc-text-on-dark) { color: var(--gc-text-on-dark); }
