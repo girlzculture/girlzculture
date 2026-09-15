@@ -59,7 +59,8 @@ assert.equal(conciergeReservationCostCents("Knotless braids near Harlem", "en"),
 
 for (const token of [
   'additionalProperties: false',
-  'openAiApiUrl("responses")',
+  'openAiApiUrl("chat/completions")',
+  'response_format',
   'type: "json_schema"',
   'strict: true',
   'runDecisionSearch',

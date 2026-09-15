@@ -7,7 +7,12 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEngineNumber } from "@/lib/engineConfigServer";
 import { aiProviderConfigured, approvedAiModels, approvedAiProviders } from "@/lib/aiAutomationServer";
 import { capturePlatformError } from "@/lib/platformErrors";
-import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
+import {
+  openAiApiKey,
+  openAiApiUrl,
+  openAiChatCompletionText,
+  openAiChatCompletionUsage,
+} from "@/lib/openAiServer";
 
 export type ConciergeIntent = {
   style: string | null;
@@ -180,38 +185,37 @@ export function parseConciergeIntent(value: unknown): ConciergeIntent {
   };
 }
 
-function responseText(body: Record<string, unknown>) {
-  if (typeof body.output_text === "string") return body.output_text;
-  const output = Array.isArray(body.output) ? body.output : [];
-  for (const item of output) {
-    const content = item && typeof item === "object" && Array.isArray((item as Record<string, unknown>).content) ? (item as Record<string, unknown>).content as Array<Record<string, unknown>> : [];
-    const text = content.find((part) => part.type === "output_text" && typeof part.text === "string")?.text;
-    if (typeof text === "string") return text;
-  }
-  throw new Error("AI_INTENT_EMPTY");
-}
-
 async function openAiIntent(text: string, language: string, model: string, timeoutMs: number) {
   const key = openAiApiKey();
   if (!key) throw new Error("AI_NOT_CONFIGURED");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Math.min(20_000, Math.max(1_000, timeoutMs)));
   try {
-    const response = await fetch(openAiApiUrl("responses"), {
+    const response = await fetch(openAiApiUrl("chat/completions"), {
       method: "POST", signal: controller.signal, cache: "no-store",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model, store: false, max_output_tokens: CONCIERGE_MAX_OUTPUT_TOKENS,
-        input: [
+        model, store: false, max_completion_tokens: CONCIERGE_MAX_OUTPUT_TOKENS,
+        messages: [
           { role: "system", content: conciergeSystemPrompt(language) },
           { role: "user", content: text },
         ],
-        text: { format: { type: "json_schema", name: "beauty_search_intent", strict: true, schema: INTENT_SCHEMA } },
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "beauty_search_intent",
+            strict: true,
+            schema: INTENT_SCHEMA,
+          },
+        },
       }),
     });
-    const body = await response.json() as Record<string, unknown> & { error?: { message?: string }; usage?: Record<string, number> };
+    const body = await response.json() as unknown;
     if (!response.ok) throw new Error(`OPENAI_${response.status}`);
-    return { intent: parseConciergeIntent(JSON.parse(responseText(body))), usage: body.usage || {} };
+    return {
+      intent: parseConciergeIntent(JSON.parse(openAiChatCompletionText(body))),
+      usage: openAiChatCompletionUsage(body),
+    };
   } finally { clearTimeout(timer); }
 }
 

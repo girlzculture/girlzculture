@@ -24,3 +24,44 @@ export function openAiApiUrl(resource: string) {
     : `${configuredBase}/v1`;
   return `${apiBase}/${resource.replace(/^\/+/, "")}`;
 }
+
+type OpenAiChatCompletionPayload = {
+  choices?: Array<{
+    message?: {
+      content?: unknown;
+    };
+  }>;
+  usage?: Record<string, unknown>;
+};
+
+/** Read the assistant text from the Chat Completions response shape used by
+ * both OpenAI directly and Netlify AI Gateway. */
+export function openAiChatCompletionText(payload: unknown) {
+  const row = payload as OpenAiChatCompletionPayload | null;
+  const content = row?.choices?.[0]?.message?.content;
+  if (typeof content === "string" && content.trim()) return content.trim();
+  if (Array.isArray(content)) {
+    const text = content
+      .map((part) =>
+        part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string"
+          ? String((part as { text: string }).text)
+          : "",
+      )
+      .join("")
+      .trim();
+    if (text) return text;
+  }
+  throw new Error("OPENAI_CHAT_COMPLETION_EMPTY");
+}
+
+/** Normalize Chat Completions token names to the internal Responses-style
+ * names already used by the governed budget ledger. */
+export function openAiChatCompletionUsage(payload: unknown) {
+  const usage = (payload as OpenAiChatCompletionPayload | null)?.usage || {};
+  const numeric = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+  return {
+    input_tokens: numeric(usage.prompt_tokens),
+    output_tokens: numeric(usage.completion_tokens),
+  };
+}

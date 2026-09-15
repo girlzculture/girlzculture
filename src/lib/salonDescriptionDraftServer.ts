@@ -5,7 +5,7 @@ import {
   approvedAiProviders,
   redactSensitiveText,
 } from "@/lib/aiAutomationServer";
-import { openAiApiKey, openAiApiUrl } from "@/lib/openAiServer";
+import { openAiApiKey, openAiApiUrl, openAiChatCompletionText } from "@/lib/openAiServer";
 
 type Feature = {
   feature_key: string;
@@ -16,19 +16,6 @@ type Feature = {
   daily_request_limit: number;
   monthly_budget_cents: number;
 };
-
-function responseText(payload: unknown) {
-  const row = payload as {
-    output_text?: unknown;
-    output?: Array<{ content?: Array<{ text?: unknown }> }>;
-  };
-  if (typeof row.output_text === "string") return row.output_text;
-  return (row.output || [])
-    .flatMap((entry) => entry.content || [])
-    .map((entry) => (typeof entry.text === "string" ? entry.text : ""))
-    .join("")
-    .trim();
-}
 
 function limitWords(value: string, maximum = 200) {
   return value
@@ -210,7 +197,9 @@ export async function createSalonDescriptionDraft(
     Math.min(Math.max(Number(feature.timeout_ms || 12_000), 1_000), 30_000),
   );
   try {
-    const response = await fetch(openAiApiUrl("responses"), {
+    const instructions =
+      "Write a truthful, warm salon profile description using only the supplied salon name and owner-provided details. Do not invent credentials, awards, prices, guarantees, services, or locations. Use 70 to 140 words and never exceed 200 words. Return only the description.";
+    const response = await fetch(openAiApiUrl("chat/completions"), {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -219,14 +208,15 @@ export async function createSalonDescriptionDraft(
       },
       body: JSON.stringify({
         model: feature.model_key,
-        instructions:
-          "Write a truthful, warm salon profile description using only the supplied salon name and owner-provided details. Do not invent credentials, awards, prices, guarantees, services, or locations. Use 70 to 140 words and never exceed 200 words. Return only the description.",
-        input: `Salon name: ${salonName}\nOwner-provided details: ${keywords}`,
-        max_output_tokens: 400,
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: `Salon name: ${salonName}\nOwner-provided details: ${keywords}` },
+        ],
+        max_completion_tokens: 400,
       }),
     });
     if (!response.ok) return fallback(`PROVIDER_${response.status}`);
-    output = limitWords(responseText(await response.json()));
+    output = limitWords(openAiChatCompletionText(await response.json()));
     if (output.split(/\s+/u).filter(Boolean).length < 25)
       return fallback("PROVIDER_OUTPUT_INVALID");
   } catch {
