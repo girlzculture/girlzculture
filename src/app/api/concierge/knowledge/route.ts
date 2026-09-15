@@ -2,8 +2,9 @@ import { searchPublishedKnowledge } from "@/lib/gcAssistantServer";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { enforceRateLimit, RateLimitError, errorResponse } from "@/lib/requestSecurity";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
+import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   let admin;
   try {
     enforceRateLimit(request, "public-knowledge", 20, 60_000);
@@ -26,3 +27,5 @@ export async function POST(request: Request) {
     return monitoredRouteFailure({ request, admin, error, feature: "ai_concierge", action: "published-knowledge", actorRole: "public", safeMessage: "Published help could not be searched." });
   }
 }
+
+export const POST = withOperationalMonitoring(routeMonitoringProfile("/api/concierge/knowledge", "POST"), POSTHandler);
