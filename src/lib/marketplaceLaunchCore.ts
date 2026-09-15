@@ -9,12 +9,6 @@ export const SITE_ACCESS_COOKIE = "gc_site_access";
 export const SITE_ACCESS_COOKIE_VALUE = "marketplace-demo";
 export const SITE_ACCESS_HEADER = "x-gc-site-access";
 
-export function isSiteAccessPrefetch(headers: Pick<Headers, "get">) {
-  return headers.get("next-router-prefetch") === "1"
-    || [headers.get("purpose"), headers.get("sec-purpose")]
-      .some(value => value?.toLowerCase().split(/[\s,;]+/u).includes("prefetch"));
-}
-
 export function marketplaceUnavailable() {
   return Response.json({
     code: "CUSTOMER_MARKETPLACE_NOT_LIVE",

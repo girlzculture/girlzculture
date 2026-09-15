@@ -14,14 +14,16 @@ export default function SiteAccessBanner() {
       <Link href="/site-access/business-demo" className="underline underline-offset-4">
         Explore the sample business dashboard
       </Link>
-      {/* This route clears a cookie. A normal navigation must replace the
-          layout and must never be automatically prefetched by Next Link. */}
-      <a
-        href={SITE_ACCESS_EXIT_PATH}
-        className="underline decoration-white/60 underline-offset-4 hover:decoration-white"
-      >
-        Exit demonstration
-      </a>
+      {/* A native form requires deliberate submission and replaces the layout.
+          GET/HEAD requests, including prefetch, cannot end the session. */}
+      <form action={SITE_ACCESS_EXIT_PATH} method="post">
+        <button
+          type="submit"
+          className="cursor-pointer underline decoration-white/60 underline-offset-4 hover:decoration-white"
+        >
+          Exit demonstration
+        </button>
+      </form>
     </aside>
   );
 }

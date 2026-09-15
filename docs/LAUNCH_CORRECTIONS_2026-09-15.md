@@ -1,6 +1,6 @@
 # Girlz Culture launch corrections — 15 September 2026
 
-Status: **PR #66 OPEN. VERIFICATION IN PROGRESS. Browser failures are under correction. NOT RELEASED. Live acceptance is BLOCKED.**
+Status: **PR #66 OPEN. DEMO-EXIT HTTP REGRESSION CORRECTED LOCALLY. FRESH CI REQUIRED. NOT RELEASED. Live acceptance remains outstanding.**
 Branch: `fix/conversational-gc-assistant-dashboard`.
 Base: `bb3b93b` (the existing #65 release).
 
@@ -11,6 +11,19 @@ This is an implementation and verification handoff, not a declaration that every
 The protected production event at 2026-09-15 12:09:06 UTC reported `ASSISTANT_COST_CONFIGURATION_REQUIRED`, reference `e29d2f5a-b786-4aec-9992-0237e082de4e`. The approved business feature was enabled for OpenAI `gpt-5.4-nano`, but the required pricing settings were unavailable in the function runtime. This is distinct from the earlier login problem and does not establish that every historical error had the same cause.
 
 The code now supplies reviewed prices only for that exact approved pilot model. Unknown models and explicitly invalid overrides still fail closed. Existing provider configuration, access checks, monthly budget reservations and write-confirmation safeguards remain enforced. No additional chatbot vendor was introduced. The combined approved monthly feature caps remain $50: $25 business assistant plus $25 customer concierge.
+
+## Latest correction and evidence
+
+This section supersedes the older in-progress and environment notes below.
+
+- **AUTOMATED ONLY — previous commit:** Normal CI for `7aacdd7` passed the full browser suite (489 passed, 5 skipped), all 149 clean-database migrations and assertions, build, lint, TypeScript, security and focused accessibility checks. The release-candidate browser shards also passed, but its separate prelaunch suite had 10 passes and two failures: the speculative `/site-access/exit` request returned 307 instead of 204 in Chromium and WebKit. The later Stripe test-mode connectivity step did not run.
+- **PASS — exact failure reproduced locally:** A new HTTP regression against the real local Next.js server reproduced the same 307-versus-204 failure before the correction. The installed Next.js documentation and adapter show that internal Flight headers, including `next-router-prefetch`, are removed before Proxy runs. Checking that header inside Proxy could not reliably prevent cookie clearing.
+- **AUTOMATED ONLY — focused correction verified:** GET and HEAD exit requests now return 204 without changing cookies. A native form submits the explicit exit as a same-origin POST; foreign/missing origins and unsupported methods cannot clear the session. The successful POST clears the cookie and redirects with 303, preserving the browser's host. The HTTP regression passes all of those cases and verifies marketplace discovery is available before the exit and gated afterward. TypeScript, affected-file lint, all 178 current P0 core tests and whitespace checks passed locally.
+- **BLOCKED — local browser execution:** Chromium and WebKit executables are absent. The official Playwright download failed with HTTP 502 and timeouts. The prelaunch server itself now starts locally. Fresh CI must run the original full prelaunch checks plus the new exit checks for phone, tablet, desktop and landscape sizes; local HTTP verification does not substitute for those checks.
+- **PASS / FAIL — latest recorded production check:** Isha 5 Stars Salon was authenticated and its existing services quick action returned 16 services. Free-form AI still failed on the old deployed release with `ASSISTANT_COST_CONFIGURATION_REQUIRED`; reference `e29d2f5a-b786-4aec-9992-0237e082de4e` matched the protected event at 16:44:45 UTC on 15 September. The corrected AI still needs post-publication acceptance.
+- **BLOCKED — isolated preview and protected publication:** The preview points to Supabase project `xqpwgzkuiwifvaxlyfns`, which could not be verified as accessible; production uses `cuzfockthsqwubupskui`. No preview settings were redirected to production. Required Netlify deploy-lock/specific-deploy controls and GitHub workflow dispatch/environment approval remain unavailable through the current connection; CLI credentials for those controls are absent. Existing founder release authorization is retained, and the exact-main migration gate remains mandatory.
+
+The broader GCIA expansion remains separate from this launch-correction batch. No new production migration, environment change, customer message, payment or business-record modification was performed for the demo-exit correction.
 
 ## Implemented in this branch
 

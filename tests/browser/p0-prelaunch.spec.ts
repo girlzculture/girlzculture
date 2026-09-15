@@ -1,7 +1,46 @@
-import { expect } from '@playwright/test';
+import { expect, test as requestTest } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
+
+requestTest('demo exit preserves browsing on reads and requires a same-origin submission', async ({ request, baseURL }) => {
+  await request.get('/site-access');
+  const speculativeHeaders: Record<string, string>[] = [
+    { 'next-router-prefetch': '1' },
+    { purpose: 'prefetch' },
+    { 'sec-purpose': 'prefetch;prerender' },
+    {},
+  ];
+  for (const headers of speculativeHeaders) {
+    for (const method of ['GET', 'HEAD']) {
+      const response = await request.fetch('/site-access/exit', { method, headers, maxRedirects: 0 });
+      expect(response.status()).toBe(204);
+      expect(response.headers()['set-cookie']).toBeUndefined();
+      expect(response.headers()['cache-control']).toContain('no-store');
+    }
+  }
+  const foreignExit = await request.post('/site-access/exit', {
+    headers: { origin: 'https://unrelated.example' }, maxRedirects: 0,
+  });
+  expect(foreignExit.status()).toBe(403);
+  expect(foreignExit.headers()['set-cookie']).toBeUndefined();
+  const missingOrigin = await request.post('/site-access/exit', { maxRedirects: 0 });
+  expect(missingOrigin.status()).toBe(403);
+  expect(missingOrigin.headers()['set-cookie']).toBeUndefined();
+  const unsupported = await request.put('/site-access/exit', { maxRedirects: 0 });
+  expect(unsupported.status()).toBe(405);
+  expect(unsupported.headers()['set-cookie']).toBeUndefined();
+  expect((await request.get('/api/discovery/salons?lat=40.7&lng=-74')).status()).toBe(200);
+
+  const exit = await request.post('/site-access/exit', {
+    headers: { origin: new URL(baseURL!).origin }, maxRedirects: 0,
+  });
+  expect(exit.status()).toBe(303);
+  expect(new URL(exit.headers().location, baseURL).toString()).toBe(new URL('/', baseURL).toString());
+  expect(exit.headers()['set-cookie']).toContain('gc_site_access=;');
+  expect(exit.headers()['set-cookie']).toContain('Max-Age=0');
+  expect((await request.get('/api/discovery/salons?lat=40.7&lng=-74')).status()).toBe(503);
+});
 
 for (const width of [390, 768, 1440]) test(`prelaunch public routes fail closed at ${width}px`, async ({ page }, info) => {
   test.setTimeout(150_000);
@@ -63,9 +102,32 @@ test('the unlisted site-access doorway exposes browsing but never transactions',
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
 
   await page.goto('/site-access');
-  await page.getByRole('link', { name: 'Exit demonstration', exact: true }).click();
+  await page.getByRole('button', { name: 'Exit demonstration', exact: true }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
+  await page.goto('/salons');
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
+});
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 844, height: 390 },
+  { width: 768, height: 1024 },
+  { width: 1180, height: 820 },
+  { width: 1440, height: 900 },
+]) test(`demo exit submits and clears browsing at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
+  await page.goto('/site-access');
+  const exit = page.getByRole('button', { name: 'Exit demonstration', exact: true });
+  await expect(exit).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const submitted = page.waitForResponse(response =>
+    new URL(response.url()).pathname === '/site-access/exit' && response.request().method() === 'POST');
+  await exit.click();
+  expect((await submitted).status()).toBe(303);
+  await expect(page).toHaveURL('/');
+  await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
   await page.goto('/salons');
   await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toBeVisible();
 });
