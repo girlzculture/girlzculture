@@ -4,6 +4,7 @@ import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 import AxeBuilder from '@axe-core/playwright';
 import { presentAssistantResult } from "../../src/lib/gcAssistantPresentation";
+import { expectedAssistantReply } from "./helpers/assistantReply";
 import { validateTool } from '../../src/lib/gcAssistantCore';
 import { mkdir } from 'node:fs/promises';
 
@@ -57,7 +58,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     async function ask() { await dialog.locator('textarea').fill('Business request'); await dialog.getByRole('button', { name: t('Ask GC Assistant'), exact: true }).click(); }
     for (const [tool, args, result] of reads) {
       next = { tool, args, result }; await ask();
-      await expect(dialog.locator('article').last()).toContainText(presentAssistantResult(tool, result, locale).message);
+      await expect(dialog.locator('article').last()).toContainText(await expectedAssistantReply(page, tool, result, locale));
       await expect(dialog.locator('article').last().locator('dl')).toHaveCount(0);
       expect(writes).toBe(0);
       expect(presentAssistantResult(tool, result, locale).message.length).toBeLessThan(900);

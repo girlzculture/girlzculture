@@ -205,7 +205,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
               </article>;
             })}
             {busy ? <div className="flex items-start gap-3" aria-label={t("GC Assistant is working")}><span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-hover text-white"><Bot aria-hidden size={16}/></span><div className="flex h-11 items-center gap-1 rounded-2xl rounded-tl-md border border-border bg-white px-4"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink [animation-delay:120ms]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink [animation-delay:240ms]"/></div></div> : null}
-            {notice ? <div role="status" aria-label={t("GC Assistant status")} className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold leading-5 text-text-danger">{t(notice)}{reference ? <span className="mt-1 block break-words text-xs font-medium">{t("Support reference")}: <span data-no-translate>{reference}</span></span> : null}</div> : <p role="status" aria-label={t("GC Assistant status")} className="sr-only">{t(busy ? "Working…" : "Ready")}</p>}
+            {notice ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold leading-5 text-text-danger"><p role="status" aria-label={t("GC Assistant status")}>{t(notice)}</p>{reference ? <p className="mt-1 break-words text-xs font-medium">{t("Support reference")}: <span data-no-translate>{reference}</span></p> : null}</div> : <p role="status" aria-label={t("GC Assistant status")} className="sr-only">{t(busy ? "Working…" : "Ready")}</p>}
             <div ref={conversationEnd}/>
           </div>
         </div>
