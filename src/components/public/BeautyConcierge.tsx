@@ -15,6 +15,7 @@ import { useSiteAccess } from "@/components/site/SiteAccessProvider";
 import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
 import { gciaText } from "@/i18n/gcia-source-catalog";
+import AssistantSupportHandoff from "@/components/public/AssistantSupportHandoff";
 
 type SearchState = "idle" | "results" | "no_results" | "clarification" | "error";
 type ResponseBody = { mode?: "openai" | "deterministic"; intent?: ConciergeIntent; clarification?: string | null; salons?: ConciergeSalonResult[]; configuration?: ConciergeConfiguration; error?: string; request_id?: string };
@@ -122,6 +123,7 @@ export default function BeautyConcierge() {
     {intent && (intent.style || intent.radius_miles || intent.maximum_price || intent.minimum_rating || intent.date) ? <div role="group" className="mt-3 flex flex-wrap gap-2" aria-label="Interpreted search details">{intent.style ? <Chip>{intent.style}</Chip> : null}{intent.radius_miles ? <Chip>Within {intent.radius_miles} mi</Chip> : null}{intent.maximum_price !== null ? <Chip>Up to ${intent.maximum_price}</Chip> : null}{intent.minimum_rating !== null ? <Chip>{intent.minimum_rating}+ stars</Chip> : null}{intent.date ? <Chip>{intent.date} · {intent.time_period}</Chip> : null}{intent.promotion_only ? <Chip>Offers only</Chip> : null}<span className="self-center text-[11px] gc-text-secondary">{mode === "openai" ? "AI interpreted; database verified" : "Standard search fallback"}</span></div> : null}
     {results.length ? <div className="mt-5 -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">{results.map((salon) => <ConciergeCard key={salon.id} salon={salon} selected={compare.includes(salon.id)} saved={saved.includes(salon.id)} toggleCompare={() => toggleCompare(salon.id)} toggleSave={() => void saveSalon(salon.id)}/>)}</div> : null}
     {compared.length >= 2 ? <Comparison salons={compared}/> : null}
+    <AssistantSupportHandoff key={dictationSession} turns={turns} failure={searchState === "error" ? message : ""}/>
   </section>;
 }
 

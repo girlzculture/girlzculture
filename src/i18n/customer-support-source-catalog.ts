@@ -1,0 +1,45 @@
+// Functional support copy; native-language acceptance remains separate.
+const rows: readonly (readonly [string, string, string, string, string])[] = [
+  ["GC Assistant support", "Ayuda de GC Assistant", "Assistance GC Assistant", "Ndimbalu GC Assistant", "GC Assistant 支持"],
+  ["My question", "Mi pregunta", "Ma question", "Sama laaj", "我的问题"],
+  ["Last assistant response (excerpt)", "Última respuesta del asistente (extracto)", "Dernière réponse de l’assistant (extrait)", "Tontu bu mujj bu ndimbal bi (dogit)", "助手的最后回复（摘录）"],
+  ["Reported error", "Error comunicado", "Erreur signalée", "Njuumte li ñu wax", "报告的错误"],
+  ["Human support", "Atención humana", "Assistance humaine", "Ndimbal ci nit", "人工支持"],
+  ["Ask a person for help", "Pedir ayuda a una persona", "Demander de l’aide à une personne", "Laaj nit ndimbal", "寻求人工帮助"],
+  ["Discard support draft", "Descartar borrador de ayuda", "Supprimer le brouillon d’assistance", "Faral bataaxalu ndimbal bi", "放弃支持草稿"],
+  ["Preparing support draft…", "Preparando borrador…", "Préparation du brouillon…", "Tàmbali bataaxalu ndimbal…", "正在准备支持草稿…"],
+  ["Support could not be loaded. Your conversation has not been sent.", "No se pudo cargar la ayuda. Tu conversación no se ha enviado.", "L’assistance n’a pas pu être chargée. Votre conversation n’a pas été envoyée.", "Mënunu ubbi ndimbal bi. Yónneesuñu sa waxtaan.", "无法加载支持表单。您的对话尚未发送。"],
+  ["Open contact form", "Abrir formulario de contacto", "Ouvrir le formulaire de contact", "Ubbi formileeru jokkoo", "打开联系表单"],
+  ["Review your support request", "Revisa tu solicitud de ayuda", "Vérifiez votre demande d’assistance", "Seetal sa laaju ndimbal", "审核您的支持请求"],
+  ["Edit the excerpt and remove anything you do not want to share. It is sent to platform support only when you press Send support request.", "Edita el extracto y elimina lo que no quieras compartir. Solo se enviará al soporte de la plataforma al pulsar Enviar solicitud de ayuda.", "Modifiez l’extrait et retirez ce que vous ne souhaitez pas partager. Il est envoyé à l’assistance de la plateforme uniquement lorsque vous appuyez sur Envoyer la demande d’assistance.", "Soppil dogit bi te far li nga bëggul bokk. Dinañu ko yónnee ndimbalu platform bi su nga bës Yónnee laaju ndimbal rekk.", "请编辑摘录并删除不想分享的内容。只有点击“发送支持请求”后，才会将其发送给平台支持团队。"],
+  ["Choose Payments for refunds or disputes, or Safety for a safety concern. For an immediate emergency, contact local emergency services.", "Elige Pagos para reembolsos o disputas, o Seguridad para un problema de seguridad. En una emergencia inmediata, contacta con los servicios de emergencia locales.", "Choisissez Paiements pour un remboursement ou un litige, ou Sécurité pour un problème de sécurité. En cas d’urgence immédiate, contactez les services d’urgence locaux.", "Tànnal Fay yi ngir delloo xaalis walla xuloo, walla Kaarange ngir laaju kaarange. Su amee lu gaaw, wooteel ci ndimbalu gaaw ci sa dëkk.", "退款或争议请选择“付款”，安全问题请选择“安全”。如遇紧急危险，请联系当地应急服务。"],
+  ["Name", "Nombre", "Nom", "Tur", "姓名"],
+  ["Email", "Correo electrónico", "Adresse e-mail", "Imeel", "电子邮箱"],
+  ["Subject", "Asunto", "Objet", "Turu mbind mi", "主题"],
+  ["Category", "Categoría", "Catégorie", "Xeet", "类别"],
+  ["Message", "Mensaje", "Message", "Bataaxal", "消息"],
+  ["Choose a category", "Elige una categoría", "Choisissez une catégorie", "Tànnal xeet", "选择类别"],
+  ["Bookings", "Reservas", "Réservations", "Rendez-vous yi", "预约"],
+  ["Payments", "Pagos", "Paiements", "Fay yi", "付款"],
+  ["Account access", "Acceso a la cuenta", "Accès au compte", "Duggu ci kont bi", "账户访问"],
+  ["Salon concern", "Problema con el salón", "Problème avec un salon", "Jafe-jafe ak salon bi", "商家问题"],
+  ["Safety", "Seguridad", "Sécurité", "Kaarange", "安全"],
+  ["Partnerships", "Colaboraciones", "Partenariats", "Àndandoo", "合作"],
+  ["Technical issue", "Problema técnico", "Problème technique", "Jafe-jafey jumtukaay", "技术问题"],
+  ["Other", "Otro", "Autre", "Beneen", "其他"],
+  ["Tell us what happened and how we can help.", "Cuéntanos qué ocurrió y cómo podemos ayudar.", "Expliquez ce qui s’est passé et comment nous pouvons vous aider.", "Wax nu li xew ak ni nu la man a dimbali.", "请说明发生了什么以及我们如何提供帮助。"],
+  ["Enter a valid email address such as name@example.com", "Introduce un correo válido, como name@example.com", "Saisissez une adresse e-mail valide, comme name@example.com", "Dugalal imeel bu baax, ni name@example.com", "请输入有效邮箱，例如 name@example.com"],
+  ["Please enter a valid email address (name@example.com).", "Introduce un correo electrónico válido (name@example.com).", "Saisissez une adresse e-mail valide (name@example.com).", "Dugalal imeel bu baax (name@example.com).", "请输入有效的电子邮箱（name@example.com）。"],
+  ["Unable to submit your request", "No se pudo enviar tu solicitud", "Impossible d’envoyer votre demande", "Mënunu yónnee sa laaj", "无法提交您的请求"],
+  ["No confirmed support reference was returned. Keep your draft and contact support before sending again.", "No se recibió una referencia confirmada. Conserva el borrador y contacta con soporte antes de volver a enviarlo.", "Aucune référence d’assistance confirmée n’a été renvoyée. Conservez le brouillon et contactez l’assistance avant de renvoyer.", "Amul limu ndimbal bu ñu dëggal. Dencal sa bataaxal te wax ak ndimbal bala ngay yónneewaat.", "未收到确认的支持编号。请保留草稿，并在再次发送前联系支持团队。"],
+  ["Delivery could not be confirmed. Keep your draft and contact support before sending again.", "No se pudo confirmar la entrega. Conserva el borrador y contacta con soporte antes de volver a enviarlo.", "L’envoi n’a pas pu être confirmé. Conservez le brouillon et contactez l’assistance avant de renvoyer.", "Mënunu dëggal yónnee bi. Dencal sa bataaxal te wax ak ndimbal bala ngay yónneewaat.", "无法确认是否送达。请保留草稿，并在再次发送前联系支持团队。"],
+  ["Your request was received. Reference: {reference}", "Recibimos tu solicitud. Referencia: {reference}", "Votre demande a été reçue. Référence : {reference}", "Jot nañu sa laaj. Lim: {reference}", "已收到您的请求。编号：{reference}"],
+  ["Sending…", "Enviando…", "Envoi…", "Yónnee…", "正在发送…"],
+  ["Send support request", "Enviar solicitud de ayuda", "Envoyer la demande d’assistance", "Yónnee laaju ndimbal", "发送支持请求"],
+];
+export const CUSTOMER_SUPPORT_SOURCE_MESSAGES: Record<string, Record<string, string>> = Object.fromEntries(
+  ["es", "fr", "wo", "zh-CN"].map((locale, index) => [locale, Object.fromEntries(rows.map(row => [row[0], row[index + 1]]))]),
+);
+export function customerSupportText(source: string, locale: string, values: Record<string, string | number> = {}) {
+  return (CUSTOMER_SUPPORT_SOURCE_MESSAGES[locale]?.[source] || source).replace(/\{(\w+)\}/g, (token, key: string) => Object.hasOwn(values, key) ? String(values[key]) : token);
+}
