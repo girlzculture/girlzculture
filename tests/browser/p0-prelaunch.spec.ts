@@ -116,6 +116,12 @@ for (const viewport of [
   { width: 1440, height: 900 },
 ]) test(`demo exit submits and clears browsing at ${viewport.width}x${viewport.height}`, async ({ page }) => {
   await page.setViewportSize(viewport);
+  // Exercise exit as a returning visitor. The first-visit location dialog has
+  // separate public-responsive coverage and can otherwise intercept this click.
+  await page.addInitScript(() => {
+    localStorage.setItem('girlz-culture-mobile-location-prompt-v1',
+      JSON.stringify({ dismissedAt: Date.now(), outcome: 'dismissed' }));
+  });
   await page.goto('/site-access');
   const exit = page.getByRole('button', { name: 'Exit demonstration', exact: true });
   await expect(exit).toBeVisible();
