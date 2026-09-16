@@ -17,7 +17,7 @@ const purposes: Record<AssistantTool, string> = {
   get_promotions: "Read this business's promotion records.",
   get_plan_status: "Read the current subscription, canonical plan features/prices and limits for a scheduled downgrade. Use for entitlement and plan-comparison questions. Business usage may be unavailable; never forecast sales or change billing.",
   get_profile_completion: "Read how complete this business's profile is.",
-  get_earnings_summary: "Read completed booking value and its preceding equal-duration comparison for a date range. Use the exact returned timestamps. Null means unavailable; this is not verified cash revenue, settlement, fees, refunds or payouts. Open the controlled earnings workflow for payment evidence.",
+  get_earnings_summary: "Read booking value and its prior equal-duration comparison, plus current recorded deposit/fee/refund/transfer aggregates for appointments in the date range. Use exact timestamps and disclose this appointment cohort, not cash flow by payment date. Keep live, test and unknown payment modes separate. Missing fields are unavailable, not zero; unverified records are excluded from confirmed sums. Connect transfers are not bank payouts. Net revenue and bank settlement remain unavailable. Open earnings for individual ledger details or financial actions.",
   get_upcoming_appointments: "Read upcoming appointments in a date range.",
   get_calendar_gaps: "Read calendar openings on a date, optionally for one professional.",
   prepare_manual_appointment: "Prepare a business-added appointment after resolving services, duration, professional and available time. Owner confirmation is still required.",

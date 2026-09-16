@@ -88,6 +88,22 @@ test('overview permission alone does not expose calendar gaps', async () => {
   assert.equal(result.calendar_gaps, null);
   assert.equal(f.calls.some(call => call.calendar), false);
 });
+
+test('earnings evidence is an authorized appointment cohort and excludes foreign and manual money', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const paid = { salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 100, payment_mode: 'live', payment_verified_at: range.start, stripe_charge_id: 'ch_fixture', deposit_status: 'Paid', deposit_amount: 20 };
+  const f = fixture({ tables: { bookings: [paid, { ...paid, salon_id: actor, deposit_amount: 999 }, { ...paid, booking_origin: 'business_added', deposit_amount: 888 }] } });
+  const result = (await f.run('get_earnings_summary', range)).request.result;
+  assert.equal(result.finance.scope, 'current_ledger_for_appointments_in_range');
+  assert.equal(result.finance.live.recorded_verified_deposits, 20);
+  assert.equal(result.finance.payment_date_cash_flow, null);
+  assert.equal(result.finance.bank_settlement_verified, false);
+  const overview = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(Object.hasOwn(overview, 'finance'), false);
+  const denied = fixture({ denied: ['earnings'] });
+  await assert.rejects(denied.run('get_earnings_summary', range), error => error.code === 'ASSISTANT_ACCESS_DENIED');
+  assert.equal(denied.calls.some(call => call.table === 'bookings'), false);
+});
 function fixture(overrides = {}) {
   const calls = [];
   const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };

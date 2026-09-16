@@ -5,6 +5,7 @@ import { ownerBusinessMetrics, profileCompletion } from "@/lib/ownerBusinessMetr
 import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
 import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
+import { assistantFinanceEvidence } from "@/lib/assistantFinance";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -81,7 +82,9 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
       for (let offset = 0; ; offset += 1000) {
         const query = summaryOnly
           ? admin.from("bookings").select("status,estimated_total,booking_origin")
-          : admin.from("bookings").select("id,public_reference,appointment_datetime,status,guest_name,guest_email,customer_id,estimated_total,cancelled_by,cancellation_initiated_by,booking_origin,source,style_id,stylist_id");
+          : tool === "get_earnings_summary"
+            ? admin.from("bookings").select("id,appointment_datetime,status,estimated_total,booking_origin,payment_mode,payment_verified_at,stripe_charge_id,deposit_status,deposit_amount,stripe_processing_fee,platform_fee,net_amount_owed_salon,refund_status,refund_amount,refund_completed_at,stripe_refund_id,transfer_status,stripe_transfer_id")
+            : admin.from("bookings").select("id,public_reference,appointment_datetime,status,guest_name,guest_email,customer_id,estimated_total,cancelled_by,cancellation_initiated_by,booking_origin,source,style_id,stylist_id");
         const result = await query.eq("salon_id", salon.id).gte("appointment_datetime", start).lt("appointment_datetime", end).order("id").range(offset, offset + 999);
         if (result.error) throw result.error;
         records.push(...result.data || []);
@@ -99,7 +102,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const comparisonStart = new Date(start - (end - start)).toISOString();
     const previousPeriod = assistantPeriodMetrics(await readPeriod(comparisonStart, args.start, true));
     const comparison = { method: "preceding_equal_elapsed_duration", current: { start: args.start, end: args.end, ...currentPeriod }, previous: { start: comparisonStart, end: args.start, ...previousPeriod }, changes: compareAssistantPeriods(currentPeriod, previousPeriod) };
-    if (tool === "get_earnings_summary") return { ...currentPeriod, comparison, currency: "USD", definition: "Completed Booking Value", cash_revenue: null };
+    if (tool === "get_earnings_summary") return { ...currentPeriod, comparison, finance: assistantFinanceEvidence(bookings), start: args.start, end: args.end, time_zone: salon.time_zone, currency: "USD", definition: "Completed Booking Value", cash_revenue: null };
     async function performance(permission: "styles" | "stylists", field: "style_id" | "stylist_id") {
       const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: permission });
       if (access.error) throw access.error;
