@@ -5,7 +5,7 @@ import AssistantDictation from "@/components/owner/AssistantDictation";
 import { ArrowUp, Bot, Building2, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
 import { getSessionForScope, getSupabaseForScope } from "@/lib/supabase";
 import { useI18n } from "@/components/i18n/LocaleProvider";
-import { OwnerActionError, ownerResponseError } from "@/lib/ownerActionError";
+import { OwnerActionError, readOwnerResponse } from "@/lib/ownerActionError";
 import { LOCALE_NAMES } from "@/i18n/catalog";
 import { BOOKING_SOURCE_LABELS } from "@/lib/ownerBusinessMetrics";
 import { POLICY_CHOICES } from "@/lib/businessPolicyCore";
@@ -120,7 +120,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     if (actor.current === null) actor.current = session.user.id;
     if (session.user.id !== actor.current) throw new Error("AUTH_REQUIRED");
     const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale }), signal: AbortSignal.timeout(55000) });
-    const result = await response.json(); if (!response.ok) throw ownerResponseError(result, "ASSISTANT_UNAVAILABLE"); return result;
+    return readOwnerResponse(response, "ASSISTANT_UNAVAILABLE");
   }
   async function submit(tool?: string, setup = false) {
     const message = setup ? t("Help me set up my business, one step at a time.") : text;
