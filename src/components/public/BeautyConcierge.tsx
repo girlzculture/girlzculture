@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarDays, Check, Heart, LoaderCircle, MapPin, Scale, Star } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
@@ -11,6 +12,7 @@ import { getSupabaseForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
 import type { ConciergeAiStatus, ConciergeConfiguration, ConciergeIntent, ConciergeSalonResult } from "@/lib/beautyConciergeServer";
 import { useSiteAccess } from "@/components/site/SiteAccessProvider";
+import AssistantDictation from "@/components/owner/AssistantDictation";
 
 type SearchState = "idle" | "results" | "no_results" | "clarification" | "error";
 type ResponseBody = { mode?: "openai" | "deterministic"; intent?: ConciergeIntent; clarification?: string | null; salons?: ConciergeSalonResult[]; configuration?: ConciergeConfiguration; error?: string; request_id?: string };
@@ -18,6 +20,7 @@ const SEARCH_PLACEHOLDER = "Describe what you want";
 
 export default function BeautyConcierge() {
   const location = useCustomerLocation();
+  const router = useRouter();
   const { locale } = useI18n();
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,12 +32,24 @@ export default function BeautyConcierge() {
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [compare, setCompare] = useState<string[]>([]);
   const [saved, setSaved] = useState<string[]>([]);
+  const [turns, setTurns] = useState<{ question: string; answer: string }[]>([]);
+  const [helpMode, setHelpMode] = useState(false);
+  const [dictationSession, setDictationSession] = useState(0);
+  const [sources, setSources] = useState<{ href: string; title: string }[]>([]);
 
   async function search(event: FormEvent) {
     event.preventDefault(); if (busy) return;
     setBusy(true); setMessage(""); setCompare([]); setSearchState("idle");
     try {
-      const response = await fetch("/api/concierge/search", { method: "POST", credentials: "same-origin", redirect: "manual", headers: { "Accept": "application/json", "Content-Type": "application/json", "X-Requested-With": "girlz-culture-public" }, body: JSON.stringify({ prompt, language: locale, latitude: location.location?.lat, longitude: location.location?.lng, website: "" }) });
+      if (helpMode) {
+        const response = await fetch("/api/concierge/knowledge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: prompt.slice(0, 240) }), signal: AbortSignal.timeout(15000) });
+        const body = await readApiResponse(response, "Published help could not be searched.");
+        if (!response.ok) throw new Error(body.error || "Published help could not be searched.");
+        const matches = (Array.isArray(body.matches) ? body.matches : []) as { question: string; answer: string; href: string; title: string }[];
+        setTurns(previous => [...previous, { question: prompt, answer: matches.length ? matches.slice(0, 2).map(match => `${match.question}: ${match.answer}`).join("\n\n") : "I couldn't find that in the published Help center. Try a more specific question or contact support." }].slice(-8));
+        setSources(matches.slice(0, 2)); setPrompt(current => current === prompt ? "" : current); return;
+      }
+      const response = await fetch("/api/concierge/search", { method: "POST", credentials: "same-origin", redirect: "manual", headers: { "Accept": "application/json", "Content-Type": "application/json", "X-Requested-With": "girlz-culture-public" }, body: JSON.stringify({ prompt, previous_intent: intent, language: locale, latitude: location.location?.lat, longitude: location.location?.lng, website: "" }), signal: AbortSignal.timeout(45000) });
       if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
         throw new Error("Beauty search is temporarily unavailable.");
       }
@@ -47,6 +62,8 @@ export default function BeautyConcierge() {
       setIntent(body.intent || null); setMode(body.mode || null); setConfiguration(body.configuration || null); setResults(salons);
       setMessage(body.clarification || (!salons.length ? "I couldn't find an eligible nearby match for those details. Try a wider distance or another date." : ""));
       setSearchState(body.clarification ? "clarification" : salons.length ? "results" : "no_results");
+      setTurns(previous => [...previous, { question: prompt, answer: body.clarification || (salons.length ? `I found ${salons.length} matching businesses${body.intent?.location ? ` near ${body.intent.location}` : ""}. You can compare them below, or tell me what you would like to change.` : "I couldn't find a match for these details. Would you like to change the date, price or distance?") }].slice(-8));
+      setPrompt(current => current === prompt ? "" : current);
     } catch (error) { setResults([]); setConfiguration(null); setMessage(error instanceof Error ? error.message : "Beauty search is temporarily unavailable."); setSearchState("error"); }
     finally { setBusy(false); }
   }
@@ -57,7 +74,7 @@ export default function BeautyConcierge() {
     try {
       const client = getSupabaseForScope("customer");
       const { data } = await client.auth.getSession();
-      if (!data.session) { window.location.assign(`/login?next=${encodeURIComponent("/salons")}`); return; }
+      if (!data.session) { router.push(`/login?next=${encodeURIComponent("/salons")}`); return; }
       const already = saved.includes(id);
       const response = await fetch("/api/customer/favorites", { method: already ? "DELETE" : "POST", redirect: "manual", headers: { Accept: "application/json", Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ salon_id: id }) });
       const body = await readApiResponse(
@@ -70,11 +87,17 @@ export default function BeautyConcierge() {
   }
   const compared = results.filter((salon) => compare.includes(salon.id));
 
-  return <section className="mb-5 rounded-[18px] border border-plum/10 bg-charcoal p-4 text-white shadow-[0_16px_40px_rgba(13,17,20,.13)] sm:p-6" aria-labelledby="concierge-title">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.18em] text-amber">AI</p><h2 id="concierge-title" className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">Tell us the look you want</h2><p className="mt-1 max-w-2xl text-xs leading-5 gc-text-on-dark-muted">Describe the beauty service you want, your preferred location, date, or other preferences.</p></div>{location.location ? <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-[10px]"><MapPin size={12}/>Searching near {location.location.label}</span> : null}</div>
-    <form onSubmit={search} className="mt-4 grid gap-2 md:grid-cols-[1fr_auto]"><label><span className="sr-only">Describe your beauty appointment</span><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={600} rows={2} placeholder={SEARCH_PLACEHOLDER} className="gc-placeholder-light min-h-16 w-full resize-y rounded-[10px] border border-white/15 bg-white px-4 py-3 text-sm text-ink outline-none focus:border-magenta" /></label><button disabled={busy || prompt.trim().length < 3} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-6 text-sm font-bold gc-disabled-control">{busy ? <LoaderCircle className="animate-spin" size={17}/> : null}Find real matches</button></form>
+  return <section className="gc-dashboard mb-5 rounded-2xl border border-border bg-white p-4 text-text-primary shadow-sm sm:p-6" aria-labelledby="concierge-title">
+    <header className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="concierge-title" className="text-2xl font-bold">GC Assistant</h2><p className="mt-2 text-sm">Tell me the service and location you want, or ask about Girlz Culture.</p></div><button type="button" disabled={busy} onClick={() => { setIntent(null); setTurns([]); setResults([]); setPrompt(""); setSources([]); setCompare([]); setMessage(""); setMode(null); setConfiguration(null); setSearchState("idle"); setDictationSession(value => value + 1); }} className="min-h-10 rounded-lg border border-border px-3 text-sm font-semibold">New conversation</button></header>
+    <nav className="mt-4 flex flex-wrap gap-2" aria-label="Assistant topic">{[[false, "Find a business"], [true, "Girlz Culture help"]].map(([value, label]) => <button key={String(label)} type="button" aria-pressed={helpMode === value} disabled={busy} onClick={() => { setHelpMode(Boolean(value)); setSources([]); setResults([]); setSearchState("idle"); setDictationSession(value => value + 1); }} className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${helpMode === value ? "border-teal bg-primary-hover text-white" : "border-border bg-white"}`}>{String(label)}</button>)}</nav>
+    {turns.length ? <div aria-label="Assistant conversation" aria-live="polite" className="my-5 max-h-96 space-y-4 overflow-y-auto rounded-xl bg-subtle p-3">{turns.map((turn, index) => <article key={index} className="space-y-3"><div className="flex justify-end"><p data-no-translate className="max-w-[90%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-primary-hover px-4 py-3 text-sm text-white">{turn.question}</p></div><p data-no-translate className="max-w-[95%] whitespace-pre-wrap rounded-2xl rounded-tl-sm border border-border bg-white px-4 py-3 text-sm leading-6">{turn.answer}</p></article>)}</div> : null}
+    {sources.length ? <div className="my-3 flex flex-wrap gap-3 text-sm">{sources.map((source,index) => <Link key={index} href={source.href} className="font-semibold text-text-link underline">Read {source.title}</Link>)}</div> : null}
+    <form onSubmit={search} className="mt-4 rounded-2xl border border-border bg-white p-3">
+      <label><span className="sr-only">Describe your beauty appointment</span><textarea value={prompt} onChange={event => setPrompt(event.target.value)} maxLength={helpMode ? 240 : 600} rows={2} placeholder={SEARCH_PLACEHOLDER} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} className="min-h-16 w-full resize-y border-0 bg-white px-2 py-2 text-base text-text-primary outline-none"/></label>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs">Only current Girlz Culture records and published help.</p><div className="flex items-center gap-2"><AssistantDictation key={dictationSession} disabled={busy} sessionKey={dictationSession} value={prompt} onChange={setPrompt} maxLength={helpMode ? 240 : 600}/><button disabled={busy || prompt.trim().length < 3} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary-hover px-4 text-sm font-bold text-white gc-disabled-control">{busy ? <LoaderCircle className="animate-spin" size={17}/> : null}{helpMode ? "Ask GC Assistant" : "Find real matches"}</button></div></div>
+    </form>
     {searchState !== "idle" ? <ConciergeResultHeader state={searchState} configuration={configuration} message={message} count={results.length}/> : null}
-    {intent && (intent.style || intent.radius_miles || intent.maximum_price || intent.minimum_rating || intent.date) ? <div role="group" className="mt-3 flex flex-wrap gap-2" aria-label="Interpreted search details">{intent.style ? <Chip>{intent.style}</Chip> : null}{intent.radius_miles ? <Chip>Within {intent.radius_miles} mi</Chip> : null}{intent.maximum_price !== null ? <Chip>Up to ${intent.maximum_price}</Chip> : null}{intent.minimum_rating !== null ? <Chip>{intent.minimum_rating}+ stars</Chip> : null}{intent.date ? <Chip>{intent.date} · {intent.time_period}</Chip> : null}{intent.promotion_only ? <Chip>Offers only</Chip> : null}<span className="self-center text-[9px] gc-text-on-dark">{mode === "openai" ? "AI interpreted; database verified" : "Standard search fallback"}</span></div> : null}
+    {intent && (intent.style || intent.radius_miles || intent.maximum_price || intent.minimum_rating || intent.date) ? <div role="group" className="mt-3 flex flex-wrap gap-2" aria-label="Interpreted search details">{intent.style ? <Chip>{intent.style}</Chip> : null}{intent.radius_miles ? <Chip>Within {intent.radius_miles} mi</Chip> : null}{intent.maximum_price !== null ? <Chip>Up to ${intent.maximum_price}</Chip> : null}{intent.minimum_rating !== null ? <Chip>{intent.minimum_rating}+ stars</Chip> : null}{intent.date ? <Chip>{intent.date} · {intent.time_period}</Chip> : null}{intent.promotion_only ? <Chip>Offers only</Chip> : null}<span className="self-center text-[11px] gc-text-secondary">{mode === "openai" ? "AI interpreted; database verified" : "Standard search fallback"}</span></div> : null}
     {results.length ? <div className="mt-5 -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">{results.map((salon) => <ConciergeCard key={salon.id} salon={salon} selected={compare.includes(salon.id)} saved={saved.includes(salon.id)} toggleCompare={() => toggleCompare(salon.id)} toggleSave={() => void saveSalon(salon.id)}/>)}</div> : null}
     {compared.length >= 2 ? <Comparison salons={compared}/> : null}
   </section>;

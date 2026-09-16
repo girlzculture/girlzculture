@@ -87,6 +87,11 @@ for (const [index, option] of BUSINESS_SETUP_OPTIONS.entries()) {
     await page.addInitScript(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
       key: buildAuthStorageKeys(providerURL).admin, value: { ...session, user: { ...user, user_metadata: { role: "admin" } } },
     });
+    await page.route("**/api/admin/verify", route => route.fulfill({ json: {
+      is_super_admin: index % 2 === 0,
+      permissions: { submissions: true },
+    } }));
+    await page.route("**/api/admin/inbox-counts", route => route.fulfill({ json: { support: 0, complaints: 0 } }));
     await page.route("**/api/admin/submissions/setup-fixture", route => route.fulfill({ json: {
       is_super_admin: index % 2 === 0,
       application: { ...saved, id: "setup-fixture", salon_id: "salon-fixture", status: "Submitted",
@@ -106,6 +111,25 @@ for (const [index, option] of BUSINESS_SETUP_OPTIONS.entries()) {
     }
   });
 }
+
+test("submission workspace denies unassigned admins before loading its embedded record", async ({ page }) => {
+  await page.addInitScript(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+    key: buildAuthStorageKeys(providerURL).admin,
+    value: { ...session, user: { ...user, user_metadata: { role: "admin" } } },
+  });
+  await page.route("**/api/admin/verify", route => route.fulfill({ json: {
+    is_super_admin: false, permissions: { customers: true },
+  } }));
+  let recordReads = 0;
+  await page.route("**/api/admin/submissions/setup-fixture", route => {
+    recordReads += 1;
+    return route.fulfill({ status: 403, json: { error: "Submission permission required" } });
+  });
+  await page.goto("/admin/submissions/setup-fixture");
+  await expect(page.getByRole("heading", { name: "Access not assigned", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open an assigned section", exact: true })).toHaveAttribute("href", "/admin/customers");
+  expect(recordReads).toBe(0);
+});
 
 for (const plan of [null, "Starter", "Growth", "Premium"]) {
   test(`confirmed business login restores ${plan || "no selection"} into the application`, async ({ page }) => {

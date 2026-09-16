@@ -35,7 +35,8 @@ export function matchDecisionLocationMarket(
   rawQuery: string,
   markets: DecisionLocationMarket[],
 ) {
-  const query = normalizeDecisionQuery(rawQuery);
+  // Match the city's ordinary names, without treating all of New York State as NYC.
+  const query = normalizeDecisionQuery(rawQuery).replace(/\bnyc\b/g, "new york city").replace(/\bnew york(?: ny)?\b(?! city| state)/g, "new york city ny");
   return markets
     .map((market) => ({
       market,

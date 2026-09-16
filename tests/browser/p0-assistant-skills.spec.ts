@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
+import { expectedAssistantReply } from "./helpers/assistantReply";
 import { validateTool } from '../../src/lib/gcAssistantCore';
 import { POLICY_DEFAULTS } from '../../src/lib/businessPolicyCore';
 import AxeBuilder from '@axe-core/playwright';
@@ -75,7 +76,8 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     for (const read of reads) {
       next = read;
       await ask(bookingQuestions[locale]);
-      await expect(dialog.locator('article').last().getByRole('status')).toHaveText(t('Current business information'));
+      await expect(dialog.locator('article').last()).toContainText(await expectedAssistantReply(page, read.tool, read.result, locale));
+      await expect(dialog.locator('article').last().locator('dl')).toHaveCount(0);
       expect(mutations).toHaveLength(0);
     }
     await page.screenshot({ path: `${gallery}/conversation.png`, ...screenshotCaret });
@@ -120,7 +122,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     await page.screenshot({ path: `${gallery}/class-five-controlled-workflow.png`, ...screenshotCaret });
     next = { unavailable: true };
     await ask(bookingQuestions[locale]);
-    await expect(dialog.getByRole('status', { name: t('GC Assistant status'), exact: true })).toHaveText(t('GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.'));
+    await expect(dialog.getByRole('status', { name: t('GC Assistant status'), exact: true })).toHaveText(t('GC Assistant could not reach its AI service. The dashboard and read-only quick actions are still available.'));
     await expect(dialog.getByText('P0-PROVIDER-FIXTURE', { exact: true })).toBeVisible();
     await page.screenshot({ path: `${gallery}/provider-unavailable.png`, ...screenshotCaret });
     next = reads[3];

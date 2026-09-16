@@ -2,6 +2,7 @@ import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitori
 import { cleanText } from "@/lib/requestSecurity";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { validCoordinates } from "@/lib/location";
+import { DIRECTORY_CATEGORIES } from "@/lib/businessDirectory";
 
 const ALLOWED_SORTS = new Set(["name", "rating", "reviews", "status", "distance"]);
 const ALLOWED_DIRECTIONS = new Set(["asc", "desc"]);
@@ -80,6 +81,10 @@ async function GETHandler(request: Request) {
     const status = cleanText(search.get("status"), 30);
     const plan = cleanText(search.get("plan"), 20);
     const state = cleanText(search.get("state"), 2).toUpperCase();
+    const categorySlug = cleanText(search.get("category"), 60);
+    const category = DIRECTORY_CATEGORIES.find(item => item.slug === categorySlug);
+    if (categorySlug && !category) throw new Error("Choose a valid business category.");
+    const city = cleanText(search.get("city"), 100);
     const setup = cleanText(search.get("setup"), 20).toLowerCase();
     const subscription = cleanText(search.get("subscription_eligibility"), 20).toLowerCase();
     const rating = optionalNumber(search.get("rating"), "Rating");
@@ -111,10 +116,12 @@ async function GETHandler(request: Request) {
       p_sort_direction: direction,
       p_result_limit: pageSize,
       p_result_offset: (page - 1) * pageSize,
+      p_business_types: category?.types || null,
+      p_city_filter: city || null,
     };
 
     const [listResult, deletedResult, totalResult, activeResult, pendingResult, newResult, suspendedResult, offboardedResult, addressReviewResult, marketResult] = await Promise.all([
-      admin.rpc("admin_list_salons", rpcParams),
+      admin.rpc("admin_list_businesses", rpcParams),
       admin.from("salons").select("id").not("deleted_at", "is", null),
       admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null),
       admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Active"),
@@ -132,15 +139,11 @@ async function GETHandler(request: Request) {
 
     const deletedIds = new Set((deletedResult.data || []).map((row) => String(row.id)));
     const rows = (Array.isArray(listResult.data) ? listResult.data : []).filter((row) => !deletedIds.has(String(row.id)));
-    const simpleDeletedAdjustment = !cleanText(search.get("q"), 120)
-      && !state && !marketText && !plan && rating === null && addressReview === null
-      && !setup && !subscription && discoverability === null && radius === null
-      && (!status || status === "Offboarded")
-      ? deletedIds.size
-      : 0;
+    // The new RPC excludes deleted records before its window count/pagination.
+    const simpleDeletedAdjustment = 0;
     let filteredTotal = Math.max(0, Number(rows[0]?.total_count || 0) - simpleDeletedAdjustment);
     if (!rows.length && page > 1) {
-      const countProbe = await admin.rpc("admin_list_salons", { ...rpcParams, p_result_limit: 1, p_result_offset: 0 });
+      const countProbe = await admin.rpc("admin_list_businesses", { ...rpcParams, p_result_limit: 1, p_result_offset: 0 });
       if (countProbe.error) throw countProbe.error;
       filteredTotal = Math.max(0, Number(countProbe.data?.[0]?.total_count || 0) - simpleDeletedAdjustment);
     }

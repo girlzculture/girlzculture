@@ -725,20 +725,6 @@
     },
     {
       "file": "src/components/admin/AdminSubmissionsWorkspace.tsx",
-      "token": "text-ink/55",
-      "maxOccurrences": 2,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/admin/AdminSubmissionsWorkspace.tsx",
-      "token": "text-ink/60",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/admin/AdminSubmissionsWorkspace.tsx",
       "token": "text-ink/65",
       "maxOccurrences": 3,
       "classification": "legacy-metadata-migration-budget",
@@ -1552,20 +1538,6 @@
     {
       "file": "src/components/owner/OwnerDashboardApp.tsx",
       "token": "text-ink/20",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/owner/OwnerDashboardApp.tsx",
-      "token": "text-ink/35",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/owner/OwnerDashboardApp.tsx",
-      "token": "text-ink/40",
       "maxOccurrences": 1,
       "classification": "legacy-metadata-migration-budget",
       "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."

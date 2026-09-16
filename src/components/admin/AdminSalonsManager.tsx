@@ -21,6 +21,7 @@ import type { CustomerLocation } from "@/lib/location";
 import { displayStoredPlan, PLAN_ORDER } from "@/lib/plans";
 import { useAdminListScrollRestoration } from "@/components/admin/useAdminListContext";
 import AdminSalon360Sections from "@/components/admin/AdminSalon360Sections";
+import { DIRECTORY_CATEGORIES, DIRECTORY_STATE_SHORTCUTS } from "@/lib/businessDirectory";
 
 type Row = Record<string, any>;
 type Summary = {
@@ -66,6 +67,8 @@ export default function AdminSalonsManager() {
   const [pageSize, setPageSize] = useState(25);
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
+  const [category, setCategory] = useState("");
+  const [city, setCity] = useState("");
   const [market, setMarket] = useState("");
   const [status, setStatus] = useState("");
   const [plan, setPlan] = useState("");
@@ -104,6 +107,8 @@ export default function AdminSalonsManager() {
       );
       setQ(params.get("q") || "");
       setState(params.get("state") || "");
+      setCategory(params.get("category") || "");
+      setCity(params.get("city") || "");
       setMarket(params.get("market") || "");
       setStatus(params.get("status") || "");
       setPlan(params.get("plan") || "");
@@ -144,6 +149,8 @@ export default function AdminSalonsManager() {
         direction,
       });
       if (q) params.set("q", q);
+      if (category) params.set("category", category);
+      if (city) params.set("city", city);
       if (state) params.set("state", state);
       if (market) params.set("market", market);
       if (status) params.set("status", status);
@@ -191,6 +198,8 @@ export default function AdminSalonsManager() {
     const timer = window.setTimeout(() => void load(), q ? 280 : 0);
     return () => window.clearTimeout(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    category,
+    city,
     addressReview,
     center?.lat,
     center?.lng,
@@ -212,6 +221,8 @@ export default function AdminSalonsManager() {
   ]);
 
   function clear() {
+    setCategory("");
+    setCity("");
     setQ("");
     setState("");
     setMarket("");
@@ -232,6 +243,8 @@ export default function AdminSalonsManager() {
 
   function detailHref(id: string) {
     const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (city) params.set("city", city);
     if (q) params.set("q", q);
     if (state) params.set("state", state);
     if (market) params.set("market", market);
@@ -258,6 +271,8 @@ export default function AdminSalonsManager() {
   }
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const activeFilterChips = [
+    category ? { key: "category", label: DIRECTORY_CATEGORIES.find(item => item.slug === category)?.name || category, clear: () => setCategory("") } : null,
+    city ? { key: "city", label: `City: ${city}`, clear: () => setCity("") } : null,
     q ? { key: "q", label: `Search: ${q}`, clear: () => setQ("") } : null,
     state
       ? { key: "state", label: `State: ${state}`, clear: () => setState("") }
@@ -323,8 +338,10 @@ export default function AdminSalonsManager() {
   ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
   return (
     <div className="space-y-5">
+      {!category ? <section className="gc-panel" aria-label="Business categories"><h2 className="text-xl">Business categories</h2><p className="mt-2 text-sm">Open a category to manage its businesses, locations, setup and visibility.</p><div className="gc-table-scroll mt-5"><table><thead><tr><th scope="col">Business category</th><th scope="col">Workspace</th></tr></thead><tbody>{DIRECTORY_CATEGORIES.map(item => <tr key={item.slug}><td className="font-semibold">{item.name}</td><td><button onClick={() => { setCategory(item.slug); setPage(1); }} className="rounded-lg border border-border px-4 py-2 font-semibold text-text-link">Open {item.name} →</button></td></tr>)}</tbody></table></div></section> : <section className="gc-panel"><button className="mb-3 min-h-10 font-semibold text-text-link" onClick={() => { setCategory(""); setPage(1); }}>← All business categories</button><h2 className="text-2xl">{DIRECTORY_CATEGORIES.find(item => item.slug === category)?.name || "Businesses"}</h2><p className="mt-2 text-sm">{loading ? "Loading records…" : `${total} businesses match this workspace's filters.`}</p></section>}
+      <nav aria-label="Quick state filters" className="flex flex-wrap gap-2">{DIRECTORY_STATE_SHORTCUTS.map(code => <button key={code} aria-pressed={state === code} onClick={() => { setState(state === code ? "" : code); setCity(""); setMarket(""); setPage(1); }} className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${state === code ? "border-teal bg-primary-hover text-white" : "border-border bg-white"}`}>{code}</button>)}</nav>
       <section
-        aria-label="Salon totals"
+        aria-label="Business totals"
         className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
       >
         {[
@@ -340,15 +357,17 @@ export default function AdminSalonsManager() {
             className="rounded-[13px] border border-plum/10 bg-white p-4"
           >
             <p className="text-[10px] font-semibold text-ink/60">{label}</p>
-            <b className="mt-2 block font-serif text-2xl text-plum">{value}</b>
-            <span className="text-[9px] text-ink/50">All salon records</span>
+            <b className="mt-2 block font-serif text-2xl text-plum">{loading ? "—" : value}</b>
+            <span className="text-[9px] text-ink/50">All business records</span>
           </article>
         ))}
       </section>
       <section className="rounded-[15px] border border-plum/10 bg-white p-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <Filter label="Business category" value={category} onChange={value => { setCategory(value); setPage(1); }}><option value="">All categories</option>{DIRECTORY_CATEGORIES.map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</Filter>
+          <label className="text-xs font-semibold">City<input aria-label="Business city" value={city} onChange={event => { setCity(event.target.value); setPage(1); }} placeholder="Exact city, e.g. Dallas" className="mt-1 min-h-11 w-full rounded-lg border border-plum/15 px-3"/></label>
           <label className="relative sm:col-span-2">
-            <span className="sr-only">Search salons</span>
+            <span className="sr-only">Search businesses</span>
             <Search className="absolute left-3 top-3.5 text-ink/45" size={16} />
             <input
               value={q}
@@ -365,6 +384,7 @@ export default function AdminSalonsManager() {
             value={state}
             onChange={(value) => {
               setState(value);
+              setCity("");
               setMarket("");
               setPage(1);
             }}

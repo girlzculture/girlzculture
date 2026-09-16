@@ -8,12 +8,71 @@ import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { isSubscriptionActive } from "@/lib/plans";
 import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
+import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gcAssistantPresentation";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 const profileFields = ["name", "description", "address_street", "address_city", "address_state", "address_zip", "hours", "instagram_url", "tiktok_url", "google_business_url", "slug", "vanity_slug", "time_zone"];
 const digest = (input: unknown) => createHash("sha256").update(stableJson(input)).digest("hex");
 const selected = (row: Row, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key] ?? null]));
+
+function safeKnowledgeText(value: unknown, maxLength = 600) {
+  return typeof value === "string"
+    ? value.replace(/[\u0000-\u001f\u007f]/gu, " ").replace(/\s+/gu, " ").trim().slice(0, maxLength)
+    : "";
+}
+
+function knowledgeSegments(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const page = value as Row;
+  const slug = safeKnowledgeText(page.slug, 120);
+  if (slug && !/^[a-z0-9]+(?:[-/][a-z0-9]+)*$/u.test(slug)) return [];
+  const pageTitle = safeKnowledgeText(page.title || page.hero_title || slug, 160);
+  const segments: { title: string; question: string; answer: string; href: string }[] = [];
+  const add = (question: unknown, answer: unknown) => {
+    const cleanQuestion = safeKnowledgeText(question, 180);
+    const cleanAnswer = safeKnowledgeText(answer, 700);
+    if (cleanAnswer) segments.push({ title: pageTitle, question: cleanQuestion || pageTitle, answer: cleanAnswer, href: slug ? `/${slug}` : "/help" });
+  };
+  add(page.hero_title || pageTitle, page.hero_subtitle);
+  for (const sectionValue of Array.isArray(page.sections) ? page.sections.slice(0, 40) : []) {
+    if (!sectionValue || typeof sectionValue !== "object" || Array.isArray(sectionValue)) continue;
+    const section = sectionValue as Row;
+    if (section.is_visible === false) continue;
+    const title = safeKnowledgeText(section.title || pageTitle, 180);
+    // Preserve FAQ line boundaries until each question/answer pair is split.
+    const body = typeof section.body === "string" ? section.body.slice(0, 6000) : "";
+    if (!body) continue;
+    const lines = body.split(/\n+/u).map(line => line.trim()).filter(Boolean).slice(0, 80);
+    for (const line of lines) {
+      const [question, ...answer] = line.split("::");
+      if (answer.length) add(question, answer.join("::"));
+      else add(title, line);
+    }
+  }
+  return segments;
+}
+
+export async function searchPublishedKnowledge(context: Pick<Context, "admin">, queryValue: unknown) {
+  const query = safeKnowledgeText(queryValue, 240).toLocaleLowerCase();
+  const tokens = [...new Set(query.split(/[^\p{L}\p{N}]+/u).filter(token => token.length > 1))].slice(0, 12);
+  if (!query || !tokens.length) throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  const published = await context.admin.rpc("get_public_content_pages");
+  if (published.error) throw published.error;
+  const pages = Array.isArray(published.data) ? published.data.slice(0, 120) : [];
+  const scored = pages.flatMap(knowledgeSegments).map(segment => {
+    const haystack = `${segment.title} ${segment.question} ${segment.answer}`.toLocaleLowerCase();
+    const score = (haystack.includes(query) ? 20 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 2 : 0), 0);
+    return { ...segment, score };
+  }).filter(segment => segment.score > 0).sort((left, right) => right.score - left.score || left.question.localeCompare(right.question));
+  const seen = new Set<string>();
+  const matches = scored.filter(segment => {
+    const key = `${segment.href}:${segment.question}:${segment.answer}`;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  }).slice(0, 5).map(segment => ({ title: segment.title, question: segment.question, answer: segment.answer, href: segment.href }));
+  return { query, matches, total: matches.length, source: "published_girlz_culture_content" };
+}
 export async function assertAssistantAccess(context: Context, permission: string) {
   const { admin, salon, user } = context;
   const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: permission });
@@ -26,6 +85,7 @@ export async function assertAssistantAccess(context: Context, permission: string
 
 async function readTool(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
   if (tool === "get_business_profile") return selected(salon, profileFields);
   if (tool === "get_business_policies") {
     const result = await admin.from("business_policy_revisions").select("id,policy,version,source_locale,published_at").eq("salon_id", salon.id).eq("id", salon.business_policy_revision_id || "00000000-0000-0000-0000-000000000000").maybeSingle();
@@ -108,7 +168,10 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   if (existing.error) throw existing.error;
   if (existing.data) {
     if (existing.data.tool !== checked.tool || stableJson(existing.data.arguments) !== stableJson(checked.args) || existing.data.locale !== input.locale) throw new AssistantError("ASSISTANT_IDEMPOTENCY_CONFLICT", 409);
-    return { request: existing.data, preview_required: checked.risk >= 3, replayed: true };
+    const presentation = checked.risk === 1
+      ? presentAssistantResult(checked.tool, existing.data.result, input.locale)
+      : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
+    return { request: existing.data, preview_required: checked.risk >= 3, replayed: true, assistant_message: presentation.message, suggestions: presentation.suggestions };
   }
   const prepared = checked.risk >= 3 ? await prepare(context, checked.tool, checked.args) : { before: {}, payload: {}, notices: [] };
   const result = checked.risk === 1 ? await readTool(context, checked.tool, checked.args) : null;
@@ -119,7 +182,10 @@ export async function executeAssistantTool(context: Context, input: { requestId:
     if (saved.error.message.includes("ASSISTANT_IDEMPOTENCY_CONFLICT")) throw new AssistantError("ASSISTANT_IDEMPOTENCY_CONFLICT", 409);
     throw saved.error;
   }
-  return { request: saved.data, preview_required: checked.risk >= 3, notices: prepared.notices };
+  const presentation = checked.risk === 1
+    ? presentAssistantResult(checked.tool, result, input.locale)
+    : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
+  return { request: saved.data, preview_required: checked.risk >= 3, notices: prepared.notices, assistant_message: presentation.message, suggestions: presentation.suggestions };
 }
 
 export async function confirmAssistantTool(context: Context, requestId: string, previewDigest: string, policyReviewed: boolean) {

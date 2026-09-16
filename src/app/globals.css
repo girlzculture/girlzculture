@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+@import "./dashboard.css";
 
 @keyframes cms-community-scroll {
   from { transform: translateX(0); }

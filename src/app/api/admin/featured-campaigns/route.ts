@@ -69,14 +69,16 @@ function parsedDate(value: unknown, label: string, required = true) {
   return new Date(timestamp).toISOString();
 }
 
-async function loadCampaigns(admin: SupabaseClient) {
-  const result = await admin
+async function loadCampaigns(admin: SupabaseClient, state = "") {
+  let query = admin
     .from("featured_salon_campaigns")
     .select(
-      "*,salon:salons(id,name,slug,address_city,address_state,subscription_status,is_discoverable,latitude,longitude),entitlement:marketing_entitlements(id,source,external_reference,status,amount_minor,currency,valid_from,valid_until),audit:featured_campaign_audit(id,action,reason,created_at,acting_admin_id,campaign_id_snapshot,salon_id_snapshot,salon_name_snapshot,placement_basis_snapshot,deleted_at)",
+      "*,salon:salons!inner(id,name,slug,address_city,address_state,subscription_status,is_discoverable,latitude,longitude),entitlement:marketing_entitlements(id,source,external_reference,status,amount_minor,currency,valid_from,valid_until),audit:featured_campaign_audit(id,action,reason,created_at,acting_admin_id,campaign_id_snapshot,salon_id_snapshot,salon_name_snapshot,placement_basis_snapshot,deleted_at)",
     )
     .order("created_at", { ascending: false })
     .limit(500);
+  if (state) query = query.eq("salon.address_state", state);
+  const result = await query;
   if (result.error) throw result.error;
   return result.data || [];
 }
@@ -88,6 +90,8 @@ async function GETHandler(request: Request) {
     monitoringAdmin = admin;
     const params = new URL(request.url).searchParams;
     const mode = cleanText(params.get("mode"), 30);
+    const state = cleanText(params.get("state"), 2).toUpperCase();
+    if (state && !/^[A-Z]{2}$/.test(state)) rejectRequest("Choose a valid state.");
 
     if (mode === "salons") {
       const q = cleanText(params.get("q"), 100);
@@ -114,6 +118,7 @@ async function GETHandler(request: Request) {
       if (q) {
         query = query.ilike("name", `%${q.replace(/[%_,()]/g, "")}%`);
       }
+      if (state) query = query.eq("address_state", state);
       const result = await query;
       if (result.error) throw result.error;
       return Response.json(
@@ -130,7 +135,7 @@ async function GETHandler(request: Request) {
 
     await admin.rpc("expire_featured_campaigns");
     const [campaigns, settingsResult] = await Promise.all([
-      loadCampaigns(admin),
+      loadCampaigns(admin, state),
       admin
         .from("homepage_sections")
         .select(

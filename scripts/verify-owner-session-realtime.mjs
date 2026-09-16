@@ -25,7 +25,7 @@ class FakeChannel {
   }
 
   subscribe(callback) {
-    this.subscribedAfterHandlers = this.handlers.length === 3;
+    this.subscribedAfterHandlers = this.handlers.length === 5;
     this.subscribed = true;
     this.statusCallback = callback;
     return this;
@@ -102,6 +102,8 @@ assert.deepEqual(
   [
     ["notifications", "INSERT", "salon_id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
     ["bookings", "INSERT", "salon_id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
+    ["bookings", "UPDATE", "salon_id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
+    ["bookings", "DELETE", "salon_id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
     ["salons", "UPDATE", "id=eq.4f879f80-3d68-4da2-8d31-b99bcfeea515"],
   ],
 );

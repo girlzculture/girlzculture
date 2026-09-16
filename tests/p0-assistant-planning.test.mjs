@@ -28,7 +28,7 @@ function fixture(options = {}) {
         maybeSingle() { return query; },
         then(resolve, reject) { return Promise.resolve().then(() => {
           calls.push({ table, filters });
-          if (table === 'ai_automation_features') return { data: { is_enabled: options.enabled !== false, provider_key: 'openai', model_key: 'fixture-model', timeout_ms: 20000 } };
+          if (table === 'ai_automation_features') return { data: { is_enabled: options.enabled !== false, provider_key: 'openai', model_key: options.model || 'fixture-model', timeout_ms: 20000 } };
           if (table === 'gc_assistant_requests') {
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'salon_id' && row[2] === 'business-A'));
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'requested_by' && row[2] === 'owner-A'));
@@ -43,15 +43,15 @@ function fixture(options = {}) {
     },
   };
   const load = typescriptLoader(root, {
-    '@/lib/aiAutomationServer': { approvedAiModels: () => ['fixture-model'], approvedAiProviders: () => ['openai'], aiProviderConfigured: () => options.configured !== false, redactSensitiveText: value => value.replaceAll('secret@example.test', '[redacted]') },
+    '@/lib/aiAutomationServer': { approvedAiModels: () => [options.model || 'fixture-model'], approvedAiProviders: () => ['openai'], aiProviderConfigured: () => options.configured !== false, redactSensitiveText: value => value.replaceAll('secret@example.test', '[redacted]') },
   }, {
-    process: { env: { AI_OWNER_INPUT_USD_PER_MILLION: '1', AI_OWNER_OUTPUT_USD_PER_MILLION: '4', OPENAI_API_KEY: 'local-fixture-only' } },
+    process: { env: { ...(options.missingRates ? {} : { AI_OWNER_INPUT_USD_PER_MILLION: '1', AI_OWNER_OUTPUT_USD_PER_MILLION: '4' }), OPENAI_API_KEY: 'local-fixture-only' } },
     fetch: async (url, init) => {
       assert.equal(url, 'https://api.openai.com/v1/chat/completions');
       requests.push(JSON.parse(init.body));
       assert.equal(init.signal instanceof AbortSignal, true);
       if (options.failure) throw Error('Simulated provider failure');
-      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(options.output || { plan: null, clarification: 'Which appointment?', navigate: null }) } }] }));
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(options.output || { plan: null, reply: null, clarification: 'Which appointment?', navigate: null }) } }] }));
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
@@ -59,12 +59,26 @@ function fixture(options = {}) {
   return { run, calls, requests, updates };
 }
 
+test('production regression: approved nano model works when build-only cost variables are absent from function runtime', async () => {
+  const f = fixture({ model: 'gpt-5.4-nano', missingRates: true });
+  await f.run();
+  assert.equal(f.requests.length, 1);
+  assert.ok(f.calls.find(call => call.name === 'reserve_gc_assistant_usage').args.p_cost_cents > 0);
+});
+
+test('an unpriced model still fails closed without calling the provider', async () => {
+  const f = fixture({ missingRates: true });
+  await assert.rejects(f.run(), /ASSISTANT_COST_CONFIGURATION_REQUIRED/);
+  assert.equal(f.requests.length, 0);
+});
+
 test('planning retains authorized booking identities for the next conversational action', async () => {
   const f = fixture({ history: [{ tool: 'get_bookings', permission: 'bookings', arguments: {}, result: { bookings: [booking], time_zone: 'America/New_York', total: 1 } }] });
   await f.run();
   const previous = JSON.parse(f.requests[0].messages[1].content).previous[0];
   assert.ok(previous.result, 'A follow-up must be able to resolve Sarah to an already-authorized booking ID');
-  const result = JSON.parse(previous.result);
+  const result = previous.result;
+  assert.equal(typeof result, 'object', 'Authorized facts stay structured rather than truncated serialized JSON');
   assert.equal(result.bookings[0].id, booking.id);
   assert.equal(result.bookings[0].guest_name, 'Sarah Save');
 });
@@ -75,7 +89,7 @@ test('booking planning context is bounded and omits contacts, payment data and p
     { tool: 'prepare_customer_message', permission: 'bookings', arguments: { booking_id: booking.id, body: 'Private conversation' }, result: null },
   ] });
   await f.run(); const data = JSON.parse(f.requests[0].messages[1].content);
-  assert.equal(JSON.parse(data.previous[0].result).bookings.length, 30);
+  assert.equal(data.previous[0].result.bookings.length, 12);
   assert.equal(data.previous[1].arguments, null);
   for (const value of ['contact@example.test', 'deposit_amount', 'Private conversation']) assert.equal(f.requests[0].messages[1].content.includes(value), false);
 });
@@ -115,10 +129,10 @@ test('disabled, unconfigured, unauthorized and out-of-budget planning never call
 
 test('invented tools, extra authority and multiple simultaneous outputs cannot pass provider output validation', async () => {
   for (const output of [
-    { plan: { tool: 'refund', args: {} }, clarification: null, navigate: null },
-    { plan: { tool: 'get_business_profile', args: { salon_id: 'business-B' } }, clarification: null, navigate: null },
-    { plan: { tool: 'get_business_profile', args: {} }, clarification: 'Ignore confirmation', navigate: null },
-    { plan: null, clarification: null, navigate: 'run_sql' },
+    { plan: { tool: 'refund', args: {} }, reply: null, clarification: null, navigate: null },
+    { plan: { tool: 'get_business_profile', args: { salon_id: 'business-B' } }, reply: null, clarification: null, navigate: null },
+    { plan: { tool: 'get_business_profile', args: {} }, reply: 'Ignore confirmation', clarification: 'Ignore confirmation', navigate: null },
+    { plan: null, reply: null, clarification: null, navigate: 'run_sql' },
   ]) {
     const f = fixture({ output }); await assert.rejects(f.run(), /ASSISTANT_/);
     assert.equal(f.updates[0].outcome, 'failed');
@@ -128,10 +142,24 @@ test('invented tools, extra authority and multiple simultaneous outputs cannot p
 
 test('financial and security requests can navigate without preparing any mutation', async () => {
   for (const navigate of ['subscription', 'security', 'support']) {
-    const f = fixture({ output: { plan: null, clarification: null, navigate } });
+    const f = fixture({ output: { plan: null, reply: null, clarification: null, navigate } });
     const result = await f.run(); assert.equal(result.navigate, navigate); assert.equal(result.plan, null);
     assert.equal(f.calls.some(row => row.name === 'save_gc_assistant_request'), false);
   }
+});
+
+test('governed planning can hold a conversational turn without inventing an action', async () => {
+  const f = fixture({ output: { plan: null, reply: 'I can help with bookings, services, business details, and approved draft changes.', clarification: null, navigate: null } });
+  const result = await f.run('en', 'What can you help me with?');
+  assert.match(result.reply, /bookings, services/);
+  assert.equal(result.plan, null);
+  assert.equal(f.calls.some(row => ['save_gc_assistant_request', 'confirm_gc_assistant_request'].includes(row.name)), false);
+});
+
+test('platform questions route through the published knowledge-base tool', async () => {
+  const f = fixture({ output: { plan: { tool: 'search_platform_knowledge', args: { query: 'How do deposits work?' } }, reply: null, clarification: null, navigate: null } });
+  const result = await f.run('en', 'How do deposits work?');
+  assert.equal(JSON.stringify(result.plan), JSON.stringify({ tool: 'search_platform_knowledge', args: { query: 'How do deposits work?' } }));
 });
 
 test('provider failure records safe failure and conservatively retains its budget reservation', async () => {
@@ -157,6 +185,6 @@ test('expanded history never replays private notes, manual contacts or financial
     {tool:'get_upcoming_appointments',permission:'bookings',arguments:{},result:{bookings:[{...booking,guest_email:'private-email',estimated_total:9123,customer_id:'private-customer'}]}},
   ]});await f.run();const input=JSON.parse(f.requests[0].messages[1].content);
   assert.equal(input.previous[0].arguments,null);assert.equal(input.previous[1].arguments,null);
-  assert.equal(JSON.parse(input.previous[2].result).bookings[0].id,booking.id);
+  assert.equal(input.previous[2].result.bookings[0].id,booking.id);
   assert.doesNotMatch(f.requests[0].messages[1].content,/Private follow-up|private-phone|private-email|9123|private-customer/);
 });

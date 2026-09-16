@@ -13,7 +13,7 @@ import {
 } from "@/lib/operationalMonitoringCore";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const ADMIN_PERMISSION_KEYS = ["overview","submissions","salons","customers","bookings","quality","reviews","finance","marketing","content","support","complaints","subscriptions","engine","settings"] as const;
+const ADMIN_PERMISSION_KEYS = ["overview","submissions","salons","customers","bookings","quality","reviews","finance","marketing","content","support","complaints","subscriptions","engine","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(ADMIN_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
 async function superAdmin(request: Request) { const context = await requireAdmin(request); if (!(context.adminUser as { is_super_admin?: boolean }).is_super_admin) throw new Error("Only a Super Admin can manage platform users."); return context; }
 async function audit(admin: Awaited<ReturnType<typeof requireAdmin>>["admin"], actorUserId: string, targetUserId: string | null, action: string, details: Record<string,unknown> = {}) { const { error } = await admin.from("admin_security_events").insert({ actor_user_id: actorUserId, target_user_id: targetUserId, action, details }); if (error) { noteOperationalFailure("Admin team audit failed", { action, targetUserId, error }); throw error; } }

@@ -28,6 +28,10 @@ export function decisionExplicitLocationRequest(
   rawQuery: string,
 ): DecisionExplicitLocationRequest | null {
   const query = normalizeDecisionSearchText(rawQuery);
+  // Harlem is a neighborhood, not an alias for the center of New York City.
+  // Also recognize the short answer to a conversational location question.
+  const harlem = query.match(/\b(?:(?:east|west|central)\s+)?harlem\b/)?.[0];
+  if (harlem) return { kind: "place", phrase: `${harlem}, Manhattan, New York, NY` };
   const contextualZip = query.match(
     /\b(?:in|near|around|zip(?: code)?)\s+(\d{5})(?:\s?\d{4})?\b/,
   )?.[1];

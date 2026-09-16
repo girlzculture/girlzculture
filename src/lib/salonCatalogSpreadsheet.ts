@@ -9,6 +9,14 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type SalonSpreadsheetKind = "services" | "products";
+export type SpreadsheetColumnMapping = {
+  sheet: string;
+  header_row: number;
+  columns: Record<string, number>;
+  duration_unit?: "hours" | "minutes";
+  category?: string;
+  service_group?: string;
+};
 
 export type SalonCatalogReference = {
   categories: Array<{ id: string; name: string }>;
@@ -314,8 +322,16 @@ const serviceAliases = new Map<string, string>([
   ["service group", "service_group"],
   ["platform service name", "platform_service"],
   ["specific service name", "platform_service"],
-  ["service name", "platform_service"],
+  ["service name", "customer_name"],
   ["customer facing name", "customer_name"],
+  ["name", "customer_name"],
+  ["service", "customer_name"],
+  ["treatment", "customer_name"],
+  ["duration", "duration_min_hours"],
+  ["duration hours", "duration_min_hours"],
+  ["duration minutes", "duration_min_hours"],
+  ["price", "base_price"],
+  ["cost", "base_price"],
   ["service name customers will see", "customer_name"],
   ["description", "description"],
   ["minimum duration hours", "duration_min_hours"],
@@ -371,6 +387,53 @@ const productAliases = new Map<string, string>([
   ["visible", "is_visible"],
 ]);
 
+export async function inspectSalonSpreadsheet(buffer: Buffer, fileName: string, kind: SalonSpreadsheetKind, heading?: { sheet: string; row: number }) {
+  const workbook = await loadWorkbook(buffer, fileName);
+  const aliases = kind === "services" ? serviceAliases : productAliases;
+  const fields = [...new Set(aliases.values())];
+  return {
+    fields,
+    sheets: workbook.worksheets.slice(0, 20).map(sheet => {
+      if (heading?.sheet === sheet.name) {
+        if (!Number.isInteger(heading.row) || heading.row < 1 || heading.row > Math.min(100, sheet.rowCount)) throw new Error("Choose an existing heading row between 1 and 100.");
+        const headers: { column: number; label: string; field: string }[] = [];
+        sheet.getRow(heading.row).eachCell((cell, column) => { if (column <= 80) headers.push({ column, label: cellText(cell.value).slice(0, 120), field: aliases.get(headerKey(cell.value)) || "" }); });
+        return { name: sheet.name, header_row: heading.row, headers, rows: Math.max(0, sheet.rowCount - heading.row) };
+      }
+      const candidates = Array.from({ length: Math.min(12, sheet.rowCount) }, (_, i) => {
+        const headers: { column: number; label: string; field: string }[] = [];
+        sheet.getRow(i + 1).eachCell((cell, column) => { if (column <= 80) headers.push({ column, label: cellText(cell.value).slice(0, 120), field: aliases.get(headerKey(cell.value)) || "" }); });
+        return { header_row: i + 1, headers, score: headers.filter(header => header.field).length };
+      });
+      const candidate = candidates.sort((a,b) => b.score - a.score || a.header_row - b.header_row)[0];
+      return { name: sheet.name, header_row: candidate?.header_row || 1, headers: candidate?.headers || [], rows: Math.max(0, sheet.rowCount - (candidate?.header_row || 1)), sample: sheet.getRow((candidate?.header_row || 1) + 1).values };
+    }),
+  };
+}
+
+function mappedHeader(sheet: ExcelJS.Worksheet, mapping: SpreadsheetColumnMapping, aliases: Map<string, string>) {
+  if (!Number.isInteger(mapping.header_row) || mapping.header_row < 1 || mapping.header_row > Math.min(sheet.rowCount, 100)) throw new Error("Choose the correct heading row.");
+  if (!mapping.columns || typeof mapping.columns !== "object" || Array.isArray(mapping.columns)) throw new Error("Review the spreadsheet column mapping.");
+  const allowed = new Set(aliases.values());
+  const seen = new Set<number>();
+  for (const [field, column] of Object.entries(mapping.columns)) {
+    if (!allowed.has(field) || !Number.isInteger(column) || column < 1 || column > 80 || seen.has(column)) throw new Error("Map each spreadsheet column to one valid field.");
+    seen.add(column);
+  }
+  if (mapping.duration_unit && !["hours", "minutes"].includes(mapping.duration_unit)) throw new Error("Choose hours or minutes for duration.");
+  return { rowNumber: mapping.header_row, columns: new Map(Object.entries(mapping.columns)) };
+}
+
+function durationHours(raw: string, unit: "hours" | "minutes" = "hours") {
+  if (!raw) return null;
+  const mixed = raw.match(/^(\d+(?:\.\d+)?)\s*h(?:ours?|rs?)?\s*(?:(\d+)\s*m(?:in(?:ute)?s?)?)?$/i);
+  if (mixed) return Number(mixed[1]) + Number(mixed[2] || 0) / 60;
+  const minutes = raw.match(/^(\d+(?:\.\d+)?)\s*m(?:in(?:ute)?s?)?$/i);
+  if (minutes) return Number(minutes[1]) / 60;
+  const number = numericValue(raw);
+  return number === null ? null : unit === "minutes" ? number / 60 : number;
+}
+
 function validateUuid(value: string, messages: string[]) {
   if (value && !UUID_PATTERN.test(value)) {
     messages.push("Record ID must be a valid exported Girlz Culture ID.");
@@ -397,9 +460,10 @@ function validateRange(
 export async function parseSalonServiceSpreadsheet(
   buffer: Buffer,
   fileName: string,
+  mapping?: SpreadsheetColumnMapping,
 ) {
   const workbook = await loadWorkbook(buffer, fileName);
-  const sheet = chooseWorksheet(
+  const sheet = mapping ? workbook.getWorksheet(mapping.sheet) : chooseWorksheet(
     workbook,
     ["services", "styles and pricing"],
     serviceAliases,
@@ -410,7 +474,7 @@ export async function parseSalonServiceSpreadsheet(
       'No service table was found. Use a sheet named "Services" with a Category column.',
     );
   }
-  const header = findHeader(sheet, serviceAliases, "category");
+  const header = mapping ? mappedHeader(sheet, mapping, serviceAliases) : findHeader(sheet, serviceAliases, "category");
   if (!header) throw new Error("The Services header row could not be found.");
 
   const rows: SalonServiceImportRow[] = [];
@@ -422,10 +486,11 @@ export async function parseSalonServiceSpreadsheet(
     rowNumber += 1
   ) {
     const row = sheet.getRow(rowNumber);
+    if (![...header.columns.values()].some(column => cellText(row.getCell(column).value))) continue;
     const raw = {
       record_id: mappedCell(row, header.columns, "record_id"),
-      category: mappedCell(row, header.columns, "category"),
-      service_group: mappedCell(row, header.columns, "service_group"),
+      category: mappedCell(row, header.columns, "category") || normalized(mapping?.category),
+      service_group: mappedCell(row, header.columns, "service_group") || normalized(mapping?.service_group),
       platform_service: mappedCell(row, header.columns, "platform_service"),
       customer_name: mappedCell(row, header.columns, "customer_name"),
       description: mappedCell(row, header.columns, "description"),
@@ -477,8 +542,8 @@ export async function parseSalonServiceSpreadsheet(
       messages.push("Description must be 500 characters or fewer.");
     }
 
-    const durationMin = numericValue(raw.duration_min_hours);
-    const durationMax = numericValue(raw.duration_max_hours);
+    const durationMin = durationHours(raw.duration_min_hours, mapping?.duration_unit);
+    const durationMax = durationHours(raw.duration_max_hours, mapping?.duration_unit) ?? durationMin;
     const basePrice = numericValue(raw.base_price);
     const maximumPrice = numericValue(raw.maximum_price) ?? basePrice;
     const bufferMinutes = numericValue(raw.cleanup_buffer_minutes) ?? 15;
@@ -580,9 +645,10 @@ export async function parseSalonServiceSpreadsheet(
 export async function parseSalonProductSpreadsheet(
   buffer: Buffer,
   fileName: string,
+  mapping?: SpreadsheetColumnMapping,
 ) {
   const workbook = await loadWorkbook(buffer, fileName);
-  const sheet = chooseWorksheet(
+  const sheet = mapping ? workbook.getWorksheet(mapping.sheet) : chooseWorksheet(
     workbook,
     ["products"],
     productAliases,
@@ -593,7 +659,7 @@ export async function parseSalonProductSpreadsheet(
       'No product table was found. Use a sheet named "Products" with a Product Name column.',
     );
   }
-  const header = findHeader(sheet, productAliases, "name");
+  const header = mapping ? mappedHeader(sheet, mapping, productAliases) : findHeader(sheet, productAliases, "name");
   if (!header) throw new Error("The Products header row could not be found.");
 
   const rows: SalonProductImportRow[] = [];

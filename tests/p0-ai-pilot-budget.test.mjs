@@ -6,6 +6,10 @@ const migration = fs.readFileSync(
   'supabase/migrations/20260914225409_ai_assistant_pilot_budget.sql',
   'utf8',
 );
+const conversationCapacity = fs.readFileSync(
+  'supabase/migrations/20260915132412_gc_assistant_conversation_and_knowledge.sql',
+  'utf8',
+);
 const concierge = fs.readFileSync('src/lib/beautyConciergeServer.ts', 'utf8');
 const ownerPlanner = fs.readFileSync('src/lib/gcAssistantPlanningServer.ts', 'utf8');
 const environment = fs.readFileSync('.env.example', 'utf8');
@@ -28,6 +32,16 @@ test('both assistants use the approved model and retain safety controls', () => 
   assert.match(migration, /moderation_required = true/);
   assert.match(migration, /setting_key = 'ai\.emergency_kill_switch'/);
   assert.match(migration, /published_value = 'false'::jsonb/);
+});
+
+test('conversational capacity no longer exhausts after 25 globally shared turns', () => {
+  assert.match(conversationCapacity, /feature_key = 'gc_owner_assistant'/);
+  assert.match(conversationCapacity, /daily_request_limit = 500/);
+  assert.match(conversationCapacity, /monthly_budget_cents = 2500/);
+  assert.match(conversationCapacity, /model_key = 'gpt-5\.4-nano'/);
+  assert.match(conversationCapacity, /GC_ASSISTANT_PILOT_CONFIGURATION_MISMATCH/);
+  const setClause = conversationCapacity.match(/set([\s\S]*?)where feature_key/)?.[1] || '';
+  assert.doesNotMatch(setClause, /monthly_budget_cents\s*=/);
 });
 
 test('budget is reserved atomically before either provider request', () => {

@@ -23,6 +23,7 @@ declare
   combined_intent uuid; checkout_intent uuid; combined_booking uuid; fixture_session text;
   service_request uuid:=gen_random_uuid(); availability_request uuid:=gen_random_uuid(); policy_request uuid:=gen_random_uuid(); read_request uuid:=gen_random_uuid();
   catalog public.master_styles%rowtype; proposal jsonb; saved_service uuid;
+  directory_actor uuid:=gen_random_uuid(); import_rows jsonb; import_layout jsonb; import_result jsonb;
   request_a uuid:=gen_random_uuid(); request_b uuid:=gen_random_uuid(); request_c uuid:=gen_random_uuid(); result jsonb;
   policy_a jsonb:='{"cancellation_hours":24,"rescheduling_hours":24,"grace_minutes":15,"no_show":"contact_business","late_arrival":"contact_business","deposit_treatment":"platform_rules","balance_due":"after_service","satisfaction":"contact_business","preparation":"","guests":"ask_first","children":"ask_first","walk_ins":"ask_first","notes":"Fixture original policy"}';
 begin
@@ -150,6 +151,36 @@ begin
   insert into public.booking_message_translations(message_id,locale,translated_body,source_hash,provider)
     values(message_a,'fr','Texte traduit — GC123; $180',repeat('a',64),'local-fixture');
   perform pg_temp.p0_assert(not public.claim_booking_message_translation(message_a,'fr'),'cached translation does not spend again');
+
+  -- Exercise the new database boundaries, including persisted workbook order,
+  -- custom heading evidence, fresh tenant permissions and directory pagination.
+  import_rows := jsonb_build_array(
+    jsonb_build_object('name','Zebra custom service','category_id',catalog.category_id,'service_group_id',catalog.service_group_id,'duration_min_hours',1,'duration_max_hours',1,'buffer_minutes',0,'base_price',80,'price_display_max',80),
+    jsonb_build_object('name','Alpha custom service','category_id',catalog.category_id,'service_group_id',catalog.service_group_id,'duration_min_hours',2,'duration_max_hours',2,'buffer_minutes',0,'base_price',120,'price_display_max',120)
+  );
+  import_layout := '{"headers":["My treatment","Time","My price"],"duration_unit":"hours"}'::jsonb;
+  import_result := public.import_salon_catalog_ordered('services',business_a,actor_a,'custom-menu.xlsx',import_rows,import_layout);
+  perform pg_temp.p0_assert(import_result->>'created'='2','custom workbook creates two services');
+  perform pg_temp.p0_assert((select array_agg(s.name order by s.sort_order)=array['Zebra custom service','Alpha custom service'] from public.styles s where s.salon_id=business_a and s.name in ('Zebra custom service','Alpha custom service')),'persisted service order follows workbook rather than alphabet');
+  perform pg_temp.p0_assert((select count(*)=1 from public.salon_spreadsheet_imports i where i.salon_id=business_a and i.result=import_result and i.source_layout=import_layout),'custom headings saved with the exact import audit');
+  import_result := public.import_salon_catalog_ordered('services',business_a,actor_a,'custom-menu.xlsx',jsonb_build_array(import_rows->1,import_rows->0),import_layout);
+  perform pg_temp.p0_assert(import_result->>'created'='0' and import_result->>'updated'='2','repeat import updates existing service records');
+  perform pg_temp.p0_assert((select array_agg(s.name order by s.sort_order)=array['Alpha custom service','Zebra custom service'] from public.styles s where s.salon_id=business_a and s.name in ('Zebra custom service','Alpha custom service')),'reordered workbook changes persisted order');
+  perform pg_temp.p0_reject(format('select public.import_salon_catalog_ordered(%L,%L,%L,%L,%L::jsonb)', 'services',business_a,actor_b,'denied.xlsx',import_rows),'Forbidden');
+  perform pg_temp.p0_reject(format('select public.import_salon_catalog_ordered(%L,%L,%L,%L,%L::jsonb)', 'services',business_a,team_a,'denied.xlsx',import_rows),'Forbidden');
+  perform pg_temp.p0_assert(not has_function_privilege('authenticated','public.import_salon_catalog_ordered(text,uuid,uuid,text,jsonb,jsonb)','execute'),'ordered import is not a direct client write RPC');
+
+  insert into auth.users(id,email,raw_user_meta_data) values(directory_actor,'p0-directory@example.test','{"role":"admin"}');
+  insert into public.admin_users(id,user_id,name,email,role,permissions,status,is_super_admin)
+    values(directory_actor,directory_actor,'P0 Directory Admin','p0-directory@example.test','Admin','{"salons":true}','Active',false);
+  update public.salons set business_type='Hair Salon',address_state='NY',address_city='P0 Launch City' where id=business_a;
+  perform pg_temp.p0_assert((select count(*)=1 and max(total_count)=2 from public.admin_list_businesses(p_acting_admin_id=>directory_actor,p_search_text=>'P0 Business',p_result_limit=>1)),'directory count precedes pagination');
+  perform pg_temp.p0_assert((select count(*)=1 and bool_and(id=business_a) and max(total_count)=1 from public.admin_list_businesses(p_acting_admin_id=>directory_actor,p_state_filter=>'NY',p_city_filter=>'p0 launch city',p_business_types=>array['hair salon'])),'category, state and city select the correct business');
+  perform pg_temp.p0_assert((select count(*)=0 from public.admin_list_businesses(p_acting_admin_id=>directory_actor,p_state_filter=>'NJ',p_city_filter=>'P0 Launch City',p_business_types=>array['hair salon'])),'directory excludes a mismatched state');
+  perform pg_temp.p0_assert((select count(*)=0 from public.admin_list_businesses(p_acting_admin_id=>directory_actor,p_state_filter=>'NY',p_city_filter=>'P0 Launch City',p_business_types=>array['nail studio'])),'directory excludes a mismatched business category');
+  update public.admin_users set permissions='{}' where user_id=directory_actor;
+  perform pg_temp.p0_reject(format('select * from public.admin_list_businesses(%L)',directory_actor),'Forbidden');
+  perform pg_temp.p0_assert(not has_function_privilege('authenticated','public.admin_list_businesses(uuid,text,text,uuid,text,text,numeric,boolean,double precision,double precision,double precision,text,text,boolean,text,text,integer,integer,text[],text)','execute'),'directory is not a direct client read RPC');
 
   -- Launch-enabled visibility uses the real publication diagnostic, including
   -- an explicit internal fixture override, and the existing test registry.
