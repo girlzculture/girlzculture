@@ -124,10 +124,10 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
 
   if (tool === "get_earnings_summary") {
     const amount = currency(result.completed_booking_value, locale);
-    return { message: amount ? [t("Completed booking value"), amount, t("This is booking value, not verified cash revenue or a payout.")].join(" — ") : words.none, suggestions: suggest(["Open earnings"]) };
+    return { message: [t("Completed booking value"), amount || t("not available"), t("This is booking value, not verified cash revenue or a payout.")].join(" — "), suggestions: suggest(["Open earnings"]) };
   }
   if (tool === "get_business_summary") {
-    return { message: words.summary(number(result.bookings), number(result.upcoming), currency(result.completed_booking_value, locale)), suggestions: suggest(["Show upcoming bookings", "Find calendar gaps", "Open overview"]) };
+    return { message: words.summary(number(result.bookings), number(result.upcoming), currency(result.completed_booking_value, locale) || t("not available")), suggestions: suggest(["Show upcoming bookings", "Find calendar gaps", "Open overview"]) };
   }
 
   const lists: Record<string, [string, string]> = {

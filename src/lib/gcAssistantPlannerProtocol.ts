@@ -2,7 +2,7 @@ import { ASSISTANT_TOOLS, AssistantError, validateTool, type AssistantTool } fro
 
 const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
-  get_business_summary: "Read appointment counts, completed booking value and business performance for a date range.",
+  get_business_summary: "Read appointment counts, recorded no-shows, completed booking value and authorized service/professional workload for a date range. Includes comparison with the preceding equal elapsed duration; use its exact timestamps, not an assumed calendar period. A null value is unavailable, not zero. Workload and booking value are not settled revenue or forecasts.",
   get_bookings: "Read appointments and their authoritative IDs for a date range.",
   get_availability: "Read bookable times on a date. Use null IDs when no service or professional is specified.",
   get_business_profile: "Read the business name, description, address, opening hours and social links. This does not contain the service menu or prices.",
@@ -17,7 +17,7 @@ const purposes: Record<AssistantTool, string> = {
   get_promotions: "Read this business's promotion records.",
   get_plan_status: "Read the current subscription, canonical plan features/prices and limits for a scheduled downgrade. Use for entitlement and plan-comparison questions. Business usage may be unavailable; never forecast sales or change billing.",
   get_profile_completion: "Read how complete this business's profile is.",
-  get_earnings_summary: "Read completed booking value for a date range. This is not verified cash revenue or payouts.",
+  get_earnings_summary: "Read completed booking value and its preceding equal-duration comparison for a date range. Use the exact returned timestamps. Null means unavailable; this is not verified cash revenue, settlement, fees, refunds or payouts. Open the controlled earnings workflow for payment evidence.",
   get_upcoming_appointments: "Read upcoming appointments in a date range.",
   get_calendar_gaps: "Read calendar openings on a date, optionally for one professional.",
   prepare_manual_appointment: "Prepare a business-added appointment after resolving services, duration, professional and available time. Owner confirmation is still required.",

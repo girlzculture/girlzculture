@@ -87,6 +87,18 @@ test('replayed plan usage is redacted when product or promotion permission is re
   assert.equal(facts.business_usage.active_promotions, null);
 });
 
+test('replayed service and staff performance respects fresh section permissions', async () => {
+  const f = fixture({ denied: ['styles', 'stylists', 'availability'], history: [{ tool: 'get_business_summary', permission: 'overview', arguments: {}, result: {
+    total_appointments: 2, calendar_gaps: { gaps: [{ start: 'private-schedule' }] }, service_performance: { rows: [{ name: 'Revoked service' }] }, professional_performance: { rows: [{ name: 'Revoked professional' }] },
+  } }] });
+  await f.run();
+  const facts = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+  assert.equal(facts.total_appointments, 2);
+  assert.equal(facts.calendar_gaps, null);
+  assert.equal(facts.service_performance, null);
+  assert.equal(facts.professional_performance, null);
+});
+
 test('production regression: approved nano model works when build-only cost variables are absent from function runtime', async () => {
   const f = fixture({ model: 'gpt-5.4-nano', missingRates: true });
   await f.run();

@@ -37,12 +37,63 @@ test('overview permission does not disclose product or promotion usage without s
   assert.equal(result.business_usage.active_promotions, null);
   assert.equal(f.calls.some(call => ['salon_products', 'salon_promotions'].includes(call.table)), false);
 });
+
+test('business comparison uses exact half-open ranges and excludes another tenant', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const f = fixture({ tables: { bookings: [
+    { salon_id: business, appointment_datetime: '2030-09-23T00:00:00.000Z', status: 'Completed', estimated_total: 50 },
+    { salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 100 },
+    { salon_id: business, appointment_datetime: range.end, status: 'Completed', estimated_total: 900 },
+    { salon_id: actor, appointment_datetime: range.start, status: 'Completed', estimated_total: 9000 },
+  ] } });
+  const result = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(result.comparison.previous.start, '2030-09-23T00:00:00.000Z');
+  assert.equal(result.comparison.previous.completed_booking_value, 50);
+  assert.equal(result.comparison.current.completed_booking_value, 100);
+  assert.equal(result.comparison.changes.completed_booking_value.percent, 100);
+  assert.equal(result.cash_revenue, null);
+});
+
+test('service and staff workload names are tenant scoped and require their section permissions', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const tables = {
+    bookings: [{ salon_id: business, style_id: service, stylist_id: professional, appointment_datetime: range.start, status: 'Completed', estimated_total: 100 }],
+    styles: [{ id: service, salon_id: actor, name: 'Foreign service' }],
+    stylists: [{ id: professional, salon_id: business, name: 'Authorized professional' }],
+  };
+  const f = fixture({ tables });
+  const result = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(result.service_performance.rows[0].name, null);
+  assert.equal(result.professional_performance.rows[0].name, 'Authorized professional');
+  assert.equal(result.professional_performance.rows[0].completed_booking_value, 100);
+  assert.equal(JSON.stringify(result).includes('Foreign service'), false);
+  const denied = fixture({ tables, denied: ['styles', 'stylists'] });
+  const hidden = (await denied.run('get_business_summary', range)).request.result;
+  assert.equal(hidden.service_performance, null); assert.equal(hidden.professional_performance, null);
+  assert.equal(denied.calls.some(call => ['styles', 'stylists'].includes(call.table)), false);
+});
+
+test('period comparisons paginate beyond the default provider row cap', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const f = fixture({ tables: { bookings: Array.from({ length: 1001 }, (_, id) => ({ id, salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 1 })) } });
+  const result = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(result.comparison.current.total_appointments, 1001);
+  assert.equal(result.comparison.current.completed_booking_value, 1001);
+  assert.equal(result.comparison.previous.total_appointments, 0);
+});
+
+test('overview permission alone does not expose calendar gaps', async () => {
+  const f = fixture({ denied: ['availability'] });
+  const result = (await f.run('get_business_summary', { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' })).request.result;
+  assert.equal(result.calendar_gaps, null);
+  assert.equal(f.calls.some(call => call.calendar), false);
+});
 function fixture(overrides = {}) {
   const calls = [];
   const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
   const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
     const filters = []; let one = false, first = 0, last = Infinity;
-    const q = { select() { return q; }, neq(k,v) { filters.push(row => row[k] != null && row[k] !== v); return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
+    const q = { select() { return q; }, in(k,v) { filters.push(row => v.includes(row[k])); return q; }, neq(k,v) { filters.push(row => row[k] != null && row[k] !== v); return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
   } };
   const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/contentModerationServer': { moderatePublicContent: async()=>({allowed:true}) }, '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
   const server = load('src/lib/gcAssistantServer.ts');
