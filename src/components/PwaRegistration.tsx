@@ -19,9 +19,10 @@ export default function PwaRegistration(){
       return;
     }
     if (!("serviceWorker" in navigator)) return;
+    // register already checks for a new worker with the HTTP cache disabled.
+    // Do not enqueue a second update while a navigation may replace this page.
     navigator.serviceWorker
       .register("/sw.js", { updateViaCache: "none" })
-      .then((registration) => registration.update())
       .catch(()=>undefined);
   },[]);
   return null;

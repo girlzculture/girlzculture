@@ -232,9 +232,13 @@ test("service worker clears old versions and cannot resurrect cached onboarding 
     expect(onboardingKeys).toEqual([]);
     // Development deliberately unregisters workers during React mounting. Register
     // after hydration so this test exercises the shipped worker in either mode.
-    await page.evaluate(async () => {
-      await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
-      await navigator.serviceWorker.ready;
+    await test.step("Re-register the shipped worker after onboarding navigation", async () => {
+      await page.evaluate(async () => {
+        await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      });
+    });
+    await test.step("Wait for the onboarding worker to become ready", async () => {
+      await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     });
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     await network.disconnect();

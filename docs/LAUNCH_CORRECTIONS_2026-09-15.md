@@ -1,10 +1,22 @@
 # Girlz Culture launch corrections — 15 September 2026
 
-Status: **PR #66 OPEN. TWO REMAINING BROWSER FAILURES CORRECTED ON 16 SEPTEMBER. FRESH CI REQUIRED. NOT RELEASED. Live acceptance remains outstanding.**
-Branch: `fix/conversational-gc-assistant-dashboard`.
+Status: **PR #66 MERGED. PRODUCTION LOCKED. POST-MERGE WEBKIT SERVICE-WORKER FAILURE REPRODUCED TWICE; FOCUSED CORRECTION AWAITING BROWSER CI. NOT RELEASED. Live acceptance remains outstanding.**
+Branch: `fix/webkit-service-worker-registration` (follow-up to `fix/conversational-gc-assistant-dashboard`).
 Base: `bb3b93b` (the existing #65 release).
 
-This is an implementation and verification handoff, not a declaration that every launch-critical workflow works in production. The founder authorized pushing this batch and proceeding through the protected release workflow after its checks pass. The batch is pushed to [PR #66](https://github.com/girlzculture/girlzculture/pull/66); no PR was merged, no production deployment or migration was performed, and no real business/customer records, payments or messages were changed.
+This is an implementation and verification handoff, not a declaration that every launch-critical workflow works in production. The founder authorized pushing this batch and proceeding through the protected release workflow after its checks pass. [PR #66](https://github.com/girlzculture/girlzculture/pull/66) was merged after its PR checks passed. No production application publication or migration was performed, and no real business/customer records, payments or messages were changed.
+
+## Protected release update — 16 September
+
+This section supersedes the historical provider-access and pre-merge notes below.
+
+- **AUTOMATED ONLY — PR checks passed:** `e9e414a` passed normal PR CI and the release-candidate gates: 489 browser passes with five skips, 20 repeated WebKit interactions, all 23 WebKit onboarding checks, 56 focused accessibility checks and all 24 prelaunch checks. Stripe connectivity was not executed because the protected test secret was absent.
+- **PASS — release protection:** the founder completed official Netlify CLI authorization. Published deploy `6aa9305e5ded67d1af74c3a0` was locked before merge and its lock independently verified. PR #66 merged as `57d4ffa755c195fa2d97b1607078b0495b11c1c3`; its tree matches the reviewed PR. Matching Netlify build `6aaaa4f7de04980008f4d5b3` is ready but unpublished.
+- **FAIL — exact-main CI:** both attempts of [run 35107509365](https://github.com/girlzculture/girlzculture/actions/runs/35107509365) passed 22 WebKit onboarding checks and timed out at the second service-worker register/ready call. The first trace confirms old-cache deletion and successful signup navigation before that wait. The simulated outage had not begun. The failure is reproducible in CI; another unchanged retry is not a correction.
+- **AUTOMATED ONLY — focused candidate:** registration already checks the worker script for updates with `updateViaCache: "none"`. The component no longer immediately forces a second update that can overlap page navigation. The original browser test retains every cache, controller, outage, fallback and private-page rejection assertion, with separate registration/readiness steps for precise failure evidence. Normal CI now repeats this exact service-worker sequence five times with zero retries before running the complete onboarding suite. TypeScript, affected-file ESLint, all 33 migration-gate/page-fixture regressions and the service-worker/CSP verifier pass locally. Browser CI must establish whether this candidate resolves the reproduced failure.
+- **PASS — read-only migration preflight:** production has 146 applied migrations; the repository has 149. Exactly the three migrations listed below remain pending, with no unexpected production versions. They have not been applied.
+- **BLOCKED — GitHub dispatch access:** after the founder's device authorization, workspace network policy blocked CLI access to `https://api.github.com:443`; no CLI credentials were saved. The connected GitHub integration supports monitoring and CI retries but does not expose workflow dispatch. Once exact-current-main CI passes, the founder must start **Verify and apply database migrations** on **main** with `confirmation = APPLY REVIEWED MIGRATIONS`, then approve `production-database` if GitHub requests it. Do not bypass these controls or publish the application first.
+- **BLOCKED — fresh live acceptance:** the owner browser now shows the sign-in screen. A fresh authenticated session is required after the corrected application is published; historical checks on the previous release are not acceptance of this batch.
 
 ## Observed original assistant failure
 
