@@ -128,13 +128,14 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
       fixture.records.bookings.push(booking);
       return route.fulfill({ json: { verified: true, result: booking } });
     });
-    await page.setViewportSize({ width: locale === 'en' ? 1440 : locale === 'fr' ? 768 : 390, height: 900 });
+    await page.setViewportSize({ width: locale === 'en' ? 1440 : locale === 'fr' ? 768 : locale === 'wo' ? 844 : 390, height: locale === 'wo' ? 390 : 900 });
     await page.goto('/salon/dashboard/bookings/new');
     await page.getByLabel(t('Customer name'), { exact: true }).fill('Sheila');
     await page.getByRole('combobox', { name: t('Service'), exact: true }).selectOption(fixture.ids.service);
     await page.getByRole('combobox', { name: t('Professional'), exact: true }).selectOption(fixture.ids.professional);
     await page.getByLabel(t('Date'), { exact: true }).fill(date);
     await page.getByLabel(t('Time'), { exact: true }).fill('13:00');
+    await expect(page.getByLabel(t('Customer name'), { exact: true })).toHaveValue('Sheila');
     await page.getByRole('button', { name: t('Review appointment'), exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: t('That time is unavailable. Choose another time.') })).toBeVisible();
     expect(writes).toBe(0);
