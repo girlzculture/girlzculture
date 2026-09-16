@@ -3,6 +3,7 @@ import type { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { AssistantError, type AssistantTool } from "@/lib/gcAssistantCore";
 import { ownerBusinessMetrics, profileCompletion } from "@/lib/ownerBusinessMetrics";
 import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
+import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -12,7 +13,34 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
   if (tool === "get_plan_status") {
     const result = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier,cancel_at_period_end").eq("salon_id", salon.id).maybeSingle();
     if (result.error) throw result.error;
-    return { subscription: result.data, billing_changes_require_subscription_workflow: true };
+    const current = canonicalPlanForStored(result.data?.tier);
+    const recordLimitPlan = restrictivePlanForLimits(result.data?.tier, result.data?.scheduled_tier);
+    const catalog = Object.values(SUBSCRIPTION_PLANS).map(plan => ({ name: plan.name, monthly_amount_cents: plan.monthlyAmountCents, currency: "USD", entitlements: plan.entitlements }));
+    async function usage(permission: "products" | "promotions") {
+      const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: permission });
+      if (access.error) throw access.error;
+      if (access.data !== true) return null;
+      // Same record definitions as validateSalonRecordEntitlements; do not
+      // expose even aggregate product/promotion data to an unauthorized team.
+      let query = admin.from(permission === "products" ? "salon_products" : "salon_promotions")
+        .select("id", { count: "exact", head: true }).eq("salon_id", salon.id).is("archived_at", null);
+      query = permission === "products" ? query.neq("product_status", "Archived") : query.eq("status", "Active").eq("is_active", true);
+      const counted = await query;
+      if (counted.error) throw counted.error;
+      return Number.isInteger(counted.count) ? counted.count : null;
+    }
+    const [productListings, activePromotions] = await Promise.all([usage("products"), usage("promotions")]);
+    return {
+      subscription: result.data,
+      current_plan: catalog.find(plan => plan.name === current) || null,
+      available_plans: catalog,
+      effective_record_limit_plan: recordLimitPlan,
+      // Match the existing inventory admission rule for pending downgrades.
+      effective_record_limits: recordLimitPlan ? { product_listings: SUBSCRIPTION_PLANS[recordLimitPlan].entitlements.productListings, active_promotions: SUBSCRIPTION_PLANS[recordLimitPlan].entitlements.customerPromotions } : null,
+      business_usage: { product_listings: productListings, active_promotions: activePromotions, as_of: new Date().toISOString() },
+      revenue_uplift_projection: null,
+      billing_changes_require_subscription_workflow: true,
+    };
   }
   if (tool === "get_profile_completion") {
     const counts = await Promise.all(["styles", "stylists"].map(table => admin.from(table).select("id", { count: "exact", head: true }).eq("salon_id", salon.id).is("archived_at", null)));

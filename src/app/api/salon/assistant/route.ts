@@ -4,6 +4,7 @@ import { AssistantError, ASSISTANT_TOOLS, assertSchema, stableJson, type Assista
 import { createHash } from "node:crypto";
 import { executeAssistantTool, confirmAssistantTool } from "@/lib/gcAssistantServer";
 import { planOwnerRequest } from "@/lib/gcAssistantPlanningServer";
+import { isAssistantPage } from "@/lib/assistantPageContext";
 import { PolicyInputError } from "@/lib/businessPolicyCore";
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
@@ -36,7 +37,7 @@ async function POSTHandler(request: Request) {
     validId(body.request_id);
     audit.assistant_request_id = body.request_id; audit.locale = body.locale;
     if (["tool", "plan", "confirm"].includes(body.action)) audit.stage = body.action;
-    const allowed = body.action === "confirm" ? ["action", "request_id", "locale", "digest", "confirm", "policy_reviewed"] : body.action === "plan" ? ["action", "request_id", "locale", "text", "previous_request_ids", "conversation"] : ["action", "request_id", "locale", "tool", "args"];
+    const allowed = body.action === "confirm" ? ["action", "request_id", "locale", "digest", "confirm", "policy_reviewed"] : body.action === "plan" ? ["action", "request_id", "locale", "text", "previous_request_ids", "conversation", "page"] : ["action", "request_id", "locale", "tool", "args"];
     if (Object.keys(body).some(key => !allowed.includes(key))) throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if (body.action === "confirm") {
       if (body.confirm !== true || typeof body.policy_reviewed !== "boolean" || !/^[0-9a-f]{64}$/.test(body.digest)) throw new AssistantError("ASSISTANT_CONFIRMATION_REQUIRED");
@@ -49,10 +50,11 @@ async function POSTHandler(request: Request) {
       return Response.json({ ...confirmed, warnings }, { headers });
     }
     if (body.action === "plan") {
+      if (body.page != null && !isAssistantPage(body.page)) throw new AssistantError("ASSISTANT_INVALID_INPUT");
       if (!Array.isArray(body.previous_request_ids) || body.previous_request_ids.length > 6 || typeof body.text !== "string") throw new AssistantError("ASSISTANT_INVALID_INPUT");
       body.previous_request_ids.forEach(validId);
       if (body.conversation !== undefined) assertSchema(body.conversation, { type: "array", maxItems: 6, items: { type: "object", additionalProperties: false, required: ["role", "text"], properties: { role: { type: "string", enum: ["user", "assistant"] }, text: { type: "string", maxLength: 2400 } } } });
-      const planned = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation });
+      const planned = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation, page: body.page });
       if (!planned.plan) return Response.json(planned, { headers });
       noteTool(planned.plan.tool, planned.plan.args);
       const executed = await executeAssistantTool(context, { requestId: body.request_id, locale: body.locale, tool: planned.plan.tool, args: planned.plan.args });

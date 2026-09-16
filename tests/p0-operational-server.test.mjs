@@ -4,12 +4,45 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 const business = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', actor = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const service = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', professional = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const manual = { guest_name: 'Sheila', guest_phone: '', guest_email: '', style_id: service, service_name: '', duration_minutes: null, stylist_id: null, date: '2030-09-24', time: '13:00', source: 'phone', notes: 'Private original note' };
+
+test('plan answers use the canonical entitlement catalog and do not infer an unknown plan', async () => {
+  const known = fixture(); const result = (await known.run('get_plan_status', {})).request.result;
+  assert.equal(result.current_plan.name, 'Premium');
+  assert.equal(result.current_plan.entitlements.productListings.limit, null);
+  assert.equal(result.available_plans.length, 3);
+  assert.equal(result.revenue_uplift_projection, null);
+  const unknown = fixture({ tables: { subscriptions: [{ salon_id: business, status: 'active', tier: 'Unknown' }] } });
+  assert.equal((await unknown.run('get_plan_status', {})).request.result.current_plan, null);
+});
+
+test('plan usage counts only the authorized business and uses existing active-record definitions', async () => {
+  const f = fixture({ tables: {
+    subscriptions: [{ salon_id: business, tier: 'Premium', scheduled_tier: 'Starter', status: 'active' }],
+    salon_products: [{ salon_id: business, product_status: 'Draft' }, { salon_id: business, product_status: 'Archived' }, { salon_id: business, product_status: 'Active', archived_at: '2030-01-01' }, { salon_id: actor, product_status: 'Active' }],
+    salon_promotions: [{ salon_id: business, status: 'Active', is_active: true }, { salon_id: business, status: 'Draft', is_active: true }, { salon_id: business, status: 'Active', is_active: false }, { salon_id: actor, status: 'Active', is_active: true }],
+  } });
+  const result = (await f.run('get_plan_status', {})).request.result;
+  assert.equal(result.current_plan.name, 'Premium');
+  assert.equal(result.effective_record_limit_plan, 'Starter');
+  assert.equal(result.effective_record_limits.product_listings.limit, 10);
+  assert.equal(result.business_usage.product_listings, 1);
+  assert.equal(result.business_usage.active_promotions, 1);
+  assert.ok(Number.isFinite(Date.parse(result.business_usage.as_of)));
+});
+
+test('overview permission does not disclose product or promotion usage without section permission', async () => {
+  const f = fixture({ denied: ['products', 'promotions'] });
+  const result = (await f.run('get_plan_status', {})).request.result;
+  assert.equal(result.business_usage.product_listings, null);
+  assert.equal(result.business_usage.active_promotions, null);
+  assert.equal(f.calls.some(call => ['salon_products', 'salon_promotions'].includes(call.table)), false);
+});
 function fixture(overrides = {}) {
   const calls = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], ...overrides.tables };
-  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
+  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
+  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
     const filters = []; let one = false, first = 0, last = Infinity;
-    const q = { select() { return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
+    const q = { select() { return q; }, neq(k,v) { filters.push(row => row[k] != null && row[k] !== v); return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
   } };
   const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/contentModerationServer': { moderatePublicContent: async()=>({allowed:true}) }, '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
   const server = load('src/lib/gcAssistantServer.ts');

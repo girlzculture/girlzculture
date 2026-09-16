@@ -16,7 +16,7 @@ function assistantHarness() {
     useEffect: effect => { if (!initialized) effect(); },
   };
   const Component = typescriptLoader(process.cwd(), {
-    react, 'next/link': { default: 'a' }, 'lucide-react': { Sparkles: 'i', X: 'i' },
+    react, 'next/link': { default: 'a' }, 'next/navigation': { usePathname: () => '/salon/dashboard/styles' }, 'lucide-react': { Sparkles: 'i', X: 'i' },
     '@/components/i18n/LocaleProvider': { useI18n: () => ({ locale: 'fr', translateSource: text => text }) },
     '@/lib/supabase': {
       getSessionForScope: async () => sessionWait ? sessionWait.promise : session,
@@ -42,6 +42,22 @@ function assistantHarness() {
   };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
+
+test('new conversation removes replayed history and sends only the active page section', async () => {
+  const app = assistantHarness(); app.quickRead(); await tick();
+  app.responses[0].resolve(Response.json({ request: { id: 'previous', risk_class: 1, tool: 'get_business_profile', result: { description: 'Prior business description' } } }));
+  await tick(); assert.equal(app.articles().length, 1);
+  app.find(node => node.type === 'button' && node.props.children === 'New conversation').props.onClick();
+  assert.equal(app.articles().length, 0);
+  app.find(node => node.type === 'textarea').props.onChange({ target: { value: 'Help me with this page' } });
+  app.find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); await tick();
+  const payload = JSON.parse(app.requests[1].body);
+  assert.equal(payload.page, 'styles');
+  assert.deepEqual(payload.previous_request_ids, []);
+  assert.deepEqual(payload.conversation, []);
+  assert.equal(JSON.stringify(payload).includes('Prior business description'), false);
+  app.responses[1].resolve(Response.json({ clarification: 'What would you like to change?' })); await tick();
+});
 
 test('a delayed Assistant response cannot reveal the previous account after an identity change', async () => {
   const app = assistantHarness(); app.quickRead(); await tick();

@@ -35,7 +35,7 @@ A focused follow-up adds bounded, fixed-category HTTP diagnostics to the protect
 
 The candidate's deterministic services quick action independently passed: **16 services**, a clearly labeled four-service excerpt and 12 additional services. This verifies the authorized read path, not the failed free-form provider path. The diagnostic follow-up passes **218 core tests / 0 failures / 0 skips**, TypeScript and affected-file lint. The original live failure remains recorded above.
 
-PR #70 (`b5836e5480c9fb99aa696cc3fc9ad7ea97f74ee9`) is Draft/open, with DeepL and speech changes; CI is still running. Dashboard page context, canonical entitlements and a new-conversation control are preserved separately as unfinished local work, including unfinished usage-count tests. They are not in the held candidate or PR #70.
+PR #70 (`b5836e5480c9fb99aa696cc3fc9ad7ea97f74ee9`) is Draft/open, with DeepL and speech changes; CI is still running. PR #71 (`026926d17eac1826fff5be17080e964476e39016`) contains safe provider diagnostics and is also Draft/open with CI running. Dashboard page context, canonical entitlements and a new-conversation control form a separate follow-up on `codex/gcia-dashboard-context`. They are not in the held candidate or PR #70/#71.
 
 ## Acceptance matrix
 
@@ -46,7 +46,8 @@ PR #70 (`b5836e5480c9fb99aa696cc3fc9ad7ea97f74ee9`) is Draft/open, with DeepL an
 | DeepL Free adapter | AUTOMATED ONLY | 14 focused adapter/route tests pass: mappings, Free origin/auth, no retries, fact preservation, private-message separation, authorized metadata and exact protected incident references. Real quota and translation not yet exercised. |
 | Translation provider governance | AUTOMATED ONLY | All 150 migrations and 16 DeepL SQL assertions pass on a fresh local database. Reviewed production application remains outstanding. |
 | Owner approved reads/prepared changes and audit | AUTOMATED ONLY | Existing platform services retained. Live isolated save/refresh/role acceptance outstanding. |
-| Whole-dashboard/page-aware help, metrics/entitlements/trends | BLOCKED | Existing capabilities being audited against the brief; unavailable metrics/trends must remain explicit. |
+| Whole-dashboard/page-aware help and plan entitlements | AUTOMATED ONLY | Section-only context, controlled navigation across dashboard sections, canonical plan prices/features and permission-scoped usage counts implemented in the separate context batch. Live provider wording remains unverified. |
+| Period comparisons, performance, finance and trends | BLOCKED | Existing booking-value aggregates remain explicitly distinct from cash sales; broader implementation and live acceptance remain outstanding. |
 | Conversation memory and tenant isolation | AUTOMATED ONLY | Existing bounded conversation mechanisms retained; audit and live role checks outstanding. |
 | Dictation and spoken answers | AUTOMATED ONLY | Explicit installed-device voice playback, pause/resume/stop, account/language/close cleanup, no autoplay or paid audio API. Five core speech checks plus 20 real-browser UI tests pass. Browser voices are simulated in those tests; physical-device/native-language quality remains BLOCKED. |
 | Customer search, follow-ups, booking/support workflows | BLOCKED | Existing implementation being audited; no real notifications or charges permitted for testing. |
@@ -88,8 +89,11 @@ Never represent the mocked adapter tests, existing CI, or a rendered deploy prev
 
 Existing tools cover authorized profile/services/products/professionals, appointments/calendar gaps, reviews/promotions, policy and customer-message drafts, published Help content and controlled business mutations. The following broader requirements are not certified by this first implementation batch:
 
-- Page-aware planning: the current planner does not receive the active dashboard section.
-- Current plan status exists, but its result lacks published feature entitlements and evidence-based upgrade comparisons.
+- Context follow-up: active section hints exclude record IDs/query strings and cannot grant permissions. Navigation covers every dashboard section through existing guarded routes. Canonical plan prices/features, current paid plan versus scheduled downgrade limits, and authorized product/promotion counts now reach the planner. Unknown plans/usage stay unavailable; no sales uplift is invented.
+- Review found that nested usage counts could survive a later product/promotion permission revocation in replayed plan facts. A regression failed before correction; fresh permission checks now redact those nested counts before both planning and answer generation.
+- New conversation clears the panel, replayed request IDs and local text; existing business-action audit records remain. This is not durable conversational memory.
+- Context validation: 20 Chromium/WebKit checks pass across all five languages, phone/tablet/desktop/landscape, including new-conversation clearing, page payload, translated navigation and dialog accessibility. Voice/API responses are fixtures. The same stream-close diagnostic occurred during navigation without failed assertions. Owner copy coverage is 1,851/1,851 per required language; full lint has 0 errors and 16 existing warnings.
+- Final context batch validation: **225 core tests passed, 0 failed, 0 skipped**; production fixture build (including TypeScript) passes after the replay-permission correction. No database migration is added by this batch.
 - Booking-value aggregates exist and are explicitly not cash sales; real period comparisons, service/staff performance and settled-payment/fee/refund/payout distinctions need further implementation/acceptance.
 - In-session bounded history exists with owner/customer identity guards; durable opt-in memory and retention controls are not yet implemented. Existing action audit records are not a user-controlled conversation memory feature.
 - Public Help retrieval is keyword based on published source text, without multilingual semantic retrieval. Its source language is unknown, so playback does not guess an English voice for those excerpts.
