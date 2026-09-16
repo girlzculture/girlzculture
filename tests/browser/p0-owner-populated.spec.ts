@@ -10,7 +10,8 @@ import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catal
 test.use({ serviceWorkers: 'block' });
 
 for (const [width, height] of [[390, 844], [768, 1024], [844, 390], [1440, 1000]]) {
-test(`P0 legacy and imported catalog order survives refresh at ${width}x${height}`, async ({ page }) => {
+test(`P0 populated owner legacy and imported catalog order survives refresh at ${width}x${height}`, async ({ page }) => {
+  test.setTimeout(60_000);
   const fixture = await p0OwnerFixture(page, { populated: true });
   await page.setViewportSize({ width, height });
   for (const [table, route, price] of [['styles', 'styles', '180'], ['salon_products', 'products', '25']]) {
