@@ -25,14 +25,24 @@ Production feature metadata confirms OpenAI `gpt-5.4-nano`, 500 daily requests e
 
 Direct credentials must be entered securely in Netlify **production context**, scope **Functions** (and Runtime if required by the adapter), never in untrusted deploy previews or repository files. Endpoint/key pairs must be configured together before rebuilding a held production candidate. Proposed translation approval is `deepl` / `deepl-api-free`; reasoning stays `openai` / `gpt-5.4-nano`. No recharge, purchase, subscription or paid DeepL endpoint is authorized. The reported OpenAI $50 purchase is not yet independently confirmed as an available balance or spend limit.
 
-The founder subsequently confirmed entry of both provider keys. Metadata verifies both names exist, including production. They were also assigned to preview/development contexts; those assignments are being removed before another branch build. Values have not been logged or copied into files. Endpoint pairing and held-runtime acceptance are still pending.
+The founder subsequently confirmed entry of both provider keys. Non-production assignments were removed by value IDs, and both keys are now secret, production-only, Functions/Runtime scoped. Their production values were preserved. `OPENAI_BASE_URL=https://api.openai.com` and `DEEPL_API_URL=https://api-free.deepl.com` are production-only Functions/Runtime variables. No values were exported or logged. Existing approved model/provider allowlists and feature budgets remain unchanged; DeepL activation is still outstanding.
+
+After automatic approval review required specific approval, the founder explicitly approved one held main build. Candidate `6aab0f23657256296bd5224f` is ready at `219f5a9e4404140be42d56f5bffc12fc6cf05b02`, production context, `published_at=null`. The guard independently confirmed the exact main SHA and locked published baseline before creating it. The founder signed in on this candidate securely.
+
+**FAIL — real provider acceptance, 22:02 UTC:** the first English free-form inventory request returned `ASSISTANT_UNAVAILABLE`. Browser reference `bd4ee3ba-5b58-405d-98bd-410619216ace` exactly matches the protected production event at this release. The event was in the planning stage; a one-cent usage reservation was finalized `failed` / `PLANNER_FAILED`. No authorized service read or answer completed. Further provider requests stopped. Existing code discards every non-success HTTP response, so the precise HTTP status/category was not retained and cannot be inferred from this event. This does not prove a bad key, insufficient credit, model denial or invalid schema.
+
+A focused follow-up adds bounded, fixed-category HTTP diagnostics to the protected event/usage ledger, preserving the public error code and incident reference. Raw provider prose, headers, credentials, prompts and schema echoes are not logged. A regression failed before correction. Requests reject redirects and never retry automatically. This diagnostic correction does not itself establish a successful live assistant response.
+
+The candidate's deterministic services quick action independently passed: **16 services**, a clearly labeled four-service excerpt and 12 additional services. This verifies the authorized read path, not the failed free-form provider path. The diagnostic follow-up passes **218 core tests / 0 failures / 0 skips**, TypeScript and affected-file lint. The original live failure remains recorded above.
+
+PR #70 (`b5836e5480c9fb99aa696cc3fc9ad7ea97f74ee9`) is Draft/open, with DeepL and speech changes; CI is still running. Dashboard page context, canonical entitlements and a new-conversation control are preserved separately as unfinished local work, including unfinished usage-count tests. They are not in the held candidate or PR #70.
 
 ## Acceptance matrix
 
 | Scope | Status | Evidence / remaining boundary |
 | --- | --- | --- |
 | PR #69 planner exclusivity, inventory excerpt, support reference | AUTOMATED ONLY | Exact-tree CI and 191 local core passes. Original live failures remain in the preceding planner record. |
-| Direct OpenAI runtime and real five-language service follow-ups | BLOCKED | Dedicated project key / direct endpoint and authenticated held-candidate session not verified. |
+| Direct OpenAI runtime and real five-language service follow-ups | FAIL | Authenticated held candidate's first English request failed, exact protected reference above. Remaining languages not run. Safe diagnostic correction requires a new reviewed candidate. |
 | DeepL Free adapter | AUTOMATED ONLY | 14 focused adapter/route tests pass: mappings, Free origin/auth, no retries, fact preservation, private-message separation, authorized metadata and exact protected incident references. Real quota and translation not yet exercised. |
 | Translation provider governance | AUTOMATED ONLY | All 150 migrations and 16 DeepL SQL assertions pass on a fresh local database. Reviewed production application remains outstanding. |
 | Owner approved reads/prepared changes and audit | AUTOMATED ONLY | Existing platform services retained. Live isolated save/refresh/role acceptance outstanding. |

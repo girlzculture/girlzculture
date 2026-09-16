@@ -6,7 +6,7 @@ const actor = '11000000-0000-4000-8000-000000000001';
 const business = '22000000-0000-4000-8000-000000000001';
 const requestId = '33000000-0000-4000-8000-000000000001';
 const reference = '44000000-0000-4000-8000-000000000001';
-function fixture(code, stage = 'tool', confirmed = null) {
+function fixture(code, stage = 'tool', confirmed = null, providerDiagnostic = null) {
   const incidents = [], deliveries = [];
   const context = { admin: {}, user: { id: actor }, salon: { id: business }, isOwner: true };
   class RateLimitError extends Error { retryAfter = 30; }
@@ -15,7 +15,10 @@ function fixture(code, stage = 'tool', confirmed = null) {
     '@/lib/supabaseAdmin': { requireSalonOwner: async () => context, deliverBookingMessageNotifications: async id => { deliveries.push(id); return { warnings: [] }; } },
     '@/lib/requestSecurity': { enforceRateLimit: () => { if (stage === 'rate') throw new RateLimitError(); }, RateLimitError },
     '@/lib/gcAssistantServer': { executeAssistantTool: async () => { throw new core.AssistantError(code, 409); }, confirmAssistantTool: async () => { if (confirmed) return confirmed; throw new core.AssistantError(code, 409); } },
-    '@/lib/gcAssistantPlanningServer': { planOwnerRequest: async () => ({ plan: { tool: 'prepare_customer_message', args: { booking_id: requestId, body: 'Private customer prose' } } }) },
+    '@/lib/gcAssistantPlanningServer': { planOwnerRequest: async () => {
+      if (providerDiagnostic) { const error = new core.AssistantError('ASSISTANT_UNAVAILABLE', 503); error.message = providerDiagnostic; throw error; }
+      return { plan: { tool: 'prepare_customer_message', args: { booking_id: requestId, body: 'Private customer prose' } } };
+    } },
     '@/lib/operationalMonitoring': { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile() {} },
     '@/lib/platformErrors': { capturePlatformError: async input => { incidents.push(input); return reference; }, safeFailure: (_message, id) => Response.json({ request_id: id }, { status: 500 }) },
   }, { Error, SyntaxError });
@@ -44,6 +47,18 @@ for (const [stage, code] of [['tool', 'ASSISTANT_ACCESS_DENIED'], ['tool', 'ASSI
     assert.doesNotMatch(JSON.stringify(result), /Private|arguments|salon/);
   });
 }
+
+test('provider diagnostic stays protected while the public response retains its exact incident reference', async () => {
+  const diagnostic = 'OPENAI_DIRECT_HTTP_429_QUOTA';
+  const f = fixture('ASSISTANT_UNAVAILABLE', 'plan', null, diagnostic);
+  const response = await f.send(); const body = await response.json();
+  assert.equal(response.status, 503);
+  assert.equal(f.incidents[0].error.message, diagnostic);
+  assert.equal(body.code, 'ASSISTANT_UNAVAILABLE');
+  assert.equal(body.request_id, reference);
+  assert.equal(response.headers.get('X-Request-ID'), reference);
+  assert.equal(JSON.stringify(body).includes(diagnostic), false);
+});
 
 test('Assistant rate limit keeps retry semantics without creating a monitoring amplification loop', async () => {
   const f = fixture('ASSISTANT_RATE_LIMIT', 'rate'); const response = await f.send();
