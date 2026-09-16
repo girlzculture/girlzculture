@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import Ajv from 'ajv';
 import { fileURLToPath } from 'node:url';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
 
@@ -51,7 +52,12 @@ function fixture(options = {}) {
       requests.push(JSON.parse(init.body));
       assert.equal(init.signal instanceof AbortSignal, true);
       if (options.failure) throw Error('Simulated provider failure');
-      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(options.output || { plan: null, reply: null, clarification: 'Which appointment?', navigate: null }) } }] }));
+      const output = options.output || { plan: null, reply: null, clarification: 'Which appointment?', navigate: null };
+      const active = Object.entries(output).filter(([, value]) => value !== null);
+      const [kind, value] = active[0] || [];
+      const wire = options.wireOutput || (active.length !== 1 ? { decision: Object.fromEntries(active) }
+        : kind === 'reply' ? { reply: value } : { decision: kind === 'plan' ? value : { [kind]: value } });
+      return new Response(JSON.stringify({ choices: [{ finish_reason: options.finishReason || 'stop', message: { content: options.rawText ?? JSON.stringify(wire) } }] }));
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
@@ -78,7 +84,7 @@ test('live regression: the planner cannot present platform vocabulary as an owne
     output: { plan: null, reply: 'Your services include Acrylic Full Set, but prices are unavailable.', clarification: null, navigate: null },
   });
   await assert.rejects(f.run('en', 'What are my services and prices?'), /ASSISTANT_INVALID_PLAN/);
-  assert.equal(f.requests[0].response_format.json_schema.schema.properties.reply.type, 'null');
+  assert.equal(Object.hasOwn(f.requests[0].response_format.json_schema.schema.properties, 'reply'), false);
   assert.equal(f.updates[0].outcome, 'failed');
 });
 
@@ -88,6 +94,60 @@ test('a service omitted from a prior excerpt requires a fresh lookup rather than
     output: { plan: null, reply: 'Silk Press is in the catalog, but its price is unavailable.', clarification: null, navigate: null },
   });
   await assert.rejects(f.run('en', 'How much is Silk Press?'), /ASSISTANT_INVALID_PLAN/);
+});
+
+test('the provider schema excludes competing actions before generation', async () => {
+  const f = fixture();
+  await f.run('en', 'How much is Silk Press?');
+  const schema = f.requests[0].response_format.json_schema.schema;
+  const validate = new Ajv().compile(schema);
+  assert.equal(validate({decision:{tool:'get_services_and_prices',args:{query:'Silk Press'}}}),true);
+  assert.equal(validate({decision:{tool:'get_services_and_prices',args:{query:''}}}),true);
+  assert.equal(validate({decision:{clarification:'Which date?'}}),true);
+  assert.equal(validate({decision:{navigate:'subscription'}}),true);
+  const competing = schema.properties.decision
+    ? { decision: { tool: 'get_services_and_prices', args: { query: 'Silk Press' }, clarification: 'Which service?' } }
+    : { plan: { tool: 'get_services_and_prices', args: { query: 'Silk Press' } }, reply: null, clarification: 'Which service?', navigate: null };
+  assert.equal(validate(competing), false, 'The strict provider schema must exclude outputs that the server will reject as multiple actions');
+});
+
+test('one service decision is normalized and a revoked tool is absent from the provider schema', async () => {
+  const f = fixture({wireOutput:{decision:{tool:'get_services_and_prices',args:{query:'Silk Press'}}}});
+  assert.equal((await f.run('en','How much is Silk Press?')).plan.args.query,'Silk Press');
+  const revoked = fixture({denied:['styles']}); await revoked.run();
+  const validate = new Ajv().compile(revoked.requests[0].response_format.json_schema.schema);
+  assert.equal(validate({decision:{tool:'get_services_and_prices',args:{query:'Silk Press'}}}),false);
+  const rejected = fixture({denied:['styles'],wireOutput:{decision:{tool:'get_services_and_prices',args:{query:'Silk Press'}}}});
+  await assert.rejects(rejected.run(),/ASSISTANT_ACCESS_DENIED/);
+});
+
+test('malformed, truncated and competing provider outputs retain bounded diagnostic codes without raw output', async () => {
+  for (const [options,code] of [
+    [{rawText:'Private model output is not JSON'},'PLANNER_JSON'],
+    [{finishReason:'length'},'PLANNER_OUTPUT_LIMIT'],
+    [{finishReason:'content_filter'},'PLANNER_REFUSAL'],
+    [{wireOutput:{reply:'Private unsupported answer'}},'PLANNER_ENVELOPE'],
+    [{wireOutput:{decision:{tool:'get_business_profile',args:{},clarification:'Private competing prose'}}},'PLANNER_DECISION'],
+  ]) {
+    const f=fixture(options); await assert.rejects(f.run(),/ASSISTANT_INVALID_PLAN/);
+    assert.equal(f.updates[0].safe_error_code,code);
+    assert.doesNotMatch(JSON.stringify(f.updates),/Private/);
+    assert.equal(f.requests.length,1,'An invalid response must not cause a hidden retry or extra spend');
+  }
+});
+
+test('inventory wording receives a count and a short service excerpt without unsolicited add-on lists', async () => {
+  const f = fixture({ answerOnly: true,
+    history: [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: '' }, result: {
+      total: 16, currency: 'USD', services: Array.from({length: 16}, (_, i) => ({id: `service-${i}`, name: `Service ${i}`, base_price: 100+i, addons: [{name:'Extra length',price_add:40}]})),
+    } }], output: { plan: null, reply: 'You have 16 services. Here are a few starting prices.', clarification: null, navigate: null },
+  });
+  await f.run('en', 'What are my services and prices?');
+  const result = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+  assert.equal(result.total,16);
+  assert.equal(result.services.length,4);
+  assert.equal(result.is_excerpt,true);
+  assert.doesNotMatch(JSON.stringify(result), /addons|Extra length/);
 });
 
 test('answer wording receives authorized read evidence without the platform draft catalog', async () => {
@@ -180,7 +240,7 @@ test('invented tools, extra authority and multiple simultaneous outputs cannot p
   ]) {
     const f = fixture({ output }); await assert.rejects(f.run(), /ASSISTANT_/);
     assert.equal(f.updates[0].outcome, 'failed');
-    assert.equal(f.updates[0].safe_error_code, 'PLANNER_FAILED');
+    assert.match(f.updates[0].safe_error_code, /^PLANNER_(FAILED|DECISION)$/);
   }
 });
 

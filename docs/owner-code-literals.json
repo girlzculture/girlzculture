@@ -1942,6 +1942,10 @@
       "reason": "Wire header, browser feature identifier, MIME/accept value or binary file signature. Used by protocol/feature detection, not rendered interface wording.",
       "contexts": [
         {
+          "file": "src/lib/ownerActionError.ts",
+          "context": "795ea8cd16dc269abc3b712bfe471bd456884280bf18a313bb75390efeb9ea94"
+        },
+        {
           "file": "src/lib/supabase.ts",
           "context": "70b1b644b2c3c04c60484d63926fcbbd845eadd9c897d06d65f06ab9d0e71f05"
         }

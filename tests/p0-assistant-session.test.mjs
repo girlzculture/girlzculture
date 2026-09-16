@@ -66,3 +66,12 @@ test('an old response must not clear the next account busy state', async () => {
   app.responses[1].resolve(Response.json({ clarification: 'Current response' })); await tick();
   assert.equal(app.articles().length, 1);
 });
+
+test('a non-JSON provider failure retains the exact support reference from the response header', async () => {
+  const app = assistantHarness(); app.quickRead(); await tick();
+  const reference = '44000000-0000-4000-8000-000000000001';
+  app.responses[0].resolve(new Response('<html>Upstream unavailable</html>', {status:502,headers:{'Content-Type':'text/html','X-Request-ID':reference}}));
+  await tick();
+  assert.ok(app.find(node => node.type === 'span' && node.props.children === reference), 'Parsing a non-JSON error must not discard the server incident reference');
+  assert.equal(app.articles().length,0);
+});
