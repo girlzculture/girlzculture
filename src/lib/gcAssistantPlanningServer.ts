@@ -18,6 +18,10 @@ function answerFacts(tool: string, args: unknown, result: unknown) {
 
 function planningResult(tool: string, result: unknown, granted: ReadonlySet<string>) {
   if (result === null || result === undefined) return null;
+  if (tool === "get_business_summary" && typeof result === "object") {
+    const value = result as Record<string, unknown>;
+    return { ...value, calendar_gaps: granted.has("availability") ? value.calendar_gaps : null, service_performance: granted.has("styles") ? value.service_performance : null, professional_performance: granted.has("stylists") ? value.professional_performance : null };
+  }
   if (tool === "get_plan_status" && typeof result === "object") {
     const value = result as { business_usage?: Record<string, unknown> };
     return { ...value, ...(value.business_usage ? { business_usage: {

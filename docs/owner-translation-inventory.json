@@ -14751,6 +14751,18 @@
       "occurrences": [
         {
           "file": "src/lib/gcAssistantPresentation.ts",
+          "line": 127,
+          "kind": "localized-source",
+          "context": "efb75d1b281d63554e7b77f93b1b83bbaf11d4795c00e7c9e7ea844b6c0f806c"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "line": 130,
+          "kind": "localized-source",
+          "context": "efb75d1b281d63554e7b77f93b1b83bbaf11d4795c00e7c9e7ea844b6c0f806c"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
           "line": 150,
           "kind": "localized-source",
           "context": "efb75d1b281d63554e7b77f93b1b83bbaf11d4795c00e7c9e7ea844b6c0f806c"
