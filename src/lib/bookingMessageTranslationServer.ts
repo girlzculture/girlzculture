@@ -33,7 +33,7 @@ export async function bookingMessageTranslation(input: { admin: SupabaseClient; 
     const reservation = await admin.rpc("reserve_governed_ai_usage", { p_feature: "translation_drafts", p_user: input.userId, p_cost_cents: cost });
     if (reservation.error || !reservation.data) return { unavailable: true };
     reservedUsageId = reservation.data;
-  } else if (feature.data.provider_key !== "test") return { unavailable: true };
+  } else if (!["test", "deepl"].includes(feature.data.provider_key)) return { unavailable: true };
   const generated = await generateTranslationDraft(admin, feature.data, input.userId, facts.protectedSource, input.locale, { messageDisplay: true, reservedUsageId });
   const translated = facts.restore(generated.translatedText);
   if (translated.length > 4000) throw new Error("MESSAGE_TRANSLATION_TOO_LONG");

@@ -1240,6 +1240,8 @@ const deployedMigration = runPsql(
   ],
   "Engine migration marker assertion",
 );
+const deepLOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-gcia-deepl.sql")], "GCIA DeepL governance assertions");
+if (deepLOutput) process.stdout.write(`${deepLOutput}\n`);
 if (deployedMigration !== expectedMigration) {
   console.error(
     `Engine expected migration ${deployedMigration || "<missing>"} does not match repository head ${expectedMigration}.`,

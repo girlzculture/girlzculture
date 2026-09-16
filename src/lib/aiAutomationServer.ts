@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { openAiApiKey, openAiApiUrl, openAiChatCompletionText } from "@/lib/openAiServer";
+import { deepLConfigured, translateWithDeepL } from "@/lib/deeplServer";
 
 type AiFeature = {
   feature_key: string;
@@ -17,7 +18,11 @@ type AiFeature = {
   moderation_required: boolean;
 };
 
-const SAFE_PROVIDERS = new Set(["test", "openai", "anthropic", "google"]);
+const SAFE_PROVIDERS = new Set(["test", "openai", "anthropic", "google", "deepl"]);
+
+export function aiProviderSupportsFeature(provider: string, feature: string) {
+  return provider !== "deepl" || feature === "translation_drafts";
+}
 const SENSITIVE_PATTERNS = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
@@ -43,6 +48,7 @@ export function approvedAiModels(provider: string) {
 export function aiProviderConfigured(provider: string) {
   if (provider === "test") return true;
   if (provider === "openai") return Boolean(openAiApiKey());
+  if (provider === "deepl") return deepLConfigured();
   if (provider === "anthropic") return Boolean(process.env.ANTHROPIC_API_KEY);
   if (provider === "google") return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
   return false;
@@ -122,7 +128,7 @@ export async function generateTranslationDraft(
   targetLocale: string,
   options: { messageDisplay?: boolean; reservedUsageId?: string } = {},
 ) {
-  const input = redactSensitiveText(source).replace(/\s+/g, " ").trim();
+  const input = redactSensitiveText(source).trim();
   if (!input || input.length > 12_000)
     throw new Error("Choose ordinary interface text to translate.");
   const { data: killSetting, error: killError } = await admin
@@ -136,6 +142,7 @@ export async function generateTranslationDraft(
       "Provider-assisted translation is disabled. You can still enter a reviewed translation manually.",
     );
   if (
+    !aiProviderSupportsFeature(feature.provider_key, feature.feature_key) ||
     !approvedAiProviders().includes(feature.provider_key) ||
     !approvedAiModels(feature.provider_key).includes(feature.model_key) ||
     !aiProviderConfigured(feature.provider_key)
@@ -145,12 +152,41 @@ export async function generateTranslationDraft(
     );
 
   let translated = "";
+  let reservedUsageId = options.reservedUsageId;
+  let inputUnits = input.length;
   if (feature.provider_key === "test") {
     translated = DASHBOARD_SOURCE_MESSAGES[targetLocale]?.[input] || "";
     if (!translated)
       throw new Error(
         "The test translation adapter has no draft for this text. Configure an approved provider or enter the translation manually.",
       );
+  } else if (feature.provider_key === "deepl") {
+    if (feature.model_key !== "deepl-api-free") throw new Error("DEEPL_FREE_MODEL_REQUIRED");
+    try {
+      const result = await translateWithDeepL(input, targetLocale, {
+        timeoutMs: feature.timeout_ms,
+        reserve: async ({ characters, remoteCount, remoteLimit }) => {
+          const claim = await admin.rpc("reserve_deepl_translation_usage", {
+            p_user: userId, p_characters: characters, p_remote_count: remoteCount, p_remote_limit: remoteLimit,
+          });
+          if (claim.error || !claim.data) {
+            const code = claim.error?.message;
+            throw new Error(code === "DEEPL_QUOTA_EXHAUSTED" || code === "DEEPL_RATE_LIMIT" ? code : "DEEPL_ALLOWANCE_UNAVAILABLE");
+          }
+          reservedUsageId = claim.data;
+          inputUnits = characters;
+        },
+      });
+      translated = result.text;
+      inputUnits = Math.max(inputUnits, result.billedCharacters);
+    } catch (error) {
+      if (reservedUsageId) {
+        const code = error instanceof Error && /^DEEPL_[A-Z_]+$/.test(error.message) ? error.message : "DEEPL_UNAVAILABLE";
+        const recorded = await admin.from("ai_usage_events").update({ outcome: "failed", safe_error_code: code }).eq("id", reservedUsageId);
+        if (recorded.error) throw new Error("TRANSLATION_AUDIT_UNAVAILABLE");
+      }
+      throw error;
+    }
   } else if (feature.provider_key === "openai") {
     const controller = new AbortController();
     const timer = setTimeout(
@@ -189,11 +225,13 @@ export async function generateTranslationDraft(
       "The selected translation provider adapter is not installed. No text was transmitted.",
     );
   }
-  translated = translated.trim().slice(0, 12_000);
-  if (!translated)
+  translated = translated.trim();
+  if (!translated || translated.length > 12_000)
     throw new Error("The translation provider returned no usable draft.");
 
-  const { data: draft, error } = await admin
+  // Private message display translations remain in the booking-scoped cache;
+  // they must not also be copied to a platform-wide editorial draft queue.
+  const { data: draft, error } = options.messageDisplay ? { data: null, error: null } : await admin
     .from("ai_generation_drafts")
     .insert({
       feature_key: feature.feature_key,
@@ -212,12 +250,12 @@ export async function generateTranslationDraft(
     provider_key: feature.provider_key,
     model_key: feature.model_key,
     outcome: "completed",
-    input_units: input.length,
+    input_units: inputUnits,
     output_units: translated.length,
     requested_by: userId,
   };
-  const { error: usageError } = options.reservedUsageId
-    ? await admin.from("ai_usage_events").update({ outcome: "completed", input_units: input.length, output_units: translated.length, safe_error_code: null }).eq("id", options.reservedUsageId)
+  const { error: usageError } = reservedUsageId
+    ? await admin.from("ai_usage_events").update({ outcome: "completed", input_units: inputUnits, output_units: translated.length, safe_error_code: null }).eq("id", reservedUsageId)
     : await admin.from("ai_usage_events").insert(usageValues);
   if (usageError) throw usageError;
   return {

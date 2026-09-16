@@ -84,6 +84,8 @@ export default function AiAutomationManager() {
   const [assistantAudit, setAssistantAudit] = useState<AssistantAudit[]>([]);
   const [killSwitch, setKillSwitch] = useState(true);
   const [selectedKey, setSelectedKey] = useState("");
+  const [providerKey, setProviderKey] = useState<string | null>(null);
+  const [translationStatus, setTranslationStatus] = useState("");
   const [input, setInput] = useState("");
   const [result, setResult] = useState("");
   const [message, setMessage] = useState("");
@@ -124,8 +126,19 @@ export default function AiAutomationManager() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = features.find((item) => item.feature_key === selectedKey);
   const provider = providers.find(
-    (item) => item.key === selected?.provider_key,
+    (item) => item.key === (providerKey ?? selected?.provider_key),
   );
+  async function checkTranslationProvider() {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/engine/ai", { method: "POST", headers: await headers(true), body: JSON.stringify({ action: "translation_provider_status" }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to check translation quota.");
+      const status = body.status;
+      setTranslationStatus(`DeepL API Free: ${status.characterCount} / ${status.characterLimit} characters used. Available application languages: ${status.supportedLocales.join(", ")}. Availability does not certify translation quality.`);
+    } catch (error) { setTranslationStatus(error instanceof Error ? error.message : "Unable to check translation quota."); }
+    finally { setBusy(false); }
+  }
   const hasConfiguredProvider = providers.some((item) => item.configured);
   const summary = useMemo(
     () => ({
@@ -164,6 +177,7 @@ export default function AiAutomationManager() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setMessage("AI feature configuration saved and audited.");
+      setProviderKey(null);
       await load();
     } catch (error) {
       setMessage(
@@ -243,6 +257,10 @@ export default function AiAutomationManager() {
           value={`$${(summary.cost / 100).toFixed(2)}`}
         />
       </section>
+      <section className="rounded-xl border border-border bg-white p-4">
+        <button type="button" disabled={busy} onClick={() => void checkTranslationProvider()} className="min-h-11 rounded-lg border border-border px-4 text-sm font-semibold">Check DeepL language support and quota</button>
+        <p role="status" className="mt-2 text-sm text-text-primary">{translationStatus || "Translation drafts require review. Unsupported languages keep the original text; no paid fallback is enabled."}</p>
+      </section>
       <div className="grid gap-4 xl:grid-cols-[.75fr_1.25fr]">
         <section className="rounded-[15px] border border-plum/10 bg-white p-3">
           <h3 className="px-2 font-serif text-xl text-plum">
@@ -261,6 +279,7 @@ export default function AiAutomationManager() {
                   key={feature.feature_key}
                   onClick={() => {
                     setSelectedKey(feature.feature_key);
+                    setProviderKey(null);
                     setResult("");
                     setMessage("");
                   }}
@@ -317,10 +336,11 @@ export default function AiAutomationManager() {
               <Field label="Approved provider">
                 <select
                   name="provider"
-                  defaultValue={selected.provider_key}
+                  value={providerKey ?? selected.provider_key}
+                  onChange={(event) => setProviderKey(event.target.value)}
                   className={controlClass}
                 >
-                  {providers.map((item) => (
+                  {providers.filter(item => item.key !== "deepl" || selected.feature_key === "translation_drafts").map((item) => (
                     <option key={item.key} value={item.key}>
                       {item.key} ·{" "}
                       {item.configured ? "configured" : "not configured"}
@@ -331,7 +351,8 @@ export default function AiAutomationManager() {
               <Field label="Approved model">
                 <select
                   name="model"
-                  defaultValue={selected.model_key}
+                  key={provider?.key}
+                  defaultValue={provider?.models.includes(selected.model_key) ? selected.model_key : provider?.models[0]}
                   className={controlClass}
                 >
                   {(provider?.models || [selected.model_key]).map((model) => (

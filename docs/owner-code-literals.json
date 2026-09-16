@@ -1910,6 +1910,10 @@
         {
           "file": "src/components/dashboard/WorkspaceToolbar.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -1984,6 +1988,10 @@
         {
           "file": "src/components/owner/AssistantDictation.tsx",
           "context": "6e1ad54b32f33690499d80aa3e80169d20be90af930a8f4212559d5fb20e5559"
+        },
+        {
+          "file": "src/lib/assistantSpeechCore.ts",
+          "context": "b185e80d289062217072ace8f5be5bd45d4053c7b4f69ae5692668d5b39fdc8b"
         }
       ]
     },

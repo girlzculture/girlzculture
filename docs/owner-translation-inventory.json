@@ -24,6 +24,7 @@
     "src/components/notifications/DashboardNotificationCenter.tsx",
     "src/components/notifications/PushSetup.tsx",
     "src/components/owner/AssistantDictation.tsx",
+    "src/components/owner/AssistantSpeech.tsx",
     "src/components/owner/BookingCheckInExceptionForm.tsx",
     "src/components/owner/BookingNotes.tsx",
     "src/components/owner/BusinessPolicies.tsx",
@@ -46,6 +47,7 @@
     "src/components/site/SafeImage.tsx",
     "src/lib/actionToastCore.ts",
     "src/lib/apiResponseClient.ts",
+    "src/lib/assistantSpeechCore.ts",
     "src/lib/authSessionCore.ts",
     "src/lib/bookingReference.ts",
     "src/lib/businessHeroVideoCore.ts",
@@ -78,6 +80,7 @@
     "src/lib/scopedApiCore.ts",
     "src/lib/supabase.ts",
     "src/lib/supabaseFetchPolicy.ts",
+    "src/lib/translationProviderErrors.ts",
     "src/lib/usStates.ts",
     "src/lib/validation.ts"
   ],
@@ -1152,7 +1155,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 218,
+          "line": 219,
           "kind": "template",
           "context": "4a8f22706efcfd0e8128df455bb7c95e8f3ae1e4faea539addae070aeb65b158"
         },
@@ -1516,7 +1519,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 59,
+          "line": 60,
           "kind": "template",
           "context": "d4f67c4fc2de50283458a226fb960a94c6615cd34670b33e498ba82ee6e55aab"
         }
@@ -1737,7 +1740,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 58,
+          "line": 59,
           "kind": "template",
           "context": "e77caf8d15c869518133b533c682a99c38d8ee83967192bec542e313c59a0a5e"
         }
@@ -1826,7 +1829,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 229,
+          "line": 230,
           "kind": "jsx-text",
           "context": "dd2849f6bc7e025d73b99cba9c8290bb5538b0157064c8cea3da6a4f39e167ae"
         }
@@ -2109,13 +2112,13 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "ceef92cd6e616957084c8acc19af06662b90f9ab34403d3f8da0f307e856aa68"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "4846df1918b6e72fcb4b91e412b18335250db2e1f629a78c804ae2d9f7fdc3a2"
         },
@@ -2632,7 +2635,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "67f46d053607ea92b3d8e43a6fdffa0b491bad0a1a734dbbe61d666519123aed"
         },
@@ -2660,7 +2663,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "74d405b8de1517f364ceb3facfb9967971e1bd9981dd2a0532b4042cc17bec8d"
         },
@@ -2677,7 +2680,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "f5ae0c192a30296e6938309ad7da37d61249accd015b629b7c2941c9b988e626"
         }
@@ -2826,7 +2829,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "0e9735ef7b19d5c393c7cd64439379b113a144b0a5e924d5668b760c1595c8a0"
         }
@@ -2909,7 +2912,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 40,
+          "line": 41,
           "kind": "literal",
           "context": "6fe2e410c61816e3d3458e8fc8caa00da64e9c8831114e1592e2d835f17216dd"
         }
@@ -3081,7 +3084,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 36,
+          "line": 37,
           "kind": "literal",
           "context": "4abfb56ed95dc8c0f14d0bdea1fcc5871d48af3a44cad393a233dfac623d95cd"
         }
@@ -3149,7 +3152,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 60,
+          "line": 61,
           "kind": "literal",
           "context": "55ac7234751965a3794d49ec3588e7137908ab01477bf1cef127c2b6450f9205"
         }
@@ -3171,13 +3174,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 236,
+          "line": 237,
           "kind": "literal",
           "context": "d0d7e247faf311547345320b67951e3e37ebdb02998f1d82fb0e182b4a66b789"
         },
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 238,
+          "line": 239,
           "kind": "literal",
           "context": "85fb55def416736f481bcd520a89d5214f68e96cbe4edcef163edc9c21facc1a"
         },
@@ -3195,13 +3198,13 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 46,
+          "line": 47,
           "kind": "literal",
           "context": "87abb4c5e6c140c9bddfeb2bb39c9f5a79df32214bca572209edb9889211b9d4"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 198,
+          "line": 199,
           "kind": "literal",
           "context": "96c6aae72096127b721aa6f063483bd9de5624c006303d6e3c92526b108254cb"
         },
@@ -3400,7 +3403,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "8afb51f2d4455583ee1ced05746ba21648bfb651dd65538420d5e067b6cdbc43"
         },
@@ -3503,7 +3506,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "d0018ddb686fc02eb23530048e3f11a91a4f7c9f7780e1def6787a6e3c161bdb"
         }
@@ -3591,7 +3594,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "7d328bf3385a0776765b2cb2f1dd54d0328461ec27141bc2cb2c08d04b74d311"
         },
@@ -3636,7 +3639,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 172,
+          "line": 173,
           "kind": "localized-source",
           "context": "2e489e5e08e2b95039c824c5e826fc50a0fd2c7159d7f6f5616b8c6f1d309ac2"
         }
@@ -3647,13 +3650,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 218,
+          "line": 219,
           "kind": "localized-source",
           "context": "40a660ab0c40eb68fe12dab0cd45f24f7f7a2af475baeb485dbacadb7eb01206"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 218,
+          "line": 219,
           "kind": "localized-source",
           "context": "40a660ab0c40eb68fe12dab0cd45f24f7f7a2af475baeb485dbacadb7eb01206"
         }
@@ -3700,6 +3703,23 @@
           "line": 4953,
           "kind": "jsx-text",
           "context": "b2101e04c6807eb812d92147c88393e4d82b2926d421a8ad07091ff834132964"
+        }
+      ]
+    },
+    "92bddb9d00d3": {
+      "source": "Audio stopped. You can continue reading the answer.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 38,
+          "kind": "literal",
+          "context": "25c698ffd6762ca1dc8b560332413a99f8afe5031fe5975623b9cc9eddc997c8"
+        },
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 41,
+          "kind": "literal",
+          "context": "25c698ffd6762ca1dc8b560332413a99f8afe5031fe5975623b9cc9eddc997c8"
         }
       ]
     },
@@ -3813,7 +3833,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "a5bc17bcfeaea74518dc916d3b01c69ee4b49bfe520b66100a30e0401c29a9f0"
         },
@@ -3925,7 +3945,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "25bd814d9b789476673108a011d9d64e05d0270de084aa609a6327e00ffe98e8"
         }
@@ -3947,7 +3967,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "5e695117752b88662283fa943ce9112994331b10f1f2dc7074dafe6fe1aafc49"
         }
@@ -4037,7 +4057,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 233,
+          "line": 234,
           "kind": "jsx-text",
           "context": "b33edca77278d39f3e1c84c6b5f19ec18c6755622a4d9245a0d4900211d208f6"
         }
@@ -4234,7 +4254,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "ee38ba12556b17be8a97f1e04250d62e55eb7947fe7b32e59bb5a85e28ffb46f"
         },
@@ -4307,7 +4327,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "f84014d2a893c72231bae2230b5b8624a4e68cb4c768cef344b29b9baf2bb7a9"
         }
@@ -4451,7 +4471,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "91476c0ae0a9d7fc827b2fea671655e4f879350b842bd1dedea8b34c76d89500"
         },
@@ -4556,7 +4576,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "e590a2011ae5256d621cb66b17ad8826114ee7416a7cb73c6367e5b8c3a48277"
         }
@@ -4611,7 +4631,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 234,
+          "line": 235,
           "kind": "jsx-text",
           "context": "3126d8e80c3792c15b25c5cf53066155df3bd03dd3b26cd4f5851fd583e2f6b2"
         }
@@ -4628,7 +4648,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "56dcd91d26328d3b61ee93f7abe7b3d2fbc0b546cb2b34ee104a8f6fdd50e155"
         },
@@ -4656,7 +4676,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "fd999f066746ef682e0c6f2bd71998009751e076a31d8b66aaa363a8352bcedf"
         },
@@ -4673,7 +4693,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "908d71b2052cfa49fff2114183f24f46d5bcb3c49ce4e247b93bc7e0afa675c0"
         }
@@ -4684,7 +4704,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "1193d0aa8e000b2c93a97cc0d3ff7b39ba9a5d7d4f413f66f4591e13896ff1b4"
         }
@@ -4762,13 +4782,13 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "a2a7bec388aaf92a404213b0376fd4de5aa1a38a1c425d69195cc6f2085115b5"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "c7808c0d9959a5318f29020341cd593be13c4b86d67d2989bb141088648c1957"
         },
@@ -4979,7 +4999,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "07ed7984af8a542e30faefcd44ec204876cb52dffcf7e2d79d17fa49628341d6"
         }
@@ -4990,7 +5010,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 240,
+          "line": 241,
           "kind": "literal",
           "context": "6db4e775a9d9f5cc7dd12cd694c7b803421e7250c3d2276ff4d0a1d7135a85e7"
         },
@@ -5002,19 +5022,19 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 42,
+          "line": 43,
           "kind": "literal",
           "context": "a667651a7a539fedf24c151f96e5fb50e6d81c1f5e408a7bdb3162f6998553c8"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 42,
+          "line": 43,
           "kind": "literal",
           "context": "f98ce55401848cd4fed6d99748c33cf7b21bad807d32524abf4fb37baf41a0e4"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 42,
+          "line": 43,
           "kind": "literal",
           "context": "fde47a603710045d1a40812c4229208e32d04394cb46f56bb23e3ff065898782"
         }
@@ -5036,7 +5056,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 139,
+          "line": 140,
           "kind": "literal",
           "context": "6c866054af9c9b7f3eb989796bec31d14190bb84bdc7d6c09f48647daa5f99d2"
         },
@@ -5120,7 +5140,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "cd0b94b87fb747e58c6fc7022d92b628ea0f791fc89e38edaf8d0e11e8b2942f"
         }
@@ -5131,7 +5151,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "91652a6b682f1a103db27cd6650933534f50d754d6c6207303f3a3fc12d5361a"
         },
@@ -5165,7 +5185,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "a0b619c080c79be6196987d6c7f51bd25e7429297a481769e13c4035fadd25df"
         }
@@ -5176,7 +5196,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 62,
+          "line": 63,
           "kind": "literal",
           "context": "c290f49ae805dd6ac758229b1e8db814630f520885c412e080048c1ca34925bb"
         },
@@ -5204,7 +5224,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "55372d97c1ec56a11d8d9eb5c1938e5ae81f00d36232873a30e869825b612b9c"
         }
@@ -5366,7 +5386,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "ded4153f8c054b174d48feca9554cfef90d7fc7d1e80d2b45955d86b30146ef7"
         }
@@ -5477,7 +5497,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "53c8729e30bdae3d2252120241d776d3736bdb57deec6d7a6d3ecfaef1655f3c"
         },
@@ -5546,7 +5566,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "adee7d2559c650001b305b06a79e389e58d5c365bd7d6c046bc4e13108714006"
         },
@@ -5591,7 +5611,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "f491d50d190baf528db8ccee11bbb2faf3fcc50602a361909c3ea348f9c635c7"
         },
@@ -5608,7 +5628,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "af27dd80b4916395aabfeff87d4118704c4c371a5242d4874211afc4bf5c5827"
         }
@@ -5878,7 +5898,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "fd4100495bbd1a4a2ee1d8b0127ed0aca862cdf753c6bd4fd38995013b13bb09"
         },
@@ -5950,7 +5970,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 75,
+          "line": 76,
           "kind": "literal",
           "context": "e993535787abd2f9a017d623ef256a8a5320dfc0d7f1101ed27e920abc4b316b"
         }
@@ -6027,7 +6047,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 80,
+          "line": 81,
           "kind": "literal",
           "context": "fa164d4cf8006ddf9f72746166edc5ea754769c5759f132eb485848d7402091e"
         }
@@ -6347,7 +6367,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "0bde37591b0f5b71633a1a76eeee3d2c105dd0cde503c257bab502c60a11e37a"
         },
@@ -6470,7 +6490,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 165,
+          "line": 166,
           "kind": "localized-source",
           "context": "3bb78b91e06604c98d2f346833b56508541a9ec13f8ea7a81059bfc9ce537f03"
         }
@@ -6492,7 +6512,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "90daecf6918a3046a2539a0eed274834ac5f10f0fa72762835f5cb8d18e33cd7"
         },
@@ -6537,7 +6557,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "79059eb94207c0d57054151b6a1a07e89acbcc981bfa8f724a69da47355fcf85"
         }
@@ -6686,7 +6706,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "23c6a267ff491b2467c5def55a5915d905137c68c9cd4d4b1d2e81d63121f3e9"
         }
@@ -6708,7 +6728,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "8acdc441cde5280c292622bd784d8b963d0366e1b17cbd8b9db56dcd1719e4eb"
         },
@@ -6808,7 +6828,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 201,
+          "line": 202,
           "kind": "literal",
           "context": "972e2e00d4ce2db4ec168a38254b55d6aa2f7e0bd65d0e37ee17b3a54c4f2f9a"
         },
@@ -6825,7 +6845,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 201,
+          "line": 202,
           "kind": "literal",
           "context": "972e2e00d4ce2db4ec168a38254b55d6aa2f7e0bd65d0e37ee17b3a54c4f2f9a"
         }
@@ -6836,7 +6856,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "6c721114281e6fc4317b9917d96d8dc56d8dc0433101cda9a8453dec65c50b33"
         },
@@ -7077,13 +7097,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 158,
+          "line": 159,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 204,
+          "line": 205,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
@@ -7149,7 +7169,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 122,
+          "line": 123,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
@@ -7619,7 +7639,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 198,
+          "line": 199,
           "kind": "localized-source",
           "context": "7aaeba7cd35c01c19231fca22312576a75a5539769b12cd97d84068081363e90"
         }
@@ -7652,7 +7672,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "abaa1cc5ecee193a71c78488197ad42c063c76181b8a01d2102af6657062cc0c"
         }
@@ -7680,7 +7700,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "86f3c53de595aa3b06e1835b479661484485f27336ca4dce30d2e3a21cf033a9"
         }
@@ -7691,7 +7711,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 240,
+          "line": 241,
           "kind": "literal",
           "context": "46157392a6a888cc990cb7a7c87ae257e84ee157d97059158a5dc363cf6302e0"
         },
@@ -7703,25 +7723,25 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "0466116332262a009a241f079504179fd308e6f99926ff89e4a7b7b1a7cd1454"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "8f413b43a95c833ffd551031be29b56d774db00d030a0a87f64095cf63b8dabf"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "0d0bd08f77ddd7cdc5ec79288ffd319e949ae29b4a60d1ee4b12016dbc2ffad3"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 42,
+          "line": 43,
           "kind": "literal",
           "context": "dfe9abd9092f05ce5335540ad5e1a284291a663aa2578c2949f5f6f019087efa"
         },
@@ -7830,7 +7850,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "bb8e30cd27596c2fd705a313c4569dff36895fd7585e054316926bb642fdabeb"
         }
@@ -7959,7 +7979,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "5704855b2126685e25d72eafc382c8594c4eb751277c1e9f1a4016978b140479"
         }
@@ -7992,7 +8012,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "52e5f477d2c824c891a339afe93910e6ef0701c50ca9f204b0e7789aa3e64cf4"
         },
@@ -8245,7 +8265,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "4b180ab0b86581ed2c17a922762ce9b20398e8b4b49d8f8324587e4620186882"
         }
@@ -8256,7 +8276,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 79,
+          "line": 80,
           "kind": "literal",
           "context": "e2d9f52556fd604e5cc93cd849529a5cd7ccec6c4291f6d97cd9b6384e4c0784"
         }
@@ -8333,7 +8353,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "909162d17476a42706e7cb3fa964d7f0b1d4b324687eb53f1bea87db9b4b8626"
         },
@@ -8397,7 +8417,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 43,
+          "line": 44,
           "kind": "literal",
           "context": "9a55ccaccd5ad622c957aced0e2ec74c508d7a04595ff4d55a8c72fc8f238e61"
         },
@@ -8497,7 +8517,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "8449c5b0e3b96ac75fa748d260c4c0756b56feb636cdd72dcf944bd164878c1c"
         },
@@ -8620,13 +8640,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "851f598844034c1c61f83973f7ad192e97e5321c3284d148461d17c513148d7f"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "efe800ed19636c22431d82f60c068f7da76bd58ea5de3f783d3c3e6f91fd58e4"
         },
@@ -8715,7 +8735,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "39979fb7fab3eeeca641aa2a947085d5629e8f4da17f368ddf67730bab9aa14a"
         }
@@ -8792,7 +8812,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "f728dbbdf086b922ab985fc3c86b6d8f9964d58d15b35c877d70fb2a126c4f5c"
         },
@@ -8809,7 +8829,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "efad350867357b78c3282b04cb1b1ca1229a4797fdee499d866d241f753bed8d"
         },
@@ -9117,7 +9137,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "a00c4966c4d180836679509944df618023d3576dbc28f3c07a4de6d1e78d0a60"
         },
@@ -9312,7 +9332,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "5279f8ceff1e87b6276b478e966fd0fbd81f0de7777ee161ff806dd72aeb2e21"
         },
@@ -9329,13 +9349,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "7acc9514e45c2a6212a7727e61a401f19f273ac2d3f672c27f6bf2a1af31f515"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a786a3bc9ad34ebe6cf9ddbb3dff43fe3f113d6aa6eda1bdbd54306705132caa"
         },
@@ -9352,7 +9372,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "e764d3e2f8df87eebdb2adf2bd96d816fdc6f0bce6a18739f0d8550854d136fe"
         },
@@ -9375,7 +9395,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 217,
+          "line": 218,
           "kind": "literal",
           "context": "0c3a3db56abf76e0817a2800dfa1ddc945353ead72a4b7c0755529e24f64a7f2"
         }
@@ -9419,7 +9439,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 54,
+          "line": 55,
           "kind": "literal",
           "context": "d8cb7be1865d7436518a4bdc24f8c0c44a2e7b8767d51bffd105e55cd83fdb7c"
         }
@@ -9779,13 +9799,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "cd25ec76df2d3d9b3aa9d490a84c2e87e0eedc0065e3c0bf9a95f02f5e6025e3"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 67,
+          "line": 68,
           "kind": "literal",
           "context": "729b26b80a2d16728fbab78d06b4e7d1cc7f1a9dad371579cabe2ae6d6085c53"
         }
@@ -9923,7 +9943,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 43,
+          "line": 44,
           "kind": "literal",
           "context": "f3b2ac97b57d82be266a42fe469c47e30c3c55ddf59f7b367f0e9280d55bda36"
         },
@@ -10012,7 +10032,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 43,
+          "line": 44,
           "kind": "literal",
           "context": "ec5f95fcf8bd784869c8d08613ec966b099774d87f536e9ed5315c949f789d06"
         },
@@ -10029,7 +10049,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 43,
+          "line": 44,
           "kind": "literal",
           "context": "2ad540fbf873599af33a7870b1b76be61b163c6ca52da99690342747b259346a"
         },
@@ -10046,7 +10066,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "1d38a4d5cd2b1f6915d6d7e38aa22ccda835e84713b2c8ee49f1ed33a7fe75ab"
         },
@@ -10086,13 +10106,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "adea5f5986e29a21dd759b9ff7a24b8b1f60cf991f60c126d41049cea3aecd92"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "6725dc02dab75415652858dda0cf8adfc8e068067a318a16f3a261b58c842e19"
         }
@@ -10259,13 +10279,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 23,
+          "line": 24,
           "kind": "jsx-text",
           "context": "56bbd579cac0b2b7788d604e2bdb031d8198e3036969826feaee93a52ca54f93"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 163,
+          "line": 164,
           "kind": "jsx-text",
           "context": "4ad135eb3777857e69f72c21b6a9b2dc9d5484ce7f86a46b8d7bab5403763731"
         }
@@ -10276,7 +10296,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 84,
+          "line": 85,
           "kind": "literal",
           "context": "513db520bfcd04006c64c2ff554bafa9384d4cc576a64f04507cf032c8b88745"
         }
@@ -10287,7 +10307,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 81,
+          "line": 82,
           "kind": "literal",
           "context": "628c0157eaaa7bd815a9f4220bfef88c86a456e00ff46830cbc68ccc8046ab14"
         }
@@ -10298,7 +10318,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 169,
+          "line": 170,
           "kind": "localized-source",
           "context": "b36329a3d481519732b2bff6e3eacf194b6884a55cf2303db8130e83f01c9894"
         }
@@ -10309,7 +10329,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 141,
+          "line": 142,
           "kind": "literal",
           "context": "32180692ed6b12f14217880f9adc591058fb36c440a1b581d6a665025bd782fb"
         }
@@ -10320,7 +10340,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 208,
+          "line": 209,
           "kind": "localized-source",
           "context": "9c6ce237f3792d58edb1b7b574106e830ed07341d5d2ff2ad7c3248da21de34f"
         }
@@ -10331,7 +10351,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 83,
+          "line": 84,
           "kind": "literal",
           "context": "772eceb23cd1e5126ae33977f0ad16eba65fa4de65b8e929ce289b158ba20abd"
         }
@@ -10342,13 +10362,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 209,
+          "line": 210,
           "kind": "localized-source",
           "context": "c441d2a3c029a6861b332d444ddc69d473cd53879b4a81eb18c1ac56e1cf56f0"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 209,
+          "line": 210,
           "kind": "localized-source",
           "context": "c441d2a3c029a6861b332d444ddc69d473cd53879b4a81eb18c1ac56e1cf56f0"
         }
@@ -10475,13 +10495,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "cd50efc73b869d53f7dfc98eff06741f3a479c72cc9b0aaf8bc7f74cb5d5b1aa"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 62,
+          "line": 63,
           "kind": "literal",
           "context": "c290f49ae805dd6ac758229b1e8db814630f520885c412e080048c1ca34925bb"
         },
@@ -10516,7 +10536,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "fcdd34ff69cf5a6161201275e9e45c3468e8133c264a213bf9c36dc1a42597f5"
         }
@@ -10550,7 +10570,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 240,
+          "line": 241,
           "kind": "literal",
           "context": "6db4e775a9d9f5cc7dd12cd694c7b803421e7250c3d2276ff4d0a1d7135a85e7"
         }
@@ -10728,7 +10748,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a78c2fac24ec0470c0e975fe335b8afffa633fa03aa84794055878aef59df928"
         },
@@ -10853,7 +10873,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "2ae8b6e95915718b5e66d9031a3ddbafdeb26ecc407e20afc0321af2e05c92e5"
         },
@@ -10947,7 +10967,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "2a84dc6c481901f3405b81efb9a9e061ca651c268cadab434a610c9d651ba711"
         }
@@ -10969,7 +10989,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 126,
+          "line": 127,
           "kind": "localized-source",
           "context": "607b543ac6db478c5e5db1b31e44e43bbd17d038016667547e614111d1cebd48"
         }
@@ -11014,7 +11034,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "55f091dbc90cf0bedca8ce37c2f9e96c84f416168cbdacc1039b03eb2e84d36a"
         },
@@ -11070,7 +11090,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 75,
+          "line": 76,
           "kind": "literal",
           "context": "66a93113fdc2206b26b64228731afa23336e8b9593a5c0ee7ae7d1fa3b941855"
         },
@@ -11216,7 +11236,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 199,
+          "line": 200,
           "kind": "localized-source",
           "context": "bd3465b1cc98f4f0ca16a068e1398af54814101e9b3646fb2ebbcfd15783b8fd"
         }
@@ -11348,7 +11368,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "af037b051e78e62e074d3e72c7fc301dce292db48a66df603cc3daa31aeba7d3"
         },
@@ -11501,7 +11521,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "0aab8f55971c54b6f5dc0d8e75102a89d4a663f2b5db45966042d172bf181e1c"
         },
@@ -11524,7 +11544,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "5be4c6f21686264b4b0a809fa9cd595ba502a82089c6af096378503a1ed19e87"
         }
@@ -11546,13 +11566,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "8d62c1d7e9624ae71cedf7a51a40fcc7afb1da2c218e7154ea9959aef963ac81"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "8e4bf5fb9dd4a3e5c497f447119b779e955abe78f048965e6aeba48595f839e6"
         },
@@ -11696,7 +11716,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "5312c67083f45fbe513eaf91942db03dd5c8c918ef0d30903034df0700cb4bbb"
         }
@@ -12038,7 +12058,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "8d50b67f46ddd50380f08ecefda7d935541118ef6bf26f6763a0c18792dfef91"
         },
@@ -12072,7 +12092,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "fcbeba212f4f7315b6fecee290429582df0a10f499b26bf62c01103bdc61bd22"
         },
@@ -12166,7 +12186,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "b652c81fb1642e9727bf851c30dd08f8830fadb79d27bdc1f7453636bc626d44"
         }
@@ -12199,7 +12219,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "81a0a56f932ff3693303f7f6988198dea1a9a7b494a1f9ca257fcac25b404456"
         }
@@ -12298,13 +12318,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 226,
+          "line": 227,
           "kind": "jsx-text",
           "context": "d6f425638f10d802596e4dbb788ca4e27d4099693a3000e667e1325f4b313298"
         },
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 232,
+          "line": 233,
           "kind": "localized-source",
           "context": "bde46c463f8f22332e728733386556a678624cd873d4c0c1ae440ca1bff3529e"
         }
@@ -12957,7 +12977,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "5a1d2c054fc319262ef0c6435607637f896bccef81ca75b90a1340bdcac5124a"
         }
@@ -12979,7 +12999,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "99c696fe13d5e868a569861e30e638275df445401c514bd2569bc3b00704ffa9"
         }
@@ -13128,13 +13148,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "2e3c2d70bc7a3940407f1ad6dd21c94e0827a60847d2343d61d2434e72dbe4d5"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "f14626614e438990ee01367ba1eee970f491f3cad512e5f36cde47c82fbe686a"
         }
@@ -13145,7 +13165,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 217,
+          "line": 218,
           "kind": "localized-source",
           "context": "3e89501a0e9773a7e7f804fdb229dc847b31e112646578692758294e845606b3"
         }
@@ -13156,7 +13176,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "localized-source",
           "context": "b06ce266baebb268a3e62cbc03138b6de6b2ea15f27787d25a0c61565aa62ba5"
         }
@@ -13167,7 +13187,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "4ccbc3d6db2ea9b78b4dd4cc9c47eeae0e87ed6b2c8a49d768f9eefaf9d9c894"
         },
@@ -13256,7 +13276,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "3ba5848fb6dd3837227a4d7ca248b3160d39ee083c9247788e64bb406efe72ad"
         }
@@ -13267,7 +13287,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "b94823c4db47e8b939f0c04cc4d683e4ff459f1d5c0bf024ea438bf19ec8a2d1"
         }
@@ -13300,7 +13320,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "eaf64dced5cf2383219f1616b9692efcda49c9039d591e51acdefbbfa6cf5fba"
         },
@@ -13361,7 +13381,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "localized-source",
           "context": "81bc5938a52c4a000168ad0768467b0af6e6257144cb9ad6302927934410a5c9"
         }
@@ -13417,13 +13437,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "34d9adca42495e0426070690f15a10be46e98dde5255a036eb5311fb3fe94772"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "3bc541c0d0041898c5ab532194a915b43527039ab51ecfd96f7517ea2e050877"
         }
@@ -13589,7 +13609,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 31,
+          "line": 32,
           "kind": "literal",
           "context": "ca2823eeb9406fc790bd23f9e8001cb7c65b17c60b25054116d94873b0f31889"
         }
@@ -13600,7 +13620,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 29,
+          "line": 30,
           "kind": "literal",
           "context": "3a2fbe5ba976f37ecab3d8215c56b19c2b41a3a75a42d733a2bb77d8bf9ae830"
         }
@@ -13617,7 +13637,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "9af0d5395e64dc8bc4018330f348f98240e607dc6e7324cdf38b86c4b6423b4c"
         },
@@ -13640,7 +13660,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 30,
+          "line": 31,
           "kind": "literal",
           "context": "b164619cd53a1e3747c26fa0937a9e0ab55e56f2b6d272fa40c06b722cbe8784"
         }
@@ -13651,13 +13671,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "865e3becdfbf0e9b8690d93b23a18a81b16b27d0b8b2fd1b4a6ffb4f966f2db9"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 53,
+          "line": 54,
           "kind": "literal",
           "context": "ceb92fda6bc4a591f0eeed1bd8721370bbf36cae0c341b17f16ffd4765984d8a"
         },
@@ -14010,7 +14030,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a826fb91b5f9b6bad3b4362a5c9f0bfd4203c42d52e17540ac63b4be3d3d0dc1"
         }
@@ -14054,7 +14074,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 56,
+          "line": 57,
           "kind": "literal",
           "context": "577d71de58f0338189b82b893a7718e554fd247a30e85f836fd5457930f191a5"
         }
@@ -14120,7 +14140,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 229,
+          "line": 230,
           "kind": "jsx-text",
           "context": "de17e2befbf8ea3cc58fe46be1b6466d08eb0453ab493beb86ccbcf461f025c7"
         }
@@ -14269,7 +14289,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "9e874796936f3a4c56162e5610659d4bd3b8e70d81197160f143210410f3cfea"
         }
@@ -14283,6 +14303,17 @@
           "line": 255,
           "kind": "jsx-text",
           "context": "9f8408511ea12d160413b7b2a3799bf8f08e0d6c4d623621994c73366900b7bb"
+        }
+      ]
+    },
+    "38f1ecbfdd4f": {
+      "source": "No on-device voice is available for this language. You can continue reading the answer.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 33,
+          "kind": "literal",
+          "context": "9c286374d2ded74f7e9cf43b2b8a3858384fa3f1287fc8561971752e0ebcb41e"
         }
       ]
     },
@@ -14429,7 +14460,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 50,
+          "line": 51,
           "kind": "localized-source",
           "context": "e70c7aa3f85087e270d90e67e1c406c81c5f7c91a32c1fd0f8f38ff62220f827"
         }
@@ -14612,7 +14643,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 49,
+          "line": 50,
           "kind": "localized-source",
           "context": "a7b0011ec6150b4035b9c13495c06f7c59eeee12bcd612a31a09b6d30806c61a"
         }
@@ -14970,7 +15001,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "7ece57974199a2057a59148f7e0a5aa88abf7fb0821058895238f4b8c5b9a616"
         },
@@ -15131,7 +15162,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 190,
+          "line": 191,
           "kind": "template",
           "context": "0a8042910099699643ca3640a682d42136777291bf7e7c56003e703127a41676"
         }
@@ -15330,7 +15361,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 78,
+          "line": 79,
           "kind": "literal",
           "context": "a2741d936da0c7f3d28632c3a532af76cb8beb7409ba17ae2450e17c12c48201"
         }
@@ -15341,7 +15372,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "05e9aba0f0eddef9f2285924f6692cb557d385e483d49cf5c424172fb7a78f06"
         }
@@ -15385,7 +15416,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a54c53c265422f0114a591465a12c74d3bf9d9f3bed7fe27a092bfc8256f0153"
         }
@@ -15418,7 +15449,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "ae223166bfa41589bc93415c8d42271e5c49b8e4a4e35426e8ce8145b6445a33"
         },
@@ -15524,7 +15555,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "088812cc7dcc80bd97581c686861898ad20c01cae3d902cc647d5dd91720f2a7"
         }
@@ -15546,7 +15577,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "09a2b9f8811b0cd4230baccba0147f69520d38f30cba5f83bb0dd117f41be731"
         }
@@ -15557,7 +15588,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "615f4212a482dbe91ee5694f3619f8b7f336b6bfebb731cb47b243372d5adc09"
         }
@@ -15590,13 +15621,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "f2193f4ecaa36181191126aa932038fd4ef812df338aa17cc10e1e3f39a01ad0"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "cf484031983fa3ea00e9baead4becc2c2757dff88bc29b13f6b318d57674041a"
         },
@@ -15961,7 +15992,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "e7f0d5ec284de3bacd929e9f015d144b7013a50599cf9db9942cee3410bc5015"
         }
@@ -15975,6 +16006,17 @@
           "line": 139,
           "kind": "jsx-text",
           "context": "f8001def41476c1bc54b9af150bcd1790b16cf2477a54dd82ff556b4acc1407c"
+        }
+      ]
+    },
+    "cd6cc6a6cc0e": {
+      "source": "Pause audio",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 51,
+          "kind": "literal",
+          "context": "9b9d0bb8e9fbef1fef911bda04a626beb0b36bd638554430bfe59f4a4b110636"
         }
       ]
     },
@@ -16005,7 +16047,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "b85b4df5b7c216f156d615c0483737b60e18a51146172f2775f27d43a48ae7c5"
         },
@@ -16085,7 +16127,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "6baf03387185734f7c879baf6f9f724d090cab9419f92feeb192e62236d3421d"
         },
@@ -16169,7 +16211,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "674b3f0ea31701f22d29c884d5a74eeafe3cd52bd8257fa11e7000e6cfb12bf4"
         },
@@ -16255,7 +16297,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 43,
+          "line": 44,
           "kind": "literal",
           "context": "9756d5994dcacd07d7828871863ebf96e6857613dc9bfda64ecfd8a476f24bab"
         },
@@ -16289,13 +16331,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "0c1a96e946d0e8370778841ba720ebc5444d768751b8bf9874d261ccaf1303f9"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "c824cf07d2c53845b7fed03ea0bce1fe5eca98a15920f12f66527daad25a881c"
         },
@@ -16446,7 +16488,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "1b312c55fc7b8016c2bf7c699484137ca472e9395c4663dc908ca5b663b8cbb6"
         },
@@ -16541,7 +16583,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 40,
+          "line": 41,
           "kind": "literal",
           "context": "767e0d8c10a1355c964bdea203ad5996aa87e1f42fa7e8f9350fe6e0dd076fef"
         }
@@ -16552,7 +16594,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 42,
+          "line": 43,
           "kind": "literal",
           "context": "c21cf72ee25c0a373ba30bc8e391917e5b59399395d4301b3986b56a5bef032f"
         }
@@ -16624,7 +16666,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 54,
+          "line": 55,
           "kind": "literal",
           "context": "827e34cd06b50f6c1de32f4773537e896148b05bd29b3d609f1488e76db69740"
         }
@@ -16657,7 +16699,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 54,
+          "line": 55,
           "kind": "literal",
           "context": "83c9736da8f7464353c56ec5b44505d6b2743c6117794e7e37883abdfefa6f28"
         }
@@ -17011,7 +17053,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "740cbc71a0dde3ffb36e9b5d7730399c8aaae28009884dc7861900d2638d546c"
         }
@@ -17044,13 +17086,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "b7a11275910e2ae255b1e2597a943e18db57c0f5d2713dcbb37a13f5f5a929f0"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "82c4d329b954d5a7552ade776d004a9d9db8823ffc6bf17e98dfb85f5e15a5ee"
         },
@@ -17106,7 +17148,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "c90638fea4453aaa35e1bb4387613c7c2946a500a5e3176b029f8f8f74f36da0"
         }
@@ -17150,7 +17192,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 234,
+          "line": 235,
           "kind": "jsx-text",
           "context": "96ec257d5c70b3a7084b555f48d20b1b765ebb88f3509df3d9744b6911eee624"
         }
@@ -17322,7 +17364,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "30d4e39d70a9e7de3a727c7a4845e8caca644915427f27819b5a2b23a79b47ed"
         },
@@ -17357,25 +17399,25 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "ac5eebbcb4fdd995488527c9c10bf7ed86689803c43627ceb3732628fdada2c2"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "80b7f4189efdce8bd74f5d5ab31e2843f451d54ee758af3d5705ac0ceebb8a3d"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "4528f58e9f51472fafa7acc5e164a799b0de3d34bb0221242904ba4c4c5dd721"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "2c6130ed0460dc04b04989c33d6fca59df99651384e889e6dbb2c27e8f5ed088"
         },
@@ -17427,7 +17469,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "90a8f532d7de1447feafb8354800a7ea0483c92ab54d7d5396aec83e8f216ef3"
         }
@@ -17455,7 +17497,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "6ada8c3ff22080237ffc6b08a4932473ed1c77e4f633d22516a1eff18d32e705"
         },
@@ -17505,7 +17547,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "cb9a3ea268f7bc1053d3e03cbc66748607e3983fda735809613462144bf799f1"
         },
@@ -17522,7 +17564,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "d0df5bfccd7d857213e2e6237376904dcbe89ac35075c2a9184c8e9743d423be"
         }
@@ -17629,7 +17671,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "044626c6fb25ddd036cfceb8a4708317e3840b43517311d8c673e64ff976e5b2"
         },
@@ -17740,7 +17782,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "d9ad5951d819820bf3779a2e4bf4ca4bcd1681ca3b6b81314771e62a2a81701a"
         },
@@ -17807,7 +17849,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "29d1ea367b8171c0174c33abe104e247de0812356acc097006742b82ac366e8f"
         }
@@ -17840,13 +17882,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "eebace46e89859c250044762aec2779275b90fccfd77efb138e9d274a0a861cd"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "2ee44a96dab566a234598a31028877f1a76fd5f4ade5f59bbc7e11d9d5a011c6"
         },
@@ -18049,7 +18091,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "b583e55ce837563f59bca45379a93c25ed4286b007613015c62aa1b33df77f08"
         }
@@ -18099,6 +18141,17 @@
         }
       ]
     },
+    "562107b866b5": {
+      "source": "Read aloud",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 46,
+          "kind": "localized-source",
+          "context": "aa3e05359980d937efa65911cd610173247bf0985df63279064c35ad0a95f89c"
+        }
+      ]
+    },
     "601dcc1c87c3": {
       "source": "Read only",
       "occurrences": [
@@ -18137,7 +18190,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 209,
+          "line": 210,
           "kind": "literal",
           "context": "5fa1ae0f172676a83b44c6fb9185ad6ef0737bc86aa6d547f04eaefaf82b4139"
         },
@@ -18222,7 +18275,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "b3b3c900c1c0a775a0a8d94bc96014bf3c7913eac8cbfd68bbe65b4cc5f9a76e"
         }
@@ -18444,7 +18497,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "13d5c6922fceae2c6da1d63db12b80cd58557544e8d038d23f235d665400a24e"
         },
@@ -18621,7 +18674,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "4de5b9aa65ff198d89fe08efdfaebd20527cf6d53b43b3de8bf0e7528082cda1"
         },
@@ -18925,7 +18978,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "450683314bd8133b05d323ae4c19792b92ece3dfa19b8f9d49f4054a86215e59"
         },
@@ -18942,7 +18995,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a811ccbd3702a11cb98bcdf0e8f62253f43fbabc082c6c1722de91364554ad6d"
         }
@@ -18992,7 +19045,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "0e5c97eb9f28a4010a8c84c812524d6922868cf9307779ad89b55ad91ab2897b"
         },
@@ -19070,6 +19123,17 @@
         }
       ]
     },
+    "2e31246073cc": {
+      "source": "Resume audio",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 51,
+          "kind": "literal",
+          "context": "9b9d0bb8e9fbef1fef911bda04a626beb0b36bd638554430bfe59f4a4b110636"
+        }
+      ]
+    },
     "44b0f3372ad7": {
       "source": "Resume bookings",
       "occurrences": [
@@ -19141,7 +19205,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "88a4b540f985b538b72e2a5d4ebcc9f2715cb080ab80b926038f1b82ff3e29ae"
         }
@@ -19152,7 +19216,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 218,
+          "line": 219,
           "kind": "localized-source",
           "context": "2fc3473fa114e1c5e3b0406db1bba73824d1e9301d122e4af7a4c147c530d852"
         }
@@ -19378,7 +19442,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 194,
+          "line": 195,
           "kind": "localized-source",
           "context": "faf5f25ad6fca66a3d19b4ac4718eb238a7f088a8d10fb3161015b557ca72cc9"
         },
@@ -19435,7 +19499,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "6959abe8cfc668de26c96aae2079baa77971423c7003495011e728f9d153aef7"
         },
@@ -19580,7 +19644,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "2ab444214fa24a96b5a0dafeed06d341a435cabcdd2bf408b755e40422ecb579"
         }
@@ -19663,7 +19727,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "47c59f77a160f3e3499be1ad4d425e50d96bcea86b73a994dea49c6cfb81b3ae"
         },
@@ -19969,7 +20033,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "ead7c254fd8679d5ff5ef4867472f7730638dc87b156a15b153d15f4758d7c04"
         }
@@ -19980,13 +20044,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "240fcec8a27fad82b85482f7e825db294bba507878196c07e7e962286f71e3aa"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "79805bd277fc071a509ecaf5c05182aed9a7ea9bd8d4f9c8ed9ac7c65241cd57"
         }
@@ -20425,7 +20489,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "ac5cf602009796744af9ce27d575a207831749bce92884ab8a5d58224be5ed95"
         }
@@ -20657,7 +20721,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "7df3c3b4fecf5dc0db9928eb355fc97071cb8dd11c2c19b7953da9a261a0d017"
         },
@@ -20848,7 +20912,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "literal",
           "context": "f04e7f97b68e7020a5a19ebd7a6ce87cc5c92ccae3bf4b54f82c2c11f83a7bdc"
         }
@@ -20859,7 +20923,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "literal",
           "context": "f04e7f97b68e7020a5a19ebd7a6ce87cc5c92ccae3bf4b54f82c2c11f83a7bdc"
         }
@@ -20881,7 +20945,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "f4c39989db0617fc6d0720d5c92303698af2f2f86d16e12b4ad14f9e13b06940"
         }
@@ -20909,13 +20973,13 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "d3e12e9a0fc09515053345e074719b6506c328a3b0477dea30df011b365fb27f"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "94e6862b7d9f952fb03200a56912b307cacddcdc17e92facf771c08c4e8e4763"
         },
@@ -21167,7 +21231,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "bd9144726f01448af97aa93ed51723284121979fe1c5f3f3a1b1dd0c82e7fe80"
         },
@@ -21239,7 +21303,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 178,
+          "line": 179,
           "kind": "localized-source",
           "context": "845bc04282ce8962dfb0df27033b4e400587eaaad33a0d2246366ac309c55471"
         }
@@ -21413,7 +21477,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 50,
+          "line": 51,
           "kind": "localized-source",
           "context": "bb261d0313ed15660469924535dd50a757ca4eecd700e801330d05bc2a7c9480"
         }
@@ -21490,7 +21554,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 77,
+          "line": 78,
           "kind": "literal",
           "context": "019af3b90c852eb728afa02c9e7bb4023a2cbb0c46582394e2f69b62ddc4d80c"
         }
@@ -21534,7 +21598,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a4446a729b746d4d82a09fa9945b8f7ebbecb5f0f33314c995959a00d0a7383d"
         }
@@ -21650,7 +21714,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "7cca9657f46ea45312535a114ffde2971f352e414830348255bcf9f99901cc95"
         },
@@ -21678,7 +21742,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "598fc8dd18854e717f6f173c61a35ab8873669f91f8f6af4691974bf150122a7"
         },
@@ -21709,6 +21773,17 @@
           "line": 251,
           "kind": "jsx-attribute",
           "context": "1f527e2b372cc1b5b52a5310d3892d2267f88e8d4f257b6cec21d32219be8dc6"
+        }
+      ]
+    },
+    "2beba88cba62": {
+      "source": "Spoken answers use an installed voice on this device. Audio is not saved.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 55,
+          "kind": "localized-source",
+          "context": "0e30b3cd198c1c4901cbe1828168ae497e089c8e7aa58311b2c30b0951d24380"
         }
       ]
     },
@@ -21863,7 +21938,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 236,
+          "line": 237,
           "kind": "localized-source",
           "context": "bedbb494ebedd9e1a6f1350a6c121c4b6ec8a71cbddbb6542eb3e1d42be4cb31"
         }
@@ -21983,13 +22058,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "404a21e3bf7cadb2196aac322ce3549468174faed6b2cc85f63a2dbc34d4205a"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "e7075c7afa4d52e89a9616c4994e860b1d1e0591413b027bc6b3cf18f9c362cd"
         },
@@ -22006,7 +22081,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "382f7191a95e214ac004c2159e0f8511a92af52d265d515ad8459fe57c668a7b"
         },
@@ -22035,19 +22110,19 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "7827aa55b87d18b5c85575de44dff31f9ca122553377f63e8cab9ebe8bd4338e"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "a080ad6be282d116db8b7a456982457caaf9599f3e60785b93e29cd452d2926f"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "84087a2497a379a37d8ecb034f5fa95ce7aec74307fb1c73597adf4c5fcc2b99"
         },
@@ -22076,7 +22151,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "6c6ee2d7c07b34963da0d42b67a9794828829419bd43f8f12407c9df17c26593"
         }
@@ -22132,6 +22207,17 @@
         }
       ]
     },
+    "15d40254eddd": {
+      "source": "Stop audio",
+      "occurrences": [
+        {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 52,
+          "kind": "localized-source",
+          "context": "a28ea8cbf4f548423533b15eca896b0e7eb397e1f5881261cf4b336c8390789d"
+        }
+      ]
+    },
     "96ad53f13938": {
       "source": "Stop dictation",
       "occurrences": [
@@ -22182,7 +22268,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "208f8493b61f207d6c9f85b886f103b0ab6be1afa5bb5d5bb90c3ca3425c5462"
         }
@@ -22415,7 +22501,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "ac79a3cbfea8f13c33be418c9dbd351b820b0747639c185b1437f1b3046cf2f8"
         },
@@ -22681,13 +22767,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "f2614360ebdc0e20d060e948ad47255634e46b02762c82abe5172e3d7ed9bb82"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "d348de956a47e7444d8dc5d0c8dae7fdfc9746b40824837763d1bf818856668c"
         },
@@ -22783,7 +22869,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 176,
+          "line": 177,
           "kind": "localized-source",
           "context": "76b2312139971034e96de85bbc7ea7097b94e2d35bad898f88d17b4ca25a90d9"
         }
@@ -22845,13 +22931,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "5a465416da56777d7ec4bcd89d9bd78667374c3590538b6e6937700322bea189"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "3f5c6a48f25c93b366f1ddf1fa1bd190175aa6c718cd7f8f272c5690e9cf70fa"
         }
@@ -22884,13 +22970,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 227,
+          "line": 228,
           "kind": "localized-source",
           "context": "08a301f9040c4e1e80436cb32750013695eea153936eec51c09f8156ef652341"
         },
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "localized-source",
           "context": "08a301f9040c4e1e80436cb32750013695eea153936eec51c09f8156ef652341"
         },
@@ -22908,7 +22994,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 209,
+          "line": 210,
           "kind": "localized-source",
           "context": "08a301f9040c4e1e80436cb32750013695eea153936eec51c09f8156ef652341"
         },
@@ -22964,7 +23050,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 42,
+          "line": 43,
           "kind": "literal",
           "context": "c5b101f06c406abe8aa649d29cdb8f37edc9d784e300245696f170c3374ca2f4"
         }
@@ -23190,7 +23276,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 75,
+          "line": 76,
           "kind": "literal",
           "context": "1bafcfc078938f26088d4c7c9717821e305f74029969466e7b302d1d28032a9f"
         },
@@ -23207,7 +23293,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 80,
+          "line": 81,
           "kind": "literal",
           "context": "b8c11617c7f1bf42e8ce1a2be5c658feebe4c076e5e0559abc84e38fe9d1ffe4"
         }
@@ -23301,7 +23387,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 154,
+          "line": 155,
           "kind": "literal",
           "context": "4e7b6c42dc913cfc712a7f5677b4d4dd72485875ec03be78ce745c368e1b7bf4"
         }
@@ -23359,6 +23445,17 @@
           "line": 64,
           "kind": "literal",
           "context": "f0b67ba30b92d1b9de3655470df89ca2384f3dde26904d7c9d6df87ee02267f9"
+        }
+      ]
+    },
+    "27c99dc08dcc": {
+      "source": "The free translation allowance is exhausted. Keep the original text or enter a reviewed translation. No paid upgrade was made.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 7,
+          "kind": "literal",
+          "context": "27b3eee66bdb7e24b98ab6a713dfc6a21a3585c1904785dc252e8c5c4684a609"
         }
       ]
     },
@@ -23552,13 +23649,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 185,
+          "line": 186,
           "kind": "literal",
           "context": "ec600c15e064f895583a2ef8163f6ee18500dadbf258742cf6e57cd5d0bdba80"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 153,
+          "line": 154,
           "kind": "literal",
           "context": "ec600c15e064f895583a2ef8163f6ee18500dadbf258742cf6e57cd5d0bdba80"
         }
@@ -23591,7 +23688,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "ac375121e9bbb65e3d6b82137eaa4e0be3f0e5fde46da1ad3b418b465988425b"
         }
@@ -23863,6 +23960,50 @@
         }
       ]
     },
+    "32b633c4f1f4": {
+      "source": "The translation account could not be authenticated. Contact platform support; the original text is unchanged.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 6,
+          "kind": "literal",
+          "context": "47b8f0343d669375c1725c14a54999741893ec435efa89963daea6c6f3026c40"
+        }
+      ]
+    },
+    "9abc1184b478": {
+      "source": "The translation did not preserve the original details and was rejected. The original text is unchanged.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 11,
+          "kind": "literal",
+          "context": "b620a97131dfb4376c8c2f294ddbe42e9633ad0034a1ece133c82f255f9b5fed"
+        }
+      ]
+    },
+    "48b78d719fb4": {
+      "source": "The translation provider does not currently support this language. Keep the original text or enter a reviewed translation.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 8,
+          "kind": "literal",
+          "context": "4d867ac20a97c0ea066338df2ec168d6cb704c91bf73e6909b1b0de628253288"
+        }
+      ]
+    },
+    "59be93a814c7": {
+      "source": "The translation provider is busy. Try again later; the original text is unchanged.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 9,
+          "kind": "literal",
+          "context": "83ff61fb39f031cfafc9ace6401afc418aa1bac25a85e1938ef7007617b98a06"
+        }
+      ]
+    },
     "11551467d480": {
       "source": "The video uploaded, but could not be saved.",
       "occurrences": [
@@ -23907,7 +24048,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 85,
+          "line": 86,
           "kind": "literal",
           "context": "1df98ec76d018d62094e57b9674ff55e78e3eb188ed58ec08047f7d0fdb950d8"
         }
@@ -23929,7 +24070,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 75,
+          "line": 76,
           "kind": "literal",
           "context": "c0157cabae469e1adb8c2bd43d2e552fac253ea0a83082bfffeb7a88df92216d"
         }
@@ -23951,7 +24092,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 54,
+          "line": 55,
           "kind": "literal",
           "context": "7ae5b089d7f46b9580d3384c05cd077947da632f1a1a36b6fcf9722c7907e0d2"
         }
@@ -24113,7 +24254,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 78,
+          "line": 79,
           "kind": "literal",
           "context": "fa8085de105dbe90d27c37f666204dc648368a08c4db9aa6811bd65a8331ca47"
         },
@@ -24251,7 +24392,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 79,
+          "line": 80,
           "kind": "literal",
           "context": "ec01ee64032c9e1eab2c6b0b792b51a7c0bfac09c105ec2c26aa4ab72f8d05a6"
         }
@@ -24361,7 +24502,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 195,
+          "line": 196,
           "kind": "localized-source",
           "context": "3c125cfc49a2f92bc14aa9d1063dedb8a54b5db87621a0fba439b2912721372f"
         }
@@ -24383,7 +24524,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 196,
+          "line": 197,
           "kind": "localized-source",
           "context": "bdd77e4ca4413365f8a50b6d0b06d4cf9a8e47f108a5e8bd1de71b9e79e40b84"
         }
@@ -24461,13 +24602,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "b2b1023efad92018ec7f71631b61d88dc3080ad2239ae8cb9e92a94ca7332e5e"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "964c37ce34fb87a572ede208390cd8c40f0fd152c9a5e1c89e3ca3535fe6fcfe"
         }
@@ -24478,7 +24619,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "c15874d5a4e7e3dcbaefd68c9bc4f5053dd572c0aa9cfbab87b660e3f4cf3687"
         },
@@ -24517,13 +24658,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 37,
+          "line": 38,
           "kind": "literal",
           "context": "b246879ba2feca04be0fd97e73e17c63c421d54b749fab59c6aa3194aea17355"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "b3bcc0d0f719f45d51c4db78dea3f965a6990bbdb069863184cfeda7750c5d47"
         },
@@ -24551,7 +24692,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a1bb55388357eb7d0c3745468e0d368e78ce0d765b6b7cb52ee59b08bd654f49"
         },
@@ -24585,7 +24726,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "44bb32e68d7c33b804facf6f1ea56d03e7e6acc909212a6597aa5da5a72c5538"
         },
@@ -24630,7 +24771,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 82,
+          "line": 83,
           "kind": "literal",
           "context": "6e8c136b5ab426ca33cbe72d6c1b888bfbd7f98648efa7d872d1fcef48b9d03c"
         }
@@ -24641,7 +24782,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 54,
+          "line": 55,
           "kind": "literal",
           "context": "a32bbbe227c6f2fc7b2ba4852dfa1dacbab6e2b7f5415050997c6f2437f19b2b"
         }
@@ -24663,7 +24804,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "bed34780248497a92ea1ad971876b5a302f7e5ac80adc4242fc72dde4a9fede1"
         },
@@ -24680,7 +24821,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "4100fc8530c7cdc69eba2258abd0df1a5405821422182fdd5e39a1fd81276c00"
         },
@@ -24902,12 +25043,45 @@
         }
       ]
     },
+    "77ab1c83fbf6": {
+      "source": "Translation is currently unavailable under the configured limits. Keep the original text or contact platform support.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 10,
+          "kind": "literal",
+          "context": "8143d2faa982281650f0b42803394aa502c46c6740b12c82fc21eb4067beeb01"
+        }
+      ]
+    },
+    "6744ecd77f8b": {
+      "source": "Translation is not configured yet. Keep the original text or enter a reviewed translation.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 5,
+          "kind": "literal",
+          "context": "4b7a0d2eaaa13bdbd5fbb2f1e60e84bce7104a1f46210eaf3be491546d6cfbf8"
+        }
+      ]
+    },
+    "485cebfcac5f": {
+      "source": "Translation is temporarily unavailable. The original text is unchanged.",
+      "occurrences": [
+        {
+          "file": "src/lib/translationProviderErrors.ts",
+          "line": 14,
+          "kind": "literal",
+          "context": "932896104268522947c934641388a43ec50ec1f93e087324aca3e09bc9744e49"
+        }
+      ]
+    },
     "0b85f9e56e97": {
       "source": "Translation language",
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-attribute",
           "context": "0ad761c6513dc0225345b3255bcd8679b6de773156980ce659b26485bdc1d077"
         }
@@ -24918,7 +25092,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "85dae4d271e89fc79ccb2ed97e3901fb33f3adb05f1105e3eadfdcf23fc18d6c"
         }
@@ -24940,7 +25114,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "0fd24304b929f7d929e22d917fe1dc984af338353d0f902bbc12967c3ec456c9"
         }
@@ -24962,7 +25136,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 227,
+          "line": 228,
           "kind": "localized-source",
           "context": "5c5b2936ab6c1cd70f3745d578c8134302ed51db4f531765a0643ded0fe92e94"
         }
@@ -24996,13 +25170,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "f4e13d56fbaa143607bdbda6c692be794b35fc48f5ae1b4a9ec6c5de147f5e7d"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "8f95b5a7e547641c2c682d3715469a1d0af92591817867d245b25e0461d0a90e"
         }
@@ -25053,7 +25227,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-attribute",
           "context": "ada857cbd20edd0230d1ca85a78f8edef4336918e898a1e64d9ff8529eb9d591"
         }
@@ -25148,13 +25322,13 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 114,
+          "line": 115,
           "kind": "literal",
           "context": "30bd61748c5aa6523359cb0c2e8564a8f0eaa59f758caaa428f735ced860342c"
         },
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 117,
+          "line": 118,
           "kind": "literal",
           "context": "04610f8d8d7d84a4b5e04ae5f234f5f4645a5dfa4d6975a3601821c25db579b3"
         }
@@ -25215,7 +25389,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 136,
+          "line": 137,
           "kind": "literal",
           "context": "4b4a8dacde4f48eb787cbb3529e31f66fcc73f64d2ba2fb68f90b3c2f22f3140"
         }
@@ -25243,7 +25417,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 219,
+          "line": 220,
           "kind": "literal",
           "context": "2cdb8ab5231bb041a5b595961d815b595b5fed98cf08797f94a098c026a5a5ed"
         }
@@ -25349,7 +25523,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 187,
+          "line": 188,
           "kind": "literal",
           "context": "893f19e166f68190f5e3d583069c43298950db961ae98647a484e3ecf621f244"
         }
@@ -25567,7 +25741,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "71b9542fc3a98be1bce6f93f3d2c29df7c46d27538074196318824c5566ff3dd"
         }
@@ -25690,7 +25864,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "e6905e41c945b283117bfb3229acc913b80be094e115c694927a533384d5b5db"
         }
@@ -26201,6 +26375,12 @@
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         },
         {
+          "file": "src/components/owner/AssistantSpeech.tsx",
+          "line": 1,
+          "kind": "literal",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
           "file": "src/components/owner/BookingCheckInExceptionForm.tsx",
           "line": 1,
           "kind": "literal",
@@ -26527,7 +26707,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "606f9e5a9d0d533fb80d241c4d53e40e19fe3980cda7f0e4ef98b87a2a8490c1"
         }
@@ -26626,7 +26806,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "6b0076b8f4ac658135f9e79ad352ad280ac473cf93285b4cfe714ef655d154d9"
         }
@@ -26670,7 +26850,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "3c309cad34e4a7ba3350ac5fa2efad4d784e829d7df700dc866b7392764ce0c4"
         },
@@ -26687,7 +26867,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "a758aab4169d795684d9b1b427e2d5a584501492bbe917881e886e09867e3101"
         },
@@ -26884,13 +27064,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "cd582e02c1348b22801890f9c1ab6d7656910c243f52f46fab71695933d1aac7"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 45,
+          "line": 46,
           "kind": "literal",
           "context": "1b3ebb30098961ece07218fc1d9a77536edc163dfc5c87f57f4f37aefdc586b4"
         }
@@ -26978,7 +27158,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 215,
+          "line": 216,
           "kind": "localized-source",
           "context": "95593de1fa16f750ef6a24e91b8ff1d8c39610de1c64cb437b35fe5344924f5e"
         }
@@ -27011,7 +27191,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 61,
+          "line": 62,
           "kind": "literal",
           "context": "ce41b4d278f283c138b4d19a29c74087c7e8e0eae9b750e52f18adab10b0d0da"
         },
@@ -27039,7 +27219,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 75,
+          "line": 76,
           "kind": "literal",
           "context": "7703eac981acc7f90c1a1be2f849f665bb1c3802be6bfde589a45e823b92f158"
         },
@@ -27056,7 +27236,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 75,
+          "line": 76,
           "kind": "literal",
           "context": "aa1e78060f94e02fef80a309793d91f3a2712c06ec6e6b72437dc73a34ad82ac"
         },
@@ -27151,7 +27331,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "caa990f5142c125c1d7254bb641bde2b603a48149bc4d9a7d23a65b033845be5"
         },
@@ -27202,7 +27382,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 209,
+          "line": 210,
           "kind": "literal",
           "context": "5fa1ae0f172676a83b44c6fb9185ad6ef0737bc86aa6d547f04eaefaf82b4139"
         },
@@ -27341,7 +27521,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 34,
+          "line": 35,
           "kind": "literal",
           "context": "d4ee065e7d77015d82c99cc33af94a424befe01eda7a3f53c6507b6d2b898f02"
         }
@@ -27380,7 +27560,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 56,
+          "line": 57,
           "kind": "literal",
           "context": "577d71de58f0338189b82b893a7718e554fd247a30e85f836fd5457930f191a5"
         }
@@ -27391,7 +27571,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 54,
+          "line": 55,
           "kind": "literal",
           "context": "a8e9ef13e5f51e348e4abf53cc29c1f9a4c076a78b3581e261965ef796c7ac21"
         }
@@ -27402,7 +27582,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 77,
+          "line": 78,
           "kind": "literal",
           "context": "0241356a41842ffdef750df4429c7b82de566cba8146ee180ff07349694bb6f0"
         },
@@ -27519,7 +27699,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 163,
+          "line": 164,
           "kind": "localized-source",
           "context": "8d0abd3736eaac09622312be8828cc422a1ba0529f66444ce821f7a67320e928"
         }
@@ -27536,7 +27716,7 @@
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "literal",
           "context": "ab5c18f5fae2d4824d1722b60ed2382485bbe5fa66fb52f57e5ac3d3a9d12f44"
         },
@@ -27564,7 +27744,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 151,
+          "line": 152,
           "kind": "literal",
           "context": "d3e78725950300210475fac17897767feca7f9e66ffe68792b98b2c8ece80b25"
         }
@@ -27865,7 +28045,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "literal",
           "context": "fd3f44c21e89a12009b74f59b4508b82fd3f6544f42b3ef41c37d3880fd7d5a4"
         },
@@ -27892,6 +28072,12 @@
           "line": 18,
           "kind": "literal",
           "context": "6e1ad54b32f33690499d80aa3e80169d20be90af930a8f4212559d5fb20e5559"
+        },
+        {
+          "file": "src/lib/assistantSpeechCore.ts",
+          "line": 7,
+          "kind": "literal",
+          "context": "b185e80d289062217072ace8f5be5bd45d4053c7b4f69ae5692668d5b39fdc8b"
         }
       ]
     },
@@ -27900,7 +28086,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/GcAssistant.tsx",
-          "line": 38,
+          "line": 39,
           "kind": "literal",
           "context": "7e89a4b792cc0585f3d1e9a06a64aa41124e6bc6ec61dfccd14dfb6fc49fbf80"
         }
@@ -27933,7 +28119,7 @@
       "occurrences": [
         {
           "file": "src/components/BookingInbox.tsx",
-          "line": 241,
+          "line": 242,
           "kind": "jsx-text",
           "context": "77fc0d22a51797e111f1bda378197ae48afe0a9569d03ddaa404abcd409a5529"
         },

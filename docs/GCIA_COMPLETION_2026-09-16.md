@@ -1,0 +1,87 @@
+# GCIA completion acceptance — 16 September 2026
+
+This is the current acceptance record. It does not certify completion while live or physical-device evidence is missing.
+
+## Authorization and release baseline
+
+The founder explicitly authorized execution of `GCIA_Codex_Completion_Prompt_2026-09-16.md`, including routine merges, reviewed migrations through the protected production workflow, held-candidate verification and deployment. Required gates, account controls, the existing $25 owner / $25 customer monthly caps, customer-data isolation and the marketplace prelaunch flag remain intact.
+
+- PR #69 merged with expected-head guard `cc8e91d388f287ce37c9584215f9ab372c7200e5`.
+- Merge: `219f5a9e4404140be42d56f5bffc12fc6cf05b02`. Tree `35ef9b976ce1ab038e600f55dd84a36709adaa7f` exactly matches the reviewed candidate.
+- PR CI and release checks passed; an independent local core run passed **191 / 0 / 0**. The first local attempt was blocked by Windows sandbox worker-spawn permissions; the approved unsandboxed run passed.
+- Exact-main CI: https://github.com/girlzculture/girlzculture/actions/runs/35148729892 — **PASS**. Full browser section: **512 passed / 5 skipped**. The five skips are viewport-specific mobile contracts on desktop/tablet-landscape projects; corresponding phone projects exercise those cases. Google Maps is not among those skips.
+- Published baseline / rollback: `585f501b490f29ed5c3be63accfc36eddd1ddd04`, deploy `6aaadcf3827d520008801ce8`. Publication locked; independently unchanged after merge. PR #69 is not published yet.
+- Production Supabase metadata: healthy; 149 migrations through `20260915133423`. No production schema or application data changes made in this continuation. Provider environment configuration is being coordinated separately; existing feature/budget settings remain unchanged.
+- Follow-up implementation: `codex/gcia-direct-providers-completion`, based on the merged PR #69.
+
+## Provider evidence and secure handoff
+
+Site `girlzculture`, ID `e7da549f-eb32-48e2-9d78-ca06fe2fb91a`.
+Site-level environment metadata did not contain `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `DEEPL_AUTH_KEY` or `DEEPL_API_URL`. The authenticated official Netlify CLI independently confirmed their absence; the team shared-variable inventory was empty. Absence from the site list is not proof of an unconfigured live gateway. No secret values were printed or written to local files. The connected Netlify browser has no authenticated session.
+
+PR #69's held production-context build is ready: `6aab00880e9a9300094a3813`, commit `219f5a9e4404140be42d56f5bffc12fc6cf05b02`, unpublished. No live authenticated AI acceptance has been performed on it. The founder has been asked to enter only the two provider secrets directly in secure Netlify production Functions settings and give nonsecret confirmation of the OpenAI credit/spend configuration. No full provider-account password or admin key is needed.
+
+Production feature metadata confirms OpenAI `gpt-5.4-nano`, 500 daily requests each and 2500 cents monthly each for owner/customer. Translation drafts are disabled, test provider, zero monetary budget, 25 daily requests. No settings were changed.
+
+Direct credentials must be entered securely in Netlify **production context**, scope **Functions** (and Runtime if required by the adapter), never in untrusted deploy previews or repository files. Endpoint/key pairs must be configured together before rebuilding a held production candidate. Proposed translation approval is `deepl` / `deepl-api-free`; reasoning stays `openai` / `gpt-5.4-nano`. No recharge, purchase, subscription or paid DeepL endpoint is authorized. The reported OpenAI $50 purchase is not yet independently confirmed as an available balance or spend limit.
+
+The founder subsequently confirmed entry of both provider keys. Metadata verifies both names exist, including production. They were also assigned to preview/development contexts; those assignments are being removed before another branch build. Values have not been logged or copied into files. Endpoint pairing and held-runtime acceptance are still pending.
+
+## Acceptance matrix
+
+| Scope | Status | Evidence / remaining boundary |
+| --- | --- | --- |
+| PR #69 planner exclusivity, inventory excerpt, support reference | AUTOMATED ONLY | Exact-tree CI and 191 local core passes. Original live failures remain in the preceding planner record. |
+| Direct OpenAI runtime and real five-language service follow-ups | BLOCKED | Dedicated project key / direct endpoint and authenticated held-candidate session not verified. |
+| DeepL Free adapter | AUTOMATED ONLY | 14 focused adapter/route tests pass: mappings, Free origin/auth, no retries, fact preservation, private-message separation, authorized metadata and exact protected incident references. Real quota and translation not yet exercised. |
+| Translation provider governance | AUTOMATED ONLY | All 150 migrations and 16 DeepL SQL assertions pass on a fresh local database. Reviewed production application remains outstanding. |
+| Owner approved reads/prepared changes and audit | AUTOMATED ONLY | Existing platform services retained. Live isolated save/refresh/role acceptance outstanding. |
+| Whole-dashboard/page-aware help, metrics/entitlements/trends | BLOCKED | Existing capabilities being audited against the brief; unavailable metrics/trends must remain explicit. |
+| Conversation memory and tenant isolation | AUTOMATED ONLY | Existing bounded conversation mechanisms retained; audit and live role checks outstanding. |
+| Dictation and spoken answers | AUTOMATED ONLY | Explicit installed-device voice playback, pause/resume/stop, account/language/close cleanup, no autoplay or paid audio API. Five core speech checks plus 20 real-browser UI tests pass. Browser voices are simulated in those tests; physical-device/native-language quality remains BLOCKED. |
+| Customer search, follow-ups, booking/support workflows | BLOCKED | Existing implementation being audited; no real notifications or charges permitted for testing. |
+| Prior launch corrections | AUTOMATED ONLY | Existing CI evidence plus historical live checks in the dated handoff; fresh acceptance outstanding. |
+| Production publication | BLOCKED | Held candidate, exact-main checks, authenticated real-provider acceptance and secure configuration required. |
+
+## Implementation and validation notes
+
+The translation adapter uses only `https://api-free.deepl.com`, rejects redirects, requests current stable language support from `/v3/languages?resource=translate_text`, checks `/v2/usage`, and requests `/v2/translate` with `DeepL-Auth-Key`. App mappings explicitly include `en-US`, `fr`, `es`, `wo`, `zh-Hans`; an unavailable target fails before the translation POST. Wolof quality/support is not inferred from its locale code.
+
+Protected names, numbers, URLs, formatting placeholders and booking tokens must survive exactly. No translated text is cached globally. Existing booking cache remains keyed by message, locale and source hash after authorized booking lookup. Private message-display translations no longer duplicate message prose into the global editorial draft queue. UI translations remain unpublished reviewable drafts.
+
+The local migration permits DeepL only for `translation_drafts` / `deepl-api-free` and adds a service-role-only, row-locked character reservation using the existing usage ledger. It does not enable a feature or change a monetary cap. Failed/uncertain reservations are retained conservatively; account usage and API Free enforce the quota without paid fallback.
+
+Official references checked September 16:
+- https://developers.openai.com/api/docs/models/gpt-5.4-nano — existing model, structured output support, $0.20 input / $1.25 output per million tokens.
+- https://developers.deepl.com/docs/languages/using-the-languages-api
+- https://developers.deepl.com/docs/languages/migrating-from-v2-languages
+- https://developers.deepl.com/api-reference/translate/request-translation
+- https://developers.deepl.com/api-reference/usage-and-quota/check-usage-and-limits
+- https://developers.deepl.com/docs/resources/usage-limits
+
+Never represent the mocked adapter tests, existing CI, or a rendered deploy preview as real provider acceptance.
+
+## Current local evidence and preserved failures
+
+- Initial DeepL tests failed because the adapter did not exist; implementation passes them.
+- A stale remote quota count allowed reservations beyond the remaining allowance in the first local SQL implementation. The permanent regression failed before correction; a persisted conservative external-use baseline plus a row lock now passes it. Failed/uncertain reservations remain charged against the character allowance.
+- The first database-denial mapping lost the specific quota cause. The added regression failed before correction; known quota/rate codes now survive while other SQL details stay private.
+- Customer conversation state previously survived account changes, and delayed responses could reappear. Two component regressions failed before correction; identity-generation guards now pass these and the new-conversation/localized-follow-up check. Saved-business responses use the same guard.
+- Final core suite for this batch: **213 passed, 0 failed, 0 skipped**. The earlier 208-test run also passed.
+- TypeScript and production fixture build pass. Full lint: **0 errors, 16 existing warnings**.
+- `npm audit --audit-level=high`: **0 vulnerabilities**, exit 0. No dependency upgrades.
+- Owner source coverage: **1,849/1,849** for each of English, French, Spanish, Wolof and Simplified Chinese. This is functional copy coverage, not native review.
+- Chromium + WebKit: **20 passed, 0 failed, 0 skipped** (2.2 minutes), covering governed skills and new speech controls in five languages with phone, tablet, desktop and landscape dimensions. Local server emitted stream-close diagnostics during fixture navigation; no browser assertion failed. These fixture tests do not establish live provider or physical-device voice quality.
+- Fresh local PostgreSQL `gcia_clean_v3`: **150 migrations applied successfully**; existing P0 security tests and **16 DeepL governance assertions** passed. Only loopback disposable databases were used.
+
+## Remaining application audit
+
+Existing tools cover authorized profile/services/products/professionals, appointments/calendar gaps, reviews/promotions, policy and customer-message drafts, published Help content and controlled business mutations. The following broader requirements are not certified by this first implementation batch:
+
+- Page-aware planning: the current planner does not receive the active dashboard section.
+- Current plan status exists, but its result lacks published feature entitlements and evidence-based upgrade comparisons.
+- Booking-value aggregates exist and are explicitly not cash sales; real period comparisons, service/staff performance and settled-payment/fee/refund/payout distinctions need further implementation/acceptance.
+- In-session bounded history exists with owner/customer identity guards; durable opt-in memory and retention controls are not yet implemented. Existing action audit records are not a user-controlled conversation memory feature.
+- Public Help retrieval is keyword based on published source text, without multilingual semantic retrieval. Its source language is unknown, so playback does not guess an English voice for those excerpts.
+- Customer discovery/book links exist, but contextual appointment management and a human case-summary/reference handoff require further audit and implementation.
+- Native Wolof and Mandarin speech accuracy, restricted-team/customer identities, isolated persistence and Stripe test-mode acceptance still require appropriate authenticated accounts/devices/test context. No real notifications, charges or refunds have been issued.

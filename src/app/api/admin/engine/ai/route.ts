@@ -1,7 +1,10 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { requireAdminPermission } from "@/lib/supabaseAdmin";
 import { cleanText, errorResponse } from "@/lib/requestSecurity";
-import { aiProviderConfigured, approvedAiModels, approvedAiProviders, runAiSandbox } from "@/lib/aiAutomationServer";
+import { aiProviderConfigured, aiProviderSupportsFeature, approvedAiModels, approvedAiProviders, runAiSandbox } from "@/lib/aiAutomationServer";
+import { deepLAccountStatus } from "@/lib/deeplServer";
+import { translationProviderFailure } from "@/lib/translationProviderErrors";
+import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 
 async function GETHandler(request: Request) {
   try {
@@ -37,6 +40,7 @@ async function PATCHHandler(request: Request) {
     const provider = cleanText(body.provider_key ?? existing.provider_key, 40).toLowerCase();
     const model = cleanText(body.model_key ?? existing.model_key, 120);
     if (!approvedAiProviders().includes(provider)) throw new Error("Choose a provider approved in secure deployment configuration.");
+    if (!aiProviderSupportsFeature(provider, featureKey)) throw new Error("DeepL is available for translation drafts only, not assistant reasoning or planning.");
     if (!approvedAiModels(provider).includes(model)) throw new Error("Choose a model approved for this provider.");
     const daily = Number(body.daily_request_limit ?? existing.daily_request_limit);
     const budget = Number(body.monthly_budget_cents ?? existing.monthly_budget_cents);
@@ -56,10 +60,17 @@ async function PATCHHandler(request: Request) {
 }
 
 async function POSTHandler(request: Request) {
+  let authenticatedAdmin;
+  let actorId: string | undefined;
   try {
     const { admin, user } = await requireAdminPermission(request, "engine");
+    authenticatedAdmin = admin; actorId = user.id;
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 40);
+    if (action === "translation_provider_status") {
+      const status = await deepLAccountStatus();
+      return Response.json({ provider: "deepl", status }, { headers: { "Cache-Control": "private, no-store" } });
+    }
     if (action !== "sandbox") throw new Error("Choose a supported AI Engine action.");
     const featureKey = cleanText(body.feature_key, 120);
     const { data: feature, error } = await admin.from("ai_automation_features").select("*").eq("feature_key", featureKey).single();
@@ -69,6 +80,11 @@ async function POSTHandler(request: Request) {
     return Response.json({ result });
   } catch (error) {
     noteOperationalFailure("AI Engine sandbox failed", error);
+    const failure = translationProviderFailure(error);
+    if (failure) {
+      const reference = await capturePlatformError({ request, admin: authenticatedAdmin, actorId, error, feature: "ai-automation", action: "translation-provider", actorRole: "admin", safeMessage: failure.error, metadata: { failure_code: failure.code } });
+      return safeFailure(failure.error, reference, failure.status, { code: failure.code });
+    }
     return errorResponse(error, "The AI sandbox could not complete this test.");
   }
 }

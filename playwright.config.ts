@@ -81,8 +81,8 @@ export default defineConfig({
     },
     {
       name: "webkit",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-owner-inventory\.spec\.ts/, /p0-owner-populated\.spec\.ts/, /p0-assistant-skills\.spec\.ts/, /p0-locale-lifecycle\.spec\.ts/, /p0-booking-recipients\.spec\.ts/, /p0-public-policy\.spec\.ts/, /p0-operational-calendar\.spec\.ts/],
-      grep: /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 policy publication|P0 owner route inventory|P0 populated owner|P0 booking composer|P0 original service|P0 Assistant launcher|P0 Assistant all skills|P0 account locale|P0 booking recipient|P0 public policy|P0 operational calendar/,
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-owner-inventory\.spec\.ts/, /p0-owner-populated\.spec\.ts/, /p0-assistant-skills\.spec\.ts/, /p0-assistant-speech\.spec\.ts/, /p0-locale-lifecycle\.spec\.ts/, /p0-booking-recipients\.spec\.ts/, /p0-public-policy\.spec\.ts/, /p0-operational-calendar\.spec\.ts/],
+      grep: /homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 policy publication|P0 owner route inventory|P0 populated owner|P0 booking composer|P0 original service|P0 Assistant launcher|P0 Assistant all skills|P0 Assistant spoken controls|P0 account locale|P0 booking recipient|P0 public policy|P0 operational calendar/,
       use: { ...devices["Desktop Safari"] },
     },
     {
