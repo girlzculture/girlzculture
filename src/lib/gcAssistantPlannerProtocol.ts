@@ -1,6 +1,6 @@
 import { ASSISTANT_TOOLS, AssistantError, validateTool, type AssistantTool } from "@/lib/gcAssistantCore";
 
-const destinations = ["profile", "services", "imports", "policies", "bookings", "subscription", "support", "security"] as const;
+const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
   get_business_summary: "Read appointment counts, completed booking value and business performance for a date range.",
   get_bookings: "Read appointments and their authoritative IDs for a date range.",
@@ -15,7 +15,7 @@ const purposes: Record<AssistantTool, string> = {
   get_booking_messages: "Read the conversation for an already resolved booking ID.",
   get_reviews: "Read customer reviews in a date range.",
   get_promotions: "Read this business's promotion records.",
-  get_plan_status: "Read the current subscription and plan status. Does not change billing or forecast sales.",
+  get_plan_status: "Read the current subscription, canonical plan features/prices and limits for a scheduled downgrade. Use for entitlement and plan-comparison questions. Business usage may be unavailable; never forecast sales or change billing.",
   get_profile_completion: "Read how complete this business's profile is.",
   get_earnings_summary: "Read completed booking value for a date range. This is not verified cash revenue or payouts.",
   get_upcoming_appointments: "Read upcoming appointments in a date range.",

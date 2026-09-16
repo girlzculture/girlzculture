@@ -63,9 +63,29 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation, answerOnly: options.answerOnly });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
   return { run, calls, requests, updates };
 }
+
+test('page context reaches planning only as a bounded section hint and never grants a tool permission', async () => {
+  const f = fixture({ page: 'styles', denied: ['styles'] }); await f.run();
+  const data = JSON.parse(f.requests[0].messages[1].content);
+  assert.equal(data.active_dashboard_section, 'styles');
+  assert.equal(new Ajv().compile(f.requests[0].response_format.json_schema.schema)({decision:{tool:'get_services_and_prices',args:{query:''}}}), false);
+  const invalid = fixture({ page: '/salon/dashboard/bookings/private-record?override=admin' });
+  await assert.rejects(invalid.run(), /ASSISTANT_INVALID_INPUT/); assert.equal(invalid.requests.length, 0);
+});
+
+test('replayed plan usage is redacted when product or promotion permission is revoked', async () => {
+  const f = fixture({ denied: ['products', 'promotions'], history: [{ tool: 'get_plan_status', permission: 'overview', arguments: {}, result: {
+    current_plan: { name: 'Premium' }, business_usage: { product_listings: 217, active_promotions: 113, as_of: '2030-01-01T00:00:00Z' },
+  } }] });
+  await f.run();
+  const facts = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+  assert.equal(facts.current_plan.name, 'Premium');
+  assert.equal(facts.business_usage.product_listings, null);
+  assert.equal(facts.business_usage.active_promotions, null);
+});
 
 test('production regression: approved nano model works when build-only cost variables are absent from function runtime', async () => {
   const f = fixture({ model: 'gpt-5.4-nano', missingRates: true });

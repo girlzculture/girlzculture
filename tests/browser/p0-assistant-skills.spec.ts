@@ -128,6 +128,17 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     next = reads[3];
     await dialog.getByRole('button', { name: t('My business profile'), exact: true }).click();
     await expect(dialog.locator('article').last()).toContainText(fixture.business.description);
+    const dimensions = [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 1180, height: 820 }];
+    await page.setViewportSize(dimensions[['en', 'fr', 'wo', 'es', 'zh-CN'].indexOf(locale)]);
+    await dialog.getByRole('button', { name: t('New conversation'), exact: true }).click();
+    await expect(dialog.locator('article')).toHaveCount(0);
+    next = { navigate: 'photos' };
+    await ask('Help me with photos.');
+    await expect(dialog.locator('article').last().getByRole('link')).toHaveAttribute('href', '/salon/dashboard/photos');
+    expect(requests.at(-1)).toMatchObject({ action: 'plan', page: 'my-page', previous_request_ids: [], conversation: [] });
+    await expect(dialog.locator('article').last().getByRole('link')).toContainText(t('Photos'));
+    const contextAudit = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(contextAudit.violations).toEqual([]);
     await dialog.getByRole('button', { name: t('Close GC Assistant') }).click();
     await expect(page.getByRole('button', { name: 'GC Assistant', exact: true })).toBeFocused();
     await page.reload();
