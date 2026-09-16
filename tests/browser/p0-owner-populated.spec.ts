@@ -22,7 +22,7 @@ test(`P0 populated owner legacy and imported catalog order survives refresh at $
       { ...base, id: '33000000-0000-4000-8000-000000000013', name: 'Silk', sort_order: null },
     ];
     await page.goto(`/salon/dashboard/${route}`);
-    const names = page.getByRole('button').filter({ hasText: price }).locator('b');
+    const names = page.getByRole('button').filter({ hasText: price }).locator('b[data-no-translate]');
     await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
     await page.reload();
     await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
