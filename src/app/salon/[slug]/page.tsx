@@ -272,9 +272,9 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order("created_at",{ascending:false}),
   ]);
 
-  const styles = sortCatalogRecords((stylesResult.data || []) as StyleRecord[]);
+  const styles = sortCatalogRecords((stylesResult.data || []) as StyleRecord[], { preserveSourceOrder: true });
   const stylists = (stylistsResult.data || []) as StylistRecord[];
-  const products = sortCatalogRecords((productsResult.data || []) as ProductRecord[]);
+  const products = sortCatalogRecords((productsResult.data || []) as ProductRecord[], { preserveSourceOrder: true });
   const promotions = hasPlanFeature(salon.subscription_tier, "promotions") ? (promotionsResult.data || []) as SalonPromotion[] : [];
   const promotionCards = promotions.map((promotion) => {
     const eligibleStyles = styles.filter((style) => bestPromotionForContext([promotion], {

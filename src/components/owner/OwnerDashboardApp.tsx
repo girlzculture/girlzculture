@@ -281,9 +281,9 @@ export default function OwnerDashboardApp({
         loadedProducts = records.salon_products || [];
       setBookings(loadedBookings);
       setReviews(loadedReviews);
-      setStyles(sortCatalogRecords(loadedStyles));
+      setStyles(sortCatalogRecords(loadedStyles, { preserveSourceOrder: true }));
       setStylists(loadedStylists);
-      setProducts(sortCatalogRecords(loadedProducts));
+      setProducts(sortCatalogRecords(loadedProducts, { preserveSourceOrder: true }));
       setPromotions(records.salon_promotions || []);
       setSubscription((records.subscriptions || [])[0] || null);
       setBillingEvents(records.billing_events || []);
@@ -348,9 +348,9 @@ export default function OwnerDashboardApp({
             if (refreshed.salon) setSalon(refreshed.salon);
             setBookings(refreshedRecords.bookings || []);
             setReviews(refreshedRecords.reviews || []);
-            setStyles(sortCatalogRecords(refreshedRecords.styles || []));
+            setStyles(sortCatalogRecords(refreshedRecords.styles || [], { preserveSourceOrder: true }));
             setStylists(refreshedRecords.stylists || []);
-            setProducts(sortCatalogRecords(refreshedRecords.salon_products || []));
+            setProducts(sortCatalogRecords(refreshedRecords.salon_products || [], { preserveSourceOrder: true }));
             setBlockouts(refreshedRecords.salon_blockouts || []);
             setNotifications(refreshedRecords.notifications || []);
             return "ready";

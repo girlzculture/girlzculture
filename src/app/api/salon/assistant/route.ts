@@ -61,7 +61,7 @@ async function POSTHandler(request: Request) {
         // responder can neither call tools nor confirm a write. If it fails,
         // the authorized, deterministic summary remains available.
         try {
-          const answer = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: [...body.previous_request_ids, body.request_id].slice(-6), answerOnly: true });
+          const answer = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: [body.request_id], answerOnly: true });
           if (answer.reply) executed.assistant_message = answer.reply;
         } catch (error) {
           await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "answer-fallback", actorRole: "salon", actorId, salonId, severity: "low", safeMessage: "The authorized business summary was returned without AI wording." });

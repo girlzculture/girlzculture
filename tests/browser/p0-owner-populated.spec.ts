@@ -9,6 +9,32 @@ import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catal
 // Real service workers have their own suite; they bypass page.route in WebKit.
 test.use({ serviceWorkers: 'block' });
 
+for (const [width, height] of [[390, 844], [768, 1024], [844, 390], [1440, 1000]]) {
+test(`P0 legacy and imported catalog order survives refresh at ${width}x${height}`, async ({ page }) => {
+  const fixture = await p0OwnerFixture(page, { populated: true });
+  await page.setViewportSize({ width, height });
+  for (const [table, route, price] of [['styles', 'styles', '180'], ['salon_products', 'products', '25']]) {
+    const base = fixture.records[table][0];
+    fixture.records[table] = [
+      { ...base, id: '33000000-0000-4000-8000-000000000011', name: 'Knotless', sort_order: null },
+      { ...base, id: '33000000-0000-4000-8000-000000000012', name: 'Boho', sort_order: null },
+      { ...base, id: '33000000-0000-4000-8000-000000000013', name: 'Silk', sort_order: null },
+    ];
+    await page.goto(`/salon/dashboard/${route}`);
+    const names = page.getByRole('button').filter({ hasText: price }).locator('b');
+    await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
+    await page.reload();
+    await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
+    Object.assign(fixture.records[table][0], { sort_order: 3 });
+    Object.assign(fixture.records[table][1], { sort_order: 2 });
+    Object.assign(fixture.records[table][2], { sort_order: 1 });
+    await page.reload();
+    await expect(names).toHaveText(['Silk', 'Boho', 'Knotless']);
+  }
+  expect(fixture.unexpected).toEqual([]);
+});
+}
+
 for (const width of [390, 1440]) test(`P0 populated owner service edits survive late Engine defaults at ${width}px`, async ({ page }) => {
   const fixture = await p0OwnerFixture(page, { populated: true });
   let releaseConfig!: () => void;

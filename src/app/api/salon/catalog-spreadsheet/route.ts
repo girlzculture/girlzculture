@@ -143,11 +143,11 @@ async function serviceExportRows(
   const { data, error } = await admin
     .from("styles")
     .select(
-      "id,category_id,service_group_id,master_style_id,name,description,duration_min_hours,duration_max_hours,base_price,price_display_max,buffer_minutes,addons,archived_at",
+      "id,category_id,service_group_id,master_style_id,name,description,duration_min_hours,duration_max_hours,base_price,price_display_max,buffer_minutes,addons,archived_at,sort_order",
     )
     .eq("salon_id", salonId)
     .is("archived_at", null)
-    .order("name");
+    .order("created_at", { ascending: false });
   if (error) throw error;
   const categoryNames = new Map(
     catalog.categories.map((row) => [String(row.id), String(row.name)]),
@@ -158,7 +158,7 @@ async function serviceExportRows(
   const serviceNames = new Map(
     catalog.services.map((row) => [String(row.id), String(row.name)]),
   );
-  return (data || []).map((row) => ({
+  return sortCatalogRecords(data || [], { preserveSourceOrder: true }).map((row) => ({
     source_row: 0,
     record_id: String(row.id),
     category: categoryNames.get(String(row.category_id)) || "",
@@ -179,13 +179,13 @@ async function productExportRows(admin: SupabaseClient, salonId: string) {
   const { data, error } = await admin
     .from("salon_products")
     .select(
-      "id,name,sku,description,price,sale_price,product_status,track_inventory,inventory_quantity,low_stock_threshold,pickup_enabled,pickup_prep_minutes,shipping_enabled,shipping_price,weight_ounces,shipping_profile,dimensions,tax_category,max_quantity_per_order,is_visible,archived_at",
+      "id,name,sku,description,price,sale_price,product_status,track_inventory,inventory_quantity,low_stock_threshold,pickup_enabled,pickup_prep_minutes,shipping_enabled,shipping_price,weight_ounces,shipping_profile,dimensions,tax_category,max_quantity_per_order,is_visible,archived_at,sort_order",
     )
     .eq("salon_id", salonId)
     .is("archived_at", null)
-    .order("name");
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []).map((row) => {
+  return sortCatalogRecords(data || [], { preserveSourceOrder: true }).map((row) => {
     const size = dimensions(row.dimensions);
     return {
       source_row: 0,
@@ -399,13 +399,13 @@ async function POSTHandler(request: Request) {
             .select("*")
             .eq("salon_id", salonId)
             .is("archived_at", null)
-            .order("name")
+            .order("created_at", { ascending: false })
         : await context.admin
             .from("salon_products")
             .select("*")
             .eq("salon_id", salonId)
             .is("archived_at", null)
-            .order("name");
+            .order("created_at", { ascending: false });
     if (records.error) throw records.error;
     revalidatePath("/salon/dashboard/styles");
     revalidatePath("/salon/dashboard/products");
@@ -415,7 +415,7 @@ async function POSTHandler(request: Request) {
         ok: true,
         kind,
         result: result.data,
-        records: sortCatalogRecords(records.data || []),
+        records: sortCatalogRecords(records.data || [], { preserveSourceOrder: true }),
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );

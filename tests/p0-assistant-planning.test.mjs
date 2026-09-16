@@ -34,7 +34,7 @@ function fixture(options = {}) {
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'requested_by' && row[2] === 'owner-A'));
             return { data: history };
           }
-          if (table === 'master_styles') return { data: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Knotless Braids' }] };
+          if (table === 'master_styles') return { data: options.catalog || [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Knotless Braids' }] };
           if (table === 'ai_usage_events') { updates.push(mutation); return { data: null }; }
           throw Error(`Unexpected table ${table}`);
         }).then(resolve, reject); },
@@ -55,7 +55,7 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation, answerOnly: options.answerOnly });
   return { run, calls, requests, updates };
 }
 
@@ -70,6 +70,50 @@ test('an unpriced model still fails closed without calling the provider', async 
   const f = fixture({ missingRates: true });
   await assert.rejects(f.run(), /ASSISTANT_COST_CONFIGURATION_REQUIRED/);
   assert.equal(f.requests.length, 0);
+});
+
+test('live regression: the planner cannot present platform vocabulary as an owner service inventory', async () => {
+  const f = fixture({
+    catalog: [{ id: 'catalog-only', name: 'Acrylic Full Set' }],
+    output: { plan: null, reply: 'Your services include Acrylic Full Set, but prices are unavailable.', clarification: null, navigate: null },
+  });
+  await assert.rejects(f.run('en', 'What are my services and prices?'), /ASSISTANT_INVALID_PLAN/);
+  assert.equal(f.requests[0].response_format.json_schema.schema.properties.reply.type, 'null');
+  assert.equal(f.updates[0].outcome, 'failed');
+});
+
+test('a service omitted from a prior excerpt requires a fresh lookup rather than an unsupported reply', async () => {
+  const f = fixture({
+    history: [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: '' }, result: { services: [{ name: 'Box Braids', base_price: 190 }], total: 16 } }],
+    output: { plan: null, reply: 'Silk Press is in the catalog, but its price is unavailable.', clarification: null, navigate: null },
+  });
+  await assert.rejects(f.run('en', 'How much is Silk Press?'), /ASSISTANT_INVALID_PLAN/);
+});
+
+test('answer wording receives authorized read evidence without the platform draft catalog', async () => {
+  const f = fixture({
+    answerOnly: true,
+    catalog: [{ id: 'catalog-only', name: 'Acrylic Full Set' }],
+    history: [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Silk Press' }, result: { services: [{ name: 'Silk Press', base_price: 120 }], total: 1, currency: 'USD' } }],
+    output: { plan: null, reply: 'Silk Press starts at $120.', clarification: null, navigate: null },
+  });
+  const result = await f.run('en', 'How much is Silk Press?');
+  assert.equal(result.reply, 'Silk Press starts at $120.');
+  assert.equal(f.calls.some(call => call.table === 'master_styles'), false);
+  assert.doesNotMatch(f.requests[0].messages[1].content, /catalog-only|Acrylic Full Set/);
+  assert.equal(JSON.parse(f.requests[0].messages[1].content).previous[0].result.services[0].base_price, 120);
+});
+
+test('the answer phase refuses to call the provider without an authorized read result', async () => {
+  for (const options of [
+    {},
+    { history: [{ tool: 'get_bookings', permission: 'bookings', arguments: {}, result: null }] },
+    { denied: ['styles'], history: [{ tool: 'get_services_and_prices', permission: 'styles', arguments: {}, result: { services: [] } }] },
+  ]) {
+    const f = fixture({ ...options, answerOnly: true, output: { plan: null, reply: 'You have no services.', clarification: null, navigate: null } });
+    await assert.rejects(f.run('en', 'What are my services?'), /ASSISTANT_INVALID_PLAN/);
+    assert.equal(f.requests.length, 0);
+  }
 });
 
 test('planning retains authorized booking identities for the next conversational action', async () => {
@@ -149,9 +193,10 @@ test('financial and security requests can navigate without preparing any mutatio
 });
 
 test('governed planning can hold a conversational turn without inventing an action', async () => {
-  const f = fixture({ output: { plan: null, reply: 'I can help with bookings, services, business details, and approved draft changes.', clarification: null, navigate: null } });
+  const f = fixture({ output: { plan: null, reply: null, clarification: 'I can help with bookings, services, business details, and approved draft changes. What would you like help with?', navigate: null } });
   const result = await f.run('en', 'What can you help me with?');
-  assert.match(result.reply, /bookings, services/);
+  assert.match(result.clarification, /bookings, services/);
+  assert.equal(result.reply, null);
   assert.equal(result.plan, null);
   assert.equal(f.calls.some(row => ['save_gc_assistant_request', 'confirm_gc_assistant_request'].includes(row.name)), false);
 });
