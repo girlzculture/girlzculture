@@ -3091,8 +3091,8 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       </Panel> : null}
       <div className="grid gap-4">
         {recordId === "calendar" ? <WorkspaceCalendar timeZone={timeZone} events={[
-          ...activeBookings.map(booking => ({ id: String(booking.id), start: String(booking.appointment_datetime), title: String(booking.guest_name || "Appointment"), subtitle: `${styleName(c, booking.style_id)} · ${stylistName(c, booking.stylist_id)}`, status: String(booking.status), href: `/salon/dashboard/bookings/${booking.id}` })),
-          ...activeBlockouts.map(block => ({ id: String(block.id), start: String(block.starts_at), title: String(block.reason || "Unavailable"), status: "Availability override", kind: "unavailable" as const, href: `/salon/dashboard/availability/${block.id}` })),
+          ...activeBookings.map(booking => ({ id: String(booking.id), start: String(booking.appointment_datetime), title: String(booking.guest_name || c.translateSource("Appointment")), subtitle: [booking.manual_service_name || styleText(c, booking.style_id), stylistText(c, booking.stylist_id)].join(" · "), status: String(booking.status), href: `/salon/dashboard/bookings/${booking.id}` })),
+          ...activeBlockouts.map(block => ({ id: String(block.id), start: String(block.starts_at), title: String(block.reason || c.translateSource("Unavailable")), status: "Availability override", kind: "unavailable" as const, href: `/salon/dashboard/availability/${block.id}` })),
         ]}/> : null}
         {recordId === "hours" || recordId === "slots" ? <div className="mx-auto w-full max-w-3xl space-y-4">
           {recordId === "hours" ? <Panel>
@@ -3448,8 +3448,8 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       booking.guest_email,
       booking.guest_phone,
       bookingReference(booking),
-      styleName(c, booking.style_id),
-      stylistName(c, booking.stylist_id),
+      booking.manual_service_name || styleText(c, booking.style_id),
+      stylistText(c, booking.stylist_id),
       booking.status,
     ].map((value) => String(value || "").toLowerCase()).join(" ");
     return haystack.includes(query.toLowerCase());
@@ -5368,6 +5368,12 @@ function dateText(value: unknown, timeZone = "America/New_York", locale = "en-US
         minute: "2-digit",
         timeZone,
       });
+}
+function styleText(c: Ctx, id: unknown) {
+  return String(c.styles.find((s) => s.id === id)?.name || c.translateSource("Braiding Service"));
+}
+function stylistText(c: Ctx, id: unknown) {
+  return String(c.stylists.find((s) => s.id === id)?.name || c.translateSource("Any stylist"));
 }
 function styleName(c: Ctx, id: unknown) {
   const name = c.styles.find((s) => s.id === id)?.name;
