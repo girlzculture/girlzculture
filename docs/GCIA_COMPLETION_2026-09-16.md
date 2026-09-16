@@ -71,6 +71,14 @@ Official references checked September 16:
 
 Never represent the mocked adapter tests, existing CI, or a rendered deploy preview as real provider acceptance.
 
+## Required CI failure and correction after provider diagnostics
+
+PR #71 required run `35156652047` at head `026926d17eac1826fff5be17080e964476e39016` failed: **521 passed / 5 viewport skips / 1 failure** (45.9-minute browser step). The separate three shards and final release-candidate job passed, but they do not override this failure. No merge or publication followed.
+
+The failure was WebKit, `p0-operational-calendar.spec.ts`, English dashboard preview/persistence. The trace shows customer-name input followed by an empty required field on submit; native validation prevented the conflict request. `ManualAppointmentEditor` enabled inputs before its first authentication callback, which resets the actor-scoped form. The correction keeps native form controls disabled until initial session readiness and while an operation is pending. Same-actor callbacks preserve edits; account changes still clear drafts and discard delayed responses. No timeout, retry, skip or weaker conflict assertion was introduced; the browser case additionally asserts that the typed name remains present.
+
+A deterministic initial-session regression failed before correction and passes afterward. All **219 P0 core tests**, affected-file lint and the production fixture build (including TypeScript) pass. Owner localization remains **1,849/1,849** per required language; the local generated coverage file needed line-ending normalization after switching branches, with no copy change. The exact failed WebKit case passed **10 consecutive runs**. All **40 affected Chromium/WebKit cases passed** across five languages, with **2 additional mobile-landscape checks passing**. Existing fixture stream-close and simulated unauthenticated-backend diagnostics remain recorded; no browser assertion failed. New CI must pass before release.
+
 ## Current local evidence and preserved failures
 
 - Initial DeepL tests failed because the adapter did not exist; implementation passes them.
