@@ -59,3 +59,36 @@ test('private-note confirmation never dispatches a customer message notification
     assert.deepEqual(f.deliveries, tool === 'prepare_customer_message' ? [reference] : []);
   }
 });
+
+test('conversational answers use only the current authorized lookup, not an older service excerpt', async () => {
+  const olderRequestId = '55000000-0000-4000-8000-000000000001';
+  const planning = [], execution = [], incidents = [];
+  const context = { admin: {}, user: { id: actor }, salon: { id: business, time_zone: 'America/New_York' }, isOwner: true };
+  const load = typescriptLoader(process.cwd(), {
+    '@/lib/supabaseAdmin': { requireSalonOwner: async () => context },
+    '@/lib/requestSecurity': { enforceRateLimit() {}, RateLimitError: class extends Error {} },
+    '@/lib/gcAssistantServer': { executeAssistantTool: async (_context, input) => {
+      execution.push(input);
+      return { request: { id: input.requestId }, assistant_message: 'Silk Press — $120', preview_required: false };
+    } },
+    '@/lib/gcAssistantPlanningServer': { planOwnerRequest: async input => {
+      planning.push(input);
+      return input.answerOnly
+        ? { plan: null, reply: 'Silk Press starts at $120.', clarification: null, navigate: null }
+        : { plan: { tool: 'get_services_and_prices', args: { query: 'Silk Press' } }, reply: null, clarification: null, navigate: null };
+    } },
+    '@/lib/operationalMonitoring': { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile() {} },
+    '@/lib/platformErrors': { capturePlatformError: async input => { incidents.push(input); return reference; } },
+  });
+  const response = await load('src/app/api/salon/assistant/route.ts').POST(new Request('http://localhost/api/salon/assistant', {
+    method: 'POST', body: JSON.stringify({ action: 'plan', request_id: requestId, locale: 'en', text: 'How much is Silk Press?', previous_request_ids: [olderRequestId] }),
+  }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).assistant_message, 'Silk Press starts at $120.');
+  assert.equal(execution.length, 1);
+  assert.equal(execution[0].args.query, 'Silk Press');
+  assert.deepEqual(Array.from(planning[0].previousRequestIds), [olderRequestId]);
+  assert.deepEqual(Array.from(planning[1].previousRequestIds), [requestId]);
+  assert.equal(planning[1].answerOnly, true);
+  assert.equal(incidents.length, 0);
+});

@@ -70,3 +70,52 @@ test('source ordering is restored from database records, rather than alphabetize
   assert.match(migration, /and s\.salon_id=p_salon_id/);
   assert.match(migration, /from public,anon,authenticated/);
 });
+
+test('legacy business services retain their existing order while new stored positions take precedence', () => {
+  const { sortCatalogRecords } = load('src/lib/catalogOrdering.ts');
+  const legacy = [{ id: 'k', name: 'Knotless Braids', sort_order: null }, { id: 'b', name: 'Boho / Goddess Braids' }, { id: 's', name: 'Silk Press', sort_order: null }];
+  const options = { preserveSourceOrder: true };
+  assert.deepEqual(Array.from(sortCatalogRecords(legacy, options), row => row.id), ['k', 'b', 's']);
+  assert.deepEqual(legacy.map(row => row.id), ['k', 'b', 's'], 'sorting must not mutate the loaded business records');
+  assert.deepEqual(Array.from(sortCatalogRecords(legacy), row => row.id), ['b', 'k', 's'], 'platform vocabulary retains its alphabetical fallback');
+  const mixed = [...legacy, { id: 'a', name: 'Alpha', sort_order: 2 }, { id: 'z', name: 'Zebra', sort_order: 1 }];
+  assert.deepEqual(Array.from(sortCatalogRecords(mixed, options), row => row.id), ['z', 'a', 'k', 'b', 's']);
+});
+
+for (const kind of ['services', 'products']) test(`${kind} spreadsheet exports retain imported positions and legacy source order`, async () => {
+  const rows = [
+    { id: 'legacy-z', name: 'Zebra legacy', sort_order: null },
+    { id: 'legacy-a', name: 'Alpha legacy', sort_order: null },
+    { id: 'import-a', name: 'Alpha imported', sort_order: 2 },
+    { id: 'import-z', name: 'Zebra imported', sort_order: 1 },
+  ];
+  const queries = []; let exported;
+  const admin = { from(table) {
+    const query = { table, columns: '', filters: [], ordering: [] }; queries.push(query);
+    const chain = {
+      select(columns) { query.columns = columns; return chain; },
+      eq(key, value) { query.filters.push([key, value]); return chain; },
+      is(key, value) { query.filters.push([key, value]); return chain; },
+      order(key, options) { query.ordering.push([key, options]); return chain; },
+      then(resolve, reject) { return Promise.resolve({ data: ['styles', 'salon_products'].includes(table) ? rows : [], error: null }).then(resolve, reject); },
+    }; return chain;
+  } };
+  const route = typescriptLoader(root, {
+    'next/cache': { revalidatePath() {} },
+    '@/lib/supabaseAdmin': { requireSalonPermission: async (_request, permission) => { assert.equal(permission, kind === 'services' ? 'styles' : 'products'); return { admin, salon: { id: 'business-A' } }; } },
+    '@/lib/operationalMonitoring': { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile() {} },
+    '@/lib/platformErrors': { rejectRequest(message) { throw Error(message); }, monitoredRouteFailure({ error }) { throw error; } },
+    '@/lib/salonCatalogSpreadsheet': {
+      buildSalonServiceExportWorkbook: async (_catalog, data) => { exported = data; return Buffer.from('workbook'); },
+      buildSalonProductExportWorkbook: async data => { exported = data; return Buffer.from('workbook'); },
+    },
+  })('src/app/api/salon/catalog-spreadsheet/route.ts');
+  const response = await route.GET(new Request(`http://localhost/api/salon/catalog-spreadsheet?kind=${kind}&mode=export`));
+  assert.equal(response.status, 200);
+  assert.deepEqual(Array.from(exported, row => row.record_id), ['import-z', 'import-a', 'legacy-z', 'legacy-a']);
+  const owned = queries.find(query => query.table === (kind === 'services' ? 'styles' : 'salon_products'));
+  assert.ok(owned.columns.split(',').includes('sort_order'));
+  assert.ok(owned.filters.some(([key, value]) => key === 'salon_id' && value === 'business-A'));
+  assert.equal(owned.ordering[0][0], 'created_at');
+  assert.equal(owned.ordering[0][1].ascending, false);
+});

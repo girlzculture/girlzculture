@@ -1,5 +1,21 @@
 # Girlz Culture launch corrections — 15 September 2026
 
+## Production verification snapshot — 16 September 2026
+
+This dated snapshot supersedes the historical release status below. Current follow-up acceptance is tracked in [PR #68](https://github.com/girlzculture/girlzculture/pull/68).
+
+- **PASS — protected baseline release:** PRs #66 and #67 are merged. Normal main CI [35117444342](https://github.com/girlzculture/girlzculture/actions/runs/35117444342) passed for `0a85521a3f360ac0ecfc8ae3de01765584684016`, including 489 full-browser passes, five skips, repeated WebKit checks and accessibility checks.
+- **PASS — production database:** protected workflow [35123958887](https://github.com/girlzculture/girlzculture/actions/runs/35123958887) applied the three reviewed September 15 migrations. The live database has 149 applied versions, ending at `20260915133423`. The two new privileged RPCs are executable by `service_role`, not by anonymous or authenticated clients.
+- **PASS — application publication:** Netlify deploy `6aaab986091d6200088f39bf` for that exact main commit was published at 2026-09-16T16:51:46Z. Automatic production publishing remains locked.
+- **PASS — authenticated read-only checks:** owner and admin sessions load the published release. Owner records still contain 16 services, Silk Press at $120 and the existing two bookings. Business category/city filtering matches production data and survives reload. Owner products, profile, photos, professionals, reviews, promotions, subscription, earnings, messages and settings render; this does not certify financial transactions or edits.
+- **FAIL — live defects under correction in PR #68:** free-form assistant answers used platform vocabulary and an incomplete older excerpt instead of a current business lookup; legacy services were alphabetized; calendar service/professional labels rendered `[object Object]`; booking searches by those names missed existing records. Each failure was reproduced before its correction. PR #68 includes permanent server/browser regression coverage and requires its own exact-main and publication gates before live rechecking.
+- **AUTOMATED ONLY — local correction checks:** all 186 core checks, TypeScript, affected-file ESLint, catalog/spreadsheet/realtime verifiers and all five owner locales pass. Browser checks remain authoritative for the new calendar/name/order workflows; local browser installation limitations below still apply.
+- **BLOCKED — remaining acceptance limits:** physical-device speech, an authenticated restricted-team/customer test identity, and protected Stripe test connectivity are not available. The public business profile intentionally renders the onboarding landing page while the marketplace flag is off. No real payment, customer message, booking change, business-data rewrite or public marketplace launch was performed.
+
+The full invisible-employee expansion remains a separate milestone. Publication of this baseline does not establish that every proposed GCIA capability is complete.
+
+## Historical engineering handoff before the September 16 publication
+
 Status: **PR #66 MERGED. PRODUCTION LOCKED. POST-MERGE WEBKIT SERVICE-WORKER FAILURE REPRODUCED TWICE; FOCUSED CORRECTION AWAITING BROWSER CI. NOT RELEASED. Live acceptance remains outstanding.**
 Branch: `fix/webkit-service-worker-registration` (follow-up to `fix/conversational-gc-assistant-dashboard`).
 Base: `bb3b93b` (the existing #65 release).

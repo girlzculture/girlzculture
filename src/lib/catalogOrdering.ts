@@ -44,6 +44,11 @@ export function compareCatalogRecords(left: CatalogOrderable, right: CatalogOrde
   return String(left.id || "").localeCompare(String(right.id || ""));
 }
 
-export function sortCatalogRecords<T extends CatalogOrderable>(records: readonly T[] | null | undefined): T[] {
-  return [...(records || [])].sort(compareCatalogRecords);
+export function sortCatalogRecords<T extends CatalogOrderable>(records: readonly T[] | null | undefined, options: { preserveSourceOrder?: boolean } = {}): T[] {
+  return [...(records || [])].sort((left, right) => {
+    // Existing business records predate stored spreadsheet positions. Preserve
+    // their loaded order instead of silently applying platform-vocabulary sorting.
+    if (options.preserveSourceOrder && explicitSortOrder(left.sort_order) === null && explicitSortOrder(right.sort_order) === null) return 0;
+    return compareCatalogRecords(left, right);
+  });
 }

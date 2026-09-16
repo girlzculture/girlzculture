@@ -15,6 +15,40 @@ test.use({ serviceWorkers: 'block' });
 // Browser API and speech fixtures exercise the real components. SQL/server
 // suites separately prove persistence and authorization; this is not live AI.
 for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  test(`P0 operational calendar keeps original record names and supports service searches in ${locale}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    const fixture = await p0OwnerFixture(page, { populated: true, locale });
+    const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
+    fixture.records.styles[0].name = 'Silk Press';
+    fixture.records.stylists[0].name = 'Danielle Save';
+    fixture.records.bookings[0].appointment_datetime = '2030-09-24T17:00:00.000Z';
+    fixture.records.bookings.push({ ...fixture.records.bookings[0], id: '33000000-0000-4000-8000-000000000019', guest_name: 'Manual guest', style_id: null, manual_service_name: 'Custom Save', booking_origin: 'business_added', source: 'phone' });
+    await page.setViewportSize({ width: locale === 'en' ? 1440 : locale === 'fr' ? 768 : locale === 'es' ? 844 : 390, height: locale === 'es' ? 390 : 900 });
+    await page.goto('/salon/dashboard/availability/calendar');
+    const calendar = page.getByRole('region', { name: t('Appointment calendar'), exact: true });
+    await calendar.getByLabel(t('Calendar date'), { exact: true }).fill('2030-09-24');
+    const recorded = calendar.locator(`a[href="/salon/dashboard/bookings/${fixture.ids.booking}"]`);
+    const manual = calendar.locator('a[href="/salon/dashboard/bookings/33000000-0000-4000-8000-000000000019"]');
+    for (const view of ['Day', 'Week', 'Month']) {
+      await calendar.getByRole('button', { name: t(view), exact: true }).click();
+      await expect(recorded).toContainText('Silk Press · Danielle Save');
+      await expect(recorded.locator('b')).toHaveText('Save');
+      await expect(manual).toContainText('Custom Save · Danielle Save');
+      await expect(calendar).not.toContainText('[object Object]');
+    }
+    await calendar.getByRole('textbox', { name: t('Filter calendar appointments'), exact: true }).fill('Silk Press');
+    await expect(recorded).toBeVisible();
+    await expect(manual).toHaveCount(0);
+    await page.goto('/salon/dashboard/bookings?group=All');
+    const search = page.getByRole('searchbox', { name: t('Search bookings'), exact: true });
+    for (const query of ['Silk Press', 'Danielle Save', 'Custom Save']) {
+      await search.fill(query);
+      await page.getByRole('button', { name: t('Search'), exact: true }).click();
+      await expect(page.getByRole('main').getByText(query, { exact: true }).filter({ visible: true }).first()).toBeVisible();
+    }
+    expect(fixture.unexpected).toEqual([]);
+  });
+
   test(`P0 operational calendar expanded reads and drafts in ${locale}`, async ({ page }) => {
     const fixture = await p0OwnerFixture(page, { populated: true, locale });
     const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
