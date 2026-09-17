@@ -13,6 +13,7 @@ Context expires after 30 days. The UI explains that expired context cannot be re
 - A new browser regression reproduced an initially missing memory incident reference. The reference now has its own display state and remains separate from ordinary Assistant errors. Original failed log/trace is preserved in the local release evidence.
 - TypeScript, localization coverage, migration order, shared operational monitoring and production build are checked before review. Language coverage is not native-speaker certification; Wolof remains founder-deferred.
 - SQL isolation/retention assertions run as part of the existing clean-database CI chain. Migration `20260917185913_gcia_opt_in_memory.sql` is additive and has **not** been applied to production during implementation. It changes no AI budget/provider setting, customer booking, payment or notification policy.
+- First required CI run `35266744586` reproduced an invalid test setup: an auth fixture with no role became a customer, so the existing canonical-identity trigger correctly rejected its salon insert before the memory assertions ran. The fixture now declares the owner role using the same setup as the existing calendar/business SQL tests. No trigger, authorization rule or assertion was relaxed; the original failure log is retained.
 - Live save/refresh/logout-login/cross-device/delete acceptance remains pending the reviewed migration and a held candidate. Do not publish this feature or mark it live solely from fixture tests.
 
 ## Other release work

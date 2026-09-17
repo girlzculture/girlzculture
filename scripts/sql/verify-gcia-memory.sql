@@ -10,7 +10,10 @@ begin
      or has_table_privilege('authenticated','public.gc_assistant_memory','SELECT,INSERT,UPDATE,DELETE') then
     raise exception 'Memory must not expose a direct client access path';
   end if;
-  insert into auth.users(id,email) values(actor,'memory-fixture@example.test');
+  -- Use the same canonical owner setup as the existing business/calendar SQL
+  -- fixtures. Without a role, the auth trigger correctly creates a customer.
+  insert into auth.users(id,email,raw_user_meta_data)
+    values(actor,'memory-fixture@example.test','{"role":"salon_owner"}'::jsonb);
   insert into public.salons(id,user_id,name,slug,email,status) values(business,actor,'Memory fixture','memory-'||business,'memory-fixture@example.test','Active');
   insert into public.gc_assistant_memory(salon_id,requested_by,request_ids,locale,saved_at,expires_at)
     values(business,actor,array[gen_random_uuid()],'es',now(),now()+interval '30 days');
