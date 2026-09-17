@@ -6,6 +6,7 @@ import { assistantPageFromPath } from "@/lib/assistantPageContext";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
 import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
+import { MEMORY_TOOLS } from "@/lib/assistantMemory";
 import { ArrowUp, Bot, Building2, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
 import { getSessionForScope, getSupabaseForScope } from "@/lib/supabase";
 import { useI18n } from "@/components/i18n/LocaleProvider";
@@ -102,8 +103,13 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
-  // Conversation preference is ephemeral and actor-scoped. A display-language
-  // change resets its default; a spoken/typed switch does not alter account UI.
+  const [rememberedIds, setRememberedIds] = useState<string[]>([]);
+  const [memory, setMemory] = useState<{ request_ids: string[]; locale: string; expires_at: string } | null>(null);
+  const [memoryNotice, setMemoryNotice] = useState("");
+  const [memoryReference, setMemoryReference] = useState("");
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  // Active preference is actor-scoped; persistence requires explicit save and
+  // resume. A display-language change resets its default, not the account UI.
   const responseLanguage = useRef<{ display: string; response: string } | null>(null);
   useEffect(() => {
     const lifetime = actorGeneration;
@@ -112,6 +118,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       if (actor.current !== nextActor) {
         actorGeneration.current++; actor.current = nextActor;
         responseLanguage.current = null;
+        setRememberedIds([]); setMemory(null); setMemoryNotice(""); setMemoryReference(""); setMemoryOpen(false);
         setDictationSession(value => value + 1); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       }
       if (!session) dialog.current?.close();
@@ -144,7 +151,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         // checks. Do not smuggle revoked data back through client chat history.
         const assistant = turn.clarification || "";
         return [...(turn.text ? [{ role: "user", text: turn.text }] : []), ...(assistant ? [{ role: "assistant", text: assistant }] : [])];
-      }).slice(-6), previous_request_ids: turns.filter(turn => turn.request).slice(-6).map(turn => turn.request!.id) }, generation);
+      }).slice(-6), previous_request_ids: [...new Set([...rememberedIds, ...turns.filter(turn => turn.request).map(turn => turn.request!.id)])].slice(-6) }, generation);
       if (generation !== actorGeneration.current) return;
       const resultLocale = isAssistantLanguage(result.response_locale) ? result.response_locale : (responseLanguage.current?.display === locale ? responseLanguage.current.response : locale);
       responseLanguage.current = { display: locale, response: resultLocale };
@@ -153,6 +160,43 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       if (!tool) setText(current => current === message ? "" : current);
     } catch (error) { if (generation !== actorGeneration.current) return; setReference(error instanceof OwnerActionError ? error.reference : ""); setNotice(errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below."); }
     finally { if (generation === actorGeneration.current) setBusy(false); }
+  }
+  async function manageMemory(action: "load" | "save" | "delete" | "resume") {
+    if (busy) return;
+    const generation = actorGeneration.current;
+    setBusy(true); setMemoryNotice(""); setMemoryReference("");
+    try {
+      const session = await getSessionForScope("salon");
+      if (!session || generation !== actorGeneration.current) throw new Error("AUTH_REQUIRED");
+      if (actor.current === null) actor.current = session.user.id;
+      if (session.user.id !== actor.current) throw new Error("AUTH_REQUIRED");
+      const safeIds = turns.filter(turn => turn.request && (MEMORY_TOOLS as readonly string[]).includes(turn.request.tool)).map(turn => turn.request!.id);
+      const responseLocale = responseLanguage.current?.display === locale ? responseLanguage.current.response : locale;
+      const response = await fetch("/api/salon/assistant/memory", {
+        method: action === "save" ? "POST" : action === "delete" ? "DELETE" : "GET",
+        headers: {Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},
+        ...(action === "save" ? {body:JSON.stringify({consent:true,locale:isAssistantLanguage(responseLocale)?responseLocale:"en",request_ids:[...new Set([...rememberedIds,...safeIds])].slice(-6)})} : {}),
+        signal:AbortSignal.timeout(15000),
+      });
+      const result = await readOwnerResponse(response,"ASSISTANT_MEMORY_UNAVAILABLE");
+      if (generation !== actorGeneration.current) return;
+      setMemory(result.memory || null);
+      if (action === "delete") { setRememberedIds([]); setMemoryNotice("Saved context deleted. Business audit records are unchanged."); }
+      else if (action === "save") setMemoryNotice("Context saved for 30 days. Only you can resume it in this business.");
+      else if (!result.memory) { setRememberedIds([]); setMemoryNotice("No saved context is available."); }
+      else if (action === "resume" && isAssistantLanguage(result.memory.locale)) {
+        // Read again at the actual resume action: a previously opened panel may
+        // outlive the bookmark or the actor's permission to a saved topic.
+        actorGeneration.current++; setBusy(false); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setDictationSession(value => value + 1);
+        setRememberedIds(result.memory.request_ids);
+        responseLanguage.current = {display:locale,response:result.memory.locale};
+        setMemoryNotice("Saved context resumed. Ask a new question to read current information.");
+      }
+    } catch (error) {
+      if (generation !== actorGeneration.current) return;
+      setMemoryReference(error instanceof OwnerActionError ? error.reference : "");
+      setMemoryNotice(error instanceof Error && error.message === "ASSISTANT_MEMORY_NO_SAFE_CONTEXT" ? "Ask about services, products, professionals or business settings before saving context." : "Saved context could not be loaded or changed. Your current conversation is still available.");
+    } finally { if (generation === actorGeneration.current) setBusy(false); }
   }
   async function confirm(turn: Turn) {
     if (!turn.request || busy) return;
@@ -189,9 +233,26 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button type="button" disabled={busy} onClick={() => {
               actorGeneration.current++; setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setDictationSession(value => value + 1);
+              setRememberedIds([]);
             }} className="min-h-11 rounded-lg border border-border bg-white px-3 text-xs font-semibold text-text-primary gc-disabled-control">{t("New conversation")}</button>
             <p className="max-w-sm text-xs leading-5 text-text-primary">{t("Starting a new conversation clears this panel. Saved business actions remain in the audit history.")}</p>
           </div>
+
+          <section className="mt-3 rounded-xl border border-border bg-white p-3" aria-label={t("Saved conversation context")}>
+            <button type="button" disabled={busy} aria-expanded={memoryOpen} onClick={() => { setMemoryOpen(value => !value); if (!memoryOpen) void manageMemory("load"); }} className="min-h-11 text-sm font-semibold underline gc-disabled-control">{t("Saved conversation context")}</button>
+            {memoryOpen ? <div className="space-y-3 text-sm">
+              <p>{t("Save business topic references and your response language for 30 days. Chat text, customer details and proposed changes are not saved as memory. Current permissions and business facts are checked again when you ask a question.")}</p>
+              <p>{t("Saving replaces your previous saved context. Expired context cannot be resumed and is removed by the daily cleanup. Business audit history is retained separately.")}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy || (!rememberedIds.length && !turns.some(turn => turn.request && (MEMORY_TOOLS as readonly string[]).includes(turn.request.tool)))} onClick={() => void manageMemory("save")} className="min-h-11 rounded-lg border border-border px-3 font-semibold gc-disabled-control">{t("Save this context for 30 days")}</button>
+                <button type="button" disabled={busy || !memory} onClick={() => void manageMemory("resume")} className="min-h-11 rounded-lg border border-border px-3 font-semibold gc-disabled-control">{t("Resume saved context")}</button>
+                <button type="button" disabled={busy} onClick={() => void manageMemory("delete")} className="min-h-11 rounded-lg border border-border px-3 font-semibold gc-disabled-control">{t("Delete saved context")}</button>
+              </div>
+              {memory ? <p>{t("Saved context expires: {value0}", {value0:new Date(memory.expires_at).toLocaleDateString(locale)})}</p> : null}
+              {memoryNotice ? <p role="status">{t(memoryNotice)}</p> : null}
+              {memoryReference ? <p>{t("Support reference")}: <span data-no-translate>{memoryReference}</span></p> : null}
+            </div> : null}
+          </section>
 
           <nav aria-label={t("Suggested Assistant actions")} className="mt-4 flex gap-2 overflow-x-auto pb-2">
             {quickActions.map(action => <button key={action.tool} data-assistant-tool={action.tool} disabled={busy} onClick={() => void submit(action.tool)} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-border bg-white px-3.5 text-xs font-semibold text-text-primary shadow-sm transition hover:border-teal hover:text-text-link gc-disabled-control"><action.icon aria-hidden size={15}/>{t(action.label)}</button>)}

@@ -1242,6 +1242,8 @@ const deployedMigration = runPsql(
 );
 const deepLOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-gcia-deepl.sql")], "GCIA DeepL governance assertions");
 if (deepLOutput) process.stdout.write(`${deepLOutput}\n`);
+const memoryOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-gcia-memory.sql")], "GCIA opt-in memory isolation and retention assertions");
+if (memoryOutput) process.stdout.write(`${memoryOutput}\n`);
 if (deployedMigration !== expectedMigration) {
   console.error(
     `Engine expected migration ${deployedMigration || "<missing>"} does not match repository head ${expectedMigration}.`,

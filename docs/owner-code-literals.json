@@ -1070,6 +1070,10 @@
         {
           "file": "src/components/owner/ManualAppointmentEditor.tsx",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "0ac0abcddd255d903bf32439a42aa1f1b7281cf20bc1e2cecfebefe5d13122b2"
         }
       ]
     },
