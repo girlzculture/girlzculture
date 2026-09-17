@@ -12,6 +12,58 @@ import { mkdir } from 'node:fs/promises';
 // own fetches and bypass page.route. Real PWA behavior retains its own suite.
 test.use({ serviceWorkers: 'block' });
 
+test('P0 operational calendar diagnoses native form submission', async ({ page }, testInfo) => {
+  const fixture = await p0OwnerFixture(page, { populated: true, locale: 'en' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const posts: unknown[] = [];
+  await page.route('**/api/salon/assistant', route => {
+    posts.push(route.request().postDataJSON());
+    return route.fulfill({ status: 409, json: { code: 'ASSISTANT_AVAILABILITY_CONFLICT' } });
+  });
+  await page.addInitScript(() => {
+    const events: unknown[] = [];
+    Object.assign(window, { calendarEvents: events });
+    for (const type of ['pointerdown', 'pointerup', 'click', 'submit', 'invalid', 'focusin', 'focusout']) {
+      document.addEventListener(type, event => {
+        const target = event.target as HTMLElement;
+        if (!target.closest('form')) return;
+        const button = target.closest('form')?.querySelector('button');
+        events.push({ type, target: target.tagName, inputType: target.getAttribute('type'), label: target.closest('label')?.textContent, value: (target as HTMLInputElement).value, scrollY, buttonY: button?.getBoundingClientRect().y, validity: Array.from(document.querySelectorAll('form input')).map(node => { const field = node as HTMLInputElement; return { type: field.type, value: field.value, valid: field.validity.valid, badInput: field.validity.badInput }; }) });
+      }, true);
+    }
+  });
+  try {
+    await page.goto('/salon/dashboard/bookings/new');
+    await page.getByLabel('Customer name', { exact: true }).fill('Sheila');
+    await page.getByRole('combobox', { name: 'Service', exact: true }).selectOption(fixture.ids.service);
+    await page.getByRole('combobox', { name: 'Professional', exact: true }).selectOption(fixture.ids.professional);
+    await page.getByLabel('Date', { exact: true }).fill('2030-09-24');
+    await page.getByLabel('Time', { exact: true }).fill('13:00');
+    await expect(page.getByLabel('Customer name', { exact: true })).toHaveValue('Sheila');
+    const review = page.getByRole('button', { name: 'Review appointment', exact: true });
+    if (testInfo.repeatEachIndex % 2 === 0) {
+      await review.click();
+    } else {
+    await review.scrollIntoViewIfNeeded();
+    const rect = await review.boundingBox();
+    await page.mouse.move(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2);
+    await page.mouse.down();
+    await page.evaluate(() => new Promise<void>(resolve => {
+      let last = scrollY; let stable = 0;
+      function frame() { stable = scrollY === last ? stable + 1 : 0; last = scrollY; if (stable >= 3) resolve(); else requestAnimationFrame(frame); }
+      requestAnimationFrame(frame);
+    }));
+    await page.mouse.up();
+    }
+    await expect(page.getByRole('status').filter({ hasText: 'That time is unavailable. Choose another time.' })).toBeVisible();
+    expect(posts).toHaveLength(1);
+  } finally {
+    const events = await page.evaluate(() => (window as unknown as { calendarEvents: unknown[] }).calendarEvents);
+    console.log(JSON.stringify(events));
+    await testInfo.attach('calendar-native-events', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
+  }
+});
+
 // Browser API and speech fixtures exercise the real components. SQL/server
 // suites separately prove persistence and authorization; this is not live AI.
 for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {

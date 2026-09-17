@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { assistantPageFromPath } from "@/lib/assistantPageContext";
+import { isAssistantLanguage } from "@/lib/assistantLanguage";
 import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
 import { ArrowUp, Bot, Building2, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
@@ -101,12 +102,16 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
+  // Conversation preference is ephemeral and actor-scoped. A display-language
+  // change resets its default; a spoken/typed switch does not alter account UI.
+  const responseLanguage = useRef<{ display: string; response: string } | null>(null);
   useEffect(() => {
     const lifetime = actorGeneration;
     const subscription = getSupabaseForScope("salon").auth.onAuthStateChange((_event, session) => {
       const nextActor = session?.user.id || null;
       if (actor.current !== nextActor) {
         actorGeneration.current++; actor.current = nextActor;
+        responseLanguage.current = null;
         setDictationSession(value => value + 1); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       }
       if (!session) dialog.current?.close();
@@ -124,7 +129,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     // the user's first Assistant request fail spuriously.
     if (actor.current === null) actor.current = session.user.id;
     if (session.user.id !== actor.current) throw new Error("AUTH_REQUIRED");
-    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale, ...(body.action === "plan" ? { page: assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
+    const requestLocale = responseLanguage.current?.display === locale ? responseLanguage.current.response : locale;
+    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale: requestLocale, ...(body.action === "plan" ? { page: assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
     return readOwnerResponse(response, "ASSISTANT_UNAVAILABLE");
   }
   async function submit(tool?: string, setup = false) {
@@ -140,8 +146,10 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         return [...(turn.text ? [{ role: "user", text: turn.text }] : []), ...(assistant ? [{ role: "assistant", text: assistant }] : [])];
       }).slice(-6), previous_request_ids: turns.filter(turn => turn.request).slice(-6).map(turn => turn.request!.id) }, generation);
       if (generation !== actorGeneration.current) return;
+      const resultLocale = isAssistantLanguage(result.response_locale) ? result.response_locale : (responseLanguage.current?.display === locale ? responseLanguage.current.response : locale);
+      responseLanguage.current = { display: locale, response: resultLocale };
       const quickAction = quickActions.find(action => action.tool === tool);
-      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, ...result, locale }].slice(-12));
+      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, ...result, locale: resultLocale }].slice(-12));
       if (!tool) setText(current => current === message ? "" : current);
     } catch (error) { if (generation !== actorGeneration.current) return; setReference(error instanceof OwnerActionError ? error.reference : ""); setNotice(errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below."); }
     finally { if (generation === actorGeneration.current) setBusy(false); }
@@ -192,8 +200,9 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
 
           <div className="mt-5 space-y-5">
             {turns.map(turn => {
-              const fallback = turn.request?.risk_class === 1 ? presentAssistantResult(turn.request.tool, turn.request.result, locale) : null;
-              const responseText = turn.request?.confirmed_at ? "" : turn.assistant_message || turn.reply || turn.clarification || fallback?.message || (turn.request?.risk_class && turn.request.risk_class >= 3 ? presentPreparedAssistantAction(turn.request.tool, locale) : "");
+              const turnLocale = turn.locale || locale;
+              const fallback = turn.request?.risk_class === 1 ? presentAssistantResult(turn.request.tool, turn.request.result, turnLocale) : null;
+              const responseText = turn.request?.confirmed_at ? "" : turn.assistant_message || turn.reply || turn.clarification || fallback?.message || (turn.request?.risk_class && turn.request.risk_class >= 3 ? presentPreparedAssistantAction(turn.request.tool, turnLocale) : "");
               const suggestions = turn.suggestions || fallback?.suggestions || [];
               return <article key={turn.id} className="space-y-3">
                 {turn.text ? <div className="flex justify-end"><p data-no-translate className="max-w-[86%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-primary-hover px-4 py-3 text-sm font-medium leading-6 text-white shadow-sm">{turn.text}</p></div> : null}

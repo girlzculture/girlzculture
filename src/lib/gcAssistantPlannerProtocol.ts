@@ -1,4 +1,5 @@
 import { ASSISTANT_TOOLS, AssistantError, validateTool, type AssistantTool } from "@/lib/gcAssistantCore";
+import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from "@/lib/assistantLanguage";
 
 const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
@@ -47,7 +48,7 @@ export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boo
   const tools = Object.entries(ASSISTANT_TOOLS).filter(([, definition]) => granted.has(definition.permission)).map(([name, definition]) => object({
     tool: { type: "string", enum: [name] }, args: definition.schema,
   }, purposes[name as AssistantTool]));
-  return object({ decision: { anyOf: [
+  return object({ language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
     ...tools,
     object({ clarification: { type: "string", minLength: 1, maxLength: 240 } }, "Ask one necessary missing-detail question, or greet the owner. Never answer business-data questions here."),
     object({ navigate: { type: "string", enum: destinations } }, "Open a controlled dashboard workflow when requested, or for financial/security actions that cannot be prepared here."),
@@ -66,8 +67,8 @@ export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<str
   let payload: unknown;
   try { payload = JSON.parse(text); } catch { throw new AssistantPlannerError("JSON"); }
   const key = answerOnly ? "reply" : "decision";
-  if (!isObject(payload) || Object.keys(payload).length !== 1 || !Object.hasOwn(payload, key)) throw new AssistantPlannerError("ENVELOPE");
-  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null } = { plan: null, reply: null, clarification: null, navigate: null };
+  if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
+  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
   if (answerOnly) {
     if (typeof payload.reply !== "string" || !payload.reply.trim() || payload.reply.length > 900) throw new AssistantPlannerError("ANSWER");
     result.reply = payload.reply; return result;

@@ -12,6 +12,36 @@ import { mkdir } from 'node:fs/promises';
 // this API-fixture test isolated; real service workers retain their PWA suite.
 test.use({ serviceWorkers: 'block' });
 
+for (const [width, height] of [[390, 844], [768, 900], [1440, 900], [844, 390]]) {
+  test(`P0 Assistant all skills preserve conversational language switches at ${width}x${height}`, async ({ page }) => {
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: 'en' });
+    await page.setViewportSize({ width, height });
+    const requestLocales: string[] = [];
+    const responses = [
+      { response_locale: 'wo', clarification: 'Waaw, dinaa tontu ci Wolof.' },
+      { response_locale: 'wo', assistant_message: 'Silk Press 120 USD la.' },
+      { response_locale: 'en', clarification: 'I will answer in English.' },
+      { response_locale: 'en', assistant_message: 'Silk Press costs 120 USD.' },
+    ];
+    await page.route('**/api/salon/assistant', route => {
+      requestLocales.push(route.request().postDataJSON().locale);
+      return route.fulfill({ json: responses[requestLocales.length - 1] });
+    });
+    await page.goto('/salon/dashboard');
+    await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'GC Assistant' });
+    for (const [i, text] of ['Please reply in Wolof.', 'How much is Silk Press?', 'Switch to English.', 'And the base price?'].entries()) {
+      await dialog.locator('textarea').fill(text);
+      await dialog.getByRole('button', { name: 'Ask GC Assistant', exact: true }).click();
+      await expect(dialog.locator('article').last()).toContainText(responses[i].clarification || responses[i].assistant_message!);
+    }
+    expect(requestLocales).toEqual(['en', 'wo', 'wo', 'en']);
+    await dialog.getByRole('button', { name: 'Close GC Assistant' }).click();
+    await expect(page.getByRole('combobox', { name: 'Select language' })).toHaveValue('en');
+    expect(fixture.unexpected).toEqual([]);
+  });
+}
+
 // Scripted API contracts exercise the real drawer and confirmation flow. They
 // are NOT provider natural-language acceptance. SQL and server tests separately
 // prove permission checks, atomic authoritative writes and idempotency.

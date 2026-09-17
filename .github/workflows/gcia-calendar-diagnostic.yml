@@ -1,0 +1,44 @@
+name: GCIA calendar native-event diagnosis
+
+on:
+  pull_request:
+    paths:
+      - tests/browser/p0-operational-calendar.spec.ts
+      - .github/workflows/gcia-calendar-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3105
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3104
+      GIRLZ_CULTURE_ACCEPTANCE_MODE: "true"
+      NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
+      CUSTOMER_MARKETPLACE_LIVE: "true"
+      PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - run: npm run build
+      - name: Capture native validation, focus and pointer events on Linux WebKit
+        run: npx playwright test tests/browser/p0-operational-calendar.spec.ts --project=webkit --grep "diagnoses native form submission" --repeat-each=20 --workers=2 --max-failures=1 --trace=on
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: gcia-calendar-diagnostic-${{ github.run_id }}
+          path: |
+            test-results
+            playwright-report
+          retention-days: 7
