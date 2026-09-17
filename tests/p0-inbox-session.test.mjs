@@ -72,3 +72,22 @@ test('message sender labels are localized on render without a later DOM translat
     assert.equal(app.find(node => node.props.messageId === 'message-a').props.original, 'Business');
   }
 });
+
+test('inbox loading is translated on its initial render', () => {
+  const app = inboxHarness(value => value === 'Loading booking messages…' ? 'Chargement des messages…' : value);
+  assert.equal(app.render().props.children, 'Chargement des messages…');
+});
+
+test('a delayed empty inbox is translated in the render that introduces it', async () => {
+  const labels = {
+    'Loading booking messages…': 'Chargement des messages…',
+    'No booking conversations yet': 'Aucune conversation de réservation',
+    'A conversation becomes available after a real appointment is booked.': 'Une conversation est disponible après la réservation d’un rendez-vous réel.',
+  };
+  const app = inboxHarness(value => labels[value] || value);
+  await app.settle();
+  app.responses[0].resolve(Response.json({ threads: [], role: 'customer' }));
+  await app.settle();
+  assert.equal(app.find(node => node.type === 'h2').props.children, labels['No booking conversations yet']);
+  assert.equal(app.find(node => node.type === 'p').props.children, labels['A conversation becomes available after a real appointment is booked.']);
+});

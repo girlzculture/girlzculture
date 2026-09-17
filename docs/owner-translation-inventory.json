@@ -1831,8 +1831,8 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "line": 230,
-          "kind": "jsx-text",
-          "context": "dd2849f6bc7e025d73b99cba9c8290bb5538b0157064c8cea3da6a4f39e167ae"
+          "kind": "localized-source",
+          "context": "fb319075dc868e5ffe7fc6e2d011571b20969b3edd168ef04d484f08f7452bac"
         }
       ]
     },
@@ -12332,8 +12332,8 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "line": 227,
-          "kind": "jsx-text",
-          "context": "d6f425638f10d802596e4dbb788ca4e27d4099693a3000e667e1325f4b313298"
+          "kind": "localized-source",
+          "context": "bde46c463f8f22332e728733386556a678624cd873d4c0c1ae440ca1bff3529e"
         },
         {
           "file": "src/components/BookingInbox.tsx",
@@ -14171,8 +14171,8 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "line": 230,
-          "kind": "jsx-text",
-          "context": "de17e2befbf8ea3cc58fe46be1b6466d08eb0453ab493beb86ccbcf461f025c7"
+          "kind": "localized-source",
+          "context": "dff5c621affd22383f9711da9604de01e8a5b79502471fe4c70a845d03a184c3"
         }
       ]
     },
