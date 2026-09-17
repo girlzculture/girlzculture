@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Bell, CalendarDays, CreditCard, Crown, Heart, Home, MessageSquare, Search, Settings, Share2, ShoppingBag, Star, UserRound } from "lucide-react";
@@ -47,15 +47,37 @@ export default function CustomerAccount() {
   const [orders, setOrders] = useState<Row[]>([]);
   const [favorites, setFavorites] = useState<Row[]>([]);
   const [error, setError] = useState("");
+  const actor = useRef<string | null | undefined>(undefined);
+  const generation = useRef(0);
+  const [actorId, setActorId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
+    const lifetime = generation;
+    const subscription = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextActor = session?.user.id || null;
+      if (nextActor === actor.current) return;
+      actor.current = nextActor; lifetime.current++;
+      setCustomer(null); setBookings([]); setOrders([]); setFavorites([]); setError("");
+      setLoading(Boolean(nextActor)); setActorId(nextActor);
+    });
+    return () => { lifetime.current++; subscription.data.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (actorId === undefined) return;
+    if (!actorId) { router.replace("/login?next=/account"); return; }
+    const identity = generation.current;
     let active = true;
+    const current = () => active && identity === generation.current;
+    // Session APIs run outside the auth callback to avoid holding its lock.
     void supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) {
+      if (!current()) return;
+      if (!data.user || data.user.id !== actorId) {
         router.replace("/login?next=/account");
         return;
       }
       const session = await getSessionForScope("customer");
+      if (!current()) return;
       if (!session || session.user.id !== data.user.id) {
         router.replace("/login?next=/account");
         return;
@@ -66,35 +88,36 @@ export default function CustomerAccount() {
         fetch("/api/customer/favorites", { credentials: "same-origin", cache: "no-store", redirect: "manual", headers: { Accept: "application/json", Authorization: `Bearer ${session.access_token}` } }),
         supabase.from("product_orders").select("*,salon:salons(name,slug,cover_photo_url),items:product_order_items(product_name,quantity,line_total,image_url)").eq("customer_id", data.user.id).order("created_at", { ascending: false }).limit(100),
       ]);
-      if (!active) return;
+      if (!current()) return;
       if (bookingResult.error || orderResult.error) throw new Error("Your bookings or orders could not be loaded. Please retry; no account data has been changed.");
+      const favoriteBody = await readApiResponse(favoriteResponse, "Unable to load your saved salons.");
+      if (!current()) return;
+      if (!favoriteResponse.ok) throw new Error(favoriteBody.error || "Unable to load your saved salons.");
       if (profileResult.error) setError(profileResult.error.message);
       setCustomer((profileResult.data || { id: data.user.id, name: data.user.user_metadata?.name || data.user.email?.split("@")[0], email: data.user.email, membership_tier: "Member" }) as Row);
       setBookings((bookingResult.data || []) as Row[]);
-      const favoriteBody = await readApiResponse(favoriteResponse, "Unable to load your saved salons.");
-      if (!favoriteResponse.ok) throw new Error(favoriteBody.error || "Unable to load your saved salons.");
       setFavorites((Array.isArray(favoriteBody.salons) ? favoriteBody.salons : []) as Row[]);
       setOrders((orderResult.data || []) as Row[]);
       setLoading(false);
     }).catch((loadError) => {
-      if (active) {
+      if (current()) {
         setError(loadError instanceof Error ? loadError.message : "Unable to load your account.");
         setLoading(false);
       }
     });
     return () => { active = false; };
-  }, [router]);
+  }, [router, actorId]);
 
   const [now] = useState(() => Date.now());
   const upcoming = useMemo(() => bookings.filter((booking) => new Date(String(booking.appointment_datetime || 0)).getTime() >= now && !["completed", "cancelled"].includes(String(booking.status || "").toLowerCase())), [bookings, now]);
   const past = useMemo(() => bookings.filter((booking) => new Date(String(booking.appointment_datetime || 0)).getTime() < now || ["completed", "cancelled"].includes(String(booking.status || "").toLowerCase())), [bookings, now]);
 
-  if (loading) return <main className="grid min-h-screen place-items-center bg-cream text-plum">Loading your beauty journey…</main>;
+  if (loading || (!customer && !error)) return <main className="grid min-h-screen place-items-center bg-cream text-plum">Loading your beauty journey…</main>;
   if (error) return <main className="grid min-h-screen place-items-center bg-cream p-6"><div className="rounded-2xl bg-white p-8 text-center"><h1 className="font-serif text-3xl text-plum">Account unavailable</h1><p className="mt-3 text-sm gc-text-danger">{error}</p><Link href="/login" className="mt-5 inline-flex rounded-lg bg-magenta px-5 py-3 font-bold text-white">Sign in again</Link></div></main>;
 
   const name = String(customer?.name || "Girlz Culture Member");
   const firstName = name.split(" ")[0];
-  return <div className="gc-dashboard min-h-screen bg-white pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
+  return <div key={actorId} className="gc-dashboard min-h-screen bg-white pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
     <header className="gc-brand-header flex min-h-20 flex-wrap gap-3 py-3 items-center justify-between border-b border-plum/10 px-5 lg:px-10">
       <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
       <nav className="hidden gap-6 text-sm xl:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
