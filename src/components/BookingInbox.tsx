@@ -224,10 +224,10 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
     }
   }
 
-  if (loading) return <div className="rounded-[18px] border border-plum/10 bg-white p-8 text-center text-sm text-ink/55">Loading booking messages…</div>;
+  if (loading) return <div className="rounded-[18px] border border-plum/10 bg-white p-8 text-center text-sm text-ink/55">{t("Loading booking messages…")}</div>;
   const failure = notice ? <div role="alert" className="border-t border-red-200 bg-red-50 p-4 text-sm gc-text-danger"><p>{t(notice)}</p>{reference ? <p>{t("Support reference")}: <span data-no-translate>{reference}</span></p> : null}<button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg border px-4">{t("Try again")}</button></div> : null;
   if (!threads.length && failure) return failure;
-  if (!threads.length) return <div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center"><MessageSquare className="mx-auto text-magenta" /><h2 className="mt-4 font-serif text-2xl text-plum">No booking conversations yet</h2><p className="mt-2 text-sm text-ink/55">A conversation becomes available after a real appointment is booked.</p></div>;
+  if (!threads.length) return <div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center"><MessageSquare className="mx-auto text-magenta" /><h2 className="mt-4 font-serif text-2xl text-plum">{t("No booking conversations yet")}</h2><p className="mt-2 text-sm text-ink/55">{t("A conversation becomes available after a real appointment is booked.")}</p></div>;
 
   const selected = threads.find((thread) => thread.booking.id === selectedId);
   if (!selected) return failure || <p role="status" className="p-8 text-sm gc-text-secondary">{t("Loading booking messages…")}</p>;

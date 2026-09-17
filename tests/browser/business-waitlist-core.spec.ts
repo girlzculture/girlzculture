@@ -7,6 +7,7 @@ import ts from "typescript";
 import { DEFAULT_BUSINESS_SIGNUP_CONTENT } from "../../src/lib/businessSignupContent";
 import * as waitlist from "../../src/lib/businessWaitlistCore";
 import * as requestSecurity from "../../src/lib/requestSecurity";
+import * as customerSupport from "../../src/lib/customerSupport";
 
 const details = {
   intent: "business_waitlist", categoryId: "nail-studio", website: "",
@@ -90,6 +91,7 @@ function isolatedSupportRoute(options: { unavailable?: boolean; missingTicket?: 
       return options.unavailable ? null : content;
     } },
     "@/lib/businessWaitlistCore": waitlist,
+    "@/lib/customerSupport": customerSupport,
     "@/lib/supabaseAdmin": { getSupabaseAdmin: () => ({ from: (table: string) => {
       expect(table).toBe("support_tickets");
       return { insert: (value: Record<string, unknown>) => {

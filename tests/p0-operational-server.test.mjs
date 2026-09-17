@@ -4,12 +4,112 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 const business = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', actor = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const service = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', professional = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const manual = { guest_name: 'Sheila', guest_phone: '', guest_email: '', style_id: service, service_name: '', duration_minutes: null, stylist_id: null, date: '2030-09-24', time: '13:00', source: 'phone', notes: 'Private original note' };
+
+test('plan answers use the canonical entitlement catalog and do not infer an unknown plan', async () => {
+  const known = fixture(); const result = (await known.run('get_plan_status', {})).request.result;
+  assert.equal(result.current_plan.name, 'Premium');
+  assert.equal(result.current_plan.entitlements.productListings.limit, null);
+  assert.equal(result.available_plans.length, 3);
+  assert.equal(result.revenue_uplift_projection, null);
+  const unknown = fixture({ tables: { subscriptions: [{ salon_id: business, status: 'active', tier: 'Unknown' }] } });
+  assert.equal((await unknown.run('get_plan_status', {})).request.result.current_plan, null);
+});
+
+test('plan usage counts only the authorized business and uses existing active-record definitions', async () => {
+  const f = fixture({ tables: {
+    subscriptions: [{ salon_id: business, tier: 'Premium', scheduled_tier: 'Starter', status: 'active' }],
+    salon_products: [{ salon_id: business, product_status: 'Draft' }, { salon_id: business, product_status: 'Archived' }, { salon_id: business, product_status: 'Active', archived_at: '2030-01-01' }, { salon_id: actor, product_status: 'Active' }],
+    salon_promotions: [{ salon_id: business, status: 'Active', is_active: true }, { salon_id: business, status: 'Draft', is_active: true }, { salon_id: business, status: 'Active', is_active: false }, { salon_id: actor, status: 'Active', is_active: true }],
+  } });
+  const result = (await f.run('get_plan_status', {})).request.result;
+  assert.equal(result.current_plan.name, 'Premium');
+  assert.equal(result.effective_record_limit_plan, 'Starter');
+  assert.equal(result.effective_record_limits.product_listings.limit, 10);
+  assert.equal(result.business_usage.product_listings, 1);
+  assert.equal(result.business_usage.active_promotions, 1);
+  assert.ok(Number.isFinite(Date.parse(result.business_usage.as_of)));
+});
+
+test('overview permission does not disclose product or promotion usage without section permission', async () => {
+  const f = fixture({ denied: ['products', 'promotions'] });
+  const result = (await f.run('get_plan_status', {})).request.result;
+  assert.equal(result.business_usage.product_listings, null);
+  assert.equal(result.business_usage.active_promotions, null);
+  assert.equal(f.calls.some(call => ['salon_products', 'salon_promotions'].includes(call.table)), false);
+});
+
+test('business comparison uses exact half-open ranges and excludes another tenant', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const f = fixture({ tables: { bookings: [
+    { salon_id: business, appointment_datetime: '2030-09-23T00:00:00.000Z', status: 'Completed', estimated_total: 50 },
+    { salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 100 },
+    { salon_id: business, appointment_datetime: range.end, status: 'Completed', estimated_total: 900 },
+    { salon_id: actor, appointment_datetime: range.start, status: 'Completed', estimated_total: 9000 },
+  ] } });
+  const result = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(result.comparison.previous.start, '2030-09-23T00:00:00.000Z');
+  assert.equal(result.comparison.previous.completed_booking_value, 50);
+  assert.equal(result.comparison.current.completed_booking_value, 100);
+  assert.equal(result.comparison.changes.completed_booking_value.percent, 100);
+  assert.equal(result.cash_revenue, null);
+});
+
+test('service and staff workload names are tenant scoped and require their section permissions', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const tables = {
+    bookings: [{ salon_id: business, style_id: service, stylist_id: professional, appointment_datetime: range.start, status: 'Completed', estimated_total: 100 }],
+    styles: [{ id: service, salon_id: actor, name: 'Foreign service' }],
+    stylists: [{ id: professional, salon_id: business, name: 'Authorized professional' }],
+  };
+  const f = fixture({ tables });
+  const result = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(result.service_performance.rows[0].name, null);
+  assert.equal(result.professional_performance.rows[0].name, 'Authorized professional');
+  assert.equal(result.professional_performance.rows[0].completed_booking_value, 100);
+  assert.equal(JSON.stringify(result).includes('Foreign service'), false);
+  const denied = fixture({ tables, denied: ['styles', 'stylists'] });
+  const hidden = (await denied.run('get_business_summary', range)).request.result;
+  assert.equal(hidden.service_performance, null); assert.equal(hidden.professional_performance, null);
+  assert.equal(denied.calls.some(call => ['styles', 'stylists'].includes(call.table)), false);
+});
+
+test('period comparisons paginate beyond the default provider row cap', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const f = fixture({ tables: { bookings: Array.from({ length: 1001 }, (_, id) => ({ id, salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 1 })) } });
+  const result = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(result.comparison.current.total_appointments, 1001);
+  assert.equal(result.comparison.current.completed_booking_value, 1001);
+  assert.equal(result.comparison.previous.total_appointments, 0);
+});
+
+test('overview permission alone does not expose calendar gaps', async () => {
+  const f = fixture({ denied: ['availability'] });
+  const result = (await f.run('get_business_summary', { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' })).request.result;
+  assert.equal(result.calendar_gaps, null);
+  assert.equal(f.calls.some(call => call.calendar), false);
+});
+
+test('earnings evidence is an authorized appointment cohort and excludes foreign and manual money', async () => {
+  const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
+  const paid = { salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 100, payment_mode: 'live', payment_verified_at: range.start, stripe_charge_id: 'ch_fixture', deposit_status: 'Paid', deposit_amount: 20 };
+  const f = fixture({ tables: { bookings: [paid, { ...paid, salon_id: actor, deposit_amount: 999 }, { ...paid, booking_origin: 'business_added', deposit_amount: 888 }] } });
+  const result = (await f.run('get_earnings_summary', range)).request.result;
+  assert.equal(result.finance.scope, 'current_ledger_for_appointments_in_range');
+  assert.equal(result.finance.live.recorded_verified_deposits, 20);
+  assert.equal(result.finance.payment_date_cash_flow, null);
+  assert.equal(result.finance.bank_settlement_verified, false);
+  const overview = (await f.run('get_business_summary', range)).request.result;
+  assert.equal(Object.hasOwn(overview, 'finance'), false);
+  const denied = fixture({ denied: ['earnings'] });
+  await assert.rejects(denied.run('get_earnings_summary', range), error => error.code === 'ASSISTANT_ACCESS_DENIED');
+  assert.equal(denied.calls.some(call => call.table === 'bookings'), false);
+});
 function fixture(overrides = {}) {
   const calls = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], ...overrides.tables };
-  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
+  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
+  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
     const filters = []; let one = false, first = 0, last = Infinity;
-    const q = { select() { return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
+    const q = { select() { return q; }, in(k,v) { filters.push(row => v.includes(row[k])); return q; }, neq(k,v) { filters.push(row => row[k] != null && row[k] !== v); return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
   } };
   const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/contentModerationServer': { moderatePublicContent: async()=>({allowed:true}) }, '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
   const server = load('src/lib/gcAssistantServer.ts');

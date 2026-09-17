@@ -3,6 +3,9 @@ import type { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { AssistantError, type AssistantTool } from "@/lib/gcAssistantCore";
 import { ownerBusinessMetrics, profileCompletion } from "@/lib/ownerBusinessMetrics";
 import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
+import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
+import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
+import { assistantFinanceEvidence } from "@/lib/assistantFinance";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -12,7 +15,34 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
   if (tool === "get_plan_status") {
     const result = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier,cancel_at_period_end").eq("salon_id", salon.id).maybeSingle();
     if (result.error) throw result.error;
-    return { subscription: result.data, billing_changes_require_subscription_workflow: true };
+    const current = canonicalPlanForStored(result.data?.tier);
+    const recordLimitPlan = restrictivePlanForLimits(result.data?.tier, result.data?.scheduled_tier);
+    const catalog = Object.values(SUBSCRIPTION_PLANS).map(plan => ({ name: plan.name, monthly_amount_cents: plan.monthlyAmountCents, currency: "USD", entitlements: plan.entitlements }));
+    async function usage(permission: "products" | "promotions") {
+      const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: permission });
+      if (access.error) throw access.error;
+      if (access.data !== true) return null;
+      // Same record definitions as validateSalonRecordEntitlements; do not
+      // expose even aggregate product/promotion data to an unauthorized team.
+      let query = admin.from(permission === "products" ? "salon_products" : "salon_promotions")
+        .select("id", { count: "exact", head: true }).eq("salon_id", salon.id).is("archived_at", null);
+      query = permission === "products" ? query.neq("product_status", "Archived") : query.eq("status", "Active").eq("is_active", true);
+      const counted = await query;
+      if (counted.error) throw counted.error;
+      return Number.isInteger(counted.count) ? counted.count : null;
+    }
+    const [productListings, activePromotions] = await Promise.all([usage("products"), usage("promotions")]);
+    return {
+      subscription: result.data,
+      current_plan: catalog.find(plan => plan.name === current) || null,
+      available_plans: catalog,
+      effective_record_limit_plan: recordLimitPlan,
+      // Match the existing inventory admission rule for pending downgrades.
+      effective_record_limits: recordLimitPlan ? { product_listings: SUBSCRIPTION_PLANS[recordLimitPlan].entitlements.productListings, active_promotions: SUBSCRIPTION_PLANS[recordLimitPlan].entitlements.customerPromotions } : null,
+      business_usage: { product_listings: productListings, active_promotions: activePromotions, as_of: new Date().toISOString() },
+      revenue_uplift_projection: null,
+      billing_changes_require_subscription_workflow: true,
+    };
   }
   if (tool === "get_profile_completion") {
     const counts = await Promise.all(["styles", "stylists"].map(table => admin.from(table).select("id", { count: "exact", head: true }).eq("salon_id", salon.id).is("archived_at", null)));
@@ -47,24 +77,52 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     // Paginate authoritative bookings, as the existing finance ledger does.
     // Aggregate numeric facts stay server-side; private bodies are never sent to
     // the planner. A bounded range prevents unbounded historical requests.
-    const bookings: Row[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const result = await admin.from("bookings").select("id,public_reference,appointment_datetime,status,guest_name,guest_email,customer_id,estimated_total,cancelled_by,cancellation_initiated_by,booking_origin,source").eq("salon_id", salon.id).gte("appointment_datetime", args.start).lt("appointment_datetime", args.end).order("id").range(offset, offset + 999);
-      if (result.error) throw result.error;
-      bookings.push(...result.data || []);
-      if ((result.data || []).length < 1000) break;
-      if (offset >= 99000) throw new AssistantError("ASSISTANT_RANGE_TOO_LARGE", 409);
+    async function readPeriod(start: unknown, end: unknown, summaryOnly = false) {
+      const records: Row[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const query = summaryOnly
+          ? admin.from("bookings").select("status,estimated_total,booking_origin")
+          : tool === "get_earnings_summary"
+            ? admin.from("bookings").select("id,appointment_datetime,status,estimated_total,booking_origin,payment_mode,payment_verified_at,stripe_charge_id,deposit_status,deposit_amount,stripe_processing_fee,platform_fee,net_amount_owed_salon,refund_status,refund_amount,refund_completed_at,stripe_refund_id,transfer_status,stripe_transfer_id")
+            : admin.from("bookings").select("id,public_reference,appointment_datetime,status,guest_name,guest_email,customer_id,estimated_total,cancelled_by,cancellation_initiated_by,booking_origin,source,style_id,stylist_id");
+        const result = await query.eq("salon_id", salon.id).gte("appointment_datetime", start).lt("appointment_datetime", end).order("id").range(offset, offset + 999);
+        if (result.error) throw result.error;
+        records.push(...result.data || []);
+        if ((result.data || []).length < 1000) break;
+        if (offset >= 99000) throw new AssistantError("ASSISTANT_RANGE_TOO_LARGE", 409);
+      }
+      return records;
     }
+    const bookings = await readPeriod(args.start, args.end);
     const metrics = ownerBusinessMetrics(bookings);
     if (tool === "get_customers") return { customers: bookings.map(row => ({ name: row.guest_name, booking_id: row.id, customer_id: row.customer_id, booking_origin: row.booking_origin })), scope: "customers_of_these_bookings" };
     if (tool === "get_upcoming_appointments") return { bookings: metrics.upcoming.map(row => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "guest_email"))), time_zone: salon.time_zone };
-    if (tool === "get_earnings_summary") return { completed_booking_value: metrics.completed_booking_value, marketplace_bookings: metrics.marketplace_bookings, business_added_appointments: metrics.business_added_appointments, currency: "USD", definition: "Completed Booking Value", cash_revenue: null };
+    const currentPeriod = assistantPeriodMetrics(bookings);
+    const start = Date.parse(String(args.start)), end = Date.parse(String(args.end));
+    const comparisonStart = new Date(start - (end - start)).toISOString();
+    const previousPeriod = assistantPeriodMetrics(await readPeriod(comparisonStart, args.start, true));
+    const comparison = { method: "preceding_equal_elapsed_duration", current: { start: args.start, end: args.end, ...currentPeriod }, previous: { start: comparisonStart, end: args.start, ...previousPeriod }, changes: compareAssistantPeriods(currentPeriod, previousPeriod) };
+    if (tool === "get_earnings_summary") return { ...currentPeriod, comparison, finance: assistantFinanceEvidence(bookings), start: args.start, end: args.end, time_zone: salon.time_zone, currency: "USD", definition: "Completed Booking Value", cash_revenue: null };
+    async function performance(permission: "styles" | "stylists", field: "style_id" | "stylist_id") {
+      const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: permission });
+      if (access.error) throw access.error;
+      if (access.data !== true) return null;
+      const groups = assistantPerformanceGroups(bookings, field), top = groups.slice(0, 10);
+      const ids = top.map(group => group.record_id).filter((id): id is string => id !== null);
+      const records = ids.length ? await admin.from(permission).select("id,name").eq("salon_id", salon.id).in("id", ids) : { data: [], error: null };
+      if (records.error) throw records.error;
+      const names = new Map((records.data || []).map(record => [String(record.id), record.name]));
+      return { total_groups: groups.length, is_excerpt: groups.length > top.length, ordered_by: "appointment_count", name_source: "current_business_catalog", rows: top.map(({ record_id, ...metrics }) => ({ name: record_id ? names.get(record_id) || null : null, ...metrics })) };
+    }
+    const [services, professionals] = await Promise.all([performance("styles", "style_id"), performance("stylists", "stylist_id")]);
     const byStatus: Record<string, number> = {};
     for (const row of bookings) byStatus[String(row.status)] = (byStatus[String(row.status)] || 0) + 1;
     // Overview permission allows aggregates, not customer identities or contacts.
     const calendarDate = new Intl.DateTimeFormat("en-CA", { timeZone: String(salon.time_zone), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-    const calendar = await calendarAvailability({ salonId: salon.id, date: calendarDate });
-    return { calendar_gaps: calendar, ...metrics, upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
+    const calendarAccess = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: "availability" });
+    if (calendarAccess.error) throw calendarAccess.error;
+    const calendar = calendarAccess.data === true ? await calendarAvailability({ salonId: salon.id, date: calendarDate }) : null;
+    return { calendar_gaps: calendar, ...metrics, ...currentPeriod, comparison, service_performance: services, professional_performance: professionals, no_show_definition: "Recorded booking status only; a past uncompleted appointment is not evidence of a no-show.", upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
   }
   throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
 }

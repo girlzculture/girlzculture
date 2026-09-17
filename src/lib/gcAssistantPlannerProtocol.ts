@@ -1,8 +1,9 @@
 import { ASSISTANT_TOOLS, AssistantError, validateTool, type AssistantTool } from "@/lib/gcAssistantCore";
+import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from "@/lib/assistantLanguage";
 
-const destinations = ["profile", "services", "imports", "policies", "bookings", "subscription", "support", "security"] as const;
+const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
-  get_business_summary: "Read appointment counts, completed booking value and business performance for a date range.",
+  get_business_summary: "Read appointment counts, recorded no-shows, completed booking value and authorized service/professional workload for a date range. Includes comparison with the preceding equal elapsed duration; use its exact timestamps, not an assumed calendar period. A null value is unavailable, not zero. Workload and booking value are not settled revenue or forecasts.",
   get_bookings: "Read appointments and their authoritative IDs for a date range.",
   get_availability: "Read bookable times on a date. Use null IDs when no service or professional is specified.",
   get_business_profile: "Read the business name, description, address, opening hours and social links. This does not contain the service menu or prices.",
@@ -15,9 +16,9 @@ const purposes: Record<AssistantTool, string> = {
   get_booking_messages: "Read the conversation for an already resolved booking ID.",
   get_reviews: "Read customer reviews in a date range.",
   get_promotions: "Read this business's promotion records.",
-  get_plan_status: "Read the current subscription and plan status. Does not change billing or forecast sales.",
+  get_plan_status: "Read the current subscription, canonical plan features/prices and limits for a scheduled downgrade. Use for entitlement and plan-comparison questions. Business usage may be unavailable; never forecast sales or change billing.",
   get_profile_completion: "Read how complete this business's profile is.",
-  get_earnings_summary: "Read completed booking value for a date range. This is not verified cash revenue or payouts.",
+  get_earnings_summary: "Read booking value and its prior equal-duration comparison, plus current recorded deposit/fee/refund/transfer aggregates for appointments in the date range. Use exact timestamps and disclose this appointment cohort, not cash flow by payment date. Keep live, test and unknown payment modes separate. Missing fields are unavailable, not zero; unverified records are excluded from confirmed sums. Connect transfers are not bank payouts. Net revenue and bank settlement remain unavailable. Open earnings for individual ledger details or financial actions.",
   get_upcoming_appointments: "Read upcoming appointments in a date range.",
   get_calendar_gaps: "Read calendar openings on a date, optionally for one professional.",
   prepare_manual_appointment: "Prepare a business-added appointment after resolving services, duration, professional and available time. Owner confirmation is still required.",
@@ -47,7 +48,7 @@ export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boo
   const tools = Object.entries(ASSISTANT_TOOLS).filter(([, definition]) => granted.has(definition.permission)).map(([name, definition]) => object({
     tool: { type: "string", enum: [name] }, args: definition.schema,
   }, purposes[name as AssistantTool]));
-  return object({ decision: { anyOf: [
+  return object({ language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
     ...tools,
     object({ clarification: { type: "string", minLength: 1, maxLength: 240 } }, "Ask one necessary missing-detail question, or greet the owner. Never answer business-data questions here."),
     object({ navigate: { type: "string", enum: destinations } }, "Open a controlled dashboard workflow when requested, or for financial/security actions that cannot be prepared here."),
@@ -66,8 +67,8 @@ export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<str
   let payload: unknown;
   try { payload = JSON.parse(text); } catch { throw new AssistantPlannerError("JSON"); }
   const key = answerOnly ? "reply" : "decision";
-  if (!isObject(payload) || Object.keys(payload).length !== 1 || !Object.hasOwn(payload, key)) throw new AssistantPlannerError("ENVELOPE");
-  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null } = { plan: null, reply: null, clarification: null, navigate: null };
+  if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
+  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
   if (answerOnly) {
     if (typeof payload.reply !== "string" || !payload.reply.trim() || payload.reply.length > 900) throw new AssistantPlannerError("ANSWER");
     result.reply = payload.reply; return result;

@@ -143,7 +143,7 @@ Updated: 2026-09-15. This inventory covers 129 API route files and is enforced b
 | `/api/stripe/subscription/checkout` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/lifecycle` | POST | provider-backed | Covered |
 | `/api/stripe/webhook` | POST | provider-backed | Covered |
-| `/api/support` | POST | provider-backed | Covered |
+| `/api/support` | POST, GET | provider-backed | Covered |
 
 ## Netlify functions
 

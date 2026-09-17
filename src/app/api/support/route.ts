@@ -5,6 +5,18 @@ import { getEngineList } from "@/lib/engineConfigServer";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { getBusinessSignupContent } from "@/lib/businessSignupContentServer";
 import { BusinessWaitlistValidationError, isConfirmedBusinessWaitlistTicketId, validateBusinessWaitlistSubmission } from "@/lib/businessWaitlistCore";
+import { confirmedSupportReference } from "@/lib/customerSupport";
+
+async function GETHandler(request: Request) {
+  try {
+    enforceRateLimit(request, "public-support-categories", 30, 60_000);
+    const categories = await getEngineList("support.ticket_categories", ["Bookings", "Payments", "Account access", "Salon concern", "Safety", "Partnerships", "Technical issue", "Other"], 40);
+    return Response.json({ categories }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    noteOperationalFailure("Public support categories failed", error);
+    return errorResponse(error, "Unable to load support categories.");
+  }
+}
 
 async function POSTHandler(request: Request) {
   try {
@@ -52,6 +64,7 @@ async function POSTHandler(request: Request) {
     if (body.intent === "business_waitlist" && !isConfirmedBusinessWaitlistTicketId(data?.id)) {
       throw new Error("Business waitlist persistence returned no confirmed ticket reference.");
     }
+    if (!confirmedSupportReference(data?.id)) throw new Error("Support persistence returned no confirmed ticket reference.");
     console.info("Public support request created", { ticketId: data.id, category });
     return Response.json({ ok: true, ticketId: data.id });
   } catch (error) {
@@ -67,3 +80,4 @@ export const POST = withOperationalMonitoring(
   routeMonitoringProfile("/api/support", "POST"),
   POSTHandler,
 );
+export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/support", "GET"), GETHandler);

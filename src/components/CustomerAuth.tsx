@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { BadgeCheck as Star, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -10,7 +10,14 @@ import MfaCodeField from "@/components/auth/MfaCodeField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
+const subscribeToHydration = () => () => {};
+const clientIsInteractive = () => true;
+const serverIsInteractive = () => false;
+
 export default function CustomerAuth() {
+  // Before hydration, typing changes the DOM but not React's controlled state.
+  // Keep every form control disabled until its handlers can retain that input.
+  const interactive = useSyncExternalStore(subscribeToHydration, clientIsInteractive, serverIsInteractive);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -66,7 +73,7 @@ export default function CustomerAuth() {
 
   function changeMode(next: "login" | "signup") { setMode(next); setChallenge(null); setCode(""); setMessage(""); }
 
-  return <div>
+  return <fieldset disabled={!interactive} aria-busy={!interactive} className="m-0 min-w-0 border-0 p-0">
     <div className="grid grid-cols-2 border-b border-plum/10"><button type="button" onClick={() => changeMode("login")} className={`py-4 font-semibold ${mode === "login" ? "border-b-3 border-plum text-plum" : ""}`}>Log in</button><button type="button" onClick={() => changeMode("signup")} className={`py-4 font-semibold ${mode === "signup" ? "border-b-3 border-plum text-plum" : ""}`}>Sign up</button></div>
     <form onSubmit={submit} className="space-y-5 p-6 sm:p-8">
       <h2 className="font-serif text-3xl font-semibold text-plum">{mode === "login" ? "Welcome back" : "Create your account"}</h2>
@@ -82,7 +89,7 @@ export default function CustomerAuth() {
       <Link href="/salons" className="flex w-full items-center justify-center gap-2 rounded-[9px] border border-plum/30 py-3 text-sm font-semibold text-plum"><UserRound size={18} />Continue as guest</Link>
       <div className="grid grid-cols-3 gap-2 border-t border-plum/10 pt-5 text-center text-xs text-ink/65">{[[ShieldCheck, "Verified Pros"], [LockKeyhole, "Secure & Private"], [Star, "Account protected"]].map(([Icon, label]) => <span key={label as string}><Icon className="mx-auto mb-1 text-amber" size={20} />{label as string}</span>)}</div>
     </form>
-  </div>;
+  </fieldset>;
 }
 
 function Field({ label, icon: Icon, children }: { label: string; icon: typeof Mail; children: React.ReactNode }) {

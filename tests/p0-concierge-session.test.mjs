@@ -15,6 +15,7 @@ function harness() {
     '@/components/location/CustomerLocationProvider': { useCustomerLocation: () => ({ location: null }) },
     '@/components/site/SiteAccessProvider': { useSiteAccess: () => null },
     '@/components/site/SafeImage': { default: 'img' },
+    '@/components/public/AssistantSupportHandoff': { __esModule: true, default: 'support-handoff' },
     '@/components/owner/AssistantDictation': { default: 'dictation' }, '@/components/owner/AssistantSpeech': { default: 'speech' },
     '@/components/i18n/LocaleProvider': { useI18n: () => ({ locale: 'fr' }) },
     '@/lib/supabase': { getSupabaseForScope: () => ({ auth: { onAuthStateChange(callback) { onAuth = callback; return { data: { subscription: { unsubscribe() {} } } }; } } }) },
@@ -40,7 +41,13 @@ function harness() {
 test('customer conversation and input clear on account changes', async () => {
   const app = harness(); const pending = app.search();
   app.responses[0](Response.json({ salons: [], mode: 'deterministic' })); await pending;
-  assert.ok(app.conversation()); app.switchAccount();
+  assert.ok(app.conversation());
+  const handoff = app.find(node => node.type === 'support-handoff');
+  assert.equal(handoff.props.turns.length, 1);
+  app.switchAccount();
+  const nextHandoff = app.find(node => node.type === 'support-handoff');
+  assert.notEqual(nextHandoff.key, handoff.key, 'account change must unmount private support drafts');
+  assert.equal(nextHandoff.props.turns.length, 0);
   assert.equal(app.conversation(), null);
   assert.equal(app.find(node => node.type === 'textarea').props.value, '');
 });

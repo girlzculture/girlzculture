@@ -1974,6 +1974,10 @@
       "reason": "IANA timezone or canonical Intl/BCP-47 locale identifier used for formatting, preferences or option values. Human-readable language labels are translated; native autonyms have a separate proper-name allowance.",
       "contexts": [
         {
+          "file": "src/lib/assistantLanguage.ts",
+          "context": "692092cc05b08c3faf457e08f73aff853f2682c7151010d9fb8598bc9df6a35a"
+        },
+        {
           "file": "src/components/i18n/LocaleProvider.tsx",
           "context": "5e0326e2de225021443e0d46ad8f635a70349dbdcdf1a9f940f8d812254bf882"
         },

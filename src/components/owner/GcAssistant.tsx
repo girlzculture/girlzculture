@@ -1,6 +1,9 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { assistantPageFromPath } from "@/lib/assistantPageContext";
+import { isAssistantLanguage } from "@/lib/assistantLanguage";
 import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
 import { ArrowUp, Bot, Building2, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
@@ -24,6 +27,7 @@ export function GcAssistantLauncher() {
   return <button data-gc-assistant-launcher onClick={event => open(event.currentTarget)} className="flex min-h-11 items-center gap-2 rounded-full bg-plum px-4 text-sm font-semibold text-white" aria-haspopup="dialog"><Sparkles aria-hidden size={18}/><span data-no-translate>GC Assistant</span></button>;
 }
 const destinations: Record<string, [string, string]> = {
+  overview: ["Overview", "/salon/dashboard"], photos: ["Photos", "/salon/dashboard/photos"], professionals: ["Stylists", "/salon/dashboard/stylists"], products: ["Products", "/salon/dashboard/products"], availability: ["Availability & Calendar", "/salon/dashboard/availability"], messages: ["Messages", "/salon/dashboard/messages"], reviews: ["Reviews", "/salon/dashboard/reviews"], earnings: ["Earnings & Payouts", "/salon/dashboard/earnings"], promotions: ["Promotions", "/salon/dashboard/promotions"], settings: ["Settings", "/salon/dashboard/settings"],
   profile: ["My Page", "/salon/dashboard/my-page"], services: ["Styles & Pricing", "/salon/dashboard/styles"], imports: ["Import a spreadsheet", "/salon/dashboard/styles"], policies: ["Your Business Policies", "/salon/dashboard/my-page/business-policies"], bookings: ["Bookings", "/salon/dashboard/bookings"], subscription: ["Subscription", "/salon/dashboard/subscription"], support: ["Help", "/help"], security: ["Security & sign out", "/salon/dashboard/settings/security"],
 };
 const quickActions = [
@@ -86,6 +90,7 @@ const errors: Record<string, string> = {
   PLATFORM_POLICY_CONFLICT: "These preferences conflict with platform protections. Review the payment and policy rules.",
 };
 export default function GcAssistant({ children }: { children?: React.ReactNode } = {}) {
+  const pathname = usePathname();
   const { locale, translateSource: t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
@@ -97,12 +102,16 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
+  // Conversation preference is ephemeral and actor-scoped. A display-language
+  // change resets its default; a spoken/typed switch does not alter account UI.
+  const responseLanguage = useRef<{ display: string; response: string } | null>(null);
   useEffect(() => {
     const lifetime = actorGeneration;
     const subscription = getSupabaseForScope("salon").auth.onAuthStateChange((_event, session) => {
       const nextActor = session?.user.id || null;
       if (actor.current !== nextActor) {
         actorGeneration.current++; actor.current = nextActor;
+        responseLanguage.current = null;
         setDictationSession(value => value + 1); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       }
       if (!session) dialog.current?.close();
@@ -120,7 +129,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     // the user's first Assistant request fail spuriously.
     if (actor.current === null) actor.current = session.user.id;
     if (session.user.id !== actor.current) throw new Error("AUTH_REQUIRED");
-    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale }), signal: AbortSignal.timeout(55000) });
+    const requestLocale = responseLanguage.current?.display === locale ? responseLanguage.current.response : locale;
+    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale: requestLocale, ...(body.action === "plan" ? { page: assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
     return readOwnerResponse(response, "ASSISTANT_UNAVAILABLE");
   }
   async function submit(tool?: string, setup = false) {
@@ -136,8 +146,10 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         return [...(turn.text ? [{ role: "user", text: turn.text }] : []), ...(assistant ? [{ role: "assistant", text: assistant }] : [])];
       }).slice(-6), previous_request_ids: turns.filter(turn => turn.request).slice(-6).map(turn => turn.request!.id) }, generation);
       if (generation !== actorGeneration.current) return;
+      const resultLocale = isAssistantLanguage(result.response_locale) ? result.response_locale : (responseLanguage.current?.display === locale ? responseLanguage.current.response : locale);
+      responseLanguage.current = { display: locale, response: resultLocale };
       const quickAction = quickActions.find(action => action.tool === tool);
-      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, ...result, locale }].slice(-12));
+      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, ...result, locale: resultLocale }].slice(-12));
       if (!tool) setText(current => current === message ? "" : current);
     } catch (error) { if (generation !== actorGeneration.current) return; setReference(error instanceof OwnerActionError ? error.reference : ""); setNotice(errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below."); }
     finally { if (generation === actorGeneration.current) setBusy(false); }
@@ -174,6 +186,13 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
             </div>
           </section>
 
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" disabled={busy} onClick={() => {
+              actorGeneration.current++; setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setDictationSession(value => value + 1);
+            }} className="min-h-11 rounded-lg border border-border bg-white px-3 text-xs font-semibold text-text-primary gc-disabled-control">{t("New conversation")}</button>
+            <p className="max-w-sm text-xs leading-5 text-text-primary">{t("Starting a new conversation clears this panel. Saved business actions remain in the audit history.")}</p>
+          </div>
+
           <nav aria-label={t("Suggested Assistant actions")} className="mt-4 flex gap-2 overflow-x-auto pb-2">
             {quickActions.map(action => <button key={action.tool} data-assistant-tool={action.tool} disabled={busy} onClick={() => void submit(action.tool)} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-border bg-white px-3.5 text-xs font-semibold text-text-primary shadow-sm transition hover:border-teal hover:text-text-link gc-disabled-control"><action.icon aria-hidden size={15}/>{t(action.label)}</button>)}
             <button disabled={busy} onClick={() => void submit(undefined, true)} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-border bg-white px-3.5 text-xs font-semibold text-text-primary shadow-sm transition hover:border-teal hover:text-text-link gc-disabled-control"><Sparkles aria-hidden size={15}/>{t("Set up with GC Assistant")}</button>
@@ -181,14 +200,15 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
 
           <div className="mt-5 space-y-5">
             {turns.map(turn => {
-              const fallback = turn.request?.risk_class === 1 ? presentAssistantResult(turn.request.tool, turn.request.result, locale) : null;
-              const responseText = turn.request?.confirmed_at ? "" : turn.assistant_message || turn.reply || turn.clarification || fallback?.message || (turn.request?.risk_class && turn.request.risk_class >= 3 ? presentPreparedAssistantAction(turn.request.tool, locale) : "");
+              const turnLocale = turn.locale || locale;
+              const fallback = turn.request?.risk_class === 1 ? presentAssistantResult(turn.request.tool, turn.request.result, turnLocale) : null;
+              const responseText = turn.request?.confirmed_at ? "" : turn.assistant_message || turn.reply || turn.clarification || fallback?.message || (turn.request?.risk_class && turn.request.risk_class >= 3 ? presentPreparedAssistantAction(turn.request.tool, turnLocale) : "");
               const suggestions = turn.suggestions || fallback?.suggestions || [];
               return <article key={turn.id} className="space-y-3">
                 {turn.text ? <div className="flex justify-end"><p data-no-translate className="max-w-[86%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-primary-hover px-4 py-3 text-sm font-medium leading-6 text-white shadow-sm">{turn.text}</p></div> : null}
                 {responseText || turn.navigate ? <div className="flex items-start gap-3"><span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-hover text-white"><Bot aria-hidden size={16}/></span><div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border bg-white px-4 py-3 shadow-[0_4px_16px_rgba(13,17,20,.04)]">
                   {responseText ? <><p role={turn.request?.risk_class === 1 || !turn.request ? "status" : undefined} data-no-translate className="whitespace-pre-wrap break-words text-sm font-medium leading-6 text-text-primary">{responseText}</p><AssistantSpeech text={responseText} sessionKey={dictationSession} language={turn.assistant_message || turn.reply || turn.clarification ? turn.locale : locale}/></> : null}
-                  {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => dialog.current?.close()}>{t(`Open ${destinations[turn.navigate][0]}`)}</Link> : null}
+                  {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => dialog.current?.close()}>{t("Open {value0}", { value0: t(destinations[turn.navigate][0]) })}</Link> : null}
                 </div></div> : null}
 
                 {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
