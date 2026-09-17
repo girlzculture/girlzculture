@@ -130,6 +130,13 @@ html {
   background: var(--background);
 }
 
+/* Native focus scrolling must finish before an appointment control is clicked.
+   An in-flight page animation can move Review between pointerdown and pointerup,
+   preventing the browser from submitting an otherwise valid form. */
+html:has([data-manual-appointment-editor]) {
+  scroll-behavior: auto;
+}
+
 body {
   margin: 0;
   background: var(--background);

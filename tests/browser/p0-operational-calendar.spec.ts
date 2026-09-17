@@ -12,57 +12,66 @@ import { mkdir } from 'node:fs/promises';
 // own fetches and bypass page.route. Real PWA behavior retains its own suite.
 test.use({ serviceWorkers: 'block' });
 
-test('P0 operational calendar diagnoses native form submission', async ({ page }, testInfo) => {
-  const fixture = await p0OwnerFixture(page, { populated: true, locale: 'en' });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  const posts: unknown[] = [];
-  await page.route('**/api/salon/assistant', route => {
-    posts.push(route.request().postDataJSON());
-    return route.fulfill({ status: 409, json: { code: 'ASSISTANT_AVAILABILITY_CONFLICT' } });
-  });
-  await page.addInitScript(() => {
-    const events: unknown[] = [];
-    Object.assign(window, { calendarEvents: events });
-    for (const type of ['pointerdown', 'pointerup', 'click', 'submit', 'invalid', 'focusin', 'focusout']) {
-      document.addEventListener(type, event => {
-        const target = event.target as HTMLElement;
-        if (!target.closest('form')) return;
-        const button = target.closest('form')?.querySelector('button');
-        events.push({ type, target: target.tagName, inputType: target.getAttribute('type'), label: target.closest('label')?.textContent, value: (target as HTMLInputElement).value, scrollY, buttonY: button?.getBoundingClientRect().y, validity: Array.from(document.querySelectorAll('form input')).map(node => { const field = node as HTMLInputElement; return { type: field.type, value: field.value, valid: field.validity.valid, badInput: field.validity.badInput }; }) });
-      }, true);
+// The failed CI trace moved the viewport by 64px during Review's pointer
+// sequence. Reproduce that boundary deterministically: use the application's
+// default scrolling behavior, capture the aimed-at position in the same frame,
+// then release the pointer only after scrolling reaches its target. This is a
+// condition-based interaction, not a sleep, click retry or forced DOM submit.
+for (const viewport of [
+  { width: 1440, height: 900 }, { width: 768, height: 900 },
+  { width: 390, height: 844 }, { width: 844, height: 390 },
+]) {
+  test(`P0 operational calendar preserves Review pointer activation after viewport repositioning at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: 'en' });
+    await page.setViewportSize(viewport);
+    const posts: unknown[] = [];
+    await page.route('**/api/salon/assistant', route => {
+      posts.push(route.request().postDataJSON());
+      return route.fulfill({ status: 409, json: { code: 'ASSISTANT_AVAILABILITY_CONFLICT' } });
+    });
+    await page.addInitScript(() => {
+      const events: { type: string; target: string; scrollY: number }[] = [];
+      Object.assign(window, { calendarPointerEvents: events });
+      for (const type of ['pointerdown', 'pointerup', 'click', 'submit', 'invalid']) {
+        document.addEventListener(type, event => {
+          const target = event.target as HTMLElement;
+          if (target.closest('form')) events.push({ type, target: target.tagName, scrollY });
+        }, true);
+      }
+    });
+    try {
+      await page.goto('/salon/dashboard/bookings/new');
+      await page.getByLabel('Customer name', { exact: true }).fill('Sheila');
+      await page.getByRole('combobox', { name: 'Service', exact: true }).selectOption(fixture.ids.service);
+      await page.getByRole('combobox', { name: 'Professional', exact: true }).selectOption(fixture.ids.professional);
+      await page.getByLabel('Date', { exact: true }).fill('2030-09-24');
+      await page.getByLabel('Time', { exact: true }).fill('13:00');
+      const review = page.getByRole('button', { name: 'Review appointment', exact: true });
+      await expect(review).toBeEnabled();
+      expect(await review.evaluate(button => (button as HTMLButtonElement).form!.checkValidity())).toBe(true);
+      await review.scrollIntoViewIfNeeded();
+      const point = await review.evaluate(button => {
+        const previous = scrollY;
+        const top = Math.max(0, previous - 64);
+        window.scrollTo({ top });
+        const rect = button.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, top, previous };
+      });
+      expect(point.previous - point.top).toBe(64);
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.waitForFunction(top => Math.abs(scrollY - top) < 1, point.top, { polling: 'raf' });
+      await page.mouse.up();
+      await expect(page.getByRole('status').filter({ hasText: 'That time is unavailable. Choose another time.' })).toBeVisible();
+      expect(posts).toHaveLength(1);
+      expect(posts[0]).toMatchObject({ action: 'tool', tool: 'prepare_manual_appointment', args: { guest_name: 'Sheila', style_id: fixture.ids.service, stylist_id: fixture.ids.professional, date: '2030-09-24', time: '13:00' } });
+    } finally {
+      const events = await page.evaluate(() => (window as unknown as { calendarPointerEvents: unknown[] }).calendarPointerEvents);
+      await testInfo.attach('calendar-pointer-events', { body: JSON.stringify({ events, requestCount: posts.length }, null, 2), contentType: 'application/json' });
     }
   });
-  try {
-    await page.goto('/salon/dashboard/bookings/new');
-    await page.getByLabel('Customer name', { exact: true }).fill('Sheila');
-    await page.getByRole('combobox', { name: 'Service', exact: true }).selectOption(fixture.ids.service);
-    await page.getByRole('combobox', { name: 'Professional', exact: true }).selectOption(fixture.ids.professional);
-    await page.getByLabel('Date', { exact: true }).fill('2030-09-24');
-    await page.getByLabel('Time', { exact: true }).fill('13:00');
-    await expect(page.getByLabel('Customer name', { exact: true })).toHaveValue('Sheila');
-    const review = page.getByRole('button', { name: 'Review appointment', exact: true });
-    if (testInfo.repeatEachIndex % 2 === 0) {
-      await review.click();
-    } else {
-    await review.scrollIntoViewIfNeeded();
-    const rect = await review.boundingBox();
-    await page.mouse.move(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2);
-    await page.mouse.down();
-    await page.evaluate(() => new Promise<void>(resolve => {
-      let last = scrollY; let stable = 0;
-      function frame() { stable = scrollY === last ? stable + 1 : 0; last = scrollY; if (stable >= 3) resolve(); else requestAnimationFrame(frame); }
-      requestAnimationFrame(frame);
-    }));
-    await page.mouse.up();
-    }
-    await expect(page.getByRole('status').filter({ hasText: 'That time is unavailable. Choose another time.' })).toBeVisible();
-    expect(posts).toHaveLength(1);
-  } finally {
-    const events = await page.evaluate(() => (window as unknown as { calendarEvents: unknown[] }).calendarEvents);
-    console.log(JSON.stringify(events));
-    await testInfo.attach('calendar-native-events', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
-  }
-});
+}
 
 // Browser API and speech fixtures exercise the real components. SQL/server
 // suites separately prove persistence and authorization; this is not live AI.
