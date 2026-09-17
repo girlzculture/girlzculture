@@ -1244,7 +1244,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 92,
+          "line": 93,
           "kind": "template",
           "context": "05806ca4857cb4782540c3087fb64e85cbb42d46fd8d60461221d6640367cadc"
         }
@@ -2096,19 +2096,19 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "literal",
           "context": "e5fbca87d63290a5d45880cc768c8ee0cfbe35c7566222a2330477607176a737"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "jsx-text",
           "context": "18010fb32ac002855e9006fb9f267fd9807107825848923474ad304dffa7d1f5"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "literal",
           "context": "2118f372f10771cd1a126a5dfb36ad5b15696a5992626ca60fdd6da48bf87025"
         },
@@ -2586,21 +2586,21 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 128,
+          "line": 129,
           "kind": "literal",
           "context": "79cd410a54c8ddcc7c7bd396f304bfc0a4f3b2a8983136106b72e76e35d1b3f2"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 139,
+          "line": 140,
           "kind": "literal",
           "context": "da0504e970f619c5ff9829b7f91301c2306d7b3e9cf72895d986ea3b88a47be1"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 145,
-          "kind": "jsx-text",
-          "context": "7a073cdda1f08883236162dc767d2ac34023a10efe0fb347fc3c1c96c3d22707"
+          "line": 146,
+          "kind": "literal",
+          "context": "ba4361cb881f8383bc3b25505190e8ba0c58ec79ccca6ab28ecc9ac3f5ca6d17"
         }
       ]
     },
@@ -2792,13 +2792,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "9fb2f5dd40e6bc800f6d7c76af86104e7b4506b3bee4bcef760bd37b96c25ad2"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 133,
+          "line": 134,
           "kind": "literal",
           "context": "d957f3a348cd74ab8eb1ba81cdfc3a89797a1fac8da0f98c7732e097c8bf466c"
         }
@@ -2809,7 +2809,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 112,
+          "line": 113,
           "kind": "template",
           "context": "36a649761407c2f0038b4abf31d69c4b19af6a3083135a8f16fe41880e91672f"
         }
@@ -2820,7 +2820,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 112,
+          "line": 113,
           "kind": "literal",
           "context": "36a649761407c2f0038b4abf31d69c4b19af6a3083135a8f16fe41880e91672f"
         }
@@ -3763,13 +3763,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 145,
-          "kind": "jsx-text",
-          "context": "47c863701e68fa43b4ec6cbd19136db64a400cacdc503e1f9f7896bbc4d52e1a"
+          "line": 146,
+          "kind": "literal",
+          "context": "0afaddb3428fc3c5caf4e9a6eb2cf6bda42d100a0b6e20dc433f794e3bac1eea"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 159,
+          "line": 160,
           "kind": "jsx-text",
           "context": "47c863701e68fa43b4ec6cbd19136db64a400cacdc503e1f9f7896bbc4d52e1a"
         }
@@ -4048,13 +4048,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 126,
+          "line": 127,
           "kind": "jsx-text",
           "context": "4ab276de21e8a87eed2ad77b6a1bf85e96452f0931a520f19b45f688937150f2"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 128,
+          "line": 129,
           "kind": "jsx-text",
           "context": "0d0925d80cb82e864cb98acb754d5d1194f8a28dd27d114b2e87b618695ae7b7"
         }
@@ -6659,7 +6659,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 131,
+          "line": 132,
           "kind": "literal",
           "context": "a8106da0d0a7161f1501e2ad36eaf867ebe404629ac6ae3cc025b9dcf48abe7e"
         }
@@ -6670,7 +6670,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 128,
+          "line": 129,
           "kind": "literal",
           "context": "d99a5165160fb58ceb95d1fbd3bc2600067a2a9ddac64c8b68c92f37f52301e2"
         }
@@ -7083,7 +7083,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "9fb2f5dd40e6bc800f6d7c76af86104e7b4506b3bee4bcef760bd37b96c25ad2"
         }
@@ -7129,13 +7129,13 @@
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 74,
+          "line": 75,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 109,
+          "line": 110,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
@@ -7897,7 +7897,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "0f9cb697d9202a99ecfd1fdd8e63d120e6638ca4f049bf6a9a9df5c4e6a7428f"
         }
@@ -9101,7 +9101,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 128,
+          "line": 129,
           "kind": "literal",
           "context": "79cd410a54c8ddcc7c7bd396f304bfc0a4f3b2a8983136106b72e76e35d1b3f2"
         }
@@ -9145,7 +9145,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 131,
+          "line": 132,
           "kind": "literal",
           "context": "a8106da0d0a7161f1501e2ad36eaf867ebe404629ac6ae3cc025b9dcf48abe7e"
         },
@@ -9475,7 +9475,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 132,
+          "line": 133,
           "kind": "jsx-attribute",
           "context": "0dfccad4cdf2e0001349a8a886b2b7bcb50d5adc307c4a339b8b69319a97d289"
         }
@@ -9536,7 +9536,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 128,
+          "line": 129,
           "kind": "literal",
           "context": "d99a5165160fb58ceb95d1fbd3bc2600067a2a9ddac64c8b68c92f37f52301e2"
         }
@@ -9841,7 +9841,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "9fb2f5dd40e6bc800f6d7c76af86104e7b4506b3bee4bcef760bd37b96c25ad2"
         }
@@ -10166,7 +10166,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "0f9cb697d9202a99ecfd1fdd8e63d120e6638ca4f049bf6a9a9df5c4e6a7428f"
         }
@@ -10221,7 +10221,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 130,
+          "line": 131,
           "kind": "jsx-attribute",
           "context": "2739e90c90e7813c827d6958eaa7950b989f476cb7fd9fd3249a4cd14390c489"
         }
@@ -11477,25 +11477,25 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "literal",
           "context": "e5fbca87d63290a5d45880cc768c8ee0cfbe35c7566222a2330477607176a737"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "jsx-text",
           "context": "88c014afd2902196e8a0f6be1feacded83cca6a5361c26b38909a8510ef04547"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
         },
@@ -11741,7 +11741,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 112,
+          "line": 113,
           "kind": "literal",
           "context": "999345379a2f37daa9ce7235ad72fa2fbf98eebb7ae01497db99101c422a138f"
         }
@@ -11763,13 +11763,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "literal",
           "context": "a6764da4ce328370000a0853f23838950a505ad7267f82daf031a993ce5c2cd2"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 162,
+          "line": 163,
           "kind": "literal",
           "context": "def186300931837f310ffe655f3966df2d14f4a5cf45b9378160ca86743d9fe5"
         }
@@ -12255,7 +12255,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 135,
+          "line": 136,
           "kind": "jsx-text",
           "context": "ca09b2c2b0ddfda0c9969b056b50d214835b1b98c4051d110cbc0b7b6700ecce"
         }
@@ -12349,9 +12349,9 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 120,
-          "kind": "jsx-text",
-          "context": "6e2860a3c3f898a1ca00cd610ab7ad7ce283de8901c7a077e762baeaecc6371a"
+          "line": 121,
+          "kind": "literal",
+          "context": "41b62629c1181a738c084ad5e778aa25eae5eff246e6a71c611547f8dc7f3f2c"
         }
       ]
     },
@@ -12742,7 +12742,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "0f9cb697d9202a99ecfd1fdd8e63d120e6638ca4f049bf6a9a9df5c4e6a7428f"
         }
@@ -14138,9 +14138,9 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 150,
-          "kind": "jsx-text",
-          "context": "2a339a991fc8dc1459e067a0aa23e317394061c48890009ed2985f4e0f229f8d"
+          "line": 151,
+          "kind": "literal",
+          "context": "e6373492d0d977e3070657b2638cbcbfa9906c8043824f3356e55acff89d4da6"
         }
       ]
     },
@@ -14160,7 +14160,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 159,
+          "line": 160,
           "kind": "jsx-text",
           "context": "867b0115bbf33b7abb333af02133d1668f33fce2766fccfc3e443dd515461bd0"
         }
@@ -14375,13 +14375,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 148,
+          "line": 149,
           "kind": "literal",
           "context": "46d8320007e7746e6a5ca369cca8e76da037e85c1d748d62124969596b4016a8"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 159,
+          "line": 160,
           "kind": "literal",
           "context": "46d8320007e7746e6a5ca369cca8e76da037e85c1d748d62124969596b4016a8"
         }
@@ -14707,7 +14707,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 135,
+          "line": 136,
           "kind": "jsx-text",
           "context": "b8316a8ae7a0edb8f4cf9851be7cec64277d76754e46147eafacce671cd91829"
         }
@@ -15304,7 +15304,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 149,
+          "line": 150,
           "kind": "jsx-text",
           "context": "243117b2de30cd6d5c9aef27dd505365085ca6fc52e8aa39084eeb8ce493a302"
         }
@@ -15332,9 +15332,9 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 145,
-          "kind": "jsx-text",
-          "context": "82cb9d04f99c3941dbfe909306b7242235de344198d92dbfb9e73ffba10ac5c9"
+          "line": 146,
+          "kind": "literal",
+          "context": "a4e35a85b56018a57a659d6b81e023ae5259af473591e371bb12d332b6e92224"
         }
       ]
     },
@@ -15481,7 +15481,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "9fb2f5dd40e6bc800f6d7c76af86104e7b4506b3bee4bcef760bd37b96c25ad2"
         }
@@ -16363,13 +16363,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 71,
+          "line": 72,
           "kind": "template",
           "context": "3269b828f1c0563b129a505e313f37005cb7f54aa15961d77c04e00a6daf201c"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 137,
+          "line": 138,
           "kind": "template",
           "context": "f5d8d69ef0ff7f95e175d78efa107f2561d6cdf55618d7562c1a0296248807c5"
         }
@@ -18180,7 +18180,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "jsx-attribute",
           "context": "40e65676e99a5ec9d59bd06f7886bc6cec70b06a58aee9e8ad3537d3e5ac274b"
         }
@@ -18802,7 +18802,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "jsx-text",
           "context": "89219ad7b26bbeead1ecc96dffdee78b54a412dcdc44c132b0f6ec83c447df06"
         }
@@ -18813,7 +18813,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 90,
+          "line": 91,
           "kind": "localized-source",
           "context": "79a6ac9f86cb92519ceb4e4ae8e5281b5e9b2215f38b6129604f36a85ed7edd0"
         }
@@ -19140,7 +19140,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "jsx-attribute",
           "context": "a732cc8bc95f720a961cbc5fd27db55cbe5372cb8934b4714a0a392f0422c713"
         }
@@ -19606,7 +19606,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "jsx-text",
           "context": "54e0efdb08b6aa0189ddbe263827a2138657f30f17f18f9c1be9508814959d70"
         }
@@ -19617,7 +19617,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 106,
+          "line": 107,
           "kind": "literal",
           "context": "06cafbe9077bb3de43c762f4bb8d0cc6f5096e403093e360ba562dbdd607122d"
         }
@@ -19628,19 +19628,19 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "literal",
           "context": "d71724a439364bc39148328ec7ad446b1b2abc258ea5e113476991eb63e592b5"
         }
@@ -19662,7 +19662,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 133,
+          "line": 134,
           "kind": "jsx-text",
           "context": "ed1595e866c0a94ebe340c55b889eac0979e65ed1d0dc6220d62267c2f591a3f"
         }
@@ -20449,7 +20449,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 139,
+          "line": 140,
           "kind": "literal",
           "context": "5cbd75330c8b56edf6b45209646f9867b8fbc6c62d5774bc77b97f40674a05d3"
         },
@@ -20772,7 +20772,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 137,
+          "line": 138,
           "kind": "jsx-text",
           "context": "8d83b571322c794ab9aa6c808c53e9bd66d1bee9bcb28099a906c1ca9bf21982"
         }
@@ -21915,25 +21915,25 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "0f9cb697d9202a99ecfd1fdd8e63d120e6638ca4f049bf6a9a9df5c4e6a7428f"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 133,
+          "line": 134,
           "kind": "literal",
           "context": "d957f3a348cd74ab8eb1ba81cdfc3a89797a1fac8da0f98c7732e097c8bf466c"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 148,
+          "line": 149,
           "kind": "literal",
           "context": "65b680d3c8b0bb9e5e806f3c9e3536f0ddaef42da1d6026a8a5a2c835baefd2f"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 159,
+          "line": 160,
           "kind": "literal",
           "context": "65b680d3c8b0bb9e5e806f3c9e3536f0ddaef42da1d6026a8a5a2c835baefd2f"
         }
@@ -22194,7 +22194,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "jsx-text",
           "context": "0f59ab42315c6f9d964eff7cc6f35fc6a54ec28ebafde3b1f3e42d4d0aa72e58"
         },
@@ -22637,7 +22637,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "0f9cb697d9202a99ecfd1fdd8e63d120e6638ca4f049bf6a9a9df5c4e6a7428f"
         },
@@ -23044,7 +23044,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 162,
+          "line": 163,
           "kind": "literal",
           "context": "02480b67e53f5bfc633e8667cdec9848ffdd58ccfbb4d01c706b037f58d26c82"
         }
@@ -23055,7 +23055,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 123,
+          "line": 124,
           "kind": "literal",
           "context": "9fb2f5dd40e6bc800f6d7c76af86104e7b4506b3bee4bcef760bd37b96c25ad2"
         }
@@ -23107,7 +23107,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "jsx-attribute",
           "context": "38444194df502cdf81bc350183b690bd786f0d598547b50b821fec2ec26f361f"
         }
@@ -23118,7 +23118,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 106,
+          "line": 107,
           "kind": "literal",
           "context": "06cafbe9077bb3de43c762f4bb8d0cc6f5096e403093e360ba562dbdd607122d"
         }
@@ -23129,13 +23129,13 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 134,
+          "line": 135,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 140,
+          "line": 141,
           "kind": "literal",
           "context": "3421aceb9b287b644f2364b794b4d0e9d9a168fa1c550a8b8bc4d6eca5f64436"
         }
@@ -23229,7 +23229,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 159,
+          "line": 160,
           "kind": "jsx-text",
           "context": "fbb596053141ae59106247b163ba28e5b8327b858eb7e3cec3a3702d309a1ddc"
         }
@@ -23240,7 +23240,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 126,
+          "line": 127,
           "kind": "jsx-text",
           "context": "d9637b7e04bf3b429be418e34c840a283fd856947d6b408896914002b3df3226"
         }
@@ -24433,7 +24433,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 126,
+          "line": 127,
           "kind": "jsx-text",
           "context": "bd1ef8750abda6bfe9de00c964c98fb6cc85798cd52c2107348657254e8c2eea"
         }
@@ -25463,7 +25463,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 53,
+          "line": 54,
           "kind": "literal",
           "context": "05750e43ab520c0534004abf5a16082b0f9a7159c71a1d888e5abd6658ea2df3"
         }
@@ -25552,7 +25552,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 100,
+          "line": 101,
           "kind": "literal",
           "context": "9daba2e8a6d2ad5f0f3b946279f73cd37763e98a84d88c89613bbcab41dbfb6a"
         }
@@ -25608,7 +25608,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 83,
+          "line": 84,
           "kind": "literal",
           "context": "96d4efdc0e946ccfce7e1009444a041cddaa1bee0a92f47726ff6a8da562f498"
         }
@@ -25630,7 +25630,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 116,
+          "line": 117,
           "kind": "literal",
           "context": "bf14b36b75ba56d33857db5bd711b68b059fa21f39bcc5d9933ebfa3c0a0fd17"
         }
@@ -26048,7 +26048,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 139,
+          "line": 140,
           "kind": "literal",
           "context": "da0504e970f619c5ff9829b7f91301c2306d7b3e9cf72895d986ea3b88a47be1"
         }
@@ -26342,7 +26342,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 132,
+          "line": 133,
           "kind": "jsx-attribute",
           "context": "bcab088c06555816d90a3b9a3c35bcf554edb386ddfb5895da3d28f334d702a7"
         }
@@ -26675,7 +26675,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 96,
+          "line": 97,
           "kind": "literal",
           "context": "0e2e489e6ec1c5156bf2aac635c5e0b8ae29f42072ceb213454f5a5eec8f6171"
         }
@@ -26686,7 +26686,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 77,
+          "line": 78,
           "kind": "literal",
           "context": "eb1aacf44b03aa240c6ff9d23a152d166fcd8d13dffe95d2bcac20a7fcbb853d"
         }
@@ -26697,7 +26697,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 77,
+          "line": 78,
           "kind": "literal",
           "context": "eb1aacf44b03aa240c6ff9d23a152d166fcd8d13dffe95d2bcac20a7fcbb853d"
         }
@@ -28108,7 +28108,7 @@
       "occurrences": [
         {
           "file": "src/components/auth/TeamUserManager.tsx",
-          "line": 36,
+          "line": 37,
           "kind": "literal",
           "context": "e62f49aee4162bec901786c1d47fd8a8a96c950f3c508350c5dd07aff55deebd"
         }

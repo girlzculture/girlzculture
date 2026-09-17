@@ -374,3 +374,28 @@ test('expanded history never replays private notes, manual contacts or financial
   assert.equal(input.previous[2].result.bookings[0].id,booking.id);
   assert.doesNotMatch(f.requests[0].messages[1].content,/Private follow-up|private-phone|private-email|9123|private-customer/);
 });
+
+test('explicit response-language commands persist even when the planner returns a null or stale switch', async () => {
+  for (const [text, locale] of [
+    ['Cambia al español. ¿Cuál es el precio base de Silk Press?', 'es'],
+    ['Réponds en français. Quel est le prix de Silk Press ?', 'fr'],
+    ['请用简体中文回答。Silk Press 的基础价格是多少？', 'zh-CN'],
+    ['Switch to Mandarin, please. What is the base price?', 'zh-CN'],
+    ['Please answer in English. What is the base price?', 'en'],
+  ]) {
+    for (const languageSwitch of [null, 'fr']) {
+      const f = fixture({ languageSwitch });
+      const result = await f.run('fr', text);
+      assert.equal(result.response_locale, locale, text);
+      assert.ok(f.requests[0].messages[0].content.includes(`(code ${locale})`));
+      assert.equal(f.requests.length, 1);
+    }
+  }
+});
+
+test('language mentions, quoted commands and ordinary follow-ups do not switch the response preference', async () => {
+  for (const text of ['Is that before add-ons?', 'What does "Switch to English" mean?', 'Do not switch to English.', 'How much is French Braids?', 'The service is called Spanish Style.']) {
+    const f = fixture();
+    assert.equal((await f.run('fr', text)).response_locale, 'fr', text);
+  }
+});

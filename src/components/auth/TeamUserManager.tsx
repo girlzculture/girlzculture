@@ -21,6 +21,7 @@ const salonPermissions = [["overview","Overview"],["my_page","My Page"],["photos
 export default function TeamUserManager({ scope, initialUserId, showBackLink = true }: { scope: TeamScope; initialUserId?: string; showBackLink?: boolean }) {
   const { translateSource: t } = useI18n();
   const router = useRouter();
+  const ownerText = (source: string) => scope === "salon" ? t(source) : source;
   const options = scope === "admin" ? adminPermissions : salonPermissions;
   const endpoint = `/api/${scope}/team`;
   const [users, setUsers] = useState<TeamUser[]>([]);
@@ -117,7 +118,7 @@ export default function TeamUserManager({ scope, initialUserId, showBackLink = t
     }
   }
 
-  if (loading) return <p className="text-sm text-ink/65">Loading team access...</p>;
+  if (loading) return <p className="text-sm text-ink/65">{ownerText("Loading team access...")}</p>;
   if (!canManage) return <ReadOnlyUsers users={users} />;
 
   const roleOptions = scope === "admin" ? ["Admin","Operations","Support","Finance","Content Editor"] : ["Manager","Front Desk","Stylist","Customer Service","Staff"];
@@ -142,12 +143,12 @@ export default function TeamUserManager({ scope, initialUserId, showBackLink = t
   if (focused) return editor;
   return <div className="space-y-5">
     <section className="rounded-[14px] border border-plum/10 bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">Authorized Users</h2><p className="mt-1 text-sm text-ink/60">Open one member to manage details and permissions in a focused workspace.</p></div><Link href={detailHref(scope, "new")} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-sm font-bold text-white"><UserPlus size={16} className="mr-2"/>Add User</Link></div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-2xl text-plum">{ownerText("Authorized Users")}</h2><p className="mt-1 text-sm text-ink/60">{ownerText("Open one member to manage details and permissions in a focused workspace.")}</p></div><Link href={detailHref(scope, "new")} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-sm font-bold text-white"><UserPlus size={16} className="mr-2"/>{ownerText("Add User")}</Link></div>
       {message ? <p role="status" className="mt-4 rounded-lg bg-blush/40 p-3 text-sm text-plum">{message}</p> : null}
       <div className="mt-4 divide-y divide-plum/10">{users.map((user) => <Link href={detailHref(scope, user.id)} key={user.id} className="flex flex-col justify-between gap-3 py-4 transition hover:bg-blush/15 sm:flex-row sm:items-center">
         <span><b className="block">{user.name || user.email}</b><small className="mt-1 block text-sm text-ink/65">{user.email} · {user.phone || "No phone"} · {user.role || "Staff"}</small></span>
         <span className="flex flex-wrap items-center gap-2"><Status user={user}/><span className="text-xs font-bold text-magenta">Open member →</span></span>
-      </Link>)}{!users.length ? <p className="py-8 text-center text-sm text-ink/60">No additional users have been added.</p> : null}</div>
+      </Link>)}{!users.length ? <p className="py-8 text-center text-sm text-ink/60">{ownerText("No additional users have been added.")}</p> : null}</div>
     </section>
   </div>;
 }
