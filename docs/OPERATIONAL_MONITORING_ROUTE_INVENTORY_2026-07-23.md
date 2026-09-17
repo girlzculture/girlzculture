@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-15. This inventory covers 129 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-17. This inventory covers 130 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -16,6 +16,7 @@ Updated: 2026-09-15. This inventory covers 129 API route files and is enforced b
 | Route | Methods | Classification | Coverage |
 |---|---|---|---|
 | `/api/salon/assistant` | POST | protected | Covered |
+| `/api/salon/assistant/memory` | GET, POST, DELETE | protected | Covered |
 | `/api/salon/policies` | GET, POST | protected | Covered |
 | `/api/admin/bookings/[id]` | GET, PATCH | protected | Covered |
 | `/api/admin/bookings` | GET, POST | protected | Covered |
@@ -151,6 +152,7 @@ Updated: 2026-09-15. This inventory covers 129 API route files and is enforced b
 |---|---|---|
 | `booking-reminders.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
 | `media-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
+| `assistant-memory-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; only expired opt-in context on a published Production deployment is removed |
 | `pickup-reservation-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
 
 ## Server actions
