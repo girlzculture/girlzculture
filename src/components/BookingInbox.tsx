@@ -8,6 +8,7 @@ import { getSessionForScope, getSupabaseForScope, type AuthScope } from "@/lib/s
 import MessageDisplay from "@/components/booking/MessageDisplay";
 import BookingWelcome from "@/components/booking/BookingWelcome";
 import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
+import { translationProviderFailure } from "@/lib/translationProviderErrors";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { LOCALE_NAMES } from "@/i18n/catalog";
 import { bookingReference } from "@/lib/bookingReference";
@@ -53,7 +54,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   function showFailure(error: unknown, fallback: string) {
     const messages: Record<string, string> = { AUTH_REQUIRED: "Please sign in again to view messages.", MESSAGE_ACCESS_DENIED: "You do not have access to this booking conversation.", MESSAGE_NOT_FOUND: "This booking conversation is unavailable.", MESSAGE_RATE_LIMIT: "Too many requests. Please try again shortly.", MESSAGE_CONTENT_REVIEW_REQUIRED: "Please revise the message to remove abusive, hateful, threatening, or unsafe language.", MESSAGE_INVALID: "Enter a message of up to 2,000 characters." };
     setReference(error instanceof OwnerActionError ? error.reference : "");
-    setNotice(error instanceof OwnerActionError ? messages[error.code] || fallback : fallback);
+    setNotice(error instanceof OwnerActionError ? messages[error.code] || translationProviderFailure(error)?.error || fallback : fallback);
   }
   const [targetLocale, setTargetLocale] = useState("fr");
   const [translationPreview, setTranslationPreview] =

@@ -25,6 +25,41 @@ export function openAiApiUrl(resource: string) {
   return `${apiBase}/${resource.replace(/^\/+/, "")}`;
 }
 
+/** Classify an HTTP rejection without retaining provider prose, headers, keys
+ * or echoed input. Unknown codes stay OTHER; this is never a retry signal. */
+export async function openAiHttpFailure(response: Response) {
+  const categories: Record<string, string> = {
+    invalid_api_key: "AUTHENTICATION", insufficient_permissions: "PERMISSION",
+    model_not_found: "MODEL_ACCESS", insufficient_quota: "QUOTA",
+    rate_limit_exceeded: "RATE_LIMIT", invalid_json_schema: "SCHEMA",
+    unsupported_parameter: "PARAMETER", unsupported_value: "PARAMETER",
+    invalid_parameter: "PARAMETER",
+  };
+  let category = "OTHER";
+  const reader = response.body?.getReader();
+  if (reader) {
+    try {
+      const decoder = new TextDecoder(); let body = "", bytes = 0;
+      while (true) {
+        const next = await reader.read();
+        if (next.done) break;
+        bytes += next.value.byteLength;
+        if (bytes > 16_384) { await reader.cancel(); body = ""; break; }
+        body += decoder.decode(next.value, { stream: true });
+      }
+      body += decoder.decode();
+      const error = JSON.parse(body)?.error;
+      if (typeof error?.code === "string" && Object.hasOwn(categories, error.code)) category = categories[error.code];
+      else if (response.status === 401) category = "AUTHENTICATION";
+      else if (response.status === 403) category = "PERMISSION";
+      else if (response.status === 400 && typeof error?.message === "string" && /^Invalid schema for response_format\b/i.test(error.message)) category = "SCHEMA";
+    } catch { /* Unreadable/non-JSON failures retain only their HTTP status. */ }
+    finally { reader.releaseLock(); }
+  }
+  const destination = new URL(openAiApiUrl("chat/completions")).origin === "https://api.openai.com" ? "DIRECT" : "COMPATIBLE";
+  return `OPENAI_${destination}_HTTP_${response.status}_${category}`;
+}
+
 type OpenAiChatCompletionPayload = {
   choices?: Array<{
     message?: {

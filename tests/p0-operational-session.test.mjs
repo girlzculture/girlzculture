@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;});return {promise,resolve};}
-function harness(kind){
+function harness(kind, initialAuth=true){
   const slots=[];let cursor=0,initialized=false,changeAuth,sessionWait;
   let session={user:{id:'owner-a'},access_token:'fixture-a'};
   const requests=[],responses=[],saved=[];
@@ -17,9 +17,24 @@ function harness(kind){
   function render(){cursor=0;const tree=Component(kind==='BookingNotes'?{bookingId:'fixture-booking'}:{styles:[],stylists:[],timeZone:'America/New_York',onSaved:row=>saved.push(row)});initialized=true;return tree;}
   function find(predicate,node=render()){if(!node||typeof node!=='object')return null;if(Array.isArray(node))return node.map(child=>find(predicate,child)).find(Boolean);if(predicate(node))return node;return find(predicate,node.props?.children??null);}
   function text(node=render()){if(node==null||typeof node==='boolean')return '';if(Array.isArray(node))return node.map(text).join(' ');if(typeof node!=='object')return String(node);return text(node.props?.children??null);}
-  render();changeAuth('SIGNED_IN',session);
-  return {requests,responses,saved,find,text,render,holdSession:()=>sessionWait=deferred(),switchActor(id){session=id?{user:{id},access_token:'fixture-'+id}:null;changeAuth(id?'SIGNED_IN':'SIGNED_OUT',session);}};
+  render();if(initialAuth)changeAuth('SIGNED_IN',session);
+  return {requests,responses,saved,find,text,render,initialSession:()=>changeAuth('INITIAL_SESSION',session),holdSession:()=>sessionWait=deferred(),switchActor(id){session=id?{user:{id},access_token:'fixture-'+id}:null;changeAuth(id?'SIGNED_IN':'SIGNED_OUT',session);}};
 }
+
+test('manual appointment controls wait for the initial session before accepting input',async()=>{
+  const app=harness('ManualAppointmentEditor',false);
+  assert.equal(app.find(n=>n.type==='fieldset')?.props.disabled,true,'The delayed initial session must not erase input accepted by an enabled form');
+  app.find(n=>n.type==='form').props.onSubmit({preventDefault(){}});await tick();
+  assert.equal(app.requests.length,0);
+  app.initialSession();
+  assert.equal(app.find(n=>n.type==='fieldset').props.disabled,false);
+  app.find(n=>n.type==='input'&&n.props.maxLength===120).props.onChange({target:{value:'Sheila'}});
+  app.initialSession();
+  assert.equal(app.find(n=>n.type==='input'&&n.props.maxLength===120).props.value,'Sheila','Repeated same-actor session events must retain the draft');
+  app.switchActor(null);
+  assert.equal(app.find(n=>n.type==='fieldset').props.disabled,true);
+  assert.equal(app.find(n=>n.type==='input'&&n.props.maxLength===120).props.value,'');
+});
 test('delayed manual preparation cannot restore a preview after an account switch',async()=>{
   const app=harness('ManualAppointmentEditor');app.find(n=>n.type==='form').props.onSubmit({preventDefault(){}});await tick();assert.equal(app.requests.length,1);
   app.switchActor('owner-b');app.responses[0].resolve(Response.json({request:{id:'private-a',digest:'a'.repeat(64),arguments:{guest_name:'PRIVATE A'},execution_payload:{}}}));await tick();

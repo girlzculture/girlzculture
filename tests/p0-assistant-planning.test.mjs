@@ -47,11 +47,13 @@ function fixture(options = {}) {
     '@/lib/aiAutomationServer': { approvedAiModels: () => [options.model || 'fixture-model'], approvedAiProviders: () => ['openai'], aiProviderConfigured: () => options.configured !== false, redactSensitiveText: value => value.replaceAll('secret@example.test', '[redacted]') },
   }, {
     process: { env: { ...(options.missingRates ? {} : { AI_OWNER_INPUT_USD_PER_MILLION: '1', AI_OWNER_OUTPUT_USD_PER_MILLION: '4' }), OPENAI_API_KEY: 'local-fixture-only' } },
+    TextDecoder,
     fetch: async (url, init) => {
       assert.equal(url, 'https://api.openai.com/v1/chat/completions');
       requests.push(JSON.parse(init.body));
       assert.equal(init.signal instanceof AbortSignal, true);
       if (options.failure) throw Error('Simulated provider failure');
+      if (options.httpStatus) return Response.json({ error: options.providerError || { code: 'invalid_api_key', message: 'Private provider message and credential fragment' } }, { status: options.httpStatus });
       const output = options.output || { plan: null, reply: null, clarification: 'Which appointment?', navigate: null };
       const active = Object.entries(output).filter(([, value]) => value !== null);
       const [kind, value] = active[0] || [];
@@ -70,6 +72,26 @@ test('production regression: approved nano model works when build-only cost vari
   await f.run();
   assert.equal(f.requests.length, 1);
   assert.ok(f.calls.find(call => call.name === 'reserve_gc_assistant_usage').args.p_cost_cents > 0);
+});
+
+test('held candidate regression: provider HTTP failures retain safe categories without raw errors or retries', async () => {
+  for (const [status, providerError, category] of [
+    [401, { code: 'invalid_api_key', message: 'Private key: sk-private' }, 'AUTHENTICATION'],
+    [403, { code: 'insufficient_permissions' }, 'PERMISSION'],
+    [404, { code: 'model_not_found' }, 'MODEL_ACCESS'],
+    [429, { code: 'insufficient_quota' }, 'QUOTA'],
+    [429, { code: 'rate_limit_exceeded' }, 'RATE_LIMIT'],
+    [400, { code: 'invalid_json_schema', message: 'Private schema echo' }, 'SCHEMA'],
+    [400, { code: 'unsupported_parameter' }, 'PARAMETER'],
+    [500, { code: 'sk-secret-not-an-allowed-code', message: 'Private prompt' }, 'OTHER'],
+  ]) {
+    const f = fixture({ httpStatus: status, providerError });
+    await assert.rejects(f.run(), error => error.code === 'ASSISTANT_UNAVAILABLE' && error.message === `OPENAI_DIRECT_HTTP_${status}_${category}`);
+    assert.equal(f.requests.length, 1);
+    assert.equal(f.updates[0].safe_error_code, `PLANNER_OPENAI_DIRECT_HTTP_${status}_${category}`);
+    assert.equal(JSON.stringify(f.updates).includes('Private'), false);
+    assert.equal(JSON.stringify(f.updates).includes('sk-'), false);
+  }
 });
 
 test('an unpriced model still fails closed without calling the provider', async () => {

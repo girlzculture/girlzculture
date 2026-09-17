@@ -8,12 +8,18 @@ import { normalizeLocale } from "@/i18n/catalog";
 import { translatedMessageFields } from "@/lib/localizationCore";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { bookingMessageTranslation } from "@/lib/bookingMessageTranslationServer";
+import { translationProviderFailure } from "@/lib/translationProviderErrors";
 
 type Row = Record<string, unknown>;
 type Role = "customer" | "salon" | "admin";
 async function messageFailure(request: Request, error: unknown) {
   if (error instanceof RateLimitError) return Response.json({ code: "MESSAGE_RATE_LIMIT" }, { status: 429, headers: { "Retry-After": String(error.retryAfter), "Cache-Control": "private, no-store" } });
   const message = error instanceof Error ? error.message : "";
+  const translation = translationProviderFailure(error);
+  if (translation) {
+    const reference = await capturePlatformError({ request, error, feature: "booking-messages", action: "translation", actorRole: "authenticated", safeMessage: translation.error });
+    return safeFailure(translation.error, reference, translation.status, { code: translation.code });
+  }
   const known: Record<string, [string, number]> = {
     "Sign in to view booking messages.": ["AUTH_REQUIRED", 401], "Your session has expired. Please sign in again.": ["AUTH_REQUIRED", 401],
     "Forbidden": ["MESSAGE_ACCESS_DENIED", 403], "You do not have access to this booking conversation.": ["MESSAGE_ACCESS_DENIED", 403],

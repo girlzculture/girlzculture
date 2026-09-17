@@ -5,6 +5,8 @@ import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
 import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
 import { revalidatePath } from "next/cache";
 import { generateTranslationDraft } from "@/lib/aiAutomationServer";
+import { translationProviderFailure } from "@/lib/translationProviderErrors";
+import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { canGenerateTranslationDraft } from "@/lib/localizationCore";
 
 function impactForKey(key:string){
@@ -98,11 +100,14 @@ async function GETHandler(request: Request) {
 }
 
 async function PATCHHandler(request: Request) {
+  let authenticatedAdmin;
+  let actorId: string | undefined;
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const action = cleanText(body.action, 40) || "save_draft";
     const permission = action.startsWith("locale_") ? "settings" : "content";
     const { admin, user } = await requireAdminPermission(request, permission);
+    authenticatedAdmin = admin; actorId = user.id;
     if (action === "locale_create") {
       const raw = cleanText(body.locale, 20);
       const locale = normalizeLocale(raw);
@@ -469,6 +474,11 @@ async function PATCHHandler(request: Request) {
     return Response.json({ entry: data });
   } catch (error) {
     noteOperationalFailure("Translation manager save failed", error);
+    const failure = translationProviderFailure(error);
+    if (failure) {
+      const reference = await capturePlatformError({ request, admin: authenticatedAdmin, actorId, error, feature: "translation-management", action: "generate-draft", actorRole: "admin", safeMessage: failure.error, metadata: { failure_code: failure.code } });
+      return safeFailure(failure.error, reference, failure.status, { code: failure.code });
+    }
     return errorResponse(error, "Unable to save translation changes.");
   }
 }

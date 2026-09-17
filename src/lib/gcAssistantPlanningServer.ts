@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { approvedAiModels, approvedAiProviders, aiProviderConfigured, redactSensitiveText } from "@/lib/aiAutomationServer";
 import { ASSISTANT_TOOLS, AssistantError } from "@/lib/gcAssistantCore";
-import { openAiApiKey, openAiApiUrl, openAiChatCompletionText } from "@/lib/openAiServer";
+import { openAiApiKey, openAiApiUrl, openAiChatCompletionText, openAiHttpFailure } from "@/lib/openAiServer";
 import { AssistantPlannerError, ownerPlannerSchema, parseOwnerPlannerResponse } from "@/lib/gcAssistantPlannerProtocol";
 
 function answerFacts(tool: string, args: unknown, result: unknown) {
@@ -96,7 +96,7 @@ export async function planOwnerRequest(input: {
   let failureCode = "PLANNER_FAILED";
   try {
     const response = await fetch(openAiApiUrl("chat/completions"), {
-      method: "POST", headers: { Authorization: `Bearer ${openAiApiKey()}`, "Content-Type": "application/json" },
+      method: "POST", redirect: "error", headers: { Authorization: `Bearer ${openAiApiKey()}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(Math.min(Math.max(Number(feature.timeout_ms), 1000), 20000)),
       body: JSON.stringify({
         model: feature.model_key,
@@ -112,7 +112,15 @@ export async function planOwnerRequest(input: {
         },
       }),
     });
-    if (!response.ok) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
+    if (!response.ok) {
+      const diagnostic = await openAiHttpFailure(response);
+      failureCode = `PLANNER_${diagnostic}`;
+      const error = new AssistantError("ASSISTANT_UNAVAILABLE", 503);
+      // The public code remains stable. Only the protected event and budget
+      // ledger receive this bounded status/category, never the provider body.
+      error.message = diagnostic;
+      throw error;
+    }
     const responseBody = await response.text();
     if (responseBody.length > 64000) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
     let payload;

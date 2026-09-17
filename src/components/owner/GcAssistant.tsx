@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AssistantDictation from "@/components/owner/AssistantDictation";
+import AssistantSpeech from "@/components/owner/AssistantSpeech";
 import { ArrowUp, Bot, Building2, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
 import { getSessionForScope, getSupabaseForScope } from "@/lib/supabase";
 import { useI18n } from "@/components/i18n/LocaleProvider";
@@ -14,7 +15,7 @@ import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gc
 
 type Row = Record<string, unknown>;
 type SavedRequest = { id: string; tool: string; arguments: Row; execution_payload: Row; before_summary: Row; result: unknown; risk_class: number; digest: string; confirmed_at: string | null };
-type Turn = { id: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[] };
+type Turn = { id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[] };
 const AssistantOpenContext = createContext<((button: HTMLButtonElement) => void) | null>(null);
 
 export function GcAssistantLauncher() {
@@ -136,7 +137,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       }).slice(-6), previous_request_ids: turns.filter(turn => turn.request).slice(-6).map(turn => turn.request!.id) }, generation);
       if (generation !== actorGeneration.current) return;
       const quickAction = quickActions.find(action => action.tool === tool);
-      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, ...result }].slice(-12));
+      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, ...result, locale }].slice(-12));
       if (!tool) setText(current => current === message ? "" : current);
     } catch (error) { if (generation !== actorGeneration.current) return; setReference(error instanceof OwnerActionError ? error.reference : ""); setNotice(errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below."); }
     finally { if (generation === actorGeneration.current) setBusy(false); }
@@ -186,7 +187,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
               return <article key={turn.id} className="space-y-3">
                 {turn.text ? <div className="flex justify-end"><p data-no-translate className="max-w-[86%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-primary-hover px-4 py-3 text-sm font-medium leading-6 text-white shadow-sm">{turn.text}</p></div> : null}
                 {responseText || turn.navigate ? <div className="flex items-start gap-3"><span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-hover text-white"><Bot aria-hidden size={16}/></span><div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border bg-white px-4 py-3 shadow-[0_4px_16px_rgba(13,17,20,.04)]">
-                  {responseText ? <p role={turn.request?.risk_class === 1 || !turn.request ? "status" : undefined} data-no-translate className="whitespace-pre-wrap break-words text-sm font-medium leading-6 text-text-primary">{responseText}</p> : null}
+                  {responseText ? <><p role={turn.request?.risk_class === 1 || !turn.request ? "status" : undefined} data-no-translate className="whitespace-pre-wrap break-words text-sm font-medium leading-6 text-text-primary">{responseText}</p><AssistantSpeech text={responseText} sessionKey={dictationSession} language={turn.assistant_message || turn.reply || turn.clarification ? turn.locale : locale}/></> : null}
                   {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => dialog.current?.close()}>{t(`Open ${destinations[turn.navigate][0]}`)}</Link> : null}
                 </div></div> : null}
 
