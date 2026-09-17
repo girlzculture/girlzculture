@@ -19,8 +19,11 @@ function explicitResponseLanguage(text: string): AssistantLanguage | null {
   // A clear leading command is a preference, not a probabilistic tool decision.
   // Do not infer a switch from the question's language, a quoted command or a
   // service name. More conversational requests still use the validated planner.
-  const command = text.trim().normalize("NFKC");
-  const western = command.match(/^(?:please\s+|por favor[,\s]+|s'il vous plaît[,\s]+)?(?:switch to|change to|answer in|respond in|reply in|cambia al?|cambiar al?|responde en|respóndeme en|contesta en|réponds en|répondez en|réponds-moi en|passe en)\s+([\p{L}-]+(?:\s+Chinese)?)(?=$|[\s,.!?;:])/iu);
+  const command = text.trim().normalize("NFKC").replaceAll("’", "'");
+  // Temporal modifiers are part of an explicit preference too. Without them,
+  // "Responde ahora en español" fell through to a null planner switch, so a
+  // Spanish answer could be displayed while the persisted preference stayed fr.
+  const western = command.match(/^(?:please[,\s]+|por favor[,\s]+|s'il vous plaît[,\s]+)?(?:(?:switch|change)(?:\s+(?:now|from now on))?\s+to|(?:answer|respond|reply)(?:\s+(?:now|from now on|henceforth))?\s+in|(?:cambia|cambiar)(?:\s+(?:ahora|de ahora en adelante))?\s+al?|(?:responde|respóndeme|contesta)(?:\s+(?:ahora|de ahora en adelante|a partir de ahora))?\s+en|(?:réponds|répondez|réponds-moi|passe|passez)(?:\s+(?:désormais|maintenant|dorénavant|à partir de maintenant))?\s+en)\s+([\p{L}-]+(?:\s+Chinese)?)(?=$|[\s,.!?;:])/iu);
   const chinese = command.match(/^(?:请)?(?:用|使用|改用|切换到|切换为)(英语|英文|法语|法文|西班牙语|西班牙文|简体中文|中文|普通话)(?:回答|回复|作答|[。！？，,.\s]|$)/u);
   const name = (western?.[1] || chinese?.[1] || "").toLocaleLowerCase("en");
   const aliases: Record<string, AssistantLanguage> = {
