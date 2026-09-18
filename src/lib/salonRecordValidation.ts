@@ -6,7 +6,7 @@ export const SALON_RECORD_CONFIG: Record<string, SaveConfig> = {
   styles: {
     permission: "styles",
     label: "service",
-    fields: new Set(["master_style_id", "name", "category", "category_id", "service_group_id", "description", "duration_min_hours", "duration_max_hours", "buffer_minutes", "base_price", "price_display_min", "price_display_max", "size_options", "length_options", "addons", "included_items", "option_groups", "photos", "is_draft", "archived_at"]),
+    fields: new Set(["master_style_id", "name", "category", "category_id", "service_group_id", "description", "duration_min_hours", "duration_max_hours", "buffer_minutes", "base_price", "price_display_min", "price_display_max", "size_options", "length_options", "addons", "included_items", "option_groups", "photos", "is_draft", "is_featured", "archived_at"]),
   },
   stylists: {
     permission: "stylists",
@@ -54,6 +54,7 @@ export function sanitizeSalonRecord(table: string, values: Record<string, unknow
   }
 
   if (table === "styles") {
+    if ("is_featured" in patch && typeof patch.is_featured !== "boolean") throw new Error("Choose whether to feature this service.");
     if ("name" in patch || isInsert) { patch.name = cleanText(patch.name, 120); if (!patch.name) throw new Error("Enter a customer-facing service name."); }
     if ("description" in patch) patch.description = cleanText(patch.description, 1_000);
     if ("duration_min_hours" in patch) patch.duration_min_hours = finiteNumber(patch.duration_min_hours, "Minimum duration", 0.25, 24);

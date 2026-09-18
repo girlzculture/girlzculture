@@ -1258,4 +1258,6 @@ if (deployedMigration !== expectedMigration) {
 }
 const clientCardsOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-client-cards.sql")], "Private client cards, field permissions and two-business assertions");
 if (clientCardsOutput) console.log(clientCardsOutput);
+const catalogOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-catalog.sql")], "Featured service persistence and isolation assertions");
+if (catalogOutput) console.log(catalogOutput);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);

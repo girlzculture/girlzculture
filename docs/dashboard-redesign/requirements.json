@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; private client card production-build browser10/10 and local database isolation passed; remaining140-clause scope in progress",
+  "status": "IMPLEMENTING; NOT RELEASED; service and team workspace checks passed locally; service assignments and remaining140-clause scope still in progress",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -3562,9 +3562,11 @@
       "source": "founder-handoff.md",
       "source_line": 501,
       "implementation_paths": [
-        "src/components/owner/OwnerDashboardApp.tsx",
-        "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "src/components/owner/ServicesWorkspace.tsx",
+        "src/components/owner/StructuredCatalogEditors.tsx",
+        "src/lib/businessCatalogPerformance.ts",
+        "supabase/migrations/20260918101950_business_featured_services.sql",
+        "src/app/salon/[slug]/page.tsx"
       ],
       "state": "PENDING",
       "acceptance": "BLOCKED",
@@ -3573,7 +3575,16 @@
       "verification": [],
       "live_evidence": [],
       "detailed_clause": "| PAGE-04 | Styles & Pricing | Rich service organization/cards/table, actual images and prices, featured/popular distinction, filters, service management and accessible secondary import/export. |",
-      "detailed_clause_line": 501
+      "detailed_clause_line": 501,
+      "status": "IMPLEMENTING",
+      "verification_status": "AUTOMATED ONLY",
+      "evidence": [
+        "Service cards, owner feature flag, 90-day completed-booking popular basis, URL filter/sort/view restoration, public-menu ordering, secondary spreadsheet import/export.",
+        "Core/workspace6 passed; catalog browser8 passed across Chromium/WebKit EN/FR/ES/zh-CN. Feature save fail retains state and reference; verified save, reload and return navigation.",
+        "Corrected atomic insertion field-list regression caught by existing assistant SQL checks; full160 migration chain and assertions pass on empty local database.",
+        "Visual review caught undefined border/background classes and untranslated Featured/Braiding; corrected, next production-build visual check pending. Public/live acceptance remains pending.",
+        "Final valid border/background tokens and Featured/Braiding localization visually checked; two catalog cases passed after correction; eight existing catalog-order/draft cases passed."
+      ]
     },
     {
       "id": "PAGE-05",
@@ -3587,9 +3598,9 @@
       "source": "founder-handoff.md",
       "source_line": 502,
       "implementation_paths": [
-        "src/components/owner/OwnerDashboardApp.tsx",
-        "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "src/components/owner/TeamWorkspace.tsx",
+        "src/components/owner/StructuredCatalogEditors.tsx",
+        "src/lib/businessTeamPerformance.ts"
       ],
       "state": "PENDING",
       "acceptance": "BLOCKED",
@@ -3598,7 +3609,15 @@
       "verification": [],
       "live_evidence": [],
       "detailed_clause": "| PAGE-05 | Stylists | Consistent staff cards, assignments and schedules, permissions, payout-arrangement configuration and usable details. |",
-      "detailed_clause_line": 502
+      "detailed_clause_line": 502,
+      "status": "IMPLEMENTING",
+      "verification_status": "AUTOMATED ONLY",
+      "evidence": [
+        "Consistent responsive cards, complete original specialty chips, URL-preserved selection/filters, own-business month-to-date performance with cash/pay distinction, saved-readiness checklist, existing compensation/team-settings navigation, selected-staff schedule deep link.",
+        "Eight original team cases pass across Chromium/WebKit EN/FR/ES/zh-CN. Mobile visual correction adds first-card-in-viewport regression; four phone/landscape cases pass afterward. Core2 passed, build/TypeScript/lint passed before final compact More text adjustment.",
+        "Related service/order/draft suite16/16 passed. Destination-stream-close logs on reload preserved without claiming diagnosed root cause.",
+        "Service assignments and remaining detailed team feature clauses are still in progress. No real live acceptance or deployment."
+      ]
     },
     {
       "id": "PAGE-06",

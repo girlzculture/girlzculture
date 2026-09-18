@@ -599,11 +599,14 @@ export default function OwnerDashboardApp({
         record?: Row;
         error?: string;
         verified?: boolean;
+        request_id?: string;
+        reference?: string;
       };
-      if (!response.ok || !body.record || body.verified !== true)
-        throw new Error(
-          body.error || "We couldn't verify this change after saving.",
-        );
+      if (!response.ok || !body.record || body.verified !== true) {
+        const reference = String(body.reference || body.request_id || "");
+        const message = body.error || "We couldn't verify this change after saving.";
+        throw new Error(/^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$/.test(reference) && !message.includes(reference) ? `${message} Reference ${reference}.` : message);
+      }
       setNotice("Saved and verified.");
       return body.record;
     } catch (saveError) {
@@ -2576,6 +2579,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
 }
 
 function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
+  const availabilityParams = useSearchParams();
   const [calendarStylist, setCalendarStylist] = useState("");
   const hours = c.salon.hours || {};
   const settings = c.salon.booking_settings || {};
@@ -2586,7 +2590,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         String(booking.status || "").toLowerCase(),
       ),
   );
-  const [stylistId, setStylistId] = useState(c.stylists[0]?.id || "");
+  const [stylistId, setStylistId] = useState(() => { const requested = availabilityParams.get("stylist"); return c.stylists.find(row => row.id === requested)?.id || c.stylists[0]?.id || ""; });
   const [until, setUntil] = useState("17:00");
   const [busy, setBusy] = useState("");
   const [renderedAt] = useState(() => Date.now());

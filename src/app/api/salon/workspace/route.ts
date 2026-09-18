@@ -82,24 +82,41 @@ async function GETHandler(request: Request) {
         }));
         return [table, reviews] as const;
       }
-      let query = context.admin
-        .from(table)
-        .select(
-          table === "subscriptions" && !context.isOwner
-            ? "id,salon_id,tier,status,current_period_end"
-            : "*",
-        )
-        .eq("salon_id", context.salon.id);
-      if (ARCHIVED_RECORD_TABLES.has(table)) {
-        query = query.is("archived_at", null);
+      const rows: Record<string, unknown>[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        let query = context.admin
+          .from(table)
+          .select(
+            table === "subscriptions" && !context.isOwner
+              ? "id,salon_id,tier,status,current_period_end"
+              : "*",
+          )
+          .eq("salon_id", context.salon.id);
+        if (ARCHIVED_RECORD_TABLES.has(table)) {
+          query = query.is("archived_at", null);
+        }
+        if (!context.isOwner && context.teamMember?.stylist_id) {
+          if (table === "bookings") query = query.eq("stylist_id", context.teamMember.stylist_id);
+          if (table === "salon_blockouts") query = query.or(`stylist_id.is.null,stylist_id.eq.${context.teamMember.stylist_id}`);
+        }
+        if (table === "notifications" && !context.isOwner) query = query.eq("user_id", context.user.id);
+        const result = await query.order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
+        if (result.error) throw result.error;
+        rows.push(...(result.data || []) as unknown as Record<string, unknown>[]);
+        if ((result.data || []).length < 1000) break;
+        // Never silently present truncated appointment totals as the full book.
+        if (offset >= 99000) throw new Error("Workspace record limit exceeded.");
       }
-      const result = await query.order("created_at", { ascending: false });
-      if (result.error) throw result.error;
-      return [table, result.data || []] as const;
+      return [table, rows] as const;
     }));
+    const records: Record<string, Record<string, unknown>[]> = Object.fromEntries(entries);
+    if (!context.isOwner && context.teamMember?.stylist_id) {
+      const assignedBookings = new Set(records.bookings.map(row => row.id));
+      records.notifications = records.notifications.filter(row => !row.booking_id || assignedBookings.has(row.booking_id));
+    }
     return Response.json({
       salon: context.salon,
-      records: Object.fromEntries(entries),
+      records,
       permissions: context.isOwner ? null : permissions,
       isTeamMember: !context.isOwner,
     }, { headers: { "Cache-Control": "private, no-store" } });
