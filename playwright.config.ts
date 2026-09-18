@@ -16,7 +16,9 @@ const acceptanceEnvironment = {
   PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: acceptanceSupabaseURL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "acceptance-fixture-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "acceptance-fixture-service-role-key",
-  // The separate legacy-gate suite also proves an unset flag does not restore demo mode.
+  // General public-site tests model a founder-opened marketplace. The separate
+  // software-launch suite exercises the actual closed launch configuration.
+  CUSTOMER_MARKETPLACE_LIVE: "true",
 };
 
 const publicResponsiveSpec = /public-responsive\.spec\.ts/;
@@ -35,7 +37,7 @@ const tabletLandscapeChecks =
 
 export default defineConfig({
   testDir: "./tests/browser",
-  // The legacy-gate suite starts its own server without the former launch flag.
+  // The software-launch suite starts its own server with discovery closed.
   testIgnore: /p0-prelaunch\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 8_000 },

@@ -28,7 +28,9 @@ import LanguageSelector, {
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import {
   marketplaceHomeHref,
+  marketplaceBrowsingAvailable,
 } from "@/lib/marketplaceAccessServer";
+import {isMarketplaceNavigationHref} from "@/lib/marketplaceLaunchCore";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
 
@@ -156,9 +158,10 @@ export async function PublicHeader({
 }: {
   active?: "styles" | "salons" | "how" | "about" | "blog";
 }) {
-  const [headerItems, mobileItems] = await Promise.all([
+  const [headerItems, mobileItems, discoveryAvailable] = await Promise.all([
     getNavigationItems("header", defaultHeader),
     getNavigationItems("mobile_menu", defaultMobileMenu),
+    marketplaceBrowsingAvailable(),
   ]);
   return (
     <header
@@ -169,7 +172,7 @@ export async function PublicHeader({
     >
       <div data-public-header-layout className="mx-auto flex h-16 w-full max-w-[1760px] items-center gap-2 px-3 sm:px-6 lg:px-10 xl:px-12 2xl:px-10 min-[1700px]:px-16">
         <div data-public-header-zone="brand" className="flex min-w-0 shrink-0 items-center gap-1">
-          <MobilePublicMenu groups={publicNavigationGroups(mobileItems)} />
+          <MobilePublicMenu groups={publicNavigationGroups(mobileItems,discoveryAvailable)} />
           <Wordmark compact />
         </div>
 
@@ -178,14 +181,14 @@ export async function PublicHeader({
           data-public-header-zone="navigation"
           className="hidden min-w-0 flex-1 items-center justify-center gap-5 whitespace-nowrap text-[13px] font-semibold text-ink 2xl:flex min-[1700px]:gap-8"
         >
-          {publicNavigationGroups(headerItems).map(group => <PublicNavigationMenu key={group.id} group={group} active={active} />)}
+          {publicNavigationGroups(headerItems,discoveryAvailable).map(group => <PublicNavigationMenu key={group.id} group={group} active={active} />)}
           <Link href="/how-it-works" aria-current={active === "how" ? "page" : undefined} className="inline-flex min-h-11 items-center rounded-lg px-2 hover:bg-teal/5"><LocalizedText messageKey="nav.how" fallback="How It Works" /></Link>        </nav>
 
         <div data-public-header-zone="actions" className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
           <div className="hidden 2xl:block">
             <LanguageSelector compact />
           </div>
-          <HeaderStyleSearch />
+          {discoveryAvailable ? <HeaderStyleSearch /> : null}
           {<Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
@@ -270,11 +273,12 @@ export async function CustomerBottomNav({
     social: Share2,
     profile: UserRound,
   };
-  const [records, homeHref] = await Promise.all([
+  const [records, homeHref, discoveryAvailable] = await Promise.all([
     getNavigationItems("mobile_bottom", fallback),
     marketplaceHomeHref(),
+    marketplaceBrowsingAvailable(),
   ]);
-  const items = records.slice(0, 5).map((item) => ({
+  const items = records.filter(item=>discoveryAvailable || !isMarketplaceNavigationHref(item.href)).slice(0, 5).map((item) => ({
     ...item,
     href:
       item.item_key === "home" || item.href === "/"
@@ -297,7 +301,7 @@ export async function CustomerBottomNav({
         aria-label="Customer navigation"
         className="gc-customer-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-plum/10 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_rgba(13,17,20,0.08)] backdrop-blur-xl md:hidden"
       >
-        <div className="mx-auto grid max-w-md grid-cols-5">
+        <div className="mx-auto grid max-w-md" style={{gridTemplateColumns:`repeat(${items.length}, minmax(0, 1fr))`}}>
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = active === item.id;
@@ -495,11 +499,13 @@ export async function PublicFooter({
 }: {
   reserveMobileNavigation?: boolean;
 } = {}) {
-  const [legalLinks, footerItems, brandAssets] = await Promise.all([
+  const [legalLinks, allFooterItems, brandAssets, discoveryAvailable] = await Promise.all([
     getVisibleLegalLinks(),
     getNavigationItems("footer", defaultFooter),
     getPublishedBrandAssets(),
+    marketplaceBrowsingAvailable(),
   ]);
+  const footerItems=allFooterItems.filter(item=>discoveryAvailable || !isMarketplaceNavigationHref(item.href));
   const footerLogo = brandAssets.light_logo;
   const legalColumns = [
     legalLinks.filter((_, index) => index % 2 === 0),

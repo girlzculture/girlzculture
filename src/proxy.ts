@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hostRoutingConfig, resolveHostRoute } from "@/lib/hostRouting";
-import { SITE_ACCESS_COOKIE, SITE_ACCESS_ENTRY_PATH, SITE_ACCESS_EXIT_PATH, SITE_ACCESS_HEADER } from "@/lib/marketplaceLaunchCore";
+import { customerMarketplaceLive, isMarketplaceDiscoveryApi, isMarketplaceDiscoveryPage, marketplaceUnavailable, SITE_ACCESS_COOKIE, SITE_ACCESS_COOKIE_VALUE, SITE_ACCESS_ENTRY_PATH, SITE_ACCESS_EXIT_PATH, SITE_ACCESS_HEADER } from "@/lib/marketplaceLaunchCore";
+
+function protectDiscovery(response: NextResponse) {
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("CDN-Cache-Control", "no-store");
+  response.headers.set("Netlify-CDN-Cache-Control", "no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  response.headers.append("Vary", "Cookie");
+  return response;
+}
 
 export function proxy(request: NextRequest) {
   const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
   const decision = resolveHostRoute(forwardedHost, request.nextUrl.pathname, hostRoutingConfig());
   const requestHeaders = new Headers(request.headers);
-  // A stale demonstration cookie or a forged header grants no access or mode.
+  // This browsing marker is never an authenticated business/customer role.
+  // Only the proxy may set it; supplied request headers are discarded.
   requestHeaders.delete(SITE_ACCESS_HEADER);
   if (decision.kind === "pass") {
     const pathname = request.nextUrl.pathname;
@@ -15,23 +25,27 @@ export function proxy(request: NextRequest) {
       if (request.method !== "POST") return NextResponse.json({ error: "Method not allowed." }, { status: 405, headers: { Allow: "GET, HEAD, POST" } });
       const origin = request.headers.get("origin");
       if (origin !== request.nextUrl.protocol + "//" + forwardedHost) return NextResponse.json({ error: "This action must start on this site." }, { status: 403 });
-      const response = NextResponse.redirect(new URL(SITE_ACCESS_ENTRY_PATH, origin), 303);
+      const response = NextResponse.redirect(new URL("/", origin), 303);
       response.cookies.set(SITE_ACCESS_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax" });
       response.headers.set("Cache-Control", "no-store");
       return response;
     }
-    // Preserve the founder-approved business landing independently of the
-    // customer marketplace. Home inside the marketplace is /site-access.
+    const entry=pathname===SITE_ACCESS_ENTRY_PATH || pathname.startsWith(`${SITE_ACCESS_ENTRY_PATH}/`);
+    const demonstration=entry || request.cookies.get(SITE_ACCESS_COOKIE)?.value===SITE_ACCESS_COOKIE_VALUE;
+    const discovery=customerMarketplaceLive() || demonstration;
+    if(!discovery && isMarketplaceDiscoveryApi(pathname))return marketplaceUnavailable();
+    if(demonstration)requestHeaders.set(SITE_ACCESS_HEADER,"1");
+    // Root stays the approved coming-soon page even during demonstrations.
+    // Direct business pages, booking, account and protected APIs remain under
+    // their existing business eligibility and authorization boundaries.
     const target = request.nextUrl.clone();
-    if (pathname === "/") { target.pathname = "/prelaunch"; target.search = ""; }
-    const response = pathname === "/"
+    const closed=pathname === "/" || (!discovery && isMarketplaceDiscoveryPage(pathname));
+    if (closed) { target.pathname = "/prelaunch"; target.search = ""; requestHeaders.delete(SITE_ACCESS_HEADER); }
+    const response = closed
       ? NextResponse.rewrite(target, { request: { headers: requestHeaders } })
       : NextResponse.next({ request: { headers: requestHeaders } });
-    if (request.cookies.get(SITE_ACCESS_COOKIE)) response.cookies.set(SITE_ACCESS_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax" });
-    if (pathname === "/" || pathname === SITE_ACCESS_ENTRY_PATH) {
-      response.headers.set("Cache-Control", "no-store");
-      response.headers.set("Netlify-CDN-Cache-Control", "no-store");
-    }
+    if(entry)response.cookies.set(SITE_ACCESS_COOKIE,SITE_ACCESS_COOKIE_VALUE,{path:"/",httpOnly:true,secure:request.nextUrl.protocol==="https:",sameSite:"lax"});
+    if(closed || demonstration || isMarketplaceDiscoveryPage(pathname) || isMarketplaceDiscoveryApi(pathname))protectDiscovery(response);
     if (decision.surface !== "public") response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     return response;
   }

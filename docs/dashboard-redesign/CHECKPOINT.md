@@ -1,5 +1,15 @@
 # Dashboard and business-software implementation checkpoint
 
+## Latest continuation — access gating and localization CI correction
+
+Local Finance checkpoint370d9a2 is followed by the founder-requested launch-access correction: root preserves the approved coming-soon page, ordinary discovery/navigation is closed, /site-access grants only a noindex browsing session, direct eligible business booking stays available. No role/auth grant or synthetic payments. Focused core17/17, prelaunch browsers28/28, valid/missing-input availability2/2 pass. Missing availability inputs now return400JSON instead of500. All use isolated fixtures; no live acceptance claim.
+
+Required2f5c28b run35389773633 finished762passed/5skipped/2failed. Chromium SIGSEGV at newContext: trace confirms no page/test body, context failed after1.49seconds; root cause inside browser not established. Original log and artifact10566654578 preserved outside Git, no speculative dependency/config changes or unchanged rerun. WebKit zh-CN finance coverage found31 English sources in newly mounted collapsed legacy payment evidence. Reproduced the actual bridge timing boundary with a next-paint regression: old requestAnimationFrame translation leaves English title/placeholder. Correction processes changed DOM in mutation microtask before paint and preserves input/original content. Production build, tsc, targeted lint and all26 affected Chromium/WebKit finance/account-locale tests pass. Existing coverage assertion remains unchanged. Sign-out test emits cancelled response-stream warnings; assertions and hydration checks pass.
+
+Release run35389773672: all3 browser shards pass and core462/462; owner-source inventory failed stale generated evidence and is corrected locally (2401 entries each required locale). Wolof663 gaps remain explicitly deferred. No new CI run dispatched yet. BothUSD25caps, production deploy6aac503fa5eacb00089c6d87 and pending migration history remain unchanged.
+
+Google Cloud projectproject-f0d9935c-69db-42c9-b22 is accessible after founder sign-in; Business Information API is disabled. Activation confirmation pending before quota/approval inspection. Browser tab28 retained; no OAuth credential or business profile change. Continue billing/pricing, remaining software-first features and full201group detailed acceptance; the product is not ready to merge or publish.
+
 This branch is in progress. It is not merged, deployed, or a completed 140-item release.
 
 Base: `d37cbf4ef3954063797946b7508352470653a739`.

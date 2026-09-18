@@ -36,7 +36,7 @@ const tabs: Array<[AccountTab, string, typeof Home]> = [
   ["payments", "Payment Methods", CreditCard], ["settings", "Settings", Settings],
 ];
 
-export default function CustomerAccount() {
+export default function CustomerAccount({discoveryAvailable=false,homeHref="/"}:{discoveryAvailable?:boolean;homeHref?:string}) {
   const router = useRouter();
   const params = useSearchParams();
   const requested = params.get("tab") as AccountTab | null;
@@ -119,8 +119,8 @@ export default function CustomerAccount() {
   const firstName = name.split(" ")[0];
   return <div key={actorId} className="gc-dashboard min-h-screen bg-white pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
     <header className="gc-brand-header flex min-h-20 flex-wrap gap-3 py-3 items-center justify-between border-b border-plum/10 px-5 lg:px-10">
-      <Link href="/site-access" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
-      <nav className="hidden gap-6 text-sm xl:flex"><Link href="/site-access">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
+      <Link href={homeHref} className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
+      <nav className="hidden gap-6 text-sm xl:flex"><Link href={homeHref}>Home</Link>{discoveryAvailable?<Link href="/salons">Search Salons</Link>:null}<Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
       <div data-language-selector-host className="flex items-center gap-2 sm:gap-4"><LanguageSelector compact/><Link href="/account?tab=upcoming" aria-label="Upcoming appointments" className="grid h-11 w-11 place-items-center"><Bell size={20}/></Link><Link href="/account?tab=inbox" aria-label="Booking messages" className="grid h-11 w-11 place-items-center"><MessageSquare size={20}/></Link><span data-no-translate className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
     </header>
     <div className="mx-auto grid max-w-[1720px] lg:grid-cols-[270px_1fr]">
@@ -133,15 +133,15 @@ export default function CustomerAccount() {
         <WorkspaceToolbar homeHref="/account" homeLabel="Overview" current={tabs.find(([id]) => id === tab)?.[1] || "Overview"} destinations={tabs.map(([id, label]) => ({ label, href: `/account?tab=${id}` }))}/>
         <div className="mb-5 flex justify-end"><CustomerAssistant upcomingCount={upcoming.length}/></div>
         <section className="rounded-[18px] bg-plum p-6 text-white lg:bg-transparent lg:p-0 lg:text-ink"><p className="text-sm lg:hidden">Welcome back,</p><h1 className="font-serif text-3xl font-semibold lg:text-4xl lg:text-plum">{tab === "overview" ? `Welcome back, ${firstName}!` : tabs.find(([id]) => id === tab)?.[1]}</h1><p className="mt-2 text-sm text-text-on-dark-muted lg:text-text-secondary">Manage your bookings, favorites, reviews, and account details.</p></section>
-        <div className="mt-7">{tab === "overview" ? <Overview upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet." full/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={tab === "reviews" ? past.filter(row => String(row.status).toLowerCase() === "completed") : past} empty="No completed appointments yet." past full/> : tab === "orders" ? <OrderPanel rows={orders}/> : tab === "favorites" ? <FavoritePanel favorites={favorites}/> : tab === "inbox" ? <BookingInbox scope="customer" initialBookingId={params.get("booking") || ""}/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits and product purchases are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action="Browse salons" href="/salons"/> : <SettingsPanel customer={customer}/>}</div>
+        <div className="mt-7">{tab === "overview" ? <Overview discoveryAvailable={discoveryAvailable} upcoming={upcoming} past={past} favorites={favorites}/> : tab === "upcoming" ? <BookingPanel title="Upcoming Bookings" rows={upcoming} empty="No upcoming appointments yet." full/> : tab === "past" || tab === "reviews" ? <BookingPanel title={tab === "reviews" ? "Appointments ready for a review" : "Past Bookings"} rows={tab === "reviews" ? past.filter(row => String(row.status).toLowerCase() === "completed") : past} empty="No completed appointments yet." past full/> : tab === "orders" ? <OrderPanel discoveryAvailable={discoveryAvailable} rows={orders}/> : tab === "favorites" ? <FavoritePanel discoveryAvailable={discoveryAvailable} favorites={favorites}/> : tab === "inbox" ? <BookingInbox scope="customer" initialBookingId={params.get("booking") || ""}/> : tab === "payments" ? <EmptyState title="Payment methods" text="Reservation deposits and product purchases are paid securely in Stripe Checkout. Girlz Culture does not store card numbers." action={discoveryAvailable?"Browse salons":"Your appointments"} href={discoveryAvailable?"/salons":"/account?tab=upcoming"}/> : <SettingsPanel customer={customer}/>}</div>
       </main>
     </div>
     <nav className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-plum/10 bg-white p-2 lg:hidden">{[[Home, "Home", "/"], [Search, "Search", "/salons"], [CalendarDays, "Bookings", "/account?tab=upcoming"], [Share2, "Social", "/social"], [UserRound, "Profile", "/account?tab=settings"]].map(([Icon, label, href]) => <Link key={label as string} href={href as string} className="flex flex-col items-center gap-1 text-[10px]"><Icon size={21}/>{label as string}</Link>)}</nav>
   </div>;
 }
 
-function Overview({ upcoming, past, favorites }: { upcoming: Row[]; past: Row[]; favorites: Row[] }) {
-  return <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-3">{[["Upcoming appointments", upcoming.length], ["Past appointments", past.length], ["Saved businesses", favorites.length]].map(([label, value]) => <article className="gc-stat" key={label}><p>{label}</p><strong>{value}</strong></article>)}</div><p className="text-xs">Counts reflect your loaded account records. No demonstration figures are included.</p><div className="grid gap-5 xl:grid-cols-2"><BookingPanel title="Upcoming Bookings" rows={upcoming.slice(0, 2)} empty="No upcoming appointments yet."/><BookingPanel title="Past Bookings" rows={past.slice(0, 2)} empty="No past appointments yet." past/></div><FavoritePanel favorites={favorites}/></div>;
+function Overview({ upcoming, past, favorites, discoveryAvailable }: { upcoming: Row[]; past: Row[]; favorites: Row[]; discoveryAvailable:boolean }) {
+  return <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-3">{[["Upcoming appointments", upcoming.length], ["Past appointments", past.length], ["Saved businesses", favorites.length]].map(([label, value]) => <article className="gc-stat" key={label}><p>{label}</p><strong>{value}</strong></article>)}</div><p className="text-xs">Counts reflect your loaded account records. No demonstration figures are included.</p><div className="grid gap-5 xl:grid-cols-2"><BookingPanel title="Upcoming Bookings" rows={upcoming.slice(0, 2)} empty="No upcoming appointments yet."/><BookingPanel title="Past Bookings" rows={past.slice(0, 2)} empty="No past appointments yet." past/></div><FavoritePanel discoveryAvailable={discoveryAvailable} favorites={favorites}/></div>;
 }
 
 function BookingPanel({ title, rows, empty, past = false, full = false }: { title: string; rows: Row[]; empty: string; past?: boolean; full?: boolean }) {
@@ -163,7 +163,7 @@ function BookingPanel({ title, rows, empty, past = false, full = false }: { titl
   </div>;
 }
 
-function OrderPanel({ rows }: { rows: Row[] }) {
+function OrderPanel({ rows, discoveryAvailable }: { rows: Row[]; discoveryAvailable:boolean }) {
   return (
     <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5">
       <div className="flex items-center justify-between gap-4">
@@ -175,9 +175,9 @@ function OrderPanel({ rows }: { rows: Row[] }) {
             Pickup, shipping, payment, and tracking details from your salons.
           </p>
         </div>
-        <Link href="/salons" className="text-sm font-bold text-magenta">
+        {discoveryAvailable?<Link href="/salons" className="text-sm font-bold text-magenta">
           Shop salons
-        </Link>
+        </Link>:null}
       </div>
       <div className="mt-5 space-y-4">
         {rows.map((order) => {
@@ -265,8 +265,8 @@ function OrderPanel({ rows }: { rows: Row[] }) {
   );
 }
 
-function FavoritePanel({ favorites }: { favorites: Row[] }) {
-  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><div><h2 className="font-serif text-2xl font-semibold text-plum">Your Favorite Salons</h2><p className="text-sm text-ink/60">Quick access to the salons you love.</p></div><Link href="/salons" className="text-sm font-bold text-magenta">Find salons</Link></div><div className="mt-5 flex gap-4 overflow-x-auto">{favorites.map((salon) => { const reviews = Number(salon.review_count || 0); const closed=isSalonClosedToday(salon); return <article key={salon.id} className="min-w-56 overflow-hidden rounded-[14px] border border-plum/10 bg-white"><SafeImage src={salon.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(salon.name)} className="h-28 w-full object-cover"/><div className="p-3"><h3 className="font-serif font-semibold">{String(salon.name)}</h3><span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold ${closed?"bg-red-100 gc-text-danger":"bg-blush/55 text-plum"}`}>{getSalonStatusLabel(salon)}</span>{reviews > 0 ? <p className="mt-1 flex items-center gap-1 text-xs text-amber"><Star size={13} className="fill-amber" aria-hidden="true"/>{Number(salon.rating_overall || 0).toFixed(1)} ({reviews})</p> : <span className="mt-1 inline-flex rounded-full bg-blush px-2 py-1 text-xs font-bold text-plum">New</span>}<Link href={`/salon/${salon.slug}`} className="mt-3 block rounded-lg border border-magenta py-2 text-center text-xs font-bold text-magenta">View salon</Link></div></article>; })}{!favorites.length ? <p className="py-10 text-sm text-ink/50">Save salons with the heart button to see them here.</p> : null}</div></section>;
+function FavoritePanel({ favorites, discoveryAvailable }: { favorites: Row[]; discoveryAvailable:boolean }) {
+  return <section className="rounded-[18px] border border-plum/10 bg-white/75 p-5"><div className="flex justify-between"><div><h2 className="font-serif text-2xl font-semibold text-plum">Your Favorite Salons</h2><p className="text-sm text-ink/60">Quick access to the salons you love.</p></div>{discoveryAvailable?<Link href="/salons" className="text-sm font-bold text-magenta">Find salons</Link>:null}</div><div className="mt-5 flex gap-4 overflow-x-auto">{favorites.map((salon) => { const reviews = Number(salon.review_count || 0); const closed=isSalonClosedToday(salon); return <article key={salon.id} className="min-w-56 overflow-hidden rounded-[14px] border border-plum/10 bg-white"><SafeImage src={salon.cover_photo_url as string} fallbackSrc="/images/salon-warm.jpg" alt={String(salon.name)} className="h-28 w-full object-cover"/><div className="p-3"><h3 className="font-serif font-semibold">{String(salon.name)}</h3><span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold ${closed?"bg-red-100 gc-text-danger":"bg-blush/55 text-plum"}`}>{getSalonStatusLabel(salon)}</span>{reviews > 0 ? <p className="mt-1 flex items-center gap-1 text-xs text-amber"><Star size={13} className="fill-amber" aria-hidden="true"/>{Number(salon.rating_overall || 0).toFixed(1)} ({reviews})</p> : <span className="mt-1 inline-flex rounded-full bg-blush px-2 py-1 text-xs font-bold text-plum">New</span>}<Link href={`/salon/${salon.slug}`} className="mt-3 block rounded-lg border border-magenta py-2 text-center text-xs font-bold text-magenta">View salon</Link></div></article>; })}{!favorites.length ? <p className="py-10 text-sm text-ink/50">Save salons with the heart button to see them here.</p> : null}</div></section>;
 }
 
 function EmptyState({ title, text, action, href }: { title: string; text: string; action: string; href: string }) {

@@ -8,24 +8,17 @@ const { proxy } = load('src/proxy.ts');
 const { publicNavigationGroups } = load('src/lib/publicNavigation.ts');
 const openAi = load('src/lib/openAiServer.ts');
 
-test('root preserves business onboarding while marketplace and deep links work without a launch flag', () => {
-  const previous = process.env.CUSTOMER_MARKETPLACE_LIVE;
-  try {
-    for (const value of ['', 'false', 'true']) {
-      process.env.CUSTOMER_MARKETPLACE_LIVE = value;
-      for (const path of ['/', '/site-access', '/styles', '/salons', '/salon/example/book', '/api/stripe/booking-checkout', '/business/login', '/admin/login']) {
-        const result = proxy(new NextRequest('https://girlzculture.test'+path, { headers: { host:'girlzculture.test', cookie:'gc_site_access=marketplace-demo', 'x-gc-site-access':'1' } }));
-        if(path === '/') assert.equal(new URL(result.headers.get('x-middleware-rewrite')).pathname,'/prelaunch');
-        else assert.equal(result.headers.get('x-middleware-next'),'1',path);
-        assert.equal(result.headers.get('location'),null,path);
-        assert.match(result.headers.get('set-cookie'),/gc_site_access=;/);
-        assert.ok(!result.headers.get('x-middleware-override-headers')?.includes('x-gc-site-access'));
-      }
-    }
-  } finally { if(previous === undefined) delete process.env.CUSTOMER_MARKETPLACE_LIVE; else process.env.CUSTOMER_MARKETPLACE_LIVE=previous; }
+test('explicit founder launch permits discovery while root stays coming-soon', () => {
+ const previous=process.env.CUSTOMER_MARKETPLACE_LIVE;process.env.CUSTOMER_MARKETPLACE_LIVE="true";
+ try{for(const path of ["/","/salons","/styles","/api/discovery/salons","/salon/example/book","/business/login","/admin/login"]){
+ const result=proxy(new NextRequest("https://girlzculture.test"+path,{headers:{host:"girlzculture.test","x-gc-site-access":"1"}}));
+ if(path==="/")assert.equal(new URL(result.headers.get("x-middleware-rewrite")).pathname,"/prelaunch");
+ else assert.equal(result.headers.get("x-middleware-next"),"1",path);
+ assert.equal(result.headers.get("x-middleware-request-x-gc-site-access"),null);
+ }}finally{if(previous===undefined)delete process.env.CUSTOMER_MARKETPLACE_LIVE;else process.env.CUSTOMER_MARKETPLACE_LIVE=previous;}
 });
 
-test('legacy exit never closes the marketplace and rejects cross-origin cookie mutation', () => {
+test('demonstration exit requires a same-origin POST and preserves prefetch reads', () => {
   for(const method of ['GET','HEAD']) {
     const r=proxy(new NextRequest('https://girlzculture.test/site-access/exit',{method,headers:{host:'girlzculture.test'}}));
     assert.equal(r.status,204);assert.equal(r.headers.get('set-cookie'),null);
@@ -35,7 +28,7 @@ test('legacy exit never closes the marketplace and rejects cross-origin cookie m
     assert.equal(r.status,403);assert.equal(r.headers.get('set-cookie'),null);
   }
   const r=proxy(new NextRequest('https://girlzculture.test/site-access/exit',{method:'POST',headers:{origin:'https://girlzculture.test',host:'girlzculture.test'}}));
-  assert.equal(r.status,303);assert.equal(new URL(r.headers.get('location')).pathname,'/site-access');
+  assert.equal(r.status,303);assert.equal(new URL(r.headers.get('location')).pathname,'/');
 });
 
 test('published CMS links survive grouping; subscription pricing only appears under For Businesses', () => {
@@ -44,7 +37,7 @@ test('published CMS links survive grouping; subscription pricing only appears un
     {item_key:'price',label:'Old pricing link',href:'/pricing'}, {item_key:'plans',label:'Plans',href:'/plans'},
     {item_key:'about',label:'Our story',href:'/about'}, {item_key:'how',label:'How It Works',href:'/how-it-works'},
     {item_key:'login',label:'Business login',href:'/business/login'}
-  ]);
+  ],true);
   assert.deepEqual(Array.from(groups,g=>g.label),['Explore','For Businesses']);
   assert.ok(groups[0].links.some(i=>i.href==='/site-access'));
   assert.ok(groups[0].links.some(i=>i.href==='/about' && i.label==='Our story'));

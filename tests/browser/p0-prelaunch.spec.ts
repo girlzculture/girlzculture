@@ -2,10 +2,11 @@ import { expect, test as requestTest } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
 
-// Runs independently with the legacy launch flag empty. Account, eligibility
-// and payment protections are tested separately from the retired demo gate.
-requestTest('legacy exit cannot close the marketplace or change cookies from another origin', async ({ request, baseURL }) => {
+// Software-first founder decision: discovery closed; direct real-business
+// booking and authenticated accounts remain available. Demo entry is unlisted.
+requestTest('demonstration exit is same-origin POST only and closes discovery', async ({ request, baseURL }) => {
   for (const method of ['GET', 'HEAD']) {
     const r = await request.fetch('/site-access/exit', { method, headers: { 'next-router-prefetch': '1' }, maxRedirects: 0 });
     expect(r.status()).toBe(204);
@@ -20,9 +21,9 @@ requestTest('legacy exit cannot close the marketplace or change cookies from ano
   expect((await request.put('/site-access/exit', { maxRedirects: 0 })).status()).toBe(405);
   const r = await request.post('/site-access/exit', { headers: { origin: new URL(baseURL!).origin }, maxRedirects: 0 });
   expect(r.status()).toBe(303);
-  expect(new URL(r.headers().location, baseURL).pathname).toBe('/site-access');
+  expect(new URL(r.headers().location, baseURL).pathname).toBe('/');
   expect(r.headers()['set-cookie']).toContain('Max-Age=0');
-  expect((await request.get('/api/discovery/salons?lat=40.7&lng=-74')).status()).toBe(200);
+  expect((await request.get('/api/discovery/salons?lat=40.7&lng=-74')).status()).toBe(503);
 });
 
 for (const width of [390, 768, 1440]) test(`root business landing preserved independently of the marketplace at ${width}px`, async ({ page }, info) => {
@@ -38,10 +39,12 @@ for (const width of [390, 768, 1440]) test(`root business landing preserved inde
   await page.screenshot({ path: `${directory}/root-preserved-${width}.png`, fullPage: true, ...screenshotCaret });
 });
 
-test('marketplace entry reaches public profiles and booking controls without a demo cookie', async ({ page }) => {
+test('unlisted entry establishes lasting browsing access while real business booking remains available', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('girlz-culture-mobile-location-prompt-v1', JSON.stringify({ dismissedAt: Date.now(), outcome: 'dismissed' })));
   const entry = await page.goto('/site-access');
   expect(entry?.status()).toBeLessThan(400);
+  expect(entry?.headers()['x-robots-tag']).toContain('noindex');
+  await expect(page.locator('meta[name=robots]')).toHaveAttribute('content',/noindex/);
   expect(entry?.headers()['netlify-cdn-cache-control']).toContain('no-store');
   await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
@@ -58,13 +61,13 @@ test('marketplace entry reaches public profiles and booking controls without a d
   await expect(page.locator('main')).toBeVisible();
 });
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 768, height: 1024 }, { width: 1180, height: 820 }, { width: 1680, height: 1000 }]) test(`marketplace navigation and stale demo removal at ${viewport.width}x${viewport.height}`, async ({ page, context, baseURL }, info) => {
+for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 768, height: 1024 }, { width: 1180, height: 820 }, { width: 1680, height: 1000 }]) test(`demonstration navigation and session retention at ${viewport.width}x${viewport.height}`, async ({ page, context, baseURL }, info) => {
   await page.setViewportSize(viewport);
   await context.addCookies([{ name: 'gc_site_access', value: 'marketplace-demo', url: baseURL! }]);
   await page.addInitScript(() => localStorage.setItem('girlz-culture-mobile-location-prompt-v1', JSON.stringify({ dismissedAt: Date.now(), outcome: 'dismissed' })));
   await page.goto('/site-access');
   await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
-  expect((await context.cookies()).some(cookie => cookie.name === 'gc_site_access')).toBe(false);
+  expect((await context.cookies()).some(cookie => cookie.name === 'gc_site_access')).toBe(true);
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   let nav = page.getByRole('navigation', { name: 'Main navigation', exact: true });
@@ -83,6 +86,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
   for (const name of ['Starter', 'Growth', 'Premium']) await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   await page.goto('/site-access');
   await page.reload();
+  expect((await context.cookies()).some(cookie=>cookie.name==='gc_site_access')).toBe(true);
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
   const directory = `docs/screenshots/dashboard-redesign/${info.project.name}`;
   await mkdir(directory, { recursive: true });
@@ -106,4 +110,29 @@ test('business signup, owner login and help remain reachable', async ({ page }) 
     await expect(page.getByRole('heading', { name: 'A new home for your beauty business', exact: true })).toHaveCount(0);
     await expect(page.locator('main')).toBeVisible();
   }
+});
+
+requestTest('closed discovery rejects forged mode headers but not direct booking APIs', async({request})=>{
+ for(const path of ["/api/discovery/salons","/api/search/suggestions","/api/concierge/search"]){
+  const r=await request.get(path,{headers:{"x-gc-site-access":"1"}});expect(r.status()).toBe(503);expect((await r.json()).code).toBe("CUSTOMER_MARKETPLACE_NOT_LIVE");
+ }
+ const invalid=await request.get("/api/booking-availability");expect(invalid.status()).toBe(400);expect((await invalid.json()).code).toBe("AVAILABILITY_INPUT_REQUIRED");
+ const business=randomUUID();const fixture=`http://127.0.0.1:3109/__fixtures/p0-public-policy/${business}`;
+ try{
+  expect((await request.post(fixture,{headers:{'x-acceptance-fixture':'p0-public-policy'},data:{version:1}})).ok()).toBe(true);
+  const day=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const direct=await request.get(`/api/booking-availability?salon_id=${business}&style_id=${business}&date=${day}`);
+  expect(direct.status()).toBe(200);const result=await direct.json();expect(Array.isArray(result.slots)).toBe(true);expect(result.timeZone).toBe('America/New_York');
+ }finally{await request.post(fixture,{headers:{'x-acceptance-fixture':'p0-public-policy'},data:{version:null}});}
+});
+
+test('ordinary visitors keep direct business pages and cannot navigate into founder discovery',async({page})=>{
+ await page.goto("/salon/acceptance-salon");
+ await expect(page.getByRole("heading",{name:"Acceptance Salon",exact:true})).toBeVisible();
+ await expect(page.getByRole("link",{name:"Girlz Culture home",exact:true})).toHaveAttribute("href","/");
+ await expect(page.locator('header a[href="/site-access"], header a[href="/salons"], header a[href="/styles"], footer a[href="/site-access"]')).toHaveCount(0);
+ await expect(page.getByRole("link",{name:"Book Appointment",exact:true})).toHaveAttribute("href","/salon/acceptance-salon/book");
+ for(const path of ["/styles","/salons"]){await page.goto(path);await expect(page.getByRole("heading",{name:"A new home for your beauty business",exact:true})).toBeVisible();}
+ await page.goto("/site-access");await page.goto("/styles");await expect(page.getByPlaceholder("Search styles")).toBeVisible();
+ await page.reload();await expect(page.getByPlaceholder("Search styles")).toBeVisible();
 });
