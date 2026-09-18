@@ -1,10 +1,13 @@
 "use client";
+import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
+import BookingAttendance from "@/components/booking/BookingAttendance";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { useAssistantBusinessBinding } from "@/components/owner/GcAssistant";
 import { assistantAvatar } from "@/lib/assistantAppearance";
 import BusinessPolicies from "@/components/owner/BusinessPolicies";
 import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
+import BusinessOverview from "@/components/owner/BusinessOverview";
 import BusinessFinances from "@/components/owner/BusinessFinances";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import { useI18n } from "@/components/i18n/LocaleProvider";
@@ -15,7 +18,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import BookingNotes from "@/components/owner/BookingNotes";
 import ManualAppointmentEditor from "@/components/owner/ManualAppointmentEditor";
-import { ownerBusinessMetrics, profileCompletion, isBusinessAdded, BOOKING_SOURCE_LABELS } from "@/lib/ownerBusinessMetrics";
+import { profileCompletion, isBusinessAdded, BOOKING_SOURCE_LABELS } from "@/lib/ownerBusinessMetrics";
 import {
   BadgeCheck,
   CalendarDays,
@@ -31,10 +34,8 @@ import {
   LockKeyhole,
   Megaphone,
   MessageCircle as Sparkles,
-  Package,
   Plus,
   Star,
-  UserPlus,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -88,7 +89,6 @@ import {
   normalizeUsZip,
   US_STATES,
 } from "@/lib/usStates";
-import PushSetup from "@/components/notifications/PushSetup";
 import BookingInbox from "@/components/BookingInbox";
 import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
@@ -220,6 +220,7 @@ export default function OwnerDashboardApp({
     boolean
   > | null>(null);
   const [isTeamMember, setIsTeamMember] = useState(false);
+  const [actorName, setActorName] = useState("");
   const [cancellationReasons, setCancellationReasons] = useState([
     "Customer requested cancellation",
     "Stylist unavailable",
@@ -278,6 +279,8 @@ export default function OwnerDashboardApp({
       if (!salonId)
         throw new Error("This salon profile is missing its identifier.");
       setSalon(s as Salon);
+      const displayName = session.user.user_metadata?.full_name || session.user.user_metadata?.first_name || session.user.user_metadata?.name;
+      setActorName(typeof displayName === "string" ? displayName.trim().split(/\s+/)[0].slice(0,80) : "");
       const teamLogin = Boolean(workspace.isTeamMember);
       setIsTeamMember(teamLogin);
       setTeamPermissions(teamLogin ? workspace.permissions || {} : null);
@@ -770,6 +773,7 @@ export default function OwnerDashboardApp({
       </OwnerDashboardShell>
     );
   const context = {
+    actorName,
     locale: intlLocale(i18n.locale),
     translateSource: i18n.translateSource,
     formatCurrency: i18n.formatCurrency,
@@ -837,6 +841,16 @@ export default function OwnerDashboardApp({
           </p>
         </div>
       ) : null}
+      {realtimeNotice ? (
+        <div
+          role="status"
+          className="mb-4 rounded-[10px] border border-amber/35 bg-amber/10 px-4 py-3 text-xs leading-5 text-plum"
+        >
+          {realtimeNotice}
+        </div>
+      ) : null}
+      <ActionToast message={notice} onDismiss={() => setNotice("")} />
+      <DashboardContent section={section} context={context} />
       {!isTeamMember &&
       subscriptionActive &&
       !salon.is_discoverable &&
@@ -859,25 +873,13 @@ export default function OwnerDashboardApp({
           </div>
         </details>
       ) : null}
-      <div className="mb-4">
-        <PushSetup scope="salon" compact />
-      </div>
-      {realtimeNotice ? (
-        <div
-          role="status"
-          className="mb-4 rounded-[10px] border border-amber/35 bg-amber/10 px-4 py-3 text-xs leading-5 text-plum"
-        >
-          {realtimeNotice}
-        </div>
-      ) : null}
-      <ActionToast message={notice} onDismiss={() => setNotice("")} />
-      <DashboardContent section={section} context={context} />
       <OwnerSetupGuideLink />
     </OwnerDashboardShell>
   );
 }
 
 type Ctx = {
+  actorName: string;
   locale: string;
   translateSource: ReturnType<typeof useI18n>["translateSource"];
   formatCurrency: ReturnType<typeof useI18n>["formatCurrency"];
@@ -1622,197 +1624,7 @@ function MiniLine() {
   );
 }
 
-function Overview({ c }: { c: Ctx }) {
-  const [renderedAt] = useState(() => Date.now());
-  const metrics = ownerBusinessMetrics(c.bookings, renderedAt);
-  const revenue = metrics.completed_booking_value;
-  const upcoming = metrics.upcoming.slice(0, 3);
-  const completion = profileCompletion(c.salon, c.styles.length, c.stylists.length);
-  const cancellationRate = metrics.cancellation_rate * 100;
-  const quickActions = (
-    [
-      ["Add Photos", "photos", ImagePlus],
-      ["Availability", "availability", CalendarDays],
-      ["Promotion", "promotions", Megaphone],
-      ["Add Stylist", "stylists", UserPlus],
-      ["Add Product", "products", Package],
-    ] as const
-  ).filter(([, path]) => c.access === null || Boolean(c.access[path]));
-  return (
-    <>
-      <Title
-        title="Your Dashboard"
-        subtitle="Run your business with confidence."
-      />
-      <SalonOpenStatusControl salon={c.salon} />
-      {cancellationRate > c.cancellationThreshold ? (
-        <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 p-4 text-xs gc-text-danger">
-          <b>
-            Your salon cancellation rate is above {c.cancellationThreshold}%.
-          </b>
-          <p className="mt-1">
-            Update availability before accepting more bookings to protect your
-            quality standing.
-          </p>
-        </div>
-      ) : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Metric
-          label="Profile Views"
-          value={Number(c.salon.profile_views || 0)}
-        />
-        <Metric
-          label="Total Appointments"
-          value={metrics.total_appointments}
-          icon={CalendarDays}
-        />
-        <Metric
-          label="New Customers"
-          value={metrics.customers}
-          icon={UsersRound}
-        />
-        <Metric
-          label="Completed Booking Value"
-          value={c.formatCurrency(revenue)}
-          icon={CircleDollarSign}
-        />
-        <Metric
-          label="Salon Cancellation Rate"
-          value={c.formatNumber(cancellationRate / 100, { style: "percent", maximumFractionDigits: 1 })}
-          icon={Clock3}
-        />
-      </div>
-<p className="mt-3 text-sm">{c.translateSource("{value0} appointments — {value1} from Girlz Culture, {value2} added by your business.", { value0: c.formatNumber(metrics.total_appointments), value1: c.formatNumber(metrics.marketplace_bookings), value2: c.formatNumber(metrics.business_added_appointments) })}</p>
-      <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1.5fr_.8fr]">
-        <Panel>
-          <h2 className="font-serif text-xl text-plum">Profile Completion</h2>
-          <p className="mt-3 text-sm">
-            Complete your profile to attract more clients and grow your brand.
-          </p>
-          <div className="mt-5 flex items-center gap-3">
-            <div className="h-2 flex-1 rounded-full bg-blush">
-              <div
-                className="h-full rounded-full bg-magenta"
-                style={{ width: `${completion}%` }}
-              />
-            </div>
-            <b>{completion}%</b>
-          </div>
-          <Link
-            href="/salon/dashboard/my-page"
-            className="mt-6 inline-flex text-xs font-bold text-magenta"
-          >
-            Finish setup
-          </Link>
-        </Panel>
-        <Panel>
-          <div className="flex justify-between">
-            <h2 className="font-serif text-xl text-plum">
-              Upcoming Appointments
-            </h2>
-            <Link
-              href="/salon/dashboard/bookings"
-              className="text-xs text-magenta"
-            >
-              View all
-            </Link>
-          </div>
-          <div className="mt-3 divide-y divide-plum/10">
-            {upcoming.map((booking, index) => (
-              <Link
-                href={`/salon/dashboard/bookings/${booking.id}`}
-                key={String(booking.id || index)}
-                className="grid grid-cols-[85px_1fr_auto] gap-3 py-3 text-xs"
-              >
-                <span>
-                  {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
-                </span>
-                <span>
-                  <b>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</b>
-                  <br />
-                  <span className="text-ink/55">
-                    {stylistName(c, booking.stylist_id)}
-                  </span>
-                </span>
-                <Status value={String(booking.status || "Confirmed")} />
-              </Link>
-            ))}
-            {!upcoming.length ? (
-              <Empty text="No upcoming appointments." />
-            ) : null}
-          </div>
-        </Panel>
-        <Panel>
-          <h2 className="font-serif text-xl text-plum">Recent Reviews</h2>
-          {c.reviews.slice(0, 2).map((review, index) => (
-            <div
-              key={review.id || index}
-              className="mt-3 border-t border-plum/10 pt-3 text-xs"
-            >
-              <Stars value={Number(review.rating_overall || 0)} />
-              {review.written_review ? (
-                <p className="mt-2 line-clamp-3">
-                  <span data-no-translate>{String(review.written_review)}</span>
-                </p>
-              ) : null}
-            </div>
-          ))}
-          {!c.reviews.length ? (
-            <Empty text="Reviews will appear after completed bookings." />
-          ) : null}
-        </Panel>
-      </div>
-      <div
-        className={`mt-4 grid gap-4 ${c.isOwner ? "lg:grid-cols-[.7fr_1.3fr]" : ""}`}
-      >
-        {c.isOwner ? (
-          <Panel>
-            <div className="flex items-center gap-3">
-              <Crown className="text-magenta" />
-              <div>
-                <p className="text-xs">Subscription</p>
-                <h2 className="font-serif text-xl text-plum">
-                  {displayStoredPlan(
-                    c.subscription?.subscription_tier ||
-                      c.subscription?.tier ||
-                      c.salon.subscription_tier,
-                  )}{" "}
-                  Plan
-                </h2>
-              </div>
-            </div>
-            <Link
-              href="/salon/dashboard/subscription"
-              className="mt-4 inline-flex text-xs font-bold text-magenta"
-            >
-              Manage subscription
-            </Link>
-          </Panel>
-        ) : null}
-        <Panel>
-          <h2 className="font-serif text-xl text-plum">Quick Actions</h2>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {quickActions.map(([label, path, Icon]) => (
-              <Link
-                key={path}
-                href={`/salon/dashboard/${path}`}
-                className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-[10px] border border-plum/10 bg-cream/40 text-center text-[10px] font-semibold text-ink"
-              >
-                <Icon size={25} className="text-magenta" />
-                {label}
-              </Link>
-            ))}
-            {!quickActions.length ? (
-              <p className="col-span-full text-xs text-ink/55">
-                No quick actions are assigned to this role.
-              </p>
-            ) : null}
-          </div>
-        </Panel>
-      </div>
-    </>
-  );
-}
+function Overview({c}:{c:Ctx}) { return <BusinessOverview {...c}/>; }
 
 function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: string; children: React.ReactNode }) {
   const current = focus || "business";
@@ -2763,6 +2575,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
 }
 
 function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
+  const [calendarStylist, setCalendarStylist] = useState("");
   const hours = c.salon.hours || {};
   const settings = c.salon.booking_settings || {};
   const timeZone = c.salon.time_zone || "America/New_York";
@@ -2952,22 +2765,26 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   };
   const workspace = workspaces[recordId];
 
-  if (!recordId) {
-    return (
-      <>
-        <Title
-          title="Availability & Calendar"
-          subtitle={`Choose one scheduling workspace. Appointments are shown in ${timeZone.replaceAll("_", " ")}.`}
-        />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <OwnerSectionCard href="/salon/dashboard/bookings/new" icon={CalendarDays} title="Add an appointment" description="Record appointments received by your business."/><OwnerSectionCard href="/salon/dashboard/availability/calendar" icon={CalendarDays} title="Appointment calendar" description="Review the weekly calendar and open individual appointment details." meta={c.translateSource("Active bookings: {value0}", { value0: c.formatNumber(activeBookings.length) })} status="Live" />
-          <OwnerSectionCard href="/salon/dashboard/availability/hours" icon={Clock3} title="Store hours" description="Set the salon's regular weekly opening and closing schedule." meta={`${Object.keys(hours).length} days configured`} />
-          <OwnerSectionCard href="/salon/dashboard/availability/slots" icon={BadgeCheck} title="Bookable time slots" description="Choose appointment intervals and the default buffer between services." meta={`${Number(settings.slot_minutes || 30)} min slots · ${Number(settings.buffer_minutes || 15)} min buffer`} />
-          <OwnerSectionCard href="/salon/dashboard/availability/stylists" icon={UsersRound} title="Per-stylist availability" description="Maintain each team member's customer-facing working hours." meta={c.translateSource("Professionals: {value0}", { value0: c.formatNumber(c.stylists.length) })} />
-          <OwnerSectionCard href="/salon/dashboard/availability/overrides" icon={LockKeyhole} title="Overrides & blockouts" description="Mark the salon full, block a stylist, or release an active override." meta={c.translateSource("Active overrides: {value0}", { value0: c.formatNumber(activeBlockouts.length) })} status={activeBlockouts.length ? "Attention" : "Clear"} />
-        </div>
-      </>
-    );
+  const calendar = <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <label className="text-sm font-semibold">{c.translateSource("Calendar professional")}<select value={calendarStylist} onChange={event=>setCalendarStylist(event.target.value)} className="ml-2 min-h-11 max-w-56 rounded-xl border border-border bg-white px-3"><option value="">{c.translateSource("All staff")}</option>{c.stylists.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+      <Link href="/salon/dashboard/bookings/new" className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white"><Plus size={17}/>{c.translateSource("Add an appointment")}</Link>
+    </div>
+    <WorkspaceCalendar timeZone={timeZone} events={[
+      ...activeBookings.filter(row=>!calendarStylist||row.stylist_id===calendarStylist).map(row=>({id:String(row.id),start:String(row.appointment_datetime),end:Number(row.duration_hours)>0&&Number.isFinite(Date.parse(String(row.appointment_datetime)))?new Date(Date.parse(String(row.appointment_datetime))+Number(row.duration_hours)*3600000).toISOString():undefined,title:String(row.guest_name||c.translateSource("Appointment")),subtitle:[row.manual_service_name||styleText(c,row.style_id),stylistText(c,row.stylist_id)].join(" · "),status:String(row.status),href:"/salon/dashboard/bookings/"+row.id})),
+      ...c.blockouts.filter(row=>(!calendarStylist||!row.stylist_id||row.stylist_id===calendarStylist)&&Number.isFinite(Date.parse(String(row.starts_at)))&&Number.isFinite(Date.parse(String(row.ends_at)))).map(row=>({id:String(row.id),start:String(row.starts_at),end:new Date(Math.min(Date.parse(String(row.ends_at)),row.released_at&&Number.isFinite(Date.parse(String(row.released_at)))?Date.parse(String(row.released_at)):Infinity)).toISOString(),title:String(row.reason||c.translateSource("Unavailable")),subtitle:row.stylist_id?stylistText(c,row.stylist_id):c.translateSource("Whole salon"),status:row.released_at?"Released override":"Availability override",kind:"unavailable" as const,href:"/salon/dashboard/availability/"+row.id})),
+    ]}/>
+  </div>;
+  if (!recordId || recordId === "calendar") {
+    return <div className="space-y-4">
+      <Title title="Availability & Calendar" subtitle={c.translateSource("Manage your team's schedule in {value0}.",{value0:timeZone.replaceAll("_"," ")})}/>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/salon/dashboard/availability/stylists" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{c.translateSource("Add Availability")}</Link>
+        <details className="relative"><summary className="flex min-h-11 cursor-pointer list-none items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{c.translateSource("Calendar tools")}</summary><div className="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-border bg-white p-2 shadow-lg">{[["hours","Store hours"],["slots","Bookable time slots"],["stylists","Per-stylist availability"],["overrides","Overrides & blockouts"]].map(([path,label])=><Link key={path} href={"/salon/dashboard/availability/"+path} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}</div></details>
+      </div>
+      <SalonOpenStatusControl salon={c.salon}/>
+      {calendar}
+    </div>;
   }
 
   if (!workspace) {
@@ -3023,10 +2840,6 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         </div>
       </Panel> : null}
       <div className="grid gap-4">
-        {recordId === "calendar" ? <WorkspaceCalendar timeZone={timeZone} events={[
-          ...activeBookings.map(booking => ({ id: String(booking.id), start: String(booking.appointment_datetime), title: String(booking.guest_name || c.translateSource("Appointment")), subtitle: [booking.manual_service_name || styleText(c, booking.style_id), stylistText(c, booking.stylist_id)].join(" · "), status: String(booking.status), href: `/salon/dashboard/bookings/${booking.id}` })),
-          ...activeBlockouts.map(block => ({ id: String(block.id), start: String(block.starts_at), title: String(block.reason || c.translateSource("Unavailable")), status: "Availability override", kind: "unavailable" as const, href: `/salon/dashboard/availability/${block.id}` })),
-        ]}/> : null}
         {recordId === "hours" || recordId === "slots" ? <div className="mx-auto w-full max-w-3xl space-y-4">
           {recordId === "hours" ? <Panel>
             <h2 className="font-serif text-xl text-plum">Store Hours</h2>
@@ -3713,7 +3526,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     }
   }
   if (recordId === "new") return <><OwnerDetailHeader title="Add an appointment" subtitle="Record appointments received by your business." fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(c.salon.id)} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => { c.setBookings(current => [row, ...current.filter(item => item.id !== row.id)]); router.push(`/salon/dashboard/bookings/${row.id}`); }}/></>;
-  if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingNotes bookingId={String(selected.id)}/></>;
+  if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/></>;
   return (
     <>
       {!recordId ? <Title
@@ -3913,7 +3726,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
               </div>
-              <BookingNotes bookingId={String(selected.id)}/><BookingPolicyEvidence booking={selected}/>
+              <BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/><BookingPriceEvidence booking={selected}/><BookingPolicyEvidence booking={selected}/>
               <div className="mt-5 space-y-3 text-xs">
                 <p>
                   <b className="block text-ink/50">Customer</b>

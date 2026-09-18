@@ -6,6 +6,7 @@ import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
 import SalonBookingWizard from "@/components/SalonBookingWizard";
 import { CustomerBottomNav, PublicHeader } from "@/components/site/PublicChrome";
 import { getEngineNumber } from "@/lib/engineConfigServer";
+import { readBusinessDepositRule } from "@/lib/businessDepositServer";
 
 type SalonRecord = {
   id?: string;
@@ -91,6 +92,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     description: salonRecord.description,
     business_policy: await currentBusinessPolicy(admin, salonRecord.id),
   };
+  const depositRule = await readBusinessDepositRule(admin,salonData.id);
 
   const [stylesResult, stylistsResult] = await Promise.all([
     admin
@@ -116,5 +118,5 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     .filter((stylist) => stylist.is_active !== false && stylist.is_draft !== true);
   const [depositPercentage,maximumAdvanceDays,clientNotesMaxLength,cancellationGraceMinutes]=await Promise.all([getEngineNumber("booking.deposit_percentage",10,0,100),getEngineNumber("booking.maximum_advance_days",180,7,730),getEngineNumber("booking.client_notes_max_length",1000,100,5000),getEngineNumber("booking.customer_cancellation_grace_minutes",30,0,1440)]);
 
-  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} depositPercentage={depositPercentage} maximumAdvanceDays={maximumAdvanceDays} clientNotesMaxLength={clientNotesMaxLength} cancellationGraceMinutes={cancellationGraceMinutes}/></Suspense>;
+  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-cream text-plum">Loading secure booking…</main>}><SalonBookingWizard salon={salonData} styles={styles} stylists={stylists} depositPercentage={depositPercentage} depositRule={depositRule} maximumAdvanceDays={maximumAdvanceDays} clientNotesMaxLength={clientNotesMaxLength} cancellationGraceMinutes={cancellationGraceMinutes}/></Suspense>;
 }

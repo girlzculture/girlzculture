@@ -35,6 +35,9 @@ import {
 import { withUniqueCanonicalNameTokens } from "@/lib/catalogFuzzySearchCore";
 import { validCoordinates, type Coordinates } from "@/lib/location";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getEngineNumber } from "@/lib/engineConfigServer";
+import { defaultDepositRule,bookingDepositTerms } from "@/lib/businessDepositRules";
+import { depositRuleFromRow } from "@/lib/businessDepositServer";
 
 export type DecisionSearchFilters = {
   serviceId?: string | null;
@@ -462,6 +465,8 @@ export async function runDecisionSearch(input: {
     styleResult,
     promotionResult,
     bookingResult,
+    depositRuleResult,
+    defaultDepositRate,
   ] = await Promise.all([
     collectDecisionSearchEnrichment<StyleRow>(
       ids,
@@ -513,10 +518,15 @@ export async function runDecisionSearch(input: {
           .order("id", { ascending: true })
           .range(from, to),
     ),
+    collectDecisionSearchEnrichment<Record<string,unknown> & {id:string;salon_id:string}>(ids,(salonIds,from,to)=>admin.from("current_business_deposit_rules").select("id,salon_id,rate,threshold_amount,threshold_rate,repeat_incident_count,repeat_incident_rate,incident_window_days").in("salon_id",salonIds).order("salon_id").range(from,to)),
+    getEngineNumber("booking.deposit_percentage",10,0,100),
   ]);
   if (styleResult.error) throw styleResult.error;
   if (promotionResult.error) throw promotionResult.error;
   if (bookingResult.error) throw bookingResult.error;
+  if (depositRuleResult.error) throw depositRuleResult.error;
+  const depositRules=new Map((depositRuleResult.data||[]).map(row=>[row.salon_id,depositRuleFromRow(row)]));
+  const fallbackDepositRule=defaultDepositRule(defaultDepositRate);
 
   const eligibleMasterStyleIds = new Set(
     services.map((service) => service.id),
@@ -566,6 +576,7 @@ export async function runDecisionSearch(input: {
         promotions: promotionsBySalon.get(salon.id) || [],
         maximumPrice: intent.maximumPrice,
         promotionOnly: intent.promotionOnly,
+        protectedDeposit: price=>bookingDepositTerms(price,depositRules.get(salon.id)||fallbackDepositRule).deposit,
         matchQuality: (style) =>
           decisionServiceMatchQuality(normalizedQuery, style.name),
       });

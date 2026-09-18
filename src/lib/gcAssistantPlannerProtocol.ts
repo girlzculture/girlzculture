@@ -33,7 +33,7 @@ const purposes: Record<AssistantTool, string> = {
   prepare_booking_note: "Prepare a private business note for a resolved booking ID. Does not send a customer message.",
   prepare_business_profile_update: "Prepare a description, opening-hours or social-link update for owner review.",
   prepare_availability_block: "Prepare a calendar block using an explicit date range and time zone.",
-  prepare_service: "Prepare a new draft service using a verified platform catalog ID and stated price/duration. Platform deposits cannot be customized.",
+  prepare_service: "Prepare a new draft service using a verified platform catalog ID and stated price/duration. Deposit rates are configured separately by the owner in Finances and must not be changed through a service draft.",
   prepare_customer_message: "Prepare a message for a resolved booking that has a Girlz Culture customer participant. Never send without explicit confirmation.",
   prepare_business_policy_update: "Prepare business policy changes for owner review. Platform and statutory protections remain in force.",
 };

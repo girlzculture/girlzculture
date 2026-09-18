@@ -16,6 +16,8 @@ import {
 import { hasPlanFeature } from "@/lib/plans";
 import { rejectRegisteredTestCheckout } from "@/lib/marketplaceEligibilityServer";
 import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
+import { readBookingDepositTerms } from "@/lib/businessDepositServer";
+import { protectedBookingDiscount } from "@/lib/businessDepositRules";
 
 type PriceOption = { value?: string; label?: string; price_add?: number | string };
 const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
@@ -124,6 +126,10 @@ async function POSTHandler(request: Request) {
     total = Math.max(0, Math.round(total * 100) / 100);
     if (!Number.isFinite(total) || total > 10000) throw new Error("The booking total could not be verified.");
     const subtotalBeforeSalonPromotion = total;
+    const depositTerms = await readBookingDepositTerms(admin, salonId, total, authData.user);
+    const depositPercentage = depositTerms.rate;
+    const originalDeposit = depositTerms.deposit;
+    const deposit = originalDeposit;
     const salonPromotionId = cleanText(body.salon_promotion_id, 50) || null;
     let salonPromotionDiscount = 0;
     let salonPromotionSnapshot: Record<string, unknown> = {};
@@ -142,9 +148,10 @@ async function POSTHandler(request: Request) {
         styleId,
         serviceGroupId: style.service_group_id,
         masterStyleId: style.master_style_id,
-        basePrice: Number(style.base_price || style.price_display_min || 0),
+        basePrice: Number(style.base_price ?? style.price_display_min ?? 0),
         selectedAddons: selectedAddonDetails,
         subtotal: total,
+        protectedDeposit: deposit,
       });
       const restrictions = promotionResult.data.restrictions && typeof promotionResult.data.restrictions === "object" ? promotionResult.data.restrictions as Record<string, unknown> : {};
       if (priceResult.eligible && restrictions.new_customers_only === true) {
@@ -169,22 +176,28 @@ async function POSTHandler(request: Request) {
         subtotal_before_promotion: subtotalBeforeSalonPromotion,
         discount_amount: salonPromotionDiscount,
         adjusted_total: total,
+        protected_deposit: deposit,
+        calculation: "eligible_subtotal_capped_at_unpaid_balance",
         captured_at: new Date().toISOString(),
       };
     }
-    const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
     const cancellationGraceMinutes = await getEngineNumber(
       "booking.customer_cancellation_grace_minutes",
       30,
       0,
       1440,
     );
-    const originalDeposit = Math.round(total * depositPercentage) / 100;
     const promoCode = cleanText(body.promo_code, 40);
-    const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
-    const calculatedDeposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
-    const deposit = Math.round(calculatedDeposit * 100) >= 50 ? calculatedDeposit : 0;
-    const discount = promoPreview?.discount || 0;
+    if (promoCode && salonPromotionId) throw new Error("Choose either the business offer or a promo code. Booking discounts cannot be combined.");
+    const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", subtotalBeforeSalonPromotion) : null;
+    const codePrice = protectedBookingDiscount(subtotalBeforeSalonPromotion, deposit, promoPreview?.discount || 0);
+    const discount = codePrice.discount;
+    if (promoPreview) total = codePrice.total;
+    // Never create a payment/reservation for different terms than the customer saw.
+    if (typeof body.expected_deposit !== "number" || typeof body.expected_total !== "number" || !Number.isFinite(body.expected_deposit) || !Number.isFinite(body.expected_total)
+      || Math.round(body.expected_deposit * 100) !== Math.round(deposit * 100) || Math.round(body.expected_total * 100) !== Math.round(total * 100)) {
+      return Response.json({code:"BOOKING_PRICE_CHANGED",error:"Review the current booking price and deposit before continuing.",deposit_terms:depositTerms,total,discount,salon_promotion_discount:salonPromotionDiscount},{status:409,headers:{"Cache-Control":"private, no-store"}});
+    }
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload: Record<string, unknown> = {
@@ -211,6 +224,7 @@ async function POSTHandler(request: Request) {
       subtotal_before_promotion: subtotalBeforeSalonPromotion,
       deposit_amount: deposit,
       deposit_percentage: depositPercentage,
+      deposit_rule_snapshot: depositTerms,
       cancellation_grace_minutes_snapshot: cancellationGraceMinutes,
       original_deposit_amount: originalDeposit,
       discount_amount: discount,
@@ -342,7 +356,7 @@ async function POSTHandler(request: Request) {
             admin
               .from("bookings")
               .select(
-                "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
+                "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,estimated_total,deposit_amount,balance_due",
               )
               .eq("id", String(commerceTotals.booking_id))
               .single(),
@@ -485,6 +499,7 @@ async function POSTHandler(request: Request) {
     if (promoCode) {
       try {
         promoReservation = await reservePromoCode(promoCode, "booking", { userId: customerId, salonId, bookingIntentId: intentId });
+        if (promoReservation.discount_type !== promoPreview?.promo.discount_type || Number(promoReservation.discount_value) !== promoPreview.promo.discount_value) throw new Error("This promo code changed. Review the current offer before continuing.");
         await admin.from("booking_checkout_intents").update({ promo_code_id: promoReservation.promo_code_id }).eq("id", intentId);
       } catch (promoError) {
         if (commerceIntentId)
@@ -507,13 +522,14 @@ async function POSTHandler(request: Request) {
         stripe_payment_id: null,
         stripe_checkout_session_id: `no_payment_required:${intentId}`,
         payment_method_label: "No payment required",
-        payment_mode: "test",
+        origin_checkout_intent_id: intentId,
+        payment_mode: "live",
         payment_verified_at: new Date().toISOString(),
         platform_fee: 0,
         stripe_processing_fee: 0,
         net_amount_owed_salon: deposit,
         payout_status: "Not required",
-      }).select("id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot").single();
+      }).select("id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,estimated_total,deposit_amount,balance_due").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
       if (intentError) throw intentError;
@@ -546,7 +562,7 @@ async function POSTHandler(request: Request) {
         salonPromotionDiscount,
         total,
         noPaymentRequired: true,
-        testMode: true,
+        testMode: false,
         warning: notificationReference
           ? {
               message: `Your booking was confirmed, but one notification could not be delivered. Reference ${notificationReference}.`,
@@ -569,7 +585,7 @@ async function POSTHandler(request: Request) {
         {
           id: `no_payment_required:${commerceIntentId}`,
           payment_status: "no_payment_required",
-          livemode: false,
+          livemode: true,
           metadata: {
             type: "combined_checkout",
             commerce_intent_id: commerceIntentId,
@@ -591,7 +607,7 @@ async function POSTHandler(request: Request) {
         ? await admin
             .from("bookings")
             .select(
-              "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
+              "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,estimated_total,deposit_amount,balance_due",
             )
             .eq("id", completion.bookingId)
             .single()
@@ -612,7 +628,7 @@ async function POSTHandler(request: Request) {
         order_id: completion?.orderId,
         combined: true,
         noPaymentRequired: true,
-        testMode: true,
+        testMode: false,
       });
     }
 
@@ -625,7 +641,7 @@ async function POSTHandler(request: Request) {
         expires_at: checkoutExpiresAtSeconds,
         "line_items[0][price_data][currency]": "usd",
         "line_items[0][price_data][unit_amount]": Math.round(
-          (commerceIntentId ? combinedCharge : originalDeposit) * 100,
+          (commerceIntentId ? combinedCharge : deposit) * 100,
         ),
         "line_items[0][price_data][product_data][name]": commerceIntentId
           ? `${salon.name} products and appointment deposit`
@@ -649,10 +665,9 @@ async function POSTHandler(request: Request) {
         "payment_intent_data[description]": commerceIntentId
           ? `Products and ${depositPercentage}% reservation deposit for ${style.name}`
           : `${depositPercentage}% reservation deposit for ${style.name}`,
-        allow_promotion_codes: commerceIntentId ? false : !promoReservation,
-        ...(!commerceIntentId && promoReservation?.stripe_coupon_id
-          ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id }
-          : {}),
+        // All booking discounts are already captured against the unpaid service
+        // balance. Stripe must collect the unchanged deposit without another coupon.
+        allow_promotion_codes: false,
         ...(connectedAccount
           ? {
               "payment_intent_data[transfer_data][destination]":

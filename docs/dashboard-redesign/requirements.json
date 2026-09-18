@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; 157 local migrations verified; reports implemented, browser routing investigation in progress",
+  "status": "IMPLEMENTING; NOT RELEASED; 158-migration clean local chain verified; deposit/attendance and history isolation implemented; Overview/Calendar Chromium+WebKit 8/8 passed",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -25,16 +25,23 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/lib/businessOverview.ts",
+        "src/components/dashboard/WorkspaceCalendar.tsx"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
-        "Shared shell and first two page compositions implemented; remaining twelve pages still required."
+        "Shared shell and first two page compositions implemented; remaining twelve pages still required.",
+        "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
       ],
       "verification": [
-        "Screenshot review exposed and corrected dashboard font override and stacked setup banners"
+        "Screenshot review exposed and corrected dashboard font override and stacked setup banners",
+        "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-01 | Apply a coherent redesign to all 14 owner navigation sections: Overview, My Page, Photos, Styles & Pricing, Stylists, Products, Availability & Calendar, Bookings, Messages, Reviews, Finances (renamed from Earnings & Payouts), Promotions, Subscription, Settings. Include their editing/detail views and dialogs. | A page inventory and matched screenshots account for every section; no old landing screen is silently excluded. |",
@@ -82,16 +89,23 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/lib/businessOverview.ts",
+        "src/components/dashboard/WorkspaceCalendar.tsx"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
-        "Removed separate assistant/search strips; compact setup disclosure and moved setup help below My Page."
+        "Removed separate assistant/search strips; compact setup disclosure and moved setup help below My Page.",
+        "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
       ],
       "verification": [
-        "Local screenshots reviewed; combined layout tests running"
+        "Local screenshots reviewed; combined layout tests running",
+        "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-03 | Reduce the stacked header, assistant-button strip, breadcrumb/search strip, and oversized route cards that push actual work down the page. | Owners reach the main editor, calendar, gallery, list, or conversation directly. |",
@@ -325,13 +339,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "src/components/owner/GcAssistant.tsx"
+        "src/components/owner/GcAssistant.tsx",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/lib/businessOverview.ts",
+        "src/components/dashboard/WorkspaceCalendar.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
+      ],
+      "verification": [
+        "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "| MOB-05 | Actions that do not fit, including calendar availability/full-day actions, go in an accessible three-line/menu or More control. Do not remove them on mobile. |",
       "detailed_clause_line": 67
@@ -379,13 +402,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "src/components/owner/GcAssistant.tsx"
+        "src/components/owner/GcAssistant.tsx",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/lib/businessOverview.ts",
+        "src/components/dashboard/WorkspaceCalendar.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
+      ],
+      "verification": [
+        "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "| MOB-07 | Match the references' compact navigation and content hierarchy, including the mobile bottom navigation where appropriate. Keep Save, Upload, Send, and Close usable when the keyboard is open. |",
       "detailed_clause_line": 69
@@ -883,18 +915,21 @@
         "src/lib/assistantMemoryServer.ts",
         "src/app/api/salon/assistant/route.ts",
         "src/lib/gcAssistantPlanningServer.ts",
-        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql",
+        "tests/p0-assistant-planning.test.mjs"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
         "Current-business services/media reads and platform-guidance allowlist; no foreign ID/URL accepted.",
-        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
       ],
       "verification": [
         "API and execution fixtures include two separate businesses",
-        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
       ],
       "live_evidence": [],
       "detailed_clause": "SCOPE-01 — The assistant serves the currently selected, authorized business only, plus general Girlz Culture platform guidance. It must refuse requests for information about another business, including publicly available profiles, prices, services, reviews or images. A public webpage is not an exception. Do not browse or query other businesses to satisfy such requests.",
@@ -921,18 +956,21 @@
         "src/components/owner/BusinessFinances.tsx",
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/lib/gcAssistantPlanningServer.ts",
-        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql",
+        "tests/p0-assistant-planning.test.mjs"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
-        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
-        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
       ],
       "live_evidence": [],
       "detailed_clause": "SCOPE-02 — Enforce that boundary in the application's server-side authorization and data access, not merely in conversational instructions. Derive the active business from the authenticated and authorized session. An owner-supplied prompt, URL or model-supplied business ID must not expand scope. Preserve staff-role permissions within the business as well.",
@@ -959,19 +997,22 @@
         "src/components/owner/BusinessFinances.tsx",
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/lib/gcAssistantPlanningServer.ts",
-        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql",
+        "tests/p0-assistant-planning.test.mjs"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
         "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels.",
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
-        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
-        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
       ],
       "live_evidence": [],
       "status": "IMPLEMENTING",
@@ -996,17 +1037,20 @@
         "src/lib/assistantMemoryServer.ts",
         "src/app/api/salon/assistant/route.ts",
         "src/lib/gcAssistantPlanningServer.ts",
-        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql",
+        "tests/p0-assistant-planning.test.mjs"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
         "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels.",
-        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
       ],
       "verification": [
-        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
       ],
       "live_evidence": [],
       "status": "IMPLEMENTING",
@@ -1037,20 +1081,23 @@
         "src/components/owner/BusinessFinances.tsx",
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/lib/gcAssistantPlanningServer.ts",
-        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql",
+        "tests/p0-assistant-planning.test.mjs"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
         "Direct foreign IDs, foreign public guidance, revoked permissions, and history replay tested at backend boundary.",
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
-        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
       ],
       "verification": [
         "14 execution + 31 planning + 4 profile/media tests; live interface refusal still pending",
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
-        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
       ],
       "live_evidence": [],
       "detailed_clause": "SCOPE-05 — Verify direct requests, indirect comparisons, guessed record IDs and follow-up questions across two isolated test businesses. Confirm both refusal in the interface and rejection at data/tool boundaries. Preserve the explicit public-information restriction even if ordinary website visitors can view those profiles manually.",
@@ -1403,13 +1450,26 @@
         "src/lib/salonPromotions.ts",
         "src/lib/decisionSearchEnrichmentCore.ts",
         "src/components/owner/SalonPromotionsManager.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "PROMO-01 — A promotion can target selected styles/services, a service group or the business's eligible services as a whole. Save the exact targets, percentage and applicable dates/conditions. Define how a business-wide scope applies to services versus products rather than extending it to subscriptions or unrelated payments automatically.",
       "detailed_clause_line": 314
@@ -1428,13 +1488,26 @@
         "src/lib/salonPromotions.ts",
         "src/lib/decisionSearchEnrichmentCore.ts",
         "src/components/owner/SalonPromotionsManager.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "PROMO-02 — Show clear evidence of an active offer on the relevant public business/service views and through booking: original price, offer/discount, revised payable amount, unchanged required deposit and remaining balance. Keep owner promotion records, booking details, customer confirmation and Finances consistent. Expired/ineligible offers must not apply, and unrelated businesses/services must be unaffected.",
       "detailed_clause_line": 316
@@ -1453,13 +1526,26 @@
         "src/lib/salonPromotions.ts",
         "src/lib/decisionSearchEnrichmentCore.ts",
         "src/components/owner/SalonPromotionsManager.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "PROMO-03 — The founder explicitly requires the booking deposit to remain unchanged; deduct the promotion's monetary saving from the remaining amount due. Do not apply the discount to, or automatically reduce/recalculate, the protected deposit. Do not stack a discount twice or generate a negative balance.",
       "detailed_clause_line": 318
@@ -1478,15 +1564,27 @@
         "src/lib/salonPromotions.ts",
         "src/lib/decisionSearchEnrichmentCore.ts",
         "src/components/owner/SalonPromotionsManager.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "DECIDED",
-      "acceptance": "BLOCKED",
-      "blocker": "Cross-engine implementation and verification pending",
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
-        "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms."
+        "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms.",
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
       ],
-      "verification": [],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "PROMO-04 — Percentage basis needs an explicit final rule. “20% off the service with an unchanged deposit” and “20% off only the remaining balance” produce different totals. The founder's message establishes deposit protection but does not finally settle that distinction. Record it for the final consolidated specification; do not silently choose a formula or interrupt the current intake with a question.",
       "detailed_clause_line": 320
@@ -1505,13 +1603,26 @@
         "src/lib/salonPromotions.ts",
         "src/lib/decisionSearchEnrichmentCore.ts",
         "src/components/owner/SalonPromotionsManager.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "PROMO-05 — Define rounding, eligibility, overlapping promotions, optional add-ons and discounts larger than the available balance against the real pricing engine before implementation. Never silently cut a protected deposit or advertise a saving the customer cannot receive. Verify the approved arithmetic and evidence from public offer through booking and Finances; no real charge is needed to record these requirements.",
       "detailed_clause_line": 324
@@ -2208,13 +2319,27 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/lib/salonPromotions.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "| FIN-14 — Owner-set deposits | Let businesses configure their deposit rate, including a higher rate above a service-price threshold. Source examples are 20% normally and 40% above $300; these are examples, not hardcoded rates. Calculate and snapshot the applicable terms for each booking. |",
       "detailed_clause_line": 376
@@ -2273,13 +2398,27 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/lib/salonPromotions.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "FIN-16 — Owner-set deposit rates extend the earlier fixed-deposit assumptions; they do not erase the instruction that a promotion must leave the applicable deposit unchanged. Use the business's applicable booking deposit rule and explicitly settle its price basis with the promotion formula. Existing booking amounts must not change retroactively when a rate is edited. Model the relationship between threshold rates and any no-show-related higher rate; do not accidentally apply both twice.",
       "detailed_clause_line": 379
@@ -2672,13 +2811,27 @@
       "implementation_paths": [
         "src/lib/ownerReadServer.ts",
         "src/components/SalonBookingWizard.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/lib/salonPromotions.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
+      ],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "NOSHOW-01 — Capture the requested customer no-show and late-cancellation history and support a higher deposit for repeat incidents. The source asks for a cross-platform history visible before booking confirmation. It does not specify the incident definitions, correction/dispute handling, visibility details or how the rule fits the existing instant-booking flow; these are concrete design points for the implementation specification.",
       "detailed_clause_line": 421
@@ -2696,15 +2849,28 @@
       "implementation_paths": [
         "src/lib/ownerReadServer.ts",
         "src/components/SalonBookingWizard.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessDepositRules.ts",
+        "src/lib/businessDepositServer.ts",
+        "src/lib/salonPromotions.ts",
+        "src/components/owner/BusinessDepositSettings.tsx",
+        "src/components/booking/BookingAttendance.tsx",
+        "supabase/migrations/20260918072308_business_deposit_rules_and_protected_offers.sql"
       ],
-      "state": "DECIDED",
-      "acceptance": "BLOCKED",
-      "blocker": "Own-business enforcement and two-business verification pending",
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
       "changes": [
-        "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording."
+        "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
+        "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
+        "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
+        "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge."
       ],
-      "verification": [],
+      "verification": [
+        "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
+        "Deposit-family Node tests: 21 pass after adding public saving-label case.",
+        "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes."
+      ],
       "live_evidence": [],
       "detailed_clause": "NOSHOW-02 — Reconcile this new cross-platform request with the founder's earlier absolute restriction on an assistant using another business's information. Do not silently expose other-business bookings, identities or incidents. A possible design is a tightly limited platform-level eligibility indicator without other-business details, but that is a proposal requiring an explicit boundary decision, not an already-approved exception. Own-business history, platform-level indicators and another business's private records must remain distinguishable.",
       "detailed_clause_line": 423
@@ -3278,13 +3444,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/lib/businessOverview.ts",
+        "src/components/dashboard/WorkspaceCalendar.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
+      ],
+      "verification": [
+        "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-01 | Overview | Personalized welcome/date, useful summaries and metrics, schedule/trends where data supports them, page health, quick actions, status and responsive assistant layout. |",
       "detailed_clause_line": 498
@@ -3436,13 +3611,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/lib/businessOverview.ts",
+        "src/components/dashboard/WorkspaceCalendar.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
+      ],
+      "verification": [
+        "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-07 | Availability & Calendar | Calendar-first layout, staff selection, labeled colors, availability/blocks/actions, mobile controls, conflicts and reliable saving. |",
       "detailed_clause_line": 504

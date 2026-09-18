@@ -126,6 +126,21 @@ test('published knowledge is searched as bounded source material and answered co
   assert.doesNotMatch(response.assistant_message, /sections|published_payload/);
 });
 
+test('policy answers include the current own-business deposit rule without retrieving incident records', async () => {
+  const f=fixture({tables:{business_policy_revisions:[],business_deposit_rules:[
+    {id:'rule-A',salon_id:business,rate:20,threshold_amount:300,threshold_rate:40,repeat_incident_count:2,repeat_incident_rate:50,incident_window_days:180},
+    {id:'rule-B',salon_id:'other-business',rate:99,threshold_amount:null,threshold_rate:null,repeat_incident_count:null,repeat_incident_rate:null,incident_window_days:365},
+  ]}});
+  const response=await f.run('get_business_policies',{});
+  assert.equal(response.request.result.deposit_rules.rate,20);
+  assert.equal(response.request.result.deposit_rules.threshold_rate,40);
+  assert.equal(response.request.result.deposit_rules.repeat_incident_rate,50);
+  assert.equal(response.request.result.deposit_rules.incident_scope,'this_business_only');
+  assert.equal(response.request.result.deposit_rules.basis,'eligible_service_subtotal_before_discounts');
+  assert.doesNotMatch(JSON.stringify(response.request.result),/rule-B|other-business/);
+  assert.equal(f.calls.some(call=>call.table==='business_booking_incidents'||call.name==='own_business_incident_count'),false);
+});
+
 test('photo counts use only the authenticated business and distinguish unique saved images from public visibility', async () => {
   const f = fixture({ visible: false, tables: { salons: [
     { id: business, gallery_photos: ['a', 'b', 'a', ''], cover_photo_url: 'a', logo_url: 'logo' },

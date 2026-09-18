@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 
-export type WorkspaceEvent = { id: string; start: string; title: string; subtitle?: string; status?: string; href?: string; kind?: "appointment" | "unavailable" };
+export type WorkspaceEvent = { id: string; start: string; end?: string; title: string; subtitle?: string; status?: string; href?: string; kind?: "appointment" | "unavailable" };
 type View = "day" | "week" | "month";
 // ISO keys deliberately use Gregorian Latin digits, independently of display language.
 export function calendarDayKey(date: Date, timeZone: string) {
@@ -48,16 +48,23 @@ export default function WorkspaceCalendar({ events, timeZone = "UTC", initialVie
     </div>
     <h3 className="mb-3 text-base" aria-live="polite">{formatDate(date, { month: "long", year: "numeric", ...(view === "day" ? { day: "numeric" } : {}), timeZone: "UTC" })}</h3>
     <div className="max-w-full overflow-x-auto rounded-xl border border-border" tabIndex={0} role="region" aria-label={t("{value0} calendar", { value0: viewLabels[view] })}>
-      <div className={view === "day" ? "grid grid-cols-1" : "grid min-w-[770px] grid-cols-7"}>
+      <div className={view === "day" ? "grid grid-cols-1" : view === "week" ? "grid grid-cols-1 sm:min-w-[770px] sm:grid-cols-7" : "grid min-w-[560px] grid-cols-7"}>
         {days.map(day => {
           const key = day.toISOString().slice(0, 10);
-          const appointments = visible.filter(event => calendarDayKey(new Date(event.start), timeZone) === key);
+          const appointments = visible.filter(event => {
+            const startKey=calendarDayKey(new Date(event.start),timeZone);
+            const ends=event.end?Date.parse(event.end):NaN;
+            // End is exclusive; a closure ending at midnight must not block
+            // the next day. Include each intervening local day across DST.
+            const endKey=Number.isFinite(ends)&&ends>Date.parse(event.start)?calendarDayKey(new Date(ends-1),timeZone):startKey;
+            return startKey<=key&&endKey>=key;
+          });
           const today = key === calendarDayKey(new Date(), timeZone);
-          return <section key={key} aria-label={formatDate(day, { dateStyle: "full", timeZone: "UTC" })} className={`min-w-0 border-b border-r border-border p-2 ${view === "month" ? "min-h-28" : "min-h-64"} ${today ? "bg-subtle" : "bg-white"}`}>
+          return <section key={key} aria-label={formatDate(day, { dateStyle: "full", timeZone: "UTC" })} className={`min-w-0 border-b border-r border-border p-2 ${view === "month" ? "min-h-28" : "min-h-20 sm:min-h-64"} ${today ? "bg-subtle" : "bg-white"}`}>
             <header className="mb-3 flex items-center justify-between text-xs font-semibold"><span>{formatDate(day, { weekday: "short", timeZone: "UTC" })}</span><span className={`grid h-7 w-7 place-items-center rounded-full ${today ? "bg-primary-hover text-white" : "text-text-primary"}`}>{day.getUTCDate()}</span></header>
             <div className="space-y-2">{appointments.map(event => {
-              const content = <><time className="block text-xs font-bold">{formatDate(event.start, { timeZone, hour: "numeric", minute: "2-digit" })}</time><b data-no-translate className="mt-1 block break-words text-sm">{event.title}</b>{event.subtitle ? <span data-no-translate className="mt-1 block break-words text-xs">{event.subtitle}</span> : null}{event.status ? <span className="mt-2 block text-xs font-semibold">{t(event.status)}</span> : null}</>;
-              const className = `block rounded-lg border-l-[3px] p-2 ${event.kind === "unavailable" ? "border-red-700 bg-red-50 text-text-danger" : "border-border bg-subtle text-text-primary"}`;
+              const content = <><time className="block text-xs font-bold">{calendarDayKey(new Date(event.start), timeZone) < key ? t("Continues") : formatDate(event.start, { timeZone, hour: "numeric", minute: "2-digit" })}</time>{event.end ? <span className="block text-xs">{t("Ends {value0}", { value0:formatDate(event.end, { timeZone, month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }) })}</span> : null}<b data-no-translate className="mt-1 block break-words text-sm">{event.title}</b>{event.subtitle ? <span data-no-translate className="mt-1 block break-words text-xs">{event.subtitle}</span> : null}{event.status ? <span className="mt-2 block text-xs font-semibold">{t(event.status)}</span> : null}</>;
+              const className = `block rounded-lg border-l-[3px] p-2 ${event.kind === "unavailable" ? "border-red-700 bg-red-50 text-text-danger" : /pending/i.test(event.status||"") ? "border-amber-600 bg-amber-50 text-ink" : /completed/i.test(event.status||"") ? "border-emerald-700 bg-emerald-50 text-ink" : "border-primary bg-subtle text-text-primary"}`;
               return event.href ? <Link key={event.id} href={event.href} className={className}>{content}</Link> : <div key={event.id} className={className}>{content}</div>;
             })}{!appointments.length && view !== "month" ? <p className="py-6 text-center text-xs">{t("No appointments loaded")}</p> : null}</div>
           </section>;

@@ -7,6 +7,7 @@ import { moneyCents, validateFinancePeriod, financePeriodToDate, type OperatingB
 import FinanceRecords from "./FinanceRecords";
 import FinanceCompensation from "./FinanceCompensation";
 import FinanceReportControls from "./FinanceReportControls";
+import BusinessDepositSettings from "./BusinessDepositSettings";
 import { FinanceField, financePanel as panel, financeInput as input, financeButton as button, financePrimary as primary } from "./FinanceUI";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 
@@ -108,6 +109,7 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
       </fieldset><p className="text-xs gc-text-secondary">{t("Leave the time empty to use now. An entered time uses this device's time zone.")}</p><button type="submit" disabled={busy} className={primary}>{t(busy ? "Saving…" : "Save record")}</button>
     </form> : null}
     {readable ? <><form onSubmit={event=>{event.preventDefault();setPeriod(draftFrom,draftTo);}} className={`${panel} flex flex-wrap items-end gap-3`}><CalendarDays size={20}/>{field("From", <input type="date" required value={draftFrom} onChange={event => setDraftFrom(event.target.value)} className={input}/>)}{field("To", <input type="date" required value={draftTo} onChange={event => setDraftTo(event.target.value)} className={input}/>)}<button type="submit" disabled={busy} className={button}>{t("Apply dates")}</button><select aria-label={t("Reporting period")} defaultValue="month" className={`${input} max-w-44`} onChange={event=>{const range=financePeriodToDate(today,event.target.value as "day"|"week"|"month"|"quarter"|"year");setPeriod(range.from,range.to);}}>{[["day","Today"],["week","This week"],["month","This month"],["quarter","This quarter"],["year","This year"]].map(([value,label])=><option key={value} value={value}>{t(label)}</option>)}</select><span className="text-xs gc-text-secondary">{timeZone} · USD</span></form>
+    {isOwner ? <BusinessDepositSettings key={binding}/> : null}
     {loading ? <p role="status">{t("Loading finance records…")}</p> : null}
     {s ? <FinanceReportControls key={`${binding}:${from}:${to}`} from={from} to={to}/> : null}
     {s ? <><div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[["Completed sales", s.completed_sales_cents, CircleDollarSign], ["Payments received", s.cash_received_cents, Wallet], ["Recorded refunds", s.by_stage.refund, ArrowDownLeft], ["Unpaid balances", s.balances.reduce((sum, row) => sum + row.unpaid_cents, 0), ReceiptText]].map(([label, value, Icon]) => { const Symbol = Icon as typeof Wallet; return <div key={String(label)} className={panel}><Symbol size={20} className="mb-3 text-magenta"/><p className="text-xs gc-text-secondary">{t(String(label))}</p><strong className="mt-1 block font-serif text-2xl">{money(Number(value))}</strong></div>; })}</div>

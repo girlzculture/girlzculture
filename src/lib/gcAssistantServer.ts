@@ -11,6 +11,8 @@ import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gcAssistantPresentation";
 import { matchBusinessCatalog } from "@/lib/businessCatalogSearch";
 import { businessMediaInventory } from "@/lib/businessMediaInventory";
+import { readBusinessDepositRule } from "@/lib/businessDepositServer";
+import { bookingDepositTerms } from "@/lib/businessDepositRules";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
@@ -106,7 +108,13 @@ async function readTool(context: Context, tool: AssistantTool, args: Row): Promi
   }
   if (tool === "get_business_policies") {
     const result = await admin.from("business_policy_revisions").select("id,policy,version,source_locale,published_at").eq("salon_id", salon.id).eq("id", salon.business_policy_revision_id || "00000000-0000-0000-0000-000000000000").maybeSingle();
-    if (result.error) throw result.error; return { policy: result.data, platform_rules_apply: true };
+    if (result.error) throw result.error;
+    const rule = await readBusinessDepositRule(admin, salon.id);
+    return { policy: result.data, platform_rules_apply: true, deposit_rules: {
+      ...rule, basis: "eligible_service_subtotal_before_discounts", incident_scope: "this_business_only",
+      combination: "highest_applicable_rate_once", promotion_preserves_deposit: true,
+      existing_bookings: "original_snapshot_unchanged", currency: "USD",
+    } };
   }
   if (tool === "get_services_and_prices") {
     const query = String(args.query).trim();
@@ -165,12 +173,10 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     const catalog = await admin.from("master_styles").select("id,name,category,category_id,service_group_id").eq("id", args.master_style_id).eq("is_active", true).maybeSingle();
     if (catalog.error) throw catalog.error;
     if (!catalog.data) throw new AssistantError("ASSISTANT_CATALOG_CLARIFICATION_REQUIRED", 409);
-    const deposit = await admin.from("engine_settings").select("published_value").eq("setting_key", "booking.deposit_percentage").eq("status", "Published").maybeSingle();
-    if (deposit.error) throw deposit.error;
-    const percentage = Number(deposit.data?.published_value ?? 10);
-    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
-    const platformDeposit = Math.round(Number(args.price) * percentage) / 100;
-    if (args.requested_deposit !== null && Math.abs(Number(args.requested_deposit) - platformDeposit) > 0.001) throw new AssistantError("ASSISTANT_DEPOSIT_PLATFORM_RULE", 409);
+    if (args.requested_deposit !== null) {
+      const rule = await readBusinessDepositRule(admin, salon.id);
+      if (Math.abs(Number(args.requested_deposit) - bookingDepositTerms(Number(args.price), rule).deposit) > 0.001) throw new AssistantError("ASSISTANT_DEPOSIT_PLATFORM_RULE", 409);
+    }
     // Managed master styles enforce their canonical name. The established
     // service-group path preserves an owner's custom name instead of silently
     // replacing it at the database trigger after confirmation.

@@ -542,14 +542,16 @@ export function decisionDisplayedStylePrice(
   >,
 ) {
   const values = [
-    style.price_display_min,
     style.base_price,
+    style.price_display_min,
     style.price_display_max,
   ]
     .filter((value) => value !== null && value !== undefined)
     .map((value) => Number(value))
     .filter((value) => Number.isFinite(value) && value >= 0);
-  return values.length ? Math.min(...values) : null;
+  // The unconfigured booking starts with base_price. A lower display-only range
+  // must not advertise a price that checkout cannot charge for this selection.
+  return values.length ? values[0] : null;
 }
 
 function normalizedDecisionTarget(value: unknown) {
@@ -568,8 +570,10 @@ export function decisionPromotionPriceForStyle<
   style: DecisionSearchStyleCandidate,
   originalPrice: number | null,
   promotion: TPromotion,
+  protectedDeposit = 0,
 ) {
   if (originalPrice === null) return null;
+  if (!Number.isFinite(protectedDeposit) || protectedDeposit < 0 || protectedDeposit > originalPrice) return null;
   if (promotion.salon_id && promotion.salon_id !== salonId) return null;
 
   const targets = new Set(
@@ -602,10 +606,11 @@ export function decisionPromotionPriceForStyle<
   const type = normalizedDecisionTarget(promotion.promotion_type);
   const value = Math.max(0, Number(promotion.discount_value || 0));
   if (!Number.isFinite(value)) return null;
+  const originalCents=Math.round(originalPrice*100),depositCents=Math.round(protectedDeposit*100);
   if (type === "percentage")
-    return Math.max(0, originalPrice * (1 - Math.min(100, value) / 100));
-  if (type === "fixed") return Math.max(0, originalPrice - value);
-  if (type === "free_service") return 0;
+    return Math.max(depositCents,originalCents-Math.round(originalCents*Math.min(100,value)/100))/100;
+  if (type === "fixed") return Math.max(depositCents,originalCents-Math.round(value*100))/100;
+  if (type === "free_service") return protectedDeposit;
   // Product and add-on promotions cannot alter a service-only search price.
   return null;
 }
@@ -625,6 +630,7 @@ export function evaluateDecisionStyleCandidates<
   maximumPrice: number | null;
   promotionOnly: boolean;
   matchQuality?: (style: TStyle) => number;
+  protectedDeposit?: (price: number) => number;
 }) {
   const all = input.styles
     .map((style): EvaluatedDecisionStyle<TStyle, TPromotion> => {
@@ -637,6 +643,7 @@ export function evaluateDecisionStyleCandidates<
             style,
             originalPrice,
             promotion,
+            originalPrice===null ? 0 : input.protectedDeposit?.(originalPrice) ?? 0,
           ),
         }))
         .filter(

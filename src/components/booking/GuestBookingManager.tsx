@@ -1,5 +1,7 @@
 "use client";
 
+import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
+import BookingAttendance from "@/components/booking/BookingAttendance";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -200,7 +202,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
   return (
     <div className="mx-auto grid w-full max-w-[1180px] gap-5 lg:grid-cols-[1.35fr_.65fr]">
       <main className="space-y-5">
-        <BookingPolicyEvidence booking={data.booking}/>
+        <BookingPriceEvidence booking={data.booking}/><BookingPolicyEvidence booking={data.booking}/><BookingAttendance key={String(data.booking.id)} bookingId={String(data.booking.id)} scope="customer" guestToken={token}/>
         <section className="rounded-2xl border border-plum/10 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

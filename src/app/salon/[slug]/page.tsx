@@ -28,6 +28,8 @@ import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
+import { readBusinessDepositRule } from "@/lib/businessDepositServer";
+import { bookingDepositTerms } from "@/lib/businessDepositRules";
 import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescription";
 import { publicGalleryPhotos, type BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
@@ -261,6 +263,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   ) notFound();
 
   const now = new Date().toISOString();
+  const depositRule = await readBusinessDepositRule(supabase,salon.id);
   const [stylesResult, stylistsResult, reviewsResult, productsResult, promotionsResult] = await Promise.all([
     supabase.from("styles").select("id,sort_order,service_group_id,master_style_id,name,price_display_min,price_display_max,duration_min_hours,duration_max_hours,base_price,size_options,length_options,addons,hair_included,included_items,photos").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
     supabase.from("stylists").select("id,slug,name,specialties,bio,avatar_url,photos,years_experience").eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).is("archived_at", null).order("created_at", { ascending: true }),
@@ -281,7 +284,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
       masterStyleId: style.master_style_id,
       basePrice: Number(style.base_price || style.price_display_min || 0),
       selectedAddons: [],
-      subtotal: Number(style.price_display_min || style.base_price || 0),
+      subtotal: Number(style.base_price ?? style.price_display_min ?? 0),
+      protectedDeposit: bookingDepositTerms(Number(style.base_price ?? style.price_display_min ?? 0),depositRule).deposit,
     }));
     const eligibleProducts = products.filter((product) => bestPromotionForContext([promotion], {
       salonId: salon.id,
@@ -397,7 +401,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <h2 className="font-serif text-[22px] font-semibold text-ink">Styles & Pricing</h2>
             <p className="mt-1 text-[9px] text-ink/55">Select a style to see full pricing and time details.</p>
-            <div className="mt-3"><SalonStyles styles={styles} styleMaterialsByStyleId={styleMaterialsByStyleId} salonSlug={salon.slug || slug} salonId={salon.id} promotions={promotions} /></div>
+            <div className="mt-3"><SalonStyles styles={styles} styleMaterialsByStyleId={styleMaterialsByStyleId} salonSlug={salon.slug || slug} salonId={salon.id} promotions={promotions} depositRule={depositRule}/></div>
           </div>
 
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">

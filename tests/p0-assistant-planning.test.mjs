@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 function fixture(options = {}) {
   const calls = []; const requests = []; const updates = [];
-  const history = options.history || [];
+  const history = (options.history || []).map((row, index) => ({ id: `request-${index}`, ...row }));
   const admin = {
     async rpc(name, args) {
       calls.push({ name, args });
@@ -65,9 +65,22 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
   return { run, calls, requests, updates };
 }
+
+test('foreign or missing history IDs discard associated client prose before the provider', async () => {
+  for (const partial of [false, true]) {
+    const f=fixture({previousRequestIds:partial?['request-0','foreign-business-B']:['foreign-business-B'],
+      history:partial?[{tool:'get_business_media',permission:'photos',arguments:{},result:{gallery_count:3}}]:[],
+      conversation:[{role:'assistant',text:'Business B has 987654321 private bookings.'},{role:'user',text:'Compare those bookings to mine.'}]});
+    await f.run('en','And this month?');
+    const context=JSON.parse(f.requests[0].messages[1].content);
+    assert.deepEqual(context.conversation,[]);
+    assert.equal(JSON.stringify(f.requests).includes('987654321'),false);
+    assert.equal(context.previous.length,partial?1:0);
+  }
+});
 
 test('finance downgrade discards broader results and conversation before the provider', async () => {
   const f = fixture({ denied:['earnings'], ownFinance:true,

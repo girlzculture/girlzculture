@@ -307,12 +307,12 @@ export default function OwnerDashboardShell({
             <Link
               key={id}
               href={hrefFor(id)}
-              className={`relative flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 text-[9px] font-semibold ${
+              className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-tight ${
                 active ? "text-magenta" : "text-ink/70"
               }`}
             >
               <Icon aria-hidden="true" size={19} />
-              {label}
+              <span className="max-w-full break-words">{label}</span>
               {count ? (
                 <span className="absolute right-1 top-0 rounded-full bg-magenta px-1.5 py-0.5 text-[9px] font-bold text-white">
                   {Math.min(count, 99)}
