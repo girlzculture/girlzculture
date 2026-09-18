@@ -504,16 +504,16 @@ for (const privateReviewField of [
 }
 
 const notificationSource = fs.readFileSync("src/lib/supabaseAdmin.ts", "utf8");
-assert.match(notificationSource, /admin\.rpc\("claim_notification_delivery"/);
+assert.match(notificationSource, /admin\.rpc\(scheduleRevision === undefined \? "claim_notification_delivery" : "claim_scheduled_notification_delivery"/);
 assert.ok(
-  notificationSource.indexOf('admin.rpc("claim_notification_delivery"') <
+  notificationSource.indexOf('admin.rpc(scheduleRevision === undefined ? "claim_notification_delivery"') <
     notificationSource.indexOf("const response = await task.run()"),
   "a durable notification reservation must be created before provider delivery",
 );
 assert.match(notificationSource, /\.update\(\{ delivery_status: status/);
 assert.match(notificationSource, /getDeliveryFailure:delivery=>/);
 assert.match(notificationSource, /delivery\.deliveries\?\.find\(item=>item\.status==="failed"\)/);
-assert.match(notificationSource, /bookingReminderDueWindow\(\{now,reminderHours\}\)/);
+assert.match(notificationSource, /admin\.rpc\("due_booking_reminders",\{p_reminder_hours:reminderHours\}\)/);
 assert.match(notificationSource, /admin\.rpc\("fail_booking_reminder_claim"/);
 assert.ok(
   notificationSource.indexOf("getDeliveryFailure:delivery=>") <

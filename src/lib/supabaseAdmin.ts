@@ -3,6 +3,7 @@ import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
 import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
+import { reminderTranslation, reminderDate, reminderStylistClause } from "@/lib/bookingReminderCopy";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
 import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
@@ -32,7 +33,7 @@ import {
   classifySupabaseAuthFailure,
   retryTransientAuthOperation,
 } from "@/lib/authSessionCore";
-import { bookingReminderDueWindow, notificationDeliveryKey, runIsolatedReminderBatch, type ReminderStage } from "@/lib/bookingReminderCore";
+import { notificationDeliveryKey, runIsolatedReminderBatch, type ReminderStage } from "@/lib/bookingReminderCore";
 import {
   isActiveSalonTeamMembership,
   resolveSalonIdentityScope,
@@ -358,7 +359,7 @@ type PublishedNotificationTemplate={template_key:string;published_subject:string
 type NotificationTemplateMap=Record<string,PublishedNotificationTemplate>;
 type NotificationTranslationMap=Record<string,string>;
 function renderNotificationText(translations:NotificationTranslationMap,locale:string,key:string,fallback:string,variables:Record<string,string>={}){
-  const source=translations[`${locale}:${key}`]||ENGLISH_MESSAGES[key]||fallback;
+  const source=translations[`${locale}:${key}`]||reminderTranslation(locale,key)||ENGLISH_MESSAGES[key]||fallback;
   return String(source).replace(/\{\{([a-z][a-z0-9_]*)\}\}/g,(_match,name:string)=>variables[name]||"");
 }
 function renderNotificationEmail(templates:NotificationTemplateMap,translations:NotificationTranslationMap,locale:string,key:string,variables:Record<string,string>,fallbackSubject:string,fallbackBody:string){
@@ -366,8 +367,8 @@ function renderNotificationEmail(templates:NotificationTemplateMap,translations:
   const substitute=(value:string)=>value.replace(/\{\{([a-z][a-z0-9_]*)\}\}/g,(_match,name:string)=>variables[name]||"");
   const subjectKey=`notification.${key}.subject`;const bodyKey=`notification.${key}.body`;
   const englishSubject=String(template?.published_subject||fallbackSubject);const englishBody=String(template?.published_body||fallbackBody);
-  const subject=substitute(locale==="en"?englishSubject:renderNotificationText(translations,locale,subjectKey,englishSubject)).slice(0,140);
-  const plainText=substitute(locale==="en"?englishBody:renderNotificationText(translations,locale,bodyKey,englishBody));
+  const subject=(locale==="en"?substitute(englishSubject):renderNotificationText(translations,locale,subjectKey,englishSubject,variables)).slice(0,140);
+  const plainText=locale==="en"?substitute(englishBody):renderNotificationText(translations,locale,bodyKey,englishBody,variables);
   return{subject,html:`<p>${escapeHtml(plainText).replaceAll("\n","<br/>")}</p>`};
 }
 
@@ -467,7 +468,7 @@ async function bookingCommunicationInput(
   };
 }
 
-export async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
+export async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[], scheduleRevision?: number) {
   const admin = getSupabaseAdmin();
   const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; request_id?: string }> = [];
   for (const task of tasks) {
@@ -476,14 +477,16 @@ export async function runDeliveries(bookingId: string, eventType: string, tasks:
       eventType,
       recipientType: task.recipientType,
       channel: task.channel,
+      scheduleRevision,
     });
-    const claim = await admin.rpc("claim_notification_delivery", {
+    const claim = await admin.rpc(scheduleRevision === undefined ? "claim_notification_delivery" : "claim_scheduled_notification_delivery", {
       p_booking_id: bookingId,
       p_event_type: eventType,
       p_recipient_type: task.recipientType,
       p_channel: task.channel,
       p_destination: task.destination,
       p_deduplication_key: deduplicationKey,
+      ...(scheduleRevision === undefined ? {} : { p_schedule_revision: scheduleRevision }),
     });
     if (claim.error) {
       const reference = await capturePlatformError({
@@ -745,56 +748,57 @@ export async function deliverCancellationNotifications(bookingId: string) {
   return { deliveries, warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A cancellation notification needs attention. Reference ${reference}.`,request_id:reference})) };
 }
 
-export async function deliverBookingReminder(bookingId:string,reminderHours:number){
+export async function deliverBookingReminder(bookingId:string,reminderHours:number,scheduleRevision:number){
   const{admin,booking,salon,style,stylist,stylistContact,customerLocale,salonLocale}=await bookingNotificationContext(bookingId);
   const stylistLocale=stylistContact?.locale||salonLocale;
-  if(String(booking.status||"").toLowerCase()!=="confirmed")return{skipped:true,reason:"Booking is no longer confirmed."};
+  if(String(booking.status||"").toLowerCase()!=="confirmed" || booking.schedule_revision!==scheduleRevision)return{skipped:true,reason:"Booking is no longer confirmed at the selected schedule."};
   const notification=await bookingNotificationSettings(admin,[customerLocale,salonLocale,stylistLocale]);
-  const when=formatInTimeZone(booking.appointment_datetime,salon.time_zone);
+  const when=reminderDate(booking.appointment_datetime,salon.time_zone,customerLocale);
   const service=String(style?.name||"Braiding service");
   const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
-  const customer=String(booking.guest_name||"A customer");const stylistClause=stylist?.name?` with ${stylist.name}`:"";const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,customer};
+  const customer=String(booking.guest_name||"A customer");const stylistClause=reminderStylistClause(customerLocale,stylist?.name);const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,customer};
   const summary=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.summary",`Reminder: ${service} at ${salon.name} is scheduled for ${when}${stylistClause}.`,variables);
-  const salonSummary=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.summary",`Reminder: ${customer}'s ${service} appointment is scheduled for ${when}${stylistClause}.`,variables);
-  const stylistSummary=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.summary",salonSummary,variables);
-  const accountUrl=`${root}/account?tab=upcoming`;const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
+  const salonSummary=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.summary",`Reminder: ${customer}'s ${service} appointment is scheduled for ${when}${stylistClause}.`,{...variables,when:reminderDate(booking.appointment_datetime,salon.time_zone,salonLocale),stylist_clause:reminderStylistClause(salonLocale,stylist?.name)});
+  const stylistSummary=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.summary",salonSummary,{...variables,when:reminderDate(booking.appointment_datetime,salon.time_zone,stylistLocale),stylist_clause:reminderStylistClause(stylistLocale,stylist?.name)});
+  const accountUrl=booking.customer_id?`${root}/account?tab=upcoming`:(await issueGuestBookingToken(admin,booking.id,{reason:"Scheduled booking reminder",rootUrl:root,reuseActive:true})).url;const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
   const customerEmail=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_reminder",{summary,account_url:accountUrl},notification.reminderSubject,`Appointment reminder.\n\n${summary}\n\nView your booking: ${accountUrl}`);
   const salonEmail=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_reminder",{summary:salonSummary,dashboard_url:dashboardUrl},"Upcoming Girlz Culture appointment",`Appointment reminder.\n\n${salonSummary}\n\nOpen booking: ${dashboardUrl}`);
   const stylistEmail=renderNotificationEmail(notification.templates,notification.translations,stylistLocale,"booking.stylist_reminder",{summary:stylistSummary},"Upcoming assigned appointment",`Appointment reminder.\n\n${stylistSummary}`);
+  const emailOptions=(recipientType:string)=>({fromName:notification.senderName,replyTo:notification.replyTo,idempotencyKey:notificationDeliveryKey({bookingId,eventType:`booking_reminder_${reminderHours}h`,recipientType,channel:"email",scheduleRevision})});
   const tasks:DeliveryTask[]=[
-    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),customerEmail.subject,customerEmail.html,"bookings")},
+    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),customerEmail.subject,customerEmail.html,"bookings",emailOptions("customer"))},
     {recipientType:"customer",channel:"sms",destination:String(booking.guest_phone||""),run:()=>sendSms(String(booking.guest_phone||""),renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.sms",`Girlz Culture: ${summary}`,{summary}))},
-    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),salonEmail.subject,salonEmail.html,"bookings")},
+    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),salonEmail.subject,salonEmail.html,"bookings",emailOptions("salon"))},
     {recipientType:"salon",channel:"sms",destination:String(salon.phone||""),run:()=>sendSms(String(salon.phone||""),renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.sms",`Girlz Culture: ${salonSummary}`,{summary:salonSummary}))},
     {recipientType:"salon",channel:"push",destination:String(salon.user_id||""),run:()=>sendPushToUsers([String(salon.user_id||"")],{title:renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.push_title","Upcoming appointment"),body:salonSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})},
   ];
   if(booking.customer_id)tasks.push({recipientType:"customer",channel:"push",destination:String(booking.customer_id),run:()=>sendPushToUsers([String(booking.customer_id)],{title:renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.push_title","Appointment reminder"),body:summary,url:"/account?tab=upcoming",tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
-  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,stylistEmail.subject,stylistEmail.html,"bookings")});
+  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,stylistEmail.subject,stylistEmail.html,"bookings",emailOptions("stylist"))});
   if(stylistContact?.phone)tasks.push({recipientType:"stylist",channel:"sms",destination:stylistContact.phone,run:()=>sendSms(stylistContact.phone,renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.sms",`Girlz Culture: ${stylistSummary}`,{summary:stylistSummary}))});
   if(stylistContact?.userId)tasks.push({recipientType:"stylist",channel:"push",destination:stylistContact.userId,run:()=>sendPushToUsers([stylistContact.userId],{title:renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_reminder.push_title","Upcoming assigned appointment"),body:stylistSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
-  const deliveries=await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)));
+  const deliveries=await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)),scheduleRevision);
   return{deliveries,warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A reminder notification needs attention. Reference ${reference}.`,request_id:reference}))};
 }
 
 export async function processBookingReminders(){
-  const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const now=Date.now();const results:Array<Record<string,unknown>>=[];
+  const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const results:Array<Record<string,unknown>>=[];
   for(const reminderHours of notification.reminderHours){
-    const{from,to}=bookingReminderDueWindow({now,reminderHours});
-    const{data:bookings,error}=await admin.from("bookings").select("id,appointment_datetime").eq("booking_origin","marketplace").eq("status","Confirmed").gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(250);
+    const{data:bookings,error}=await admin.rpc("due_booking_reminders",{p_reminder_hours:reminderHours});
     if(error){
       const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"load_due_bookings",actorRole:"system",provider:"supabase",safeMessage:"Due booking reminders could not be loaded."});
       results.push({reminderHours,status:"failed",stage:"load_due_bookings",request_id:reference});
       continue;
     }
+    const revisions=new Map<string,number>((bookings||[]).map((booking:{id:string;schedule_revision:number})=>[booking.id,Number(booking.schedule_revision)]));
     results.push(...await runIsolatedReminderBatch({
       bookings:bookings||[],
       reminderHours,
       claim:async bookingId=>{
-        const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours});
+        const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_schedule_revision:revisions.get(bookingId)});
         if(claim.error)throw claim.error;
         return claim.data===true;
       },
-      deliver:bookingId=>deliverBookingReminder(bookingId,reminderHours),
+      deliver:bookingId=>deliverBookingReminder(bookingId,reminderHours,revisions.get(bookingId)!),
       getDeliveryFailure:delivery=>{
         const failedDelivery=delivery.deliveries?.find(item=>item.status==="failed");
         if(!failedDelivery)return null;
@@ -806,12 +810,11 @@ export async function processBookingReminders(){
         };
       },
       complete:async bookingId=>{
-        const nowIso=new Date().toISOString();
-        const update=await admin.from("booking_reminder_claims").update({completed_at:nowIso,error_message:null,lease_expires_at:null,next_attempt_at:null,updated_at:nowIso}).eq("booking_id",bookingId).eq("reminder_hours",reminderHours).is("completed_at",null).is("terminal_at",null);
+        const update=await admin.rpc("complete_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_schedule_revision:revisions.get(bookingId)});
         if(update.error)throw update.error;
       },
       recordDeliveryFailure:async (bookingId,reference)=>{
-        const failure=await admin.rpc("fail_booking_reminder_claim",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_reference:reference});
+        const failure=await admin.rpc("fail_booking_reminder_claim",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_reference:reference,p_schedule_revision:revisions.get(bookingId)});
         if(failure.error)throw failure.error;
       },
       reportFailure:async (stage:ReminderStage,error,bookingId)=>capturePlatformError({

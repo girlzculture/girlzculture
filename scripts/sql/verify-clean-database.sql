@@ -810,12 +810,12 @@ begin
         and constraint_row.contype='c'
     )
     or pg_get_functiondef(
-      'public.claim_booking_reminder(uuid,integer)'::regprocedure
+      'public.claim_booking_reminder(uuid,integer,integer)'::regprocedure
     ) !~ 'claim[.]attempt_count[[:space:]]*<[[:space:]]*3'
     or position(
       'REMINDER_PERMANENT_FAILURE_REFERENCE:'
       in pg_get_functiondef(
-        'public.fail_booking_reminder_claim(uuid,integer,text)'::regprocedure
+        'public.fail_booking_reminder_claim(uuid,integer,text,integer)'::regprocedure
       )
     )=0
   then

@@ -1,4 +1,5 @@
 import test from 'node:test';
+// Included by the required test:p0:core workflow glob.
 import assert from 'node:assert/strict';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
 

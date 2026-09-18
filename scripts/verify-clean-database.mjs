@@ -1274,3 +1274,4 @@ const conversationOutput=runPsql(["--file",path.join(root,"scripts","sql","verif
 console.log(conversationOutput);
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-substitution.sql")],"Customer approved professional substitution and retry isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-reminder-revisions.sql")],"Reminder schedule, cancellation and retry isolation"));
