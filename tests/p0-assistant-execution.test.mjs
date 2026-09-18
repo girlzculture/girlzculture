@@ -203,7 +203,7 @@ test('a newly revoked actor cannot confirm an existing public proposal', async (
 test('confirmation revalidates the customer identity shown in the preview', async () => {
   const f = fixture({ tables: {
     gc_assistant_requests: [{ id: requestId, salon_id: business, requested_by: actor, tool: 'prepare_customer_message', arguments: { booking_id: requestId, body: 'Hello Sarah' }, execution_payload: { customer_name: 'Sarah', public_reference: 'GC123', time_zone: 'America/New_York' }, confirmed_at: null }],
-    bookings: [{ id: requestId, salon_id: business, status: 'Confirmed', appointment_datetime: '2026-09-20T13:00:00Z', guest_name: 'Different customer', public_reference: 'GC123' }],
+    bookings: [{ id: requestId, salon_id: business, status: 'Confirmed', duration_hours: 1, appointment_datetime: '2099-09-20T13:00:00Z', guest_name: 'Different customer', public_reference: 'GC123' }],
   } });
   await assert.rejects(f.server.confirmAssistantTool(f.context, requestId, 'a'.repeat(64), false), /ASSISTANT_PREVIEW_STALE/);
   assert.equal(f.calls.some(row => row.name === 'confirm_gc_assistant_request'), false);
@@ -214,4 +214,10 @@ test('a saved proposal cannot replay private booking data after stylist reassign
  const args={booking_id:actor,body:'Original private message'};
  const f=fixture({teamMember:{stylist_id:requestId},tables:{bookings:[{id:actor,salon_id:business,stylist_id:actor}],gc_assistant_requests:[{id:requestId,salon_id:business,requested_by:actor,tool:'prepare_customer_message',arguments:args,locale:'fr',before_summary:{guest_name:'REASSIGNED_PRIVATE_NAME'},execution_payload:{body:'REASSIGNED_PRIVATE_BODY'}}]}});
  await assert.rejects(f.run('prepare_customer_message',args),e=>e.code==='ASSISTANT_ACCESS_DENIED' && e.status===403);
+});
+
+test('assistant refuses to prepare new sends for a closed conversation while retained read tools remain scoped',async()=>{
+ const f=fixture({tables:{bookings:[{id:requestId,salon_id:business,status:'Cancelled',appointment_datetime:'2099-01-01T13:00:00Z',duration_hours:1,customer_id:actor}]}});
+ await assert.rejects(f.run('prepare_customer_message',{booking_id:requestId,body:'Private follow-up'}),e=>e.code==='ASSISTANT_CONVERSATION_CLOSED');
+ assert.equal(f.saved.length,0);
 });

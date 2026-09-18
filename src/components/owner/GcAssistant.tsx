@@ -85,6 +85,7 @@ export function Facts({ value, name = "", group = "", depth = 0, timeZone = "Ame
   return <span className="whitespace-pre-wrap break-words" data-no-translate>{String(value)}</span>;
 }
 const errors: Record<string, string> = {
+  ASSISTANT_CONVERSATION_CLOSED: "This conversation is closed. Its history is still available.",
   ASSISTANT_SERVICE_CLARIFICATION_REQUIRED: "Which service is this appointment for?", ASSISTANT_DURATION_CLARIFICATION_REQUIRED: "How many minutes will this appointment take?", ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED: "Which professional should take this appointment?", ASSISTANT_AVAILABILITY_CONFLICT: "That time is unavailable. Choose another time.", ASSISTANT_DRAFT_REQUIRED: "Choose a draft record. Published records remain in their existing editing workflow.", ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED: "This appointment has no customer participant in Girlz Culture. Use your existing contact channel.",
 
   ASSISTANT_ACCESS_DENIED: "You do not have permission for this action.", AUTH_REQUIRED: "Sign in to use GC Assistant.",

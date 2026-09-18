@@ -1,0 +1,58 @@
+-- Rollback-only synthetic fixtures. No public replies or messages are sent.
+begin;
+create function pg_temp.message_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'Message assertion failed: %',label;end if;end $$;
+create function pg_temp.message_reject(command text,expected text) returns void language plpgsql as $$declare rejected boolean:=false;begin begin execute command;exception when others then if position(expected in sqlerrm)>0 then rejected:=true;else raise;end if;end;perform pg_temp.message_assert(rejected,expected);end $$;
+do $$
+declare oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();ba uuid:=gen_random_uuid();bb uuid:=gen_random_uuid();style_a uuid:=gen_random_uuid();style_b uuid:=gen_random_uuid();booking_a uuid:=gen_random_uuid();booking_b uuid:=gen_random_uuid();ra uuid:=gen_random_uuid();rb uuid:=gen_random_uuid();req uuid:=gen_random_uuid();result jsonb;again jsonb;version integer;
+begin
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values(oa,'review-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'review-b@example.test','',now(),'{"role":"salon_owner"}'),(staff,'review-staff@example.test','',now(),'{"role":"salon_team"}'),(customer,'review-customer@example.test','',now(),'{"role":"customer"}');
+ update public.platform_identities set primary_role='salon_team' where user_id=staff;
+ insert into public.customers(id,name,email) values(customer,'Shared test customer','review-customer@example.test');
+ insert into public.salons(id,user_id,name,slug,email,status,subscription_status,subscription_tier) values(ba,oa,'Review A','review-a','review-a@example.test','Active','active','Premium'),(bb,ob,'Review B','review-b','review-b@example.test','Active','active','Premium');
+ insert into public.salon_team_members(salon_id,user_id,email,name,role,status,permissions) values(ba,staff,'review-staff@example.test','Review staff','Manager','Active','{"reviews":true}');
+ insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,price_display_min,price_display_max) select v.id,v.salon,g.id,'Test service',1,1,100,100,100 from (values(style_a,ba),(style_b,bb)) v(id,salon) cross join lateral(select id from public.service_groups where is_active and archived_at is null order by sort_order,name limit 1) g;
+ insert into public.bookings(id,salon_id,style_id,customer_id,guest_name,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,status) values(booking_a,ba,style_a,customer,'Shared customer',now()-interval '3 days',1,100,10,90,'Paid','Completed'),(booking_b,bb,style_b,customer,'Shared customer',now()-interval '4 days',1,100,10,90,'Paid','Completed');
+
+ perform pg_temp.message_reject(format('insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body) values(%L,%L,%L,%L,%L)',booking_a,ba,oa,'salon','Expired'), 'MESSAGE_CONVERSATION_CLOSED');
+ update public.bookings set appointment_datetime=now()+interval '3 days',status='Confirmed' where id=booking_a;
+ insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body,original_body,client_request_id) values(booking_a,ba,oa,'salon','Original owner','Original owner',req);
+ insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body,original_body) values(booking_a,ba,customer,'customer','Original customer','Original customer');
+ perform pg_temp.message_assert((select count(*)=2 from public.booking_messages where booking_id=booking_a),'two-way conversation');
+ perform pg_temp.message_reject(format('insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body) values(%L,%L,%L,%L,%L)',booking_a,ba,ob,'salon','Foreign'), 'MESSAGE_ACCESS_DENIED');
+ perform pg_temp.message_reject(format('insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body) values(%L,%L,%L,%L,%L)',booking_b,bb,oa,'salon','Other business same customer'), 'MESSAGE_ACCESS_DENIED');
+ update public.salon_team_members set permissions='{"bookings":true}' where user_id=staff;
+ insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body,original_body) values(booking_a,ba,staff,'salon','Permitted staff','Permitted staff');
+ insert into public.stylists(id,salon_id,name) values(style_a,ba,'Assigned professional'),(style_b,ba,'Other professional');
+ update public.salon_team_members set stylist_id=style_a where user_id=staff;
+ update public.bookings set stylist_id=style_b where id=booking_a;
+ perform pg_temp.message_reject(format('insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body) values(%L,%L,%L,%L,%L)',booking_a,ba,staff,'salon','Other assignment'), 'MESSAGE_ACCESS_DENIED');
+ insert into public.booking_messages(id,booking_id,salon_id,sender_user_id,sender_role,body,original_body) values(rb,booking_a,ba,customer,'customer','Assigned preview','Assigned preview');
+ perform pg_temp.message_assert(not exists(select 1 from public.notifications where user_id=staff and metadata->>'message_id'=rb::text),'unassigned staff cannot receive message preview');
+ perform set_config('request.jwt.claim.sub',staff::text,true);
+ perform pg_temp.message_assert(not public.p0_booking_message_access(booking_a),'direct API assignment deny');
+ update public.bookings set stylist_id=style_a where id=booking_a;
+ perform pg_temp.message_assert(public.p0_booking_message_access(booking_a),'direct API assigned allow');
+ update public.salon_team_members set permissions='{}' where user_id=staff;
+ perform pg_temp.message_assert(not public.p0_booking_message_access(booking_a),'direct API revocation deny');
+ update public.bookings set status='Cancelled' where id=booking_a;
+ perform pg_temp.message_reject(format('insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body) values(%L,%L,%L,%L,%L)',booking_a,ba,oa,'salon','Cancelled'), 'MESSAGE_CONVERSATION_CLOSED');
+ perform pg_temp.message_reject(format('insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body,client_request_id) values(%L,%L,%L,%L,%L,%L)',booking_a,ba,oa,'salon','Original owner',req), 'MESSAGE_REQUEST_EXISTS');
+ perform set_config('request.jwt.claim.sub',oa::text,true);
+ perform pg_temp.message_assert(public.p0_booking_message_access(booking_a) and not public.p0_booking_message_access(booking_b),'closed history private readable');
+ perform pg_temp.message_assert((select count(*)=4 from public.booking_messages where booking_id=booking_a),'closure retains originals');
+ update public.bookings set appointment_datetime=now()+interval '5 days',status='Confirmed' where id=booking_b;
+ insert into public.booking_messages(booking_id,salon_id,sender_user_id,sender_role,body,original_body) values(booking_b,bb,ob,'salon','Foreign private content','Foreign private content');
+ set local role authenticated;
+ perform pg_temp.message_assert((select count(*)=4 from public.booking_messages),'actual owner RLS reads only own closed history');
+ reset role;
+ perform set_config('request.jwt.claim.sub',ob::text,true);
+ set local role authenticated;
+ perform pg_temp.message_assert((select count(*)=1 from public.booking_messages),'second owner RLS excludes first business');
+ reset role;
+ perform set_config('request.jwt.claim.sub',staff::text,true);
+ set local role authenticated;
+ perform pg_temp.message_assert((select count(*)=0 from public.booking_messages),'revoked staff RLS reads no history');
+ reset role;
+ perform pg_temp.message_assert(not has_table_privilege('authenticated','public.booking_messages','INSERT'),'browser cannot forge sender');
+end $$;
+rollback;

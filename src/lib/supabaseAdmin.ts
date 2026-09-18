@@ -585,7 +585,7 @@ export async function deliverBookingMessageNotifications(messageId: string) {
     const team = await admin.from("salon_team_members").select("user_id,permissions").eq("salon_id", booking.salon_id).eq("status", "Active");
     if (team.error) throw team.error;
     recipientIds.push(...(team.data || []).filter(row => Boolean(row.permissions?.bookings)).map(row => String(row.user_id || "")).filter(Boolean));
-    recipientIds = await authorizedMessageRecipients(admin, String(booking.salon_id), recipientIds);
+    recipientIds = await authorizedMessageRecipients(admin, String(booking.salon_id), String(booking.id), recipientIds);
     if (!recipientIds.includes(String(salon.user_id || ""))) { email = ""; phone = ""; }
   }
   const url = path.startsWith("https://") ? path : `${root}${path}`;

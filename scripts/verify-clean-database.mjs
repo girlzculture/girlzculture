@@ -1269,3 +1269,6 @@ if(stockOutput) console.log(stockOutput);
 const businessReviewsOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-business-reviews.sql")],"Business review revisions and private moderation assertions");
 if(businessReviewsOutput)console.log(businessReviewsOutput);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);
+
+const conversationOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-booking-conversation.sql")],"Booking conversation window and recipient isolation");
+console.log(conversationOutput);

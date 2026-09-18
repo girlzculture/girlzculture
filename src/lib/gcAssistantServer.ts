@@ -1,4 +1,5 @@
 import "server-only";
+import { bookingConversationWindow } from "@/lib/bookingConversation";
 import { createHash } from "node:crypto";
 import { AssistantError, stableJson, validateTool, serviceLengthOptions, type AssistantTool } from "@/lib/gcAssistantCore";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -190,7 +191,7 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     notices.push("SERVICE_SAVED_AS_DRAFT");
   }
   if (tool === "prepare_customer_message") {
-    let query = admin.from("bookings").select("id,status,appointment_datetime,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id);
+    let query = admin.from("bookings").select("id,status,appointment_datetime,duration_hours,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id);
     const assigned = assistantAssignedProfessional(context);
     if (assigned) query = query.eq("stylist_id", assigned);
     const booking = await query.maybeSingle();
@@ -198,6 +199,7 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     if (!booking.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
     before = selected(booking.data, ["id", "status", "appointment_datetime"]);
     if (booking.data.booking_origin === "business_added" && !booking.data.customer_id) throw new AssistantError("ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED", 409);
+    if (!bookingConversationWindow(booking.data).open) throw new AssistantError("ASSISTANT_CONVERSATION_CLOSED", 409);
     const customer = booking.data.customer as unknown as { name?: string } | null;
     payload = { customer_name: booking.data.guest_name || customer?.name || null, public_reference: booking.data.public_reference, time_zone: salon.time_zone };
   }

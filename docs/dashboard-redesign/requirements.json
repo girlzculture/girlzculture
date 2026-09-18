@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; Bookings and Reviews locally verified; full remaining scope continues",
+  "status": "IMPLEMENTING; NOT RELEASED; Messages workspace/window/isolation verified locally; remaining communications and full scope continue",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -2812,16 +2812,31 @@
         "src/lib/bookingCommunications.ts",
         "src/lib/bookingMessageTranslationServer.ts",
         "src/components/BookingInbox.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/app/api/messages/route.ts",
+        "src/lib/bookingConversation.ts",
+        "src/lib/bookingMessageRecipientsServer.ts",
+        "supabase/migrations/20260918150923_booking_conversation_window.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IN_PROGRESS",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining communications clauses and live release validation not completed",
+      "changes": [
+        "URL-backed inbox search/unread/active/closed categories; split desktop and phone inbox/detail; original-language records, retained per-conversation draft in memory, explicit translation preview, booking/policy context. Failed sends retain draft/request ID and exact incident reference.",
+        "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
+        "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps."
+      ],
+      "verification": [
+        "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
+        "165 migrations and all clean database assertions pass: messages-clean-verified.log. Original notification leak preserved messages-notification-before.log; corrected assertions messages-notification-final.log.",
+        "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim."
+      ],
       "live_evidence": [],
       "detailed_clause": "COMMS-02 — Create the two-way booking conversation automatically when a booking is made. Translate both directions through DeepL so business and customer each use their chosen language. Include automatic welcome messages, questions, confirmations and the stylist-substitution flow. The requested active window ends 24 hours after the appointment; define how rescheduling/cancellation affects that window and distinguish closing a chat from deleting its history.",
-      "detailed_clause_line": 411
+      "detailed_clause_line": 411,
+      "remaining_clauses": [
+        "Stylist substitution review/confirmation flow, communication automation/campaign clauses and final live evidence remain to complete; no claim that these references are functioning controls."
+      ]
     },
     {
       "id": "COMMS-03",
@@ -3840,16 +3855,32 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/BookingInbox.tsx",
+        "src/app/api/messages/route.ts",
+        "src/lib/bookingConversation.ts",
+        "src/lib/bookingMessageRecipientsServer.ts",
+        "supabase/migrations/20260918150923_booking_conversation_window.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IN_PROGRESS",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining communications clauses and live release validation not completed",
+      "changes": [
+        "URL-backed inbox search/unread/active/closed categories; split desktop and phone inbox/detail; original-language records, retained per-conversation draft in memory, explicit translation preview, booking/policy context. Failed sends retain draft/request ID and exact incident reference.",
+        "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
+        "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps."
+      ],
+      "verification": [
+        "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
+        "165 migrations and all clean database assertions pass: messages-clean-verified.log. Original notification leak preserved messages-notification-before.log; corrected assertions messages-notification-final.log.",
+        "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-09 | Messages | Inbox/conversation layout, booking/customer context, translation, approved reply/send flows, reminders and client communications. |",
-      "detailed_clause_line": 506
+      "detailed_clause_line": 506,
+      "remaining_clauses": [
+        "Stylist substitution review/confirmation flow, communication automation/campaign clauses and final live evidence remain to complete; no claim that these references are functioning controls."
+      ]
     },
     {
       "id": "PAGE-10",
