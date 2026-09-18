@@ -7,6 +7,7 @@ import BusinessPolicyDisclosure from "@/components/booking/BusinessPolicyDisclos
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import {JoinAppointmentWaitlist} from "@/components/booking/AppointmentWaitlist";
 import { BriefcaseBusiness, CalendarDays, Check, Clock3, LockKeyhole, ShieldCheck, Star, UserRound, UsersRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SafeImage from "@/components/site/SafeImage";
@@ -67,8 +68,8 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const [styleId, setStyleId] = useState(requestedStyle && styles.some((row) => row.id === requestedStyle) ? requestedStyle : styles[0]?.id || "");
   const requestedStylist = searchParams.get("stylist");
   const [chosenStylistId, setStylistId] = useState(requestedStylist && stylists.some((row) => row.id === requestedStylist) ? requestedStylist : "any");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [date, setDate] = useState(/^\d{4}-\d{2}-\d{2}$/.test(searchParams.get("date")||"")?searchParams.get("date")!:"");
+  const [time, setTime] = useState(/^\d{2}:\d{2}$/.test(searchParams.get("time")||"")?searchParams.get("time")!:"");
   const [size, setSize] = useState("");
   const [length, setLength] = useState("");
   const [addons, setAddons] = useState<string[]>([]);
@@ -121,7 +122,9 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const total = promotionPrice.eligible ? promotionPrice.total : codePrice.total;
   const balance = Math.round((total - deposit)*100)/100;
   useEffect(()=>{promoRequest.current++;setPromoDiscount(0);setPromoMessage("");},[subtotal,styleId,salon.id]);
-  const minimumBookingDate=localDateOffset(1);
+  const minimumBookingDate=searchParams.has("waitlist_offer")
+    ? new Intl.DateTimeFormat("en-CA",{timeZone:String(salon.time_zone||"America/New_York"),year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())
+    : localDateOffset(1);
   const maximumBookingDate=localDateOffset(maximumAdvanceDays);
 
   useEffect(() => {
@@ -260,6 +263,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
         body: JSON.stringify({
           salon_id: salon.id,
+          waitlist_offer_id: searchParams.get("waitlist_offer") || null,
           style_id: style.id,
           stylist_id: stylistId === "any" ? null : stylistId,
           selected_size: size || null,
@@ -328,7 +332,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const panels = [
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion }} />,
     <StylistPanel key="stylist" stylists={eligibleStylists} value={stylistId} setValue={setStylistId} />,
-    <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested, fieldErrors, setFieldErrors, minimumBookingDate, maximumBookingDate }} />,
+    <div key="date"><DatePanel {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested, fieldErrors, setFieldErrors, minimumBookingDate, maximumBookingDate }} /><JoinAppointmentWaitlist key={`${salon.id}:${styleId}:${stylistId}:${date}`} salonId={String(salon.id)} styleId={String(styleId)} stylistId={stylistId==="any"?null:String(stylistId)} date={date} timeZone={String(salon.time_zone||"America/New_York")}/></div>,
     <div key="review"><BusinessPolicyDisclosure businessName={salon.name} revision={salon.business_policy || null}/>{salon.business_policy?.id ? <div className="my-4 rounded-xl border bg-white p-4"><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={businessConsent === salon.business_policy.id} onChange={event => { setBusinessConsent(event.target.checked ? salon.business_policy.id : null); setFieldErrors(current => ({ ...current, business_consent: "" })); }}/><span>{t("I have read and agree to {value0}'s Business Policies, including its Refund & Service Satisfaction Policy. These policies are set by the business and are separate from Girlz Culture's platform policies and protections.", { value0: salon.name })}</span></label><a className="mt-2 inline-flex min-h-11 items-center text-sm underline" href="#business-policies" onClick={() => { const details = document.querySelector<HTMLDetailsElement>("#business-policies details"); if (details) details.open = true; }}>{t("Read the full business policy")}</a>{fieldErrors.business_consent ? <p role="alert" className="text-sm gc-text-danger">{t(fieldErrors.business_consent)}</p> : null}</div> : null}<ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, protectionApplies:terms.own_business_protection_applies, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, cancellationGraceMinutes, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} />{productCart?.items.length ? <CombinedProductSummary cart={productCart} /> : null}<PromoField {...{ promoCode, setPromoCode:changePromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,
   ];

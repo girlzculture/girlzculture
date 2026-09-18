@@ -773,6 +773,8 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
   }
   const payload: Record<string, unknown> = {
     ...(intent.payload as Record<string, unknown>),
+    // Link the verified checkout to its waitlist claim when payment completes.
+    ...((intent.payload as Record<string, unknown>)?.waitlist_offer_id ? {origin_checkout_intent_id:intent.id} : {}),
     salon_promotion_redemption_id: intent.salon_promotion_redemption_id || null,
     promotion_snapshot: intent.promotion_snapshot || {},
     stripe_payment_id: paymentIntentId || session.id,

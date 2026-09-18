@@ -11,6 +11,7 @@
     "src/components/ImageUpload.tsx",
     "src/components/auth/RoleLogoutButton.tsx",
     "src/components/auth/TeamUserManager.tsx",
+    "src/components/booking/AppointmentWaitlist.tsx",
     "src/components/booking/BookingAttendance.tsx",
     "src/components/booking/BookingPolicyEvidence.tsx",
     "src/components/booking/BookingPriceEvidence.tsx",
@@ -288,6 +289,12 @@
       "source": "· {value0}",
       "occurrences": [
         {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 56,
+          "kind": "template",
+          "context": "1701bed10955bc4bfdefea0b2321c2dc1e72b764bb5d97a2ec06139ec9b3c8dd"
+        },
+        {
           "file": "src/components/owner/BusinessClientCard.tsx",
           "line": 107,
           "kind": "template",
@@ -501,7 +508,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 35,
+          "line": 39,
           "kind": "template",
           "context": "3288af9c301e92509423f83ca48d6b0692fd16d9737f4ead3cc5b3f46d05683e"
         },
@@ -983,6 +990,17 @@
         }
       ]
     },
+    "b47cb3e95fc0": {
+      "source": "{value0} open offers",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 59,
+          "kind": "localized-source",
+          "context": "a1e611953fcfcc8d017a8642c83637e7ac50183e8dd6ac86f5a0b14df10fabd7"
+        }
+      ]
+    },
     "2c185aa0f882": {
       "source": "{value0} opening time",
       "occurrences": [
@@ -1230,6 +1248,12 @@
     "54f5abb30055": {
       "source": "{value0}-{value1}-{value2}",
       "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 21,
+          "kind": "template",
+          "context": "f7e66cc7a28d8a6c78a63bbda8d1f973a06c70daad56f093523b3d239ee03a2f"
+        },
         {
           "file": "src/lib/dateTime.ts",
           "line": 147,
@@ -1511,6 +1535,12 @@
           "context": "58409a5667afd86e7b0e08b0577f3742c6ad3fd99b45b9daa151854eae17cdac"
         },
         {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 21,
+          "kind": "template",
+          "context": "651b4093e35443640b1c58e2ab4aa4f32a02bbd37c96989c8dcbf45ba91d729b"
+        },
+        {
           "file": "src/components/booking/CommunicationPreferences.tsx",
           "line": 9,
           "kind": "template",
@@ -1638,6 +1668,17 @@
           "line": 212,
           "kind": "template",
           "context": "a6b5df829dee9383ced78eb9d183d680bb43f8d0fe37600dc39da1d159146254"
+        }
+      ]
+    },
+    "c68ea8d1e362": {
+      "source": "{value0}:{value1}:{value2}:{value3}:{value4}:{value5}",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 72,
+          "kind": "template",
+          "context": "ea9288ebbf319e4da09a2cdf8937a4304ff1af2103272dddacc7c05193ab45d7"
         }
       ]
     },
@@ -1949,6 +1990,18 @@
     "a5c11ea1f2f3": {
       "source": "{value0}T{value1}",
       "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 85,
+          "kind": "template",
+          "context": "f8fab2290bdf88865fa43cb66fd2ac777aca28c648adcb3d041b28ebd3b637bd"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 85,
+          "kind": "template",
+          "context": "a2e593df6a05670fe2b742df9eb3dacab863a9d3217c15b39c5fc70e911c97b6"
+        },
         {
           "file": "src/lib/financeLedgerCore.ts",
           "line": 161,
@@ -2567,7 +2620,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         },
@@ -2958,19 +3011,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 32,
+          "line": 36,
           "kind": "localized-source",
           "context": "c2a0d854bcce24153f0e2d27d343994a7b873c5955a49dc872508b9065ce457a"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 32,
+          "line": 36,
           "kind": "localized-source",
           "context": "c2a0d854bcce24153f0e2d27d343994a7b873c5955a49dc872508b9065ce457a"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 52,
+          "line": 56,
           "kind": "localized-source",
           "context": "c2a0d854bcce24153f0e2d27d343994a7b873c5955a49dc872508b9065ce457a"
         },
@@ -3726,43 +3779,43 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 13,
+          "line": 14,
           "kind": "literal",
           "context": "e91e50038abceb85e890f89d13d42500588b1626862dd03478cdcd218d91671a"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 14,
+          "line": 15,
           "kind": "literal",
           "context": "79f8c70a1b1de5d60cc1c968b4eef6ce839d7d67786179891022541e5133a6bd"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 21,
+          "line": 22,
           "kind": "literal",
           "context": "89ef4f3e50b993bab50cad3f898b30a463816f80a60a06aa35ff5b5e178e4def"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 40,
+          "line": 44,
           "kind": "literal",
           "context": "1c951363eaa0df9852817c3d1bd122fd90631020b6a62bf198aa8f3ebff894ec"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 44,
+          "line": 48,
           "kind": "literal",
           "context": "2e3cfaafd4c958bc99a4e17062f5cf1c8ed10119d63d88b69352bd1be46dbe1d"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 44,
+          "line": 48,
           "kind": "literal",
           "context": "2e3cfaafd4c958bc99a4e17062f5cf1c8ed10119d63d88b69352bd1be46dbe1d"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 44,
+          "line": 48,
           "kind": "literal",
           "context": "a1b3a9b9c02d3c1a571edeb8c67d31f9963f6ac4270ba5d3734f32fffee374a1"
         },
@@ -3835,7 +3888,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 35,
+          "line": 39,
           "kind": "localized-source",
           "context": "b8326774f0f33062126c73cab13ca59000e4b2c917113e5e00f70895760a6364"
         }
@@ -3940,7 +3993,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 43,
+          "line": 47,
           "kind": "localized-source",
           "context": "8cbaf73af6db7554116f12b099b75a87cec10b815f99670619faf7dfe9ebe6b0"
         },
@@ -3963,7 +4016,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 42,
+          "line": 46,
           "kind": "localized-source",
           "context": "2ff7ea8a5809571f69bfc7678627397aba2c97a99170068ffd3fb52ebfb7d249"
         },
@@ -3980,7 +4033,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 44,
+          "line": 48,
           "kind": "localized-source",
           "context": "2f3fbae3d14400b4fff03f121a1d58b6c2caef8fe41b61e015e8876f90d6d3cd"
         },
@@ -4119,6 +4172,18 @@
           "line": 297,
           "kind": "literal",
           "context": "d4e761df7d400cdb1e1403cfc96d966e985469fc21b7bbc4c988d39d2836d3b0"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 20,
+          "kind": "literal",
+          "context": "d0394ed6c9eab77b7b394148dc71dea5986af74750639a55e0b72767b727eb58"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 25,
+          "kind": "literal",
+          "context": "1d82d7cd49e6625e7e46585ed1aa1b5431cc4a23542f05fd1f55d6963aa20807"
         },
         {
           "file": "src/components/booking/BookingWelcome.tsx",
@@ -4402,7 +4467,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 41,
+          "line": 45,
           "kind": "localized-source",
           "context": "a6ea8b1e9cbaeb91505fe36ee7339a799c68aa0f2dbf300bbef923efbcb84b77"
         },
@@ -4578,7 +4643,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 53,
+          "line": 57,
           "kind": "localized-source",
           "context": "021234cc1d544c2047e9e63ae5a634ee5836c61b99d74fcd93a99213c1cc556d"
         }
@@ -4612,9 +4677,38 @@
         }
       ]
     },
+    "287d26082d47": {
+      "source": "Appointment waitlist",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 48,
+          "kind": "localized-source",
+          "context": "d91b0f0f4ec416f20356810ebb746950cfa7bd28c9da881a5a0ec00112ee234e"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 49,
+          "kind": "localized-source",
+          "context": "d91b0f0f4ec416f20356810ebb746950cfa7bd28c9da881a5a0ec00112ee234e"
+        },
+        {
+          "file": "src/components/owner/BookingsWorkspace.tsx",
+          "line": 32,
+          "kind": "localized-source",
+          "context": "d91b0f0f4ec416f20356810ebb746950cfa7bd28c9da881a5a0ec00112ee234e"
+        }
+      ]
+    },
     "1f3f4957c553": {
       "source": "Appointments",
       "occurrences": [
+        {
+          "file": "src/components/owner/BookingsWorkspace.tsx",
+          "line": 32,
+          "kind": "localized-source",
+          "context": "c48bec70be7273472ffd237b5a1595797eb17dc23982f17337065d97be3965b1"
+        },
         {
           "file": "src/components/owner/BusinessOverview.tsx",
           "line": 20,
@@ -4646,7 +4740,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 30,
+          "line": 31,
           "kind": "literal",
           "context": "a47660da39f2911166e86aa51aac75f84b8b645cfac77f91bd9c43b92a2b7c3e"
         }
@@ -5335,13 +5429,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 50,
+          "line": 54,
           "kind": "localized-source",
           "context": "8896b1035bdc971eadecd3f15a76c2b5719703a1c8308e6c205cedf5d153c09e"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         },
@@ -5796,6 +5890,23 @@
         }
       ]
     },
+    "13e7a657eca6": {
+      "source": "Booked",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 58,
+          "kind": "literal",
+          "context": "2646e5fed0aaebfc43d32104775ca1e030de23c1cc4dfbd74b5b692fba0ccf48"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 61,
+          "kind": "literal",
+          "context": "9266eb0d50e77ba9b13bd76074bf1e2f3f6c6e474d8e7ffea73e5ba3e12ab2eb"
+        }
+      ]
+    },
     "826f495b3b50": {
       "source": "Booked length",
       "occurrences": [
@@ -6180,7 +6291,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 34,
+          "line": 38,
           "kind": "localized-source",
           "context": "424abaf0567bca605ef5ef465e652456110f01ae80c8e25f687c068253314aec"
         }
@@ -6214,12 +6325,23 @@
         }
       ]
     },
+    "a6a20da0df09": {
+      "source": "Booking views",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BookingsWorkspace.tsx",
+          "line": 32,
+          "kind": "localized-source",
+          "context": "3c2fa748df3b1b0e1ef4defc9e272b0be81ab8861663766694ec942b12045823"
+        }
+      ]
+    },
     "4bc571f859ce": {
       "source": "Booking workflow groups",
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 39,
+          "line": 43,
           "kind": "localized-source",
           "context": "2104834d84448c17a3722fd443a3cc9c4a88980702361725fa350654e08b39ff"
         }
@@ -6286,7 +6408,7 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 32,
+          "line": 36,
           "kind": "localized-source",
           "context": "b284c85961a14f070828af03b0c8e7c8c1be5ae69e00a5057fe8391afda9ccb2"
         },
@@ -6360,7 +6482,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 31,
+          "line": 34,
           "kind": "localized-source",
           "context": "31990d64e4a1189263a080c426f503be50b70ab9c8123e8bec7d1bcabadd5cd1"
         }
@@ -6986,7 +7108,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 37,
+          "line": 41,
           "kind": "localized-source",
           "context": "7ae30252377f3f9ab8a9e0f5ac4522829e1306d25b9cae0cd30732c3df8ccf84"
         },
@@ -7346,6 +7468,12 @@
     "a1bf92eff40d": {
       "source": "Cancelled",
       "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 58,
+          "kind": "literal",
+          "context": "62cabee51117aa97b85c80f0c574a0465438841f940990ce2a46b9e8ebd2ea2f"
+        },
         {
           "file": "src/components/owner/FinanceUI.tsx",
           "line": 12,
@@ -7789,6 +7917,17 @@
         }
       ]
     },
+    "fca49040e2f1": {
+      "source": "Checkout in progress",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 61,
+          "kind": "literal",
+          "context": "ad6bfea6007d99fb38e492adbea4a0118538b4c660194239f19d2e788f41cf16"
+        }
+      ]
+    },
     "392984a05cc4": {
       "source": "Checkout needs reconciliation.",
       "occurrences": [
@@ -7968,6 +8107,17 @@
           "line": 61,
           "kind": "jsx-text",
           "context": "94471521113aac362b2ca9a0790a49c8108823475899e4d8acbd95a4461eb566"
+        }
+      ]
+    },
+    "ebb900f64a03": {
+      "source": "Choose a start-time window for this service and professional. We will notify your customer account if a cancellation matches. No reservation or payment is made.",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 91,
+          "kind": "localized-source",
+          "context": "16dfbdca1619829d7b80b1dcc75605645ddf5b979fdbc4ec5ffa5f08f695ab2e"
         }
       ]
     },
@@ -8358,7 +8508,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 46,
+          "line": 50,
           "kind": "localized-source",
           "context": "db60484117d116558245215dc63b674db08f42ce0e0e0bd97befd404a520e968"
         }
@@ -8391,7 +8541,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         }
@@ -9060,7 +9210,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 30,
+          "line": 31,
           "kind": "literal",
           "context": "493a6a8fea7ba56c24b62c5309db57a299f7cd6b12a29bf5209e6057dd4bc4dd"
         },
@@ -9100,7 +9250,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 30,
+          "line": 31,
           "kind": "literal",
           "context": "46f530bf537fa3b8ef6455d71467c04261f7c61b9b2b4445674a62836840e002"
         },
@@ -9357,7 +9507,7 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 30,
+          "line": 31,
           "kind": "literal",
           "context": "4ac6a413e488b23e29a9d852ca2a936ce0d64ed8088edc09eaf3bb95874ed30c"
         },
@@ -9625,6 +9775,12 @@
           "line": 110,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 14,
+          "kind": "literal",
+          "context": "0ac0abcddd255d903bf32439a42aa1f1b7281cf20bc1e2cecfebefe5d13122b2"
         },
         {
           "file": "src/components/booking/BookingAttendance.tsx",
@@ -10461,7 +10617,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 43,
+          "line": 47,
           "kind": "localized-source",
           "context": "7bc4f74ff99b0c4be159433784f296bba25325d95c219b0083bb315dc4cfb95f"
         }
@@ -10484,13 +10640,13 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 50,
+          "line": 54,
           "kind": "localized-source",
           "context": "5e141d3d3b01752ac88c2ba51d5dbd0a0757d0152cf94847f1bd0d116a72060b"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "localized-source",
           "context": "5e141d3d3b01752ac88c2ba51d5dbd0a0757d0152cf94847f1bd0d116a72060b"
         },
@@ -10741,7 +10897,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 38,
+          "line": 42,
           "kind": "localized-source",
           "context": "0510d1569370e238b285ef951a86b759585de781718c2d4dae08edd95793b01c"
         }
@@ -10859,7 +11015,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         }
@@ -10904,7 +11060,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 27,
+          "line": 28,
           "kind": "localized-source",
           "context": "a79e0d5a37567d5b754fcfb6f64194674c6c4bb5025f9c617f726b5d68d1a672"
         },
@@ -10921,7 +11077,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 40,
+          "line": 44,
           "kind": "localized-source",
           "context": "614ad36b096a8914edcde6ea3d208cbfb793536c3a4b91e33ffc979b36afbca3"
         }
@@ -11010,13 +11166,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 50,
+          "line": 54,
           "kind": "localized-source",
           "context": "8be18a30b5f0b0dbfbd6e7bc6262ae1a8fcff4ae31a7f57dfea66ee541216c99"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         },
@@ -11865,6 +12021,17 @@
         }
       ]
     },
+    "9a1e734bc98f": {
+      "source": "Earliest start",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 93,
+          "kind": "localized-source",
+          "context": "046f2e03a0798aa3285c33eaba1527da37d9dca8eeeaa0ece3e6aac30fe73d04"
+        }
+      ]
+    },
     "8515015e9bab": {
       "source": "Early access to advertising spaces",
       "occurrences": [
@@ -12261,6 +12428,12 @@
       "source": "en-CA",
       "occurrences": [
         {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 20,
+          "kind": "literal",
+          "context": "00f2ce441b4adb14a39712c8e4626ea3c912497d12093d683c7862093f8fc3b7"
+        },
+        {
           "file": "src/components/owner/BusinessFinances.tsx",
           "line": 22,
           "kind": "literal",
@@ -12472,7 +12645,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 41,
+          "line": 45,
           "kind": "literal",
           "context": "1a1d33d319e4de1753f69cfa9fe5d731c03bf1776fd0f0d0275a05bbfb0bbe4d"
         }
@@ -12852,7 +13025,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 44,
+          "line": 48,
           "kind": "localized-source",
           "context": "52f4d5bfad96779abf9f3b7ef7c15290613c2ecc2a7e56037bc4e3e575edc486"
         }
@@ -12910,6 +13083,17 @@
           "line": 2152,
           "kind": "literal",
           "context": "36af388a7bbf69866ec577ab8ffca11c6e73d733c3a4681e04260c2debcbc8ee"
+        }
+      ]
+    },
+    "a689a999a5e6": {
+      "source": "Expired",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 58,
+          "kind": "literal",
+          "context": "63f99fc84e31b1b7cecd5231f6b7027230c8706d81b9ebb3a9bf19f3fa9aeafa"
         }
       ]
     },
@@ -13744,7 +13928,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 41,
+          "line": 45,
           "kind": "localized-source",
           "context": "d35ee304431890c9e23ff40665e652f0429370222c940192121f26df5386b678"
         }
@@ -14109,7 +14293,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 29,
+          "line": 30,
           "kind": "literal",
           "context": "472a525f5f9737b58e8c05f0f827e77b87899b0248f0effde7ac2da91778e7cf"
         },
@@ -15773,6 +15957,28 @@
         }
       ]
     },
+    "9badd844261b": {
+      "source": "Join the appointment waitlist",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 90,
+          "kind": "localized-source",
+          "context": "4102eda29aa58e831d7e2e20c09c5b517db20fd242fbfd7df35090debadcd4a9"
+        }
+      ]
+    },
+    "68b1a8aca654": {
+      "source": "Join waitlist",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 94,
+          "kind": "literal",
+          "context": "385b778bd264fba9f673d3ece340e62698f2f4d9ba2cff686de6ec24c1bfe52d"
+        }
+      ]
+    },
     "1937d38092fa": {
       "source": "JPG or PNG",
       "occurrences": [
@@ -16189,6 +16395,17 @@
         }
       ]
     },
+    "b1fbef32a6d4": {
+      "source": "Latest start",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 93,
+          "kind": "localized-source",
+          "context": "69c1c07b4dbcbec1cf01dc79c54b50b38a4a058b924cf9e33910d854a368936c"
+        }
+      ]
+    },
     "bdda9f9adb86": {
       "source": "Learn more →",
       "occurrences": [
@@ -16230,6 +16447,17 @@
           "line": 121,
           "kind": "localized-source",
           "context": "2f878ce8fb5245c54f62bfc8b3cb765ad1e19b51249f792ba0352eddfa1a7e69"
+        }
+      ]
+    },
+    "4e9b8cce02c8": {
+      "source": "Leave waitlist",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 63,
+          "kind": "localized-source",
+          "context": "b4be0fc8c9319b34de46b74c14ff9701c0482170ab5cb8d43003d0ed3ea0de1f"
         }
       ]
     },
@@ -16382,7 +16610,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 37,
+          "line": 41,
           "kind": "localized-source",
           "context": "6fb14906bcac63d621491f767acdc895aff4e6545536eb778e2bbf7308106b1e"
         },
@@ -16513,6 +16741,12 @@
     "33ce417454bf": {
       "source": "Loading…",
       "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 51,
+          "kind": "localized-source",
+          "context": "43093d2ee64ef7678a1d0821f35c459a9d2367f6088579efd191ba8825e7c248"
+        },
         {
           "file": "src/components/booking/CommunicationPreferences.tsx",
           "line": 35,
@@ -16757,7 +16991,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 32,
+          "line": 36,
           "kind": "localized-source",
           "context": "79f30e8633ca95537f1ecb827dc76db0ee78bd2a15ceabe91f17087d4120ebca"
         }
@@ -17188,7 +17422,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 49,
+          "line": 53,
           "kind": "localized-source",
           "context": "efddfcb57bb878c7ad2542390c8167397e45132c84ed2f04188929883d7e46ed"
         }
@@ -18519,7 +18753,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 53,
+          "line": 57,
           "kind": "localized-source",
           "context": "759cef6c48bfee37099ac6d84c331bd5a14fdf2f514ade34612129bae67eee98"
         },
@@ -18608,6 +18842,17 @@
         }
       ]
     },
+    "c26453b320a1": {
+      "source": "No appointment waitlist requests yet.",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 53,
+          "kind": "localized-source",
+          "context": "3635143fc2af01ba9a81533c7cc13dd2843bb3d55b9f16b7f6d204a3b6643510"
+        }
+      ]
+    },
     "ce57705f9fcd": {
       "source": "No appointments loaded",
       "occurrences": [
@@ -18624,7 +18869,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 52,
+          "line": 56,
           "kind": "localized-source",
           "context": "8a32e33b0759743202cc7f52e15cc3c97914edd1bd2d29ec9bb25c85214bdc93"
         }
@@ -19460,31 +19705,31 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 26,
+          "line": 27,
           "kind": "localized-source",
           "context": "1b9cb52ee873403fd7730f47e3fee00391ef9b21362e744893c810c797742bee"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 50,
+          "line": 54,
           "kind": "literal",
           "context": "0c186d7db4b874c761e6d6b66873473a1c519ac71f321bf643dd9028e35094a9"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 50,
+          "line": 54,
           "kind": "literal",
           "context": "3658d653f2ba1d0d0a5b1aefa7948a6ba5570f75996baa487ccdfb57689867e1"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "0c186d7db4b874c761e6d6b66873473a1c519ac71f321bf643dd9028e35094a9"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "3658d653f2ba1d0d0a5b1aefa7948a6ba5570f75996baa487ccdfb57689867e1"
         },
@@ -19726,6 +19971,28 @@
         }
       ]
     },
+    "af9c3aa43065": {
+      "source": "Offer closed",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 61,
+          "kind": "literal",
+          "context": "ad6bfea6007d99fb38e492adbea4a0118538b4c660194239f19d2e788f41cf16"
+        }
+      ]
+    },
+    "346de52b1a7e": {
+      "source": "Offer expires {value0}",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 61,
+          "kind": "localized-source",
+          "context": "6b960802afc4c444a0709d43d8aaf732c6266093b56f6cf60a6a8a868549fb8c"
+        }
+      ]
+    },
     "fa8d7ef407e3": {
       "source": "Offer labels show active promotions. Customer eligibility and the final price are checked at checkout.",
       "occurrences": [
@@ -19947,7 +20214,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "localized-source",
           "context": "08a3e8c16481b37b2911b5bdfb2fe9ad0ae7a97b08f62db6502cd43f4c03c4a1"
         },
@@ -20302,6 +20569,17 @@
         }
       ]
     },
+    "199777af1b1e": {
+      "source": "Opening offers appear in your account notifications. An offer is not a booking. Review current availability, price and deposit before confirming.",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 50,
+          "kind": "localized-source",
+          "context": "1864676f8d8f7af141dc72e909b7de18e941f2bca6df7155fe235345a1578fa9"
+        }
+      ]
+    },
     "38b7df5607ab": {
       "source": "Opening stock",
       "occurrences": [
@@ -20612,7 +20890,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 29,
+          "line": 30,
           "kind": "literal",
           "context": "1d863d39a41d60dba0467de26ae90f16bb95ffba771bab39e4d8633eec234a1c"
         },
@@ -22360,7 +22638,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 53,
+          "line": 57,
           "kind": "localized-source",
           "context": "4dc4cfa04ce4ce2574b523d77bc7a3a2036d13c0cddc694735615c8bc80c1700"
         },
@@ -24390,6 +24668,12 @@
       "source": "Refresh",
       "occurrences": [
         {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 49,
+          "kind": "localized-source",
+          "context": "2aed71770574d79ce2c61a7169355195c1298754d88fe82fcfa0d02feb0a368e"
+        },
+        {
           "file": "src/components/owner/SalonProductOrders.tsx",
           "line": 183,
           "kind": "jsx-text",
@@ -25112,6 +25396,17 @@
         }
       ]
     },
+    "4625a6c5a234": {
+      "source": "Request saved. Manage your waitlist",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 95,
+          "kind": "localized-source",
+          "context": "3208077716b7274ddde0616b3b858004a032e913fb7cd0c04a71ba6799dd5c98"
+        }
+      ]
+    },
     "c26bf60fed37": {
       "source": "Requested",
       "occurrences": [
@@ -25575,6 +25870,17 @@
           "line": 16,
           "kind": "literal",
           "context": "f768a2e92a2c619073fa0558923b41d9cbe19a443777c45c0a5c90d43e6024af"
+        }
+      ]
+    },
+    "1eda53871f05": {
+      "source": "Review opening",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 61,
+          "kind": "localized-source",
+          "context": "fa82980ce736dd67fa6b059490e4c2f6ba83ad15ad4eb3b1ea90e4e9941872f0"
         }
       ]
     },
@@ -26959,6 +27265,12 @@
           "context": "5cbd75330c8b56edf6b45209646f9867b8fbc6c62d5774bc77b97f40674a05d3"
         },
         {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 94,
+          "kind": "literal",
+          "context": "385b778bd264fba9f673d3ece340e62698f2f4d9ba2cff686de6ec24c1bfe52d"
+        },
+        {
           "file": "src/components/booking/BookingAttendance.tsx",
           "line": 79,
           "kind": "literal",
@@ -27215,7 +27527,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 38,
+          "line": 42,
           "kind": "localized-source",
           "context": "56d7815459c2a8e204cdec6a620a386e8dfcb36974b2b2904956c08348e55e27"
         },
@@ -27254,7 +27566,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 38,
+          "line": 42,
           "kind": "localized-source",
           "context": "d1b3ba5e818d2190d81526028e560d579bd1b7dbc6da6fa83defc100f5eabd7b"
         }
@@ -27738,7 +28050,7 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         },
@@ -27908,7 +28220,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 43,
+          "line": 47,
           "kind": "localized-source",
           "context": "59f46341f73ee4159cd75a3889d9b5d7ace964e8ecc2f0cad44ed2da5917516d"
         }
@@ -28113,7 +28425,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 19,
+          "line": 20,
           "kind": "localized-source",
           "context": "0464eea11b0f86e05d0b2cb26d52bdf79e3d18c5c25fa0219eb447169fd88b95"
         },
@@ -28567,6 +28879,23 @@
         }
       ]
     },
+    "acedf15c63e8": {
+      "source": "Sign in to manage your waitlist",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 52,
+          "kind": "localized-source",
+          "context": "2fe04ce51c57cb2d8b471b3d2c7d2083296a3c7ff1a53ce035f9fab06b5d758b"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 95,
+          "kind": "localized-source",
+          "context": "2fe04ce51c57cb2d8b471b3d2c7d2083296a3c7ff1a53ce035f9fab06b5d758b"
+        }
+      ]
+    },
     "0be94a8eb43b": {
       "source": "Sign in to upload",
       "occurrences": [
@@ -28777,13 +29106,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 34,
+          "line": 38,
           "kind": "localized-source",
           "context": "911413a04e84c357d6931b81dcbe5fd82e725b85a766488c0b08f9434c3aeafb"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 35,
+          "line": 39,
           "kind": "localized-source",
           "context": "911413a04e84c357d6931b81dcbe5fd82e725b85a766488c0b08f9434c3aeafb"
         },
@@ -29029,7 +29358,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 42,
+          "line": 46,
           "kind": "localized-source",
           "context": "5c5d02777b69d1d650ae7b528c1741ffe2e2bf042cec0d2d498552eeb82987d8"
         }
@@ -29291,7 +29620,7 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         },
@@ -29343,7 +29672,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 28,
+          "line": 29,
           "kind": "literal",
           "context": "560fb5ac1fdbcc28c44857f576bfa01520740ade8e208c2f5d7ff1d023675d18"
         }
@@ -29869,7 +30198,7 @@
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 51,
+          "line": 55,
           "kind": "literal",
           "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
         },
@@ -30330,13 +30659,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 34,
+          "line": 38,
           "kind": "localized-source",
           "context": "0febe9eae63078fc0557d064b2d1b52267382f9660abdf7c0d2a21e53241b809"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 35,
+          "line": 39,
           "kind": "localized-source",
           "context": "0febe9eae63078fc0557d064b2d1b52267382f9660abdf7c0d2a21e53241b809"
         }
@@ -32885,7 +33214,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 41,
+          "line": 45,
           "kind": "localized-source",
           "context": "c2fa12889c44e65119ca31c8dfc84193ea7909ca79b02ccace890a0872e45981"
         }
@@ -33378,7 +33707,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 52,
+          "line": 56,
           "kind": "localized-source",
           "context": "870be9c017f7687c6aef408b7a482562004d90b0b1fd0863d8e76357fcaa3fce"
         }
@@ -33820,13 +34149,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 20,
+          "line": 21,
           "kind": "localized-source",
           "context": "c2977c0aada8c47f1cdb3a72aa59ebcf10175713f65ad3deb71c37b42d470f59"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 42,
+          "line": 46,
           "kind": "localized-source",
           "context": "c2977c0aada8c47f1cdb3a72aa59ebcf10175713f65ad3deb71c37b42d470f59"
         },
@@ -33847,6 +34176,12 @@
     "2c9c1f79142d": {
       "source": "Unavailable",
       "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 58,
+          "kind": "literal",
+          "context": "2fbbaf33d02dd851e206009c09e2f4ff2f952d37c08ac17ec1c091f37b32f6dc"
+        },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "line": 2687,
@@ -34195,19 +34530,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 13,
+          "line": 14,
           "kind": "literal",
           "context": "e91e50038abceb85e890f89d13d42500588b1626862dd03478cdcd218d91671a"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 39,
+          "line": 43,
           "kind": "literal",
           "context": "3d603e306180d640ecc265ae4a763bce71efddb61aea501815622bededa638b8"
         },
         {
           "file": "src/components/owner/BookingsWorkspace.tsx",
-          "line": 44,
+          "line": 48,
           "kind": "literal",
           "context": "2443b861dba1a2e4d3dc6182a8bd91e0c3d3cbd1b8599d2ad7472ad79380a632"
         },
@@ -34636,6 +34971,12 @@
         },
         {
           "file": "src/components/auth/TeamUserManager.tsx",
+          "line": 1,
+          "kind": "literal",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
           "line": 1,
           "kind": "literal",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
@@ -35451,6 +35792,17 @@
         }
       ]
     },
+    "33d30632848d": {
+      "source": "Waiting",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 58,
+          "kind": "literal",
+          "context": "26ba1c8ff0be382f342f6722a454ac1578bbfcd7974bd133a82c9f108a8c38a9"
+        }
+      ]
+    },
     "23a1732e27a5": {
       "source": "Waitlist",
       "occurrences": [
@@ -35459,6 +35811,34 @@
           "line": 277,
           "kind": "literal",
           "context": "dbe5935aedbbca2eb39033baa0abf21964c3360603060c15a88501fbc403041d"
+        }
+      ]
+    },
+    "a6dd526dd96f": {
+      "source": "Waitlist unavailable.",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 15,
+          "kind": "literal",
+          "context": "f0f6c00a28f0220d957ddd8fcdd34733eb8649654f0408fae627796ffd955949"
+        }
+      ]
+    },
+    "9aa684317773": {
+      "source": "Waitlist unavailable. Try again.",
+      "occurrences": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 52,
+          "kind": "localized-source",
+          "context": "a6bbb894f22f2efe9df178e0d373ef581de4a053c6632ef05ccdfd3f044c80fc"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 95,
+          "kind": "localized-source",
+          "context": "a6bbb894f22f2efe9df178e0d373ef581de4a053c6632ef05ccdfd3f044c80fc"
         }
       ]
     },
@@ -36936,6 +37316,12 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "line": 301,
+          "kind": "literal",
+          "context": "89758a527c84a22833df769357dde43329f1a23595a3f6b256d4cfe03d88235d"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "line": 85,
           "kind": "literal",
           "context": "89758a527c84a22833df769357dde43329f1a23595a3f6b256d4cfe03d88235d"
         },

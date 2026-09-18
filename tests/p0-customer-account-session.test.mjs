@@ -30,7 +30,7 @@ function harness() {
   };
   for (const name of ['site/SafeImage','auth/RoleLogoutButton','BookingInbox','i18n/LanguageSelector','dashboard/WorkspaceToolbar','dashboard/CustomerAssistant','dashboard/WorkspaceCalendar']) overrides[`@/components/${name}`] = { default: name, RoleSessionBoundary: 'boundary' };
   const Component = typescriptLoader(process.cwd(), overrides, { fetch: (_url, options) => new Promise(resolve => pending.push({ actor: options.headers.Authorization, resolve })) })('src/components/CustomerAccount.tsx').default;
-  function render() { cursor = 0; const tree = Component(); while (effects.length) effects.shift()(); return tree; }
+  function render() { cursor = 0; const tree = Component({discoveryAvailable:false,homeHref:'/site-access'}); while (effects.length) effects.shift()(); return tree; }
   async function settle() { for (let i = 0; i < 3; i++) { render(); await tick(); } }
   function changeActor(next) { id = next; onAuth?.(next ? 'SIGNED_IN' : 'SIGNED_OUT', session()); render(); }
   render(); onAuth?.('INITIAL_SESSION', session());

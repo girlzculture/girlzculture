@@ -158,6 +158,10 @@
         {
           "file": "src/components/owner/ServicesWorkspace.tsx",
           "context": "f7fa1da19de5446bdd69318f3af5e686797b5e818564717e9008e2ffdb586911"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "1701bed10955bc4bfdefea0b2321c2dc1e72b764bb5d97a2ec06139ec9b3c8dd"
         }
       ]
     },
@@ -452,6 +456,10 @@
         {
           "file": "src/lib/dateTime.ts",
           "context": "10ca4dd2c7f4b001adb8ebc8e2bc9810c0e19e2670d78e0be9512bf6f6e8cbf5"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "f7e66cc7a28d8a6c78a63bbda8d1f973a06c70daad56f093523b3d239ee03a2f"
         }
       ]
     },
@@ -592,6 +600,10 @@
         {
           "file": "src/components/owner/BusinessFinances.tsx",
           "context": "b4ed979ef59d070e445588cebf383a2f92aa655c626241954fc0d039d342b3ed"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "651b4093e35443640b1c58e2ab4aa4f32a02bbd37c96989c8dcbf45ba91d729b"
         }
       ]
     },
@@ -860,6 +872,14 @@
         {
           "file": "src/lib/financeLedgerCore.ts",
           "context": "5d8d7dab9a89f28c74818d7c9a9e14812ef574dd9b01ac8942dff629d5958b38"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "f8fab2290bdf88865fa43cb66fd2ac777aca28c648adcb3d041b28ebd3b637bd"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "a2e593df6a05670fe2b742df9eb3dacab863a9d3217c15b39c5fc70e911c97b6"
         }
       ]
     },
@@ -1084,6 +1104,14 @@
         {
           "file": "src/components/owner/TeamWorkspace.tsx",
           "context": "899a3a03267cefea1722b2c8fb250c48414488f8631b37a56e8505c89894a5c6"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "d0394ed6c9eab77b7b394148dc71dea5986af74750639a55e0b72767b727eb58"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "1d82d7cd49e6625e7e46585ed1aa1b5431cc4a23542f05fd1f55d6963aa20807"
         }
       ]
     },
@@ -1290,6 +1318,10 @@
         {
           "file": "src/components/owner/ReviewsWorkspace.tsx",
           "context": "fc5ca4b2af818fb80c34267a2464bc2e98a86c0b871ab045500f4e00d80ccfae"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "0ac0abcddd255d903bf32439a42aa1f1b7281cf20bc1e2cecfebefe5d13122b2"
         }
       ]
     },
@@ -2250,6 +2282,10 @@
         {
           "file": "src/components/owner/FinancePeriodRecords.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2356,6 +2392,10 @@
         {
           "file": "src/lib/gcAssistantPresentation.ts",
           "context": "b56efb1b71d52faac48cd041bd92175814b603df4ed72deaf321dba80e76c114"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "89758a527c84a22833df769357dde43329f1a23595a3f6b256d4cfe03d88235d"
         }
       ]
     },
@@ -2638,6 +2678,10 @@
         {
           "file": "src/lib/financeDailyClose.ts",
           "context": "1615c7dad4bafb12205df47585794cc68897b40b600d8f05f2b37d2bcbae696c"
+        },
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "00f2ce441b4adb14a39712c8e4626ea3c912497d12093d683c7862093f8fc3b7"
         }
       ]
     },
@@ -2948,6 +2992,16 @@
         {
           "file": "src/components/dashboard/WorkspaceTabs.tsx",
           "context": "b465373840542b46a39c71e99fad3fa2c4cbebbbdbbca2881c427a3eaef2291e"
+        }
+      ]
+    },
+    {
+      "source": "{value0}:{value1}:{value2}:{value3}:{value4}:{value5}",
+      "reason": "Internal join operation identity for idempotency.",
+      "contexts": [
+        {
+          "file": "src/components/booking/AppointmentWaitlist.tsx",
+          "context": "ea9288ebbf319e4da09a2cdf8937a4304ff1af2103272dddacc7c05193ab45d7"
         }
       ]
     }

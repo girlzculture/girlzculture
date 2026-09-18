@@ -1,5 +1,6 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { processBookingReminders, processBookingFollowups } from "@/lib/supabaseAdmin";
+import {processAppointmentWaitlist} from "@/lib/appointmentWaitlistServer";
 
 export const runtime="nodejs";
 async function POSTHandler(request:Request){
@@ -8,7 +9,8 @@ async function POSTHandler(request:Request){
   try{
     const reminders=await processBookingReminders();
     const followups=await processBookingFollowups();
-    return Response.json({ok:true,...reminders,followups});
+    const waitlist=await processAppointmentWaitlist();
+    return Response.json({ok:true,...reminders,followups,waitlist});
   }
   catch(error){noteOperationalFailure("Scheduled booking reminders failed",error);return Response.json({error:"Reminder processing failed."},{status:500});}
 }

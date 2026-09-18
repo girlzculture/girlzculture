@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import {verifyWaitlistConcurrency} from './verify-waitlist-concurrency.mjs';
 
 const databaseUrl = process.env.CLEAN_DATABASE_URL;
 const psql = process.env.PSQL_BIN || "psql";
@@ -1278,3 +1279,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-rem
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-business-communication-preferences.sql")],"Two-business communication consent, guest access and delivery isolation"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-followups.sql")],"Opt-in post-visit scheduling, lease and business isolation"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-subscription-recorded-price.sql")],"Recorded subscription price integrity and business isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-appointment-waitlist.sql")],"Appointment waitlist lifecycle and isolation"));
+await verifyWaitlistConcurrency(databaseUrl,psql);

@@ -2,14 +2,15 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; local pricing preservation and Google access diagnosis; full201-group release not complete",
+  "status": "IN PROGRESS; waitlist and review correction locally verified; Google live activation founder-deferred; full201-group release not complete",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
     "assistant_boundary": "Authenticated authorized business only, including public records; enforce before model through backend/tools/queries/cache/memory/exports/actions.",
     "promotion": "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms.",
     "caps": "Preserve both existing USD25 caps",
-    "wolof": "Explicitly deferred"
+    "wolof": "Explicitly deferred",
+    "google_business_profile": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile."
   },
   "requirements": [
     {
@@ -10809,15 +10810,26 @@
       "source": "founder-handoff.md",
       "source_line": 646,
       "implementation_paths": [
-        "src/components/dashboard/WorkspaceCalendar.tsx",
-        "src/components/SalonBookingWizard.tsx",
-        "supabase/migrations"
+        "src/components/booking/AppointmentWaitlist.tsx",
+        "src/app/account/waitlist/page.tsx",
+        "src/app/api/customer/waitlist/route.ts",
+        "src/app/api/salon/waitlist/route.ts",
+        "src/lib/appointmentWaitlistServer.ts",
+        "supabase/migrations/20260918223254_business_appointment_waitlist.sql"
       ],
-      "state": "PENDING",
+      "state": "IMPLEMENTED",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": null,
+      "changes": [
+        "Added appointment waitlist preferences, authenticated persisted customer/owner queues, bounded cancellation-matching scheduler, localized account notifications, offer expiry and source-level atomic claiming through existing checkout. Fresh customer identity, canonical availability, deposit and consent remain mandatory."
+      ],
+      "verification": [
+        "tests/p0-appointment-waitlist.test.mjs (5 passing route/provider boundary tests)",
+        "tests/p0-waitlist-paid-checkout.test.mjs (verified-event simulation, claim linkage and idempotency)",
+        "scripts/sql/verify-appointment-waitlist.sql (rollback-only lifecycle and two-business/customer assertions)",
+        "scripts/verify-waitlist-concurrency.mjs (two real independent database sessions; one hold/claim, no booking/charge)",
+        "tests/browser/appointment-waitlist.spec.ts (16 Chromium/WebKit cases, four viewports, customer join/retry/refresh/review/leave, owner EN/FR/ES/zh-CN queues)"
+      ],
       "live_evidence": [],
       "detailed_clause": "WAIT-01 — Provide a waitlist by service, stylist and requested time. When an eligible booking cancels, automatically offer the slot to suitable waitlisted clients. Implement offer expiry and atomic slot claiming so one cancellation cannot create multiple confirmed bookings. Keep the owner informed and preserve availability/conflict rules. Offering a slot must not silently charge or confirm every notified customer.",
       "detailed_clause_line": 425,
@@ -10825,13 +10837,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Implement appointment waitlist preferences, cancellation offers, expiration, atomic acceptance and current availability/deposit checks. This is not the removed future-category marketing waitlist.",
+      "remaining": "Protected application of reviewed migration20260918223254, final-source required CI and held/public acceptance of the real account notification/scheduler/checkout journey remain. Provider payments are simulated; no real customer charged. No live pass claimed.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "implemented; local automated evidence; hosted acceptance pending",
+      "implementation_status": "IMPLEMENTED",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -12067,15 +12079,26 @@
       "source": "founder-handoff.md",
       "source_line": 658,
       "implementation_paths": [
-        "src/app/site-access/page.tsx",
-        "src/app/page.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/booking/AppointmentWaitlist.tsx",
+        "src/app/account/waitlist/page.tsx",
+        "src/app/api/customer/waitlist/route.ts",
+        "src/app/api/salon/waitlist/route.ts",
+        "src/lib/appointmentWaitlistServer.ts",
+        "supabase/migrations/20260918223254_business_appointment_waitlist.sql"
       ],
-      "state": "PENDING",
+      "state": "IMPLEMENTED",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": null,
+      "changes": [
+        "Added appointment waitlist preferences, authenticated persisted customer/owner queues, bounded cancellation-matching scheduler, localized account notifications, offer expiry and source-level atomic claiming through existing checkout. Fresh customer identity, canonical availability, deposit and consent remain mandatory."
+      ],
+      "verification": [
+        "tests/p0-appointment-waitlist.test.mjs (5 passing route/provider boundary tests)",
+        "tests/p0-waitlist-paid-checkout.test.mjs (verified-event simulation, claim linkage and idempotency)",
+        "scripts/sql/verify-appointment-waitlist.sql (rollback-only lifecycle and two-business/customer assertions)",
+        "scripts/verify-waitlist-concurrency.mjs (two real independent database sessions; one hold/claim, no booking/charge)",
+        "tests/browser/appointment-waitlist.spec.ts (16 Chromium/WebKit cases, four viewports, customer join/retry/refresh/review/leave, owner EN/FR/ES/zh-CN queues)"
+      ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-09 — Preserve the appointment/cancellation waitlist specified in part 5 of the Software Value Build Spec. It is a separate operational feature from future-business-category applications; the request to remove homepage category waitlists does not cancel appointment waitlists.",
       "detailed_clause_line": 472,
@@ -12083,13 +12106,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Code includes real /site-access entry, removal of public demo gates/banner, supported-category/navigation corrections and component polish. Complete every detailed public clause, full booking path, matched responsive before/after review and production cache/banner/route checks; root landing/content must remain.",
+      "remaining": "Protected application of reviewed migration20260918223254, final-source required CI and held/public acceptance of the real account notification/scheduler/checkout journey remain. Provider payments are simulated; no real customer charged. No live pass claimed.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "implemented; local automated evidence; hosted acceptance pending",
+      "implementation_status": "IMPLEMENTED",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -15839,7 +15862,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-02",
@@ -15995,7 +16019,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-03",
@@ -16151,7 +16176,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-04",
@@ -16307,7 +16333,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-05",
@@ -16463,7 +16490,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-06",
@@ -16619,7 +16647,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-07",
@@ -16775,7 +16804,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-08",
@@ -16931,7 +16961,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-09",
@@ -17087,7 +17118,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "WIRE-10",
@@ -17243,7 +17275,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-01",
@@ -17406,7 +17439,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-02",
@@ -17569,7 +17603,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-03",
@@ -17732,7 +17767,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-04",
@@ -17895,7 +17931,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-05",
@@ -18058,7 +18095,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-06",
@@ -18221,7 +18259,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-07",
@@ -18377,7 +18416,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-08",
@@ -18540,7 +18580,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "LAYOUT-09",
@@ -18703,7 +18744,8 @@
         "PAGE-12",
         "PAGE-13",
         "PAGE-14"
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-LAUNCH",
@@ -18843,7 +18885,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-STANDARD",
@@ -18973,7 +19016,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-FOUNDATIONS",
@@ -19123,7 +19167,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-ONBOARD",
@@ -19267,7 +19312,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Not started"
     },
     {
       "id": "SF-VOICE",
@@ -19410,7 +19456,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-LANG",
@@ -19552,7 +19599,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-BRIEF",
@@ -19690,7 +19738,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-MONEY",
@@ -19831,7 +19880,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-TAX",
@@ -19975,7 +20025,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-MARKETING",
@@ -20116,7 +20167,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Not started"
     },
     {
       "id": "SF-WEBSITE",
@@ -20257,7 +20309,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-GOOGLE",
@@ -20278,7 +20331,7 @@
       "source_line": 682,
       "added_specification": "software-first-2026-09-18",
       "requirement_kind": "product",
-      "assessment": "provider-dependent",
+      "assessment": "live activation founder-deferred; code implementation required",
       "implementation_status": "IN PROGRESS",
       "verification_status": "UNVERIFIED",
       "release_status": "NOT RELEASED",
@@ -20286,12 +20339,13 @@
         "docs/dashboard-redesign/GOOGLE-BUSINESS-PROFILE-ACCESS.md"
       ],
       "changes": [
-        "Founder-approved activation completed for Business Information API in project project-f0d9935c-69db-42c9-b22 (number886435271334). Read-only Cloud quota inspection shows0requests/minute; Google documents this as unapproved."
+        "Founder-approved activation completed for Business Information API in project project-f0d9935c-69db-42c9-b22 (number886435271334). Read-only Cloud quota inspection shows0requests/minute; Google documents this as unapproved.",
+        "Founder expressly deferred live activation on 18 September; no qualifying salon available. No further profile requests or zero-quota retries. Recorded single activation checklist with reserved production callback."
       ],
       "verification": [],
       "live_evidence": [],
-      "remaining": "Obtain project API approval and configure OAuth, then implement/verify owner connect, selected-business binding, sync, conflict handling, retry and disconnect. Maps is not Business Profile sync.",
-      "external_blocker": "GBP API approval absent (0QPM); qualifying verified60+day profile/website needed for access application. OAuth client not yet configured. Authenticated Cloud tab retained; no business profile modified.",
+      "remaining": "Implement and simulate-test OAuth authorization, encrypted per-business connection storage, disconnect, hours/business information synchronization, supported media/posts, conflict detection, retry/audit. Keep live actions and background sync disabled with honest unavailable UI. Follow GOOGLE-BUSINESS-PROFILE-ACCESS.md when live activation resumes.",
+      "external_blocker": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. This external dependency no longer blocks the current release.",
       "wire_coverage": [
         {
           "id": "WIRE-01",
@@ -20395,7 +20449,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-WHATSAPP",
@@ -20530,7 +20585,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-REFERRAL",
@@ -20668,7 +20724,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Not started"
     },
     {
       "id": "SF-PRICING",
@@ -20812,7 +20869,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-PROMISE",
@@ -20962,7 +21020,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-PRELAUNCH",
@@ -21108,7 +21167,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-TIMING",
@@ -21238,7 +21298,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-LATER-CREATORS",
@@ -21375,7 +21436,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Explicitly deferred"
     },
     {
       "id": "SF-LATER-GROWTH",
@@ -21506,7 +21568,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Explicitly deferred"
     },
     {
       "id": "SF-LATER-REGIONS",
@@ -21643,7 +21706,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Explicitly deferred"
     },
     {
       "id": "SF-LATER-COMMERCE",
@@ -21777,7 +21841,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Explicitly deferred"
     },
     {
       "id": "SF-LATER-MEMBERSHIP",
@@ -21915,7 +21980,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "Explicitly deferred"
     },
     {
       "id": "SF-SEQUENCE",
@@ -22057,7 +22123,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-OUTCOME",
@@ -22190,7 +22257,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-EXECUTION",
@@ -22322,7 +22390,8 @@
         "source": "founder-software-first-2026-09-18.md",
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
-      }
+      },
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-01",
@@ -22449,7 +22518,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-02",
@@ -22580,7 +22650,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-03",
@@ -22711,7 +22782,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-04",
@@ -22838,7 +22910,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-05",
@@ -22969,7 +23042,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-06",
@@ -23096,7 +23170,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-07",
@@ -23223,7 +23298,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-08",
@@ -23354,7 +23430,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-09",
@@ -23485,7 +23562,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-10",
@@ -23618,7 +23696,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-11",
@@ -23751,7 +23830,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-12",
@@ -23884,7 +23964,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-13",
@@ -24011,7 +24092,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-14",
@@ -24138,7 +24220,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-15",
@@ -24264,7 +24347,8 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     },
     {
       "id": "SF-DECISION-16",
@@ -24390,28 +24474,36 @@
           "status": "UNVERIFIED",
           "evidence": []
         }
-      ]
+      ],
+      "progress_status": "In progress"
     }
   ],
   "progress_audit": {
-    "at": "2026-09-18T19:25:03.226Z",
-    "commit": "b3401f079f34bae55bd355154a48d93a455a5fc6",
+    "at": "2026-09-18T23:40:01.583Z",
+    "commit": "b8271a8ffe92a2383c1e9ce205388520babe8f85",
     "counts": {
-      "In progress": 103,
-      "Not started": 19,
-      "Implemented / unverified": 17,
+      "In progress": 156,
+      "Not started": 20,
+      "Implemented / unverified": 19,
       "Completed / verified": 1,
-      "Blocked": 0
+      "Explicitly deferred": 5
     },
     "interpretation": "Full-requirement conservative states; completed governance decision is not a deployed product feature. In-progress items may contain passing local subfeatures. Not-started means requirement-specific work/acceptance is not recorded, not that inherited platform functionality is absent.",
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
     "uncommitted": true,
-    "uncommitted_summary": "Pricing/agreement preservation, local migration170, browser fixture correction and known French precedence fix; no production publication.",
+    "uncommitted_summary": "Appointment waitlist with local SQL/concurrency and browser evidence; deferred-input review fix; customer harness correction; Google live deferral and activation checklist. No production change.",
     "production_checked_at": "2026-09-18T19:25:03.226Z",
     "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
     "production_deployment": "6aac503fa5eacb00089c6d87",
-    "production_locked": true
+    "production_locked": true,
+    "original140_counts": {
+      "In progress": 103,
+      "Not started": 17,
+      "Implemented / unverified": 19,
+      "Completed / verified": 1
+    },
+    "total": 201
   },
   "latest_authority": {
     "source": "founder-software-first-2026-09-18.md",
@@ -24422,11 +24514,11 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-18T22:21:04.171Z",
-    "head": "2f5c28bcec70d9e98122170f6c29f42a6e384c0c",
+    "at": "2026-09-18T23:40:01.584Z",
+    "head": "b8271a8ffe92a2383c1e9ce205388520babe8f85",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
-    "provider_access": "Google Cloud project-f0d9935c-69db-42c9-b22 confirmed by founder; Business Profile API approval unknown. Stripe read API returns a masked secret, not an invalid-credential diagnosis.",
-    "local_checkpoint": "559b29b plus verified pricing/agreement correction; checkpoint commit pending"
+    "provider_access": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
+    "local_checkpoint": "Waitlist and review correction verified locally; checkpoint commit pending"
   }
 }

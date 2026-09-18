@@ -1,3 +1,17 @@
+# Current continuation — waitlist, review correction and Google deferral
+
+PR80 remains Draft/open on codex/business-dashboard-value-redesign. Pushed head before this checkpoint: b8271a8ffe92a2383c1e9ce205388520babe8f85. No production mutation/publication. Last-known production remains6aac503fa5eacb00089c6d87 / d37cbf4; bothUSD25caps unchanged.
+
+Google: **Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification.** This removes the live dependency only. OAuth/storage/disconnect/sync implementation and simulated tests remain required, with live controls/background sync disabled. No further zero-quota calls/profile requests. Activation checklist: GOOGLE-BUSINESS-PROFILE-ACCESS.md.
+
+Waitlist implementation is local and automated-only: persisted customer/owner queues, bounded existing scheduler, review-only localized account notifications, offer expiry, canonical checkout claim and paid completion, source unique claim guard. 16 waitlist +14 review browser cases passed (30 total, Chromium/WebKit, production build). New waitlist SQL applies to the previous170-migration local database; rollback lifecycle/identity/isolation assertions pass. Two real database sessions produce one hold/claim and no automatic booking/charge. First concurrency fixture cleanup failed on an audit FK; corrected harness uses its own disposable clone, succeeds and drops the clone. Production migration171 remains pending. Paid provider completion is simulated, not a real charge.
+
+CI atb827: release run35401330871 has passing shards1/2, but owner-localization fails two customer test harness calls without props, and shard3 has262passed/1skipped/1failed (WebKit review Save disabled after fill). Customer harness now supplies actual React props; same isolation assertions pass. Original review artifact10572096583/log/trace retained outsideGit. Trace shows empty textarea after fill and no save request. Deferred-event regression reproduces controlled input loss; capture edit text synchronously before state updater. New regression and original browser moderation case pass; no assertion/retry/sleep/skip change. Required35401330913 completed successfully onb827. Release-candidate failures above still require the corrected-source run; this success does not erase the original review defect.
+
+Latest evidence outsideGit: waitlist-review-browser.log, waitlist-review-build.log, waitlist-final-database.log, waitlist-concurrency-isolated.log, waitlist-checkout-and-review.log, review-draft-event-before.log. Tracker covers201groups; no entire redesign/product release claimed complete. Next: finish Google code behind deferral, Morning Brief/advice/voice, marketing/referrals/onboarding/business website/plan promises and remaining detailed acceptance; finish required CI, protected migrations, held candidate and authorized publication after gates.
+
+---
+
 # Current checkpoint — pricing and Google access, 18 September 2026
 
 PR80 remains Draft and unmerged. Required CI at pushed559b29b passed: https://github.com/girlzculture/girlzculture/actions/runs/35397134733 . Release-candidate35397135026 passed all3 browser shards but failed the French Overview wording regression; corrected locally without changing the assertion.

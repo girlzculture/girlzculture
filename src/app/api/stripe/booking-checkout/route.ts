@@ -40,6 +40,10 @@ async function POSTHandler(request: Request) {
     const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     const { data: authData } = token ? await admin.auth.getUser(token) : { data: { user: null } };
     const customerId = authData.user?.id || null;
+    const waitlistOffer = typeof body.waitlist_offer_id === "string" ? body.waitlist_offer_id : null;
+    if (body.waitlist_offer_id != null && (!customerId || !waitlistOffer || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waitlistOffer))) {
+      return Response.json({code:"WAITLIST_OFFER_UNAVAILABLE",error:"Sign in to the customer account that joined the waitlist."},{status:403});
+    }
     const salonId = cleanText(body.salon_id, 50);
     const styleId = cleanText(body.style_id, 50);
     if (!salonId || !styleId) throw new Error("The salon or style selection is missing. Please return to the salon page and try again.");
@@ -201,6 +205,7 @@ async function POSTHandler(request: Request) {
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload: Record<string, unknown> = {
+      ...(waitlistOffer ? {waitlist_offer_id:waitlistOffer} : {}),
       business_policy_revision_id: policyAtCheckout?.id || null,
       business_policy_captured_at: new Date().toISOString(),
       business_policy_accepted_at: policyAtCheckout ? new Date().toISOString() : null,
@@ -400,6 +405,9 @@ async function POSTHandler(request: Request) {
       reservationError = bookingReservation.error;
     }
     if (reservationError || !reservationId) {
+      if (reservationError?.message === "WAITLIST_OFFER_UNAVAILABLE") {
+        return Response.json({code:"WAITLIST_OFFER_UNAVAILABLE",error:"This waitlist offer is no longer available. Review your waitlist for another opening."},{status:409,headers:{"Cache-Control":"private, no-store"}});
+      }
       if (reservationError?.message === "PROFESSIONAL_SERVICE_UNAVAILABLE") {
         return Response.json({ error: "The selected professional no longer offers this service. Choose another professional or service.", code: "PROFESSIONAL_SERVICE_UNAVAILABLE" }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
       }
