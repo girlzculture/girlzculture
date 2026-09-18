@@ -31,6 +31,7 @@ export const ASSISTANT_TOOLS = {
   get_business_policies: { risk: 1, permission: "my_page", schema: object({}) },
   search_platform_knowledge: { risk: 1, permission: "overview", schema: object({ query: { ...string(240), minLength: 2 } }) },
   get_customers: { risk: 1, permission: "bookings", schema: object(range) },
+  get_client_record: { risk: 1, permission: "client_history", schema: object({ booking_id: uuid }) },
   get_professionals: { risk: 1, permission: "stylists", schema: object({ query: string(120) }) },
   get_products: { risk: 1, permission: "products", schema: object({ query: string(120) }) },
   get_booking_messages: { risk: 1, permission: "bookings", schema: object({ booking_id: uuid }) },

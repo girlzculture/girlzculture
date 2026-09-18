@@ -36,7 +36,7 @@ function fixture(options = {}) {
   };
   const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/bookingAvailabilityServer': { bookingAvailability: async () => ({ timeZone: 'America/New_York', durationMinutes: 60, bufferMinutes: 15, slots: [{ value: '13:00', stylistId: actor, stylistName: 'Save' }] }) }, '@/lib/contentModerationServer': { moderatePublicContent: async () => ({ allowed: true }) } });
   const server = load('src/lib/gcAssistantServer.ts');
-  const context = { admin, user: { id: actor }, salon: { id: business, subscription_status: 'active', time_zone: 'America/New_York', description: 'Original Save' }, isOwner: true };
+  const context = { admin, user: { id: actor }, salon: { id: business, subscription_status: 'active', time_zone: 'America/New_York', description: 'Original Save' }, isOwner: !options.teamMember, teamMember: options.teamMember };
   return { calls, saved, context, server, run: (tool, args) => server.executeAssistantTool(context, { requestId, locale: 'fr', tool, args }) };
 }
 
@@ -207,4 +207,11 @@ test('confirmation revalidates the customer identity shown in the preview', asyn
   } });
   await assert.rejects(f.server.confirmAssistantTool(f.context, requestId, 'a'.repeat(64), false), /ASSISTANT_PREVIEW_STALE/);
   assert.equal(f.calls.some(row => row.name === 'confirm_gc_assistant_request'), false);
+});
+
+
+test('a saved proposal cannot replay private booking data after stylist reassignment',async()=>{
+ const args={booking_id:actor,body:'Original private message'};
+ const f=fixture({teamMember:{stylist_id:requestId},tables:{bookings:[{id:actor,salon_id:business,stylist_id:actor}],gc_assistant_requests:[{id:requestId,salon_id:business,requested_by:actor,tool:'prepare_customer_message',arguments:args,locale:'fr',before_summary:{guest_name:'REASSIGNED_PRIVATE_NAME'},execution_payload:{body:'REASSIGNED_PRIVATE_BODY'}}]}});
+ await assert.rejects(f.run('prepare_customer_message',args),e=>e.code==='ASSISTANT_ACCESS_DENIED' && e.status===403);
 });

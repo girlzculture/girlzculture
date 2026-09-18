@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; 158-migration clean local chain verified; deposit/attendance and history isolation implemented; Overview/Calendar Chromium+WebKit 8/8 passed",
+  "status": "IMPLEMENTING; NOT RELEASED; private client card production-build browser10/10 and local database isolation passed; remaining140-clause scope in progress",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -41,7 +41,7 @@
       "verification": [
         "Screenshot review exposed and corrected dashboard font override and stacked setup banners",
         "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
-        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
+        "Overview/Calendar production-build browser8/8 passed across Chromium/WebKit390,768,1440 and844 landscape; screenshots reviewed."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-01 | Apply a coherent redesign to all 14 owner navigation sections: Overview, My Page, Photos, Styles & Pricing, Stylists, Products, Availability & Calendar, Bookings, Messages, Reviews, Finances (renamed from Earnings & Payouts), Promotions, Subscription, Settings. Include their editing/detail views and dialogs. | A page inventory and matched screenshots account for every section; no old landing screen is silently excluded. |",
@@ -2552,13 +2552,27 @@
       "implementation_paths": [
         "src/components/BookingNotes.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/components/owner/BusinessClientCard.tsx",
+        "src/lib/businessClientCore.ts",
+        "src/lib/businessClientServer.ts",
+        "src/app/api/salon/bookings/[id]/client-record/route.ts",
+        "supabase/migrations/20260918091453_business_private_client_cards.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Live migration, role verification and final release pending. Guest visits remain separate unless linked to a verified customer; offline unlinked sales are explicitly excluded from client spend.",
+      "changes": [
+        "Business-specific client record with preferences, notes, cautions, original-language per-visit formulas/duration and private work photos; assigned-stylist projection and independent field/update permissions; linked visit history and qualified recorded spend.",
+        "Atomic revision checks and request deduplication retain drafts on failure; private photo authorization before binary read/upload/removal; no public URL or image optimizer.",
+        "Assistant client retrieval uses current SQL field permissions on every follow-up; memory excludes private client cards."
+      ],
+      "verification": [
+        "Clean local chain159 migrations plus rollback-only two-business/same-customer, assigned-stylist, field/revocation, CAS/retry/audit, formula and Storage RLS assertions passed.",
+        "10/10 Chromium/WebKit browser cases: EN390, FR768, ES1440, zh-CN844 landscape; explicit retry retains ID/draft, save/readback/refresh, private photo/remove, revoked access.",
+        "Combined118 Node tests passed before final proposal-replay guard; malformed image validation regression reproduced HTTP500 and corrected to secret-safe HTTP400.",
+        "Final client UI production-build Chromium/WebKit10/10, TypeScript and changed-file lint pass; exact-error-code route6/6; assignment read/proposal regressions36/36."
+      ],
       "live_evidence": [],
       "detailed_clause": "CLIENT-01 — Maintain a business-specific client record containing past services/dates, exact service details or formula (color, size, length, technique and similar instructions), preferences, notes, allergies/sensitivities/cautions, photos of prior work and spend history. The owner's example includes medium waist-length box braids, approximately four hours, and a preference against excessive tightness.",
       "detailed_clause_line": 393
@@ -2575,13 +2589,27 @@
       "implementation_paths": [
         "src/components/BookingNotes.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/components/owner/BusinessClientCard.tsx",
+        "src/lib/businessClientCore.ts",
+        "src/lib/businessClientServer.ts",
+        "src/app/api/salon/bookings/[id]/client-record/route.ts",
+        "supabase/migrations/20260918091453_business_private_client_cards.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Live migration, role verification and final release pending. Guest visits remain separate unless linked to a verified customer; offline unlinked sales are explicitly excluded from client spend.",
+      "changes": [
+        "Business-specific client record with preferences, notes, cautions, original-language per-visit formulas/duration and private work photos; assigned-stylist projection and independent field/update permissions; linked visit history and qualified recorded spend.",
+        "Atomic revision checks and request deduplication retain drafts on failure; private photo authorization before binary read/upload/removal; no public URL or image optimizer.",
+        "Assistant client retrieval uses current SQL field permissions on every follow-up; memory excludes private client cards."
+      ],
+      "verification": [
+        "Clean local chain159 migrations plus rollback-only two-business/same-customer, assigned-stylist, field/revocation, CAS/retry/audit, formula and Storage RLS assertions passed.",
+        "10/10 Chromium/WebKit browser cases: EN390, FR768, ES1440, zh-CN844 landscape; explicit retry retains ID/draft, save/readback/refresh, private photo/remove, revoked access.",
+        "Combined118 Node tests passed before final proposal-replay guard; malformed image validation regression reproduced HTTP500 and corrected to secret-safe HTTP400.",
+        "Final client UI production-build Chromium/WebKit10/10, TypeScript and changed-file lint pass; exact-error-code route6/6; assignment read/proposal regressions36/36."
+      ],
       "live_evidence": [],
       "detailed_clause": "CLIENT-02 — Make a returning client's history easy for the owner or an authorized relevant stylist to open before service. Apply owner-set permissions to fields, photos, assistant retrieval and updates. Support the required languages while preserving the meaning of formulas, numerical quantities and cautions. A shared customer identity must not expose another business's private formula card or notes.",
       "detailed_clause_line": 395

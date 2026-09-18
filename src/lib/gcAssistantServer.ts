@@ -13,6 +13,8 @@ import { matchBusinessCatalog } from "@/lib/businessCatalogSearch";
 import { businessMediaInventory } from "@/lib/businessMediaInventory";
 import { readBusinessDepositRule } from "@/lib/businessDepositServer";
 import { bookingDepositTerms } from "@/lib/businessDepositRules";
+import { readBusinessClientCard } from "@/lib/businessClientServer";
+import { assistantAssignedProfessional, assistantRequestedProfessional, assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
@@ -93,9 +95,10 @@ export async function assertAssistantAccess(context: Context, permission: string
   if (!isSubscriptionActive(subscription.data?.status || salon.subscription_status, subscription.data?.current_period_end)) throw new AssistantError("ASSISTANT_PLAN_REQUIRED", 403);
 }
 
-async function readTool(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
+export async function readAssistantData(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
+  if (tool === "get_client_record") return readBusinessClientCard(context, String(args.booking_id));
   if (tool === "get_business_profile") return { ...selected(salon, profileFields), walk_ins_welcome: (salon.trust_info as Row | null)?.walk_ins_welcome === true };
   if (tool === "get_business_media") {
     const media = await admin.from("salons").select("gallery_photos,cover_photo_url,logo_url,photo_metadata").eq("id", salon.id).maybeSingle();
@@ -140,12 +143,15 @@ async function readTool(context: Context, tool: AssistantTool, args: Row): Promi
   }
   if (tool === "get_availability" && args.style_id) {
     if (args.stylist_id) { const stylist = await admin.from("stylists").select("id").eq("id", args.stylist_id).eq("salon_id", salon.id).maybeSingle(); if (stylist.error || !stylist.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404); }
-    const available = await bookingAvailability({ salonId: salon.id, styleId: String(args.style_id), stylistId: args.stylist_id ? String(args.stylist_id) : null, date: String(args.date) });
+    const available = await bookingAvailability({ salonId: salon.id, styleId: String(args.style_id), stylistId: assistantRequestedProfessional(context, args.stylist_id), date: String(args.date) });
     return { date: args.date, time_zone: available.timeZone, duration_minutes: available.durationMinutes, buffer_minutes: available.bufferMinutes, slots: available.slots.map(slot => ({ time: slot.value, stylist_id: slot.stylistId || null, professional_name: slot.stylistId ? slot.stylistName : null })) };
   }
   if (tool === "get_bookings") {
     const fields = "id,public_reference,appointment_datetime,status,guest_name,booking_origin,source,style:styles(name),stylist:stylists(name)";
-    const result = await admin.from("bookings").select(fields, { count: "exact" }).eq("salon_id", salon.id).gte("appointment_datetime", args.start).lt("appointment_datetime", args.end).order("appointment_datetime").limit(300);
+    let query = admin.from("bookings").select(fields, { count: "exact" }).eq("salon_id", salon.id);
+    const assigned = assistantAssignedProfessional(context);
+    if (assigned) query = query.eq("stylist_id", assigned);
+    const result = await query.gte("appointment_datetime", args.start).lt("appointment_datetime", args.end).order("appointment_datetime").limit(300);
     if (result.error) throw result.error;
     return { bookings: result.data, total: result.count, time_zone: salon.time_zone, capped_at: 300 };
   }
@@ -184,7 +190,10 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     notices.push("SERVICE_SAVED_AS_DRAFT");
   }
   if (tool === "prepare_customer_message") {
-    const booking = await admin.from("bookings").select("id,status,appointment_datetime,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id).maybeSingle();
+    let query = admin.from("bookings").select("id,status,appointment_datetime,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id);
+    const assigned = assistantAssignedProfessional(context);
+    if (assigned) query = query.eq("stylist_id", assigned);
+    const booking = await query.maybeSingle();
     if (booking.error) throw booking.error;
     if (!booking.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
     before = selected(booking.data, ["id", "status", "appointment_datetime"]);
@@ -202,6 +211,7 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
 export async function executeAssistantTool(context: Context, input: { requestId: string; locale: string; tool: unknown; args: unknown }) {
   const checked = validateTool(input.tool, input.args);
   await assertAssistantAccess(context, checked.permission);
+  if (checked.risk >= 3) await assertAssistantProposalScope(context, checked.tool, checked.args);
   const { admin, salon, user } = context;
   const existing = await admin.from("gc_assistant_requests").select("*").eq("id", input.requestId).eq("salon_id", salon.id).eq("requested_by", user.id).maybeSingle();
   if (existing.error) throw existing.error;
@@ -210,14 +220,14 @@ export async function executeAssistantTool(context: Context, input: { requestId:
     // Read permissions may narrow without changing the tool-level permission
     // (for example business finance -> own earnings). Refresh through the
     // authorized query instead of replaying a previously broader payload.
-    const request = checked.risk === 1 ? { ...existing.data, result: await readTool(context, checked.tool, checked.args) } : existing.data;
+    const request = checked.risk === 1 ? { ...existing.data, result: await readAssistantData(context, checked.tool, checked.args) } : existing.data;
     const presentation = checked.risk === 1
       ? presentAssistantResult(checked.tool, request.result, input.locale)
       : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
     return { request, preview_required: checked.risk >= 3, replayed: true, assistant_message: presentation.message, suggestions: presentation.suggestions };
   }
   const prepared = checked.risk >= 3 ? await prepare(context, checked.tool, checked.args) : { before: {}, payload: {}, notices: [] };
-  const result = checked.risk === 1 ? await readTool(context, checked.tool, checked.args) : null;
+  const result = checked.risk === 1 ? await readAssistantData(context, checked.tool, checked.args) : null;
   const row = { id: input.requestId, salon_id: salon.id, requested_by: user.id, locale: input.locale, tool: checked.tool, arguments: checked.args, execution_payload: prepared.payload, risk_class: checked.risk, permission: checked.permission, before_summary: prepared.before, result,
     digest: digest({ id: input.requestId, salon: salon.id, user: user.id, locale: input.locale, tool: checked.tool, args: checked.args, before: prepared.before, payload: prepared.payload }) };
   const saved = await admin.rpc("save_gc_assistant_request", { p_request: row, p_notices: prepared.notices });
@@ -237,6 +247,7 @@ export async function confirmAssistantTool(context: Context, requestId: string, 
   if (!row.data) throw new AssistantError("ASSISTANT_REQUEST_NOT_FOUND", 404);
   const checked = validateTool(row.data.tool, row.data.arguments);
   await assertAssistantAccess(context, checked.permission);
+  await assertAssistantProposalScope(context, checked.tool, checked.args);
   if (checked.tool === "prepare_business_policy_update" && !policyReviewed) throw new AssistantError("ASSISTANT_POLICY_REVIEW_REQUIRED", 409);
   // Re-run deterministic catalog/moderation checks at execution time as well.
   if (!row.data.confirmed_at) {

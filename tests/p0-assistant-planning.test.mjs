@@ -16,6 +16,10 @@ function fixture(options = {}) {
       if (name === 'p0_actor_has_permission') return { data: !(options.denied || []).includes(args.p_permission) };
       if (name === 'business_finance_scope') return options.ownFinance ? { data: { kind: 'own', stylist_id: 'professional-A' } } : { error: { message: 'FINANCE_ACCESS_DENIED' } };
       if (name === 'reserve_gc_assistant_usage') return { data: options.budget === false ? null : 'local-reservation' };
+      if (name === 'read_business_client_card') {
+        assert.equal(args.p_salon,'business-A'); assert.equal(args.p_actor,'owner-A');
+        return options.clientDenied ? {error:{message:'CLIENT_NOT_FOUND'}} : {data:options.clientRead};
+      }
       throw Error(`Unexpected RPC ${name}`);
     },
     from(table) {
@@ -45,6 +49,7 @@ function fixture(options = {}) {
     },
   };
   const load = typescriptLoader(root, {
+    '@/lib/gcAssistantServer': {readAssistantData:async(context,tool,args)=>{assert.equal(context.salon.id,'business-A');assert.equal(context.user.id,'owner-A');calls.push({refresh:tool,args});if(options.historyReadDenied){const e=Error('ASSISTANT_RECORD_NOT_FOUND');e.code='ASSISTANT_RECORD_NOT_FOUND';throw e;}return Object.hasOwn(options,'historyRead')?options.historyRead:history.find(row=>row.tool===tool && JSON.stringify(row.arguments)===JSON.stringify(args))?.result;}},
     '@/lib/aiAutomationServer': { approvedAiModels: () => [options.model || 'fixture-model'], approvedAiProviders: () => ['openai'], aiProviderConfigured: () => options.configured !== false, redactSensitiveText: value => value.replaceAll('secret@example.test', '[redacted]') },
   }, {
     process: { env: { ...(options.missingRates ? {} : { AI_OWNER_INPUT_USD_PER_MILLION: '1', AI_OWNER_OUTPUT_USD_PER_MILLION: '4' }), OPENAI_API_KEY: 'local-fixture-only' } },
@@ -65,7 +70,7 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
   return { run, calls, requests, updates };
 }
 
@@ -79,6 +84,18 @@ test('foreign or missing history IDs discard associated client prose before the 
     assert.deepEqual(context.conversation,[]);
     assert.equal(JSON.stringify(f.requests).includes('987654321'),false);
     assert.equal(context.previous.length,partial?1:0);
+  }
+});
+
+test('client field permissions and assignment are reprojected before follow-up context reaches the model', async () => {
+  for(const clientDenied of [false,true]) {
+    const fresh={booking_id:booking.id,permissions:{client_history:true,client_cautions:false},cautions:null,notes:'Current authorized note'};
+    const f=fixture({clientDenied,clientRead:fresh,history:[{tool:'get_client_record',permission:'client_history',arguments:{booking_id:booking.id},result:{...fresh,cautions:'REVOKED_PRIVATE_CAUTION'}}],conversation:[{role:'assistant',text:'REVOKED_PRIVATE_CAUTION'}]});
+    await f.run('en','What should I know before this visit?');
+    assert.equal(JSON.stringify(f.requests).includes('REVOKED_PRIVATE_CAUTION'),false);
+    const context=JSON.parse(f.requests[0].messages[1].content);assert.deepEqual(context.conversation,[]);
+    assert.equal(context.previous.length,clientDenied?0:1);
+    if(!clientDenied)assert.equal(context.previous[0].result.notes,'Current authorized note');
   }
 });
 
@@ -325,7 +342,7 @@ test('all five locales are explicit in governed planning, with untrusted input k
 test('disabled, unconfigured, unauthorized and out-of-budget planning never calls the provider', async () => {
   for (const [options, code] of [
     [{ enabled: false }, 'ASSISTANT_UNAVAILABLE'], [{ configured: false }, 'ASSISTANT_UNAVAILABLE'],
-    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'photos', 'styles', 'stylists', 'products', 'reviews', 'promotions', 'earnings'] }, 'ASSISTANT_ACCESS_DENIED'],
+    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'photos', 'styles', 'stylists', 'products', 'reviews', 'promotions', 'earnings', 'client_history'] }, 'ASSISTANT_ACCESS_DENIED'],
     [{ budget: false }, 'ASSISTANT_BUDGET_LIMIT'],
   ]) {
     const f = fixture(options); await assert.rejects(f.run(), new RegExp(code)); assert.equal(f.requests.length, 0);
@@ -452,4 +469,12 @@ test('language mentions, quoted commands and ordinary follow-ups do not switch t
     const f = fixture();
     assert.equal((await f.run('fr', text)).response_locale, 'fr', text);
   }
+});
+
+
+test('reassigned appointment history and its transcript cannot reach a follow-up provider request',async()=>{
+ for(const historyReadDenied of [false,true]){
+ const f=fixture({assigned:'professional-A',historyReadDenied,historyRead:{bookings:[],total:0},history:[{tool:'get_bookings',permission:'bookings',arguments:{start:'2026-09-24T00:00:00Z',end:'2026-09-25T00:00:00Z'},result:{bookings:[{guest_name:'REASSIGNED_PRIVATE_CLIENT'}],total:1}}],conversation:[{role:'assistant',text:'REASSIGNED_PRIVATE_CLIENT has an appointment.'}]});
+ await f.run('en','What about that appointment?');assert.doesNotMatch(JSON.stringify(f.requests),/REASSIGNED_PRIVATE_CLIENT/);const sent=JSON.parse(f.requests[0].messages[1].content);assert.deepEqual(sent.conversation,[]);assert.equal(sent.previous.length,historyReadDenied?0:1);assert.equal(f.calls.filter(c=>c.refresh==='get_bookings').length,1);
+ }
 });

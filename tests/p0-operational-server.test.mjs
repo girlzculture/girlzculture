@@ -201,3 +201,17 @@ test('catalog and hours preparations share dashboard validation and never publis
   assert.equal((await f.run('prepare_business_hours',{hours})).request.execution_payload.hours.Mon.close,'18:00');
   await assert.rejects(fixture().run('prepare_service_edit',{style_id:service,name:'Braids',price:180,duration_hours:2,buffer_minutes:15}),/ASSISTANT_DRAFT_REQUIRED/);
 });
+
+
+test('assigned stylist reads exclude other appointments, clients, messages and availability before model access',async()=>{
+ const range={start:'2030-09-24T00:00:00.000Z',end:'2030-09-25T00:00:00.000Z'};
+ const own={id:service,salon_id:business,stylist_id:professional,guest_name:'Assigned client',customer_id:service,appointment_datetime:range.start,status:'Confirmed',estimated_total:100};
+ const other={...own,id:actor,stylist_id:actor,guest_name:'OTHER_PRIVATE_CLIENT',estimated_total:999};
+ const tables={bookings:[own,other,{...other,salon_id:actor,id:business}],booking_messages:[{id:actor,salon_id:business,booking_id:actor,body:'OTHER_PRIVATE_MESSAGE'}]};
+ const f=fixture({teamMember:{stylist_id:professional},tables});
+ for(const tool of ['get_bookings','get_customers','get_upcoming_appointments','get_business_summary']){const result=(await f.run(tool,range)).request.result;assert.doesNotMatch(JSON.stringify(result),/OTHER_PRIVATE_CLIENT|999/);if(tool==='get_bookings')assert.equal(result.total,1);if(tool==='get_business_summary')assert.equal(result.bookings,1);}
+ await assert.rejects(f.run('get_booking_messages',{booking_id:actor}),e=>e.code==='ASSISTANT_RECORD_NOT_FOUND');
+ assert.equal(f.calls.some(c=>c.table==='booking_messages'),false);
+ await f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:null});assert.equal(f.calls.filter(c=>c.calendar).at(-1).calendar.stylistId,professional);
+ await assert.rejects(f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:actor}),e=>e.code==='ASSISTANT_ACCESS_DENIED');
+});

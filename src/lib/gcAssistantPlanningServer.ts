@@ -6,6 +6,8 @@ import { openAiApiKey, openAiApiUrl, openAiChatCompletionText, openAiHttpFailure
 import { AssistantPlannerError, ownerPlannerSchema, parseOwnerPlannerResponse } from "@/lib/gcAssistantPlannerProtocol";
 import { isAssistantPage } from "@/lib/assistantPageContext";
 import { isAssistantLanguage, type AssistantLanguage } from "@/lib/assistantLanguage";
+import type { requireSalonOwner } from "@/lib/supabaseAdmin";
+import { readAssistantData } from "@/lib/gcAssistantServer";
 
 const ASSISTANT_LANGUAGE_NAMES = {
   en: "English",
@@ -57,6 +59,11 @@ function answerFacts(tool: string, args: unknown, result: unknown) {
 
 function planningResult(tool: string, result: unknown, granted: ReadonlySet<string>) {
   if (result === null || result === undefined) return null;
+  if (tool === "get_client_record" && typeof result === "object") {
+    const card = result as Record<string, unknown>;
+    return { ...card, is_excerpt: Number(card.visit_count) > 12, text_may_be_excerpted: true,
+      photo_evidence: "Authorized metadata only; image contents have not been analyzed." };
+  }
   if (tool === "get_business_summary" && typeof result === "object") {
     const value = result as Record<string, unknown>;
     return { ...value, calendar_gaps: granted.has("availability") ? value.calendar_gaps : null, service_performance: granted.has("styles") ? value.service_performance : null, professional_performance: granted.has("stylists") ? value.professional_performance : null };
@@ -89,9 +96,10 @@ function boundedFacts(value: unknown, depth = 0): unknown {
   return value;
 }
 
-/** Planning cannot read private records or mutate anything. The returned plan
- * is untrusted input to the same server validators used by manual controls. */
+/** Server authorization refreshes sensitive history before planning. The model
+ * cannot choose a business or mutate records; its plan is validated again. */
 export async function planOwnerRequest(input: {
+  context: Awaited<ReturnType<typeof requireSalonOwner>>;
   admin: SupabaseClient; userId: string; salonId: string; locale: string; text: string;
   timeZone: string; previousRequestIds: string[]; conversation?: { role: "user" | "assistant"; text: string }[];
   answerOnly?: boolean; page?: string | null;
@@ -104,6 +112,7 @@ export async function planOwnerRequest(input: {
   const explicitLocale = input.answerOnly ? null : explicitResponseLanguage(input.text);
   const responseLocale = explicitLocale ?? input.locale;
   const { admin } = input;
+  if (input.context.admin !== admin || input.context.salon.id !== input.salonId || input.context.user.id !== input.userId) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
   const planAccess = await admin.rpc("p0_business_plan_active", { p_salon: input.salonId });
   if (planAccess.error) throw planAccess.error;
   if (planAccess.data !== true) throw new AssistantError("ASSISTANT_PLAN_REQUIRED", 403);
@@ -137,13 +146,38 @@ export async function planOwnerRequest(input: {
   if (!Number.isFinite(inputRate) || inputRate <= 0 || !Number.isFinite(outputRate) || outputRate <= 0) throw new AssistantError("ASSISTANT_COST_CONFIGURATION_REQUIRED", 503);
   const previous = input.previousRequestIds.length ? await admin.from("gc_assistant_requests").select("id,tool,arguments,result,permission").in("id", input.previousRequestIds).eq("salon_id", input.salonId).eq("requested_by", input.userId).order("created_at").limit(6) : { data: [], error: null };
   if (previous.error) throw previous.error;
-  const authorizedHistory = (previous.data || []).filter(row => granted.has(row.permission) &&
+  let clientHistoryChanged = false;
+  // Private field grants and stylist assignment can change independently of
+  // the tool's broad permission. Reproject from current SQL authorization on
+  // every follow-up/answer, before old facts or transcript reach the model.
+  const refreshedHistory = await Promise.all((previous.data || []).map(async row => {
+    if (granted.has(row.permission) && ["get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_booking_messages", "get_availability", "get_calendar_gaps"].includes(row.tool)) {
+      try {
+        const fresh = await readAssistantData(input.context, row.tool, row.arguments);
+        if (JSON.stringify(fresh) !== JSON.stringify(row.result)) clientHistoryChanged = true;
+        return { ...row, result: fresh };
+      } catch (error) {
+        const code = error && typeof error === "object" && "code" in error ? error.code : null;
+        if (code === "ASSISTANT_ACCESS_DENIED" || code === "ASSISTANT_RECORD_NOT_FOUND") { clientHistoryChanged = true; return null; }
+        throw error;
+      }
+    }
+    if (row.tool !== "get_client_record" || !granted.has("client_history")) return row;
+    const fresh = await admin.rpc("read_business_client_card", { p_salon: input.salonId, p_actor: input.userId, p_booking: row.arguments?.booking_id });
+    if (fresh.error) {
+      if (/CLIENT_ACCESS_DENIED|CLIENT_NOT_FOUND/.test(String(fresh.error.message))) { clientHistoryChanged = true; return null; }
+      throw fresh.error;
+    }
+    if (JSON.stringify(fresh.data) !== JSON.stringify(row.result)) clientHistoryChanged = true;
+    return { ...row, result: fresh.data };
+  }));
+  const authorizedHistory = refreshedHistory.filter(row => row && granted.has(row.permission) &&
     (row.tool !== "get_earnings_summary" || !ownFinanceStylist ||
-      row.result?.scope === "own_stylist_only" && row.result?.scope_stylist_id === ownFinanceStylist));
+      row.result?.scope === "own_stylist_only" && row.result?.scope_stylist_id === ownFinanceStylist)).filter(row => row !== null);
   // Unavailable/foreign request IDs and permission or assignment changes also
   // invalidate the client transcript derived from them, before any model call.
   const authorizedIds = new Set(authorizedHistory.map(row => row.id));
-  const historyWasRestricted = input.previousRequestIds.some(id => !authorizedIds.has(id));
+  const historyWasRestricted = clientHistoryChanged || input.previousRequestIds.some(id => !authorizedIds.has(id));
   const priorResults = authorizedHistory.map(row => ({ tool: row.tool, arguments: Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as keyof typeof ASSISTANT_TOOLS].risk >= 3 ? null : boundedFacts(row.arguments), result: boundedFacts(planningResult(row.tool, input.answerOnly ? answerFacts(row.tool, row.arguments, row.result) : row.result, granted as Set<string>)) }));
   if (input.answerOnly && !priorResults.some(row => row.result !== null && Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as keyof typeof ASSISTANT_TOOLS].risk === 1)) throw new AssistantError("ASSISTANT_INVALID_PLAN", 502);
   // Catalog names/IDs are public platform vocabulary. Prior booking reads may

@@ -6,11 +6,13 @@ import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
 import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
 import { readBusinessFinances } from "@/lib/businessFinanceServer";
+import { assistantAssignedProfessional, assistantRequestedProfessional } from "@/lib/assistantProfessionalScope";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
 export async function readOwnerOperation(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  const assigned = assistantAssignedProfessional(context);
   if (tool === "get_earnings_summary") {
     const timeZone = String(salon.time_zone || "America/New_York");
     const day = (instant: number) => {
@@ -28,7 +30,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
       compensation_position: Object.entries(compensation_position).map(([id,values]) => ({ name:names.get(id)||null,...values })),
       definitions: "Integer cents in USD. Completed sales, receipts, costs, earned compensation and payouts are separate. Payments taken outside the app are recorded, not provider-processed. Recorded profit is not an exact margin when costs or expenses are incomplete." };
   }
-  if (tool === "get_calendar_gaps" || tool === "get_availability") return calendarAvailability({ salonId: salon.id, date: String(args.date), stylistId: args.stylist_id ? String(args.stylist_id) : null });
+  if (tool === "get_calendar_gaps" || tool === "get_availability") return calendarAvailability({ salonId: salon.id, date: String(args.date), stylistId: assistantRequestedProfessional(context, args.stylist_id) });
   if (tool === "get_plan_status") {
     const result = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier,cancel_at_period_end").eq("salon_id", salon.id).maybeSingle();
     if (result.error) throw result.error;
@@ -67,7 +69,9 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     return { profile_completion: profileCompletion(salon, counts[0].count || 0, counts[1].count || 0) };
   }
   if (tool === "get_booking_messages") {
-    const booking = await admin.from("bookings").select("id,booking_origin,customer_id").eq("salon_id", salon.id).eq("id", args.booking_id).maybeSingle();
+    let query = admin.from("bookings").select("id,booking_origin,customer_id").eq("salon_id", salon.id).eq("id", args.booking_id);
+    if (assigned) query = query.eq("stylist_id", assigned);
+    const booking = await query.maybeSingle();
     if (booking.error) throw booking.error;
     if (!booking.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
     const messages = await admin.from("booking_messages").select("id,original_body,body,source_locale,sender_role,created_at", { count: "exact" }).eq("salon_id", salon.id).eq("booking_id", args.booking_id).order("created_at", { ascending: false }).limit(100);
@@ -97,11 +101,12 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     async function readPeriod(start: unknown, end: unknown, summaryOnly = false) {
       const records: Row[] = [];
       for (let offset = 0; ; offset += 1000) {
-        const query = summaryOnly
+        let query = summaryOnly
           ? admin.from("bookings").select("status,estimated_total,booking_origin")
           : tool === "get_earnings_summary"
             ? admin.from("bookings").select("id,appointment_datetime,status,estimated_total,booking_origin,payment_mode,payment_verified_at,stripe_charge_id,deposit_status,deposit_amount,stripe_processing_fee,platform_fee,net_amount_owed_salon,refund_status,refund_amount,refund_completed_at,stripe_refund_id,transfer_status,stripe_transfer_id")
             : admin.from("bookings").select("id,public_reference,appointment_datetime,status,guest_name,guest_email,customer_id,estimated_total,cancelled_by,cancellation_initiated_by,booking_origin,source,style_id,stylist_id");
+        if (assigned) query = query.eq("stylist_id", assigned);
         const result = await query.eq("salon_id", salon.id).gte("appointment_datetime", start).lt("appointment_datetime", end).order("id").range(offset, offset + 999);
         if (result.error) throw result.error;
         records.push(...result.data || []);
@@ -137,7 +142,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const calendarDate = new Intl.DateTimeFormat("en-CA", { timeZone: String(salon.time_zone), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     const calendarAccess = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: "availability" });
     if (calendarAccess.error) throw calendarAccess.error;
-    const calendar = calendarAccess.data === true ? await calendarAvailability({ salonId: salon.id, date: calendarDate }) : null;
+    const calendar = calendarAccess.data === true ? await calendarAvailability({ salonId: salon.id, date: calendarDate, stylistId: assigned }) : null;
     return { calendar_gaps: calendar, ...metrics, ...currentPeriod, comparison, service_performance: services, professional_performance: professionals, no_show_definition: "Recorded booking status only; a past uncompleted appointment is not evidence of a no-show.", upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
   }
   throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");

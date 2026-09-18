@@ -119,6 +119,8 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
     return { message: [prose, parts].filter(Boolean).join("\n\n") || words.policies(parts), suggestions: suggest(["Explain cancellations", "Explain deposits", "Open policies"]) };
   }
 
+  if (tool === "get_client_record") return { message: t("I found the client history you are allowed to access. Open the client record in Bookings to review or update it.") };
+
   if (tool === "search_platform_knowledge") {
     const matches = rows(result.matches);
     const answers = matches.slice(0, 3).map(match => {

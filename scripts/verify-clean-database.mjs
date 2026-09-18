@@ -1256,4 +1256,6 @@ if (deployedMigration !== expectedMigration) {
   );
   process.exit(1);
 }
+const clientCardsOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-client-cards.sql")], "Private client cards, field permissions and two-business assertions");
+if (clientCardsOutput) console.log(clientCardsOutput);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);
