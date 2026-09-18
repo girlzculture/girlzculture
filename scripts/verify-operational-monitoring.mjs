@@ -19,7 +19,7 @@ function regexEscape(value) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 130, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 144, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -32,9 +32,11 @@ for (const file of routeFiles) {
     /console\.(?:error|warn)\s*\(/,
     `${route} can write a raw exception to provider logs.`,
   );
-  const wrappedMethods = [...source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE) = withOperationalMonitoring/g)].map((match) => match[1]);
+  const handlerExports = [...source.matchAll(/export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\s*=/g)].map((match) => match[1]);
+  const wrappedMethods = [...source.matchAll(/export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\s*=\s*withOperationalMonitoring/g)].map((match) => match[1]);
   assert.ok(wrappedMethods.length > 0, `${route} has no monitored handler exports.`);
-  assert.match(source, /from "@\/lib\/operationalMonitoring"/, `${route} does not import shared monitoring.`);
+  assert.deepEqual(handlerExports, wrappedMethods, `${route} has an unwrapped handler export.`);
+  assert.match(source, /from\s*["']@\/lib\/operationalMonitoring["']/, `${route} does not import shared monitoring.`);
   for (const method of wrappedMethods) {
     assert.ok(
       new RegExp(
@@ -113,7 +115,7 @@ for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
   const relative = path.relative(root, file).replaceAll("\\", "/");
   const route = `/${relative.replace(/^src\/app\//, "").replace(/\/route\.ts$/, "")}`;
-  const methods = [...source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE) = withOperationalMonitoring/g)]
+  const methods = [...source.matchAll(/export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\s*=\s*withOperationalMonitoring/g)]
     .map((match) => match[1]);
   const evidence = inventoryRows.get(route);
   assert.ok(evidence, `${route} has no structured inventory evidence.`);
@@ -403,7 +405,7 @@ const providerEntryPoints = [
   ["src/lib/publicPageMonitoring.ts", /capturePublicPageFailure/, /capturePlatformError/],
   ["src/lib/discoveryServer.ts", /getSupabaseAdmin/, /discover_nearby_salons_ranked/],
   ["src/lib/bookingAvailabilityServer.ts", /getSupabaseAdmin/, /booking_checkout_intents/],
-  ["src/lib/bookingRescheduleServer.ts", /capturePlatformError/, /Promise\.allSettled/],
+  ["src/lib/bookingRescheduleServer.ts", /await runDeliveries\(/, /warningReferences/],
   ["src/lib/mediaUploadServer.ts", /verifyPreparedMediaObjects/, /uploadToSignedUrl|createSignedUploadUrl/],
   ["src/lib/mediaUploadClient.ts", /uploadToSignedUrl/, /reportClientOperationalFailure/],
   ["src/lib/supabase.ts", /protected API route supplies the canonical incident reference/, /catch\s*\{/],
@@ -424,6 +426,15 @@ for (const [relative, firstEvidence, secondEvidence] of providerEntryPoints) {
 const stripeSource = fs.readFileSync(path.join(root, "src/lib/stripeServer.ts"), "utf8");
 assert.doesNotMatch(stripeSource, /data\.error\?\.message/, "Stripe provider text must never be thrown.");
 const notificationsSource = fs.readFileSync(path.join(root, "src/lib/supabaseAdmin.ts"), "utf8");
+const deliveryWorker = notificationsSource.slice(
+  notificationsSource.indexOf("export async function runDeliveries("),
+  notificationsSource.indexOf("export async function bookingDeliveryChannels("),
+);
+assert.match(deliveryWorker, /await capturePlatformError\(/, "Shared booking delivery failures must retain canonical incident references.");
+assert.match(deliveryWorker, /action:\s*"claim_delivery"/, "Delivery reservation failures must be monitored.");
+assert.match(deliveryWorker, /action:\s*`deliver:/, "Individual provider failures must be monitored.");
+assert.match(deliveryWorker, /action:\s*"write_delivery_log"/, "Delivery log failures must be monitored.");
+assert.match(deliveryWorker, /request_id:\s*reference/, "Reschedule callers must receive the same delivery incident reference.");
 assert.doesNotMatch(notificationsSource, /await response\.text\(/, "Email/SMS provider bodies must never be retained.");
 const pushSource = fs.readFileSync(path.join(root, "src/lib/webPushServer.ts"), "utf8");
 assert.doesNotMatch(pushSource, /await response\.text\(/, "Web Push provider bodies must never be retained.");

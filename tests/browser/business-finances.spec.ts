@@ -4,8 +4,25 @@ import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { summarizeOperatingBooks, type OperatingBooks } from '../../src/lib/businessFinanceCore';
 import { BUSINESS_FINANCE_SOURCE_MESSAGES } from '../../src/i18n/business-finance-source-catalog';
 import { expectOwnerLocaleCoverage } from './helpers/ownerLocaleCoverage';
+import AxeBuilder from '@axe-core/playwright';
 
 test.use({ serviceWorkers: 'block' });
+test('Business finance tablet ledger is reachable and scrollable with the keyboard',async({page})=>{
+  const fixture=await p0OwnerFixture(page,{locale:'es'});
+  const t=(text:string)=>BUSINESS_FINANCE_SOURCE_MESSAGES.es[text]||text;
+  await page.setViewportSize({width:768,height:1000});
+  await page.goto('/salon/dashboard/earnings');
+  const filter=page.getByRole('combobox',{name:t('Balance filter'),exact:true});
+  await expect(filter).toBeVisible();
+  await filter.focus();await page.keyboard.press('Tab');
+  const ledger=page.getByRole('region',{name:t('Sales and balances'),exact:true});
+  await expect(ledger).toBeFocused();
+  await expect.poll(()=>ledger.evaluate(node=>node.scrollWidth>node.clientWidth)).toBe(true);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(()=>ledger.evaluate(node=>node.scrollLeft)).toBeGreaterThan(0);
+  const audit=await new AxeBuilder({page}).include('main').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+  expect(audit.violations).toEqual([]);expect(fixture.unexpected).toEqual([]);
+});
 for(const locale of ['en','fr','es','zh-CN'] as const){
   test(`Business finance downloads use the selected ${locale} language and preserve export failure references`,async({page})=>{
     const fixture=await p0OwnerFixture(page,{populated:true,locale});

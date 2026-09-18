@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-17. This inventory covers 130 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-18. This inventory covers 144 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -15,6 +15,20 @@ Updated: 2026-09-17. This inventory covers 130 API route files and is enforced b
 
 | Route | Methods | Classification | Coverage |
 |---|---|---|---|
+| `/api/communications/unsubscribe` | POST | expected-only | Covered |
+| `/api/customer/bookings/[id]/attendance` | GET, POST | protected | Covered |
+| `/api/customer/bookings/[id]/communications` | GET, PUT | protected | Covered |
+| `/api/salon/assistant/appearance` | PATCH | protected | Covered |
+| `/api/salon/bookings/[id]/attendance` | GET, POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record/links` | GET, POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record/photos/[photoId]` | GET, DELETE | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record/photos` | POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record` | GET, POST | provider-backed | Covered |
+| `/api/salon/deposit-rules` | GET, POST | protected | Covered |
+| `/api/salon/finances/export` | GET | protected | Covered |
+| `/api/salon/finances` | GET, POST | protected | Covered |
+| `/api/salon/inventory` | GET, POST | protected | Covered |
+| `/api/salon/photos` | PATCH | protected | Covered |
 | `/api/salon/assistant` | POST | protected | Covered |
 | `/api/salon/assistant/memory` | GET, POST, DELETE | protected | Covered |
 | `/api/salon/policies` | GET, POST | protected | Covered |

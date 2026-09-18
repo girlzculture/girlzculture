@@ -61,7 +61,7 @@ test("P0 owner core language flow retains account preference and original busine
 });
 
 for (const width of [390, 768, 1440]) {
-  test(`P0 policy publication and Assistant review at ${width}px in every locale`, async ({ page }, testInfo) => {
+  test(`P0 policy publication and Assistant review at ${width}px in every release locale`, async ({ page }, testInfo) => {
     test.setTimeout(150_000);
     const fixture = await p0OwnerFixture(page, { planning: true });
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
@@ -69,7 +69,7 @@ for (const width of [390, 768, 1440]) {
     await expect(page.getByRole('heading', { name: 'Your Business Policies', exact: true })).toBeVisible();
     const gallery = `docs/screenshots/p0/${testInfo.project.name}`;
     await mkdir(gallery, { recursive: true });
-    for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+    for (const locale of ownerReleaseLocales) {
       const t = (text: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[text] || text;
       await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
       await expect.poll(fixture.accountLocale).toBe(locale);
@@ -87,7 +87,7 @@ for (const width of [390, 768, 1440]) {
       await expect(page.getByRole('heading', { name: t('Review policy draft'), exact: true })).toBeVisible();
       const publish = page.getByRole('button', { name: t('Confirm and publish'), exact: true });
       await expect(publish).toBeDisabled();
-      expect(fixture.revisions.filter(row => row.published_at)).toHaveLength(['en', 'fr', 'wo', 'es', 'zh-CN'].indexOf(locale));
+      expect(fixture.revisions.filter(row => row.published_at)).toHaveLength(ownerReleaseLocales.indexOf(locale));
       await page.getByRole('checkbox').check();
       await publish.click();
       await expect(page.getByRole('status').filter({ hasText: t('Business policies published.') })).toBeVisible();
@@ -104,7 +104,7 @@ for (const width of [390, 768, 1440]) {
       await expect(dialog.getByRole('heading', { name: t('Review this draft'), exact: true }).last()).toBeVisible();
       await page.screenshot({ path: `${gallery}/assistant-preview-${locale}-${width}.png`, ...screenshotCaret });
       const pending = fixture.actions.filter(action => action.action === 'confirm').length;
-      expect(pending).toBe(['en', 'fr', 'wo', 'es', 'zh-CN'].indexOf(locale));
+      expect(pending).toBe(ownerReleaseLocales.indexOf(locale));
       await dialog.getByRole('button', { name: t('Confirm this public action'), exact: true }).click();
       await expect(dialog.getByRole('status').filter({ hasText: t('Your change was saved and verified.') }).last()).toBeVisible();
       expect(fixture.business.description).toBe('Texte original vérifié — $180');

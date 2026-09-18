@@ -15,7 +15,12 @@ export function loadNodeTypescript(root,overrides={}){
   const code=ts.transpileModule(readFileSync(resolved,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
   const resolve=name=>{
    if(Object.hasOwn(overrides,name))return overrides[name];if(name==='server-only')return {};
-   if(name.startsWith('@/'))return load(`src/${name.slice(2)}${existsSync(path.resolve(root,`src/${name.slice(2)}.tsx`))?'.tsx':'.ts'}`);
+   if(name.startsWith('@/')){
+    const base=`src/${name.slice(2)}`;
+    const target=[base,`${base}.tsx`,`${base}.ts`].find(file=>existsSync(path.resolve(root,file)));
+    if(!target)throw new Error(`Repository test module not found: ${name}`);
+    return load(target);
+   }
    return require(name);
   };
   new Function('exports','require',code)(exports,resolve);return exports;

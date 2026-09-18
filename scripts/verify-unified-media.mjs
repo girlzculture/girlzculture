@@ -67,6 +67,7 @@ assert.ok(
 const ownerDashboard = read(
   "src/components/owner/OwnerDashboardApp.tsx",
 );
+const photoLibrary = read("src/components/owner/BusinessPhotoLibrary.tsx");
 const catalogEditors = read(
   "src/components/owner/StructuredCatalogEditors.tsx",
 );
@@ -244,7 +245,8 @@ const checks = [
   [
     ownerDashboard.includes('field: "logo_url"') &&
       ownerDashboard.includes('field: "cover_photo_url"') &&
-      ownerDashboard.includes('field: "gallery_photos"') &&
+      ownerDashboard.includes('<BusinessPhotoLibrary salon=') &&
+      /attachment=\{\{\s*record_type:\s*"salon",\s*record_id:\s*salon.id,\s*field:\s*"gallery_photos"\s*\}\}/.test(photoLibrary) &&
       ownerDashboard.includes('record_type: "product"') &&
       catalogEditors.includes('record_type: "style"') &&
       catalogEditors.includes('record_type: "stylist"'),
