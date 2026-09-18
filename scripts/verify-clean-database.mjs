@@ -1258,6 +1258,8 @@ if (deployedMigration !== expectedMigration) {
 }
 const clientCardsOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-client-cards.sql")], "Private client cards, field permissions and two-business assertions");
 if (clientCardsOutput) console.log(clientCardsOutput);
+const clientLinksOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-business-client-links.sql")],"Explicit client links and two-business boundaries");
+if(clientLinksOutput) console.log(clientLinksOutput);
 const catalogOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-catalog.sql")], "Featured service persistence and isolation assertions");
 if (catalogOutput) console.log(catalogOutput);
 const assignmentOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-professional-service-assignments.sql")], "Professional assignments, checkout enforcement and two-business isolation assertions");

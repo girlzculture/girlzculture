@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; product catalog, private inventory and stock-linked finance verified locally; remaining full scope continues",
+  "status": "IMPLEMENTING; NOT RELEASED; explicit private guest-history links verified locally; remaining full scope continues",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -1009,7 +1009,9 @@
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/lib/gcAssistantPlanningServer.ts",
         "supabase/migrations/20260918060000_assistant_scoped_history.sql",
-        "tests/p0-assistant-planning.test.mjs"
+        "tests/p0-assistant-planning.test.mjs",
+        "src/components/owner/BusinessClientLinks.tsx",
+        "supabase/migrations/20260918131641_business_client_visit_links.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -1018,12 +1020,14 @@
         "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels.",
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
         "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
-        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions.",
+        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
         "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
-        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity.",
+        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending."
       ],
       "live_evidence": [],
       "status": "IMPLEMENTING",
@@ -1093,7 +1097,9 @@
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/lib/gcAssistantPlanningServer.ts",
         "supabase/migrations/20260918060000_assistant_scoped_history.sql",
-        "tests/p0-assistant-planning.test.mjs"
+        "tests/p0-assistant-planning.test.mjs",
+        "src/components/owner/BusinessClientLinks.tsx",
+        "supabase/migrations/20260918131641_business_client_visit_links.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -1102,13 +1108,15 @@
         "Direct foreign IDs, foreign public guidance, revoked permissions, and history replay tested at backend boundary.",
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
         "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
-        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions."
+        "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions.",
+        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up."
       ],
       "verification": [
         "14 execution + 31 planning + 4 profile/media tests; live interface refusal still pending",
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
         "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
-        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity."
+        "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity.",
+        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending."
       ],
       "live_evidence": [],
       "detailed_clause": "SCOPE-05 — Verify direct requests, indirect comparisons, guessed record IDs and follow-up questions across two isolated test businesses. Confirm both refusal in the interface and rejection at data/tool boundaries. Preserve the explicit public-information restriction even if ordinary website visitors can view those profiles manually.",
@@ -2575,7 +2583,9 @@
         "src/lib/businessClientCore.ts",
         "src/lib/businessClientServer.ts",
         "src/app/api/salon/bookings/[id]/client-record/route.ts",
-        "supabase/migrations/20260918091453_business_private_client_cards.sql"
+        "supabase/migrations/20260918091453_business_private_client_cards.sql",
+        "src/components/owner/BusinessClientLinks.tsx",
+        "supabase/migrations/20260918131641_business_client_visit_links.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -2583,13 +2593,15 @@
       "changes": [
         "Business-specific client record with preferences, notes, cautions, original-language per-visit formulas/duration and private work photos; assigned-stylist projection and independent field/update permissions; linked visit history and qualified recorded spend.",
         "Atomic revision checks and request deduplication retain drafts on failure; private photo authorization before binary read/upload/removal; no public URL or image optimizer.",
-        "Assistant client retrieval uses current SQL field permissions on every follow-up; memory excludes private client cards."
+        "Assistant client retrieval uses current SQL field permissions on every follow-up; memory excludes private client cards.",
+        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up."
       ],
       "verification": [
         "Clean local chain159 migrations plus rollback-only two-business/same-customer, assigned-stylist, field/revocation, CAS/retry/audit, formula and Storage RLS assertions passed.",
         "10/10 Chromium/WebKit browser cases: EN390, FR768, ES1440, zh-CN844 landscape; explicit retry retains ID/draft, save/readback/refresh, private photo/remove, revoked access.",
         "Combined118 Node tests passed before final proposal-replay guard; malformed image validation regression reproduced HTTP500 and corrected to secret-safe HTTP400.",
-        "Final client UI production-build Chromium/WebKit10/10, TypeScript and changed-file lint pass; exact-error-code route6/6; assignment read/proposal regressions36/36."
+        "Final client UI production-build Chromium/WebKit10/10, TypeScript and changed-file lint pass; exact-error-code route6/6; assignment read/proposal regressions36/36.",
+        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending."
       ],
       "live_evidence": [],
       "detailed_clause": "CLIENT-01 — Maintain a business-specific client record containing past services/dates, exact service details or formula (color, size, length, technique and similar instructions), preferences, notes, allergies/sensitivities/cautions, photos of prior work and spend history. The owner's example includes medium waist-length box braids, approximately four hours, and a preference against excessive tightness.",
@@ -2612,7 +2624,9 @@
         "src/lib/businessClientCore.ts",
         "src/lib/businessClientServer.ts",
         "src/app/api/salon/bookings/[id]/client-record/route.ts",
-        "supabase/migrations/20260918091453_business_private_client_cards.sql"
+        "supabase/migrations/20260918091453_business_private_client_cards.sql",
+        "src/components/owner/BusinessClientLinks.tsx",
+        "supabase/migrations/20260918131641_business_client_visit_links.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -2620,13 +2634,15 @@
       "changes": [
         "Business-specific client record with preferences, notes, cautions, original-language per-visit formulas/duration and private work photos; assigned-stylist projection and independent field/update permissions; linked visit history and qualified recorded spend.",
         "Atomic revision checks and request deduplication retain drafts on failure; private photo authorization before binary read/upload/removal; no public URL or image optimizer.",
-        "Assistant client retrieval uses current SQL field permissions on every follow-up; memory excludes private client cards."
+        "Assistant client retrieval uses current SQL field permissions on every follow-up; memory excludes private client cards.",
+        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up."
       ],
       "verification": [
         "Clean local chain159 migrations plus rollback-only two-business/same-customer, assigned-stylist, field/revocation, CAS/retry/audit, formula and Storage RLS assertions passed.",
         "10/10 Chromium/WebKit browser cases: EN390, FR768, ES1440, zh-CN844 landscape; explicit retry retains ID/draft, save/readback/refresh, private photo/remove, revoked access.",
         "Combined118 Node tests passed before final proposal-replay guard; malformed image validation regression reproduced HTTP500 and corrected to secret-safe HTTP400.",
-        "Final client UI production-build Chromium/WebKit10/10, TypeScript and changed-file lint pass; exact-error-code route6/6; assignment read/proposal regressions36/36."
+        "Final client UI production-build Chromium/WebKit10/10, TypeScript and changed-file lint pass; exact-error-code route6/6; assignment read/proposal regressions36/36.",
+        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending."
       ],
       "live_evidence": [],
       "detailed_clause": "CLIENT-02 — Make a returning client's history easy for the owner or an authorized relevant stylist to open before service. Apply owner-set permissions to fields, photos, assistant retrieval and updates. Support the required languages while preserving the meaning of formulas, numerical quantities and cautions. A shared customer identity must not expose another business's private formula card or notes.",

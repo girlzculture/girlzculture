@@ -99,6 +99,14 @@ test('client field permissions and assignment are reprojected before follow-up c
   }
 });
 
+test('removed guest-client links discard linked facts and follow-up prose before the provider',async()=>{
+ const fresh={booking_id:booking.id,permissions:{client_history:true},notes:'Current own note',related_profiles:[],visits:[]};
+ const f=fixture({clientRead:fresh,history:[{tool:'get_client_record',permission:'client_history',arguments:{booking_id:booking.id},result:{...fresh,related_profiles:[{notes:'UNLINKED_PRIVATE_RECORD'}]}}],conversation:[{role:'assistant',text:'UNLINKED_PRIVATE_RECORD'},{role:'user',text:'Repeat that information'}]});
+ await f.run('en','And the related visit?');
+ assert.equal(JSON.stringify(f.requests).includes('UNLINKED_PRIVATE_RECORD'),false);
+ assert.deepEqual(JSON.parse(f.requests[0].messages[1].content).conversation,[]);
+});
+
 test('finance downgrade discards broader results and conversation before the provider', async () => {
   const f = fixture({ denied:['earnings'], ownFinance:true,
     history:[{tool:'get_earnings_summary',permission:'earnings',arguments:{},result:{scope:'authenticated_business_only',business_sales_cents:987654321}}],
