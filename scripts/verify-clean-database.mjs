@@ -1266,4 +1266,6 @@ const assignmentOutput = runPsql(["--file", path.join(root, "scripts", "sql", "v
 if (assignmentOutput) console.log(assignmentOutput);
 const stockOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-inventory.sql")], "Business inventory, stock reconciliation and two-business isolation assertions");
 if(stockOutput) console.log(stockOutput);
+const businessReviewsOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-business-reviews.sql")],"Business review revisions and private moderation assertions");
+if(businessReviewsOutput)console.log(businessReviewsOutput);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);

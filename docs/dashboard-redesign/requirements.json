@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; Bookings redesigned and locally verified; remaining full scope continues",
+  "status": "IMPLEMENTING; NOT RELEASED; Bookings and Reviews locally verified; full remaining scope continues",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -28,7 +28,12 @@
         "src/app/globals.css",
         "src/components/owner/BusinessOverview.tsx",
         "src/lib/businessOverview.ts",
-        "src/components/dashboard/WorkspaceCalendar.tsx"
+        "src/components/dashboard/WorkspaceCalendar.tsx",
+        "src/components/owner/ReviewsWorkspace.tsx",
+        "src/lib/businessReviews.ts",
+        "src/app/api/salon/workspace/route.ts",
+        "src/app/api/salon/reviews/[id]/reply/route.ts",
+        "supabase/migrations/20260918142356_business_review_reply_revisions.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -36,12 +41,14 @@
       "changes": [
         "Shared shell and first two page compositions implemented; remaining twelve pages still required.",
         "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
-        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination.",
+        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
       ],
       "verification": [
         "Screenshot review exposed and corrected dashboard font override and stacked setup banners",
         "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
-        "Overview/Calendar production-build browser8/8 passed across Chromium/WebKit390,768,1440 and844 landscape; screenshots reviewed."
+        "Overview/Calendar production-build browser8/8 passed across Chromium/WebKit390,768,1440 and844 landscape; screenshots reviewed.",
+        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-01 | Apply a coherent redesign to all 14 owner navigation sections: Overview, My Page, Photos, Styles & Pricing, Stylists, Products, Availability & Calendar, Bookings, Messages, Reviews, Finances (renamed from Earnings & Payouts), Promotions, Subscription, Settings. Include their editing/detail views and dialogs. | A page inventory and matched screenshots account for every section; no old landing screen is silently excluded. |",
@@ -130,16 +137,23 @@
         "src/components/dashboard/WorkspaceToolbar.tsx",
         "src/app/globals.css",
         "src/components/owner/BookingsWorkspace.tsx",
-        "src/lib/businessBookings.ts"
+        "src/lib/businessBookings.ts",
+        "src/components/owner/ReviewsWorkspace.tsx",
+        "src/lib/businessReviews.ts",
+        "src/app/api/salon/workspace/route.ts",
+        "src/app/api/salon/reviews/[id]/reply/route.ts",
+        "supabase/migrations/20260918142356_business_review_reply_revisions.sql"
       ],
       "state": "PENDING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
       "changes": [
-        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation.",
+        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
       ],
       "verification": [
-        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending."
+        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending.",
+        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-04 | Preserve existing functions, data, validation, permissions, and save/publish behavior while changing their presentation. Spreadsheet import/export remains accessible as a secondary task instead of dominating everyday work. | Existing important workflows remain reachable and functional. |",
@@ -1025,7 +1039,12 @@
         "supabase/migrations/20260918060000_assistant_scoped_history.sql",
         "tests/p0-assistant-planning.test.mjs",
         "src/components/owner/BusinessClientLinks.tsx",
-        "supabase/migrations/20260918131641_business_client_visit_links.sql"
+        "supabase/migrations/20260918131641_business_client_visit_links.sql",
+        "src/components/owner/ReviewsWorkspace.tsx",
+        "src/lib/businessReviews.ts",
+        "src/app/api/salon/workspace/route.ts",
+        "src/app/api/salon/reviews/[id]/reply/route.ts",
+        "supabase/migrations/20260918142356_business_review_reply_revisions.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -1035,13 +1054,15 @@
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
         "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
         "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions.",
-        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up."
+        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up.",
+        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
         "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
         "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity.",
-        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending."
+        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending.",
+        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending."
       ],
       "live_evidence": [],
       "status": "IMPLEMENTING",
@@ -3844,13 +3865,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/owner/ReviewsWorkspace.tsx",
+        "src/lib/businessReviews.ts",
+        "src/app/api/salon/workspace/route.ts",
+        "src/app/api/salon/reviews/[id]/reply/route.ts",
+        "supabase/migrations/20260918142356_business_review_reply_revisions.sql"
       ],
       "state": "PENDING",
-      "acceptance": "BLOCKED",
+      "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
+      ],
+      "verification": [
+        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-10 | Reviews | Real summaries and filters, review/detail/response management and contextual assistant behavior. |",
       "detailed_clause_line": 507

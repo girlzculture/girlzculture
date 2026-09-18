@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import {ADMIN_OVERVIEW_PROJECTIONS,ADMIN_OVERVIEW_SOURCE_PERMISSIONS,ADMIN_SECTION_SOURCES} from "../src/lib/adminDataProjectionCore.ts";
 import { deterministicContentDecision } from "../src/lib/contentModerationCore.ts";
 import { normalizeImageFile } from "../src/lib/imageUpload.ts";
 import { bookingReminderDueWindow, notificationDeliveryKey, runIsolatedReminderBatch } from "../src/lib/bookingReminderCore.ts";
@@ -288,10 +289,18 @@ assert.match(moderationServer, /REVIEW_MODERATION_PROVIDER_TIMEOUT/);
 assert.match(moderationServer, /REVIEW_MODERATION_PROVIDER_HTTP_/);
 assert.match(moderationServer, /noteOperationalFailure/);
 const ownerSource = fs.readFileSync("src/components/owner/OwnerDashboardApp.tsx", "utf8");
-assert.match(ownerSource, /title=["']Your Dashboard["']/);
+assert.match(ownerSource, /<BusinessOverview /);
+const overviewSource = fs.readFileSync("src/components/owner/BusinessOverview.tsx", "utf8");
+assert.match(overviewSource, /Welcome back/);
+assert.match(overviewSource, /actorName/);
 assert.doesNotMatch(ownerSource, /title=["']Salon Owner Dashboard["']/);
 const workspaceSource = fs.readFileSync("src/app/api/salon/workspace/route.ts", "utf8");
-assert.match(workspaceSource, /\.eq\("moderation_status",\s*"Published"\)/);
+// The protected owner inbox includes moderation history; public rating totals
+// must still use the public-only subset (behavior covered by review core tests).
+assert.match(workspaceSource, /\.eq\("salon_id",\s*context\.salon\.id\)/);
+const reviewMetricsSource = fs.readFileSync("src/lib/businessReviews.ts", "utf8");
+assert.match(reviewMetricsSource, /reviews\.filter\(publicReview\)/);
+assert.match(reviewMetricsSource, /review\.dispute_status !== 'Removed'/);
 assert.match(workspaceSource, /dispute_status/);
 const monitoringSource = fs.readFileSync("netlify/functions/_monitoring.mjs", "utf8");
 assert.doesNotMatch(monitoringSource, /production-release-not-injected/);
@@ -448,40 +457,17 @@ assert.ok(
 
 const adminDataSource = fs.readFileSync("src/app/api/admin/data/route.ts", "utf8");
 assert.doesNotMatch(adminDataSource, /overview:\s*allSources\.map/);
-assert.match(adminDataSource, /overview:\s*\[\]/);
-assert.match(adminDataSource, /overviewSourcePermissions/);
-assert.match(adminDataSource, /overviewProjections/);
-const overviewPermissionBlock = adminDataSource.match(
-  /const overviewSourcePermissions:[\s\S]*?\n\s*};/,
-)?.[0] || "";
-assert.ok(overviewPermissionBlock, "Overview source permission map is missing.");
-const overviewProjectionBlock = adminDataSource.match(
-  /const overviewProjections:[\s\S]*?\n\s*};/,
-)?.[0] || "";
-assert.ok(overviewProjectionBlock, "Overview source projections are missing.");
-assert.doesNotMatch(overviewProjectionBlock, /["']\*["']/);
-for (const projection of [
-  /salons:\s*"id,status,rating_overall,review_count"/,
-  /salon_applications:\s*"id,business_name,status,submitted_at"/,
-  /customers:\s*"id,created_at"/,
-  /bookings:\s*"id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status,payment_status"/,
-  /reviews:\s*"id,rating_overall,dispute_status,created_at"/,
-]) assert.match(overviewProjectionBlock, projection);
+assert.deepEqual(ADMIN_SECTION_SOURCES.overview, []);
+assert.match(adminDataSource, /Object.entries\(ADMIN_OVERVIEW_SOURCE_PERMISSIONS\)/);
+assert.match(adminDataSource, /ADMIN_OVERVIEW_PROJECTIONS\[table\]/);
+assert.deepEqual(ADMIN_OVERVIEW_SOURCE_PERMISSIONS,{salons:"salons",salon_applications:"submissions",customers:"customers",bookings:"bookings",reviews:"reviews"});
+assert.deepEqual(ADMIN_OVERVIEW_PROJECTIONS,{
+ salons:"id,status,rating_overall,review_count",salon_applications:"id,business_name,status,submitted_at",customers:"id,created_at",
+ bookings:"id,status,appointment_datetime,created_at,estimated_total,deposit_amount,deposit_status",reviews:"id,rating_overall,dispute_status,created_at"
+});
 assert.match(adminDataSource, /access\.is_super_admin \|\| access\.permissions\?\.\[sourcePermission\]/);
-for (const forbiddenOverviewSource of [
-  "support_tickets",
-  "complaints_log",
-  "admin_users",
-  "billing_events",
-  "identity_conflict_queue",
-  "review_content_moderation_queue",
-  "review_reply_moderation_queue",
-]) {
-  assert.doesNotMatch(
-    overviewPermissionBlock,
-    new RegExp(`\\b${forbiddenOverviewSource}\\s*:`),
-    `${forbiddenOverviewSource} must not be downloadable through Overview`,
-  );
+for(const forbidden of ["support_tickets","complaints_log","admin_users","billing_events","identity_conflict_queue","review_content_moderation_queue","review_reply_moderation_queue"]){
+ assert.equal(forbidden in ADMIN_OVERVIEW_SOURCE_PERMISSIONS,false,forbidden+" must not be downloadable through Overview");
 }
 
 const publicSalonPage = fs.readFileSync("src/app/salon/[slug]/page.tsx", "utf8");
@@ -489,10 +475,10 @@ assert.doesNotMatch(
   publicSalonPage,
   /from\("(?:styles|stylists|reviews|salon_products|style_materials)"\)\.select\("\*"\)/,
 );
-assert.match(publicSalonPage, /from\("styles"\)\.select\("id,service_group_id,master_style_id,name,/);
+assert.match(publicSalonPage, /from\("styles"\)\.select\("id,sort_order,is_featured,service_group_id,master_style_id,name,/);
 assert.match(publicSalonPage, /from\("stylists"\)\.select\("id,slug,name,specialties,bio,avatar_url,photos,years_experience"\)/);
 assert.match(publicSalonPage, /from\("reviews"\)\.select\("id,display_name,review_title,rating_overall,/);
-assert.match(publicSalonPage, /from\("salon_products"\)\.select\("id,name,description,price,photo_url"\)/);
+assert.match(publicSalonPage, /from\("salon_products"\)\.select\("id,sort_order,name,description,price,photo_url"\)/);
 const publicReviewProjection = publicSalonPage.match(
   /from\("reviews"\)\.select\("([^"]+)"\)/,
 )?.[1] || "";
@@ -506,6 +492,9 @@ for (const privateReviewField of [
   "dispute_status",
   "dispute_reason",
   "disputed_by_user_id",
+  "reply_revision",
+  "reply_queue",
+  "reply_versions",
 ]) {
   assert.equal(
     publicReviewProjection.split(",").includes(privateReviewField),

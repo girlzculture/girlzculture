@@ -1,0 +1,43 @@
+-- Rollback-only synthetic fixtures. No public replies or messages are sent.
+begin;
+create function pg_temp.review_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'Review assertion failed: %',label;end if;end $$;
+create function pg_temp.review_reject(command text,expected text) returns void language plpgsql as $$declare rejected boolean:=false;begin begin execute command;exception when others then if position(expected in sqlerrm)>0 then rejected:=true;else raise;end if;end;perform pg_temp.review_assert(rejected,expected);end $$;
+do $$
+declare oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();ba uuid:=gen_random_uuid();bb uuid:=gen_random_uuid();style_a uuid:=gen_random_uuid();style_b uuid:=gen_random_uuid();booking_a uuid:=gen_random_uuid();booking_b uuid:=gen_random_uuid();ra uuid:=gen_random_uuid();rb uuid:=gen_random_uuid();req uuid:=gen_random_uuid();result jsonb;again jsonb;version integer;
+begin
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values(oa,'review-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'review-b@example.test','',now(),'{"role":"salon_owner"}'),(staff,'review-staff@example.test','',now(),'{"role":"salon_team"}'),(customer,'review-customer@example.test','',now(),'{"role":"customer"}');
+ update public.platform_identities set primary_role='salon_team' where user_id=staff;
+ insert into public.customers(id,name,email) values(customer,'Shared test customer','review-customer@example.test');
+ insert into public.salons(id,user_id,name,slug,email,status,subscription_status,subscription_tier) values(ba,oa,'Review A','review-a','review-a@example.test','Active','active','Premium'),(bb,ob,'Review B','review-b','review-b@example.test','Active','active','Premium');
+ insert into public.salon_team_members(salon_id,user_id,email,name,role,status,permissions) values(ba,staff,'review-staff@example.test','Review staff','Manager','Active','{"reviews":true}');
+ insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,price_display_min,price_display_max) select v.id,v.salon,g.id,'Test service',1,1,100,100,100 from (values(style_a,ba),(style_b,bb)) v(id,salon) cross join lateral(select id from public.service_groups where is_active and archived_at is null order by sort_order,name limit 1) g;
+ insert into public.bookings(id,salon_id,style_id,customer_id,guest_name,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,status) values(booking_a,ba,style_a,customer,'Shared customer',now()-interval '3 days',1,100,10,90,'Paid','Completed'),(booking_b,bb,style_b,customer,'Shared customer',now()-interval '4 days',1,100,10,90,'Paid','Completed');
+ insert into public.reviews(id,booking_id,salon_id,customer_id,rating_overall,written_review,display_name) values(ra,booking_a,ba,customer,5,'Original A private words','Same customer'),(rb,booking_b,bb,customer,1,'Original B private words','Same customer');
+ result:=public.save_business_review_reply(ba,ra,oa,req,0,'Thank you A','Clear');
+ perform pg_temp.review_assert(result#>>'{review,salon_reply}'='Thank you A','public first reply');
+ again:=public.save_business_review_reply(ba,ra,oa,req,0,'Thank you A','Clear');
+ perform pg_temp.review_assert(again->>'replayed'='true' and (select count(*)=1 from public.business_review_reply_versions where review_id=ra),'same request once');
+ perform pg_temp.review_reject(format('select public.save_business_review_reply(%L,%L,%L,%L,0,%L,%L)',ba,ra,oa,req,'Different text','Clear'),'REVIEW_REPLY_REQUEST_REUSED');
+ perform pg_temp.review_reject(format('select public.save_business_review_reply(%L,%L,%L,%L,1,%L,%L)',ba,rb,oa,gen_random_uuid(),'Foreign attempt','Clear'),'REVIEW_NOT_FOUND');
+ perform pg_temp.review_reject(format('select public.save_business_review_reply(%L,%L,%L,%L,1,%L,%L)',bb,rb,oa,gen_random_uuid(),'Forged business','Clear'),'REVIEW_REPLY_FORBIDDEN');
+ result:=public.save_business_review_reply(ba,ra,staff,gen_random_uuid(),1,'Edited reply held','Pending');
+ perform pg_temp.review_assert(result#>>'{review,salon_reply}'='Thank you A' and result->>'content_status'='pending','pending edit preserves actual public reply');
+ perform pg_temp.review_assert((select submitted_reply='Edited reply held' and status='Pending' from public.review_reply_moderation_queue where review_id=ra),'pending queue exact text');
+ perform pg_temp.review_reject(format('select public.save_business_review_reply(%L,%L,%L,%L,1,%L,%L)',ba,ra,oa,gen_random_uuid(),'Stale edit','Clear'),'REVIEW_REPLY_STALE');
+ result:=public.save_business_review_reply(ba,ra,oa,gen_random_uuid(),2,'Revised public reply','Clear');
+ perform pg_temp.review_assert(result#>>'{review,salon_reply}'='Revised public reply' and (result#>>'{review,reply_revision}')::integer=3,'guarded replacement');
+ perform pg_temp.review_assert((select status='Rejected' from public.review_reply_moderation_queue where review_id=ra),'old held text cannot later publish');
+ again:=public.save_business_review_reply(ba,ra,oa,req,0,'Thank you A','Clear');
+ perform pg_temp.review_assert(again#>>'{review,salon_reply}'='Revised public reply' and again#>>'{review,reply_queue,0,status}'='Rejected','replay returns current public and queue state, never stale text');
+ perform pg_temp.review_assert((select written_review='Original A private words' and rating_overall=5 from public.reviews where id=ra),'customer words and rating immutable');
+ perform pg_temp.review_assert((select salon_reply is null and written_review='Original B private words' from public.reviews where id=rb),'business B unchanged');
+ update public.salon_team_members set permissions='{}' where salon_id=ba and user_id=staff;
+ perform pg_temp.review_reject(format('select public.save_business_review_reply(%L,%L,%L,%L,3,%L,%L)',ba,ra,staff,gen_random_uuid(),'Revoked role','Clear'),'REVIEW_REPLY_FORBIDDEN');
+ update public.reviews set salon_reply='Moderator replacement' where id=ra returning reply_revision into version;
+ perform pg_temp.review_assert(version=4,'other publication paths invalidate open editors');
+ update public.reviews set moderation_status='Hidden' where id=ra;
+ perform pg_temp.review_reject(format('select public.save_business_review_reply(%L,%L,%L,%L,4,%L,%L)',ba,ra,oa,gen_random_uuid(),'Hidden edit','Clear'),'REVIEW_REPLY_NOT_VISIBLE');
+ perform pg_temp.review_assert(not has_table_privilege('authenticated','public.business_review_reply_versions','SELECT') and not has_table_privilege('service_role','public.business_review_reply_versions','UPDATE'),'private immutable history grants');
+ perform pg_temp.review_assert(not has_function_privilege('authenticated','public.save_business_review_reply(uuid,uuid,uuid,uuid,integer,text,text,text,text)','EXECUTE') and has_function_privilege('service_role','public.save_business_review_reply(uuid,uuid,uuid,uuid,integer,text,text,text,text)','EXECUTE'),'RPC boundary');
+end $$;
+rollback;
