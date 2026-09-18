@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { buildAuthStorageKeys } from "../../../src/lib/authSessionCore";
 import { POLICY_DEFAULTS } from "../../../src/lib/businessPolicyCore";
+import { summarizeOperatingBooks, type OperatingBooks } from "../../../src/lib/businessFinanceCore";
 import { createHash } from "node:crypto";
 import { IMAGE_UPLOAD_PROFILES, type ImagePresetKey } from "../../../src/lib/imageUpload";
 
@@ -68,6 +69,12 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (req.method() === "GET" && path === `/api/salon/bookings/${ids.booking}/reschedule`) return respond({ proposals: [] });
     if (req.method() === "GET" && path === "/api/salon/team") return respond({ users: [], stylists: records.stylists, can_manage: true });
     if (req.method() === "GET" && path === "/api/salon/product-orders") return respond({ orders: [] });
+    if (req.method() === "GET" && path === "/api/salon/finances") {
+      const query = new URL(req.url()).searchParams;
+      if (query.get('options') === 'entry') return respond({ stylists: records.stylists, products: records.salon_products });
+      const books: OperatingBooks = { sales: [], payments: [], expenses: [], obligations: [], compensation_payments: [] };
+      return respond({ scope: { kind: 'business' }, books, summary: summarizeOperatingBooks(business.id, books, { from: query.get('from')!, to: query.get('to')!, timeZone: business.time_zone }), evidence: {}, stylists: records.stylists, arrangements: [] });
+    }
     if (req.method() === "GET" && path === "/api/messages") {
       if (!options.populated) return respond({ threads: [], role: 'salon' });
       const booking = { ...records.bookings[0], salon: business, style: { name: 'Save' } };

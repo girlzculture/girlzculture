@@ -28,7 +28,11 @@ export function ownerCoverageReport(inventory, catalogs, exceptions, codeLiteral
     return [locale, { source_count: ui.length, covered: ui.length - missing.length, missing_count: missing.length, missing }];
   }));
   return {
-    status: Object.values(locales).every(locale => !locale.missing_count) ? 'AUTOMATED ONLY' : 'FAIL',
+    // Founder explicitly deferred Wolof. Retain its measured gaps without
+    // claiming it passed or blocking the four authorized release languages.
+    status: ['en', 'fr', 'es', 'zh-CN'].every(locale => !locales[locale].missing_count) ? 'AUTOMATED ONLY' : 'FAIL',
+    required_locales: ['en', 'fr', 'es', 'zh-CN'],
+    deferred_locales: { wo: 'Founder explicitly deferred Wolof; not release-verified.' },
     scope: 'All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.',
     candidate_count: Object.keys(inventory.entries).length,
     excluded_code_count: excludedCode.length,

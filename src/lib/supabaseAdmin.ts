@@ -4,6 +4,7 @@ import { sendPushToUsers } from "@/lib/webPushServer";
 import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
 import { reminderTranslation, reminderDate, reminderStylistClause } from "@/lib/bookingReminderCopy";
+import {bookingCommunicationPreferences} from "@/lib/businessCommunicationServer";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
 import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
@@ -324,7 +325,8 @@ async function bookingNotificationContext(bookingId: string) {
     ? await admin.auth.admin.getUserById(String(salon.user_id))
     : null;
   if (salonAuth?.error) throw salonAuth.error;
-  const customerLocale = normalizeLocale(booking.preferred_locale);
+  const communicationPreferences = await bookingCommunicationPreferences(admin, booking);
+  const customerLocale = normalizeLocale(communicationPreferences.locale);
   const salonLocale = normalizeLocale(
     salonAuth?.data.user?.user_metadata?.locale,
   );
@@ -351,6 +353,7 @@ async function bookingNotificationContext(bookingId: string) {
     material,
     stylistContact,
     customerLocale,
+    communicationPreferences,
     salonLocale,
   };
 }

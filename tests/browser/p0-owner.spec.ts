@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "./helpers/hydration";
 import { p0OwnerFixture } from "./helpers/p0OwnerFixture";
+import { ownerReleaseLocales } from './helpers/releaseLocales';
 import { expectOwnerLocaleCoverage } from "./helpers/ownerLocaleCoverage";
 import { DASHBOARD_SOURCE_MESSAGES } from "../../src/i18n/dashboard-source-catalog";
 import AxeBuilder from "@axe-core/playwright";
@@ -16,10 +17,10 @@ for (const width of [390, 768, 1440]) test(`P0 owner core language flow translat
   await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
   await page.goto('/salon/dashboard/availability');
   await expect(page.locator('[data-owner-workspace]')).toBeVisible();
-  const source = 'Choose one scheduling workspace. Appointments are shown in {value0}.';
+  const source = "Manage your team's schedule in {value0}.";
   const gallery = `docs/screenshots/p0/${info.project.name}`;
   await mkdir(gallery, { recursive: true });
-  for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  for (const locale of ownerReleaseLocales) {
     await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
     await expect.poll(fixture.accountLocale).toBe(locale);
     const expected = (DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source).replace('{value0}', 'America/New York');

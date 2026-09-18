@@ -13,10 +13,11 @@ import { mkdir } from 'node:fs/promises';
 test.use({ serviceWorkers: 'block' });
 
 // The failed CI trace moved the viewport by 64px during Review's pointer
-// sequence. Reproduce that boundary deterministically: use the application's
-// default scrolling behavior, capture the aimed-at position in the same frame,
-// then release the pointer only after scrolling reaches its target. This is a
-// condition-based interaction, not a sleep, click retry or forced DOM submit.
+// sequence. Guard the correction directly and exercise a native pointer click
+// after a 64px reposition. Center the initial target clear of fixed navigation.
+// Firefox commits even non-animated scroll coordinates on its next layout;
+// measure only after that position is reached, rather than clicking an old
+// coordinate (which can activate a different control). No click retry/DOM submit.
 for (const viewport of [
   { width: 1440, height: 900 }, { width: 768, height: 900 },
   { width: 390, height: 844 }, { width: 844, height: 390 },
@@ -26,6 +27,14 @@ for (const viewport of [
     const fixture = await p0OwnerFixture(page, { populated: true, locale: 'en' });
     await page.setViewportSize(viewport);
     const posts: unknown[] = [];
+    async function waitForScroll(top: number) {
+      try {
+        await page.waitForFunction(target => Math.abs(scrollY - target) < 1, top, { polling: 'raf', timeout: 5000 });
+      } catch (error) {
+        await testInfo.attach('calendar-scroll-position', { body: JSON.stringify(await page.evaluate(target => ({ target, scrollY, documentTop: document.documentElement.scrollTop, bodyTop: document.body.scrollTop, viewport: innerHeight, height: document.documentElement.scrollHeight, behavior: getComputedStyle(document.documentElement).scrollBehavior, focused: document.activeElement?.tagName }), top)), contentType: 'application/json' });
+        throw error;
+      }
+    }
     await page.route('**/api/salon/assistant', route => {
       posts.push(route.request().postDataJSON());
       return route.fulfill({ status: 409, json: { code: 'ASSISTANT_AVAILABILITY_CONFLICT' } });
@@ -47,27 +56,45 @@ for (const viewport of [
       await page.getByRole('combobox', { name: 'Professional', exact: true }).selectOption(fixture.ids.professional);
       await page.getByLabel('Date', { exact: true }).fill('2030-09-24');
       await page.getByLabel('Time', { exact: true }).fill('13:00');
+      // Firefox restores the focused native time input's scroll position on
+      // layout. End field editing before staging a separate page reposition;
+      // ordinary focused-input Review clicks are covered by the preview test.
+      await page.getByLabel('Time', { exact: true }).blur();
       const review = page.getByRole('button', { name: 'Review appointment', exact: true });
       await expect(review).toBeEnabled();
       expect(await review.evaluate(button => (button as HTMLButtonElement).form!.checkValidity())).toBe(true);
-      await review.scrollIntoViewIfNeeded();
-      const point = await review.evaluate(button => {
+      await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
+      const centeredTop = await review.evaluate(button => {
+        const rect = button.getBoundingClientRect();
+        const top = Math.max(0, Math.min(document.documentElement.scrollHeight - innerHeight, scrollY + rect.y + rect.height / 2 - innerHeight / 2));
+        window.scrollTo({ top });
+        return top;
+      });
+      await waitForScroll(centeredTop);
+      const position = await review.evaluate(() => {
         const previous = scrollY;
         const top = Math.max(0, previous - 64);
         window.scrollTo({ top });
-        const rect = button.getBoundingClientRect();
-        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, top, previous };
+        return { top, previous };
       });
-      expect(point.previous - point.top).toBe(64);
+      expect(position.previous - position.top).toBe(64);
+      await waitForScroll(position.top);
+      const point = await review.evaluate(button => {
+        const rect = button.getBoundingClientRect();
+        const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+        return { x, y, targetIsReview: button.contains(document.elementFromPoint(x, y)) };
+      });
+      expect(point.targetIsReview, 'Review must not be covered by fixed navigation').toBe(true);
       await page.mouse.move(point.x, point.y);
       await page.mouse.down();
-      await page.waitForFunction(top => Math.abs(scrollY - top) < 1, point.top, { polling: 'raf' });
       await page.mouse.up();
       await expect(page.getByRole('status').filter({ hasText: 'That time is unavailable. Choose another time.' })).toBeVisible();
       expect(posts).toHaveLength(1);
       expect(posts[0]).toMatchObject({ action: 'tool', tool: 'prepare_manual_appointment', args: { guest_name: 'Sheila', style_id: fixture.ids.service, stylist_id: fixture.ids.professional, date: '2030-09-24', time: '13:00' } });
     } finally {
-      const events = await page.evaluate(() => (window as unknown as { calendarPointerEvents: unknown[] }).calendarPointerEvents);
+      // Diagnostics must not replace the original failure after timeout closes
+      // the page. Playwright still retains its trace and screenshot.
+      const events = page.isClosed() ? 'page closed before diagnostic collection' : await page.evaluate(() => (window as unknown as { calendarPointerEvents: unknown[] }).calendarPointerEvents).catch(() => 'page closed during diagnostic collection');
       await testInfo.attach('calendar-pointer-events', { body: JSON.stringify({ events, requestCount: posts.length }, null, 2), contentType: 'application/json' });
     }
   });

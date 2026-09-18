@@ -180,5 +180,5 @@ language sql stable security definer set search_path=pg_catalog,public as $$
 $$;
 revoke all on function public.due_booking_reminders(integer) from public,anon,authenticated;
 grant execute on function public.due_booking_reminders(integer) to service_role;
-update public.engine_settings set published_value='"20260918165227"',draft_value='"20260918165227"',updated_at=now() where setting_key='integrations.expected_migration';
+update public.engine_settings set published_value='"20260918165227"'::jsonb,draft_value='"20260918165227"'::jsonb,updated_at=now() where setting_key='integrations.expected_migration';
 commit;

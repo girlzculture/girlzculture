@@ -11,6 +11,7 @@ function assistantHarness() {
   let sessionWait = null;
   const react = {
     createContext: () => ({ Provider: 'context-provider' }),
+    useCallback: (callback, deps) => { const index = cursor++; const previous = slots[index]; if (!previous || deps.some((value, i) => value !== previous.deps[i])) slots[index] = { callback, deps }; return slots[index].callback; },
     useRef: value => { const index = cursor++; return slots[index] ??= { current: value }; },
     useState: initial => { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }]; },
     useEffect: effect => { if (!initialized) effect(); },
@@ -37,7 +38,7 @@ function assistantHarness() {
     requests, responses, events, render, find,
     switchActor: id => { session = id ? { user: { id }, access_token: `local-${id}` } : null; changeAuth(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); },
     holdSession: () => sessionWait = deferred(),
-    quickRead: () => find(node => node.type === 'button' && node.props['data-assistant-tool'] === 'get_business_profile').props.onClick(),
+    quickRead: () => find(node => node.type === 'button' && node.props['data-assistant-tool'] === 'get_services_and_prices').props.onClick(),
     articles: () => { const tree = render(); const found = []; const walk = node => { if (!node || typeof node !== 'object') return; if (Array.isArray(node)) return node.forEach(walk); if (node.type === 'article') found.push(node); walk(node.props?.children); }; walk(tree); return found; },
   };
 }
@@ -78,7 +79,7 @@ test('an old response must not clear the next account busy state', async () => {
   const app = assistantHarness(); app.quickRead(); await tick(); app.switchActor('owner-b'); app.quickRead(); await tick();
   assert.equal(app.requests.length, 2, 'new actor must be able to start independently');
   app.responses[0].resolve(Response.json({ clarification: 'PRIVATE A' })); await tick();
-  assert.equal(app.find(node => node.type === 'button' && node.props['data-assistant-tool'] === 'get_business_profile').props.disabled, true);
+  assert.equal(app.find(node => node.type === 'button' && node.props['data-assistant-tool'] === 'get_services_and_prices').props.disabled, true);
   app.responses[1].resolve(Response.json({ clarification: 'Current response' })); await tick();
   assert.equal(app.articles().length, 1);
 });

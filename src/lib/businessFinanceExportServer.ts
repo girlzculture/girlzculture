@@ -1,4 +1,5 @@
 import 'server-only';
+import { NON_DOM_VISUAL_TOKENS } from '@/lib/nonDomVisualTokens.mjs';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import path from 'node:path';
@@ -27,7 +28,7 @@ export async function financePdf(report: FinanceReport): Promise<Buffer> {
   const doc=new PDFDocument({size:'A4',margin:40,font,bufferPages:true,info:{Title:report.title,Author:'Girlz Culture',Subject:`${report.period.from} - ${report.period.to} | ${report.period.timeZone} | USD`}});
   const chunks: Buffer[]=[];const output=new Promise<Buffer>((resolve,reject)=>{doc.on('data',(chunk:Buffer)=>chunks.push(chunk));doc.on('end',()=>resolve(Buffer.concat(chunks)));doc.on('error',reject);});
   const width=doc.page.width-80;
-  const text=(value:string,size=10,color='#17242b')=>{doc.fontSize(size).fillColor(color).text(value,{width,lineGap:3});};
+  const text=(value:string,size=10,color:string=NON_DOM_VISUAL_TOKENS.primaryText)=>{doc.fontSize(size).fillColor(color).text(value,{width,lineGap:3});};
   text('GIRLZ CULTURE',10,'#006b88');text(report.title,23);text(report.business,13);text(`${report.period.from} - ${report.period.to} | ${report.period.timeZone} | USD`,9);doc.moveDown();
   const format=(item:ReportCell)=>item.kind==='money'?new Intl.NumberFormat(report.locale,{style:'currency',currency:'USD'}).format(Number(item.value)):String(item.value);
   // Concise accountant summary; full immutable references and transactions are
@@ -40,8 +41,8 @@ export async function financePdf(report: FinanceReport): Promise<Buffer> {
       doc.fontSize(header?8:9);
       const height=Math.max(26,...values.map((value,index)=>doc.heightOfString(value,{width:widths[index]-12,lineGap:2})+14));
       if(doc.y+height>doc.page.height-55){doc.addPage();if(!header)row(section.headers,true);}
-      const y=doc.y;doc.rect(40,y,width,height).fill(header?'#006b88':'#f5f8f9');let x=40;
-      values.forEach((value,index)=>{doc.fillColor(header?'#ffffff':'#17242b').text(value,x+6,y+5,{width:widths[index]-12,lineGap:2});x+=widths[index];});
+      const y=doc.y;doc.rect(40,y,width,height).fill(header?'#006b88':NON_DOM_VISUAL_TOKENS.lightSurface);let x=40;
+      values.forEach((value,index)=>{doc.fillColor(header?'#ffffff':NON_DOM_VISUAL_TOKENS.primaryText).text(value,x+6,y+5,{width:widths[index]-12,lineGap:2});x+=widths[index];});
       doc.x=40;doc.y=y+height+2;
     };
     row(section.headers,true);for(const values of section.rows)row(values.map(format));

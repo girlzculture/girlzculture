@@ -9,7 +9,7 @@ import {salonTimeZone} from "@/lib/dateTime";
 type Row=Record<string,unknown>;
 type Slot={value:string;label:string;stylistId:string|null;stylistName:string};
 const input="min-h-11 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm";
-const button="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50";
+const button="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary gc-disabled-control";
 export default function BookingChangeProposal({booking,timeZone,professionalName}:{booking:Row;timeZone:string;professionalName:string}) {
  const {translateSource:t,locale}=useI18n();
  const zone=salonTimeZone(timeZone),currentLocal=rescheduleLocalTimestamp(booking.appointment_datetime,zone);

@@ -227,7 +227,7 @@ export default function OwnerDashboardShell({
       </aside>
 
       <div className="min-w-0 lg:col-start-2">
-        <header className="gc-owner-header sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b border-border bg-white/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-5">
+        <header className="gc-owner-header sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b border-border bg-white px-3 py-2 sm:flex-nowrap lg:px-5">
           <DashboardMobileMenu
             ariaLabel="owner navigation"
             items={visibleNav.map(([id, label, Icon]) => ({
@@ -293,7 +293,7 @@ export default function OwnerDashboardShell({
 
       <nav
         aria-label="Owner mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white/95 px-1 pb-[max(7px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(13,17,20,.08)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white px-1 pb-[max(7px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(13,17,20,.08)] lg:hidden"
       >
         {mobileNav.map(([id, label, Icon]) => {
           const active =

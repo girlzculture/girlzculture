@@ -135,7 +135,7 @@ export default function PushSetup({
 
   if (compact) return <section data-owner-device-alerts className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-primary/20 bg-subtle p-3" aria-live="polite">
     <div className="min-w-0"><h2 className="flex items-center gap-2 text-sm font-semibold"><BellRing size={17} className="shrink-0 text-primary"/>Booking alerts on this device</h2><p className="mt-1 text-xs text-muted">{supported ? "Install the app and enable booking alerts." : "Web Push is not supported in this browser."}</p></div>
-    <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>void installApp()} disabled={installed} className="min-h-11 rounded-lg border border-primary px-3 text-xs font-semibold text-primary disabled:opacity-50">{installed?"App installed":"Install app"}</button><button type="button" onClick={()=>void enableNotifications()} disabled={busy||!installed} className="min-h-11 rounded-lg bg-primary px-3 text-xs font-semibold text-white disabled:opacity-50">{busy?"Enabling…":"Enable alerts"}</button></div>
+    <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>void installApp()} disabled={installed} className="min-h-11 rounded-lg border border-primary px-3 text-xs font-semibold text-primary gc-disabled-control">{installed?"App installed":"Install app"}</button><button type="button" onClick={()=>void enableNotifications()} disabled={busy||!installed} className="min-h-11 rounded-lg bg-primary px-3 text-xs font-semibold text-white gc-disabled-control">{busy?"Enabling…":"Enable alerts"}</button></div>
     {message?<p className="w-full text-xs">{message}</p>:null}
   </section>;
 

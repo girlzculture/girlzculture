@@ -4,7 +4,7 @@ import type { BusinessPolicy } from "@/lib/businessPolicyCore";
 
 export default function BusinessPolicyEditor({ policy, onChange, disabled }: { policy: BusinessPolicy; onChange: (policy: BusinessPolicy) => void; disabled: boolean }) {
   const { translateSource: t } = useI18n();
-  return <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
+  return <fieldset disabled={disabled} className="space-y-5 gc-disabled-control">
     <div>
       <label htmlFor="business-policy-text" className="block font-serif text-xl font-semibold">{t("Business Policy")}</label>
       <p id="business-policy-guidance" className="my-2 text-sm text-text-secondary">{t("Explain cancellations, missed appointments, late arrivals, guests and service concerns in your own words. Check that your wording matches the booking rules below.")}</p>

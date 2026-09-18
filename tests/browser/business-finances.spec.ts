@@ -3,6 +3,7 @@ import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { summarizeOperatingBooks, type OperatingBooks } from '../../src/lib/businessFinanceCore';
 import { BUSINESS_FINANCE_SOURCE_MESSAGES } from '../../src/i18n/business-finance-source-catalog';
+import { expectOwnerLocaleCoverage } from './helpers/ownerLocaleCoverage';
 
 test.use({ serviceWorkers: 'block' });
 for(const locale of ['en','fr','es','zh-CN'] as const){
@@ -21,7 +22,10 @@ for(const locale of ['en','fr','es','zh-CN'] as const){
       await route.fulfill({json:{scope:{kind:'business'},books,summary:summarizeOperatingBooks(fixture.business.id,books,{from:url.searchParams.get('from')!,to:url.searchParams.get('to')!,timeZone:fixture.business.time_zone}),evidence:{},stylists:fixture.records.stylists,arrangements:[]}});
     });
     await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/earnings');
-    const button=page.getByRole('button',{name:t('Download PDF'),exact:true});await button.click();
+    const button=page.getByRole('button',{name:t('Download PDF'),exact:true});
+    await expect(button).toBeVisible();
+    await expectOwnerLocaleCoverage(page,locale);
+    await button.click();
     await expect(page.getByRole('alert').filter({hasText:'99000000-0000-4000-8000-000000000079'})).toBeVisible();
     const [download]=await Promise.all([page.waitForEvent('download'),button.click()]);expect(download.suggestedFilename()).toMatch(new RegExp(`-${locale}\\.pdf$`));
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(fixture.unexpected).toEqual([]);

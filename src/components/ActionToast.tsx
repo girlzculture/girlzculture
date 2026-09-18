@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 import {
   ACTION_TOAST_SUCCESS_DURATION_MS,
   actionToastIsError,
   actionToastReference,
+  actionToastMessage,
 } from "@/lib/actionToastCore";
 
 export default function ActionToast({
@@ -14,6 +16,7 @@ export default function ActionToast({
   message: string;
   onDismiss: () => void;
 }) {
+  const { translateSource: t } = useI18n();
   const dismissRef = useRef(onDismiss);
   const [copiedReference, setCopiedReference] = useState("");
   useEffect(() => {
@@ -62,7 +65,7 @@ export default function ActionToast({
       aria-live={failed ? "assertive" : "polite"}
       className={`fixed inset-x-4 bottom-24 z-[160] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-[10px] border bg-white px-4 py-3 text-xs font-semibold shadow-[0_14px_40px_rgba(13,17,20,.22)] md:bottom-6 ${failed ? "border-red-300 gc-text-danger" : "border-magenta/25 text-plum"}`}
     >
-      <span className="min-w-0 flex-1 leading-5">{message}</span>
+      <span className="min-w-0 flex-1 leading-5"><span>{t(actionToastMessage(message))}</span>{reference ? <span className="mt-1 block">{t("Support reference")}: <span data-no-translate>{reference}</span></span> : null}</span>
       <span className="flex shrink-0 items-center gap-1">
         {reference ? (
           <button
@@ -70,12 +73,12 @@ export default function ActionToast({
             onClick={() => void copyReference()}
             className="min-h-9 rounded-md border border-current/25 px-2 text-[10px] font-bold"
           >
-            {copiedReference === reference ? "Copied" : "Copy reference"}
+            {t(copiedReference === reference ? "Copied" : "Copy reference")}
           </button>
         ) : null}
         <button
           type="button"
-          aria-label="Dismiss message"
+          aria-label={t("Dismiss message")}
           onClick={onDismiss}
           className="min-h-9 min-w-9 text-lg"
         >

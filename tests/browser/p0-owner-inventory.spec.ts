@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
+import { ownerReleaseLocales } from './helpers/releaseLocales';
 import { untranslatedOwnerCopy } from './helpers/ownerLocaleCoverage';
 import { mkdir, writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
@@ -22,7 +23,7 @@ export const ownerRoutes = [
 ];
 
 for (const width of [390, 768, 1440]) {
-  for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  for (const locale of ownerReleaseLocales) {
     test(`P0 owner route inventory ${locale} at ${width}px`, async ({ page }, testInfo) => {
       test.setTimeout(300_000);
       const fixture = await p0OwnerFixture(page);
@@ -48,7 +49,7 @@ for (const width of [390, 768, 1440]) {
         // Wait for the localization observer's scheduled scan after route mount.
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         if (route === 'availability') {
-          const source = 'Choose one scheduling workspace. Appointments are shown in {value0}.';
+          const source = "Manage your team's schedule in {value0}.";
           const expected = (DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source).replace('{value0}', 'America/New York');
           await expect(page.getByText(expected, { exact: true })).toBeVisible();
         }

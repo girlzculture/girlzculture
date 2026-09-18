@@ -230,6 +230,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     } catch (error) {
       if (generation !== actorGeneration.current) return;
       const message = errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.";
+      setNotice(message);
       setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: false, error: message, errorReference: error instanceof OwnerActionError ? error.reference : "" } : turn));
     } finally { if (generation === actorGeneration.current) { submissionInFlight.current = false; setBusy(false); } }
   }

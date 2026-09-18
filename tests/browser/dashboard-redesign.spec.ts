@@ -4,6 +4,16 @@ import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { defaultPhotoDetails, type BusinessPhotoMetadata } from '../../src/lib/businessPhotoMetadata';
 
 test.use({ serviceWorkers: 'block' });
+test('Dashboard redesign mobile chrome keeps scrolled content out of header and navigation surfaces',async({page},info)=>{
+ await p0OwnerFixture(page,{populated:true});await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/my-page');
+ await expect(page.getByRole('textbox',{name:'Business Name',exact:true})).toBeVisible();
+ await page.getByLabel('Walk-ins welcome',{exact:true}).scrollIntoViewIfNeeded();
+ await expect(page.locator('.gc-owner-header')).toHaveCSS('background-color','rgb(255, 255, 255)');
+ const bottom=page.getByRole('navigation',{name:'Owner mobile navigation',exact:true});
+ await expect(bottom.getByRole('link',{name:'More',exact:true})).toBeVisible();
+ await expect(bottom).toHaveCSS('background-color','rgb(255, 255, 255)');
+ await info.attach('mobile-opaque-chrome',{body:await page.screenshot(),contentType:'image/png'});
+});
 for (const [width,height] of [[390,844],[768,900],[1440,1000],[844,390]]) {
   test(`Dashboard redesign profile and photo edits persist at ${width}x${height}`, async ({ page }, info) => {
     const fixture=await p0OwnerFixture(page,{ populated:true });

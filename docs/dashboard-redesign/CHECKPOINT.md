@@ -4,7 +4,7 @@ This branch is in progress. It is not merged, deployed, or a completed 140-item 
 
 Base: `d37cbf4ef3954063797946b7508352470653a739`.
 Branch: `codex/business-dashboard-value-redesign`.
-Production last checked at 2026-09-18 01:51 UTC: locked deployment `6aac503fa5eacb00089c6d87`, same base commit. Rollback: `6aac3c4f2da488000962085f` / `525f4103a778b95290885ee15e7bf1ffee8839af`.
+Production last checked at 2026-09-18 17:13 UTC: locked deployment `6aac503fa5eacb00089c6d87`, same base commit. Rollback: `6aac3c4f2da488000962085f` / `525f4103a778b95290885ee15e7bf1ffee8839af`.
 
 ## Binding decisions
 
@@ -205,3 +205,11 @@ Prior main release CI `35272232878` passed 580 tests with five existing viewport
 - Newworker passes selectedrevision throughclaim/delivery/complete/fail; status/revisionreadback; secureguestlinkreuse; stableemailidempotencykeys. Builtin4localeremindercopy/dates withEnginepublishedpriority. Newintegrationtest then exposed shared translated emailrender removingvariables before substitution; corrected withoutdouble-substituting literal facts. Original failurelogs retained.
 - Focused17/17 testsreminder-server-final.log; testsrenamedp0-business-reminders andp0-business-reschedule toensure requiredtest:p0:core includes them. Testloader nowhandles existingmjs files. TypeScript/lint/build andexistingreminderverifierpass. Freshgirlzculture_reminder_release full167chain/assertions pass(reminder-clean-final.log). SQLfixture initialmissingownerrole/overlappingappointments corrected; no appprotections relaxed. No productionmigration/data/config/capchanges.
 - Next:publish current workasDraftPR for visibility, thenfinish COMMS03/04preferences/postvisit/campaign, WAIT/ADVISEandremainingpage/detail/finance/billing/public/full140release. No newgeneralpermissionneeded.
+
+## Communication controls and CI correction checkpoint — 18 September
+
+Draft PR #80 is open: https://github.com/girlzculture/girlzculture/pull/80. No redesign release is live. Full 140-item status is in PROGRESS-2026-09-18.md and requirements.json: 1 governance decision completed, 17 implemented/unverified, 103 in progress, 19 not started, no external blockers.
+
+Customer-controlled own-business preferences, guest booking scope, audit/revision/idempotency, default-off optional messages, signed explicit opt-out and fresh per-channel SQL reservation guards are implemented. All168 migrations pass from an empty local PostgreSQL database; 10 preference browser cases pass in four languages. Post-visit automatic delivery and owner campaign workflow remain unfinished.
+
+Required CI at e6d6936 failed; original logs remain under work/redesign-evidence. Local fixes now pass design-system gates, four-language inventory (2386 each), session regressions, exact incident-copy handling, 12 calendar pointer cases across three engines/four viewports, assistant conversation controls and public keyboard navigation. Finance/localization and Spanish phone route audit:10/10. Wolof UI acceptance is explicitly deferred; legacy functional tests remain and its648 missing sources are still reported. TypeScript/build pass; full lint has13warnings/0errors; final changed-file lint is clean. No production mutation, provider calls, customer notifications or cap changes.
