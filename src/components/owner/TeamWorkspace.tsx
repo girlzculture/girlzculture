@@ -4,10 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import {CalendarDays,CheckCircle2,Circle,UserRound,Users} from "lucide-react";
 import {useI18n} from "@/components/i18n/LocaleProvider";
+import ProfessionalServiceAssignments from "./ProfessionalServiceAssignments";
 import {professionalHours,professionalPerformance} from "@/lib/businessTeamPerformance";
 type Row=Record<string,unknown>&{id?:string;name?:string};
-type Props={salon:Row;stylists:Row[];bookings:Row[];access:Record<string,boolean>|null;params:URLSearchParams};
-export default function TeamWorkspace({salon,stylists,bookings,access,params}:Props){
+type Props={salon:Row;stylists:Row[];bookings:Row[];access:Record<string,boolean>|null;params:URLSearchParams;services:Row[];saveAssignments:(professional:Row,ids:string[]|null)=>Promise<void>};
+export default function TeamWorkspace({salon,stylists,bookings,access,params,services,saveAssignments}:Props){
  const {translateSource:t,formatNumber,formatCurrency,formatDate}=useI18n();
  const [now]=useState(()=>Date.now());
  const can=(permission:string)=>access===null||access[permission]===true;
@@ -51,7 +52,7 @@ export default function TeamWorkspace({salon,stylists,bookings,access,params}:Pr
     {specialties(row)}<p className="flex items-center gap-2 text-xs text-primary"><CalendarDays size={15}/>{t(hasHours(row)?'Availability configured':'Availability needs setup')}</p>
     <div className="flex flex-wrap gap-2 border-t border-border pt-3"><button type="button" aria-pressed={selected?.id===row.id} onClick={()=>{focusSelection.current=true;set('person',selected?.id===row.id?'':String(row.id));}} className={`${control} flex-1 text-primary`}>{t('View professional')}</button><Link href={href(row)} className="flex min-h-11 items-center px-2 text-sm font-semibold text-primary">{t('Edit profile')}</Link></div>
    </article>)}</div>
-   {selected?<aside ref={detailRef} tabIndex={-1} aria-label={t('Selected professional')} className="order-first scroll-mt-32 lg:order-last h-fit space-y-4 rounded-xl border border-primary/20 bg-white p-4"><div className="flex justify-between gap-2">{photo(selected)}<button aria-label={t('Close professional details')} onClick={()=>set('person','')} className={control}>×</button></div><h2 data-no-translate className="font-serif text-2xl">{selected.name}</h2><p data-no-translate className="whitespace-pre-wrap break-words text-sm">{String(selected.bio||'')}</p>{specialties(selected)}<h3 className="font-semibold">{t('Working hours')}</h3>{hours(selected)}{can('availability')?<Link href={scheduleHref(selected)} className="flex min-h-11 items-center text-sm font-semibold text-primary">{t('Edit working hours')}</Link>:null}<Link href={href(selected)} className={`${control} flex items-center justify-center text-primary`}>{t('Edit profile')}</Link></aside>:null}
+   {selected?<aside ref={detailRef} tabIndex={-1} aria-label={t('Selected professional')} className="order-first scroll-mt-32 lg:order-last h-fit space-y-4 rounded-xl border border-primary/20 bg-white p-4"><div className="flex justify-between gap-2">{photo(selected)}<button aria-label={t('Close professional details')} onClick={()=>set('person','')} className={control}>×</button></div><h2 data-no-translate className="font-serif text-2xl">{selected.name}</h2><p data-no-translate className="whitespace-pre-wrap break-words text-sm">{String(selected.bio||'')}</p>{specialties(selected)}{can("styles")&&can("stylists")?<ProfessionalServiceAssignments key={selected.id} professional={selected} services={services} save={ids=>saveAssignments(selected,ids)}/>:null}<h3 className="font-semibold">{t('Working hours')}</h3>{hours(selected)}{can('availability')?<Link href={scheduleHref(selected)} className="flex min-h-11 items-center text-sm font-semibold text-primary">{t('Edit working hours')}</Link>:null}<Link href={href(selected)} className={`${control} flex items-center justify-center text-primary`}>{t('Edit profile')}</Link></aside>:null}
   </div>:null}
   {!visible.length?<p className="rounded-xl border border-dashed border-border p-6 text-center text-sm"><Users size={24} className="mx-auto mb-3 text-primary"/>{t(stylists.length?'No stylists match these filters.':'Add your first stylist.')}</p>:null}
  </div>;

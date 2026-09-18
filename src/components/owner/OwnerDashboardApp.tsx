@@ -578,6 +578,7 @@ export default function OwnerDashboardApp({
     table: string,
     values: Record<string, unknown>,
     id?: string,
+    throwOnFailure = false,
   ) {
     if (!salon?.id) return null;
     try {
@@ -615,6 +616,7 @@ export default function OwnerDashboardApp({
           ? saveError.message
           : "We couldn't save this change. Please try again.",
       );
+      if (throwOnFailure) throw saveError;
       return null;
     }
   }
@@ -927,6 +929,7 @@ type Ctx = {
     table: string,
     values: Record<string, unknown>,
     id?: string,
+    throwOnFailure?: boolean,
   ) => Promise<Row | null>;
   removeRecord: (
     table: string,

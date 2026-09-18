@@ -11,7 +11,7 @@ export const SALON_RECORD_CONFIG: Record<string, SaveConfig> = {
   stylists: {
     permission: "stylists",
     label: "stylist",
-    fields: new Set(["name", "bio", "specialties", "years_experience", "avatar_url", "photos", "is_active", "is_draft", "availability", "archived_at"]),
+    fields: new Set(["name", "bio", "specialties", "years_experience", "avatar_url", "photos", "is_active", "is_draft", "availability", "archived_at", "assigned_service_ids"]),
   },
   salon_products: {
     permission: "products",
@@ -66,6 +66,11 @@ export function sanitizeSalonRecord(table: string, values: Record<string, unknow
     if ("price_display_min" in patch && "price_display_max" in patch && Number(patch.price_display_max) < Number(patch.price_display_min)) throw new Error("Maximum price cannot be lower than minimum price.");
     if ("buffer_minutes" in patch || isInsert) patch.buffer_minutes = finiteNumber(patch.buffer_minutes ?? 0, "Cleanup buffer", 0, 180);
   } else if (table === "stylists") {
+    if ("assigned_service_ids" in patch && patch.assigned_service_ids !== null) {
+      const ids = patch.assigned_service_ids;
+      if (!Array.isArray(ids) || ids.length > 1000 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) throw new Error("Choose valid services from this business.");
+      patch.assigned_service_ids = [...new Set(ids.map(id => id.toLowerCase()))];
+    }
     if ("name" in patch || isInsert) { patch.name = cleanText(patch.name, 120); if (!patch.name) throw new Error("Enter the stylist's name."); }
     if ("bio" in patch) patch.bio = cleanText(patch.bio, 500);
     if ("years_experience" in patch) patch.years_experience = finiteNumber(patch.years_experience, "Years of experience", 0, 70, true);

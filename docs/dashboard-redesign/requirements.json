@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; service and team workspace checks passed locally; service assignments and remaining140-clause scope still in progress",
+  "status": "IMPLEMENTING; NOT RELEASED; catalog, team and new service-assignment boundaries verified locally; remaining 140-requirement scope continues",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -868,14 +868,17 @@
         "src/lib/ownerReadServer.ts",
         "src/lib/ownerBusinessMetrics.ts"
       ],
-      "state": "PENDING",
+      "state": "IMPLEMENTING",
       "acceptance": "BLOCKED",
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
       "live_evidence": [],
       "detailed_clause": "DATA-01 — Connect the assistant to the same authoritative business records used by the dashboard, using authorized lookups on demand and maintained Girlz Culture product guidance. A responding model does not itself establish complete access to application data. The implementation needs an explicit inventory of reads, calculations and permitted actions for every module; do not rely on a static prompt containing a partial snapshot.",
-      "detailed_clause_line": 248
+      "detailed_clause_line": 248,
+      "evidence": [
+        "Professional service assignments use the authenticated business service dictionary, with its own total/cap and both role permissions. Two-business direct/name-follow-up/foreign-query and revoked-catalog-permission tests prove the boundary before model input. Other module/action inventory remains in progress."
+      ]
     },
     {
       "id": "DATA-02",
@@ -3600,9 +3603,12 @@
       "implementation_paths": [
         "src/components/owner/TeamWorkspace.tsx",
         "src/components/owner/StructuredCatalogEditors.tsx",
-        "src/lib/businessTeamPerformance.ts"
+        "src/lib/businessTeamPerformance.ts",
+        "src/components/owner/ProfessionalServiceAssignments.tsx",
+        "src/lib/professionalServices.ts",
+        "supabase/migrations/20260918112223_business_professional_service_assignments.sql"
       ],
-      "state": "PENDING",
+      "state": "IMPLEMENTING",
       "acceptance": "BLOCKED",
       "blocker": "Implementation and verification not completed",
       "changes": [],
@@ -3616,7 +3622,7 @@
         "Consistent responsive cards, complete original specialty chips, URL-preserved selection/filters, own-business month-to-date performance with cash/pay distinction, saved-readiness checklist, existing compensation/team-settings navigation, selected-staff schedule deep link.",
         "Eight original team cases pass across Chromium/WebKit EN/FR/ES/zh-CN. Mobile visual correction adds first-card-in-viewport regression; four phone/landscape cases pass afterward. Core2 passed, build/TypeScript/lint passed before final compact More text adjustment.",
         "Related service/order/draft suite16/16 passed. Destination-stream-close logs on reload preserved without claiming diagnosed root cause.",
-        "Service assignments and remaining detailed team feature clauses are still in progress. No real live acceptance or deployment."
+        "Service assignments now save all/subset/none, preserve failed drafts and support readback/reload in EN/FR/ES/zh-CN. Twelve Chromium/WebKit cases pass including public service/stylist selection; core/route5, availability4, assistant18, full161 clean database chain passed. Live acceptance and complete visual/role acceptance remain pending."
       ]
     },
     {

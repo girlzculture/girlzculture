@@ -1260,4 +1260,6 @@ const clientCardsOutput = runPsql(["--file", path.join(root, "scripts", "sql", "
 if (clientCardsOutput) console.log(clientCardsOutput);
 const catalogOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-catalog.sql")], "Featured service persistence and isolation assertions");
 if (catalogOutput) console.log(catalogOutput);
+const assignmentOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-professional-service-assignments.sql")], "Professional assignments, checkout enforcement and two-business isolation assertions");
+if (assignmentOutput) console.log(assignmentOutput);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);

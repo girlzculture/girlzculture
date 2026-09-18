@@ -16,6 +16,7 @@ import { useI18n } from "@/components/i18n/LocaleProvider";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
 import { calculateSalonPromotion, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 import { bookingReference } from "@/lib/bookingReference";
+import { professionalOffersService } from "@/lib/professionalServices";
 import {
   clearProductCart,
   readProductCart,
@@ -65,7 +66,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const requestedPromotion = searchParams.get("promotion");
   const [styleId, setStyleId] = useState(requestedStyle && styles.some((row) => row.id === requestedStyle) ? requestedStyle : styles[0]?.id || "");
   const requestedStylist = searchParams.get("stylist");
-  const [stylistId, setStylistId] = useState(requestedStylist && stylists.some((row) => row.id === requestedStylist) ? requestedStylist : "any");
+  const [chosenStylistId, setStylistId] = useState(requestedStylist && stylists.some((row) => row.id === requestedStylist) ? requestedStylist : "any");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [size, setSize] = useState("");
@@ -97,6 +98,9 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   );
 
   const style = styles.find((row) => row.id === styleId) || styles[0];
+  const eligibleStylists = stylists.filter(row => professionalOffersService(row, String(style?.id || "")));
+  const stylistId = chosenStylistId === "any" || eligibleStylists.some(row => row.id === chosenStylistId) ? chosenStylistId : "any";
+  useEffect(() => { if (chosenStylistId !== stylistId) setStylistId(stylistId); }, [chosenStylistId, stylistId]);
   const sizeOptions = options(style?.size_options);
   const lengthOptions = options(style?.length_options);
   const addonOptions = options(style?.addons);
@@ -323,7 +327,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
 
   const panels = [
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion }} />,
-    <StylistPanel key="stylist" stylists={stylists} value={stylistId} setValue={setStylistId} />,
+    <StylistPanel key="stylist" stylists={eligibleStylists} value={stylistId} setValue={setStylistId} />,
     <DatePanel key="date" {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested, fieldErrors, setFieldErrors, minimumBookingDate, maximumBookingDate }} />,
     <div key="review"><BusinessPolicyDisclosure businessName={salon.name} revision={salon.business_policy || null}/>{salon.business_policy?.id ? <div className="my-4 rounded-xl border bg-white p-4"><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={businessConsent === salon.business_policy.id} onChange={event => { setBusinessConsent(event.target.checked ? salon.business_policy.id : null); setFieldErrors(current => ({ ...current, business_consent: "" })); }}/><span>{t("I have read and agree to {value0}'s Business Policies, including its Refund & Service Satisfaction Policy. These policies are set by the business and are separate from Girlz Culture's platform policies and protections.", { value0: salon.name })}</span></label><a className="mt-2 inline-flex min-h-11 items-center text-sm underline" href="#business-policies" onClick={() => { const details = document.querySelector<HTMLDetailsElement>("#business-policies details"); if (details) details.open = true; }}>{t("Read the full business policy")}</a>{fieldErrors.business_consent ? <p role="alert" className="text-sm gc-text-danger">{t(fieldErrors.business_consent)}</p> : null}</div> : null}<ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, protectionApplies:terms.own_business_protection_applies, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, cancellationGraceMinutes, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} />{productCart?.items.length ? <CombinedProductSummary cart={productCart} /> : null}<PromoField {...{ promoCode, setPromoCode:changePromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,
     <PaymentPanel key="payment" confirmed={confirmed} deposit={deposit} saving={saving} reserve={reserve} suggested={suggested} applySuggested={applySuggested} />,

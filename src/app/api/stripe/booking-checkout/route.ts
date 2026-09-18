@@ -400,6 +400,9 @@ async function POSTHandler(request: Request) {
       reservationError = bookingReservation.error;
     }
     if (reservationError || !reservationId) {
+      if (reservationError?.message === "PROFESSIONAL_SERVICE_UNAVAILABLE") {
+        return Response.json({ error: "The selected professional no longer offers this service. Choose another professional or service.", code: "PROFESSIONAL_SERVICE_UNAVAILABLE" }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
+      }
       if (/CONFLICT|exclusion/i.test(reservationError?.message || "")) {
         const next = await nextAvailableSlot({ salonId, styleId, stylistId: requestedStylistId, customerId, guestEmail, afterDate: localDate, afterTime: localTime });
         return Response.json({ error: "That time was just reserved by another customer.", next_available: next }, { status: 409 });

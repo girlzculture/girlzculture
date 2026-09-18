@@ -86,12 +86,24 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
   };
   const list = lists[tool];
   if (list) {
-    let query = admin.from(list.table).select(list.fields, { count: "exact" }).eq("salon_id", salon.id);
+    const canReadAssignments = tool === "get_professionals" && (context.isOwner || context.teamMember?.permissions?.styles === true);
+    let query = admin.from(list.table).select(list.fields + (canReadAssignments ? ",assigned_service_ids" : ""), { count: "exact" }).eq("salon_id", salon.id);
     if (list.table !== "reviews") query = query.is("archived_at", null);
     if (list.name) query = query.ilike(list.name, `%${String(args.query || "").replace(/[\\%_]/g, character => `\\${character}`)}%`);
     if (tool === "get_reviews") query = query.gte("created_at", args.start).lt("created_at", args.end);
     const result = await query.order("created_at", { ascending: false }).limit(100);
     if (result.error) throw result.error;
+    if (canReadAssignments) {
+      // Resolve names from the same authenticated business before model input.
+      // Publish one bounded dictionary, not a repeated catalog per professional.
+      const services = await admin.from("styles").select("id,name,is_draft", { count: "exact" }).eq("salon_id", salon.id).is("archived_at", null).order("name").limit(1000);
+      if (services.error) throw services.error;
+      const allowed = new Set((services.data || []).map(row => row.id));
+      const professionals = (result.data || []) as unknown as Row[];
+      return { professionals: professionals.map(row => ({ ...row, assigned_service_ids: row.assigned_service_ids == null ? null : (Array.isArray(row.assigned_service_ids) ? row.assigned_service_ids.filter((id: unknown) => typeof id === "string" && allowed.has(id)) : []) })), total: result.count, capped_at: 100,
+        service_dictionary: services.data, services_total: services.count, services_capped_at: 1000,
+        assignment_definition: "Null assignments offer all current and future services; an empty array offers none. IDs are filtered to this business's visible service dictionary. If the dictionary is capped, absence is not evidence that a service is unassigned. Draft services are not bookable." };
+    }
     return { [list.key]: result.data, total: result.count, capped_at: 100 };
   }
   if (["get_business_summary", "get_customers", "get_upcoming_appointments"].includes(tool)) {

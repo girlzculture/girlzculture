@@ -7,6 +7,7 @@ import {
   zonedLocalToUtc,
 } from "@/lib/dateTime";
 import { isSalonClosedOn } from "@/lib/salonOpenStatus";
+import { professionalOffersService } from "@/lib/professionalServices";
 
 type Row = Record<string, unknown>;
 type HoursRange = { open: string; close: string; closed: boolean };
@@ -122,9 +123,9 @@ async function loadAvailabilityData(
       .single() : Promise.resolve({ data: {}, error: null }),
     admin
       .from("stylists")
-      .select("id,name,availability,is_active", { count: "exact" })
+      .select("id,name,availability,is_active,is_draft,assigned_service_ids", { count: "exact" })
       .eq("salon_id", input.salonId)
-      .eq("is_active", true).is("archived_at", null),
+      .is("archived_at", null),
   ]);
   if (salonResult.error || styleResult.error)
     throw new Error("SALON_OR_STYLE_QUERY_FAILED");
@@ -252,12 +253,13 @@ function availabilityForDate(
       timeZone,
       reason: "This salon is closed today. Choose another date.",
     };
+  const eligible = data.roster.filter(row => professionalOffersService(row, String(style.id || input.styleId || "")));
   const requested = input.stylistId
-    ? data.roster.filter((row) => row.id === input.stylistId)
-    : data.roster;
+    ? eligible.filter((row) => row.id === input.stylistId)
+    : eligible;
   const resources = requested.length
     ? requested
-    : input.stylistId
+    : input.stylistId || data.roster.length
       ? []
       : [{ id: null, availability: {} }];
   const day = dayName(date);
@@ -400,7 +402,7 @@ export async function calendarAvailability(input: { salonId: string; date: strin
   const hours = hoursRange((data.salon.hours as Row | null)?.[day]);
   const gaps: { start: string; end: string; stylist_id: string | null; professional_name: string | null }[] = [];
   if (!hours || hours.closed || isSalonClosedOn(data.salon, input.date)) return { date: input.date, time_zone: data.timeZone, gaps };
-  const resources = data.roster.length ? data.roster : [{ id: null, name: null, availability: {} }];
+  const resources = data.roster.length ? data.roster.filter(row => row.is_active !== false) : [{ id: null, name: null, availability: {} }];
   for (const resource of resources) {
     const id = resource.id ? String(resource.id) : null;
     if (input.stylistId && input.stylistId !== id) continue;

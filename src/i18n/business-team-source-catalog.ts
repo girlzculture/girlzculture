@@ -1,4 +1,12 @@
 const rows=[
+ ["Assigned services","Services attribués","Servicios asignados","已分配服务"],
+ ["Controls new online bookings. Existing appointments and checkout holds keep their booked terms.","S’applique aux nouvelles réservations en ligne. Les rendez-vous et les créneaux réservés au paiement conservent leurs conditions.","Se aplica a nuevas reservas en línea. Las citas y los horarios retenidos durante el pago conservan sus condiciones.","适用于新的在线预约。已有预约和结账时保留的时段维持原有条款。"],
+ ["All current and future services","Tous les services actuels et futurs","Todos los servicios actuales y futuros","所有当前及未来服务"],
+ ["Select services this professional offers. Selecting none stops new online bookings for this professional.","Choisissez les services proposés par ce professionnel. Sans sélection, aucune nouvelle réservation en ligne ne lui sera attribuée.","Selecciona los servicios que ofrece este profesional. Sin selección, no recibirá nuevas reservas en línea.","选择此专业人员提供的服务。若不选择任何服务，此人员将无法接收新的在线预约。"],
+ ["No services saved yet.","Aucun service enregistré.","Aún no hay servicios guardados.","尚未保存任何服务。"],
+ ["Unable to save service assignments.","Impossible d’enregistrer les services attribués.","No se pueden guardar los servicios asignados.","无法保存服务分配。"],
+ ["Service assignments saved and verified.","Services attribués enregistrés et vérifiés.","Servicios asignados guardados y verificados.","服务分配已保存并验证。"],
+ ["Save service assignments","Enregistrer les services attribués","Guardar servicios asignados","保存服务分配"],
  ["Team view","Vue de l’équipe","Vista del equipo","团队视图"],
  ["More team actions","Autres actions","Más acciones del equipo","更多团队操作"],
  ["Off","Repos","Descanso","休息"],

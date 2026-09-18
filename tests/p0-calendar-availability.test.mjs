@@ -31,3 +31,19 @@ test('incomplete occupancy or roster responses fail closed instead of inventing 
     await assert.rejects(fixture({truncated}).calendarAvailability(input), /RESULT_TRUNCATED/);
   }
 });
+
+test('service assignments exclude unassigned professionals without falling back to a salon slot',async()=>{
+  const professional={id:'one',salon_id:'business',name:'One',is_active:true,is_draft:false,availability:{Tue:'09:00 - 19:00'}};
+  for(const assigned_service_ids of [[],['other-service']]) {
+    const f=fixture({roster:[{...professional,assigned_service_ids}]});
+    assert.equal((await f.bookingAvailability({...input,styleId:'service'})).slots.length,0);
+    assert.equal((await f.bookingAvailability({...input,styleId:'service',stylistId:'one'})).slots.length,0);
+    assert.equal((await f.calendarAvailability(input)).gaps.length,1,'general calendar still reports working hours');
+  }
+  for(const assigned_service_ids of [null,['service']]) {
+    assert.ok((await fixture({roster:[{...professional,assigned_service_ids}]}).bookingAvailability({...input,styleId:'service'})).slots.length>0);
+  }
+  for(const status of [{is_active:false},{is_draft:true}]) {
+    assert.equal((await fixture({roster:[{...professional,...status}]}).bookingAvailability({...input,styleId:'service'})).slots.length,0);
+  }
+});
