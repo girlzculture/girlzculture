@@ -11,7 +11,7 @@ test('Business finance tablet ledger is reachable and scrollable with the keyboa
   const fixture=await p0OwnerFixture(page,{locale:'es'});
   const t=(text:string)=>BUSINESS_FINANCE_SOURCE_MESSAGES.es[text]||text;
   await page.setViewportSize({width:768,height:1000});
-  await page.goto('/salon/dashboard/earnings');
+  await page.goto('/salon/dashboard/earnings?finance=transactions');
   const filter=page.getByRole('combobox',{name:t('Balance filter'),exact:true});
   await expect(filter).toBeVisible();
   await filter.focus();await page.keyboard.press('Tab');
@@ -38,7 +38,7 @@ for(const locale of ['en','fr','es','zh-CN'] as const){
       if(url.searchParams.get('options')==='entry'){await route.fulfill({json:{stylists:fixture.records.stylists}});return;}
       await route.fulfill({json:{scope:{kind:'business'},books,summary:summarizeOperatingBooks(fixture.business.id,books,{from:url.searchParams.get('from')!,to:url.searchParams.get('to')!,timeZone:fixture.business.time_zone}),evidence:{},stylists:fixture.records.stylists,arrangements:[]}});
     });
-    await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/earnings');
+    await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/earnings?finance=reports');
     const button=page.getByRole('button',{name:t('Download PDF'),exact:true});
     await expect(button).toBeVisible();
     await expectOwnerLocaleCoverage(page,locale);
@@ -136,7 +136,7 @@ test('Business finance wage agreement, obligation and partial payment retain sep
     else throw Error(`Unexpected action ${action}`);
     await route.fulfill({json:{id,verified:true}});
   });
-  await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/earnings');
+  await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/earnings?finance=team');
   const region=page.getByRole('region',{name:'Compensation and rent',exact:true});
   await region.getByRole('button',{name:'Set an arrangement',exact:true}).click();
   let form=region.getByRole('form',{name:'Set an arrangement',exact:true});
@@ -155,6 +155,7 @@ test('Business finance wage agreement, obligation and partial payment retain sep
   await form.getByLabel('Amount paid',{exact:true}).fill('40');
   await form.getByRole('button',{name:'Save record',exact:true}).click();await expect(form).toHaveCount(0);
   await page.reload();await expect(region.getByText('Outstanding compensation',{exact:true}).locator('..')).toContainText('$60.00');
+  await page.getByRole('tab',{name:'Reports',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Recorded profit: -$100.00',exact:true})).toBeVisible();
   expect(actions).toEqual(['arrangement','obligation','compensation_payment']);expect(fixture.unexpected).toEqual([]);
 });

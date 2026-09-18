@@ -588,6 +588,10 @@
         {
           "file": "src/components/booking/CommunicationPreferences.tsx",
           "context": "bd756a1989dd75b1daac30b1403ca57c39d7d6f4bcdaaa28c579e8d22e8e2ff3"
+        },
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "context": "b4ed979ef59d070e445588cebf383a2f92aa655c626241954fc0d039d342b3ed"
         }
       ]
     },
@@ -2234,6 +2238,18 @@
         {
           "file": "src/components/owner/TeamWorkspace.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2614,6 +2630,14 @@
         {
           "file": "src/lib/businessFinanceCore.ts",
           "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "context": "1615c7dad4bafb12205df47585794cc68897b40b600d8f05f2b37d2bcbae696c"
+        },
+        {
+          "file": "src/lib/financeDailyClose.ts",
+          "context": "1615c7dad4bafb12205df47585794cc68897b40b600d8f05f2b37d2bcbae696c"
         }
       ]
     },
@@ -2724,6 +2748,10 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "context": "0f407478f70c7ec254707950f73ac42aaeb245cade5497d7cbb60855cf085b7c"
+        },
+        {
+          "file": "src/lib/financeWorkspace.ts",
+          "context": "101b03577d579a4c825f91a2d1d86502cd3cdeaf7b5b530898a534f1ec60aca1"
         }
       ]
     },
@@ -2748,6 +2776,10 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "context": "0f407478f70c7ec254707950f73ac42aaeb245cade5497d7cbb60855cf085b7c"
+        },
+        {
+          "file": "src/lib/financeWorkspace.ts",
+          "context": "101b03577d579a4c825f91a2d1d86502cd3cdeaf7b5b530898a534f1ec60aca1"
         }
       ]
     },
@@ -2772,6 +2804,10 @@
         {
           "file": "src/components/owner/TeamWorkspace.tsx",
           "context": "84dc10c0e959e21b67cce24892a65afb6dfe72fbd4542754ed96090369e948b4"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "context": "de28e2d619f59ffbd7ee83304969d9590f3a4b7662e86e45d1d19270a44f53f1"
         }
       ]
     },
@@ -2822,6 +2858,96 @@
         {
           "file": "src/lib/gcAssistantPresentation.ts",
           "context": "b56efb1b71d52faac48cd041bd92175814b603df4ed72deaf321dba80e76c114"
+        }
+      ]
+    },
+    {
+      "source": "[role=\"tab\"]",
+      "reason": "DOM selector for tab keyboard focus, never displayed.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "9bd26a9be0db2ff203a9fbf954c7d2a7898dd75ea4d638f50e4cc1b686f9cd6f"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-panel-{value1}",
+      "reason": "ARIA target ID, not displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "c2cfb62ea2a86106ce45819774bafdd99f73e26504d2f7f6f70695f6b1c4adc9"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-tab-{value1}",
+      "reason": "ARIA tab ID, not displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "115d9e1c42f21c851ba11e5db066cfba1347f4406d85639e5766c990e8980b11"
+        }
+      ]
+    },
+    {
+      "source": "ArrowLeft",
+      "reason": "KeyboardEvent key identifier.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "5b813f392c6a5292066e6ad1ae0a091042e81c343b240fe42ec74aab2fc1d97a"
+        }
+      ]
+    },
+    {
+      "source": "ArrowRight",
+      "reason": "KeyboardEvent key identifier.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "fbfe66b1b0f7de69c41abce4bc27cbcb0fd7195da42da3b4db9cb01dfda8c2d3"
+        }
+      ]
+    },
+    {
+      "source": "End",
+      "reason": "KeyboardEvent key identifier.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "362f67079dca885659999237b768d118cb075a7a010da14d12d884fe31641a5b"
+        }
+      ]
+    },
+    {
+      "source": "finance-panel-{value0}",
+      "reason": "ARIA panel ID, not displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "context": "ad8d45b19334773b6dd284275400675171d437d3074a600c285cdb14230ffefd"
+        }
+      ]
+    },
+    {
+      "source": "finance-tab-{value0}",
+      "reason": "ARIA label reference ID, not displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "context": "599ad3526e74a740536739467d7c7eae46a8785344df2358a804bc0c49c97e57"
+        }
+      ]
+    },
+    {
+      "source": "Home",
+      "reason": "KeyboardEvent key identifier.",
+      "contexts": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "context": "b465373840542b46a39c71e99fad3fa2c4cbebbbdbbca2881c427a3eaef2291e"
         }
       ]
     }

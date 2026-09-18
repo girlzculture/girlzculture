@@ -20,6 +20,7 @@
     "src/components/booking/MessageDisplay.tsx",
     "src/components/dashboard/DashboardMobileMenu.tsx",
     "src/components/dashboard/WorkspaceCalendar.tsx",
+    "src/components/dashboard/WorkspaceTabs.tsx",
     "src/components/dashboard/WorkspaceToolbar.tsx",
     "src/components/forms/NumericInput.tsx",
     "src/components/i18n/LanguageSelector.tsx",
@@ -42,6 +43,8 @@
     "src/components/owner/BusinessPolicies.tsx",
     "src/components/owner/BusinessPolicyEditor.tsx",
     "src/components/owner/FinanceCompensation.tsx",
+    "src/components/owner/FinancePeriodControls.tsx",
+    "src/components/owner/FinancePeriodRecords.tsx",
     "src/components/owner/FinanceRecords.tsx",
     "src/components/owner/FinanceReportControls.tsx",
     "src/components/owner/FinanceUI.tsx",
@@ -96,7 +99,9 @@
     "src/lib/dashboardNotificationPollingCore.ts",
     "src/lib/dashboardNotificationsCore.ts",
     "src/lib/dateTime.ts",
+    "src/lib/financeDailyClose.ts",
     "src/lib/financeLedgerCore.ts",
+    "src/lib/financeWorkspace.ts",
     "src/lib/gcAssistantPresentation.ts",
     "src/lib/hostRouting.ts",
     "src/lib/imageCropCore.ts",
@@ -290,13 +295,13 @@
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 19,
+          "line": 21,
           "kind": "template",
           "context": "f27801551c485b339738226ad42d49634fe5d67f93435f574ddc402e462f437d"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "template",
           "context": "f27801551c485b339738226ad42d49634fe5d67f93435f574ddc402e462f437d"
         },
@@ -357,10 +362,10 @@
       "source": "· USD",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 16,
           "kind": "jsx-text",
-          "context": "cc9ea625f06f9fcb161017f76a3c8f43ecef13eda91ab3a854d581631e1a4bb1"
+          "context": "2edaf9eed5ef4f3d2f6b8807d1dffc5cd55a6216d198767332e1ffa4b09a9c87"
         }
       ]
     },
@@ -466,6 +471,17 @@
           "line": 149,
           "kind": "literal",
           "context": "bd8b761afaad9479dbf664101a67789943c95e9d2ea23fa0005d2c027411d578"
+        }
+      ]
+    },
+    "851ba02a6642": {
+      "source": "[role=\"tab\"]",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 9,
+          "kind": "literal",
+          "context": "9bd26a9be0db2ff203a9fbf954c7d2a7898dd75ea4d638f50e4cc1b686f9cd6f"
         }
       ]
     },
@@ -623,7 +639,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 13,
+          "line": 15,
           "kind": "template",
           "context": "35e4ad93bcb55123fa613fe518180b0b8c5c4e5b18036d1d1bc488e27d913986"
         },
@@ -1029,7 +1045,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 101,
+          "line": 112,
           "kind": "template",
           "context": "417e51d1bedf948eaabc992b89b65563337df69dec13904e7f8aefd94e43290d"
         }
@@ -1306,6 +1322,17 @@
         }
       ]
     },
+    "9e71512da188": {
+      "source": "{value0}-panel-{value1}",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 13,
+          "kind": "template",
+          "context": "c2cfb62ea2a86106ce45819774bafdd99f73e26504d2f7f6f70695f6b1c4adc9"
+        }
+      ]
+    },
     "dfc0adcf4b53": {
       "source": "{value0}-salon",
       "occurrences": [
@@ -1314,6 +1341,17 @@
           "line": 30,
           "kind": "template",
           "context": "1f73d496ecbbc2a14036fe02b274243305e89a170219eb98029280718171695a"
+        }
+      ]
+    },
+    "5a1e181f2977": {
+      "source": "{value0}-tab-{value1}",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 13,
+          "kind": "template",
+          "context": "115d9e1c42f21c851ba11e5db066cfba1347f4406d85639e5766c990e8980b11"
         }
       ]
     },
@@ -1480,9 +1518,15 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 101,
+          "line": 112,
           "kind": "template",
           "context": "e59e704324ef39013ec5b2b1065f4576c5641ad5cdd73e183022c768bf1e4d92"
+        },
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 125,
+          "kind": "template",
+          "context": "b4ed979ef59d070e445588cebf383a2f92aa655c626241954fc0d039d342b3ed"
         },
         {
           "file": "src/components/owner/GcAssistant.tsx",
@@ -1568,7 +1612,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 115,
+          "line": 133,
           "kind": "template",
           "context": "ec838177d3669bded1a6e08c31a2e10e05e841836463e3ea6adac00c290313ac"
         },
@@ -1839,7 +1883,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 117,
+          "line": 128,
           "kind": "template",
           "context": "582d944732372adef701caa943a546ec30b0ba60eb845c3095233cfb7ee133d8"
         },
@@ -1957,7 +2001,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 117,
+          "line": 128,
           "kind": "template",
           "context": "68afc378f469e3d7498297c0fe8f4da8dd08b5abbd5c7958a80d9930e53a7e39"
         },
@@ -2407,6 +2451,17 @@
         }
       ]
     },
+    "ced95dd44d9c": {
+      "source": "About these totals",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 135,
+          "kind": "localized-source",
+          "context": "ab76773c36cb33abca0a8bbdde798d960b6a9a4cc9c47f7a31d78b82c335ca99"
+        }
+      ]
+    },
     "bb54db510a92": {
       "source": "Accept",
       "occurrences": [
@@ -2518,7 +2573,7 @@
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "literal",
           "context": "423d26c536efaf2c4b67fa65d463b8d6c7d51fdcd241d92b8a9400d7ec83381a"
         }
@@ -2984,19 +3039,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 98,
+          "line": 109,
           "kind": "localized-source",
           "context": "f17ac5367e522387688af728b475aa2905b9f38e265f035933ad88e20d15122e"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 101,
+          "line": 112,
           "kind": "literal",
           "context": "978a5a4cd87dc570c5fbe39878652fffca32fc2572785c73c3dc82571d2229c8"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 102,
+          "line": 113,
           "kind": "literal",
           "context": "978a5a4cd87dc570c5fbe39878652fffca32fc2572785c73c3dc82571d2229c8"
         }
@@ -3615,13 +3670,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 19,
+          "line": 21,
           "kind": "localized-source",
           "context": "e35ca2a583d9e59e7035257d451afd455c40261a5262e1fa18334dcbfb28a77b"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "literal",
           "context": "423d26c536efaf2c4b67fa65d463b8d6c7d51fdcd241d92b8a9400d7ec83381a"
         }
@@ -3863,7 +3918,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 16,
+          "line": 18,
           "kind": "localized-source",
           "context": "37ada593ffb15f2367c175fca7636acd477e18dc7b97fedaa05204bdee4967dc"
         }
@@ -4191,7 +4246,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 106,
+          "line": 117,
           "kind": "literal",
           "context": "054a5c767166ad0e33a7bdb30504f41bf7acc6d2f34e4c69620e118dc3829775"
         }
@@ -4224,7 +4279,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 107,
+          "line": 118,
           "kind": "literal",
           "context": "41c0907cb879a7e01107052b678247ff8af862709c9b820f55a8d70d354e86ad"
         }
@@ -4235,7 +4290,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 108,
+          "line": 119,
           "kind": "literal",
           "context": "1e4a7586ef184779e2658cab5b0702435962c9f9f16d7670b14bac4e74165e37"
         }
@@ -4352,10 +4407,10 @@
           "context": "a6ea8b1e9cbaeb91505fe36ee7339a799c68aa0f2dbf300bbef923efbcb84b77"
         },
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 13,
           "kind": "localized-source",
-          "context": "7a9ec66d1753198f69d1a20e2ab720f0cc45fd5d9cada88ee63266604e83c2c2"
+          "context": "a6ea8b1e9cbaeb91505fe36ee7339a799c68aa0f2dbf300bbef923efbcb84b77"
         }
       ]
     },
@@ -4755,6 +4810,28 @@
           "line": 43,
           "kind": "localized-source",
           "context": "970fcf933d25ee4f811b43e748005cd69e28f2af3e914c091498fc6474da9d84"
+        }
+      ]
+    },
+    "55cfd14c41e5": {
+      "source": "ArrowLeft",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 11,
+          "kind": "literal",
+          "context": "5b813f392c6a5292066e6ad1ae0a091042e81c343b240fe42ec74aab2fc1d97a"
+        }
+      ]
+    },
+    "c5d27b07ce65": {
+      "source": "ArrowRight",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 11,
+          "kind": "literal",
+          "context": "fbfe66b1b0f7de69c41abce4bc27cbcb0fd7195da42da3b4db9cb01dfda8c2d3"
         }
       ]
     },
@@ -5320,7 +5397,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 16,
+          "line": 18,
           "kind": "localized-source",
           "context": "f80e886f24fc5d023a7fa5edf6776a1a6a8f8154d16e9d69cb605560398209cf"
         }
@@ -5331,7 +5408,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 17,
+          "line": 19,
           "kind": "localized-source",
           "context": "a029126f625b1c49ccd4c88dee60bfb0a9478ac8062987f49deb5634cfe648ec"
         }
@@ -5375,7 +5452,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 121,
+          "line": 134,
           "kind": "localized-source",
           "context": "e2ddfdc2fb879339e25ba0ceff1fbcbd91cec0fbd8b1c15fa1ff08fe8a65beb0"
         }
@@ -6175,7 +6252,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 75,
+          "line": 81,
           "kind": "literal",
           "context": "cbc659b7f704af116e2ab15fd72dd48079e587279ed147731e179fcf937b4b39"
         }
@@ -6311,7 +6388,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "literal",
           "context": "227f0cdd2e21c13775f44a7ef346cbf540a07cffca3059ed585f5f3062e12871"
         }
@@ -6322,7 +6399,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "literal",
           "context": "337b16932c62568dd2be7066277e5934007ae7b99a8386bc425afea56c26f1a8"
         }
@@ -7021,7 +7098,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 102,
+          "line": 113,
           "kind": "localized-source",
           "context": "94a9118c0f8c6ec66fb714cbd855d70c5148c7f3f1b2de0ff882093501ec88e2"
         },
@@ -7349,9 +7426,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 96,
+          "line": 107,
           "kind": "localized-source",
           "context": "6b21e9c01ced67403df001145a60aa5eeb64ce662720ca860cf58925232fffcd"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "042e081a3f5a55b40d76937c3cd907632b83cc931afba972bbaa205dc59a2c12"
         },
         {
           "file": "src/components/owner/FinanceUI.tsx",
@@ -7377,9 +7460,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 96,
+          "line": 107,
           "kind": "localized-source",
           "context": "b23b932a64d4c5b987fd6272e34b49fabd76590c0afbed0b4da1d4b00da2cb60"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "e06672071baa9f9f845c230749dc6eb4211e8e87d5ae36464d0ae27a412b43d9"
         },
         {
           "file": "src/components/owner/FinanceUI.tsx",
@@ -7416,7 +7505,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "3217b32fb8a4ab79c1af14c70e9303f387fb80a8591ff96940809aba9fd842be"
         }
@@ -7427,7 +7516,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 106,
+          "line": 117,
           "kind": "literal",
           "context": "842d6c690af53f6a5b55d50e390c45addc5a84fbcdb873242bbb8a7b82a54fa6"
         },
@@ -7583,7 +7672,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 79,
+          "line": 85,
           "kind": "localized-source",
           "context": "54a6a741ded0bcda61d8712f82b34a97a8c3ef15d0743e42a044355dcdf83e01"
         },
@@ -7909,7 +7998,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 37,
+          "line": 43,
           "kind": "localized-source",
           "context": "3422b2197b412f6cf6197441035e549446a4fdbfd3df44e3691b63a0987a9005"
         }
@@ -8091,7 +8180,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "ebf2b90327ee38aa14d38f683bd18cd987ab451fe7f1c615c68ab6cb029047a3"
         }
@@ -8135,7 +8224,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "1f2ce3ce9334338396e606fe3cc302d66d36e614da86e5d295f6d9d83a9415c1"
         },
@@ -8385,7 +8474,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "d5bbb545c10494ba31f15666946ac4f5d36975ebc6eeb4fe13cd408a189b35ad"
         }
@@ -8731,7 +8820,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "literal",
           "context": "7ceaf623438fbf0f85a750b0116cb87e695b9e6b25905702375cf13a645bec6c"
         },
@@ -8909,7 +8998,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "literal",
           "context": "6294a0a4088b3ac231789b9613e00dafc9aaef50ff43d241f16ff8d5d3eaefa5"
         },
@@ -9073,9 +9162,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 116,
+          "line": 127,
           "kind": "literal",
           "context": "18bab7a230e699354ff62a6db498162d1ac52c0b8f01d02a28c78053a0efc470"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "844b12454adff20317d1adb9546085eb421cc5c5dbe74a93c501efb42731ae4d"
         }
       ]
     },
@@ -9084,7 +9179,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 117,
+          "line": 128,
           "kind": "localized-source",
           "context": "508110bde7587aecce228da7320866cb02fb79fa56d6fa15f7230464af3cec4c"
         }
@@ -9599,7 +9694,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 86,
+          "line": 93,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
@@ -9978,7 +10073,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 121,
+          "line": 134,
           "kind": "localized-source",
           "context": "eac0a655b93d7914a0398e864ee38959d9bd16aca07b5c2e14c9d1480d051b8a"
         }
@@ -10339,6 +10434,17 @@
         }
       ]
     },
+    "081ae3fdc403": {
+      "source": "Custom",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 15,
+          "kind": "localized-source",
+          "context": "a4c39a0581258883462ec9623d56278526c2378e17a01a473798d7656dd826f9"
+        }
+      ]
+    },
     "8afbde435567": {
       "source": "Custom public URL",
       "occurrences": [
@@ -10680,6 +10786,17 @@
         }
       ]
     },
+    "2afcb4fc7c00": {
+      "source": "Daily close",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "localized-source",
+          "context": "7874d616dbc1b221df32e588819314dbcf9a52683f613a6618088d192aca6696"
+        }
+      ]
+    },
     "eb9a4bc1c0c1": {
       "source": "Date",
       "occurrences": [
@@ -10997,6 +11114,17 @@
           "line": 51,
           "kind": "literal",
           "context": "4b180ab0b86581ed2c17a922762ce9b20398e8b4b49d8f8324587e4620186882"
+        }
+      ]
+    },
+    "677fc3de7a03": {
+      "source": "Deposit settings",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 102,
+          "kind": "literal",
+          "context": "76947c192feac9c3296d9b96c9bd278645101b7406c78ceec4f455c06622ec00"
         }
       ]
     },
@@ -12134,9 +12262,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 17,
+          "line": 22,
           "kind": "literal",
           "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 12,
+          "kind": "literal",
+          "context": "1615c7dad4bafb12205df47585794cc68897b40b600d8f05f2b37d2bcbae696c"
         },
         {
           "file": "src/lib/businessBookings.ts",
@@ -12149,6 +12283,12 @@
           "line": 66,
           "kind": "literal",
           "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
+        },
+        {
+          "file": "src/lib/financeDailyClose.ts",
+          "line": 10,
+          "kind": "literal",
+          "context": "1615c7dad4bafb12205df47585794cc68897b40b600d8f05f2b37d2bcbae696c"
         }
       ]
     },
@@ -12302,6 +12442,17 @@
           "line": 163,
           "kind": "literal",
           "context": "f7177f99867d9383291152f2c0fbeb11abf77c9359cf86ecbdb81a7a33ae61b7"
+        }
+      ]
+    },
+    "a2bb9d34b8a1": {
+      "source": "End",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 11,
+          "kind": "literal",
+          "context": "362f67079dca885659999237b768d118cb075a7a010da14d12d884fe31641a5b"
         }
       ]
     },
@@ -12533,7 +12684,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "3672376ed083ab4b6b4d4e681e1ab84b8ab284d13332eb30b4af9c11fdc4b1ac"
         }
@@ -12715,6 +12866,39 @@
           "line": 113,
           "kind": "jsx-attribute",
           "context": "1e1a95cba4e36edd194274dad859b93903178fbb467c6892e693c31d5252efdf"
+        }
+      ]
+    },
+    "c450095a5c0e": {
+      "source": "Expense categories",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "localized-source",
+          "context": "043471b8d9045a7b70318c42d2cbbf1a0af7b439aa513727c4578964121edc4f"
+        }
+      ]
+    },
+    "3e0c89466a38": {
+      "source": "Expense records",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "localized-source",
+          "context": "25df2b9b61ff2d4eb317cf23711721417070cd6457d81010e2ed1c1bbd725f33"
+        }
+      ]
+    },
+    "8d437dbf95ab": {
+      "source": "Expenses",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 102,
+          "kind": "literal",
+          "context": "33c21c69718c6d12576bfce0f5eb096c43e4cd13abd51f238d39e39742bf4d91"
         }
       ]
     },
@@ -13044,9 +13228,42 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 52,
+          "line": 58,
           "kind": "localized-source",
           "context": "81885483e6833fab03c281347b4ec553492d7106926b24190aff41d81c43bfee"
+        }
+      ]
+    },
+    "13a0b8384828": {
+      "source": "Finance workspace",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 124,
+          "kind": "localized-source",
+          "context": "b4dc962dd16d3f6576c2236dbc0776438b827518ecf925035cb13fc824bc71d8"
+        }
+      ]
+    },
+    "1cfc4b1b2cff": {
+      "source": "finance-panel-{value0}",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 104,
+          "kind": "template",
+          "context": "ad8d45b19334773b6dd284275400675171d437d3074a600c285cdb14230ffefd"
+        }
+      ]
+    },
+    "688531ee15d4": {
+      "source": "finance-tab-{value0}",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 104,
+          "kind": "template",
+          "context": "599ad3526e74a740536739467d7c7eae46a8785344df2358a804bc0c49c97e57"
         }
       ]
     },
@@ -13055,13 +13272,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 97,
+          "line": 108,
           "kind": "localized-source",
           "context": "6b7daee3daf6efee5ff8661bc81098e45e6ffbc1050b0b0520aebc22a807f57a"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 98,
+          "line": 109,
           "kind": "localized-source",
           "context": "6b7daee3daf6efee5ff8661bc81098e45e6ffbc1050b0b0520aebc22a807f57a"
         },
@@ -13497,10 +13714,10 @@
       "source": "From",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
-          "kind": "literal",
-          "context": "adb824669dd9cdef3d7982af6de943bf69ae7cf47288fb9f6e683c8cfdc3f791"
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 11,
+          "kind": "localized-source",
+          "context": "b3f13678caf7827c611d362642b22650967ae4ed4f77ae19e59f8761776fcf86"
         },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
@@ -14558,6 +14775,17 @@
         }
       ]
     },
+    "70f8bb9a8a53": {
+      "source": "Home",
+      "occurrences": [
+        {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 11,
+          "kind": "literal",
+          "context": "b465373840542b46a39c71e99fad3fa2c4cbebbbdbbca2881c427a3eaef2291e"
+        }
+      ]
+    },
     "5aedee0964c6": {
       "source": "hours",
       "occurrences": [
@@ -14792,7 +15020,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 122,
+          "line": 135,
           "kind": "localized-source",
           "context": "31428c3fb3ccbd1a429f0cfb9d02a6247000fd978faf730e104af5aa103daf8e"
         },
@@ -15455,9 +15683,32 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 106,
+          "line": 117,
           "kind": "localized-source",
           "context": "f741c768bea6db222f61a0ab87c4223b123e89aa932ae95d8d574767f9888733"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "literal",
+          "context": "848625e143ba371b84e3e84440d9aade90ed24e0c49cb205853e3ea4e0ca61cc"
+        }
+      ]
+    },
+    "5e8d4304d5f9": {
+      "source": "Inventory purchases",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "localized-source",
+          "context": "ba6a6b82e5e51a3b98792d334eb041b066f7b6322ff76a6664755546d4cff28b"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "83638e46c2af5280fd144992f36e57021cdcc1b55c2c82b50724ae29bc7f6532"
         }
       ]
     },
@@ -15753,7 +16004,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "f9155adde8eeb0725a614509a9f67cba1303f164a2d46938dfbe33cebafd7bf5"
         }
@@ -15976,7 +16227,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 110,
+          "line": 121,
           "kind": "localized-source",
           "context": "2f878ce8fb5245c54f62bfc8b3cb765ad1e19b51249f792ba0352eddfa1a7e69"
         }
@@ -16120,7 +16371,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 15,
+          "line": 17,
           "kind": "localized-source",
           "context": "8df8313d7730b72178ebcca3fa3a1a9efefe28f813dc6cc6f0f1e686f586af3a"
         }
@@ -16209,7 +16460,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 114,
+          "line": 126,
           "kind": "localized-source",
           "context": "0378ae7472c88a3245eab699eb86a5628541a9905cf4a4185da667c3dc2bc855"
         }
@@ -18483,7 +18734,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 117,
+          "line": 128,
           "kind": "localized-source",
           "context": "45336a63e0e75b962b84aa2a6758c0ff14ab6b1328c8ac63b144fd823319cc0f"
         }
@@ -18530,6 +18781,17 @@
           "line": 51,
           "kind": "localized-source",
           "context": "d4499bbee9278c5980f91ffe290d0e89dc97f7a3d4d391cd8cba69dc06d0b806"
+        }
+      ]
+    },
+    "01f538c6061a": {
+      "source": "No expenses recorded for this period.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "localized-source",
+          "context": "42f29ea5d63fb1932f9c582cc6977009b0aa110fcde0ac334dc5c586e2e584bf"
         }
       ]
     },
@@ -18582,7 +18844,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 18,
+          "line": 20,
           "kind": "localized-source",
           "context": "024c5d4162e6922d6a54620ea371f8f5e074d6729e46d8d7cf6153dd15e9c99c"
         }
@@ -18789,6 +19051,17 @@
           "line": 62,
           "kind": "localized-source",
           "context": "ada9faaeed66f6b4d33fe4ab8f01aaff845257548042c0f698537b728d852437"
+        }
+      ]
+    },
+    "6bb2bbeb51ab": {
+      "source": "No recorded activity for this period.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "localized-source",
+          "context": "7b3a1e7dd754cac6157d53153d7dadb30cca8abc9a3939ccdce6869385ae4a33"
         }
       ]
     },
@@ -19291,7 +19564,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 106,
+          "line": 117,
           "kind": "literal",
           "context": "63ea461e0301326a4c6f618c05fcb7e339d2a88869d40a34b0b1c43ae0e621f8"
         }
@@ -20067,9 +20340,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 106,
+          "line": 117,
           "kind": "localized-source",
           "context": "b14dea3a0fc4c53820779d360cca77e5461c0da584552ef071b5e26e0cb99d08"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "literal",
+          "context": "848625e143ba371b84e3e84440d9aade90ed24e0c49cb205853e3ea4e0ca61cc"
         }
       ]
     },
@@ -20078,9 +20357,21 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 121,
+          "line": 134,
           "kind": "localized-source",
           "context": "bacc6ac11e99130137929254838a70f19cdd2896e21a63036984ee05e1cbfeea"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 14,
+          "kind": "localized-source",
+          "context": "41e117dfff61ab7bab7c05ec793adcef682eab3381fd215bc222820c99ab0e7a"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "a254b8239dae6290e923fb47729db7ddc7e69c07b2b9d62df37f8a15790423ba"
         }
       ]
     },
@@ -20178,7 +20469,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 75,
+          "line": 81,
           "kind": "literal",
           "context": "6b774ea0097ba38eb582a120292a053ecf9f81a6dea9607ae4245685be02065b"
         }
@@ -20266,7 +20557,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 108,
+          "line": 119,
           "kind": "literal",
           "context": "4110d5fe57aee847802ed0f593f5c3f82d856d9a831cc51637809dc2c51feaf8"
         }
@@ -20327,15 +20618,21 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 96,
+          "line": 107,
           "kind": "localized-source",
           "context": "08f3baf7bf16cace9dee6d0b72b214c557ed0a131a809e9eb50cad90455e6fa5"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "08f3baf7bf16cace9dee6d0b72b214c557ed0a131a809e9eb50cad90455e6fa5"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "705cb651a64bcb5538ef6351078d43ce7ee176ec922d81679d19c1672f5ae894"
         },
         {
           "file": "src/components/owner/FinanceUI.tsx",
@@ -20562,6 +20859,12 @@
         {
           "file": "src/components/auth/TeamUserManager.tsx",
           "line": 19,
+          "kind": "literal",
+          "context": "03483ae1ffab93d94a0bd439df5d008fa1199bfa6f8138325548a7d3ab028b13"
+        },
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 102,
           "kind": "literal",
           "context": "03483ae1ffab93d94a0bd439df5d008fa1199bfa6f8138325548a7d3ab028b13"
         },
@@ -20924,7 +21227,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 15,
+          "line": 17,
           "kind": "localized-source",
           "context": "3dabf60d38a31dc49f726b77fc5c5cc53775c10cfd0428d98500ce9acee0cc60"
         }
@@ -20946,7 +21249,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 96,
+          "line": 107,
           "kind": "literal",
           "context": "6da51fde60dbd56c6749c79c72172c35f69f8e18eed9683478643fabc2b3a19b"
         },
@@ -20963,7 +21266,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 117,
+          "line": 128,
           "kind": "localized-source",
           "context": "75e97b73dc8e2c0f92b359a1fd7642bedbf04260249ab0f2473629d683b4d636"
         }
@@ -20974,7 +21277,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 117,
+          "line": 128,
           "kind": "localized-source",
           "context": "dec14ee1436be23e31973627ce9363b2de1abbe40de37ec4e39184f7e0f44e07"
         }
@@ -21019,9 +21322,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 116,
+          "line": 127,
           "kind": "literal",
           "context": "db8f9f474b16266bc4344c92ce2b9b5a950d1e33fa5585da51e25e6d1a457774"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "0a2e918a3d2449fbfe5c1ef8634f649a5ae4cc2ccf56391fb0b18d1e497fae0e"
         }
       ]
     },
@@ -21245,7 +21554,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "f8773916626961276c9909874b4c33f3d4a693f6e4d95482b8fc333ccca63d36"
         },
@@ -21532,7 +21841,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 124,
+          "line": 138,
           "kind": "localized-source",
           "context": "9c640e1b5968781e016d11e7d2acf122efcc380c2c424505005eab6f7e4d9076"
         }
@@ -22135,7 +22444,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "04da5bfa561b110c852e7504225101070339093289d22ae219955767d05b8b53"
         }
@@ -22323,7 +22632,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "a508d919092520e1131ae9ba7291c8f6e275c147657760daf49ef9779469138f"
         },
@@ -22440,7 +22749,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 123,
+          "line": 136,
           "kind": "localized-source",
           "context": "aed0474475752a6174920dbb6d1cd117a35dcbd6bd59c48370aede2888d00dff"
         }
@@ -23283,6 +23592,12 @@
           "line": 47,
           "kind": "literal",
           "context": "0f407478f70c7ec254707950f73ac42aaeb245cade5497d7cbb60855cf085b7c"
+        },
+        {
+          "file": "src/lib/financeWorkspace.ts",
+          "line": 21,
+          "kind": "literal",
+          "context": "101b03577d579a4c825f91a2d1d86502cd3cdeaf7b5b530898a534f1ec60aca1"
         }
       ]
     },
@@ -23374,7 +23689,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "890f35ccb7386f26ace0916a976be37eb7579cc101bc03777ef294539231558f"
         }
@@ -23602,7 +23917,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 108,
+          "line": 119,
           "kind": "literal",
           "context": "f276054ed731a98362ecc482eea943b8f3a3987f5c8ad5cc7809737aa13b40a0"
         },
@@ -23674,13 +23989,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 108,
+          "line": 119,
           "kind": "literal",
           "context": "2c31a2726887a7f99cb4745f87b5af108c575bcdb41ef9ce5c478f0ab84b4dd9"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 14,
+          "line": 16,
           "kind": "literal",
           "context": "2c31a2726887a7f99cb4745f87b5af108c575bcdb41ef9ce5c478f0ab84b4dd9"
         }
@@ -23746,19 +24061,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 98,
+          "line": 109,
           "kind": "localized-source",
           "context": "dd331beba34c0c4bf3b25d9cf5a0076ef607d6e3066426b47f51897e1fb9d96a"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 101,
+          "line": 112,
           "kind": "literal",
           "context": "a074d56c467d995632f0544ce3056c464d6c1b0d32951a0f883248b10139ac04"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 102,
+          "line": 113,
           "kind": "literal",
           "context": "a074d56c467d995632f0544ce3056c464d6c1b0d32951a0f883248b10139ac04"
         }
@@ -23780,19 +24095,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 101,
+          "line": 112,
           "kind": "literal",
           "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 102,
+          "line": 113,
           "kind": "literal",
           "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 14,
+          "line": 16,
           "kind": "localized-source",
           "context": "7ebf6c438a817f730ea3747b40b5f00cf67f54a1d1f1d6ef8aecd9da33c3590e"
         }
@@ -23814,7 +24129,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 103,
+          "line": 114,
           "kind": "localized-source",
           "context": "7f8000d6c302985954a3b5a0228721b48fd153e2f2c0b962c46caf13ab7d8a92"
         }
@@ -23836,19 +24151,19 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 101,
+          "line": 112,
           "kind": "literal",
           "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 102,
+          "line": 113,
           "kind": "literal",
           "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 14,
+          "line": 16,
           "kind": "localized-source",
           "context": "05577bb87d766f4b7edb505561dd48d3fbd98dac50e26ce2d6a2dd2d1330af28"
         }
@@ -23881,7 +24196,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 89,
+          "line": 96,
           "kind": "localized-source",
           "context": "b799f54189e54e01a4c5758956135e50c5c8768bf4efb16f87b982db598cfe7e"
         },
@@ -23960,7 +24275,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 109,
+          "line": 120,
           "kind": "literal",
           "context": "61db450cce5bcb453d453392fe4452598d1abf7ff82d9666ac94b70f3e9b0ec0"
         }
@@ -24004,7 +24319,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 121,
+          "line": 134,
           "kind": "localized-source",
           "context": "58b688f33c4aba5b8b41197a46cdea862402264c29a83dd5aab4f42ff7b19d3c"
         }
@@ -24015,9 +24330,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 116,
+          "line": 127,
           "kind": "literal",
           "context": "dc3bccd744b311ec9d38c8d4518d5c0fe53d766260fa2899db19dcfbb1664210"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "30b9cacf9293556b0d4f8f7cef9b051ff24ea3caa05b55b4f72ee284b54fda16"
         }
       ]
     },
@@ -24304,7 +24625,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 99,
+          "line": 110,
           "kind": "localized-source",
           "context": "132c52754e8aa148a446d1d29e879790fba2d116fa7adfead41efd127337b25d"
         },
@@ -24633,6 +24954,12 @@
           "line": 47,
           "kind": "literal",
           "context": "0f407478f70c7ec254707950f73ac42aaeb245cade5497d7cbb60855cf085b7c"
+        },
+        {
+          "file": "src/lib/financeWorkspace.ts",
+          "line": 21,
+          "kind": "literal",
+          "context": "101b03577d579a4c825f91a2d1d86502cd3cdeaf7b5b530898a534f1ec60aca1"
         }
       ]
     },
@@ -24695,10 +25022,27 @@
       "source": "Reporting period",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 9,
           "kind": "localized-source",
-          "context": "7a8cef8f40857018225a2a62b2b611f12a1f958eee44b4e6d46eebfb9c5f283a"
+          "context": "865f41a7bfecef381883c1d00d5dc4a8f8cdaaba18e55838aae2bd5eca96f0b7"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 14,
+          "kind": "localized-source",
+          "context": "865f41a7bfecef381883c1d00d5dc4a8f8cdaaba18e55838aae2bd5eca96f0b7"
+        }
+      ]
+    },
+    "88bc3fe3dadd": {
+      "source": "Reports",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 102,
+          "kind": "literal",
+          "context": "1d460ae638244c35e44f13ec6644eb15bfec23541d1f4a433db8a7b8396a4930"
         }
       ]
     },
@@ -25646,9 +25990,26 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 16,
+          "line": 18,
           "kind": "localized-source",
           "context": "9bb284775d2463ccd3aca27fe200fc1aa55dd45c40feeb7e010fc364a61e3541"
+        },
+        {
+          "file": "src/components/owner/FinanceRecords.tsx",
+          "line": 22,
+          "kind": "localized-source",
+          "context": "9bb284775d2463ccd3aca27fe200fc1aa55dd45c40feeb7e010fc364a61e3541"
+        }
+      ]
+    },
+    "8f372d1a2d59": {
+      "source": "Sales follow completion dates. Payments and expenses follow their recorded dates. This is not a bank reconciliation.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "localized-source",
+          "context": "c088b7eea09789203c124f28a5e78ad9fa54e33f46d3129c077ea1abda95b737"
         }
       ]
     },
@@ -25657,7 +26018,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 17,
+          "line": 19,
           "kind": "localized-source",
           "context": "076295446d0fd0b386cdb215462921891eb6dbccfed03d511f03644fe17c4aeb"
         }
@@ -25668,7 +26029,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 121,
+          "line": 134,
           "kind": "localized-source",
           "context": "e2c4ce47f463547cdbf48eb4ae473bbfbdf0047c07c29ed4ab21d1119baa1170"
         }
@@ -25679,7 +26040,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 98,
+          "line": 109,
           "kind": "literal",
           "context": "79bd992a94739583ab19d9cc4a18dbc587dc363a9750ee0b998e49c3e04b13ea"
         }
@@ -26289,7 +26650,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 110,
+          "line": 121,
           "kind": "literal",
           "context": "a586c9bf9788faefd97b2a1c40074578c11c04c7d6140a621bad5db1b9321b56"
         },
@@ -26612,7 +26973,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 110,
+          "line": 121,
           "kind": "literal",
           "context": "a586c9bf9788faefd97b2a1c40074578c11c04c7d6140a621bad5db1b9321b56"
         },
@@ -26915,7 +27276,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 16,
+          "line": 18,
           "kind": "localized-source",
           "context": "e2dd511ee947114e589d6d25c14674ad4d4cb90159c2f0a1db5e51fe20d582c8"
         }
@@ -26981,7 +27342,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 16,
+          "line": 18,
           "kind": "localized-source",
           "context": "12e8a4709366baadfe823565320af44d1dc83ef3cb9b0123cfd68edf02ef0279"
         }
@@ -27372,7 +27733,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "9302d499275803a53843af60c73782d8051cf27a3a0bc2c63c40b164b7a1e131"
         },
@@ -27658,13 +28019,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "027675b3745c848bf17391897c3362544908638cf33d48ef968e83150b00c0df"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "literal",
           "context": "423d26c536efaf2c4b67fa65d463b8d6c7d51fdcd241d92b8a9400d7ec83381a"
         }
@@ -27686,7 +28047,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "literal",
           "context": "e57a393077cc487373a948be310eeed4842090b6fc2f077e746f04a806d34043"
         }
@@ -27697,7 +28058,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "localized-source",
           "context": "13c0fe9896f08351d66688a8bf03090c9def46fd178b1734bb12a98c19ffb2cd"
         }
@@ -28388,7 +28749,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "3a0e40cf4ef10f56039d13d7fe5411e804da0ecc32109d55edea092bbfdfec14"
         },
@@ -28450,13 +28811,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "350efb2a9eba8a8549e3582744d79914d410a7477a7b4c6c0a6c65256f686eae"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "literal",
           "context": "423d26c536efaf2c4b67fa65d463b8d6c7d51fdcd241d92b8a9400d7ec83381a"
         }
@@ -29497,7 +29858,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "9bea17e840fdf693d24089300e2314f874b73f9c3ee18abedcc0296e676ab0b4"
         },
@@ -29509,7 +29870,7 @@
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "literal",
           "context": "423d26c536efaf2c4b67fa65d463b8d6c7d51fdcd241d92b8a9400d7ec83381a"
         },
@@ -29560,7 +29921,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "localized-source",
           "context": "ad20f7a036fbb7d8e0930275f60124f797baad3801236c830ce3e1990643ff12"
         }
@@ -30249,6 +30610,12 @@
       "source": "T12:00:00Z",
       "occurrences": [
         {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 9,
+          "kind": "literal",
+          "context": "de28e2d619f59ffbd7ee83304969d9590f3a4b7662e86e45d1d19270a44f53f1"
+        },
+        {
           "file": "src/components/owner/TeamWorkspace.tsx",
           "line": 45,
           "kind": "literal",
@@ -30342,6 +30709,17 @@
           "line": 3794,
           "kind": "jsx-attribute",
           "context": "8bc7601e3efb889cd8d56a90502ff509ca984993e2c79148604da8b02ec933ae"
+        }
+      ]
+    },
+    "eafc3fcd1f94": {
+      "source": "Team earnings",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 102,
+          "kind": "literal",
+          "context": "55413c9c16ce15a45ef4deb94576d3af016887ecc7ee584cb46f58a7b396aecc"
         }
       ]
     },
@@ -31149,7 +31527,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 90,
+          "line": 97,
           "kind": "localized-source",
           "context": "bd7fef8bc7ba177e6dea1482d63c01307a0e8ea7cfb7d4ffa108bffbf2986024"
         },
@@ -31949,10 +32327,10 @@
       "source": "This month",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 15,
           "kind": "literal",
-          "context": "6d288b39c1aa208fbc7a5fd4f3ef68cf02ef16b59e3fa050998efad5535a20e3"
+          "context": "677f54c8f3efd98e43ec7e6a5ddd6af30df188aeacc5d2136386e3926889b2bd"
         }
       ]
     },
@@ -32070,10 +32448,10 @@
       "source": "This quarter",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 15,
           "kind": "literal",
-          "context": "4b720f0bc681ee0b4c58c2e66b185b077a7ed3419f7d09e0c072097441de910d"
+          "context": "7524c67e3153456d974116db78b9dfeacdc8471337faa6ecf31fdd36787c2e91"
         }
       ]
     },
@@ -32235,10 +32613,10 @@
       "source": "This week",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 15,
           "kind": "literal",
-          "context": "6dcff6b74eafc79960df75abba5a4a6f74195fe650e658788048787f2c591286"
+          "context": "3ba04f76ed0cd31d96a53f655a08fff4f63e3a4f726b4db5e866d34e87d57ca4"
         }
       ]
     },
@@ -32257,10 +32635,10 @@
       "source": "This year",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 15,
           "kind": "literal",
-          "context": "1eb2a6568e32c94167992042fa400e6e248945b2674b59ea99aab4bed4ec46e7"
+          "context": "c6b3389aa0ca4bb6aad0319aabe58a52bf8dd942a572779a25ab864629e565d4"
         }
       ]
     },
@@ -32466,10 +32844,10 @@
       "source": "To",
       "occurrences": [
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
-          "kind": "literal",
-          "context": "15178008622901e64c687e82120aeb3f44ce32bb42c9788d9ba0a0b6fced2100"
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 12,
+          "kind": "localized-source",
+          "context": "8aa3a8f1b83a08cde50c355b6fd92be96adf60ec590b765eec3eda44719b4c32"
         },
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
@@ -32506,16 +32884,16 @@
           "context": "52aeb9915f8041251bccd02a8a728d3a830845ea3f1a8c008eae363a40ed4792"
         },
         {
-          "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 112,
-          "kind": "literal",
-          "context": "9ef7d25cd5fc47d87dead0b6c6ef74b8c258edc7423e69298aacd96b4cde5e8a"
-        },
-        {
           "file": "src/components/owner/BusinessOverview.tsx",
           "line": 30,
           "kind": "localized-source",
           "context": "52aeb9915f8041251bccd02a8a728d3a830845ea3f1a8c008eae363a40ed4792"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 15,
+          "kind": "literal",
+          "context": "8d8d32dbb6c5db847c2bdb1fd8505e546c5dda061d1a6c5d9d98cda2f725205c"
         }
       ]
     },
@@ -32773,6 +33151,17 @@
         }
       ]
     },
+    "1e3281a962e6": {
+      "source": "Transactions",
+      "occurrences": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "line": 102,
+          "kind": "literal",
+          "context": "6dd7ee1b70507f5b19fb808293d990ec1ef6c6ce69af536a31301170bc44baf9"
+        }
+      ]
+    },
     "eb820e71346f": {
       "source": "Transcript ready. You can stop recording, review it, and send when ready.",
       "occurrences": [
@@ -32789,9 +33178,15 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 96,
+          "line": 107,
           "kind": "localized-source",
           "context": "79fe7dc2fc135cf6574648d0bdcfd721ea66892afdd0d1fd141cd7c98f61f76b"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "5c61a4fcab47944c77211e14c1971771db67eed4cef31613b05196398c2865cb"
         },
         {
           "file": "src/components/owner/FinanceUI.tsx",
@@ -32922,7 +33317,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 106,
+          "line": 117,
           "kind": "literal",
           "context": "e8fe9f79ebce093c88357c9a5fdc813b5ddd5f4c5de9a237db38f300f0b2e101"
         }
@@ -33063,7 +33458,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "literal",
           "context": "97f4e3d7fd109f705b1639b8148bd9a47b1889bb092a1e9e2ac7f6d2665ab3bf"
         }
@@ -33420,7 +33815,7 @@
         },
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "localized-source",
           "context": "05339ae7c9e53e7f4e2f546e0fc206c628a18f53fb62c18e25d108e61b9ebaf0"
         },
@@ -33616,7 +34011,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 122,
+          "line": 135,
           "kind": "localized-source",
           "context": "e7b9c3d4c9913d2b48e35bbbd6c5f28adf5a85029a46307e5bc0e79c790c75eb"
         }
@@ -33627,13 +34022,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 19,
+          "line": 21,
           "kind": "localized-source",
           "context": "9c9196976513a3c8e7b58c3183b9c85b98d2413af696f620327cd0a22207a3c3"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 20,
+          "line": 22,
           "kind": "literal",
           "context": "423d26c536efaf2c4b67fa65d463b8d6c7d51fdcd241d92b8a9400d7ec83381a"
         },
@@ -33650,13 +34045,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 116,
+          "line": 127,
           "kind": "literal",
           "context": "262722c3858a5c043f492c869442c69b24efdec68e6e872f64e26da536cda952"
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
-          "line": 16,
+          "line": 18,
           "kind": "localized-source",
           "context": "9d24963c89899da05e440d188c5a76b1e95a2b4e7e691355ba3f471a7905719c"
         }
@@ -34283,6 +34678,12 @@
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         },
         {
+          "file": "src/components/dashboard/WorkspaceTabs.tsx",
+          "line": 1,
+          "kind": "literal",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
           "file": "src/components/dashboard/WorkspaceToolbar.tsx",
           "line": 1,
           "kind": "literal",
@@ -34410,6 +34811,18 @@
         },
         {
           "file": "src/components/owner/FinanceCompensation.tsx",
+          "line": 1,
+          "kind": "literal",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodControls.tsx",
+          "line": 1,
+          "kind": "literal",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
           "line": 1,
           "kind": "literal",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
@@ -34709,7 +35122,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 122,
+          "line": 135,
           "kind": "localized-source",
           "context": "db7a5e3b80777fb2a1bf93aa8210124de3fb9c0d5bcf3a55d11e068a2c92a065"
         }
@@ -34936,9 +35349,21 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 122,
+          "line": 135,
           "kind": "localized-source",
           "context": "0c9498f8e197ca5009c631f923324054641dcc737c028100d7f551629b4c47c5"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "3a0b3dd9cf0f6adff52f56b702adbde1f8f7548d4f58aeca6d6bb2f44ddff771"
+        },
+        {
+          "file": "src/components/owner/FinancePeriodRecords.tsx",
+          "line": 16,
+          "kind": "literal",
+          "context": "d0b6278bde188cbae2c1c3fa9ef3e985b4a2e70b8c9ca3837ea311b0fd0ef977"
         }
       ]
     },
@@ -34986,7 +35411,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 119,
+          "line": 131,
           "kind": "literal",
           "context": "efddb28662e395cc5ffbfc715d09c98c6d9afc59a87781f575df71513af6de05"
         },
@@ -35025,7 +35450,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 105,
+          "line": 116,
           "kind": "localized-source",
           "context": "02930b4ba4b2d1b0d94f722b2b2847bff7b6aac09e84f98f7092287711fd72ac"
         },
@@ -35903,7 +36328,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 125,
+          "line": 141,
           "kind": "localized-source",
           "context": "93d419992b83074433b058694236cfeef3c5e0742df55d7c91c787d0045ea89a"
         }
@@ -36410,7 +36835,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/BusinessFinances.tsx",
-          "line": 98,
+          "line": 109,
           "kind": "literal",
           "context": "79bd992a94739583ab19d9cc4a18dbc587dc363a9750ee0b998e49c3e04b13ea"
         }

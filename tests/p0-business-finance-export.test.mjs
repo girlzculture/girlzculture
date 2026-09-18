@@ -6,7 +6,7 @@ import path from 'node:path';
 import { loadNodeTypescript } from './helpers/load-node-typescript.mjs';
 const load=loadNodeTypescript(process.cwd());
 const {buildFinanceReport,financeReportText}=load('src/lib/businessFinanceReport.ts');
-const {financePdf,financeSpreadsheet}=load('src/lib/businessFinanceExportServer.ts');
+const {financePdf,financeSpreadsheet,financePdfColumnGroups}=load('src/lib/businessFinanceExportServer.ts');
 const {summarizeOperatingBooks}=load('src/lib/businessFinanceCore.ts');
 const at='2026-09-18T16:00:00Z',salon='business-A',period={from:'2026-09-01',to:'2026-09-30',timeZone:'America/New_York'};
 const books={
@@ -15,6 +15,17 @@ const books={
  expenses:[{id:'exp:A',salon_id:salon,occurred_at:at,category:'Supplies',amount_cents:500,treatment:'operating'}],obligations:[],compensation_payments:[],
 };
 const input={salonId:salon,business:'Test Beauty 丽人',scope:'business',books,names:new Map([['stylist-A','Test Stylist']]),period,generatedAt:at};
+
+test('wide daily-close PDFs retain all figures and repeat the date in readable continuation tables',()=>{
+ const daily=buildFinanceReport({...input,locale:'fr'}).sections.find(section=>section.key==='daily');
+ assert.ok(daily.headers.length>6);
+ const groups=financePdfColumnGroups(daily.headers.length);
+ assert.ok(groups.every(group=>group.length<=5&&group[0]===0));
+ assert.deepEqual(groups.flatMap(group=>group.slice(1)),Array.from({length:daily.headers.length-1},(_,index)=>index+1));
+ for(const values of daily.rows){
+  assert.deepEqual(groups.flatMap(group=>group.slice(1).map(index=>values[index])),values.slice(1));
+ }
+});
 
 test('four-language PDF and spreadsheet exports match the operating ledger and preserve original facts',async()=>{
  const summary=summarizeOperatingBooks(salon,books,period);assert.equal(summary.recorded_profit_cents,7700);assert.equal(summary.cash_received_cents,14500);

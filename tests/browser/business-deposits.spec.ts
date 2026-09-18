@@ -17,7 +17,7 @@ for(const [locale,width,height] of [['en',1440,1000],['fr',390,844],['es',768,90
    if(fail){fail=false;await route.fulfill({status:503,json:{code:'DEPOSIT_UNAVAILABLE',request_id:'99000000-0000-4000-8000-000000000083'}});return;}
    rule={...input.rule,version:'99000000-0000-4000-8000-000000000084'};await route.fulfill({json:{rule,verified:true}});
   });
-  await page.setViewportSize({width,height});await page.goto('/salon/dashboard/earnings');
+  await page.setViewportSize({width,height});await page.goto('/salon/dashboard/earnings?finance=settings');
   await page.getByRole('button',{name:t('Manage deposit settings'),exact:true}).click();
   const form=page.getByRole('form',{name:t('Booking deposit settings')});await form.getByLabel(t('Standard deposit (%)'),{exact:true}).fill('20');
   await form.getByLabel(t('Higher rate above service price (USD)'),{exact:true}).fill('300');await form.getByLabel(t('Higher-price deposit (%)'),{exact:true}).fill('40');

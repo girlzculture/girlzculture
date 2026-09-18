@@ -5,6 +5,17 @@ import PDFDocument from 'pdfkit';
 import path from 'node:path';
 import { financeReportText, type FinanceReport, type ReportCell } from '@/lib/businessFinanceReport';
 
+/** Repeat the record label in each continuation, retaining every data column.
+ * Wide accountant sheets must not become unreadable portrait PDF tables. */
+export function financePdfColumnGroups(columnCount: number): number[][] {
+  if (columnCount <= 6) return [Array.from({length: columnCount}, (_, index) => index)];
+  const groups: number[][] = [];
+  for (let start = 1; start < columnCount; start += 4) {
+    groups.push([0, ...Array.from({length: Math.min(4, columnCount - start)}, (_, index) => start + index)]);
+  }
+  return groups;
+}
+
 export async function financeSpreadsheet(report: FinanceReport) {
   const book=new ExcelJS.Workbook();book.creator='Girlz Culture';book.created=new Date(report.generatedAt);
   for(const section of report.sections){
@@ -34,18 +45,22 @@ export async function financePdf(report: FinanceReport): Promise<Buffer> {
   // Concise accountant summary; full immutable references and transactions are
   // in the accompanying spreadsheet, not silently truncated from a PDF table.
   for(const section of report.sections.filter(section=>!section.detail)){
-    if(doc.y>doc.page.height-170)doc.addPage();doc.moveDown(.7);text(section.title,15,'#006b88');doc.moveDown(.3);
-    if(!section.rows.length){text(financeReportText(report.locale,'No records in this period.'),10);continue;}
-    const columns=section.headers.length;const widths=columns===2?[width*.7,width*.3]:columns===3?[width*.45,width*.2,width*.35]:[width*.28,...Array(columns-1).fill(width*.72/(columns-1))];
+    const groups=financePdfColumnGroups(section.headers.length);
+    for(const [groupIndex,indices] of groups.entries()){
+    if(doc.y>doc.page.height-170)doc.addPage();doc.moveDown(.7);text(section.title+(groups.length>1?` (${groupIndex+1}/${groups.length})`:''),15,'#006b88');doc.moveDown(.3);
+    if(!section.rows.length){text(financeReportText(report.locale,'No records in this period.'),10);break;}
+    const headers=indices.map(index=>section.headers[index]);
+    const columns=headers.length;const widths=columns===2?[width*.7,width*.3]:columns===3?[width*.45,width*.2,width*.35]:[width*.28,...Array(columns-1).fill(width*.72/(columns-1))];
     const row=(values:string[],header=false)=>{
       doc.fontSize(header?8:9);
       const height=Math.max(26,...values.map((value,index)=>doc.heightOfString(value,{width:widths[index]-12,lineGap:2})+14));
-      if(doc.y+height>doc.page.height-55){doc.addPage();if(!header)row(section.headers,true);}
+      if(doc.y+height>doc.page.height-55){doc.addPage();if(!header)row(headers,true);}
       const y=doc.y;doc.rect(40,y,width,height).fill(header?'#006b88':NON_DOM_VISUAL_TOKENS.lightSurface);let x=40;
       values.forEach((value,index)=>{doc.fillColor(header?'#ffffff':NON_DOM_VISUAL_TOKENS.primaryText).text(value,x+6,y+5,{width:widths[index]-12,lineGap:2});x+=widths[index];});
       doc.x=40;doc.y=y+height+2;
     };
-    row(section.headers,true);for(const values of section.rows)row(values.map(format));
+    row(headers,true);for(const values of section.rows)row(indices.map(index=>format(values[index])));
+    }
   }
   doc.moveDown();text(financeReportText(report.locale,'Report notes'),15,'#006b88');report.notes.forEach(note=>{doc.moveDown(.35);text(note,9);});
   const pages=doc.bufferedPageRange();for(let index=0;index<pages.count;index++){

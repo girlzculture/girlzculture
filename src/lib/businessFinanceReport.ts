@@ -1,5 +1,6 @@
 import { summarizeOperatingBooks, financeSalePayable, type OperatingBooks, type FinancePeriod } from '@/lib/businessFinanceCore';
 import { BUSINESS_FINANCE_SOURCE_MESSAGES } from '@/i18n/business-finance-source-catalog';
+import {financeDailyClose} from '@/lib/financeDailyClose';
 
 export const FINANCE_REPORT_LOCALES = ['en', 'fr', 'es', 'zh-CN'] as const;
 export type FinanceReportLocale = typeof FINANCE_REPORT_LOCALES[number];
@@ -36,7 +37,7 @@ export function buildFinanceReport(input: { salonId: string; business: string; s
   add('methods','Payment methods',['Payment method','Amount'],Object.entries(s.by_method).map(([method,value])=>[cell(t(method)),cash(value)]));
   add('sources','Completed sales by source',['Source','Completed sales'],Object.entries(s.by_source).map(([source,value])=>[cell(t(source)),cash(value)]));
   add('services','Sales by service or product',['Service or product','Completed sales'],Object.entries(s.by_service).sort((a,b)=>b[1]-a[1]).map(([service,value])=>[cell(service),cash(value)]));
-  add('daily','Daily close',['Date','Visits','Completed sales'],Object.entries(s.by_day).sort(([a],[b])=>a.localeCompare(b)).map(([at,value])=>[cell(new Intl.DateTimeFormat(input.locale,{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${at}T12:00:00Z`))),cell(value.visits,'count'),cash(value.sales_cents)]));
+  add('daily','Daily close',['Date','Visits','Completed sales','Payments received','Cash','Card','Transfer','Other','Recorded refunds',...(input.scope==='business'?['Operating expenses','Inventory purchases']:[])],financeDailyClose(input.salonId,input.books,input.period).map(row=>[cell(new Intl.DateTimeFormat(input.locale,{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${row.day}T12:00:00Z`))),cell(row.visits,'count'),cash(row.sales_cents),cash(row.receipts_cents),cash(row.methods.cash),cash(row.methods.card),cash(row.methods.transfer),cash(row.methods.other),cash(row.refunds_cents),...(input.scope==='business'?[cash(row.operating_expenses_cents),cash(row.inventory_purchases_cents)]:[])]));
   add('stylists','Stylist earnings',['Stylist','Visits','Service sales','Commission earned','Wages due','Compensation paid'],Object.entries(s.by_stylist).map(([id,row])=>[cell(name(id)),cell(row.visits,'count'),cash(row.service_sales_cents),cash(row.commission_earned_cents),cash(row.wage_due_cents),cash(row.paid_cents)]));
   if(input.scope==='business')add('expenses','Expense categories',['Category','Operating expenses'],Object.entries(s.expense_categories).map(([category,value])=>[cell(category),cash(value)]));
   const sales = new Map(input.books.sales.map(sale=>[sale.id,sale]));
