@@ -47,3 +47,13 @@ test('service assignments exclude unassigned professionals without falling back 
     assert.equal((await fixture({roster:[{...professional,...status}]}).bookingAvailability({...input,styleId:'service'})).slots.length,0);
   }
 });
+
+test('existing appointment availability reserves its full duration and buffer after a catalog edit',async()=>{
+ const f=fixture();
+ const current=await f.bookingAvailability({...input,styleId:'service'});
+ assert.ok(current.slots.some(slot=>slot.value==='17:30'),'edited one-hour catalog service fits');
+ const booked=await f.bookingAvailability({...input,styleId:'service',durationMinutes:180,bufferMinutes:30});
+ assert.equal(booked.durationMinutes,180);
+ assert.ok(!booked.slots.some(slot=>slot.value==='17:30'),'three-hour booked service cannot fit before closing');
+ assert.ok(booked.slots.some(slot=>slot.value==='15:30'),'complete booked duration plus buffer fits exactly');
+});

@@ -85,8 +85,8 @@ const server = fs.readFileSync("src/lib/bookingRescheduleServer.ts", "utf8");
 assert.match(server, /bookingAvailability\(/);
 assert.match(server, /excludeBookingId:\s*String\(booking\.id\)/);
 assert.match(server, /issueGuestBookingToken/);
-assert.match(server, /Promise\.allSettled/);
-assert.match(server, /capturePlatformError/);
+assert.match(server, /runDeliveries/);
+assert.match(server, /result\.request_id/);
 
 const guestRoute = fs.readFileSync(
   "src/app/api/guest/bookings/manage/route.ts",

@@ -19,6 +19,9 @@ type AvailabilityInput = {
   guestEmail?: string | null;
   excludeBookingId?: string | null;
   includeAllStylists?: boolean;
+  /** Trusted existing appointment terms; public callers do not accept these fields. */
+  durationMinutes?: number;
+  bufferMinutes?: number;
 };
 type AvailabilityData = {
   salon: Row;
@@ -272,12 +275,12 @@ function availabilityForDate(
     };
   const durationMinutes = Math.max(
     1,
-    Math.round(Number(style.duration_min_hours || 0) * 60),
+    Math.round(input.durationMinutes ?? Number(style.duration_min_hours || 0) * 60),
   );
   const bufferMinutes = Math.max(
     0,
     Number(
-      style.buffer_minutes ??
+      input.bufferMinutes ?? style.buffer_minutes ??
         (salon.booking_settings as Row | null)?.buffer_minutes ??
         15,
     ),

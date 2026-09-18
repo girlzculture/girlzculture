@@ -1,14 +1,15 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
 import { normalizeRescheduleLocalOptions } from "@/lib/bookingRescheduleCore";
 import { salonTimeZone, zonedLocalToUtc } from "@/lib/dateTime";
 import { issueGuestBookingToken } from "@/lib/guestBookingAccess";
-import { capturePlatformError } from "@/lib/platformErrors";
 import { cleanText } from "@/lib/requestSecurity";
-import { sendEmail, sendSms } from "@/lib/supabaseAdmin";
+import { sendEmail, sendSms, runDeliveries, bookingDeliveryChannels } from "@/lib/supabaseAdmin";
 import { sendPushToUsers } from "@/lib/webPushServer";
+import { rescheduleCopy } from "@/lib/bookingRescheduleCopy";
 import { NON_DOM_VISUAL_TOKENS } from "@/lib/nonDomVisualTokens.mjs";
 
 type Row = Record<string, unknown>;
@@ -29,8 +30,8 @@ function escapeHtml(value: unknown) {
   );
 }
 
-function displayWhen(value: string, timeZone: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function displayWhen(value: string, timeZone: string, locale = "en") {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "full",
     timeStyle: "short",
     timeZone,
@@ -63,10 +64,11 @@ export async function createCustomerApprovedReschedule(input: {
   message: unknown;
   localOptions: unknown;
   rootUrl: string;
+  requestId?: unknown;
+  changeKind?: unknown;
 }) {
   const {
     admin,
-    request,
     booking,
     salon,
     actorUserId,
@@ -90,6 +92,13 @@ export async function createCustomerApprovedReschedule(input: {
     throw new Error("This booking can no longer be rescheduled.");
   }
   const timeZone = salonTimeZone(salon.time_zone);
+  const duration = Number(booking.duration_hours);
+  if (!Number.isFinite(duration) || duration < 0.25 || duration > 24) throw new Error("This booking duration must be corrected before proposing a change.");
+  const requestId = cleanText(input.requestId, 40) || randomUUID();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) throw new Error("Choose a valid proposal request.");
+  if (input.changeKind === "substitution" && localOptions.some(option => !option.stylistId || option.stylistId === booking.stylist_id || zonedLocalToUtc(option.local, timeZone).getTime() !== new Date(String(booking.appointment_datetime)).getTime())) {
+    throw new Error("Choose another professional at the current appointment time.");
+  }
   const availabilityByDate = new Map<
     string,
     Awaited<ReturnType<typeof bookingAvailability>>
@@ -115,6 +124,8 @@ export async function createCustomerApprovedReschedule(input: {
         date,
         excludeBookingId: String(booking.id),
         includeAllStylists: true,
+        durationMinutes: duration * 60,
+        bufferMinutes: Math.max(0, Number(booking.buffer_minutes ?? 15)),
       });
       availabilityByDate.set(availabilityKey, availability);
     }
@@ -134,10 +145,7 @@ export async function createCustomerApprovedReschedule(input: {
         `${date}T${time}`,
         timeZone,
       ).toISOString(),
-      duration_hours: Math.max(
-        0.25,
-        Number(availability.durationMinutes || 60) / 60,
-      ),
+      duration_hours: duration,
       stylist_id: slot.stylistId,
       stylist_name: slot.stylistName,
     });
@@ -169,13 +177,25 @@ export async function createCustomerApprovedReschedule(input: {
       p_message: message || null,
       p_options: verifiedOptions,
       p_expires_at: expiresAt,
+      p_request_id: requestId,
     },
   );
   if (proposalError) throw proposalError;
+  const { data: proposal, error: loadError } = await admin
+    .from("booking_reschedule_proposals")
+    .select(
+      "id,booking_id,status,message,reason,previous_appointment_datetime,expires_at,created_at",
+    )
+    .eq("id", proposalId)
+    .single();
+  if (loadError) throw loadError;
+  if (proposal.status !== "Pending" || new Date(String(proposal.expires_at)).getTime() <= Date.now()) return {proposal,warnings:[]};
   const access = await issueGuestBookingToken(admin, String(booking.id), {
     reason: "Reschedule proposal",
     rootUrl: input.rootUrl,
+    reuseActive: true,
   });
+  const copy = rescheduleCopy(String(booking.preferred_locale || "en"));
   const subject = cleanText(
     await engineValue(
       admin,
@@ -188,97 +208,28 @@ export async function createCustomerApprovedReschedule(input: {
     .map(
       (option) =>
         `<li style="margin:8px 0">${escapeHtml(
-          displayWhen(option.appointment_datetime, timeZone),
+          displayWhen(option.appointment_datetime, timeZone, copy.locale),
         )} · ${escapeHtml(option.stylist_name)}</li>`,
     )
     .join("");
   const currentTime = displayWhen(
     String(booking.appointment_datetime),
     timeZone,
+    copy.locale,
   );
-  const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;background:${NON_DOM_VISUAL_TOKENS.lightSurface};padding:28px;border-radius:16px;color:${NON_DOM_VISUAL_TOKENS.primaryText}"><h1 style="font-family:Georgia,serif;color:${NON_DOM_VISUAL_TOKENS.primaryText}">New appointment times from ${escapeHtml(salon.name)}</h1><p>Your current appointment is <strong>${escapeHtml(currentTime)}</strong>. The salon proposed:</p><ul>${proposedList}</ul>${message ? `<p><strong>Salon message:</strong> ${escapeHtml(message)}</p>` : ""}<p>This proposal expires in ${expiryHours} hours. Your booking will not change unless you accept a time.</p><a href="${escapeHtml(access.url)}" style="display:inline-block;background:${NON_DOM_VISUAL_TOKENS.action};color:${NON_DOM_VISUAL_TOKENS.onAction};padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:700">Review proposed times</a></div>`;
-  const sms = `${String(salon.name)} proposed new appointment times. Your booking will not change unless you accept. Review securely: ${access.url}`;
-  const tasks: Array<{
-    channel: string;
-    run: () => Promise<unknown>;
-  }> = [];
-  if (booking.guest_email) {
-    tasks.push({
-      channel: "email",
-      run: () =>
-        sendEmail(
-          String(booking.guest_email),
-          subject || "Your salon proposed new appointment times",
-          emailHtml,
-          "bookings",
-        ),
-    });
-  }
-  if (booking.guest_phone) {
-    tasks.push({
-      channel: "sms",
-      run: () => sendSms(String(booking.guest_phone), sms),
-    });
-  }
+  const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;background:${NON_DOM_VISUAL_TOKENS.lightSurface};padding:28px;color:${NON_DOM_VISUAL_TOKENS.primaryText}"><h1>${escapeHtml(copy.title)}</h1><p>${escapeHtml(salon.name)}</p><p>${escapeHtml(copy.current)} <strong>${escapeHtml(currentTime)}</strong></p><ul>${proposedList}</ul>${message ? `<p>${escapeHtml(copy.originalMessage)}: ${escapeHtml(message)}</p>` : ""}<p>${escapeHtml(copy.unchanged)}</p><p>${escapeHtml(copy.expires)} ${escapeHtml(displayWhen(String(proposal.expires_at), timeZone, copy.locale))}</p><a href="${escapeHtml(access.url)}">${escapeHtml(copy.review)}</a></div>`;
+  const sms = `${String(salon.name)}: ${copy.title}. ${copy.unchanged} ${access.url}`;
+  const tasks: Array<{ recipientType: "customer"; channel: "email" | "sms" | "push"; destination: string; run: () => Promise<unknown> }> = [];
+  if (booking.guest_email) tasks.push({ recipientType: "customer", channel: "email", destination: String(booking.guest_email), run: () => sendEmail(String(booking.guest_email), copy.locale === "en" ? subject : copy.title, emailHtml, "bookings", { idempotencyKey: `reschedule-${proposalId}-email` }) });
+  if (booking.guest_phone) tasks.push({ recipientType: "customer", channel: "sms", destination: String(booking.guest_phone), run: () => sendSms(String(booking.guest_phone), sms) });
   if (booking.customer_id) {
-    tasks.push({
-      channel: "push",
-      run: () =>
-        sendPushToUsers([String(booking.customer_id)], {
-          title: "Your salon proposed new times",
-          body: `Your ${String(booking.style_name || "appointment")} will not change until you accept.`,
-          url: new URL(access.url).pathname,
-          tag: `reschedule-${proposalId}`,
-          requireInteraction: true,
-        }),
-    });
-    const { error: notificationError } = await admin
-      .from("notifications")
-      .insert({
-        user_id: booking.customer_id,
-        salon_id: booking.salon_id,
-        booking_id: booking.id,
-        recipient_role: "customer",
-        category: "bookings",
-        severity: "info",
-        dedupe_key: `reschedule-proposal:${proposalId}`,
-        title: "Your salon proposed new times",
-        body: "Review the options. Your booking remains unchanged until you accept.",
-        action_url: new URL(access.url).pathname,
-        delivery_status: "delivered",
-      });
-    if (notificationError) throw notificationError;
+    tasks.push({ recipientType: "customer", channel: "push", destination: String(booking.customer_id), run: () => sendPushToUsers([String(booking.customer_id)], { title: copy.title, body: copy.unchanged, url: new URL(access.url).pathname, tag: `reschedule-${proposalId}`, requireInteraction: true }) });
+    const { error } = await admin.from("notifications").upsert({ user_id: booking.customer_id, salon_id: booking.salon_id, booking_id: booking.id, recipient_role: "customer", category: "bookings", severity: "info", dedupe_key: `reschedule-proposal:${proposalId}`, title: copy.title, body: copy.unchanged, action_url: new URL(access.url).pathname, delivery_status: "delivered" }, { onConflict: "dedupe_key", ignoreDuplicates: true });
+    if (error) throw error;
   }
-  const warningReferences: string[] = [];
-  const deliveries = await Promise.allSettled(tasks.map((task) => task.run()));
-  for (const [index, result] of deliveries.entries()) {
-    if (result.status === "fulfilled") continue;
-    warningReferences.push(
-      await capturePlatformError({
-        request,
-        admin,
-        error: result.reason,
-        feature: "booking-rescheduling",
-        action: `deliver_proposal_${tasks[index].channel}`,
-        actorRole,
-        actorId: actorUserId,
-        salonId: String(booking.salon_id),
-        recordType: "booking",
-        recordId: String(booking.id),
-        provider: tasks[index].channel,
-        safeMessage:
-          "The reschedule proposal was saved, but one customer notification could not be delivered.",
-      }),
-    );
-  }
-  const { data: proposal, error: loadError } = await admin
-    .from("booking_reschedule_proposals")
-    .select(
-      "id,booking_id,status,message,reason,previous_appointment_datetime,expires_at,created_at",
-    )
-    .eq("id", proposalId)
-    .single();
-  if (loadError) throw loadError;
+  const channels = await bookingDeliveryChannels(admin);
+  const deliveries = await runDeliveries(String(booking.id), `reschedule_proposal:${proposalId}`, tasks.filter(task => channels.has(task.channel)));
+  const warningReferences = deliveries.flatMap(result => result.request_id ? [result.request_id] : []);
   return {
     proposal: {
       ...proposal,

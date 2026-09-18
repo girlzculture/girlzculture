@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; Messages workspace/window/isolation verified locally; remaining communications and full scope continue",
+  "status": "IMPLEMENTING; NOT RELEASED; customer-approved substitution verified locally; remaining communications and full scope continue",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -2816,7 +2816,11 @@
         "src/app/api/messages/route.ts",
         "src/lib/bookingConversation.ts",
         "src/lib/bookingMessageRecipientsServer.ts",
-        "supabase/migrations/20260918150923_booking_conversation_window.sql"
+        "supabase/migrations/20260918150923_booking_conversation_window.sql",
+        "src/components/owner/BookingChangeProposal.tsx",
+        "src/lib/bookingRescheduleServer.ts",
+        "src/lib/guestBookingAccess.ts",
+        "supabase/migrations/20260918160921_booking_professional_substitution.sql"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -2824,18 +2828,21 @@
       "changes": [
         "URL-backed inbox search/unread/active/closed categories; split desktop and phone inbox/detail; original-language records, retained per-conversation draft in memory, explicit translation preview, booking/policy context. Failed sends retain draft/request ID and exact incident reference.",
         "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
-        "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps."
+        "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps.",
+        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event."
       ],
       "verification": [
         "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
         "165 migrations and all clean database assertions pass: messages-clean-verified.log. Original notification leak preserved messages-notification-before.log; corrected assertions messages-notification-final.log.",
-        "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim."
+        "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim.",
+        "substitution-browser-final.log:18/18 Chromium+WebKit cases, including four locale/viewport owner flows, failed draft/exact incident/same-ID retry, refreshed proposal, actual professional label, customer accept/decline/conflict/expiry and existing public professional assignment regression. Production build substitution-verified-build.log and lint substitution-lint-corrected.log pass.",
+        "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log."
       ],
       "live_evidence": [],
       "detailed_clause": "COMMS-02 — Create the two-way booking conversation automatically when a booking is made. Translate both directions through DeepL so business and customer each use their chosen language. Include automatic welcome messages, questions, confirmations and the stylist-substitution flow. The requested active window ends 24 hours after the appointment; define how rescheduling/cancellation affects that window and distinguish closing a chat from deleting its history.",
       "detailed_clause_line": 411,
       "remaining_clauses": [
-        "Stylist substitution review/confirmation flow, communication automation/campaign clauses and final live evidence remain to complete; no claim that these references are functioning controls."
+        "Final live conversation, translation and substitution verification on the stable release candidate; COMMS-03/04 automation and consent-aware client communication requirements remain separately tracked."
       ]
     },
     {
@@ -2853,10 +2860,12 @@
         "src/components/BookingInbox.tsx",
         "supabase/migrations"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
+      "state": "IN_PROGRESS",
+      "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
-      "changes": [],
+      "changes": [
+        "Accepted appointment changes now use a distinct confirmation delivery event instead of being suppressed by the original confirmation claim. Reminder schedule revisions, customer delivery preferences and post-visit/rebooking path remain next."
+      ],
       "verification": [],
       "live_evidence": [],
       "detailed_clause": "COMMS-03 — Add automatic booking confirmation, day-before reminder, and post-visit thank-you/rebooking nudge in the customer's language. Respect actual booking status, timezones, delivery preferences and channel configuration; avoid duplicate or inappropriate reminders after cancellation/rescheduling.",
@@ -3826,16 +3835,23 @@
         "tests/browser/p0-owner-inventory.spec.ts",
         "src/components/owner/BookingsWorkspace.tsx",
         "src/lib/businessBookings.ts",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/owner/BookingChangeProposal.tsx",
+        "src/lib/bookingRescheduleServer.ts",
+        "src/lib/guestBookingAccess.ts",
+        "supabase/migrations/20260918160921_booking_professional_substitution.sql"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
       "changes": [
-        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation.",
+        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event."
       ],
       "verification": [
-        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending."
+        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending.",
+        "substitution-browser-final.log:18/18 Chromium+WebKit cases, including four locale/viewport owner flows, failed draft/exact incident/same-ID retry, refreshed proposal, actual professional label, customer accept/decline/conflict/expiry and existing public professional assignment regression. Production build substitution-verified-build.log and lint substitution-lint-corrected.log pass.",
+        "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log."
       ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-08 | Bookings | Filters, useful desktop/mobile records, correct statuses/prices/deposits, manual/walk-in capture where appropriate and client-history access. |",
@@ -3860,7 +3876,11 @@
         "src/app/api/messages/route.ts",
         "src/lib/bookingConversation.ts",
         "src/lib/bookingMessageRecipientsServer.ts",
-        "supabase/migrations/20260918150923_booking_conversation_window.sql"
+        "supabase/migrations/20260918150923_booking_conversation_window.sql",
+        "src/components/owner/BookingChangeProposal.tsx",
+        "src/lib/bookingRescheduleServer.ts",
+        "src/lib/guestBookingAccess.ts",
+        "supabase/migrations/20260918160921_booking_professional_substitution.sql"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -3868,12 +3888,15 @@
       "changes": [
         "URL-backed inbox search/unread/active/closed categories; split desktop and phone inbox/detail; original-language records, retained per-conversation draft in memory, explicit translation preview, booking/policy context. Failed sends retain draft/request ID and exact incident reference.",
         "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
-        "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps."
+        "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps.",
+        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event."
       ],
       "verification": [
         "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
         "165 migrations and all clean database assertions pass: messages-clean-verified.log. Original notification leak preserved messages-notification-before.log; corrected assertions messages-notification-final.log.",
-        "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim."
+        "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim.",
+        "substitution-browser-final.log:18/18 Chromium+WebKit cases, including four locale/viewport owner flows, failed draft/exact incident/same-ID retry, refreshed proposal, actual professional label, customer accept/decline/conflict/expiry and existing public professional assignment regression. Production build substitution-verified-build.log and lint substitution-lint-corrected.log pass.",
+        "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log."
       ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-09 | Messages | Inbox/conversation layout, booking/customer context, translation, approved reply/send flows, reminders and client communications. |",

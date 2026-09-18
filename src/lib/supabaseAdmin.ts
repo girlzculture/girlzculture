@@ -467,7 +467,7 @@ async function bookingCommunicationInput(
   };
 }
 
-async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
+export async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
   const admin = getSupabaseAdmin();
   const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; request_id?: string }> = [];
   for (const task of tasks) {
@@ -552,6 +552,10 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
   return results;
 }
 
+export async function bookingDeliveryChannels(admin: SupabaseClient) {
+  return (await bookingNotificationSettings(admin)).channels;
+}
+
 /** Share the established per-event delivery claim/lease for typed and
  * Assistant messages. A retry can retry a failed channel without resending a
  * successfully delivered channel or creating another message. */
@@ -601,13 +605,19 @@ export async function deliverBookingMessageNotifications(messageId: string) {
 
 export async function deliverBookingNotifications(
   bookingId: string,
-  options: { manageUrl?: string; skipCustomerEmail?: boolean } = {},
+  options: { manageUrl?: string; skipCustomerEmail?: boolean; acceptedProposalId?: string } = {},
 ) {
   const context = await bookingNotificationContext(bookingId);
   const { admin, booking, salon, style, stylist, stylistContact, customerLocale, salonLocale } = context;
   const stylistLocale=stylistContact?.locale||salonLocale;
   const notification=await bookingNotificationSettings(admin,[customerLocale,salonLocale,stylistLocale]);
-  if (booking.notifications_sent_at) return { alreadySent: true };
+  let confirmationEvent = "booking_confirmed";
+  if (options.acceptedProposalId) {
+    const accepted = await admin.from("booking_reschedule_proposals").select("id").eq("id", options.acceptedProposalId).eq("booking_id", bookingId).eq("status", "Accepted").maybeSingle();
+    if (accepted.error) throw accepted.error;
+    if (!accepted.data) throw new Error("RESCHEDULE_PROPOSAL_UNAVAILABLE");
+    confirmationEvent = `reschedule_accepted:${accepted.data.id}`;
+  } else if (booking.notifications_sent_at) return { alreadySent: true };
   const when = formatInTimeZone(booking.appointment_datetime, salon.time_zone);
   const duration = `${Number(booking.duration_hours || 0)} hour${Number(booking.duration_hours || 0) === 1 ? "" : "s"}`;
   const service = String(style?.name || "Braiding service");
@@ -654,7 +664,7 @@ export async function deliverBookingNotifications(
   if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, stylistSms) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_confirmed.push_title","A booking was assigned to you"), body: stylistSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
-  const deliveries = await runDeliveries(bookingId, "booking_confirmed", tasks.filter(task=>notification.channels.has(task.channel)));
+  const deliveries = await runDeliveries(bookingId, confirmationEvent, tasks.filter(task=>notification.channels.has(task.channel)));
   const delivered = deliveries.every((item) => item.status === "delivered");
   const warningReferences=[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))];
   if (delivered) {

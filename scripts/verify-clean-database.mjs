@@ -1272,3 +1272,5 @@ process.stdout.write(`Executed ${migrations.length} migrations successfully agai
 
 const conversationOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-booking-conversation.sql")],"Booking conversation window and recipient isolation");
 console.log(conversationOutput);
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-substitution.sql")],"Customer approved professional substitution and retry isolation"));

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n/LocaleProvider";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import { useEffect, useMemo, useState } from "react";
@@ -33,8 +34,8 @@ function money(value: unknown) {
   }).format(Number(value || 0));
 }
 
-function when(value: unknown, timeZone = "America/New_York") {
-  return new Intl.DateTimeFormat("en-US", {
+function when(value: unknown, timeZone = "America/New_York", locale = "en") {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "full",
     timeStyle: "short",
     timeZone,
@@ -42,11 +43,13 @@ function when(value: unknown, timeZone = "America/New_York") {
 }
 
 export default function GuestBookingManager({ token }: { token: string }) {
+  const {translateSource:t,locale} = useI18n();
   const [data, setData] = useState<ManagedBooking | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(true);
   const [selectedOption, setSelectedOption] = useState("");
+  const [proposalNow, setProposalNow] = useState(() => Date.now());
   const [cancelReason, setCancelReason] = useState(
     "Customer requested cancellation",
   );
@@ -131,7 +134,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
       setNotice(
         body.warnings?.[0]?.message ||
           (action === "accept_reschedule"
-            ? "The new appointment time is confirmed. An updated confirmation is on its way."
+            ? "Your selected appointment change is confirmed."
             : "The salon has been told that you declined this proposal."),
       );
       if (body.manage_url) window.location.assign(body.manage_url);
@@ -149,10 +152,16 @@ export default function GuestBookingManager({ token }: { token: string }) {
   const pendingProposal = useMemo(
     () =>
       data?.proposals.find(
-        (proposal) => String(proposal.status) === "Pending",
+              (proposal) => String(proposal.status) === "Pending" && new Date(String(proposal.expires_at)).getTime() > proposalNow,
       ) || null,
-    [data],
+    [data, proposalNow],
   );
+  useEffect(() => {
+    if (!pendingProposal) return;
+    const delay = Math.min(2_147_000_000, Math.max(0, new Date(String(pendingProposal.expires_at)).getTime() - Date.now() + 1));
+    const timer = window.setTimeout(() => setProposalNow(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [pendingProposal, proposalNow]);
   const salonTimeZone = String(data?.salon.time_zone || "America/New_York");
   const address = data
     ? [
@@ -247,11 +256,12 @@ export default function GuestBookingManager({ token }: { token: string }) {
               Response needed
             </p>
             <h2 className="mt-2 font-serif text-3xl text-plum">
-              The salon proposed new times
+              {t("The business proposed an appointment change")}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-ink/70">
+            <p className="mt-2 text-sm leading-6 text-ink/70" data-no-translate>
               {String(pendingProposal.message || pendingProposal.reason || "")}
             </p>
+            <p className="mt-3 text-sm">{t("Your appointment stays unchanged until you accept. Price and deposit stay the same.")}</p>
             <div className="mt-5 grid gap-3">
               {(pendingProposal.options || []).map((option) => (
                 <label
@@ -267,8 +277,8 @@ export default function GuestBookingManager({ token }: { token: string }) {
                     className="accent-magenta"
                   />
                   <span className="text-sm font-bold">
-                    {when(option.appointment_datetime, salonTimeZone)}
-                    <small className="mt-1 block font-normal text-ink/55">
+                    {when(option.appointment_datetime, salonTimeZone, locale)}
+                    <small className="mt-1 block font-normal text-ink/55" data-no-translate>
                       {String(
                         (option.stylist as Row | undefined)?.name ||
                           "Any available stylist",
@@ -287,7 +297,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
                 }
                 className="min-h-11 rounded-xl bg-magenta px-5 text-sm font-bold text-white gc-disabled-control"
               >
-                Accept selected time
+                {t("Accept selected option")}
               </button>
               <button
                 type="button"

@@ -1,5 +1,6 @@
 "use client";
 
+import BookingChangeProposal from "./BookingChangeProposal";
 import ReviewsWorkspace from "./ReviewsWorkspace";
 import BusinessInventory from "./BusinessInventory";
 import BookingsWorkspace from "./BookingsWorkspace";
@@ -3027,16 +3028,6 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   );
   const [customerMessage, setCustomerMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [rescheduleReason, setRescheduleReason] = useState("");
-  const [rescheduleMessage, setRescheduleMessage] = useState("");
-  const [rescheduleDate, setRescheduleDate] = useState("");
-  const [rescheduleSlots, setRescheduleSlots] = useState<Row[]>([]);
-  const [selectedRescheduleSlots, setSelectedRescheduleSlots] = useState<
-    string[]
-  >([]);
-  const [availabilityMessage, setAvailabilityMessage] = useState("");
-  const [loadingAvailability, setLoadingAvailability] = useState(false);
-  const [proposalSummary, setProposalSummary] = useState<Row | null>(null);
   const [confirmCompletion, setConfirmCompletion] = useState(false);
   const [checkInException, setCheckInException] =
     useState<CheckInExceptionRequirement | null>(null);
@@ -3047,99 +3038,6 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const activeSelected =
     selected &&
     !/cancelled|completed|refunded/i.test(String(selected.status || ""));
-  const marketplaceSelectedId = selected && !isBusinessAdded(selected) ? selectedId : "";
-  useEffect(() => {
-    if (!marketplaceSelectedId) return;
-    let active = true;
-    getSessionForScope("salon")
-      .then((session) =>
-        session
-          ? fetch(`/api/salon/bookings/${marketplaceSelectedId}/reschedule`, {
-              headers: { Authorization: `Bearer ${session.access_token}` },
-              cache: "no-store",
-            })
-          : null,
-      )
-      .then(async (response) => {
-        if (!response?.ok) return null;
-        return (await response.json()) as { proposals?: Row[] };
-      })
-      .then((body) => {
-        if (active) setProposalSummary(body?.proposals?.[0] || null);
-      })
-      .catch(() => {
-        if (active) setProposalSummary(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [marketplaceSelectedId]);
-  useEffect(() => {
-    let active = true;
-    const timer = window.setTimeout(() => {
-      if (!marketplaceSelectedId || !rescheduleDate) {
-        setRescheduleSlots([]);
-        setSelectedRescheduleSlots([]);
-        setAvailabilityMessage("");
-        return;
-      }
-      setLoadingAvailability(true);
-      setAvailabilityMessage("");
-      getSessionForScope("salon")
-        .then((session) =>
-          session
-            ? fetch(
-                `/api/salon/bookings/${marketplaceSelectedId}/reschedule?date=${encodeURIComponent(rescheduleDate)}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                  },
-                  cache: "no-store",
-                },
-              )
-            : null,
-        )
-        .then(async (response) => {
-          if (!response) throw new Error("Please sign in again.");
-          const body = (await response.json()) as {
-            error?: string;
-            reason?: string;
-            slots?: Row[];
-          };
-          if (!response.ok) {
-            throw new Error(body.error || "Unable to load available times.");
-          }
-          return body;
-        })
-        .then((body) => {
-          if (!active) return;
-          setRescheduleSlots(body.slots || []);
-          setSelectedRescheduleSlots([]);
-          setAvailabilityMessage(
-            body.slots?.length
-              ? ""
-              : body.reason || "No open times remain for this day.",
-          );
-        })
-        .catch((error) => {
-          if (!active) return;
-          setRescheduleSlots([]);
-          setSelectedRescheduleSlots([]);
-          setAvailabilityMessage(
-            error instanceof Error
-              ? error.message
-              : "Unable to load available times.",
-          );
-        })
-        .finally(() => {
-          if (active) setLoadingAvailability(false);
-        });
-    }, 0);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [rescheduleDate, marketplaceSelectedId]);
   async function serviceAction(
     action: "check_in" | "start" | "complete",
     exception?: CheckInExceptionAnswer,
@@ -3281,68 +3179,6 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         error instanceof Error
           ? error.message
           : "Unable to cancel this booking.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function proposeReschedule() {
-    if (!selected?.id || !rescheduleReason.trim()) {
-      c.setNotice("Add a reason for the reschedule proposal.");
-      return;
-    }
-    const options = selectedRescheduleSlots.map((key) => {
-      const [local, stylistId = ""] = key.split("|");
-      return { local, stylistId: stylistId || null };
-    });
-    if (!options.length) {
-      c.setNotice("Choose at least one proposed appointment time.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const session = await getSessionForScope("salon");
-      if (!session) throw new Error("Please sign in again.");
-      const response = await fetch(
-        `/api/salon/bookings/${selected.id}/reschedule`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            reason: rescheduleReason,
-            message: rescheduleMessage,
-            options,
-          }),
-        },
-      );
-      const body = (await response.json()) as {
-        error?: string;
-        proposal?: Row;
-        warnings?: Array<{ message?: string }>;
-      };
-      if (!response.ok) {
-        throw new Error(
-          body.error || "Unable to propose new appointment times.",
-        );
-      }
-      setProposalSummary(body.proposal || null);
-      setRescheduleReason("");
-      setRescheduleMessage("");
-      setRescheduleDate("");
-      setRescheduleSlots([]);
-      setSelectedRescheduleSlots([]);
-      c.setNotice(
-        body.warnings?.[0]?.message ||
-          "Proposal sent. The appointment remains unchanged until the customer accepts.",
-      );
-    } catch (error) {
-      c.setNotice(
-        error instanceof Error
-          ? error.message
-          : "Unable to propose new appointment times.",
       );
     } finally {
       setBusy(false);
@@ -3490,134 +3326,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                       </p>
                     ) : null}
                   </div>
-                  <div className="mt-6 border-t border-plum/10 pt-5">
-                    <h3 className="font-serif text-lg text-plum">
-                      Propose reschedule
-                    </h3>
-                    <p className="mt-1 text-[10px] leading-4 text-ink/55">
-                      Pick a date, then offer a preferred available
-                      time/stylist and up to two alternatives. The current
-                      appointment stays confirmed until the customer accepts.
-                    </p>
-                    {proposalSummary ? (
-                      <div className="mt-3 rounded-[9px] bg-blush/35 p-3 text-xs">
-                        <b>
-                          Latest proposal:{" "}
-                          {String(proposalSummary.status || "Pending")}
-                        </b>
-                        <p className="mt-1 text-ink/60">
-                          <span data-no-translate>{String(proposalSummary.reason || "")}</span>
-                        </p>
-                      </div>
-                    ) : null}
-                    <input
-                      value={rescheduleReason}
-                      onChange={(event) =>
-                        setRescheduleReason(event.target.value.slice(0, 300))
-                      }
-                      placeholder="Reason for proposing a change"
-                      className="mt-3 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
-                    />
-                    <textarea
-                      value={rescheduleMessage}
-                      onChange={(event) =>
-                        setRescheduleMessage(event.target.value.slice(0, 600))
-                      }
-                      placeholder="Optional message to the customer"
-                      rows={2}
-                      className="mt-2 w-full rounded-[8px] border border-plum/15 p-3 text-xs"
-                    />
-                    <label className="mt-3 block text-[10px] font-bold text-ink/60">
-                      Date to search
-                      <input
-                        type="date"
-                        value={rescheduleDate}
-                        min={new Date().toISOString().slice(0, 10)}
-                        onChange={(event) =>
-                          setRescheduleDate(event.target.value)
-                        }
-                        className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 px-3 text-xs"
-                      />
-                    </label>
-                    {loadingAvailability ? (
-                      <p className="mt-3 rounded-[8px] bg-cream p-3 text-xs text-ink/60">
-                        Checking live availability…
-                      </p>
-                    ) : null}
-                    {availabilityMessage ? (
-                      <p className="mt-3 rounded-[8px] bg-blush/35 p-3 text-xs text-plum">
-                        {availabilityMessage}
-                      </p>
-                    ) : null}
-                    {rescheduleSlots.length ? (
-                      <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1">
-                        {rescheduleSlots.map((slot) => {
-                          const local = `${rescheduleDate}T${String(slot.value)}`;
-                          const key = `${local}|${String(slot.stylistId || "")}`;
-                          const selectedIndex =
-                            selectedRescheduleSlots.indexOf(key);
-                          return (
-                            <label
-                              key={key}
-                              className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-[8px] border px-3 text-xs ${
-                                selectedIndex >= 0
-                                  ? "border-magenta bg-blush/35"
-                                  : "border-plum/10 bg-white"
-                              }`}
-                            >
-                              <span>
-                                <b>{String(slot.label)}</b>
-                                <span className="ml-2 text-ink/55">
-                                  {String(
-                                    slot.stylistName ||
-                                      "Any available stylist",
-                                  )}
-                                </span>
-                                {selectedIndex >= 0 ? (
-                                  <small className="mt-0.5 block text-magenta">
-                                    {selectedIndex === 0
-                                      ? "Preferred"
-                                      : `Alternative ${selectedIndex}`}
-                                  </small>
-                                ) : null}
-                              </span>
-                              <input
-                                type="checkbox"
-                                checked={selectedIndex >= 0}
-                                disabled={
-                                  selectedIndex < 0 &&
-                                  selectedRescheduleSlots.length >= 3
-                                }
-                                onChange={(event) =>
-                                  setSelectedRescheduleSlots((current) =>
-                                    event.target.checked
-                                      ? [...current, key].slice(0, 3)
-                                      : current.filter(
-                                          (candidate) => candidate !== key,
-                                        ),
-                                  )
-                                }
-                                className="h-4 w-4 accent-magenta"
-                              />
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                    <button
-                      disabled={
-                        busy ||
-                        !rescheduleReason.trim() ||
-                        !selectedRescheduleSlots.length
-                      }
-                      onClick={() => void proposeReschedule()}
-                      className="mt-3 min-h-11 w-full rounded-[8px] bg-plum text-xs font-bold text-white gc-disabled-control"
-                    >
-                      {busy
-                        ? "Checking availability…"
-                        : "Send proposal for customer approval"}
-                    </button>
-                  </div>
+                  <BookingChangeProposal key={String(selected.id)} booking={selected} timeZone={String(c.salon.time_zone)} professionalName={String(c.stylists.find(stylist=>stylist.id===selected.stylist_id)?.name||"")} />
                   <div className="mt-6 border-t border-plum/10 pt-5">
                     <h3 className="font-serif text-lg text-plum">
                       Cancel booking
