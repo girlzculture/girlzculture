@@ -39,7 +39,7 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Shared shell and first two page compositions implemented; remaining twelve pages still required.",
+        "Initial shared shell and first two page compositions were followed by the additional page changes listed below. All fourteen complete page/editor/dialog requirements remain tracked separately; no complete dashboard visual acceptance is claimed.",
         "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
         "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination.",
         "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
@@ -59,7 +59,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -96,7 +96,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -144,7 +144,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -180,7 +180,8 @@
         "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending.",
         "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending.",
         "calendar-pointer-corrected-final.log: 12/12 native Review-pointer cases passed Chromium/Firefox/WebKit in four viewports. Trace showed old test coordinates clicked fixed navigation; Firefox diagnostic proved focused time input restores scrolling. Explicit auto-scroll assertion, unobscured target, conflict notice and exact single request retained. No arbitrary waits/retries.",
-        "finance-localization-and-inventory-final.log: 10/10 passed, four-language finance export/error/original-data checks in Chromium/WebKit plus complete Spanish phone owner-route audit with zero unexpected requests, untranslated copy, overflow or Axe violations. Shared fixture now explicitly serves Finances. Full build and final narrow lint passed."
+        "finance-localization-and-inventory-final.log: 10/10 passed, four-language finance export/error/original-data checks in Chromium/WebKit plus complete Spanish phone owner-route audit with zero unexpected requests, untranslated copy, overflow or Axe violations. Shared fixture now explicitly serves Finances. Full build and final narrow lint passed.",
+        "finance-policy-browser-corrected.log: 8/8 Chromium/WebKit checks pass: actual keyboard horizontal scrolling at Spanish tablet size, plus complete policy review/publication and assistant preview at 390/768/1440 for all four release locales. Wolof remains explicitly deferred."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-04 | Preserve existing functions, data, validation, permissions, and save/publish behavior while changing their presentation. Spreadsheet import/export remains accessible as a secondary task instead of dominating everyday work. | Existing important workflows remain reachable and functional. |",
@@ -191,7 +192,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -223,7 +224,7 @@
       },
       "progress_status": "Not started",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -255,7 +256,7 @@
       },
       "progress_status": "Not started",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -287,7 +288,7 @@
       },
       "progress_status": "Not started",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Current phone substitution capture still shows header overlap; visual acceptance is incomplete.",
+      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
       "external_blocker": null
     },
     {
@@ -1474,7 +1475,8 @@
         "Canonical digest fixes false stale preview after JSONB key reorder; genuine stale review retains HTTP409 and exact reference."
       ],
       "verification": [
-        "Read-only historical incident HTTP409 confirmed. Reproduced API failure before fix; 3/3 API/audit tests after fix. Live publication still pending."
+        "Read-only historical incident HTTP409 confirmed. Reproduced API failure before fix; 3/3 API/audit tests after fix. Live publication still pending.",
+        "finance-policy-browser-corrected.log: 8/8 Chromium/WebKit checks pass: actual keyboard horizontal scrolling at Spanish tablet size, plus complete policy review/publication and assistant preview at 390/768/1440 for all four release locales. Wolof remains explicitly deferred."
       ],
       "live_evidence": [],
       "detailed_clause": "POL-01 — Fix the reported unavailable/save/confirm/publish failure. Start from support reference 70ad1644-c08f-4a16-af76-014d9b58b0df and correlate the request/logs when implementation begins. Preserve the owner's draft during failures. A success message must correspond to a real save and, when requested, publication.",
@@ -3242,7 +3244,8 @@
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
-        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending.",
+        "finance-policy-browser-corrected.log: 8/8 Chromium/WebKit checks pass: actual keyboard horizontal scrolling at Spanish tablet size, plus complete policy review/publication and assistant preview at 390/768/1440 for all four release locales. Wolof remains explicitly deferred."
       ],
       "live_evidence": [],
       "detailed_clause": "FIN-19 — Show profit from recorded revenue and applicable recorded costs. If expenses or service costs are incomplete, make that limit visible and do not claim an exact margin or “most profitable service” without supporting cost data. Do not equate the highest revenue service with the most profitable. This is needed for trustworthy assistant advice as well as screens and exports.",
@@ -3593,7 +3596,12 @@
         "src/app/api/customer/bookings/[id]/communications/route.ts",
         "supabase/migrations/20260918173101_business_customer_communication_preferences.sql",
         "tests/p0-business-communications.test.mjs",
-        "scripts/sql/verify-business-communication-preferences.sql"
+        "scripts/sql/verify-business-communication-preferences.sql",
+        "src/lib/bookingFollowupCopy.ts",
+        "src/app/api/bookings/reminders/route.ts",
+        "supabase/migrations/20260918193727_business_post_visit_followups.sql",
+        "scripts/sql/verify-booking-followups.sql",
+        "tests/p0-business-followups.test.mjs"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -3602,12 +3610,14 @@
         "Accepted appointment changes now use a distinct confirmation delivery event instead of being suppressed by the original confirmation claim. Reminder schedule revisions, customer delivery preferences and post-visit/rebooking path remain next.",
         "Rescheduled reminder suppression reproduced. Revisioned claims/delivery gates and localized defaults written. Local SQL passes; current Node integration run: 5 pass, 4 fail before execution because the test loader cannot resolve nonDomVisualTokens.mjs. No live reminders sent.",
         "Schedule revisions prevent reminders for cancelled/superseded appointments; eligible queue excludes completed/leased/terminal records before batch limit. Engine translations keep priority, builtin four-language copy preserves original facts. Corrected shared translated-email variable substitution; secure guest links reused.",
-        "Added customer-controlled, per-business communication preferences and booking-only guest preferences; default-off optional marketing/rebooking, revisioned consent history, signed opt-out and delivery reservation gate. Prevents an awaiting save from executing under a replacement account."
+        "Added customer-controlled, per-business communication preferences and booking-only guest preferences; default-off optional marketing/rebooking, revisioned consent history, signed opt-out and delivery reservation gate. Prevents an awaiting save from executing under a replacement account.",
+        "Automatic opt-in post-visit thank-you/rebooking worker added to the existing protected schedule: new completed visits only, due 24 hours after the booked end, expires after 72 hours, bounded leases/retries, current consent/channel/status/schedule rechecked before delivery. No historical backfill. EN/FR/ES/zh-CN copy and opt-out link; stable delivery keys and recorded failures."
       ],
       "verification": [
         "reminder-server-final.log:17/17 reminders+substitution tests pass in EN/FR/ES/zh-CN; reminder-revision-sql-final.log cancellation/revision/legacy/retry/251st-record assertions pass; reminder-clean-final.log all167 migrations/assertions pass on fresh isolated database; reminder-typescript.log, reminder-lint.log, reminder-build.log and existing reminder verifier pass. No live messages sent.",
         "communication-focused.log: 26/26 communication, reminder and coverage tests; communication-session-focused-final.log: 26/26 consent/session/coverage regressions; communication-preferences-sql-verified.log: real isolated PostgreSQL two-business/guest/revision/opt-out checks; communication-clean-database.log: complete 168-migration chain and assertions pass. Production untouched. Browser acceptance still running at this snapshot.",
-        "pr80-focused-browser-corrections.log: all 10 communication-preference cases passed in Chromium/WebKit across EN/FR/ES/zh-CN, including failed-save retention, retry, refresh and explicit opt-out. Synthetic customer sessions; no live communication sent."
+        "pr80-focused-browser-corrections.log: all 10 communication-preference cases passed in Chromium/WebKit across EN/FR/ES/zh-CN, including failed-save retention, retry, refresh and explicit opt-out. Synthetic customer sessions; no live communication sent.",
+        "followup-finance-core-final.log: 26/26 combined follow-up/reminder/finance-export checks, including original facts, configured channels, opt-out, cancellation and failure references (mocked transport only). followup-sql-final.log: real local PostgreSQL service-role/two-business/lease/cancellation/opt-out/expiry/retry/schedule assertions pass. followup-clean-database.log: fresh 169-migration chain and all assertions pass. TypeScript, narrow lint and build pass. No live customer messages sent."
       ],
       "live_evidence": [],
       "detailed_clause": "COMMS-03 — Add automatic booking confirmation, day-before reminder, and post-visit thank-you/rebooking nudge in the customer's language. Respect actual booking status, timezones, delivery preferences and channel configuration; avoid duplicate or inappropriate reminders after cancellation/rescheduling.",
@@ -3618,7 +3628,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish automatic post-visit scheduling and delivery, then final changed-path live verification. Reminder revisions and customer/guest channel, language and optional-message preferences now have local automated evidence.",
+      "remaining": "Complete final combined release and changed-path live verification, including booking confirmations, reminders and post-visit status across supported customer/guest flows. Campaigns remain separate COMMS-04 work. No real test message has been sent.",
       "external_blocker": null
     },
     {
@@ -5530,8 +5540,8 @@
     }
   ],
   "progress_audit": {
-    "at": "2026-09-18T19:08:38.249Z",
-    "commit": "e6d693627e053f434c5aca4480e01355738dd5b8",
+    "at": "2026-09-18T19:25:03.226Z",
+    "commit": "b3401f079f34bae55bd355154a48d93a455a5fc6",
     "counts": {
       "In progress": 103,
       "Not started": 19,
@@ -5542,6 +5552,11 @@
     "interpretation": "Full-requirement conservative states; completed governance decision is not a deployed product feature. In-progress items may contain passing local subfeatures. Not-started means requirement-specific work/acceptance is not recorded, not that inherited platform functionality is absent.",
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
-    "uncommitted": true
+    "uncommitted": true,
+    "uncommitted_summary": "Post-visit worker/migration and demonstrated CI integration/accessibility corrections verified locally, pending commit/push; full requirements still incomplete.",
+    "production_checked_at": "2026-09-18T19:25:03.226Z",
+    "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
+    "production_deployment": "6aac503fa5eacb00089c6d87",
+    "production_locked": true
   }
 }

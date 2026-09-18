@@ -4,7 +4,9 @@ import { sendPushToUsers } from "@/lib/webPushServer";
 import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
 import { reminderTranslation, reminderDate, reminderStylistClause } from "@/lib/bookingReminderCopy";
-import {bookingCommunicationPreferences} from "@/lib/businessCommunicationServer";
+import {bookingCommunicationPreferences,communicationUnsubscribeToken} from "@/lib/businessCommunicationServer";
+import {bookingFollowupCopy} from "@/lib/bookingFollowupCopy";
+import {salonPublicPath} from "@/lib/salonVanity";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
 import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
@@ -395,7 +397,7 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const templates=Object.fromEntries((templateRows||[]).map(row=>[row.template_key,row])) as NotificationTemplateMap;
   const translations=Object.fromEntries((translationRows||[]).map(row=>[`${row.locale}:${row.translation_key}`,row.translated_text])) as NotificationTranslationMap;
   const rawChannels=Array.isArray(values["notifications.channels"])?values["notifications.channels"]:[];
-  const channels=new Set((rawChannels.length?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
+  const channels=new Set((Array.isArray(values["notifications.channels"])?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
   const subject=(key:string,fallback:string)=>{const value=String(values[key]||"").trim();return value&&value.length<=140?value:fallback};
   const text=(key:string,fallback:string,maxLength=1200)=>{const value=String(values[key]||"").trim();return value&&value.length<=maxLength?value:fallback};
   const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
@@ -471,7 +473,7 @@ async function bookingCommunicationInput(
   };
 }
 
-export async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[], scheduleRevision?: number) {
+export async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[], scheduleRevision?: number, followupLease?: string) {
   const admin = getSupabaseAdmin();
   const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; request_id?: string }> = [];
   for (const task of tasks) {
@@ -482,7 +484,7 @@ export async function runDeliveries(bookingId: string, eventType: string, tasks:
       channel: task.channel,
       scheduleRevision,
     });
-    const claim = await admin.rpc(scheduleRevision === undefined ? "claim_notification_delivery" : "claim_scheduled_notification_delivery", {
+    const claim = await admin.rpc(followupLease ? "claim_followup_notification_delivery" : scheduleRevision === undefined ? "claim_notification_delivery" : "claim_scheduled_notification_delivery", {
       p_booking_id: bookingId,
       p_event_type: eventType,
       p_recipient_type: task.recipientType,
@@ -490,6 +492,7 @@ export async function runDeliveries(bookingId: string, eventType: string, tasks:
       p_destination: task.destination,
       p_deduplication_key: deduplicationKey,
       ...(scheduleRevision === undefined ? {} : { p_schedule_revision: scheduleRevision }),
+      ...(followupLease ? {p_lease:followupLease} : {}),
     });
     if (claim.error) {
       const reference = await capturePlatformError({
@@ -781,6 +784,58 @@ export async function deliverBookingReminder(bookingId:string,reminderHours:numb
   if(stylistContact?.userId)tasks.push({recipientType:"stylist",channel:"push",destination:stylistContact.userId,run:()=>sendPushToUsers([stylistContact.userId],{title:renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_reminder.push_title","Upcoming assigned appointment"),body:stylistSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
   const deliveries=await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)),scheduleRevision);
   return{deliveries,warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A reminder notification needs attention. Reference ${reference}.`,request_id:reference}))};
+}
+
+export async function deliverBookingFollowup(bookingId:string,leaseId:string){
+  const {admin,booking,salon,style,customerLocale,communicationPreferences:preferences}=await bookingNotificationContext(bookingId);
+  const end=new Date(booking.appointment_datetime).getTime()+Number(booking.duration_hours)*3_600_000;
+  if(booking.status!=="Completed"||!preferences.follow_up||!preferences.id||!Number.isFinite(end)||end>Date.now()-86_400_000||end<=Date.now()-259_200_000){
+    return {deliveries:[],skipped:true};
+  }
+  const notification=await bookingNotificationSettings(admin,[customerLocale]);
+  // Optional messages fail closed when channel/template settings cannot load.
+  if(notification.warningReferences.length)throw Error("FOLLOWUP_CONFIGURATION_UNAVAILABLE");
+  if(!salon.slug||!style?.name)throw Error("FOLLOWUP_CONTEXT_UNAVAILABLE");
+  const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
+  const bookPath=salonPublicPath(String(salon.slug));
+  const bookUrl=new URL(bookPath,root).toString();
+  const unsubscribe=new URL("/communications/unsubscribe",root);
+  unsubscribe.searchParams.set("token",communicationUnsubscribeToken(preferences.id));
+  const copy=bookingFollowupCopy(customerLocale,String(salon.name),String(style.name));
+  const variables={salon:String(salon.name),service:String(style.name),booking_url:bookUrl,unsubscribe_url:unsubscribe.toString()};
+  const email=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_follow_up",variables,copy.subjectTemplate,copy.bodyTemplate);
+  // The opt-out remains present even when the Engine overrides the template.
+  const html=`${email.html}<p><a href="${escapeHtml(bookUrl)}">${escapeHtml(copy.book)}</a></p><p><a href="${escapeHtml(unsubscribe.toString())}">${escapeHtml(copy.preferences)}</a></p>`;
+  const tasks:DeliveryTask[]=[];
+  if(preferences.email_enabled&&booking.guest_email&&notification.channels.has("email"))tasks.push({recipientType:"customer",channel:"email",destination:String(booking.guest_email),run:()=>sendEmail(String(booking.guest_email),email.subject,html,"bookings",{fromName:notification.senderName,replyTo:notification.replyTo,idempotencyKey:notificationDeliveryKey({bookingId,eventType:"booking_follow_up",recipientType:"customer",channel:"email"})})});
+  if(preferences.sms_enabled&&booking.guest_phone&&notification.channels.has("sms"))tasks.push({recipientType:"customer",channel:"sms",destination:String(booking.guest_phone),run:()=>sendSms(String(booking.guest_phone),`${copy.body}\n${copy.book}: ${bookUrl}\n${copy.preferences}: ${unsubscribe}`)});
+  if(preferences.push_enabled&&booking.customer_id&&notification.channels.has("push"))tasks.push({recipientType:"customer",channel:"push",destination:String(booking.customer_id),run:()=>sendPushToUsers([String(booking.customer_id)],{title:copy.subject,body:copy.body,url:bookPath,tag:`booking-follow-up-${booking.id}`})});
+  return {deliveries:await runDeliveries(bookingId,"booking_follow_up",tasks,undefined,leaseId),skipped:tasks.length===0};
+}
+
+export async function processBookingFollowups(){
+  const admin=getSupabaseAdmin();
+  const batch=await admin.rpc("claim_due_booking_followups",{p_limit:10});
+  if(batch.error)throw batch.error;
+  const results:Array<{bookingId:string;status:string;request_id?:string}>=[];
+  for(const item of (batch.data||[]) as Array<{booking_id:string;lease_id:string}>){
+    let reference:string|undefined;
+    let skipped=false;
+    try{
+      const delivery=await deliverBookingFollowup(item.booking_id,item.lease_id);
+      skipped=delivery.skipped;
+      const failure=delivery.deliveries.find(result=>result.status==="failed"||result.request_id);
+      if(failure)reference=failure.request_id||await capturePlatformError({admin,error:Error("FOLLOWUP_DELIVERY_FAILED"),feature:"booking-followups",action:"deliver",actorRole:"system",recordType:"booking",recordId:item.booking_id,safeMessage:"A post-visit message could not be delivered."});
+    }catch(error){
+      reference=await capturePlatformError({admin,error,feature:"booking-followups",action:"deliver",actorRole:"system",recordType:"booking",recordId:item.booking_id,safeMessage:"A post-visit message could not be delivered."});
+    }
+    const finished=await admin.rpc("finish_booking_followup",{p_booking:item.booking_id,p_lease:item.lease_id,p_success:!reference,p_reference:reference||null});
+    if(finished.error){
+      reference=await capturePlatformError({admin,error:finished.error,feature:"booking-followups",action:"complete",actorRole:"system",recordType:"booking",recordId:item.booking_id,safeMessage:"A post-visit delivery result could not be recorded."});
+    }
+    results.push({bookingId:item.booking_id,status:reference?"failed":finished.data!==true?"superseded":skipped?"skipped":"completed",...(reference?{request_id:reference}:{})});
+  }
+  return {processed:results.length,results};
 }
 
 export async function processBookingReminders(){
