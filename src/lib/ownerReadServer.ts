@@ -8,6 +8,7 @@ import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPer
 import { readBusinessFinances } from "@/lib/businessFinanceServer";
 import { assistantAssignedProfessional, assistantRequestedProfessional } from "@/lib/assistantProfessionalScope";
 import { productStock } from "@/lib/businessProductInventory";
+import { recordedSubscriptionMonthlyAmount } from "@/lib/subscriptionAgreement";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -33,9 +34,10 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
   }
   if (tool === "get_calendar_gaps" || tool === "get_availability") return calendarAvailability({ salonId: salon.id, date: String(args.date), stylistId: assistantRequestedProfessional(context, args.stylist_id) });
   if (tool === "get_plan_status") {
-    const result = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier,cancel_at_period_end").eq("salon_id", salon.id).maybeSingle();
+    const result = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier,cancel_at_period_end,price_id,recurring_price_snapshot").eq("salon_id", salon.id).maybeSingle();
     if (result.error) throw result.error;
     const current = canonicalPlanForStored(result.data?.tier);
+    const recordedMonthlyAmount = recordedSubscriptionMonthlyAmount(result.data || {});
     const recordLimitPlan = restrictivePlanForLimits(result.data?.tier, result.data?.scheduled_tier);
     const catalog = Object.values(SUBSCRIPTION_PLANS).map(plan => ({ name: plan.name, monthly_amount_cents: plan.monthlyAmountCents, currency: "USD", entitlements: plan.entitlements }));
     async function usage(permission: "products" | "promotions") {
@@ -53,8 +55,8 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     }
     const [productListings, activePromotions] = await Promise.all([usage("products"), usage("promotions")]);
     return {
-      subscription: result.data,
-      current_plan: catalog.find(plan => plan.name === current) || null,
+      subscription: result.data ? { tier: result.data.tier, status: result.data.status, current_period_end: result.data.current_period_end, scheduled_tier: result.data.scheduled_tier, cancel_at_period_end: result.data.cancel_at_period_end } : null,
+      current_plan: current ? { name: current, entitlements: SUBSCRIPTION_PLANS[current].entitlements, monthly_amount_cents: recordedMonthlyAmount === null ? null : Math.round(recordedMonthlyAmount * 100), currency: "USD", amount_basis: "Recorded provider base price before discounts and tax; unknown is not the new-sale catalog price." } : null,
       available_plans: catalog,
       effective_record_limit_plan: recordLimitPlan,
       // Match the existing inventory admission rule for pending downgrades.

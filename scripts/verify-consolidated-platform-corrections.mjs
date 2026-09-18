@@ -42,7 +42,7 @@ assert.match(adminSalons, /Permanent deletion is available only for a record exp
 assert.match(adminSalons, /category=data_management/);
 
 for (const control of [
-  /Expected monthly revenue/,
+  /Recorded monthly base value/,
   /Actually collected/,
   /Plans by state/,
   /All states/,

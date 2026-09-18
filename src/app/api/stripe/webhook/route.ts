@@ -11,6 +11,7 @@ import { normalizeUsState } from "@/lib/usStates";
 import { completeCommerceCheckout } from "@/lib/commerceCheckoutServer";
 import { completePickupReservation } from "@/lib/pickupReservationsServer";
 import { productRefundSummary } from "@/lib/productCommerceCore";
+import { existingAgreementPlan, subscriptionPriceSnapshot, type SubscriptionPriceItem } from "@/lib/subscriptionAgreement";
 
 type StripeLine = {
   amount?: number;
@@ -59,7 +60,7 @@ type StripeObject = Record<string, unknown> & {
   amount_reversed?: number;
   last_finalization_error?: { message?: string };
   parent?: { subscription_details?: { subscription?: string | { id?: string }; metadata?: Record<string, string> } };
-  items?: { data?: Array<{ price?: { id?: string }; current_period_start?: number; current_period_end?: number }> };
+  items?: { data?: Array<SubscriptionPriceItem & { current_period_start?: number; current_period_end?: number }> };
   lines?: { data?: StripeLine[] };
   phases?: Array<{ start_date?: number; end_date?: number }>;
   discounts?: Array<{ coupon?: { id?: string } | string; promotion_code?: { id?: string } | string }>;
@@ -127,7 +128,7 @@ async function syncSubscription(object: StripeObject) {
     if (bySalonId.error) throw bySalonId.error;
     existing = bySalonId.data as StoredSubscription | null;
   }
-  const plan = planFromObject(object);
+  const plan = existingAgreementPlan({ subscriptionId: object.id, priceId: object.items?.data?.[0]?.price?.id, configuredPlan: planFromObject(object), stored: existing });
   if (!plan) throw new Error("STRIPE_SUBSCRIPTION_PLAN_UNRECOGNIZED");
   const status = String(object.status || "inactive");
   const subscriptionItem = object.items?.data?.[0];
@@ -145,6 +146,7 @@ async function syncSubscription(object: StripeObject) {
     stripe_subscription_id: object.id,
     stripe_customer_id: object.customer || null,
     price_id: object.items?.data?.[0]?.price?.id || null,
+    recurring_price_snapshot: subscriptionPriceSnapshot(object.items?.data, new Date().toISOString()),
     current_period_start: periodStart,
     current_period_end: periodEnd,
     cancel_at_period_end: Boolean(object.cancel_at_period_end),

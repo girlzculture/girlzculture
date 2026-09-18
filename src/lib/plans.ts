@@ -42,8 +42,8 @@ export type PlanEntitlements = {
 export type SubscriptionPlanDefinition = {
   key: PlanKey;
   name: SubscriptionPlan;
-  monthlyAmountCents: 5900 | 6900 | 8900;
-  /** Retained for existing subscription calculations; cents is authoritative. */
+  monthlyAmountCents: 8900 | 10900 | 12900;
+  /** New-sale catalog only. Existing agreements retain their provider price. */
   monthlyPrice: number;
   stripePriceEnv: "STRIPE_PRICE_STARTER" | "STRIPE_PRICE_GROWTH" | "STRIPE_PRICE_PREMIUM";
   /** Commercial upgrade order only. It must never influence organic discovery. */
@@ -57,8 +57,8 @@ export const SUBSCRIPTION_PLANS = {
   Starter: {
     key: "starter",
     name: "Starter",
-    monthlyAmountCents: 5900,
-    monthlyPrice: 59,
+    monthlyAmountCents: 8900,
+    monthlyPrice: 89,
     stripePriceEnv: "STRIPE_PRICE_STARTER",
     rank: 1,
     description: "The essentials for running your salon on Girlz Culture.",
@@ -95,8 +95,8 @@ export const SUBSCRIPTION_PLANS = {
   Growth: {
     key: "growth",
     name: "Growth",
-    monthlyAmountCents: 6900,
-    monthlyPrice: 69,
+    monthlyAmountCents: 10900,
+    monthlyPrice: 109,
     stripePriceEnv: "STRIPE_PRICE_GROWTH",
     rank: 2,
     description: "More tools to help you understand and grow your business.",
@@ -133,8 +133,8 @@ export const SUBSCRIPTION_PLANS = {
   Premium: {
     key: "premium",
     name: "Premium",
-    monthlyAmountCents: 8900,
-    monthlyPrice: 89,
+    monthlyAmountCents: 12900,
+    monthlyPrice: 129,
     stripePriceEnv: "STRIPE_PRICE_PREMIUM",
     rank: 3,
     description: "Advanced operations, reporting, and advertising benefits.",
@@ -385,6 +385,7 @@ export function planFromStripePriceId(priceId: unknown): StoredSubscriptionPlan 
   if (value === process.env.STRIPE_PRICE_GROWTH) return "Growth";
   if (value === process.env.STRIPE_PRICE_PREMIUM) return "Premium";
   if (value === process.env.STRIPE_BASIC_PRICE_ID) return "Basic";
+  if (value === process.env.STRIPE_STARTER_PRICE_ID) return "Starter";
   if (value === process.env.STRIPE_GROWTH_PRICE_ID) return "Growth";
   if (value === process.env.STRIPE_PREMIUM_PRICE_ID) return "Premium";
   return null;

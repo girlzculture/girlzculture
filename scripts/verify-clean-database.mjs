@@ -1277,3 +1277,4 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-sub
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-reminder-revisions.sql")],"Reminder schedule, cancellation and retry isolation"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-business-communication-preferences.sql")],"Two-business communication consent, guest access and delivery isolation"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-followups.sql")],"Opt-in post-visit scheduling, lease and business isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-subscription-recorded-price.sql")],"Recorded subscription price integrity and business isolation"));

@@ -10,6 +10,8 @@ test('plan answers use the canonical entitlement catalog and do not infer an unk
   assert.equal(result.current_plan.name, 'Premium');
   assert.equal(result.current_plan.entitlements.productListings.limit, null);
   assert.equal(result.available_plans.length, 3);
+  assert.equal(result.current_plan.monthly_amount_cents, null, 'missing agreement must not invent a catalog charge');
+  assert.deepEqual(Array.from(result.available_plans, plan => plan.monthly_amount_cents), [8900,10900,12900]);
   assert.equal(result.revenue_uplift_projection, null);
   const unknown = fixture({ tables: { subscriptions: [{ salon_id: business, status: 'active', tier: 'Unknown' }] } });
   assert.equal((await unknown.run('get_plan_status', {})).request.result.current_plan, null);
@@ -215,6 +217,18 @@ test('assigned stylist reads exclude other appointments, clients, messages and a
  assert.equal(f.calls.some(c=>c.table==='booking_messages'),false);
  await f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:null});assert.equal(f.calls.filter(c=>c.calendar).at(-1).calendar.stylistId,professional);
  await assert.rejects(f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:actor}),e=>e.code==='ASSISTANT_ACCESS_DENIED');
+});
+
+test('assistant separates an existing provider agreement from new-sale prices without exposing Stripe IDs', async () => {
+  const snapshot={price_id:'price_retired',amount_cents:5900,currency:'usd',interval:'month',interval_count:1,quantity:1,observed_at:'2026-09-18T21:35:00Z'};
+  const f=fixture({tables:{subscriptions:[
+    {salon_id:actor,tier:'Premium',status:'active',price_id:'price_other',recurring_price_snapshot:{...snapshot,price_id:'price_other',amount_cents:99999}},
+    {salon_id:business,tier:'Starter',status:'active',price_id:'price_retired',recurring_price_snapshot:snapshot},
+  ]}});
+  const result=(await f.run('get_plan_status',{})).request.result;
+  assert.equal(result.current_plan.monthly_amount_cents,5900);
+  assert.equal(result.available_plans[0].monthly_amount_cents,8900);
+  assert.doesNotMatch(JSON.stringify(result),/price_retired|price_other|99999/);
 });
 
 test('assistant stock uses own-business quantities and thresholds, excludes foreign supplies, and checks revoked permissions',async()=>{

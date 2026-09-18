@@ -22,11 +22,11 @@ import {
 assert.deepEqual(PLAN_ORDER, ["Starter", "Growth", "Premium"]);
 assert.deepEqual(
   PLAN_ORDER.map((name) => SUBSCRIPTION_PLANS[name].monthlyAmountCents),
-  [5900, 6900, 8900],
+  [8900, 10900, 12900],
 );
 assert.deepEqual(
   PLAN_ORDER.map((name) => SUBSCRIPTION_PLANS[name].monthlyPrice),
-  [59, 69, 89],
+  [89, 109, 129],
 );
 assert.deepEqual(
   PLAN_ORDER.map((name) => stripePriceEnv(name)),

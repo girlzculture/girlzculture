@@ -1,7 +1,7 @@
 // Interface terminology, shared by finance screens and reports. Business names,
 // original entries, dates and numerical amounts are never translated here.
 const rows: readonly (readonly [string,string,string,string])[] = [
-  ["Overview","Aperçu","Resumen","概览"],
+  ["Overview","Vue d’ensemble","Resumen","概览"],
   ["Transactions","Transactions","Transacciones","交易"],
   ["Expenses","Dépenses","Gastos","支出"],
   ["Team earnings","Revenus de l’équipe","Ingresos del equipo","团队收入"],

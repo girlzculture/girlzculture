@@ -1,3 +1,14 @@
+# Current checkpoint — pricing and Google access, 18 September 2026
+
+PR80 remains Draft and unmerged. Required CI at pushed559b29b passed: https://github.com/girlzculture/girlzculture/actions/runs/35397134733 . Release-candidate35397135026 passed all3 browser shards but failed the French Overview wording regression; corrected locally without changing the assertion.
+
+New-sale USD89/109/129 catalog and exact existing-agreement preservation are implemented locally.26 subscription/operational tests,10 localization tests,170 fresh local migrations/assertions, catalog/preflight/idempotency, build/types/lint pass.16 pricing/report browser cases and final28 application-consent cases pass. Original3 WebKit failures were bypassed fixture routes with service-worker control; isolated fixture setup corrected, production PWA unchanged. Snapshot migration20260918213511 is not applied to production. See PRICING-RECONCILIATION.md. No Stripe catalog/environment/subscription changes or charges.
+
+Google Business Information API is enabled under explicit founder approval. Project886435271334 / project-f0d9935c-69db-42c9-b22 has0requests/minute, which Google documents as not approved. Founder asked for qualifying verified60+day profile/website to prepare the access application. Cloud tab28 is preserved. No profile or OAuth credential created/changed. See GOOGLE-BUSINESS-PROFILE-ACCESS.md.
+
+201groups remain tracked; no additional full product requirement claimed complete or released. BothUSD25caps unchanged. Production baseline remains6aac503fa5eacb00089c6d87 / d37cbf4; no publication. Continue remaining full software-first features and hosted/provider acceptance.
+
+---
 # Dashboard and business-software implementation checkpoint
 
 ## Latest continuation — access gating and localization CI correction

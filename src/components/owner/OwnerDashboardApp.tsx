@@ -1183,6 +1183,11 @@ function SubscriptionV2({ c }: { c: Ctx }) {
         title="Subscription"
         subtitle="Choose the plan that matches your salon's operations and growth goals."
       />
+      {c.subscriptionActive ? (
+        <p className="mb-4 text-sm text-ink/70">
+          Prices below apply to new subscriptions. Your existing billing terms remain unchanged unless you confirm a plan change.
+        </p>
+      ) : null}
       {legacyBasicActive ? (
         <Panel className="mb-4 border-plum/20 bg-cream/60">
           <h2 className="font-serif text-2xl text-plum">Basic (legacy)</h2>

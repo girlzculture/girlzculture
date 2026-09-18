@@ -1,7 +1,6 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
   parseOfficialPlan,
-  parseStoredPlan,
   planDowngradeLimitConflicts,
   planFromStripePriceId,
   planRank,
@@ -22,6 +21,7 @@ import {
   safeFailure,
 } from "@/lib/platformErrors";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { existingAgreementPlan, subscriptionPriceSnapshot, type SubscriptionPriceItem } from "@/lib/subscriptionAgreement";
 
 type StripeInvoice = {
   id?: string;
@@ -53,7 +53,7 @@ type StripeSubscription = {
   latest_invoice?: string | StripeInvoice | null;
   pending_update?: Record<string, unknown> | null;
   discounts?: Array<string | { id?: string }>;
-  items?: { data?: Array<{ id?: string; quantity?: number; current_period_start?: number; current_period_end?: number; price?: { id?: string }; tax_rates?: Array<string | { id?: string }> }> };
+  items?: { data?: Array<SubscriptionPriceItem & { id?: string; current_period_start?: number; current_period_end?: number; tax_rates?: Array<string | { id?: string }> }> };
 };
 
 type StripeSchedule = { id: string };
@@ -153,8 +153,7 @@ async function POSTHandler(request: Request) {
     const currentPeriodStart = current.current_period_start || item.current_period_start;
     const currentPeriodEnd = current.current_period_end || item.current_period_end;
 
-    const currentPlan = planFromStripePriceId(item.price.id)
-      || parseStoredPlan(stored.tier || salon.subscription_tier);
+    const currentPlan = existingAgreementPlan({ subscriptionId: current.id, priceId: item.price.id, configuredPlan: planFromStripePriceId(item.price.id), stored });
     if (!currentPlan) {
       throw new SubscriptionPriceValidationError(
         "CURRENT_SUBSCRIPTION_IDENTITY_UNRECOGNIZED",
@@ -467,6 +466,7 @@ async function POSTHandler(request: Request) {
       tier: plan,
       status,
       price_id: priceId,
+      recurring_price_snapshot: subscriptionPriceSnapshot(updated.items?.data, new Date().toISOString()),
       current_period_start: periodStart,
       current_period_end: periodEnd,
       cancel_at_period_end: Boolean(updated.cancel_at_period_end),

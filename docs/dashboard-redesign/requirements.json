@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; LOCAL IMPLEMENTATION; reminder correction verified locally; full release not complete",
+  "status": "IN PROGRESS; local pricing preservation and Google access diagnosis; full201-group release not complete",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -20283,13 +20283,15 @@
       "verification_status": "UNVERIFIED",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
-        "src/components/search/GoogleSalonMap.tsx"
+        "docs/dashboard-redesign/GOOGLE-BUSINESS-PROFILE-ACCESS.md"
       ],
-      "changes": [],
+      "changes": [
+        "Founder-approved activation completed for Business Information API in project project-f0d9935c-69db-42c9-b22 (number886435271334). Read-only Cloud quota inspection shows0requests/minute; Google documents this as unapproved."
+      ],
       "verification": [],
       "live_evidence": [],
-      "remaining": "Implement owner connect/sync/conflict/retry/disconnect while approved-project API access and OAuth configuration are confirmed. Project ID is confirmed, API approval is not.",
-      "external_blocker": "Google Cloud project confirmed and signed-in session available. Business Information API shown disabled; API activation/approval/quota and OAuth configuration still pending.",
+      "remaining": "Obtain project API approval and configure OAuth, then implement/verify owner connect, selected-business binding, sync, conflict handling, retry and disconnect. Maps is not Business Profile sync.",
+      "external_blocker": "GBP API approval absent (0QPM); qualifying verified60+day profile/website needed for access application. OAuth client not yet configured. Authenticated Cloud tab retained; no business profile modified.",
       "wire_coverage": [
         {
           "id": "WIRE-01",
@@ -20687,18 +20689,25 @@
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/lib/plans.ts",
         "src/lib/subscriptionPriceServer.ts",
         "src/app/api/stripe/subscription/checkout/route.ts",
-        "src/app/api/stripe/portal/route.ts"
+        "src/app/api/stripe/portal/route.ts",
+        "src/lib/subscriptionAgreement.ts",
+        "supabase/migrations/20260918213511_subscription_recorded_price_terms.sql",
+        "tests/p0-subscription-agreement.test.mjs"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "New-sale catalog now USD89/109/129. Existing agreements retain exact stored provider subscription/Price identity. Verified price snapshots supply admin/assistant monthly base values; unknown values are never inferred from new-sale prices. Owner notice separates current terms from new prices; no live Stripe change."
+      ],
+      "verification": [
+        "26 subscription/operational tests; 10 localization regression tests; 170 fresh local migrations and all database assertions; catalog/preflight/idempotency checks; build, types, targeted lint. Browser pricing/reporting16 unaffected cases passed; application consent final28/28 includes all3 WebKit plan journeys after fixture service-worker correction. These are local fixtures, not live Stripe acceptance."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Securely inspect real Stripe products/prices and existing agreements; preserve legacy Price mappings before new catalog configuration. Complete entitlement/provider checkout/portal acceptance. Migration170 remains local only; no production price, subscription or sales flag changed.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -23491,18 +23500,25 @@
       "requirement_kind": "confirmed-rule",
       "assessment": "partial",
       "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/lib/plans.ts",
         "src/lib/subscriptionPriceServer.ts",
         "src/app/api/stripe/subscription/checkout/route.ts",
-        "src/app/api/stripe/portal/route.ts"
+        "src/app/api/stripe/portal/route.ts",
+        "src/lib/subscriptionAgreement.ts",
+        "supabase/migrations/20260918213511_subscription_recorded_price_terms.sql",
+        "tests/p0-subscription-agreement.test.mjs"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "New-sale catalog now USD89/109/129. Existing agreements retain exact stored provider subscription/Price identity. Verified price snapshots supply admin/assistant monthly base values; unknown values are never inferred from new-sale prices. Owner notice separates current terms from new prices; no live Stripe change."
+      ],
+      "verification": [
+        "26 subscription/operational tests; 10 localization regression tests; 170 fresh local migrations and all database assertions; catalog/preflight/idempotency checks; build, types, targeted lint. Browser pricing/reporting16 unaffected cases passed; application consent final28/28 includes all3 WebKit plan journeys after fixture service-worker correction. These are local fixtures, not live Stripe acceptance."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Securely inspect real Stripe products/prices and existing agreements; preserve legacy Price mappings before new catalog configuration. Complete entitlement/provider checkout/portal acceptance. Migration170 remains local only; no production price, subscription or sales flag changed.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -23617,18 +23633,25 @@
       "requirement_kind": "confirmed-rule",
       "assessment": "partial",
       "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/lib/plans.ts",
         "src/lib/subscriptionPriceServer.ts",
         "src/app/api/stripe/subscription/checkout/route.ts",
-        "src/app/api/stripe/portal/route.ts"
+        "src/app/api/stripe/portal/route.ts",
+        "src/lib/subscriptionAgreement.ts",
+        "supabase/migrations/20260918213511_subscription_recorded_price_terms.sql",
+        "tests/p0-subscription-agreement.test.mjs"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "New-sale catalog now USD89/109/129. Existing agreements retain exact stored provider subscription/Price identity. Verified price snapshots supply admin/assistant monthly base values; unknown values are never inferred from new-sale prices. Owner notice separates current terms from new prices; no live Stripe change."
+      ],
+      "verification": [
+        "26 subscription/operational tests; 10 localization regression tests; 170 fresh local migrations and all database assertions; catalog/preflight/idempotency checks; build, types, targeted lint. Browser pricing/reporting16 unaffected cases passed; application consent final28/28 includes all3 WebKit plan journeys after fixture service-worker correction. These are local fixtures, not live Stripe acceptance."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Securely inspect real Stripe products/prices and existing agreements; preserve legacy Price mappings before new catalog configuration. Complete entitlement/provider checkout/portal acceptance. Migration170 remains local only; no production price, subscription or sales flag changed.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -23743,18 +23766,25 @@
       "requirement_kind": "confirmed-rule",
       "assessment": "partial",
       "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/lib/plans.ts",
         "src/lib/subscriptionPriceServer.ts",
         "src/app/api/stripe/subscription/checkout/route.ts",
-        "src/app/api/stripe/portal/route.ts"
+        "src/app/api/stripe/portal/route.ts",
+        "src/lib/subscriptionAgreement.ts",
+        "supabase/migrations/20260918213511_subscription_recorded_price_terms.sql",
+        "tests/p0-subscription-agreement.test.mjs"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "New-sale catalog now USD89/109/129. Existing agreements retain exact stored provider subscription/Price identity. Verified price snapshots supply admin/assistant monthly base values; unknown values are never inferred from new-sale prices. Owner notice separates current terms from new prices; no live Stripe change."
+      ],
+      "verification": [
+        "26 subscription/operational tests; 10 localization regression tests; 170 fresh local migrations and all database assertions; catalog/preflight/idempotency checks; build, types, targeted lint. Browser pricing/reporting16 unaffected cases passed; application consent final28/28 includes all3 WebKit plan journeys after fixture service-worker correction. These are local fixtures, not live Stripe acceptance."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Securely inspect real Stripe products/prices and existing agreements; preserve legacy Price mappings before new catalog configuration. Complete entitlement/provider checkout/portal acceptance. Migration170 remains local only; no production price, subscription or sales flag changed.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -24377,7 +24407,7 @@
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
     "uncommitted": true,
-    "uncommitted_summary": "Software-launch access and localization correction verified locally, checkpoint commit/push pending. Large remaining feature scope is unchanged.",
+    "uncommitted_summary": "Pricing/agreement preservation, local migration170, browser fixture correction and known French precedence fix; no production publication.",
     "production_checked_at": "2026-09-18T19:25:03.226Z",
     "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
     "production_deployment": "6aac503fa5eacb00089c6d87",
@@ -24392,11 +24422,11 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-18T21:29:22.983Z",
+    "at": "2026-09-18T22:21:04.171Z",
     "head": "2f5c28bcec70d9e98122170f6c29f42a6e384c0c",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
     "provider_access": "Google Cloud project-f0d9935c-69db-42c9-b22 confirmed by founder; Business Profile API approval unknown. Stripe read API returns a masked secret, not an invalid-credential diagnosis.",
-    "local_checkpoint": "Finance tabs370d9a2 plus access/localization corrections prepared for PR80"
+    "local_checkpoint": "559b29b plus verified pricing/agreement correction; checkpoint commit pending"
   }
 }
