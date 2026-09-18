@@ -24,7 +24,7 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,900],['es',1440,100
   await page.setViewportSize({width,height});await page.goto(`/salon/dashboard/bookings/${id}`);
   const region=page.getByRole('region',{name:t('Client history and formulas'),exact:true});await region.getByRole('button',{name:t('Open client record'),exact:true}).click();
   const links=region.getByRole('region',{name:t('Link returning guest visits'),exact:true});
-  await links.getByRole('textbox',{name:t('Find a client at this business'),exact:true}).fill('Returning');await links.getByRole('button',{name:t('Search / reload links'),exact:true}).click();
+  expect((await links.getByRole('textbox',{name:t('Find a client at this business'),exact:true}).boundingBox())?.width).toBeGreaterThan(160);await links.getByRole('textbox',{name:t('Find a client at this business'),exact:true}).fill('Returning');await links.getByRole('button',{name:t('Search / reload links'),exact:true}).click();
   await links.getByRole('button',{name:t('Review link'),exact:true}).click();expect(writes).toHaveLength(0);
   await links.getByRole('button',{name:t('Confirm client link'),exact:true}).click();await expect(links.getByText(reference,{exact:true})).toBeVisible();
   await expect(links.getByRole('group',{name:t('Review client link'),exact:true})).toContainText('Returning GC123');

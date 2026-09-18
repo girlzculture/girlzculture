@@ -1,3 +1,4 @@
+import { BUSINESS_BOOKINGS_SOURCE_MESSAGES } from "./business-bookings-source-catalog";
 // Interface copy only. Business prose stays in the existing content translation flow.
 import { BUSINESS_FINANCE_SOURCE_MESSAGES } from "./business-finance-source-catalog";
 import { BOOKING_DEPOSIT_SOURCE_MESSAGES } from "./booking-deposit-source-catalog";
@@ -135,5 +136,5 @@ const rows: readonly (readonly [string, string, string, string])[] = [
   ["These settings control booking behavior. Writing a different time in your policy does not change them.", "Ces paramètres déterminent les règles de réservation. Indiquer un autre délai dans votre texte ne les modifie pas.", "Estos ajustes controlan las reservas. Escribir un plazo diferente en la política no los modifica.", "这些设置决定预约规则。在政策中写入不同时间不会更改这些设置。"],
 ];
 export const DASHBOARD_REDESIGN_SOURCE_MESSAGES: Record<string, Record<string, string>> = Object.fromEntries(
-  ['fr', 'es', 'zh-CN'].map((locale, index) => [locale, { ...BUSINESS_FINANCE_SOURCE_MESSAGES[locale], ...BOOKING_DEPOSIT_SOURCE_MESSAGES[locale], ...BUSINESS_OVERVIEW_SOURCE_MESSAGES[locale], ...BUSINESS_CLIENT_SOURCE_MESSAGES[locale], ...BUSINESS_CATALOG_SOURCE_MESSAGES[locale], ...BUSINESS_TEAM_SOURCE_MESSAGES[locale], ...BUSINESS_PRODUCTS_SOURCE_MESSAGES[locale], ...Object.fromEntries(rows.map(row => [row[0], row[index + 1]])) }]),
+  ['fr', 'es', 'zh-CN'].map((locale, index) => [locale, { ...BUSINESS_FINANCE_SOURCE_MESSAGES[locale], ...BOOKING_DEPOSIT_SOURCE_MESSAGES[locale], ...BUSINESS_OVERVIEW_SOURCE_MESSAGES[locale], ...BUSINESS_CLIENT_SOURCE_MESSAGES[locale], ...BUSINESS_CATALOG_SOURCE_MESSAGES[locale], ...BUSINESS_TEAM_SOURCE_MESSAGES[locale], ...BUSINESS_PRODUCTS_SOURCE_MESSAGES[locale], ...BUSINESS_BOOKINGS_SOURCE_MESSAGES[locale], ...Object.fromEntries(rows.map(row => [row[0], row[index + 1]])) }]),
 );

@@ -1,5 +1,6 @@
 "use client";
 import BusinessInventory from "./BusinessInventory";
+import BookingsWorkspace from "./BookingsWorkspace";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
@@ -3013,50 +3014,10 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
 }
 
 
-const BOOKING_GROUPS = ["Upcoming", "In Progress", "Needs Resolution", "All"] as const;
-type BookingGroup = (typeof BOOKING_GROUPS)[number];
-
-function normalizedBookingStatus(booking: Row) {
-  return String(booking.status || "").trim().toLowerCase().replaceAll("_", " ");
-}
-
-function bookingNeedsResolution(booking: Row, now: number) {
-  const operationalState = [
-    normalizedBookingStatus(booking),
-    String(booking.reschedule_status || ""),
-    String(booking.refund_status || ""),
-    String(booking.payment_status || ""),
-  ].join(" ").toLowerCase().replaceAll("_", " ");
-  if (/requested|pending|needs? (review|attention)|resolution|failed|disput|chargeback|on hold/.test(operationalState)) {
-    return true;
-  }
-  const appointmentTime = new Date(String(booking.appointment_datetime || "")).getTime();
-  const terminal = /completed|cancelled|canceled|declined|refunded|no show/.test(normalizedBookingStatus(booking));
-  return !terminal && Number.isFinite(appointmentTime) && appointmentTime < now && !/ready|checked in|in progress|started/.test(normalizedBookingStatus(booking));
-}
-
-function bookingMatchesGroup(booking: Row, group: BookingGroup, now: number) {
-  if (group === "All") return true;
-  const status = normalizedBookingStatus(booking);
-  if (group === "In Progress") return /ready|checked in|in progress|started/.test(status);
-  if (group === "Needs Resolution") return bookingNeedsResolution(booking, now);
-  const appointmentTime = new Date(String(booking.appointment_datetime || "")).getTime();
-  const active = !/completed|cancelled|canceled|declined|refunded|no show/.test(status);
-  return active && !bookingNeedsResolution(booking, now) && !/ready|checked in|in progress|started/.test(status) && (!Number.isFinite(appointmentTime) || appointmentTime >= now);
-}
 
 function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedGroup = searchParams.get("group");
-  const group: BookingGroup = BOOKING_GROUPS.includes(requestedGroup as BookingGroup)
-    ? requestedGroup as BookingGroup
-    : searchParams.has("status")
-      ? "All"
-      : "Upcoming";
-  const filter = searchParams.get("status") || "All";
-  const query = (searchParams.get("q") || "").trim();
-  const [renderedAt] = useState(() => Date.now());
   const [selectedId] = useState(recordId || c.initialBookingId || "");
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
@@ -3078,51 +3039,8 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const [confirmCompletion, setConfirmCompletion] = useState(false);
   const [checkInException, setCheckInException] =
     useState<CheckInExceptionRequirement | null>(null);
-  function contextQuery(next: { group?: BookingGroup; status?: string; query?: string } = {}) {
-    const nextGroup = next.group ?? group;
-    const nextStatus = next.status ?? filter;
-    const nextQuery = next.query ?? query;
-    const params = new URLSearchParams();
-    if (nextGroup !== "Upcoming") params.set("group", nextGroup);
-    if (nextStatus !== "All") params.set("status", nextStatus);
-    if (nextQuery.trim()) params.set("q", nextQuery.trim());
-    const value = params.toString();
-    return value ? `?${value}` : "";
-  }
-  const visible = c.bookings.filter((booking) => {
-    if (!bookingMatchesGroup(booking, group, renderedAt)) return false;
-    if (filter !== "All" && normalizedBookingStatus(booking) !== filter.toLowerCase().replaceAll("_", " ")) return false;
-    if (!query) return true;
-    const haystack = [
-      booking.guest_name,
-      booking.guest_email,
-      booking.guest_phone,
-      bookingReference(booking),
-      booking.manual_service_name || styleText(c, booking.style_id),
-      stylistText(c, booking.stylist_id),
-      booking.status,
-    ].map((value) => String(value || "").toLowerCase()).join(" ");
-    return haystack.includes(query.toLowerCase());
-  });
-  const groupCounts = Object.fromEntries(
-    BOOKING_GROUPS.map((item) => [
-      item,
-      c.bookings.filter((booking) => bookingMatchesGroup(booking, item, renderedAt)).length,
-    ]),
-  ) as Record<BookingGroup, number>;
-  const statusOptions = [
-    "All",
-    ...Array.from(
-      new Set(
-        c.bookings
-          .map((booking) => String(booking.status || "").trim())
-          .filter(Boolean),
-      ),
-    ).sort((a, b) => a.localeCompare(b)),
-  ];
-  const bookingListHref = `/salon/dashboard/bookings${contextQuery()}`;
-  const bookingDetailHref = (id: unknown) =>
-    `/salon/dashboard/bookings/${encodeURIComponent(String(id || ""))}${contextQuery()}`;
+  const contextQuery = searchParams.size ? '?' + searchParams.toString() : '';
+  const bookingListHref = '/salon/dashboard/bookings' + contextQuery;
   const selected =
     c.bookings.find((booking) => booking.id === selectedId) || null;
   const activeSelected =
@@ -3430,191 +3348,12 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     }
   }
   if (recordId === "new") return <><OwnerDetailHeader title="Add an appointment" subtitle="Record appointments received by your business." fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(c.salon.id)} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => { c.setBookings(current => [row, ...current.filter(item => item.id !== row.id)]); router.push(`/salon/dashboard/bookings/${row.id}`); }}/></>;
+  if (!recordId) return <BookingsWorkspace bookings={c.bookings} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} canUseCalendar={!c.access || c.access.availability === true}/>;
   if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}</>;
   return (
     <>
-      {!recordId ? <Title
-        title="Bookings & Appointments"
-        subtitle="Available slots confirm instantly. Keep availability current and cancel only when necessary."
-      /> : <OwnerDetailHeader
-        title={selected ? `Booking for ${String(selected.guest_name || "customer")}` : "Booking details"}
-        subtitle={selected ? `Reference #${bookingReference(selected)}` : "This booking could not be found."}
-        fallbackHref={bookingListHref}
-        status={selected ? String(selected.status || "Confirmed") : "Unavailable"}
-      />}
-      {!recordId ? <Link href="/salon/dashboard/bookings/new" className="mb-4 inline-flex min-h-11 items-center rounded-full bg-plum px-5 text-sm text-white">Add an appointment</Link> : null}
-      {!recordId ? <Panel className="mb-4">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            router.replace(`/salon/dashboard/bookings${contextQuery({ query: String(form.get("booking_search") || "") })}`, { scroll: false });
-          }}
-          className="flex flex-col gap-2 sm:flex-row"
-          role="search"
-        >
-          <label className="flex-1 text-[10px] font-bold uppercase tracking-wide text-ink/55">
-            Search bookings
-            <input
-              key={query}
-              name="booking_search"
-              type="search"
-              defaultValue={query}
-              placeholder="Customer, reference, style, stylist, or status"
-              className="mt-1 min-h-11 w-full rounded-[8px] border border-plum/15 bg-white px-3 text-xs font-normal normal-case tracking-normal"
-            />
-          </label>
-          <button className="min-h-11 self-end rounded-[8px] bg-magenta px-5 text-xs font-bold text-white">
-            Search
-          </button>
-          {query || filter !== "All" || group !== "Upcoming" ? (
-            <button
-              type="button"
-              onClick={() => {
-                router.replace("/salon/dashboard/bookings", { scroll: false });
-              }}
-              className="min-h-11 self-end rounded-[8px] border border-plum/15 px-4 text-xs font-bold text-plum"
-            >
-              Clear
-            </button>
-          ) : null}
-        </form>
-        <div role="group" className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Booking workflow groups">
-          {BOOKING_GROUPS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={group === item}
-              onClick={() => router.replace(`/salon/dashboard/bookings${contextQuery({ group: item, status: "All" })}`, { scroll: false })}
-              className={`min-h-10 shrink-0 rounded-[8px] px-4 text-xs font-semibold ${group === item ? "bg-plum text-white" : "border border-plum/10 bg-white text-plum"}`}
-            >
-              {item} <span className={`ml-1 ${group === item ? "gc-text-on-dark-muted" : "gc-text-secondary"}`}>{groupCounts[item]}</span>
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[10px] leading-4 text-ink/50">
-            Upcoming is future confirmed work. In Progress tracks active services. Needs Resolution collects requests, failures, disputes, and overdue active bookings.
-          </p>
-          <label className="shrink-0 text-[10px] font-bold text-ink/55">
-            Exact status
-            <select
-              value={filter}
-              onChange={(event) => {
-                const status = event.target.value;
-                router.replace(`/salon/dashboard/bookings${contextQuery({ group: status === "All" ? group : "All", status })}`, { scroll: false });
-              }}
-              className="ml-2 min-h-10 rounded-[8px] border border-plum/15 bg-white px-3 text-xs text-ink"
-            >
-              {statusOptions.map((item) => <option key={item} value={item}>{item === "All" ? "All statuses" : item}</option>)}
-            </select>
-          </label>
-        </div>
-      </Panel> : null}
-      <div className={recordId ? "block" : "grid gap-4"}>
-        {!recordId ? <Panel className="overflow-x-auto">
-          <div className="space-y-3 lg:hidden">
-            {visible.map((booking) => (
-              <button
-                key={String(booking.id)}
-                onClick={() => router.push(bookingDetailHref(booking.id))}
-                className={`w-full rounded-[10px] border p-4 text-left ${selectedId === booking.id ? "border-magenta bg-blush/25" : "border-plum/10"}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span>
-                    <b className="font-serif text-lg text-plum">
-                      <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span>
-                    </b>
-                    <span className="mt-1 block text-xs">
-                      {booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} ·{" "}
-                      {stylistName(c, booking.stylist_id)}
-                    </span>
-                  </span>
-                  <Status value={String(booking.status || "Confirmed")} />
-                </div>
-                <p className="mt-3 text-xs font-semibold">
-                  {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
-                </p>
-                <div className="mt-3 flex justify-between text-xs">
-                  <span>
-                    Deposit{" "}
-                    <b className="gc-text-success">
-                      {c.formatCurrency(Number(booking.deposit_amount || 0))}
-                    </b>
-                  </span>
-                  <span>
-                    Balance{" "}
-                    <b className="text-magenta">
-                      {c.formatCurrency(Number(booking.balance_due || 0))}
-                    </b>
-                  </span>
-                </div>
-              </button>
-            ))}
-            {!visible.length ? (
-              <Empty text={c.translateSource("No bookings match {value0}. {value1} {value2}", { value0: c.translateSource(group), value1: query ? c.translateSource("Search: “{value0}”.", { value0: query }) : "", value2: filter !== "All" ? c.translateSource("Status: {value0}.", { value0: c.translateSource(filter) }) : "" })} />
-            ) : null}
-          </div>
-          <table className="hidden w-full min-w-[850px] text-left text-xs lg:table">
-            <thead>
-              <tr className="border-b border-plum/10 text-[9px] uppercase tracking-wider">
-                {[
-                  "Customer",
-                  "Style",
-                  "Stylist",
-                  "Date / Time",
-                  "Deposit",
-                  "Balance",
-                  "Status",
-                  "Actions",
-                ].map((heading) => (
-                  <th key={heading} className="px-3 py-3">
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((booking) => (
-                <tr
-                  key={String(booking.id)}
-                  className={`border-b border-plum/10 ${selectedId === booking.id ? "bg-blush/25" : ""}`}
-                >
-                  <td className="px-3 py-3">
-                    <span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span>
-                  </td>
-                  <td className="px-3">{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)}</td>
-                  <td className="px-3">{stylistName(c, booking.stylist_id)}</td>
-                  <td className="px-3">
-                    {dateText(booking.appointment_datetime, c.salon.time_zone, c.locale)}
-                  </td>
-                  <td className="px-3 gc-text-success">
-                    {c.formatCurrency(Number(booking.deposit_amount || 0))}
-                  </td>
-                  <td className="px-3 text-magenta">
-                    {c.formatCurrency(Number(booking.balance_due || 0))}
-                  </td>
-                  <td className="px-3">
-                    <Status value={String(booking.status || "Confirmed")} />
-                  </td>
-                  <td className="px-3">
-                    <button
-                      onClick={() => router.push(bookingDetailHref(booking.id))}
-                      className="font-bold text-magenta"
-                    >
-                      Open
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!visible.length ? (
-            <div className="hidden lg:block">
-              <Empty text={c.translateSource("No bookings match {value0}. {value1} {value2}", { value0: c.translateSource(group), value1: query ? c.translateSource("Search: “{value0}”.", { value0: query }) : "", value2: filter !== "All" ? c.translateSource("Status: {value0}.", { value0: c.translateSource(filter) }) : "" })} />
-            </div>
-          ) : null}
-        </Panel> : null}
+      <OwnerDetailHeader title={selected ? `Booking for ${String(selected.guest_name || "customer")}` : "Booking details"} subtitle={selected ? `Reference #${bookingReference(selected)}` : "This booking could not be found."} fallbackHref={bookingListHref} status={selected ? String(selected.status || "Confirmed") : "Unavailable"}/>
+      <div>
         {recordId ? <Panel>
           {selected ? (
             <>

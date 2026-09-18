@@ -140,8 +140,14 @@ html {
 /* Native focus scrolling must finish before an appointment control is clicked.
    An in-flight page animation can move Review between pointerdown and pointerup,
    preventing the browser from submitting an otherwise valid form. */
-html:has([data-manual-appointment-editor]) {
+html:has([data-manual-appointment-editor]),
+html:has([data-owner-workspace]) {
   scroll-behavior: auto;
+}
+
+/* Keep focused dashboard controls clear of the sticky header and phone nav. */
+html:has([data-owner-workspace]) {
+  scroll-padding-block: 7rem 6rem;
 }
 
 body {

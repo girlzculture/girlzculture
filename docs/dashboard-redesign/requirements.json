@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; explicit private guest-history links verified locally; remaining full scope continues",
+  "status": "IMPLEMENTING; NOT RELEASED; Bookings redesigned and locally verified; remaining full scope continues",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -92,7 +92,9 @@
         "src/app/globals.css",
         "src/components/owner/BusinessOverview.tsx",
         "src/lib/businessOverview.ts",
-        "src/components/dashboard/WorkspaceCalendar.tsx"
+        "src/components/dashboard/WorkspaceCalendar.tsx",
+        "src/components/owner/BookingsWorkspace.tsx",
+        "src/lib/businessBookings.ts"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
@@ -100,12 +102,14 @@
       "changes": [
         "Removed separate assistant/search strips; compact setup disclosure and moved setup help below My Page.",
         "Overview now uses local date, period selection, defined booking metrics, actual trends, today/upcoming schedules, page health and filtered quick actions. Calendar opens immediately with professional filtering, multiday override spans, compact phone agenda and existing editing routes.",
-        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination."
+        "Translated mobile navigation uses equal-width wrapping labels; no missing or clipped More destination.",
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
       ],
       "verification": [
         "Local screenshots reviewed; combined layout tests running",
         "Business Overview calculation tests 5/5 pass: business timezone and DST, distinct identified clients, test exclusion, missing price disclosure, terminal-outcome cancellation denominator.",
-        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed."
+        "Calendar-first baseline reproduced absent calendar on the previous acceptance build. New production build and TypeScript pass. Browser test setup selector correction still in progress; no final layout pass claimed.",
+        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-03 | Reduce the stacked header, assistant-button strip, breadcrumb/search strip, and oversized route cards that push actual work down the page. | Owners reach the main editor, calendar, gallery, list, or conversation directly. |",
@@ -124,13 +128,19 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/owner/BookingsWorkspace.tsx",
+        "src/lib/businessBookings.ts"
       ],
       "state": "PENDING",
-      "acceptance": "BLOCKED",
+      "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
+      ],
+      "verification": [
+        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending."
+      ],
       "live_evidence": [],
       "detailed_clause": "| UI-04 | Preserve existing functions, data, validation, permissions, and save/publish behavior while changing their presentation. Spreadsheet import/export remains accessible as a secondary task instead of dominating everyday work. | Existing important workflows remain reachable and functional. |",
       "detailed_clause_line": 52
@@ -223,16 +233,20 @@
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/GcAssistant.tsx",
         "src/app/globals.css",
-        "public/fonts/montserrat"
+        "public/fonts/montserrat",
+        "src/components/owner/BookingsWorkspace.tsx",
+        "src/lib/businessBookings.ts"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
       "changes": [
-        "Reproduced hairline Montserrat rendering in Windows WebKit with Google resource; official pinned static weights render correctly with the same family and weight. Included upstream OFL."
+        "Reproduced hairline Montserrat rendering in Windows WebKit with Google resource; official pinned static weights render correctly with the same family and weight. Included upstream OFL.",
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
       ],
       "verification": [
-        "Isolated Chromium/WebKit comparison preserved outsideGit; two focused390finance browser tests passed and native header crop visually inspected. Global final regression still pending."
+        "Isolated Chromium/WebKit comparison preserved outsideGit; two focused390finance browser tests passed and native header crop visually inspected. Global final regression still pending.",
+        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending."
       ],
       "live_evidence": [],
       "detailed_clause": "| MOB-01 | Keep every necessary feature accessible on mobile, using compact cards, lists, tabs, and menus suitable for touch. |",
@@ -3773,13 +3787,20 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/owner/BookingsWorkspace.tsx",
+        "src/lib/businessBookings.ts",
+        "src/app/globals.css"
       ],
       "state": "PENDING",
-      "acceptance": "BLOCKED",
+      "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
+      ],
+      "verification": [
+        "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-08 | Bookings | Filters, useful desktop/mobile records, correct statuses/prices/deposits, manual/walk-in capture where appropriate and client-history access. |",
       "detailed_clause_line": 505
