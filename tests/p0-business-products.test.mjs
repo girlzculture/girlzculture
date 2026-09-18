@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {typescriptLoader} from './helpers/load-typescript.mjs';
 const {productStock,productHasOffer}=typescriptLoader(process.cwd())('src/lib/businessProductInventory.ts');
+test('stale catalog edits cannot overwrite stock changed by a reservation or sale',()=>{
+ const {sanitizeSalonRecord}=typescriptLoader(process.cwd())('src/lib/salonRecordValidation.ts');
+ const oldForm={name:'Oil',price:25,inventory_quantity:10};
+ assert.throws(()=>sanitizeSalonRecord('salon_products',oldForm,false),/stock workflow/i);
+ assert.equal(sanitizeSalonRecord('salon_products',oldForm,true).inventory_quantity,10);
+ assert.equal(Object.hasOwn(sanitizeSalonRecord('salon_products',{name:'Oil renamed',price:26},false),'inventory_quantity'),false);
+});
 test('stock states distinguish real zero, low stock, untracked and unavailable data',()=>{
  const row={track_inventory:true,low_stock_threshold:3};
  for(const [quantity,state] of [[0,'out'],[2,'low'],[3,'low'],[4,'available'],[undefined,'unknown'],[null,'unknown'],[-1,'unknown'],[1.5,'unknown']])assert.equal(productStock({...row,inventory_quantity:quantity}).state,state);

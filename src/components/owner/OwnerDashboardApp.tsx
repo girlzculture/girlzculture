@@ -1,4 +1,5 @@
 "use client";
+import BusinessInventory from "./BusinessInventory";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
@@ -2247,9 +2248,8 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         images,
         is_visible: form.get("visible") === "on",
         in_person_only: !pickupEnabled && !shippingEnabled,
-        inventory_quantity: Number(form.get("inventory_quantity")),
-        low_stock_threshold: Number(form.get("low_stock_threshold")),
-        track_inventory: form.get("track_inventory") === "on",
+        ...(!active ? {inventory_quantity: Number(form.get("inventory_quantity"))} : {}),
+        ...(!active ? {low_stock_threshold: Number(form.get("low_stock_threshold")), track_inventory: form.get("track_inventory") === "on"} : {}),
         product_status: form.get("product_status"),
         pickup_enabled: pickupEnabled,
         pickup_prep_minutes: Number(form.get("pickup_prep_minutes")),
@@ -2292,8 +2292,8 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   return (
     <>
       {!recordId ? <>
-        <ProductsWorkspace products={c.products} promotions={c.promotions} params={productParams}/>
-        <details className="my-5 rounded-xl border border-border bg-white p-4"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">{c.translateSource("Import or export products")}</summary><SalonSpreadsheetPanel kind="products" onImported={records=>{c.setProducts(records as Row[]);if(c.selectedProduct&&!records.some(record=>record.id===c.selectedProduct))c.setSelectedProduct(null);}}/></details>
+        {productParams.get("tab")==="inventory"?<><Link href={productListHref.replace(/([?&])tab=inventory(&?)/,(_all,lead,tail)=>tail?lead:lead==="?"?"":"")} className="mb-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary">{c.translateSource("Product catalog")}</Link><BusinessInventory key={JSON.stringify([c.salon.id,c.isOwner,c.access])} canLogCost={c.isOwner||c.access?.finance_manage===true} onProductsChanged={updates=>c.setProducts(rows=>rows.map(row=>({...row,...updates.find(update=>update.id===row.id)})))}/></>:<ProductsWorkspace products={c.products} promotions={c.promotions} params={productParams}/>}
+        <details className="my-5 rounded-xl border border-border bg-white p-4"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">{c.translateSource("Import or export products")}</summary><p className="my-2 text-sm">{c.translateSource("Imports set starting stock for new products. Existing quantities stay unchanged; use Stock and supplies for adjustments.")}</p><SalonSpreadsheetPanel kind="products" onImported={records=>{c.setProducts(records as Row[]);if(c.selectedProduct&&!records.some(record=>record.id===c.selectedProduct))c.setSelectedProduct(null);}}/></details>
       </> : null}
       <div className="block">
         <MobileRecordEditor
@@ -2393,14 +2393,14 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
             </div>
             <div className="rounded-[12px] border border-plum/10 bg-blush/20 p-4">
               <h3 className="font-serif text-lg text-plum">Inventory</h3>
-              <label className="mt-3 flex items-center gap-2 text-xs font-semibold">
-                <input type="checkbox" name="track_inventory" defaultChecked={active?.track_inventory === true} className="accent-magenta" />
+              {!active ? <><label className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" name="track_inventory" defaultChecked={false} className="accent-magenta" />
                 Track inventory and prevent overselling
               </label>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <Field label="Quantity available" name="inventory_quantity" type="number" defaultValue={active?.inventory_quantity ?? 0} />
-                <Field label="Low-stock alert at" name="low_stock_threshold" type="number" defaultValue={active?.low_stock_threshold ?? 5} />
-              </div>
+                <Field label="Quantity available" name="inventory_quantity" type="number" defaultValue={0} />
+                <Field label="Low-stock alert at" name="low_stock_threshold" type="number" defaultValue={5} />
+              </div></> : <Link href="/salon/dashboard/products?tab=inventory" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary">{c.translateSource("Adjust existing quantities in Stock and supplies. Catalog edits do not change stock.")}</Link>}
             </div>
             <div className="rounded-[12px] border border-plum/10 bg-white p-4">
               <h3 className="font-serif text-lg text-plum">Pickup</h3>

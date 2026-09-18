@@ -110,6 +110,7 @@ function fixture(overrides = {}) {
   const calls = [];
   const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
   const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'business_finance_scope') return overrides.ownFinance ? {data:{kind:'own',stylist_id:professional}} : {error:{message:'FINANCE_ACCESS_DENIED'}};
+    if(name==='read_business_stock'){assert.equal(args.p_salon,business);assert.equal(args.p_user,actor);return {data:{products:tables.salon_products.filter(row=>row.salon_id===business),supplies:(tables.business_supplies||[]).filter(row=>row.salon_id===business)}};}
     if (name === 'read_business_finance') {
       assert.equal(args.p_salon,business); assert.equal(args.p_user,actor);
       const bookings=tables.bookings.filter(row=>row.salon_id===args.p_salon && (!overrides.ownFinance || row.stylist_id===professional)).map((row,index)=>({...row,id:row.id??`booking-${index}`,created_at:row.created_at||row.appointment_datetime,name:row.name||'Service',verified_charge:Boolean(row.stripe_charge_id),verified_refund:Boolean(row.stripe_refund_id),operating_compensation:{kind:'none',version:null}}));
@@ -214,4 +215,10 @@ test('assigned stylist reads exclude other appointments, clients, messages and a
  assert.equal(f.calls.some(c=>c.table==='booking_messages'),false);
  await f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:null});assert.equal(f.calls.filter(c=>c.calendar).at(-1).calendar.stylistId,professional);
  await assert.rejects(f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:actor}),e=>e.code==='ASSISTANT_ACCESS_DENIED');
+});
+
+test('assistant stock uses own-business quantities and thresholds, excludes foreign supplies, and checks revoked permissions',async()=>{
+ const tables={salon_products:[{id:service,salon_id:business,name:'Own oil',inventory_quantity:2,track_inventory:true,low_stock_threshold:3},{id:professional,salon_id:actor,name:'Foreign oil',inventory_quantity:0,track_inventory:true,low_stock_threshold:5}],business_supplies:[{id:service,salon_id:business,name:'Own gloves',inventory_quantity:0,track_inventory:true,low_stock_threshold:2},{id:actor,salon_id:actor,name:'Foreign formula supply',inventory_quantity:0,track_inventory:true,low_stock_threshold:10}]};
+ const f=fixture({tables});for(const query of ['', 'Own oil', 'Foreign formula supply']){const result=(await f.run('get_products',{query})).request.result;assert.equal(JSON.stringify(result).includes('Foreign'),false);assert.equal(result.stock_alerts_total,2);assert.equal(result.stock_alerts[0].quantity,2);}
+ const denied=fixture({tables,denied:['products']});await assert.rejects(denied.run('get_products',{query:''}),error=>error.code==='ASSISTANT_ACCESS_DENIED');assert.equal(denied.calls.some(call=>call.name==='read_business_stock'||call.table==='salon_products'),false);
 });

@@ -15,7 +15,7 @@ export type OperatingSale = {
   list_cents: number; discount_cents: number; agreed_cents: number;
   cost_cents: number | null; quantity: number; compensation: CompensationSnapshot;
   /** Product tax and shipping are collected money, separate from merchandise. */
-  tax_cents?: number; shipping_cents?: number;
+  tax_cents?: number; shipping_cents?: number; product_id?: string | null;
 };
 export type OperatingPayment = {
   id: string; salon_id: string; sale_id: string; occurred_at: string;

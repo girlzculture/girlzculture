@@ -14,7 +14,7 @@ const purposes: Record<AssistantTool, string> = {
   get_customers: "Read customers associated with this business's appointments in a date range.",
   get_client_record: "Read this business's private client visit history from an already resolved booking ID. Backend field permissions independently govern formulas, preferences/notes, cautions, photos and spend. Staff with a linked stylist see only their assigned visits. Null fields are unavailable, not absent facts. Never infer that a client has no allergy from an inaccessible or empty caution field. Photo metadata does not establish image contents. Original formulas, quantities and cautions must retain their meaning. Updates use the client card in Bookings; never send private client notes to customer chat.",
   get_professionals: "Read team members and their authoritative IDs. Empty query lists the professionals.",
-  get_products: "Read this business's products and prices. Empty query lists products; a name searches products.",
+  get_products: "Read only this business's products, prices, private supplies, available stock and configured low-stock alerts. Empty query lists records; a name searches. Untracked stock is not zero. Use get_earnings_summary for actual product revenue; do not infer sales or profit from inventory.",
   get_booking_messages: "Read the conversation for an already resolved booking ID.",
   get_reviews: "Read customer reviews in a date range.",
   get_promotions: "Read this business's promotion records.",

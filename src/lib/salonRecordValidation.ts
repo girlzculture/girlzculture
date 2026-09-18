@@ -75,6 +75,7 @@ export function sanitizeSalonRecord(table: string, values: Record<string, unknow
     if ("bio" in patch) patch.bio = cleanText(patch.bio, 500);
     if ("years_experience" in patch) patch.years_experience = finiteNumber(patch.years_experience, "Years of experience", 0, 70, true);
   } else if (table === "salon_products") {
+    if (!isInsert && "inventory_quantity" in patch) throw new Error("Use the stock workflow to restock or correct an existing product quantity.");
     patch.name = cleanText(patch.name, 120);
     if (!patch.name) throw new Error("Enter the product name.");
     patch.description = cleanText(patch.description, 1_000);

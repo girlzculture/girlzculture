@@ -6,7 +6,7 @@ import { capturePlatformError } from "@/lib/platformErrors";
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 
 const fields: Record<string, string[]> = {
-  sale: ["occurred_at", "source", "kind", "name", "stylist_id", "client_name", "list_cents", "discount_cents", "cost_cents", "quantity", "method"],
+  sale: ["occurred_at", "source", "kind", "name", "product_id", "stylist_id", "client_name", "list_cents", "discount_cents", "cost_cents", "quantity", "method"],
   receipt: ["occurred_at", "sale_id", "booking_id", "product_order_id", "amount_cents", "method", "note"],
   refund: ["occurred_at", "original_payment_id", "amount_cents", "note"],
   expense: ["occurred_at", "category", "amount_cents", "treatment", "note"],
@@ -44,7 +44,7 @@ async function handle(request: Request) {
   } catch (error) {
     const message = error && typeof error === "object" && "message" in error ? String(error.message) : "";
     const known = /^FINANCE_[A-Z_]+$/.test(message);
-    const status = /Unauthorized/.test(message) ? 401 : /ACCESS_DENIED|OWNER_REQUIRED|PLAN_REQUIRED|Forbidden/.test(message) ? 403 : /RECORD_NOT_FOUND/.test(message) ? 404 : /CONFLICT|EXCEEDS|UNVERIFIED|RANGE_TOO_LARGE/.test(message) ? 409 : known || error instanceof SyntaxError ? 400 : 500;
+    const status = /Unauthorized/.test(message) ? 401 : /ACCESS_DENIED|OWNER_REQUIRED|PLAN_REQUIRED|Forbidden/.test(message) ? 403 : /RECORD_NOT_FOUND/.test(message) ? 404 : /CONFLICT|EXCEEDS|UNVERIFIED|RANGE_TOO_LARGE|STOCK_INSUFFICIENT/.test(message) ? 409 : known || error instanceof SyntaxError ? 400 : 500;
     const reference = await capturePlatformError({ request, admin: context?.admin, error, feature: "business-finances", action: request.method === "GET" ? "read" : "record", actorRole: "salon", actorId: context?.user.id, salonId: context?.salon.id, safeMessage: "Business finance records could not be accessed.", severity: status >= 500 ? "high" : "low" });
     return Response.json({ code: known ? message : "FINANCE_UNAVAILABLE", request_id: reference }, { status, headers: { "Cache-Control": "private, no-store", "X-Request-ID": reference } });
   }

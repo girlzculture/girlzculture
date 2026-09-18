@@ -7,6 +7,7 @@ import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } 
 import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
 import { readBusinessFinances } from "@/lib/businessFinanceServer";
 import { assistantAssignedProfessional, assistantRequestedProfessional } from "@/lib/assistantProfessionalScope";
+import { productStock } from "@/lib/businessProductInventory";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -80,7 +81,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
   }
   const lists: Partial<Record<AssistantTool, { table: string; fields: string; key: string; name?: string }>> = {
     get_professionals: { table: "stylists", fields: "id,name,bio,specialties,years_experience,is_active,is_draft,availability", key: "professionals", name: "name" },
-    get_products: { table: "salon_products", fields: "id,name,description,price,sale_price,inventory_quantity,product_status,is_visible", key: "products", name: "name" },
+    get_products: { table: "salon_products", fields: "id,name,description,price,sale_price,inventory_quantity,track_inventory,low_stock_threshold,product_status,is_visible", key: "products", name: "name" },
     get_promotions: { table: "salon_promotions", fields: "id,title,description,promotion_type,discount_value,starts_at,ends_at,status,target_scope", key: "promotions" },
     get_reviews: { table: "reviews", fields: "id,rating_overall,written_review,salon_reply,display_name,moderation_status,created_at", key: "reviews" },
   };
@@ -93,6 +94,18 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     if (tool === "get_reviews") query = query.gte("created_at", args.start).lt("created_at", args.end);
     const result = await query.order("created_at", { ascending: false }).limit(100);
     if (result.error) throw result.error;
+    if(tool === "get_products") {
+      const stock=await admin.rpc("read_business_stock",{p_salon:salon.id,p_user:context.user.id});
+      if(stock.error)throw stock.error;
+      if(!Array.isArray(stock.data?.products)||!Array.isArray(stock.data?.supplies))throw new AssistantError("ASSISTANT_SERVICE_UNAVAILABLE",503);
+      const inventory=[...stock.data.products.map((row:Row)=>({...row,kind:"retail"})),...stock.data.supplies.map((row:Row)=>({...row,kind:"supply"}))] as Row[];
+      const search=String(args.query||"").toLocaleLowerCase();
+      const supplies=(stock.data.supplies as Row[]).filter(row=>String(row.name).toLocaleLowerCase().includes(search));
+      return {products:result.data,total:result.count,capped_at:100,supplies:supplies.slice(0,100),supplies_total:supplies.length,
+        stock_alerts:inventory.filter(row=>["low","out"].includes(productStock(row).state)).slice(0,100).map(row=>({name:row.name,kind:row.kind,unit:row.unit,quantity:row.inventory_quantity,threshold:row.low_stock_threshold})),
+        stock_alerts_total:inventory.filter(row=>["low","out"].includes(productStock(row).state)).length,
+        stock_definition:"Available stock excludes existing order reservations. Only this authenticated business is included. Untracked stock is not zero. Supplies are private, not customer products. Restocks and corrections require the Stock and supplies workflow. Financial product totals use get_earnings_summary; never infer profit from retail prices."};
+    }
     if (canReadAssignments) {
       // Resolve names from the same authenticated business before model input.
       // Publish one bounded dictionary, not a repeated catalog per professional.

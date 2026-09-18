@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; Products catalog verified locally; inventory reconciliation and remaining detailed scope continue",
+  "status": "IMPLEMENTING; NOT RELEASED; product catalog, private inventory and stock-linked finance verified locally; remaining full scope continues",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -866,13 +866,21 @@
       "implementation_paths": [
         "src/lib/gcAssistantServer.ts",
         "src/lib/ownerReadServer.ts",
-        "src/lib/ownerBusinessMetrics.ts"
+        "src/lib/ownerBusinessMetrics.ts",
+        "src/components/owner/BusinessInventory.tsx",
+        "src/app/api/salon/inventory/route.ts",
+        "supabase/migrations/20260918122816_business_inventory_reconciliation.sql"
       ],
       "state": "IMPLEMENTING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Production migration and live acceptance pending; full dashboard release remains in progress.",
+      "changes": [
+        "Own-business retail/supply stock, configurable thresholds, restock/usage/correction with revision and request guards, immutable movement history; offline catalog product sales deduct once; existing reservation/release/import paths reconcile. Optional retail purchase cost is inventory_asset; supply purchase is operating expense. Existing catalog edits and imports cannot restore stale quantities."
+      ],
+      "verification": [
+        "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
+        "A product named Save was incorrectly translated in finance display. Business product/client/stylist names now excluded from interface translation; four-language reload evidence passes."
+      ],
       "live_evidence": [],
       "detailed_clause": "DATA-01 — Connect the assistant to the same authoritative business records used by the dashboard, using authorized lookups on demand and maintained Girlz Culture product guidance. A responding model does not itself establish complete access to application data. The implementation needs an explicit inventory of reads, calculations and permitted actions for every module; do not rely on a static prompt containing a partial snapshot.",
       "detailed_clause_line": 248,
@@ -2487,18 +2495,25 @@
         "src/components/owner/BusinessFinances.tsx",
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/components/owner/FinanceRecords.tsx",
-        "src/components/owner/FinanceCompensation.tsx"
+        "src/components/owner/FinanceCompensation.tsx",
+        "src/components/owner/BusinessInventory.tsx",
+        "src/app/api/salon/inventory/route.ts",
+        "supabase/migrations/20260918122816_business_inventory_reconciliation.sql",
+        "src/lib/ownerReadServer.ts"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Production migration and live acceptance pending; full dashboard release remains in progress.",
       "changes": [
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
-        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit.",
+        "Own-business retail/supply stock, configurable thresholds, restock/usage/correction with revision and request guards, immutable movement history; offline catalog product sales deduct once; existing reservation/release/import paths reconcile. Optional retail purchase cost is inventory_asset; supply purchase is operating expense. Existing catalog edits and imports cannot restore stale quantities."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
-        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending.",
+        "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
+        "A product named Save was incorrectly translated in finance display. Business product/client/stylist names now excluded from interface translation; four-language reload evidence passes."
       ],
       "live_evidence": [],
       "detailed_clause": "FIN-18 — Keep agreed sale value, completed service/product sales, cash received, unpaid balances, expenses and recorded profit distinct. Define each reporting period and calculation consistently. Discounts and refunds reduce the relevant amounts once; stylist compensation and recorded payouts must not count as the same expense twice. Inventory restock costs and the cost attributed to sold products need a consistent treatment to avoid deducting both twice.",
@@ -2943,13 +2958,22 @@
         "src/components/owner/SalonProductOrders.tsx",
         "supabase/migrations",
         "src/components/owner/ProductsWorkspace.tsx",
-        "src/lib/businessProductInventory.ts"
+        "src/lib/businessProductInventory.ts",
+        "src/components/owner/BusinessInventory.tsx",
+        "src/app/api/salon/inventory/route.ts",
+        "supabase/migrations/20260918122816_business_inventory_reconciliation.sql",
+        "src/lib/ownerReadServer.ts"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "blocker": "Production migration and live acceptance pending; full dashboard release remains in progress.",
+      "changes": [
+        "Own-business retail/supply stock, configurable thresholds, restock/usage/correction with revision and request guards, immutable movement history; offline catalog product sales deduct once; existing reservation/release/import paths reconcile. Optional retail purchase cost is inventory_asset; supply purchase is operating expense. Existing catalog edits and imports cannot restore stale quantities."
+      ],
+      "verification": [
+        "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
+        "A product named Save was incorrectly translated in finance display. Business product/client/stylist names now excluded from interface translation; four-language reload evidence passes."
+      ],
       "live_evidence": [],
       "detailed_clause": "STOCK-01 — Track retail products (such as wigs, oils, edge control and accessories) and key business supplies, with appropriate quantities and configurable low-stock alerts. Make current stock and alerts available to the assistant. Reconcile logged sales, restocks and stock corrections without duplicating existing inventory deductions.",
       "detailed_clause_line": 429,
@@ -2969,13 +2993,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/SalonProductOrders.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/components/owner/BusinessInventory.tsx",
+        "src/app/api/salon/inventory/route.ts",
+        "supabase/migrations/20260918122816_business_inventory_reconciliation.sql",
+        "src/lib/ownerReadServer.ts"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Production migration and live acceptance pending; full dashboard release remains in progress.",
+      "changes": [
+        "Own-business retail/supply stock, configurable thresholds, restock/usage/correction with revision and request guards, immutable movement history; offline catalog product sales deduct once; existing reservation/release/import paths reconcile. Optional retail purchase cost is inventory_asset; supply purchase is operating expense. Existing catalog edits and imports cannot restore stale quantities."
+      ],
+      "verification": [
+        "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
+        "A product named Save was incorrectly translated in finance display. Business product/client/stylist names now excluded from interface translation; four-language reload evidence passes."
+      ],
       "live_evidence": [],
       "detailed_clause": "STOCK-02 — Log product sales into the same financial reporting model as services, preserving product identity, quantity, price, source and payment records. The owner can ask for product revenue over any supported period. Record payments handled outside the app as such; do not introduce an unintended new checkout or payment-processing scope.",
       "detailed_clause_line": 431
@@ -3000,18 +3033,25 @@
         "src/components/owner/BusinessFinances.tsx",
         "supabase/migrations/20260918050000_business_operating_books.sql",
         "src/components/owner/FinanceRecords.tsx",
-        "src/components/owner/FinanceCompensation.tsx"
+        "src/components/owner/FinanceCompensation.tsx",
+        "src/components/owner/BusinessInventory.tsx",
+        "src/app/api/salon/inventory/route.ts",
+        "supabase/migrations/20260918122816_business_inventory_reconciliation.sql",
+        "src/lib/ownerReadServer.ts"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "blocker": "Production migration and live acceptance pending; full dashboard release remains in progress.",
       "changes": [
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
-        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit.",
+        "Own-business retail/supply stock, configurable thresholds, restock/usage/correction with revision and request guards, immutable movement history; offline catalog product sales deduct once; existing reservation/release/import paths reconcile. Optional retail purchase cost is inventory_asset; supply purchase is operating expense. Existing catalog edits and imports cannot restore stale quantities."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
-        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending.",
+        "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
+        "A product named Save was incorrectly translated in finance display. Business product/client/stylist names now excluded from interface translation; four-language reload evidence passes."
       ],
       "live_evidence": [],
       "detailed_clause": "EXPENSE-01 — Let the business log supplies, rent, restocks and other expenses with dates, amounts and useful categories. Feed these into expense breakdowns and recorded-profit reporting, subject to the reconciliation definitions above. The assistant must answer what was spent, the largest categories and profit for a requested period from actual records.",
@@ -3646,13 +3686,22 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "tests/browser/p0-owner-inventory.spec.ts",
         "src/components/owner/ProductsWorkspace.tsx",
-        "src/lib/businessProductInventory.ts"
+        "src/lib/businessProductInventory.ts",
+        "src/components/owner/BusinessInventory.tsx",
+        "src/app/api/salon/inventory/route.ts",
+        "supabase/migrations/20260918122816_business_inventory_reconciliation.sql",
+        "src/lib/ownerReadServer.ts"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
+      "blocker": "Production migration and live acceptance pending; full dashboard release remains in progress.",
+      "changes": [
+        "Own-business retail/supply stock, configurable thresholds, restock/usage/correction with revision and request guards, immutable movement history; offline catalog product sales deduct once; existing reservation/release/import paths reconcile. Optional retail purchase cost is inventory_asset; supply purchase is operating expense. Existing catalog edits and imports cannot restore stale quantities."
+      ],
+      "verification": [
+        "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
+        "A product named Save was incorrectly translated in finance display. Business product/client/stylist names now excluded from interface translation; four-language reload evidence passes."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-06 | Products | Catalog, stock/supplies, images, relevant orders/pickups, alerts, sales records and integration with Finances. |",
       "detailed_clause_line": 503,
