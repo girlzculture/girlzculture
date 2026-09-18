@@ -7,6 +7,7 @@
 import { P0_OWNER_SOURCE_MESSAGES } from "@/i18n/p0-owner-source-catalog";
 import { LAUNCH_WORKSPACE_SOURCE_MESSAGES } from "@/i18n/launch-workspace-source-catalog";
 import { GCIA_SOURCE_MESSAGES } from "@/i18n/gcia-source-catalog";
+import { DASHBOARD_REDESIGN_SOURCE_MESSAGES } from "@/i18n/dashboard-redesign-source-catalog";
 type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
@@ -205,8 +206,8 @@ const wo: SourceCatalog = {
 };
 
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {
-  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es, ...GCIA_SOURCE_MESSAGES.es },
-  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr, ...GCIA_SOURCE_MESSAGES.fr },
+  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es, ...GCIA_SOURCE_MESSAGES.es, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.es },
+  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr, ...GCIA_SOURCE_MESSAGES.fr, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.fr },
   wo: { ...P0_OWNER_SOURCE_MESSAGES.wo, ...wo, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.wo, ...GCIA_SOURCE_MESSAGES.wo },
-  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"], ...GCIA_SOURCE_MESSAGES["zh-CN"] },
+  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"], ...GCIA_SOURCE_MESSAGES["zh-CN"], ...DASHBOARD_REDESIGN_SOURCE_MESSAGES["zh-CN"] },
 };

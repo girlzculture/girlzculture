@@ -15,6 +15,10 @@
 .gc-dashboard :is(h1,h2,h3,h4,.font-serif) { font-family: var(--font-inter), Arial, Helvetica, sans-serif; font-weight: 700; letter-spacing: -.025em; }
 .gc-dashboard h1 { font-size: clamp(1.5rem, 2.4vw, 2.15rem); line-height: 1.25; }
 .gc-dashboard h2 { line-height: 1.35; }
+/* The business redesign uses editorial headings; administrative workspaces
+   retain their established typography. Form controls remain sans-serif. */
+.gc-dashboard[data-owner-dashboard] :is(h1,h2,h3,h4,.font-serif) { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -.025em; }
+.gc-dashboard[data-owner-dashboard] h1 { font-size: clamp(1.65rem, 2.6vw, 2.5rem); line-height: 1.16; }
 .gc-dashboard :is(.text-xs,[class~="text-[8px]"],[class~="text-[9px]"],[class~="text-[10px]"],[class~="text-[11px]"]) { font-size: .8125rem; line-height: 1.5; }
 .gc-dashboard :is([class*="text-ink/"],.gc-text-secondary,.gc-text-muted,.text-text-secondary,.text-text-muted) { color: var(--gc-text-primary) !important; }
 .gc-dashboard :is(input,select,textarea)::placeholder { color: var(--gc-text-placeholder); }

@@ -5,7 +5,7 @@ import { assistantLocalVoice } from "@/lib/assistantSpeechCore";
 
 /** Explicit playback of existing text only. No provider call, recording,
  * automatic playback, or paid audio usage is introduced by this control. */
-export default function AssistantSpeech({ text, sessionKey, language }: { text: string; sessionKey: number; language?: string }) {
+export default function AssistantSpeech({ text, sessionKey, language, showExplanation = true }: { text: string; sessionKey: number; language?: string; showExplanation?: boolean }) {
   const { locale, translateSource: t } = useI18n();
   const current = useRef<SpeechSynthesisUtterance | null>(null);
   const [state, setState] = useState<"idle" | "speaking" | "paused">("idle");
@@ -52,7 +52,7 @@ export default function AssistantSpeech({ text, sessionKey, language }: { text: 
         <button type="button" className={control} onClick={() => window.dispatchEvent(new Event("gc-assistant-stop-speech"))}>{t("Stop audio")}</button>
       </>}
     </div>
-    <p className="text-xs leading-5 text-text-primary">{t("Spoken answers use an installed voice on this device. Audio is not saved.")}</p>
+    {showExplanation ? <p className="text-xs leading-5 text-text-primary">{t("Spoken answers use an installed voice on this device. Audio is not saved.")}</p> : null}
     {notice ? <p role="status" className="text-xs leading-5 text-text-primary">{t(notice)}</p> : null}
   </div>;
 }

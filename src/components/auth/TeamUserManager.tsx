@@ -16,7 +16,7 @@ type AdminAction = "resend" | "suspend" | "revoke" | "reactivate";
 const adminPermissions = [["overview","Overview"],["submissions","Submissions"],["salons","Salons"],["customers","Customers"],["bookings","Bookings"],["quality","Quality & Performance"],["reviews","Reviews"],["finance","Payments & Finance"],["marketing","Marketing & Promotions"],["content","Content Management"],["support","Customer Support"],["complaints","Complaints"],["subscriptions","Subscriptions"],["engine","The Engine"],["settings","Settings & Team"]] as const;
 // Subscription and billing are intentionally owner-only. Team permissions
 // control operational sections but never grant access to payment management.
-const salonPermissions = [["overview","Overview"],["my_page","My Page"],["photos","Photos"],["styles","Styles & Pricing"],["stylists","Stylists"],["products","Products"],["availability","Availability & Calendar"],["bookings","Bookings"],["reviews","Reviews"],["earnings","Earnings & Payouts"],["promotions","Promotions"],["settings","Settings & Team"]] as const;
+const salonPermissions = [["overview","Overview"],["my_page","My Page"],["photos","Photos"],["styles","Styles & Pricing"],["stylists","Stylists"],["products","Products"],["availability","Availability & Calendar"],["bookings","Bookings"],["reviews","Reviews"],["earnings","Finances"],["promotions","Promotions"],["settings","Settings & Team"]] as const;
 
 export default function TeamUserManager({ scope, initialUserId, showBackLink = true }: { scope: TeamScope; initialUserId?: string; showBackLink?: boolean }) {
   const { translateSource: t } = useI18n();

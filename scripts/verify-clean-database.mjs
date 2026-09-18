@@ -1244,6 +1244,8 @@ const deepLOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify
 if (deepLOutput) process.stdout.write(`${deepLOutput}\n`);
 const memoryOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-gcia-memory.sql")], "GCIA opt-in memory isolation and retention assertions");
 if (memoryOutput) process.stdout.write(`${memoryOutput}\n`);
+const redesignOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-dashboard-redesign.sql")], "Dashboard business isolation and metadata assertions");
+if (redesignOutput) process.stdout.write(`${redesignOutput}\n`);
 if (deployedMigration !== expectedMigration) {
   console.error(
     `Engine expected migration ${deployedMigration || "<missing>"} does not match repository head ${expectedMigration}.`,

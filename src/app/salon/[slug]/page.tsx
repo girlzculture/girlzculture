@@ -33,6 +33,7 @@ import { getEngineText } from "@/lib/engineConfigServer";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescription";
+import { publicGalleryPhotos, type BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import SalonRatingSummary from "@/components/public/SalonRatingSummary";
 import SalonStylistFallback from "@/components/public/SalonStylistFallback";
 import SalonTrustLabels, {
@@ -61,6 +62,8 @@ type SalonRecord = {
   languages?: string[] | string | null;
   logo_url?: string | null;
   cover_photo_url?: string | null;
+  trust_info?: Record<string, boolean> | null;
+  photo_metadata?: BusinessPhotoMetadata | null;
   gallery_photos?: string[] | string | null;
   verification_status?: string | null;
   rating_overall?: number | null;
@@ -237,7 +240,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     || { slug: "salon-profile", title: "Salon profile", labels: {} };
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,trust_info,photo_metadata,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -327,7 +330,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     ? "Bookings paused"
     : getSalonStatusLabel(salon);
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
-  const uploadedGallery = [salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)].filter((photo): photo is string => Boolean(photo));
+  const uploadedGallery = publicGalleryPhotos([salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)]);
+  const displayedPhotoMetadata = Object.fromEntries(uploadedGallery.filter(url => salon.photo_metadata?.[url]).map(url => [url, salon.photo_metadata![url]]));
   const locationLine = [salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
   const addressLine = [salon.address_street, salon.address_line2, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
   const mapQuery = salon.latitude != null && salon.longitude != null ? `${salon.latitude},${salon.longitude}` : addressLine;
@@ -351,7 +355,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </nav>
 
         <section className="grid gap-5 pb-5 pt-3 md:pt-0 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8">
-          <SalonPhotoGallery photos={uploadedGallery} salonName={salon.name || "Salon"} />
+          <SalonPhotoGallery photos={uploadedGallery} salonName={salon.name || "Salon"} metadata={displayedPhotoMetadata} />
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
@@ -361,6 +365,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             <SalonRatingSummary rating={rating} reviewCount={reviewCount} />
 
             <SalonTrustLabels labels={trustLabels} verified={isVerified} />
+            {salon.trust_info?.walk_ins_welcome === true ? <p className="mt-3 text-sm font-semibold text-primary">Walk-ins welcome</p> : null}
 
             {salon.description?.trim() ? <ExpandableSalonDescription description={salon.description} aiAssisted={salon.description_ai_assisted === true} /> : null}
 

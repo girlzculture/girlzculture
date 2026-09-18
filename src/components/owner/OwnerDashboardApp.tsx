@@ -1,7 +1,11 @@
 "use client";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
+import { useAssistantBusinessBinding } from "@/components/owner/GcAssistant";
+import { assistantAvatar } from "@/lib/assistantAppearance";
 import BusinessPolicies from "@/components/owner/BusinessPolicies";
+import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
+import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { intlLocale } from "@/i18n/catalog";
 
@@ -146,6 +150,8 @@ type Salon = Row & {
   logo_url?: string;
   cover_photo_url?: string;
   gallery_photos?: string[];
+  photo_metadata?: BusinessPhotoMetadata;
+  gc_assistant_avatar?: string;
   hours?: Record<string, unknown>;
   booking_settings?: Record<string, unknown>;
   languages?: string[];
@@ -192,6 +198,7 @@ export default function OwnerDashboardApp({
   initialRecordId?: string;
 }) {
   const i18n = useI18n();
+  const bindAssistantBusiness = useAssistantBusinessBinding();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -273,6 +280,7 @@ export default function OwnerDashboardApp({
       const teamLogin = Boolean(workspace.isTeamMember);
       setIsTeamMember(teamLogin);
       setTeamPermissions(teamLogin ? workspace.permissions || {} : null);
+      bindAssistantBusiness?.({ id: salonId, userId, avatar: assistantAvatar(s.gc_assistant_avatar), isOwner: !teamLogin, permissions: teamLogin ? workspace.permissions || {} : null });
       const records = workspace.records || {};
       const loadedBookings = records.bookings || [],
         loadedReviews = records.reviews || [],
@@ -345,7 +353,11 @@ export default function OwnerDashboardApp({
             );
             if (!live) return "terminal";
             const refreshedRecords = refreshed.records || {};
-            if (refreshed.salon) setSalon(refreshed.salon);
+            if (refreshed.salon) {
+              setSalon(refreshed.salon);
+              bindAssistantBusiness?.({ id: String(refreshed.salon.id), userId, avatar: assistantAvatar(refreshed.salon.gc_assistant_avatar), isOwner: !refreshed.isTeamMember, permissions: refreshed.isTeamMember ? refreshed.permissions || {} : null });
+            }
+            setIsTeamMember(Boolean(refreshed.isTeamMember)); setTeamPermissions(refreshed.isTeamMember ? refreshed.permissions || {} : null);
             setBookings(refreshedRecords.bookings || []);
             setReviews(refreshedRecords.reviews || []);
             setStyles(sortCatalogRecords(refreshedRecords.styles || [], { preserveSourceOrder: true }));
@@ -450,7 +462,7 @@ export default function OwnerDashboardApp({
       if (removeRealtime) void removeRealtime();
       removeAssistantRefresh?.();
     };
-  }, [initialRecordId, section]);
+  }, [initialRecordId, section, bindAssistantBusiness]);
 
   async function updateSalonServer(patch: Record<string, unknown>) {
     if (!salon?.id) return;
@@ -500,7 +512,9 @@ export default function OwnerDashboardApp({
         throw new Error(
           body.error || "We couldn't verify this change after saving.",
         );
-      setSalon(body.salon);
+      const verifiedSalon = body.salon;
+      if (verifiedSalon.id !== salon.id) throw new Error("The saved business could not be verified.");
+      setSalon(current => current?.id === salon.id ? verifiedSalon : current);
       if (addressChanged) {
         setNotice("Address saved. Verifying its map location…");
         const geocodeResponse = await fetch("/api/location/geocode-salon", {
@@ -826,12 +840,10 @@ export default function OwnerDashboardApp({
       subscriptionActive &&
       !salon.is_discoverable &&
       lifecycleStatus !== "suspended" ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-magenta/20 bg-blush/45 p-4">
+        <details className="mb-4 rounded-xl border border-magenta/20 bg-blush/45 px-4">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Finish marketplace setup {typeof salon.onboarding_progress === "number" ? `· ${salon.onboarding_progress}%` : ""}</summary>
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
           <div>
-            <b className="font-serif text-lg text-plum">
-              Finish marketplace setup ·{" "}
-              {Number(salon.onboarding_progress || 0)}%
-            </b>
             <p className="mt-1 text-xs text-ink/60">
               Your dashboard works, but the salon stays out of search until
               every required setup item is complete.
@@ -843,12 +855,12 @@ export default function OwnerDashboardApp({
           >
             Continue setup
           </Link>
-        </div>
+          </div>
+        </details>
       ) : null}
       <div className="mb-4">
         <PushSetup scope="salon" compact />
       </div>
-      <OwnerSetupGuideLink />
       {realtimeNotice ? (
         <div
           role="status"
@@ -859,6 +871,7 @@ export default function OwnerDashboardApp({
       ) : null}
       <ActionToast message={notice} onDismiss={() => setNotice("")} />
       <DashboardContent section={section} context={context} />
+      <OwnerSetupGuideLink />
     </OwnerDashboardShell>
   );
 }
@@ -938,7 +951,7 @@ function DashboardContent({
       <AccessPaused isOwner={false} />
     );
   if (section === "overview") return <Overview c={c} />;
-  if (section === "my-page") return <MyPage c={c} focus={c.focusedRecordId} />;
+  if (section === "my-page") return <BusinessProfileWorkspace c={c} focus={c.focusedRecordId}><MyPage c={c} focus={c.focusedRecordId || "business"} /></BusinessProfileWorkspace>;
   if (section === "photos") return <Photos c={c} focus={c.focusedRecordId} />;
   if (section === "styles") return <StructuredStylesEditor c={c} recordId={c.focusedRecordId} />;
   if (section === "stylists") return <><StructuredStylistsEditor c={c} recordId={c.focusedRecordId} />{!c.focusedRecordId && c.stylists.length === 0 ? <StylistSectionFallbackEditor gallery={Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : []} products={c.products} promotions={c.promotions} initial={c.salon.stylist_section_fallback} onSave={c.updateSalon} onNotice={c.setNotice} /> : null}</>;
@@ -1800,39 +1813,49 @@ function Overview({ c }: { c: Ctx }) {
   );
 }
 
+function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: string; children: React.ReactNode }) {
+  const current = focus || "business";
+  const progress = profileCompletion(c.salon, c.styles.length, c.stylists.length);
+  const tabs = [["business", "Business information"], ["description", "Description"], ["address", "Location"], ["social", "Social links"], ["business-policies", "Business Policy"], ["policies", "Girlz Culture Policies"], ...(c.isOwner ? [["identity", "Public identity"]] : [])];
+  const checks: [string, boolean, string][] = [
+    ["Business information", Boolean(c.salon.name && c.salon.phone), "my-page/business"],
+    ["Description", Boolean(c.salon.description), "my-page/description"],
+    ["Location", Boolean(c.salon.address_street), "my-page/address"],
+    ["Cover photo", Boolean(c.salon.cover_photo_url), "photos/cover"],
+    ["Styles & Pricing", c.styles.length > 0, "styles"],
+    ["Stylists", c.stylists.length > 0, "stylists"],
+  ];
+  return <div className="space-y-5">
+    <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<Link href={`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link>}/>
+    <section className="overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="relative h-36 bg-gradient-to-r from-primary-hover to-primary sm:h-52">
+        {c.salon.cover_photo_url ? <SafeImage src={c.salon.cover_photo_url} fallbackSrc={c.salon.cover_photo_url} alt={c.salon.name || "Business"} className="h-full w-full object-cover"/> : <div className="flex h-full items-center justify-center text-sm text-white">{c.translateSource("Add a cover photo to showcase your business.")}</div>}
+        <Link href="/salon/dashboard/photos/cover" className="absolute right-3 top-3 flex min-h-11 items-center gap-2 rounded-xl bg-white/95 px-3 text-xs font-semibold text-ink"><ImagePlus size={16}/>{c.translateSource("Change cover photo")}</Link>
+      </div>
+      <div className="flex flex-wrap items-end gap-4 px-4 pb-5 sm:px-6">
+        <Link href="/salon/dashboard/photos/logo" aria-label={c.translateSource("Change business logo")} className="relative -mt-9 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-primary-hover text-3xl text-white shadow-sm sm:h-28 sm:w-28">{c.salon.logo_url ? <SafeImage src={c.salon.logo_url} fallbackSrc={c.salon.logo_url} alt={c.salon.name || "Business"} className="h-full w-full object-cover"/> : (c.salon.name || "G").slice(0, 1)}</Link>
+        <div className="min-w-0 flex-1 pt-3"><h2 data-no-translate className="break-words font-serif text-2xl text-ink">{c.salon.name}</h2><p className="mt-1 text-sm text-muted" data-no-translate>{[c.salon.address_city, c.salon.address_state].filter(Boolean).join(", ")}</p></div>
+        <Link href="/salon/dashboard/availability" className="min-h-11 rounded-lg border border-border px-3 py-3 text-xs font-semibold">{c.translateSource("Manage hours")}</Link>
+      </div>
+    </section>
+    <nav aria-label={c.translateSource("My Page sections")} className="relative border-b border-border pb-1">
+      <div className="grid grid-cols-4 gap-1 sm:hidden">
+        {[["business","Info","my-page/business"],["services","Services","styles"],["address","Location","my-page/address"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 items-center justify-center rounded-lg text-xs font-semibold ${current === id ? "bg-teal/10 text-primary" : "text-muted"}`}>{c.translateSource(label)}</Link>)}
+        <details className="group"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-center rounded-lg text-xs font-semibold group-open:bg-teal/10">{c.translateSource("More")}</summary><div className="absolute right-0 z-20 mt-1 min-w-56 rounded-xl border border-border bg-white p-2 shadow-lg">{tabs.filter(([id]) => !["business","address"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} onClick={event => event.currentTarget.closest("details")?.removeAttribute("open")} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}</div></details>
+      </div>
+      <div className="hidden flex-wrap gap-1 sm:flex">{[["business","Business Information","my-page/business"],["services","Services & Pricing","styles"],["address","Location & Hours","my-page/address"],["business-policies","Amenities & Policies","my-page/business-policies"],["social","Social & Links","my-page/social"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 items-center border-b-2 px-3 text-xs ${current === id ? "border-primary font-semibold text-primary" : "border-transparent text-muted"}`}>{c.translateSource(label)}</Link>)}</div>
+    </nav>
+    {["business","description","identity"].includes(current) ? <div className="flex flex-wrap gap-2">{tabs.filter(([id]) => ["business","description","identity"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-10 items-center rounded-lg border px-3 text-xs ${current === id ? "border-primary bg-teal/5 text-primary" : "border-border text-muted"}`}>{c.translateSource(label)}</Link>)}</div> : null}
+    {current === "business-policies" ? <Link className="inline-flex min-h-11 items-center text-sm text-primary underline" href="/salon/dashboard/my-page/policies">{c.translateSource("Girlz Culture Policies")}</Link> : null}
+    <div className="grid min-w-0 gap-5 min-[1400px]:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="min-w-0">{children}</div>
+      <aside className="h-fit rounded-2xl border border-border bg-white p-5"><h2 className="font-serif text-lg">{c.translateSource("Profile Completion")}</h2><div className="my-5 flex items-center gap-4"><div className="flex h-20 w-20 items-center justify-center rounded-full border-[7px] border-primary/20 text-xl font-semibold text-primary" aria-label={`${c.translateSource("Profile Completion")}: ${progress}%`}>{progress}%</div><p className="flex-1 text-xs leading-5 text-muted">{c.translateSource("Keep your profile complete so clients know what to expect.")}</p></div><ul className="space-y-3">{checks.map(([label,done,href]) => <li key={label}><Link href={`/salon/dashboard/${href}`} className="flex min-h-8 items-center gap-2 text-sm"><span aria-hidden className={`flex h-5 w-5 items-center justify-center rounded-full border ${done ? "border-emerald-600 bg-emerald-600 text-white" : "border-border"}`}>{done ? <Check size={13}/> : null}</span>{c.translateSource(label)}<span className="sr-only"> — {c.translateSource(done ? "Complete" : "Incomplete")}</span></Link></li>)}</ul></aside>
+    </div>
+  </div>;
+}
+
 function MyPage({ c, focus }: { c: Ctx; focus: string }) {
   if (focus === "business-policies") return <BusinessPolicies />;
-  if (!focus) {
-    const trustCount = Object.values(c.salon.trust_info || {}).filter(Boolean).length;
-    return (
-      <>
-        <Title
-          title="My Page"
-          subtitle="Choose one part of your public salon page to review or update."
-          action={
-            <Link
-              href={`/salon/${c.salon.slug}`}
-              className="rounded-[8px] border border-magenta px-4 py-3 text-xs font-bold text-magenta"
-            >
-              Preview public page
-            </Link>
-          }
-        />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <OwnerSectionCard href="/salon/dashboard/my-page/business" icon={UserRound} title="Business information" description="Salon name, contact details, languages, and trust information." meta={c.translateSource("Enabled trust items: {value0}", { value0: c.formatNumber(trustCount) })} status="Public" />
-          <OwnerSectionCard href="/salon/dashboard/my-page/description" icon={Sparkles} title="Description" description="Tell customers what makes your salon and services distinctive." meta={c.salon.description ? `${String(c.salon.description).length} characters` : "Description needed"} status={c.salon.description ? "Ready" : "Incomplete"} />
-          <OwnerSectionCard href="/salon/dashboard/my-page/address" icon={Info} title="Address" description="Keep the marketplace location and map position accurate." meta={c.salon.formatted_address || [c.salon.address_city, c.salon.address_state].filter(Boolean).join(", ") || "Address needed"} status={c.salon.address_needs_review ? "Needs review" : "Verified"} />
-          <OwnerSectionCard href="/salon/dashboard/availability" icon={Clock3} title="Hours" description="Manage store hours, calendar availability, and scheduling rules." meta={`${Object.keys(c.salon.hours || {}).length} days configured`} />
-          <OwnerSectionCard href="/salon/dashboard/my-page/social" icon={ExternalLink} title="Social links" description="Connect your Instagram, TikTok, and Google Business profiles." meta={[c.salon.instagram_url, c.salon.tiktok_url, c.salon.google_business_url].filter(Boolean).length ? "Links added" : "No links added"} />
-          <OwnerSectionCard href="/salon/dashboard/photos" icon={ImagePlus} title="Cover, logo & gallery" description="Manage the visual media customers see on your salon profile." meta={`${Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos.length : 0} gallery items`} status={c.salon.cover_photo_url ? "Published" : "Cover needed"} />
-          <OwnerSectionCard href="/salon/dashboard/my-page/business-policies" icon={BadgeCheck} title="Your Business Policies" description="Set appointment expectations, review drafts, and publish policies for future bookings." />
-          <OwnerSectionCard href="/salon/dashboard/my-page/policies" icon={BadgeCheck} title="Girlz Culture Policies" description="Read platform booking, deposit, privacy, and customer-safety protections." meta="Platform policies" />
-          {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/my-page/identity" icon={Crown} title="Public identity" description="Manage your requested public URL and verified identity links." meta={c.salon.vanity_slug || c.salon.slug || "Standard URL"} /> : null}
-        </div>
-      </>
-    );
-  }
-
   if (focus === "policies") {
     return (
       <>
@@ -1885,7 +1908,7 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
       await c.updateSalon({ instagram_url: f.get("instagram_url") || null, tiktok_url: f.get("tiktok_url") || null, google_business_url: f.get("google_business_url") || null });
       return;
     }
-    await c.updateSalon({ name: f.get("name"), phone: f.get("phone"), email: f.get("email"), languages: String(f.get("languages") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 5), trust_info: Object.fromEntries(["licensed_professionals", "clean_safe", "women_owned", "appointment_only"].map((key) => [key, f.get(key) === "on"])) });
+    await c.updateSalon({ name: f.get("name"), phone: f.get("phone"), email: f.get("email"), languages: String(f.get("languages") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 5), trust_info: { ...c.salon.trust_info, ...Object.fromEntries(["licensed_professionals", "clean_safe", "women_owned", "appointment_only", "walk_ins_welcome"].map((key) => [key, f.get(key) === "on"])) } });
   }
   const addressWarning =
     c.salon.address_needs_review || c.salon.geocode_status === "needs_review";
@@ -1898,7 +1921,7 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
   const [heading, subtitle] = headings[focus] || headings.business;
   return (
     <>
-      <OwnerDetailHeader title={heading} subtitle={subtitle} fallbackHref="/salon/dashboard/my-page" status="Public page" />
+      <p className="mb-4 text-sm text-muted">{c.translateSource(subtitle)}</p>
       {focus === "address" && addressWarning ? (
         <div
           role="alert"
@@ -1925,7 +1948,7 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
               <Field label="Phone" name="phone" defaultValue={c.salon.phone} />
               <Field label="Email" name="email" defaultValue={c.salon.email} type="email" />
               <Field label="Languages Spoken" name="languages" defaultValue={(c.salon.languages || []).join(", ")} wide />
-              <div className="sm:col-span-2"><p className="mb-2 text-xs font-bold">Trust information</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[["licensed_professionals", "Licensed Professionals"], ["clean_safe", "Clean & Safe Studio"], ["women_owned", "Women-Owned"], ["appointment_only", "By Appointment Only"]].map(([key, label]) => <label key={key} className="flex min-h-20 flex-col justify-between rounded-[9px] border border-plum/10 p-3 text-[10px] font-semibold"><span>{label}</span><input name={key} type="checkbox" defaultChecked={c.salon.trust_info?.[key]} className="accent-magenta" /></label>)}</div></div>
+              <div className="sm:col-span-2"><p className="mb-2 text-xs font-bold">Trust information</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[["licensed_professionals", "Licensed Professionals"], ["clean_safe", "Clean & Safe Studio"], ["women_owned", "Women-Owned"], ["appointment_only", "By Appointment Only"], ["walk_ins_welcome", "Walk-ins welcome"]].map(([key, label]) => <label key={key} className="flex min-h-20 flex-col justify-between rounded-[9px] border border-plum/10 p-3 text-[10px] font-semibold"><span>{label}</span><input name={key} type="checkbox" defaultChecked={c.salon.trust_info?.[key]} onChange={event => { if (event.currentTarget.checked && ["appointment_only", "walk_ins_welcome"].includes(key)) { const other = event.currentTarget.form?.elements.namedItem(key === "appointment_only" ? "walk_ins_welcome" : "appointment_only"); if (other instanceof HTMLInputElement) other.checked = false; } }} className="accent-magenta" /></label>)}</div></div>
             </> : null}
             {focus === "description" ? <SalonDescriptionEditor initialValue={c.salon.description || ""} initiallyAiAssisted={c.salon.description_ai_assisted === true} /> : null}
             {focus === "address" ? <>
@@ -1994,7 +2017,7 @@ function SalonLogoEditor({ c }: { c: Ctx }) {
                 const next = typeof value === "string" ? value : "";
                 setLogo(next);
                 c.setSalon((row) =>
-                  row ? { ...row, logo_url: next || undefined } : row,
+                  row?.id === c.salon.id ? { ...row, logo_url: next || undefined } : row,
                 );
               }}
             />
@@ -2014,103 +2037,12 @@ function SalonLogoEditor({ c }: { c: Ctx }) {
 
 function Photos({ c, focus }: { c: Ctx; focus: string }) {
   const [cover, setCover] = useState(c.salon.cover_photo_url || "");
-  const [gallery, setGallery] = useState<string[]>(
-    Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : [],
-  );
-  if (!focus) {
-    return (
-      <>
-        <Title title="Photos & Media" subtitle="Choose one media area to update. Upload status and public visibility stay clear." />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <OwnerSectionCard href="/salon/dashboard/photos/cover" icon={ImagePlus} title="Cover photo" description="The main image at the top of your public salon page." meta={cover ? "Uploaded and attached" : "No cover uploaded"} status={cover ? "Published" : "Incomplete"} />
-          <OwnerSectionCard href="/salon/dashboard/photos/logo" icon={BadgeCheck} title="Salon logo" description="The business mark shown in the dashboard and public profile." meta={c.salon.logo_url ? "Uploaded and attached" : "No logo uploaded"} status={c.salon.logo_url ? "Saved" : "Optional"} />
-          <OwnerSectionCard href="/salon/dashboard/photos/gallery" icon={ImagePlus} title="Gallery" description="Upload, crop, reorder, and remove photos of your work and space." meta={`${gallery.length} of 16 items`} status={gallery.length ? "Published" : "Empty"} />
-        </div>
-        <Panel className="mt-4"><p className="text-xs leading-5 text-ink/60"><b className="text-plum">Media status:</b> an item moves from staged to uploaded, attached, saved, and published. A failed upload remains visible with a safe error instead of silently disappearing.</p></Panel>
-      </>
-    );
-  }
-  if (focus === "logo") {
-    return <><OwnerDetailHeader title="Salon logo" subtitle="Upload and save the mark used across your public profile and dashboard." fallbackHref="/salon/dashboard/photos" status={c.salon.logo_url ? "Saved" : "Optional"} /><SalonLogoEditor c={c} /></>;
-  }
-  const galleryMode = focus === "gallery";
-  return (
-    <>
-      <Title
-        title={galleryMode ? "Gallery" : "Cover photo"}
-        subtitle="Manage the media that tells your salon’s story."
-        action={
-          <div className="flex gap-2"><Link href="/salon/dashboard/photos" className="rounded-[8px] border border-plum/15 bg-white px-4 py-3 text-xs font-bold text-plum">Back</Link><button
-            onClick={() =>
-              c.updateSalon({
-                cover_photo_url: cover,
-                gallery_photos: gallery,
-                media_consent: true,
-              })
-            }
-            className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
-          >
-            Save media
-          </button></div>
-        }
-      />
-      <div className="max-w-5xl">
-        {!galleryMode ? <Panel>
-          <ImageUpload
-            bucket="salon-photos"
-            preset="cover"
-            folder={`salons/${c.salon.id}`}
-            label="Cover Photo"
-            value={cover}
-            onChange={(v) => setCover(typeof v === "string" ? v : "")}
-            attachment={{
-              record_type: "salon",
-              record_id: String(c.salon.id),
-              field: "cover_photo_url",
-            }}
-            onPersisted={(value) => {
-              const next = typeof value === "string" ? value : "";
-              setCover(next);
-              c.setSalon((row) =>
-                row ? { ...row, cover_photo_url: next || undefined } : row,
-              );
-            }}
-            helperText="JPG or PNG, maximum 2MB after optimization."
-          />
-        </Panel> : null}
-        {galleryMode ? <Panel>
-          <ImageUpload
-            bucket="salon-photos"
-            preset="gallery"
-            multiple
-            maxFiles={16}
-            folder={`salons/${c.salon.id}/gallery`}
-            label="Media Library"
-            value={gallery}
-            onChange={(v) => setGallery(Array.isArray(v) ? v : [])}
-            attachment={{
-              record_type: "salon",
-              record_id: String(c.salon.id),
-              field: "gallery_photos",
-            }}
-            onPersisted={(value) => {
-              const next = Array.isArray(value) ? value.map(String) : [];
-              setGallery(next);
-              c.setSalon((row) =>
-                row ? { ...row, gallery_photos: next } : row,
-              );
-            }}
-            helperText="Upload, remove, and reorder salon work photos."
-          />
-          <label className="mt-5 flex gap-3 text-xs font-semibold">
-            <input type="checkbox" defaultChecked className="accent-magenta" />I
-            confirm I have permission to use these images and the right to
-            display them.
-          </label>
-        </Panel> : null}
-      </div>
-    </>
-  );
+  if (!c.salon.id) return null;
+  if (!focus || focus === "gallery") return <BusinessPhotoLibrary salon={{ ...c.salon, id: c.salon.id }} onSaved={patch => c.setSalon(row => row?.id === c.salon.id ? { ...row, ...patch } : row)}/>;
+  if (focus === "logo") return <><OwnerDetailHeader title="Salon logo" subtitle="Upload and save the mark used across your public profile and dashboard." fallbackHref="/salon/dashboard/photos" status={c.salon.logo_url ? "Saved" : "Optional"}/><SalonLogoEditor c={c}/></>;
+  return <><OwnerDetailHeader title="Cover photo" subtitle="Manage the main image on your public business profile." fallbackHref="/salon/dashboard/photos"/>
+    <Panel><ImageUpload bucket="salon-photos" preset="cover" folder={`salons/${c.salon.id}`} label="Cover Photo" value={cover} onChange={value => setCover(typeof value === "string" ? value : "")} attachment={{ record_type: "salon", record_id: c.salon.id, field: "cover_photo_url" }} onPersisted={value => { const next = typeof value === "string" ? value : ""; setCover(next); c.setSalon(row => row?.id === c.salon.id ? { ...row, cover_photo_url: next } : row); }}/></Panel>
+  </>;
 }
 
 function Styles({ c }: { c: Ctx }) {
@@ -4704,7 +4636,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   return (
     <>
       <Title
-        title="Earnings & Payouts"
+        title="Finances"
         subtitle="Track your earnings, manage payouts, and view your transaction history."
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -5255,7 +5187,7 @@ function Field({
     <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
       <span className="mb-1.5 block text-[10px] font-bold">
         {label}
-        {required ? <span className="text-magenta"> *</span> : null}
+        {required ? <span aria-hidden="true" className="text-magenta"> *</span> : null}
       </span>
       {numeric ? <NumericInput
         name={name}

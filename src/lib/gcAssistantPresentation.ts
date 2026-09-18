@@ -61,7 +61,9 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
 
   if (tool === "get_services_and_prices") {
     const services = rows(result.services);
-    const count = Math.max(number(result.total), services.length);
+    const count = Math.max(number(result.matching_total ?? result.total), services.length);
+    if (!count && result.match_status === "incomplete_search") return { message: t("Only part of your catalog was searched. Open Styles & Pricing to check the remaining services."), suggestions: suggest(["Open Styles & Pricing"]) };
+    if (!count && number(result.inventory_total) > 0) return { message: t("No service matched this search. Your catalog contains {count} services.", { count: number(result.inventory_total) }), suggestions: suggest(["Find a service"]) };
     if (!count) return { message: words.none, suggestions: suggest(["Add a service", "Import a spreadsheet"]) };
     const summaries = services.slice(0, 4).map(service => {
       const name = text(service.name, 90) || t("Service");
@@ -72,9 +74,13 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
       return `${name}${price || duration ? ` (${[price, duration].filter(Boolean).join(", ")})` : ""}`;
     });
     return {
-      message: words.services(count, list(summaries, locale), Math.max(0, count - summaries.length)),
+      message: [result.match_status === "related" ? t("These are related services, not an exact name match. Confirm the service before making changes.") : "", result.search_complete === false ? t("Only part of your catalog was searched. Open Styles & Pricing to check the remaining services.") : "", result.query ? t("Matching services: {count}. {details}", { count, details: list(summaries, locale) }) : words.services(count, list(summaries, locale), Math.max(0, count - summaries.length))].filter(Boolean).join(" "),
       suggestions: suggest(["Find a service", "Prepare a price change", "Import a spreadsheet"]),
     };
+  }
+
+  if (tool === "get_business_media") {
+    return { message: [t("You have {gallery} gallery photos, {cover} cover image and {logo} logo image saved. There are {total} distinct saved images.", { gallery: number(result.gallery_count), cover: number(result.cover_count), logo: number(result.logo_count), total: number(result.distinct_saved_images) }), t(result.publicly_visible === true ? "Your gallery is visible on your public business page." : result.publicly_visible === false ? "Your business page is not currently public." : "Public visibility could not be verified.")].join(" "), suggestions: suggest(["Open Photos"]) };
   }
 
   if (tool === "get_business_profile") {
@@ -109,7 +115,8 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
       policy.rescheduling_hours !== undefined ? t("rescheduling notice: {value0} hours", { value0: number(policy.rescheduling_hours) }) : "",
       policy.walk_ins ? t("walk-ins: {value0}", { value0: text(policy.walk_ins, 40).replaceAll("_", " ") }) : "",
     ].filter(Boolean).join("; ");
-    return { message: words.policies(parts), suggestions: suggest(["Explain cancellations", "Explain deposits", "Open policies"]) };
+    const prose = text(policy.business_policy_text || [policy.refund_terms, policy.notes, policy.preparation].filter(Boolean).join(" "), 650);
+    return { message: [prose, parts].filter(Boolean).join("\n\n") || words.policies(parts), suggestions: suggest(["Explain cancellations", "Explain deposits", "Open policies"]) };
   }
 
   if (tool === "search_platform_knowledge") {
@@ -124,7 +131,7 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
 
   if (tool === "get_earnings_summary") {
     const amount = currency(result.completed_booking_value, locale);
-    return { message: [t("Completed booking value"), amount || t("not available"), t("This is booking value, not verified cash revenue or a payout.")].join(" — "), suggestions: suggest(["Open earnings"]) };
+    return { message: [t("Completed booking value"), amount || t("not available"), t("This is booking value, not verified cash revenue or a payout.")].join(" — "), suggestions: suggest(["Open finances"]) };
   }
   if (tool === "get_business_summary") {
     return { message: words.summary(number(result.bookings), number(result.upcoming), currency(result.completed_booking_value, locale) || t("not available")), suggestions: suggest(["Show upcoming bookings", "Find calendar gaps", "Open overview"]) };

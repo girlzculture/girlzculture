@@ -1,0 +1,64 @@
+# Dashboard and business-software implementation checkpoint
+
+This branch is in progress. It is not merged, deployed, or a completed 140-item release.
+
+Base: `d37cbf4ef3954063797946b7508352470653a739`.
+Branch: `codex/business-dashboard-value-redesign`.
+Production last checked at 2026-09-18 01:51 UTC: locked deployment `6aac503fa5eacb00089c6d87`, same base commit. Rollback: `6aac3c4f2da488000962085f` / `525f4103a778b95290885ee15e7bf1ffee8839af`.
+
+## Binding decisions
+
+- Percentage promotions use eligible service price: $100 price, $10 protected deposit, 20% offer gives $20 saving and $70 remaining balance. Cap saving at the unpaid balance; preserve existing booking snapshots.
+- No-show protection uses only incidents at the current business. Cross-business blacklists, scores and even anonymized eligibility indicators are forbidden. This supersedes the attachment's across-platform wording.
+- Assistant data access is current authorized business only, even for another business's public records. Ordinary customer public browsing remains available.
+- Existing OpenAI and DeepL integrations, both $25 caps, supported EN/FR/ES/zh-CN behavior, opt-in memory and calendar safeguards must remain. Wolof remains deferred.
+- Full implementation, protected reviewed migrations, merge and publication are authorized once release gates pass. No additional general deployment approval is needed. PRs #59/#60 and unrelated parked work remain untouched.
+
+## Source and tracking
+
+`founder-handoff.md` is an unchanged copy of the complete attached brief. `requirements.json` contains all 140 unique IDs with full indexed definitions, detailed-section references, initial code mappings, changes and evidence fields. All detailed clauses apply; the short index does not reduce scope. Two initial mapping paths need correction as discovered: BookingNotes is under `src/components/`, not `src/components/owner/`; new modules must be added to the map when implemented.
+
+All 19 supplied inline images were inspected: ten dashboard target composites, three public inspiration composites, two mobile assistant defect captures and int10–int13 defect captures. Preserve the root business landing. `/site-access` must become the real customer entry; public layout is selective polish, not a mockup replacement. The decorative poster/phone frames and invented figures in references are not app content.
+
+## Work implemented locally
+
+1. Chat submission now inserts the user's message and clears the composer before awaiting the server. An in-flight guard prevents duplicate submits. Failure retains the turn and exact reference; explicit retry keeps its ID/context and preserves the next draft. Actor changes discard stale results. New replies do not pull readers away from earlier messages. IME and Shift+Enter remain supported.
+2. Persistent desktop assistant uses a nonmodal adjacent panel at desktop widths; the workspace reserves its width. Phones/tablets open on tap. Close/reopen and desktop route continuity work. Shared header combines the page search and assistant launcher, removing the redundant strips. These are foundational changes, not all fourteen page redesigns.
+3. Finances label replaces Earnings & Payouts in owner navigation, title, assistant destination and permission labels; existing route/permission identifiers remain stable. New copy has FR/ES/zh-CN baseline translations. Per-reply audio explanations are collapsed into one panel disclosure; explicit read-aloud controls remain.
+4. Policy publishing hashes canonical key order. Genuine stale previews retain code HTTP409 and the exact protected reference instead of becoming a generic HTTP500 through monitoring.
+5. Policy editor now uses primary Business Policy text, optional preparation, a source-language selector and explicit booking-rule controls. Legacy terms convert without altering published history; enforced rules stay structured. Initial-load failure disables saving defaults over existing policy and offers reload. New prose must pass validation. A pending migration expands JSON size capacity for multibyte prose plus retained legacy fields; not applied yet.
+
+## Demonstrated defects and evidence
+
+- Baseline chat browser test failed before the response arrived: submitted text absent from all articles. Original screenshot/trace retained outside Git in `../redesign-evidence/chat-before/`. The dependency junction first caused a Turbopack setup failure; replaced with `npm ci --offline` from the unchanged lockfile. No dependency changes.
+- After correction, 18/18 new Chromium/WebKit tests passed in `tests/browser/p0-assistant-interaction.spec.ts`, covering 390x844, 768x900, 1440x900, 844x390 and IME/history behavior. WebKit emitted a dev-HMR chunk-load message; final production-build browser verification remains required.
+- Five actor/session tests passed after optimistic submission; a failed submission now correctly retains one turn instead of zero, with raw-body exclusion and a retry assertion.
+- Policy incident `70ad1644-c08f-4a16-af76-014d9b58b0df` was inspected read-only. It records six `/api/salon/policies` POST conflicts, HTTP409, between 2026-09-17 22:20 and 23:06 UTC. No private business data or credentials were read. The code separately reproduced unchanged input becoming `POLICY_PREVIEW_STALE` after a JSONB-style key reorder. Canonical hashing passes that case and still rejects an actual prose change. Monitoring's generic wrapper explained why the UI displayed unavailable rather than a recoverable conflict. The coarse historical event does not independently prove every one of the six requests had identical input.
+- Policy tests: 3 editor/conversion, 3 API/audit, 4 disclosure tests passing. Browser editor/save/review/publish/refresh/failure recovery and public acknowledgment coverage still needs updating for the expressly requested new editor.
+- TypeScript passed after chat/layout changes; a later TypeScript check after policy changes was still running at this checkpoint.
+
+## Next work, without restarting completed checks
+
+1. Finish policy browser regression and public presentation; add its new primary text to assistant draft presentation. Connect Walk-ins welcome in My Page/public profile without changing booking capacity. Verify migration locally before protected application.
+2. Implement service search matching and truthful inventory counts. Current query filters `styles.name` before counting, so no match is incorrectly represented as total zero; no photo read tool exists. Add scoped media inventory and server-side permissions, update planner/presentation/registry migrations, prove two-business isolation before live provider checks.
+3. Finish all fourteen page compositions and details, saved business assistant avatars, media categories/editor, owner finance/off-platform ledger, deposits/compensation/expenses/stock/reports/permissions, client history, communications, own-business no-show rules and appointment waitlist. All remain required; none is deferred.
+4. Resolve subscription method-management defect through existing Stripe integration without charges. Implement approved promotion math consistently with server booking snapshots and public evidence.
+5. `/site-access` currently delegates to the customer Home component but retains demonstration metadata and gate/banner wrappers. Preserve approved root routing, remove public demo restrictions only for real eligible businesses, restore customer navigation/Pricing placement and selective public polish.
+6. Complete updated ledger clauses, matched visual evidence, required checks on final source, reviewed pending migrations, held candidate provider checks, merge and verified production publication. No new PR or workflow has been created/dispatched yet.
+
+Prior main release CI `35272232878` passed 580 tests with five existing viewport skips; DeepL and memory migrations already applied. Reuse unchanged provider/language/calendar evidence, rerun only where these changes invalidate it. No production writes, billing changes, cap changes or deployments have been made for this redesign so far.
+
+## Continuation — 18 September, local foundation verified
+
+- Service search now ranks current-business alias/typo candidates while distinguishing inventory size, matching records, unavailable counts and bounded/incomplete searches. Actual service facts remain unchanged. Planning tests31/31; execution tests14/14 at media-read introduction. Full module coverage remains required.
+- Added authenticated get_business_media read (photos permission), distinct gallery/cover/logo counts, category/caption metadata and honest unknown publication status. General platform knowledge is limited to six general CMS slugs; no public-business lookup.
+- My Page now presents actual editable cover/logo, identity, completion and mobile Info/Services/Location/More. Walk-ins is persisted in existing trust_info and exposed on the correct public profile. Mixed profile patches require every affected permission; asynchronous updates check business identity. A selected walk-in option clears the incompatible appointment-only option, and the backend independently validates both.
+- Photos opens the real gallery with categories, edit title/caption/featured controls and existing crop/remove/order pipeline as a secondary disclosure. Category assignment uses the selected upload category, retains failures for retry. Atomic photo metadata RPC validates authorization, existing gallery membership, prior revision and merges per-image edits. Source prose remains unchanged. Real upload/category persistence and live SQL gates are still pending.
+- Policy prose included in assistant moderation and public disclosure. Chromium390 policy edit/save/review/publish/refresh/failure test passed before the later My Page tab change; final combined policy/booking acknowledgment coverage remains necessary.
+- Assistant business preference now offers six avatar choices, displayed in launcher/header/messages. Only owners can update, with exact error reference and verified persisted response. Roles and business context reset stale conversation, request IDs and optional memory references. Current-page quick actions (3–5 before staff filtering) cover all14 owner routes. Source copy includes FR/ES/zh-CN baseline translations; no native-quality/provider claim.
+- Latest combined browser run:40/40 passed in3.1minutes, Chromium and WebKit, dashboard profile/photo flows (fourviewports), avatar retry/persistence/context reset (phone/desktop), all prior chat/IME/retry/scroll and opt-in-memory persistence/exact-reference cases. Browser fixtures are explicitly local; the context-switch case simulates a newly authorized server workspace. Two-business API tests reject foreign IDs/URLs and staff appearance writes. Full live isolation remains pending.
+- TypeScript and targeted ESLint passed after these changes. Dev-only WebKit HMR chunk warnings persist; production-build browser verification is still required. No arbitrary sleeps, retries or skipped failing assertions were introduced.
+- Four pending, unapplied migrations:20260918024000policycapacity,20260918031000mediareadregistry,20260918033000photodetails,20260918040000appearance. Added disposable rollback-only database assertions to existing clean-DB verification. PostgreSQL tools are not currently onPATH; SQL not yet executed. Latest migration marker advances only integrations.expected_migration; bothAIcaps untouched.
+- Read-only billing incident:b19ef999-8b7b-4a21-811f-6e1de5a443cf, two portal failures Sep17 22:17:21 and23:34:32UTC, StripeHTTP400. Existing helper drops provider reason, so rootcause not established. No payment/card/subscription changes made.
+- Browser inventory now has no earlier authenticated tabs. Do not ask to sign in during independent implementation. Reuse a stable final candidate and request the minimum genuinelyneeded role only at live verification. New background public baseline tab27 shows root stillbusinessonboarding and /site-access stilldemo banner with booking/payment disabled; this is the reproduced public defect.
+- Remaining next:public marketplace/demo/navigation corrections, allremaining page compositions and finance/client/communications/stock/waitlist/deposit capabilities, safe billing diagnostics/correction, source-translation inventory, cleanDB/build/requiredCI, reviewed migrations, heldcandidate and publishverifiedfinalsource. These are all required. No newPR/push/workflow/productionmutation/deploy yet.

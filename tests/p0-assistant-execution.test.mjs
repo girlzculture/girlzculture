@@ -11,7 +11,8 @@ function fixture(options = {}) {
     async rpc(name, args) {
       calls.push({ name, args });
       if (name === 'p0_actor_has_permission') return { data: options.allowed !== false };
-      if (name === 'get_public_content_pages') return { data: options.knowledge || [] };
+      if (name === 'get_public_content_page') return { data: (options.knowledge || []).find(page => page.slug === args.p_slug) || null };
+      if (name === 'is_marketplace_visible') return options.visibilityError ? { error: { code: 'unavailable' } } : { data: options.visible ?? true };
       if (name === 'save_gc_assistant_request') { saved.push(args.p_request); return { data: args.p_request }; }
       if (name === 'confirm_gc_assistant_request') return { data: { verified: true, result: {} } };
       throw Error(`Unexpected RPC ${name}`);
@@ -53,6 +54,39 @@ test('literal service search cannot expand percent or underscore into wildcard r
   assert.equal(response.request.result.services.length, 1); assert.equal(response.request.result.services[0].name, 'A_100% Save');
 });
 
+test('service lookup distinguishes a miss from an empty inventory and never includes another business', async () => {
+  const styles = [
+    { id: 'own-boho', salon_id: business, name: 'Boho / Goddess Braids', base_price: 250, duration_min_hours: 5, duration_max_hours: 7 },
+    { id: 'own-box', salon_id: business, name: 'Box Braids', base_price: 190 },
+    { id: 'foreign', salon_id: 'other-business', name: 'Private business B mermaid design', base_price: 999 },
+  ];
+  const f = fixture({ tables: { styles } });
+  const miss = await f.run('get_services_and_prices', { query: 'Private business B mermaid design' });
+  assert.equal(miss.request.result.inventory_total, 2);
+  assert.equal(miss.request.result.matching_total, 0);
+  assert.equal(miss.request.result.match_status, 'no_match');
+  assert.doesNotMatch(JSON.stringify(miss.request.result.services), /foreign|999|Private business B/);
+  await assert.rejects(f.run('get_services_and_prices', { query: '', salon_id: 'other-business' }), /ASSISTANT_INVALID_INPUT/);
+  const empty = await fixture().run('get_services_and_prices', { query: 'braids' });
+  assert.equal(empty.request.result.match_status, 'empty_inventory');
+});
+
+test('service aliases and typos return the actual record without declaring distinct styles identical', async () => {
+  const f = fixture({ tables: { styles: [
+    { id: 'own-boho', salon_id: business, name: 'Boho / Goddess Braids', base_price: 250, duration_min_hours: 5, duration_max_hours: 7 },
+    { id: 'own-knotless', salon_id: business, name: 'Knotless Braids', base_price: 180 },
+  ] } });
+  const boho = await f.run('get_services_and_prices', { query: 'Bohemian / Mermaid Braids' });
+  assert.equal(boho.request.result.services[0].id, 'own-boho');
+  assert.equal(boho.request.result.services[0].name, 'Boho / Goddess Braids');
+  assert.equal(boho.request.result.services[0].base_price, 250);
+  assert.equal(boho.request.result.services[0].duration_max_hours, 7);
+  assert.equal(boho.request.result.match_status, 'related');
+  assert.equal(boho.request.result.exact_match, false, 'mermaid and goddess are not silently equated');
+  const typo = await f.run('get_services_and_prices', { query: 'knotles braids' });
+  assert.equal(typo.request.result.services[0].id, 'own-knotless');
+});
+
 test('bookings are read only for the resolved business and requested interval', async () => {
   const f = fixture({ tables: { bookings: [
     { salon_id: business, appointment_datetime: '2026-09-20T15:00:00Z', guest_name: 'Save' },
@@ -81,6 +115,47 @@ test('published knowledge is searched as bounded source material and answered co
   assert.equal(response.request.result.matches[0].question, 'How do deposits work?');
   assert.match(response.assistant_message, /base de connaissances Girlz Culture/i);
   assert.doesNotMatch(response.assistant_message, /sections|published_payload/);
+});
+
+test('photo counts use only the authenticated business and distinguish unique saved images from public visibility', async () => {
+  const f = fixture({ visible: false, tables: { salons: [
+    { id: business, gallery_photos: ['a', 'b', 'a', ''], cover_photo_url: 'a', logo_url: 'logo' },
+    { id: 'other-business', gallery_photos: ['private-other', 'private-two', 'private-three'], cover_photo_url: 'private-cover' },
+  ] } });
+  const response = await f.run('get_business_media', {});
+  const media = response.request.result;
+  assert.equal(media.gallery_count, 2);
+  assert.equal(media.distinct_saved_images, 3);
+  assert.equal(media.cover_count, 1);
+  assert.equal(media.logo_count, 1);
+  assert.equal(media.duplicate_gallery_references, 1);
+  assert.equal(media.publicly_visible, false);
+  assert.equal(media.published_gallery_count, 0);
+  assert.doesNotMatch(JSON.stringify(response), /private-other|private-cover/);
+  assert.equal(f.calls.find(call => call.name === 'is_marketplace_visible').args.target_salon_id, business);
+  assert.equal(f.saved[0].permission, 'photos');
+  await assert.rejects(f.run('get_business_media', { salon_id: 'other-business' }), /ASSISTANT_INVALID_INPUT/);
+});
+
+test('photo reads fail closed without permission and retain unknown publication rather than inventing zero', async () => {
+  const revoked = fixture({ allowed: false });
+  await assert.rejects(revoked.run('get_business_media', {}), /ASSISTANT_ACCESS_DENIED/);
+  assert.equal(revoked.calls.some(call => call.table === 'salons'), false);
+  const f = fixture({ visibilityError: true, tables: { salons: [{ id: business, gallery_photos: ['a'] }] } });
+  const result = (await f.run('get_business_media', {})).request.result;
+  assert.equal(result.gallery_count, 1);
+  assert.equal(result.publicly_visible, null);
+  assert.equal(result.published_gallery_count, null);
+});
+
+test('owner platform guidance never retrieves a different public business page', async () => {
+  const f = fixture({ knowledge: [{ slug: 'salon/another-business', title: 'Other business', hero_subtitle: 'PRIVATE-B price 999 USD' }] });
+  const response = await f.run('search_platform_knowledge', { query: 'another-business 999 price' });
+  assert.equal(response.request.result.matches.length, 0);
+  assert.doesNotMatch(JSON.stringify(response.request.result), /PRIVATE-B/);
+  const reads = f.calls.filter(call => call.name === 'get_public_content_page');
+  assert.deepEqual(reads.map(call => call.args.p_slug).sort(), ['faq', 'help', 'how-it-works', 'pricing', 'privacy', 'terms']);
+  assert.equal(f.calls.some(call => call.name === 'get_public_content_pages'), false);
 });
 
 test('revoked permission and expired subscription stop reads and proposal saves', async () => {

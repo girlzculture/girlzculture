@@ -89,5 +89,7 @@ test('a non-JSON provider failure retains the exact support reference from the r
   app.responses[0].resolve(new Response('<html>Upstream unavailable</html>', {status:502,headers:{'Content-Type':'text/html','X-Request-ID':reference}}));
   await tick();
   assert.ok(app.find(node => node.type === 'span' && node.props.children === reference), 'Parsing a non-JSON error must not discard the server incident reference');
-  assert.equal(app.articles().length,0);
+  assert.equal(app.articles().length, 1, 'the submitted message remains available after failure');
+  assert.ok(app.find(node => node.type === 'button' && node.props.children === 'Retry message'));
+  assert.equal(JSON.stringify(app.render()).includes('Upstream unavailable'), false, 'raw error bodies must never render');
 });

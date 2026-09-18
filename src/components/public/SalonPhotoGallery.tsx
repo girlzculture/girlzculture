@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ImageOff, Images, Minus, Plus, X } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
+import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 
-export default function SalonPhotoGallery({ photos, salonName }: { photos: string[]; salonName: string }) {
-  const available = useMemo(() => photos.filter(Boolean), [photos]);
+export default function SalonPhotoGallery({ photos, salonName, metadata = {} }: { photos: string[]; salonName: string; metadata?: BusinessPhotoMetadata }) {
+  const available = useMemo(() => [...new Set(photos.filter(Boolean))], [photos]);
   const tiles = Array.from({ length: 5 }, (_, index) => available[index] || null);
   const remaining = Math.max(0, available.length - 5);
   const [active, setActive] = useState<number | null>(null);
@@ -97,9 +98,10 @@ export default function SalonPhotoGallery({ photos, salonName }: { photos: strin
       <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold">{salonName} · Photo {active + 1} of {available.length}</p><div className="flex items-center gap-2"><button type="button" aria-label="Zoom out" onClick={()=>setZoom(value=>Math.max(1,value-.5))} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Minus/></button><button type="button" aria-label="Zoom in" onClick={()=>setZoom(value=>Math.min(4,value+.5))} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Plus/></button><button ref={closeButtonRef} type="button" aria-label="Close photo gallery" onClick={close} className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><X/></button></div></div>
       <div className="relative mt-3 flex min-h-0 flex-1 items-center justify-center overflow-hidden touch-none" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onContextMenu={event=>event.preventDefault()}>
         <button type="button" aria-label="Previous photo" onPointerDown={event=>event.stopPropagation()} onClick={()=>move(-1)} className="absolute left-1 z-10 grid h-12 w-12 place-items-center rounded-full bg-white/10 backdrop-blur sm:left-4"><ArrowLeft/></button>
-        <SafeImage src={available[active]} fallbackSrc={available[active]} alt={`${salonName} gallery photo ${active + 1}`} draggable={false} className="max-h-full max-w-full select-none object-contain transition-transform duration-150" style={{ transform: `scale(${zoom})` }} />
+        <SafeImage src={available[active]} fallbackSrc={available[active]} alt={metadata[available[active]]?.title || `${salonName} gallery photo ${active + 1}`} draggable={false} className="max-h-full max-w-full select-none object-contain transition-transform duration-150" style={{ transform: `scale(${zoom})` }} />
         <button type="button" aria-label="Next photo" onPointerDown={event=>event.stopPropagation()} onClick={()=>move(1)} className="absolute right-1 z-10 grid h-12 w-12 place-items-center rounded-full bg-white/10 backdrop-blur sm:right-4"><ArrowRight/></button>
       </div>
+      {metadata[available[active]]?.title || metadata[available[active]]?.caption ? <div className="mx-auto mt-3 max-h-32 max-w-2xl overflow-auto text-center" data-no-translate><h2 className="font-semibold">{metadata[available[active]]?.title}</h2><p className="mt-1 whitespace-pre-wrap break-words text-sm">{metadata[available[active]]?.caption}</p></div> : null}
       <p className="pt-3 text-center text-[10px] gc-text-on-dark-muted">Use arrow keys or swipe to browse. Pinch or use the zoom controls to inspect a photo.</p>
     </div> : null}
   </>;

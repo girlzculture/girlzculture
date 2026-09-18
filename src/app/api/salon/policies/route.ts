@@ -9,9 +9,21 @@ import { withOperationalMonitoring, routeMonitoringProfile } from "@/lib/operati
 const headers = { "Cache-Control": "private, no-store" };
 const locales = new Set(["en", "fr", "wo", "es", "zh-CN"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const policyDigest = (policy: unknown) => createHash("sha256").update(JSON.stringify(validateBusinessPolicy(policy))).digest("hex");
+const policyDigest = (policy: unknown) => {
+  const validated = validateBusinessPolicy(policy);
+  // JSONB preserves values, not JavaScript key insertion order. Approval must
+  // compare content across that round trip while still rejecting edited drafts.
+  const canonical = Object.fromEntries(Object.entries(validated).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+};
 async function handle(request: Request) {
   let context: Awaited<ReturnType<typeof requireSalonPermission>> | undefined;
+  async function stalePreview() {
+    const reference = await capturePlatformError({ request, admin: context?.admin, actorId: context?.user.id, salonId: context?.salon.id, error: new Error("POLICY_PREVIEW_STALE"), feature: "business-policies", action: "review-conflict", actorRole: "salon", severity: "low", safeMessage: "The policy changed after review. Review a new draft before publishing." });
+    // Preserve this actionable conflict and its exact Engine reference. The
+    // generic monitoring wrapper otherwise turns code-only HTTP 409 into 500.
+    return Response.json({ code: "POLICY_PREVIEW_STALE", request_id: reference }, { status: 409, headers: { ...headers, "X-Request-ID": reference } });
+  }
   try {
     context = await requireSalonPermission(request, "my_page");
     const { admin, salon, user } = context;
@@ -38,7 +50,7 @@ async function handle(request: Request) {
     const draft = await admin.from("business_policy_revisions").select("policy").eq("salon_id", salon.id).eq("id", body.revision_id).maybeSingle();
     if (draft.error) throw draft.error;
     if (draft.error || !draft.data) return Response.json({ code: "POLICY_NOT_FOUND" }, { status: 404, headers });
-    if (policyDigest(draft.data.policy) !== body.digest) return Response.json({ code: "POLICY_PREVIEW_STALE" }, { status: 409, headers });
+    if (policyDigest(draft.data.policy) !== body.digest) return stalePreview();
     const result = await admin.rpc("publish_business_policy", { p_salon: salon.id, p_user: user.id, p_revision: body.revision_id, p_expected_revision: body.expected_revision || null });
     if (result.error) throw result.error;
     return Response.json({ revision: result.data, verified: true }, { headers });
@@ -48,7 +60,8 @@ async function handle(request: Request) {
     if (error instanceof PolicyInputError) return Response.json({ code: error.code }, { status: 400, headers });
     const message = error instanceof Error ? error.message : String((error as { message?: string })?.message || "");
     if (message === "PLAN_ACCESS_REQUIRED") return Response.json({ code: message }, { status: 403, headers });
-    if (/Unauthorized|Forbidden|POLICY_PREVIEW_STALE|POLICY_NOT_FOUND|FORBIDDEN/.test(message)) return Response.json({ code: /Unauthorized/.test(message) ? "AUTH_REQUIRED" : /STALE/.test(message) ? "POLICY_PREVIEW_STALE" : "ACCESS_DENIED" }, { status: /Unauthorized/.test(message) ? 401 : /STALE/.test(message) ? 409 : 403, headers });
+    if (message.includes("POLICY_PREVIEW_STALE")) return stalePreview();
+    if (/Unauthorized|Forbidden|POLICY_NOT_FOUND|FORBIDDEN/.test(message)) return Response.json({ code: /Unauthorized/.test(message) ? "AUTH_REQUIRED" : "ACCESS_DENIED" }, { status: /Unauthorized/.test(message) ? 401 : 403, headers });
     const reference = await capturePlatformError({ request, admin: context?.admin, actorId: context?.user.id, salonId: context?.salon.id, error, feature: "business-policies", action: request.method.toLowerCase(), actorRole: "salon", safeMessage: "Business policies are temporarily unavailable." });
     return safeFailure("Business policies are temporarily unavailable.", reference, 500, { code: "POLICY_UNAVAILABLE" });
   }

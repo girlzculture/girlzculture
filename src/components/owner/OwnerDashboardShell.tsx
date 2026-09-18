@@ -25,7 +25,7 @@ import RoleLogoutButton, {
   RoleSessionBoundary,
 } from "@/components/auth/RoleLogoutButton";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
-import { GcAssistantLauncher } from "@/components/owner/GcAssistant";
+import { GcAssistantLauncher, useAssistantDocked } from "@/components/owner/GcAssistant";
 import DashboardNotificationCenter, {
   type DashboardNotification,
 } from "@/components/notifications/DashboardNotificationCenter";
@@ -62,7 +62,7 @@ const nav = [
   ["bookings", "Bookings", CalendarDays],
   ["messages", "Messages", MessageSquare],
   ["reviews", "Reviews", Star],
-  ["earnings", "Earnings & Payouts", CircleDollarSign],
+  ["earnings", "Finances", CircleDollarSign],
   ["promotions", "Promotions", Megaphone],
   ["subscription", "Subscription", Crown],
   ["settings", "Settings", Settings],
@@ -88,6 +88,7 @@ export default function OwnerDashboardShell({
   notifications?: DashboardNotification[];
   access?: Record<string, boolean> | null;
 }) {
+  const assistantDocked = useAssistantDocked();
   const [notificationCounts, setNotificationCounts] = useState<
     Record<string, number>
   >({});
@@ -164,18 +165,15 @@ export default function OwnerDashboardShell({
             : 0;
 
   return (
-    <div className="gc-dashboard min-h-screen bg-white text-ink lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+    <div data-owner-dashboard className="gc-dashboard min-h-screen bg-white text-ink lg:grid lg:grid-cols-[216px_minmax(0,1fr)]">
       <RoleSessionBoundary scope="salon" />
       <OwnerRealtimeAlertBridge />
-      <aside className="gc-workspace-sidebar fixed inset-y-0 left-0 z-50 hidden w-[240px] overflow-y-auto px-4 py-5 text-white lg:block">
+      <aside className="gc-workspace-sidebar fixed inset-y-0 left-0 z-50 hidden w-[216px] overflow-y-auto px-3 py-5 text-white lg:block">
         <Link
           href={homeHref}
           className="block px-3 font-serif text-[31px] font-bold leading-none"
         >
-          Girlz
-          <span className="block pl-1 text-[10px] uppercase tracking-[0.35em] text-amber">
-            Culture
-          </span>
+          <span className="text-[26px]">Girlz Culture</span>
         </Link>
         <nav aria-label="Salon owner navigation" className="mt-7 space-y-1">
           {visibleNav.map(([id, label, Icon]) => {
@@ -229,7 +227,7 @@ export default function OwnerDashboardShell({
       </aside>
 
       <div className="min-w-0 lg:col-start-2">
-        <header className="gc-brand-header sticky top-0 z-40 flex h-[74px] items-center justify-between border-b border-plum/10 px-4 backdrop-blur lg:px-8">
+        <header className="gc-owner-header sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b border-border bg-white/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-5">
           <DashboardMobileMenu
             ariaLabel="owner navigation"
             items={visibleNav.map(([id, label, Icon]) => ({
@@ -243,18 +241,19 @@ export default function OwnerDashboardShell({
           />
           <Link
             href={homeHref}
-            className="shrink-0 font-serif text-[22px] font-bold leading-none text-plum sm:text-[27px] lg:block"
+            className="mr-auto shrink-0 font-serif text-[22px] font-bold leading-none text-ink lg:hidden"
           >
             Girlz
             <span className="mt-1 block text-[8px] uppercase tracking-[0.22em] text-amber sm:ml-1 sm:mt-0 sm:inline sm:text-[9px]">
               Culture
             </span>
           </Link>
-          <LanguageSelector compact className="ml-auto mr-2 sm:mr-4" />
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="mr-auto hidden min-w-0 max-w-md flex-1 lg:block"><WorkspaceToolbar compact homeHref={homeHref} homeLabel="Overview" current={nav.find(([id]) => id === section)?.[1] || "Workspace"} destinations={visibleNav.map(([id, label]) => ({ label, href: hrefFor(id) }))}/></div>
+          <LanguageSelector compact className="order-2 mr-auto sm:order-none sm:mr-0" />
+          <div className="flex items-center gap-2">
             <Link
               href={`/salon/${salonSlug}`}
-              className="hidden items-center gap-1 text-xs font-semibold text-plum sm:inline-flex"
+              className="hidden items-center gap-1 text-xs font-semibold text-text-link xl:inline-flex"
             >
               View Public Page
               <ExternalLink aria-hidden="true" size={14} />
@@ -276,7 +275,7 @@ export default function OwnerDashboardShell({
                 <UserRound aria-hidden="true" size={19} />
               )}
             </div>
-            <span data-no-translate className="hidden max-w-44 truncate text-xs font-semibold sm:block">
+            <span data-no-translate className="hidden max-w-32 truncate text-xs font-semibold xl:block">
               {salonName}
             </span>
             <ChevronDown
@@ -285,12 +284,9 @@ export default function OwnerDashboardShell({
               className="hidden sm:block"
             />
           </div>
+          <div className="order-2 sm:order-none"><GcAssistantLauncher /></div>
         </header>
-        <div className="flex justify-end border-b border-plum/10 bg-white px-4 py-2 sm:px-6 lg:px-8">
-          <GcAssistantLauncher />
-        </div>
-        <main data-owner-workspace className="min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-8">
-          <WorkspaceToolbar homeHref={homeHref} homeLabel="Overview" current={nav.find(([id]) => id === section)?.[1] || "Workspace"} destinations={visibleNav.map(([id, label]) => ({ label, href: hrefFor(id) }))}/>
+        <main data-owner-workspace className={`min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-5 lg:pb-8 ${assistantDocked ? "xl:mr-[336px]" : ""}`}>
           {children}
         </main>
       </div>

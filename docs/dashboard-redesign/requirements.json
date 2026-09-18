@@ -1,0 +1,3316 @@
+{
+  "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
+  "branch": "codex/business-dashboard-value-redesign",
+  "published_baseline": "6aac503fa5eacb00089c6d87",
+  "status": "IMPLEMENTING; NOT RELEASED",
+  "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
+  "decisions": {
+    "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
+    "assistant_boundary": "Authenticated authorized business only, including public records; enforce before model through backend/tools/queries/cache/memory/exports/actions.",
+    "promotion": "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms.",
+    "caps": "Preserve both existing USD25 caps",
+    "wolof": "Explicitly deferred"
+  },
+  "requirements": [
+    {
+      "id": "UI-01",
+      "index": "Apply a coherent redesign to all 14 owner navigation sections: Overview, My Page, Photos, Styles & Pricing, Stylists, Products, Availability & Calendar,…",
+      "definition": "| UI-01 | Apply a coherent redesign to all 14 owner navigation sections: Overview, My Page, Photos, Styles & Pricing, Stylists, Products, Availability & Calendar, Bookings, Messages, Reviews, Finances (renamed from Earnings & Payouts), Promotions, Subscription, Settings. Include their editing/detail views and dialogs. | A page inventory and matched screenshots account for every section; no old landing screen is silently excluded. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 49,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Shared shell and first two page compositions implemented; remaining twelve pages still required."
+      ],
+      "verification": [
+        "Screenshot review exposed and corrected dashboard font override and stacked setup banners"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "UI-02",
+      "index": "Match the references' layout and visual hierarchy: compact header, recognizable navigation, useful page headings, organized cards, imagery, clear actions,…",
+      "definition": "| UI-02 | Match the references' layout and visual hierarchy: compact header, recognizable navigation, useful page headings, organized cards, imagery, clear actions, consistent spacing and typography. | Review composition as well as colors/fonts. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 50,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "UI-03",
+      "index": "Reduce the stacked header, assistant-button strip, breadcrumb/search strip, and oversized route cards that push actual work down the page.",
+      "definition": "| UI-03 | Reduce the stacked header, assistant-button strip, breadcrumb/search strip, and oversized route cards that push actual work down the page. | Owners reach the main editor, calendar, gallery, list, or conversation directly. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 51,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Removed separate assistant/search strips; compact setup disclosure and moved setup help below My Page."
+      ],
+      "verification": [
+        "Local screenshots reviewed; combined layout tests running"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "UI-04",
+      "index": "Preserve existing functions, data, validation, permissions, and save/publish behavior while changing their presentation",
+      "definition": "| UI-04 | Preserve existing functions, data, validation, permissions, and save/publish behavior while changing their presentation. Spreadsheet import/export remains accessible as a secondary task instead of dominating everyday work. | Existing important workflows remain reachable and functional. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 52,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "UI-05",
+      "index": "Use plain business language",
+      "definition": "| UI-05 | Use plain business language. Replace implementation-oriented explanations in ordinary screens with useful labels, statuses, help, and recoverable errors. | For example, media owners see uploading/saved/published/retry status rather than a permanent explanation of storage stages. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 53,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "UI-06",
+      "index": "Design loading, empty, error, and populated states deliberately.",
+      "definition": "| UI-06 | Design loading, empty, error, and populated states deliberately. | A business without transactions or bookings still gets a useful screen; missing activity is never replaced with fabricated live figures. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 54,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "UI-07",
+      "index": "Extend the founder's modern, bright, colorful, conversational and interactive design direction and plain-language copy review across the main website and…",
+      "definition": "| UI-07 | Extend the founder's modern, bright, colorful, conversational and interactive design direction and plain-language copy review across the main website and app as well as the owner dashboard. | Keep the detailed dashboard references as the current visual specification; incorporate further customer-facing design instructions as they arrive. Public profile, policy, promotion and booking changes below are already explicit scope. |",
+      "detail_sections": [
+        "2"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 55,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/dashboard/WorkspaceToolbar.tsx",
+        "src/app/globals.css"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "MOB-01",
+      "index": "Keep every necessary feature accessible on mobile, using compact cards, lists, tabs, and menus suitable for touch.",
+      "definition": "| MOB-01 | Keep every necessary feature accessible on mobile, using compact cards, lists, tabs, and menus suitable for touch. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 63,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "MOB-02",
+      "index": "Keep a clearly labeled GC Assistant icon/button near the top on every owner page",
+      "definition": "| MOB-02 | Keep a clearly labeled GC Assistant icon/button near the top on every owner page. Open the conversation only on a tap; do not automatically cover the mobile screen. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 64,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "MOB-03",
+      "index": "Use shorter My Page labels: Info, Services, Location, More",
+      "definition": "| MOB-03 | Use shorter My Page labels: Info, Services, Location, More. Desktop retains fuller labels such as Services & Pricing and Location & Hours. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 65,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "MOB-04",
+      "index": "More exposes Amenities & Policies, Social & Links, and other overflow content",
+      "definition": "| MOB-04 | More exposes Amenities & Policies, Social & Links, and other overflow content. Selecting an item displays its actual editable content. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 66,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "MOB-05",
+      "index": "Actions that do not fit, including calendar availability/full-day actions, go in an accessible three-line/menu or More control",
+      "definition": "| MOB-05 | Actions that do not fit, including calendar availability/full-day actions, go in an accessible three-line/menu or More control. Do not remove them on mobile. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 67,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "MOB-06",
+      "index": "Mobile photo uploads inherit the selected category and allow titles/captions and editing.",
+      "definition": "| MOB-06 | Mobile photo uploads inherit the selected category and allow titles/captions and editing. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 68,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Category selected in Photos carries into upload metadata; editor retains failed-save text."
+      ],
+      "verification": [
+        "390px browser verifies category selection and metadata recovery; real upload test pending"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "MOB-07",
+      "index": "Match the references' compact navigation and content hierarchy, including the mobile bottom navigation where appropriate",
+      "definition": "| MOB-07 | Match the references' compact navigation and content hierarchy, including the mobile bottom navigation where appropriate. Keep Save, Upload, Send, and Close usable when the keyboard is open. |",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 69,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "GC-01",
+      "index": "On desktop, show the assistant alongside the workspace by default on every owner page.",
+      "definition": "| GC-01 | On desktop, show the assistant alongside the workspace by default on every owner page. | Current int10 is a large overlay that tints and obscures the page. Target is the reference's adjacent panel. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 163,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Nonmodal adjacent desktop panel; workspace reserves its width."
+      ],
+      "verification": [
+        "18/18 Chromium/WebKit interaction tests; desktop 1440x900 geometry and route continuity."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "GC-02",
+      "index": "Provide X to close and an obvious way to reopen.",
+      "definition": "| GC-02 | Provide X to close and an obvious way to reopen. | Closing must work immediately and not be instantly undone by a rerender. The assistant stays available on each page. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 164,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Close/reopen preserves active draft and conversation."
+      ],
+      "verification": [
+        "18/18 interaction tests across four viewports."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "GC-03",
+      "index": "On mobile, show the top entry button; open only on tap.",
+      "definition": "| GC-03 | On mobile, show the top entry button; open only on tap. | The conversation must not automatically cover the working screen. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 165,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Mobile and tablet panel stays closed until launcher tap."
+      ],
+      "verification": [
+        "18/18 interaction tests across four viewports."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "GC-04",
+      "index": "Use “GC Assistant” and “Your business co-pilot.” Remove “AI” and generic “Ask about…” phrasing from assistant-facing labels and copy.",
+      "definition": "| GC-04 | Use “GC Assistant” and “Your business co-pilot.” Remove “AI” and generic “Ask about…” phrasing from assistant-facing labels and copy. | Current footer says “Review AI suggestions before saving changes.” Use plain wording such as “Review suggested changes before saving.” Preserve the review behavior. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 166,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "GC-05",
+      "index": "Keep voice interaction and read-aloud controls understandable and compact.",
+      "definition": "| GC-05 | Keep voice interaction and read-aloud controls understandable and compact. | Current repeated device-voice explanations take significant message space; place necessary information in suitable help/settings. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 167,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "GC-06",
+      "index": "Update assistant context to the current page and business",
+      "definition": "| GC-06 | Update assistant context to the current page and business. Keep the conversation coherent as the owner navigates. | int10 shows booking/calendar/overview suggestion chips while Products is open. Provide contextually useful actions rather than repeating the same generic chips after each answer. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 168,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "GC-07",
+      "index": "Retrieve relevant authorized business facts when needed and preserve language preferences.",
+      "definition": "| GC-07 | Retrieve relevant authorized business facts when needed and preserve language preferences. | A static reply asking for service details does not establish a backend defect; inspect actual retrieval before diagnosing. Do not make owners repeat information the assistant can legitimately read. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 169,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "GC-08",
+      "index": "Keep changes reviewable and verify actual outcomes through existing tools/permissions.",
+      "definition": "| GC-08 | Keep changes reviewable and verify actual outcomes through existing tools/permissions. | Do not replace real operations with decorative success messages. Existing confirmation requirements remain in effect. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 170,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "GC-09",
+      "index": "Retain the existing consent-based memory behavior.",
+      "definition": "| GC-09 | Retain the existing consent-based memory behavior. | A persistent panel or route change must not silently enable transcript storage or cross-business access. |",
+      "detail_sections": [
+        "5",
+        "10",
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 171,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/assistantMemoryServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "CHAT-01",
+      "index": "Immediately insert submitted messages, clear the composer, and show a separate assistant loading state; implement and verify every interaction below.",
+      "definition": "Immediately insert submitted messages, clear the composer, and show a separate assistant loading state; implement and verify every interaction below.",
+      "detail_sections": [
+        "6"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 576,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "tests/browser/p0-assistant-skills.spec.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Optimistic turn, separate loader, exact-reference failure/retry, stable retry ID, next-draft preservation, synchronous duplicate-submit guard, IME/multiline handling and scroll retention."
+      ],
+      "verification": [
+        "Baseline failed before response arrived; corrected 18/18 browser checks plus five actor/session tests. Timeout/offline and actual mobile keyboard/live checks still required."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "NL-01",
+      "index": "Accept everyday wording, abbreviations, common service aliases, punctuation differences, misspellings, spoken rambling and multilingual phrasing",
+      "definition": "Accept everyday wording, abbreviations, common service aliases, punctuation differences, misspellings, spoken rambling and multilingual phrasing",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 577,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantPlannerProtocol.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/gcAssistantPresentation.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Scoped service search ranks aliases/typos while retaining real record identities and prices."
+      ],
+      "verification": [
+        "tests/p0-assistant-execution.test.mjs: related styles and literal wildcard regressions"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "NL-02",
+      "index": "Resolve wording to real catalog records",
+      "definition": "Resolve wording to real catalog records",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 578,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantPlannerProtocol.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/gcAssistantPresentation.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Distinctive service names remain separate; related matches are not exact identities."
+      ],
+      "verification": [
+        "14 execution tests passed"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "NL-03",
+      "index": "Preserve intent across follow-ups",
+      "definition": "Preserve intent across follow-ups",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 579,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantPlannerProtocol.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/gcAssistantPresentation.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Photo lookup and follow-up facts reach planning/answer generation; revoked Photos permission strips them."
+      ],
+      "verification": [
+        "31 planning tests passed; live provider check pending"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "NL-04",
+      "index": "Answer first, then offer a relevant next action if helpful",
+      "definition": "Answer first, then offer a relevant next action if helpful",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 580,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantPlannerProtocol.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/gcAssistantPresentation.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "NL-05",
+      "index": "Distinguish zero records, zero search matches, unavailable data and an unsuccessful lookup",
+      "definition": "Distinguish zero records, zero search matches, unavailable data and an unsuccessful lookup",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 581,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantPlannerProtocol.ts",
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/gcAssistantPresentation.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Inventory totals are distinct from filtered matches; saved photo counts are distinct from public visibility unknown/false."
+      ],
+      "verification": [
+        "14 execution tests passed"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "DATA-01",
+      "index": "Connect the assistant to the same authoritative business records used by the dashboard, using authorized lookups on demand and maintained Girlz Culture…",
+      "definition": "Connect the assistant to the same authoritative business records used by the dashboard, using authorized lookups on demand and maintained Girlz Culture…",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 582,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/ownerBusinessMetrics.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "DATA-02",
+      "index": "Use authoritative amounts/counts and reliable calculation code for arithmetic, percentages, financial rounding and date filters",
+      "definition": "Use authoritative amounts/counts and reliable calculation code for arithmetic, percentages, financial rounding and date filters",
+      "detail_sections": [
+        "10"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 583,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/ownerBusinessMetrics.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "SCOPE-01",
+      "index": "The assistant serves the currently selected, authorized business only, plus general Girlz Culture platform guidance",
+      "definition": "The assistant serves the currently selected, authorized business only, plus general Girlz Culture platform guidance",
+      "detail_sections": [
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 584,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/assistantMemoryServer.ts",
+        "src/app/api/salon/assistant/route.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Current-business services/media reads and platform-guidance allowlist; no foreign ID/URL accepted."
+      ],
+      "verification": [
+        "API and execution fixtures include two separate businesses"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "SCOPE-02",
+      "index": "Enforce that boundary in the application's server-side authorization and data access, not merely in conversational instructions",
+      "definition": "Enforce that boundary in the application's server-side authorization and data access, not merely in conversational instructions",
+      "detail_sections": [
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 585,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/assistantMemoryServer.ts",
+        "src/app/api/salon/assistant/route.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "SCOPE-03",
+      "index": "Apply the same boundary to searches, tools, file/media reads, aggregates, caches, conversation context, saved memory, exports and write actions",
+      "definition": "Apply the same boundary to searches, tools, file/media reads, aggregates, caches, conversation context, saved memory, exports and write actions",
+      "detail_sections": [
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 586,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/assistantMemoryServer.ts",
+        "src/app/api/salon/assistant/route.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "SCOPE-04",
+      "index": "If the application allows a user to manage multiple businesses, a deliberate authorized business switch sets a new context; do not carry one business's…",
+      "definition": "If the application allows a user to manage multiple businesses, a deliberate authorized business switch sets a new context; do not carry one business's…",
+      "detail_sections": [
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 587,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/assistantMemoryServer.ts",
+        "src/app/api/salon/assistant/route.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "SCOPE-05",
+      "index": "Verify direct requests, indirect comparisons, guessed record IDs and follow-up questions across two isolated test businesses",
+      "definition": "Verify direct requests, indirect comparisons, guessed record IDs and follow-up questions across two isolated test businesses",
+      "detail_sections": [
+        "11"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 588,
+      "implementation_paths": [
+        "src/lib/gcAssistantServer.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/assistantMemoryServer.ts",
+        "src/app/api/salon/assistant/route.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Direct foreign IDs, foreign public guidance, revoked permissions, and history replay tested at backend boundary."
+      ],
+      "verification": [
+        "14 execution + 31 planning + 4 profile/media tests; live interface refusal still pending"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-01",
+      "index": "Fix the reported unavailable/save/confirm/publish failure",
+      "definition": "Fix the reported unavailable/save/confirm/publish failure",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 589,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Canonical digest fixes false stale preview after JSONB key reorder; genuine stale review retains HTTP409 and exact reference."
+      ],
+      "verification": [
+        "Read-only historical incident HTTP409 confirmed. Reproduced API failure before fix; 3/3 API/audit tests after fix. Live publication still pending."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-02",
+      "index": "Replace the collection of refund/satisfaction, missed-appointment, late-arrival, guest and children dropdowns with one main text editor titled Business Policy",
+      "definition": "Replace the collection of refund/satisfaction, missed-appointment, late-arrival, guest and children dropdowns with one main text editor titled Business Policy",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 590,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Primary Business Policy editor with optional preparation and separate explicit structured booking rules."
+      ],
+      "verification": [
+        "Three editor/conversion tests passing; browser contract update in progress."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-03",
+      "index": "Give optional writing guidance or an editable starting outline covering cancellation notice, missed appointments, late arrivals, rescheduling,…",
+      "definition": "Give optional writing guidance or an editable starting outline covering cancellation notice, missed appointments, late arrivals, rescheduling,…",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 591,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Optional writing guidance uses no invented prefilled terms."
+      ],
+      "verification": [
+        "Policy editor unit and focused mobile publish test passed"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-04",
+      "index": "Keep an optional Before your appointment text area, as expressly allowed",
+      "definition": "Keep an optional Before your appointment text area, as expressly allowed",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 592,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Optional preparation retained; legacy notes folded into primary policy prose."
+      ],
+      "verification": [
+        "Policy conversion tests passed"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-05",
+      "index": "Move walk-in acceptance to a Walk-ins welcome checkbox in My Page",
+      "definition": "Move walk-in acceptance to a Walk-ins welcome checkbox in My Page",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 593,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "My Page Walk-ins welcome checkbox persists through profile API and renders a public label; booking settings untouched."
+      ],
+      "verification": [
+        "390px save-refresh plus permission/validation unit pass; public live check pending"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-06",
+      "index": "Publish a clear Business Policy link on the public business page",
+      "definition": "Publish a clear Business Policy link on the public business page",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 594,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-07",
+      "index": "Carry existing saved policy content into the new editor without loss",
+      "definition": "Carry existing saved policy content into the new editor without loss",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 595,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full clause verification and final production release pending",
+      "changes": [
+        "Legacy prose and enum terms converted in the original source language without rewriting published revisions or dropping retained fields."
+      ],
+      "verification": [
+        "Three editor/conversion tests plus four disclosure tests pass; historical and live acceptance still pending."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "POL-08",
+      "index": "Acceptance follows the full path: edit → save/review → publish → refresh → public policy link → booking acknowledgement, including a failed-save recovery",
+      "definition": "Acceptance follows the full path: edit → save/review → publish → refresh → public policy link → booking acknowledgement, including a failed-save recovery",
+      "detail_sections": [
+        "12"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 596,
+      "implementation_paths": [
+        "src/components/owner/BusinessPolicies.tsx",
+        "src/lib/businessPolicyCore.ts",
+        "src/lib/businessPolicyServer.ts",
+        "src/components/booking/BusinessPolicyDisclosure.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "BILL-01",
+      "index": "The founder reports Subscription → Manage payment method shows an unavailable/support-reference error",
+      "definition": "The founder reports Subscription → Manage payment method shows an unavailable/support-reference error",
+      "detail_sections": [
+        "13"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 597,
+      "implementation_paths": [
+        "src/app/api/stripe/portal/route.ts",
+        "src/components/owner/OwnerDashboardApp.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": [],
+      "status": "INVESTIGATING",
+      "evidence": [
+        "Read-only production Engine event b19ef999-8b7b-4a21-811f-6e1de5a443cf: two /api/stripe/portal failures, Sep17 22:17 and23:34UTC, STRIPE_PROVIDER_FAILURE:400. Provider reason absent. No diagnosis of account/card/configuration cause is yet proven."
+      ]
+    },
+    {
+      "id": "BILL-02",
+      "index": "Let the authorized business owner update the payment method attached to the correct existing subscription/billing customer",
+      "definition": "Let the authorized business owner update the payment method attached to the correct existing subscription/billing customer",
+      "detail_sections": [
+        "13"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 598,
+      "implementation_paths": [
+        "src/app/api/stripe/portal/route.ts",
+        "src/components/owner/OwnerDashboardApp.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "BILL-03",
+      "index": "Reuse the secure Stripe integration for collecting/updating payment details",
+      "definition": "Reuse the secure Stripe integration for collecting/updating payment details",
+      "detail_sections": [
+        "13"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 599,
+      "implementation_paths": [
+        "src/app/api/stripe/portal/route.ts",
+        "src/components/owner/OwnerDashboardApp.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "BILL-04",
+      "index": "Verify update and cancellation paths, persistence/default selection, correct business association and absence of an app-initiated charge from this action",
+      "definition": "Verify update and cancellation paths, persistence/default selection, correct business association and absence of an app-initiated charge from this action",
+      "detail_sections": [
+        "13"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 600,
+      "implementation_paths": [
+        "src/app/api/stripe/portal/route.ts",
+        "src/components/owner/OwnerDashboardApp.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-01",
+      "index": "Rename Earnings & Payouts to Finances in navigation, headings, breadcrumbs, page search, assistant guidance and translated labels",
+      "definition": "Rename Earnings & Payouts to Finances in navigation, headings, breadcrumbs, page search, assistant guidance and translated labels",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 601,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PROMO-01",
+      "index": "A promotion can target selected styles/services, a service group or the business's eligible services as a whole",
+      "definition": "A promotion can target selected styles/services, a service group or the business's eligible services as a whole",
+      "detail_sections": [
+        "14",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 602,
+      "implementation_paths": [
+        "src/lib/salonPromotions.ts",
+        "src/lib/decisionSearchEnrichmentCore.ts",
+        "src/components/owner/SalonPromotionsManager.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PROMO-02",
+      "index": "Show clear evidence of an active offer on the relevant public business/service views and through booking: original price, offer/discount, revised payable…",
+      "definition": "Show clear evidence of an active offer on the relevant public business/service views and through booking: original price, offer/discount, revised payable…",
+      "detail_sections": [
+        "14",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 603,
+      "implementation_paths": [
+        "src/lib/salonPromotions.ts",
+        "src/lib/decisionSearchEnrichmentCore.ts",
+        "src/components/owner/SalonPromotionsManager.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PROMO-03",
+      "index": "The founder explicitly requires the booking deposit to remain unchanged; deduct the promotion's monetary saving from the remaining amount due",
+      "definition": "The founder explicitly requires the booking deposit to remain unchanged; deduct the promotion's monetary saving from the remaining amount due",
+      "detail_sections": [
+        "14",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 604,
+      "implementation_paths": [
+        "src/lib/salonPromotions.ts",
+        "src/lib/decisionSearchEnrichmentCore.ts",
+        "src/components/owner/SalonPromotionsManager.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PROMO-04",
+      "index": "Percentage basis needs an explicit final rule",
+      "definition": "Percentage basis needs an explicit final rule",
+      "detail_sections": [
+        "14",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 605,
+      "implementation_paths": [
+        "src/lib/salonPromotions.ts",
+        "src/lib/decisionSearchEnrichmentCore.ts",
+        "src/components/owner/SalonPromotionsManager.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "DECIDED",
+      "acceptance": "BLOCKED",
+      "blocker": "Cross-engine implementation and verification pending",
+      "changes": [
+        "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms."
+      ],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PROMO-05",
+      "index": "Define rounding, eligibility, overlapping promotions, optional add-ons and discounts larger than the available balance against the real pricing engine…",
+      "definition": "Define rounding, eligibility, overlapping promotions, optional add-ons and discounts larger than the available balance against the real pricing engine…",
+      "detail_sections": [
+        "14",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 606,
+      "implementation_paths": [
+        "src/lib/salonPromotions.ts",
+        "src/lib/decisionSearchEnrichmentCore.ts",
+        "src/components/owner/SalonPromotionsManager.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COPY-01",
+      "index": "Audit user-facing copy throughout the platform, especially GC Assistant",
+      "definition": "Audit user-facing copy throughout the platform, especially GC Assistant",
+      "detail_sections": [
+        "15"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 607,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/i18n"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COPY-02",
+      "index": "A concise greeting can identify the assistant and offer relevant help without claiming to be a human",
+      "definition": "A concise greeting can identify the assistant and offer relevant help without claiming to be a human",
+      "detail_sections": [
+        "15"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 608,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/i18n"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "AVATAR-01",
+      "index": "Replace the robot-only presentation with a choice of friendly illustrated/emoticon avatars: smiling men, smiling women and optional pets",
+      "definition": "Replace the robot-only presentation with a choice of friendly illustrated/emoticon avatars: smiling men, smiling women and optional pets",
+      "detail_sections": [
+        "15"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 609,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "AVATAR-02",
+      "index": "Use the selected avatar consistently in the assistant launcher, header and messages on desktop and mobile",
+      "definition": "Use the selected avatar consistently in the assistant launcher, header and messages on desktop and mobile",
+      "detail_sections": [
+        "15"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 610,
+      "implementation_paths": [
+        "src/components/owner/GcAssistant.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "MOB-08",
+      "index": "Review the supplied real mobile assistant captures for excessive header/footer/composer space, long low-information replies, repeated Read aloud…",
+      "definition": "Review the supplied real mobile assistant captures for excessive header/footer/composer space, long low-information replies, repeated Read aloud…",
+      "detail_sections": [
+        "3",
+        "15",
+        "16"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 611,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/GcAssistant.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Implementation and verification not completed",
+      "changes": [
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+      ],
+      "verification": [],
+      "live_evidence": [],
+      "status": "IMPLEMENTING",
+      "evidence": [
+        "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
+      ]
+    },
+    {
+      "id": "VALUE-01",
+      "index": "Girlz Culture should help the owner run the whole business, including activity originating outside the marketplace",
+      "definition": "Girlz Culture should help the owner run the whole business, including activity originating outside the marketplace",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 612,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/bookingCommunications.ts",
+        "src/i18n"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "VALUE-02",
+      "index": "The supplied specification requires deposits to route directly to the business, no Girlz Culture commission or Girlz Culture processing fee, and…",
+      "definition": "The supplied specification requires deposits to route directly to the business, no Girlz Culture commission or Girlz Culture processing fee, and…",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 613,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/bookingCommunications.ts",
+        "src/i18n"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "VALUE-03",
+      "index": "Keep every screen, label, export and assistant reply available in EN/FR/ES/ZH, using the existing language preference and DeepL integration where appropriate",
+      "definition": "Keep every screen, label, export and assistant reply available in EN/FR/ES/ZH, using the existing language preference and DeepL integration where appropriate",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 614,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/bookingCommunications.ts",
+        "src/i18n"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-02",
+      "index": "Automatic platform records: Capture service, agreed/listed price, actual deposit, stylist, customer, booking identity and date/time from platform bookings",
+      "definition": "Automatic platform records: Capture service, agreed/listed price, actual deposit, stylist, customer, booking identity and date/time from platform bookings",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 615,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-03",
+      "index": "Fast walk-in/off-platform entry: Make service, price, stylist and payment method the minimal required fields; client name is optional",
+      "definition": "Fast walk-in/off-platform entry: Make service, price, stylist and payment method the minimal required fields; client name is optional",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 616,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-04",
+      "index": "Balance at the chair: From a platform booking, provide a one-tap or comparably short action to record the remaining balance and its payment method",
+      "definition": "Balance at the chair: From a platform booking, provide a one-tap or comparably short action to record the remaining balance and its payment method",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 617,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-05",
+      "index": "Consistent transaction details: Store date, service/product, amount, deposit/balance/full-payment stage, cash/card/transfer method label, stylist where…",
+      "definition": "Consistent transaction details: Store date, service/product, amount, deposit/balance/full-payment stage, cash/card/transfer method label, stylist where…",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 618,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-06",
+      "index": "Stylist reporting: Earnings for any requested day/week/month/period, clients served and top earner",
+      "definition": "Stylist reporting: Earnings for any requested day/week/month/period, clients served and top earner",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 619,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-07",
+      "index": "Business reporting: Daily/weekly/monthly/custom-period totals, cash/card/transfer breakdown, deposit and balance position, revenue by service, platform…",
+      "definition": "Business reporting: Daily/weekly/monthly/custom-period totals, cash/card/transfer breakdown, deposit and balance position, revenue by service, platform…",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 620,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-08",
+      "index": "Daily close and summaries: Provide an understandable end-of-day summary plus automatic weekly and monthly totals",
+      "definition": "Daily close and summaries: Provide an understandable end-of-day summary plus automatic weekly and monthly totals",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 621,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-09",
+      "index": "Commission arrangements: Owner configures a stylist's percentage and calculation basis",
+      "definition": "Commission arrangements: Owner configures a stylist's percentage and calculation basis",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 622,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-10",
+      "index": "Booth rent: Configure weekly/monthly rent; track rent owed and paid and the stylist retaining their service income",
+      "definition": "Booth rent: Configure weekly/monthly rent; track rent owed and paid and the stylist retaining their service income",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 623,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-11",
+      "index": "Employee/flat arrangements: Record the agreed wage amount/period and other inputs required by that arrangement",
+      "definition": "Employee/flat arrangements: Record the agreed wage amount/period and other inputs required by that arrangement",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 624,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-12",
+      "index": "Deposit clarity: Clearly distinguish collected deposits, booked/unpaid balances and fully paid transactions, with a usable view of who still owes money at…",
+      "definition": "Deposit clarity: Clearly distinguish collected deposits, booked/unpaid balances and fully paid transactions, with a usable view of who still owes money at…",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 625,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-13",
+      "index": "Reports and exports: Monthly, quarterly and yearly income summaries, payment-method breakdowns, downloadable PDF and spreadsheet exports suitable for…",
+      "definition": "Reports and exports: Monthly, quarterly and yearly income summaries, payment-method breakdowns, downloadable PDF and spreadsheet exports suitable for…",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 626,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-14",
+      "index": "Owner-set deposits: Let businesses configure their deposit rate, including a higher rate above a service-price threshold",
+      "definition": "Owner-set deposits: Let businesses configure their deposit rate, including a higher rate above a service-price threshold",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 627,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-15",
+      "index": "Owner-controlled access: Owner sees the business's complete finance view and decides whether a stylist sees only their own earnings or none, and what…",
+      "definition": "Owner-controlled access: Owner sees the business's complete finance view and decides whether a stylist sees only their own earnings or none, and what…",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 628,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-16",
+      "index": "Owner-set deposit rates extend the earlier fixed-deposit assumptions; they do not erase the instruction that a promotion must leave the applicable deposit…",
+      "definition": "Owner-set deposit rates extend the earlier fixed-deposit assumptions; they do not erase the instruction that a promotion must leave the applicable deposit…",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 629,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-17",
+      "index": "Correct the source document's closing shorthand before it becomes code",
+      "definition": "Correct the source document's closing shorthand before it becomes code",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 630,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-18",
+      "index": "Keep agreed sale value, completed service/product sales, cash received, unpaid balances, expenses and recorded profit distinct",
+      "definition": "Keep agreed sale value, completed service/product sales, cash received, unpaid balances, expenses and recorded profit distinct",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 631,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "FIN-19",
+      "index": "Show profit from recorded revenue and applicable recorded costs",
+      "definition": "Show profit from recorded revenue and applicable recorded costs",
+      "detail_sections": [
+        "14",
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 632,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/lib/assistantFinance.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "CLIENT-01",
+      "index": "Maintain a business-specific client record containing past services/dates, exact service details or formula (color, size, length, technique and similar…",
+      "definition": "Maintain a business-specific client record containing past services/dates, exact service details or formula (color, size, length, technique and similar…",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 633,
+      "implementation_paths": [
+        "src/components/BookingNotes.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "CLIENT-02",
+      "index": "Make a returning client's history easy for the owner or an authorized relevant stylist to open before service",
+      "definition": "Make a returning client's history easy for the owner or an authorized relevant stylist to open before service",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 634,
+      "implementation_paths": [
+        "src/components/BookingNotes.tsx",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "ADVISE-01",
+      "index": "Deepen the existing assistant; preserve its working language, memory and action functionality",
+      "definition": "Deepen the existing assistant; preserve its working language, memory and action functionality",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 635,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/assistantPerformance.ts",
+        "src/lib/ownerReadServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "ADVISE-02",
+      "index": "Provide proactive, specific suggestions: slow Tuesday afternoons; a genuinely profitable but underbooked service; own-business regulars absent for six…",
+      "definition": "Provide proactive, specific suggestions: slow Tuesday afternoons; a genuinely profitable but underbooked service; own-business regulars absent for six…",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 636,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/assistantPerformance.ts",
+        "src/lib/ownerReadServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "ADVISE-03",
+      "index": "Offer useful next steps such as preparing a promotion, featuring a service, drafting a rebooking message, suggesting a schedule adjustment or a restock action",
+      "definition": "Offer useful next steps such as preparing a promotion, featuring a service, drafting a rebooking message, suggesting a schedule adjustment or a restock action",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 637,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/assistantPerformance.ts",
+        "src/lib/ownerReadServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "ADVISE-04",
+      "index": "Retain natural-language matching and follow-up continuity from sections 10–11",
+      "definition": "Retain natural-language matching and follow-up continuity from sections 10–11",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 638,
+      "implementation_paths": [
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/assistantPerformance.ts",
+        "src/lib/ownerReadServer.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COMMS-01",
+      "index": "Maintain one shareable business booking link showing its page, services, prices, availability and booking/deposit flow",
+      "definition": "Maintain one shareable business booking link showing its page, services, prices, availability and booking/deposit flow",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 639,
+      "implementation_paths": [
+        "src/lib/bookingCommunications.ts",
+        "src/lib/bookingMessageTranslationServer.ts",
+        "src/components/BookingInbox.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COMMS-02",
+      "index": "Create the two-way booking conversation automatically when a booking is made",
+      "definition": "Create the two-way booking conversation automatically when a booking is made",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 640,
+      "implementation_paths": [
+        "src/lib/bookingCommunications.ts",
+        "src/lib/bookingMessageTranslationServer.ts",
+        "src/components/BookingInbox.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COMMS-03",
+      "index": "Add automatic booking confirmation, day-before reminder, and post-visit thank-you/rebooking nudge in the customer's language",
+      "definition": "Add automatic booking confirmation, day-before reminder, and post-visit thank-you/rebooking nudge in the customer's language",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 641,
+      "implementation_paths": [
+        "src/lib/bookingCommunications.ts",
+        "src/lib/bookingMessageTranslationServer.ts",
+        "src/components/BookingInbox.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COMMS-04",
+      "index": "Let the business send promotions/updates to its own eligible client list, translated to customer languages",
+      "definition": "Let the business send promotions/updates to its own eligible client list, translated to customer languages",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 642,
+      "implementation_paths": [
+        "src/lib/bookingCommunications.ts",
+        "src/lib/bookingMessageTranslationServer.ts",
+        "src/components/BookingInbox.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "COMMS-05",
+      "index": "Position this as retaining and rebooking customers served by the business",
+      "definition": "Position this as retaining and rebooking customers served by the business",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 643,
+      "implementation_paths": [
+        "src/lib/bookingCommunications.ts",
+        "src/lib/bookingMessageTranslationServer.ts",
+        "src/components/BookingInbox.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "NOSHOW-01",
+      "index": "Capture the requested customer no-show and late-cancellation history and support a higher deposit for repeat incidents",
+      "definition": "Capture the requested customer no-show and late-cancellation history and support a higher deposit for repeat incidents",
+      "detail_sections": [
+        "17",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 644,
+      "implementation_paths": [
+        "src/lib/ownerReadServer.ts",
+        "src/components/SalonBookingWizard.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "NOSHOW-02",
+      "index": "Reconcile this new cross-platform request with the founder's earlier absolute restriction on an assistant using another business's information",
+      "definition": "Reconcile this new cross-platform request with the founder's earlier absolute restriction on an assistant using another business's information",
+      "detail_sections": [
+        "17",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 645,
+      "implementation_paths": [
+        "src/lib/ownerReadServer.ts",
+        "src/components/SalonBookingWizard.tsx",
+        "supabase/migrations"
+      ],
+      "state": "DECIDED",
+      "acceptance": "BLOCKED",
+      "blocker": "Own-business enforcement and two-business verification pending",
+      "changes": [
+        "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording."
+      ],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "WAIT-01",
+      "index": "Provide a waitlist by service, stylist and requested time",
+      "definition": "Provide a waitlist by service, stylist and requested time",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 646,
+      "implementation_paths": [
+        "src/components/dashboard/WorkspaceCalendar.tsx",
+        "src/components/SalonBookingWizard.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "STOCK-01",
+      "index": "Track retail products (such as wigs, oils, edge control and accessories) and key business supplies, with appropriate quantities and configurable low-stock…",
+      "definition": "Track retail products (such as wigs, oils, edge control and accessories) and key business supplies, with appropriate quantities and configurable low-stock…",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 647,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/SalonProductOrders.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "STOCK-02",
+      "index": "Log product sales into the same financial reporting model as services, preserving product identity, quantity, price, source and payment records",
+      "definition": "Log product sales into the same financial reporting model as services, preserving product identity, quantity, price, source and payment records",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 648,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/SalonProductOrders.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXPENSE-01",
+      "index": "Let the business log supplies, rent, restocks and other expenses with dates, amounts and useful categories",
+      "definition": "Let the business log supplies, rent, restocks and other expenses with dates, amounts and useful categories",
+      "detail_sections": [
+        "17"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 649,
+      "implementation_paths": [
+        "src/lib/financeLedgerCore.ts",
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "supabase/migrations"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-01",
+      "index": "Use the established project/domain girlzculture.com",
+      "definition": "Use the established project/domain girlzculture.com",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 650,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-02",
+      "index": "/site-access must provide the complete working customer homepage/marketplace entry and access to its other public pages",
+      "definition": "/site-access must provide the complete working customer homepage/marketplace entry and access to its other public pages",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 651,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-03",
+      "index": "Remove public demo/demonstration banners, demo-only labels, preview/demo disclaimers, sample-only notices and demo-specific restrictions on real booking…",
+      "definition": "Remove public demo/demonstration banners, demo-only labels, preview/demo disclaimers, sample-only notices and demo-specific restrictions on real booking…",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 652,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-04",
+      "index": "Make the public marketplace accessible and real eligible salons/services bookable",
+      "definition": "Make the public marketplace accessible and real eligible salons/services bookable",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 653,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-05",
+      "index": "Removing public demo notices does not authorize passing invented reviews, transactions, availability or synthetic sample businesses off as real",
+      "definition": "Removing public demo notices does not authorize passing invented reviews, transactions, availability or synthetic sample businesses off as real",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 654,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-06",
+      "index": "Primary customer navigation should expose Explore, For Businesses and How It Works, together with appropriate existing search, account and booking actions",
+      "definition": "Primary customer navigation should expose Explore, For Businesses and How It Works, together with appropriate existing search, account and booking actions",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 655,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-07",
+      "index": "Provide a mobile hamburger menu with access to the same relevant navigation, including For Businesses → Pricing",
+      "definition": "Provide a mobile hamburger menu with access to the same relevant navigation, including For Businesses → Pricing",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 656,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-08",
+      "index": "Customer discovery is currently for the supported hair-salon category",
+      "definition": "Customer discovery is currently for the supported hair-salon category",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 657,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-09",
+      "index": "Preserve the appointment/cancellation waitlist specified in part 5 of the Software Value Build Spec",
+      "definition": "Preserve the appointment/cancellation waitlist specified in part 5 of the Software Value Build Spec",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 658,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-10",
+      "index": "Preserve the existing public website's layout, content and journeys; use reference images only for visual inspiration in teal, white and black",
+      "definition": "Preserve the existing public website's layout, content and journeys; use reference images only for visual inspiration in teal, white and black",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 659,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-11",
+      "index": "Adapt the rounded/pill-shaped search bars and category controls, soft card corners, clear active tabs, compact header, balanced whitespace and prominent actions",
+      "definition": "Adapt the rounded/pill-shaped search bars and category controls, soft card corners, clear active tabs, compact header, balanced whitespace and prominent actions",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 660,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-12",
+      "index": "Homepage reference (08_38_15): polished image-led hero, strong readable heading, rounded desktop location/query/search control, clear booking/business…",
+      "definition": "Homepage reference (08_38_15): polished image-led hero, strong readable heading, rounded desktop location/query/search control, clear booking/business…",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 661,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-13",
+      "index": "Discovery/results reference (08_38_33): rounded combined desktop search, service chips with small images, compact result count and sorting, consistent salon…",
+      "definition": "Discovery/results reference (08_38_33): rounded combined desktop search, service chips with small images, compact result count and sorting, consistent salon…",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 662,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-14",
+      "index": "Public salon reference (08_38_47): wide cover photograph, overlapping business logo, strong business name, concise location/hours/rating information,…",
+      "definition": "Public salon reference (08_38_47): wide cover photograph, overlapping business logo, strong business name, concise location/hours/rating information,…",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 663,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-15",
+      "index": "Mockups are visual references, not copy or fact specifications",
+      "definition": "Mockups are visual references, not copy or fact specifications",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 664,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-16",
+      "index": "Desktop and mobile each require intentional layouts",
+      "definition": "Desktop and mobile each require intentional layouts",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 665,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PUBLIC-17",
+      "index": "Verify demo removal and public routing on the deployed production site, not only a local build or preview",
+      "definition": "Verify demo removal and public routing on the deployed production site, not only a local build or preview",
+      "detail_sections": [
+        "18"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 666,
+      "implementation_paths": [
+        "src/app/site-access/page.tsx",
+        "src/components/site/SiteAccessProvider.tsx",
+        "src/components/site/SiteAccessBanner.tsx",
+        "src/app/page.tsx",
+        "src/components/SalonBookingWizard.tsx"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-01",
+      "index": "Overview: Personalized welcome/date, useful summaries and metrics, schedule/trends where data supports them, page health, quick actions, status and…",
+      "definition": "| PAGE-01 | Overview | Personalized welcome/date, useful summaries and metrics, schedule/trends where data supports them, page health, quick actions, status and responsive assistant layout. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 498,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-02",
+      "index": "My Page: Cover/profile editing, tabbed content, correct public synchronization, policies/preparation, walk-ins and mobile More.",
+      "definition": "| PAGE-02 | My Page | Cover/profile editing, tabbed content, correct public synchronization, policies/preparation, walk-ins and mobile More. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 499,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "My Page opens the editor beneath actual cover/logo and section tabs; obsolete landing cards removed."
+      ],
+      "verification": [
+        "390px edit-save-refresh browser check passed; other widths running"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-03",
+      "index": "Photos: Visible categorized gallery, selected-category upload, title/caption editing, cover/logo controls, ordering/status/retry and mobile flow.",
+      "definition": "| PAGE-03 | Photos | Visible categorized gallery, selected-category upload, title/caption editing, cover/logo controls, ordering/status/retry and mobile flow. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 500,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "changes": [
+        "Categorized gallery opens immediately; existing uploader/crop/order retained; title/caption/featured metadata saved through scoped API."
+      ],
+      "verification": [
+        "390px edit-failure-retry-refresh browser check passed; upload-category persistence and public evidence still pending"
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-04",
+      "index": "Styles & Pricing: Rich service organization/cards/table, actual images and prices, featured/popular distinction, filters, service management and accessible…",
+      "definition": "| PAGE-04 | Styles & Pricing | Rich service organization/cards/table, actual images and prices, featured/popular distinction, filters, service management and accessible secondary import/export. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 501,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-05",
+      "index": "Stylists: Consistent staff cards, assignments and schedules, permissions, payout-arrangement configuration and usable details.",
+      "definition": "| PAGE-05 | Stylists | Consistent staff cards, assignments and schedules, permissions, payout-arrangement configuration and usable details. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 502,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-06",
+      "index": "Products: Catalog, stock/supplies, images, relevant orders/pickups, alerts, sales records and integration with Finances.",
+      "definition": "| PAGE-06 | Products | Catalog, stock/supplies, images, relevant orders/pickups, alerts, sales records and integration with Finances. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 503,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-07",
+      "index": "Availability & Calendar: Calendar-first layout, staff selection, labeled colors, availability/blocks/actions, mobile controls, conflicts and reliable saving.",
+      "definition": "| PAGE-07 | Availability & Calendar | Calendar-first layout, staff selection, labeled colors, availability/blocks/actions, mobile controls, conflicts and reliable saving. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 504,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-08",
+      "index": "Bookings: Filters, useful desktop/mobile records, correct statuses/prices/deposits, manual/walk-in capture where appropriate and client-history access.",
+      "definition": "| PAGE-08 | Bookings | Filters, useful desktop/mobile records, correct statuses/prices/deposits, manual/walk-in capture where appropriate and client-history access. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 505,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-09",
+      "index": "Messages: Inbox/conversation layout, booking/customer context, translation, approved reply/send flows, reminders and client communications.",
+      "definition": "| PAGE-09 | Messages | Inbox/conversation layout, booking/customer context, translation, approved reply/send flows, reminders and client communications. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 506,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-10",
+      "index": "Reviews: Real summaries and filters, review/detail/response management and contextual assistant behavior.",
+      "definition": "| PAGE-10 | Reviews | Real summaries and filters, review/detail/response management and contextual assistant behavior. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 507,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-11",
+      "index": "Finances: Every finance, payout-arrangement, expense, deposit, product-sale, reporting, export and permission requirement from sections 14 and 17.",
+      "definition": "| PAGE-11 | Finances | Every finance, payout-arrangement, expense, deposit, product-sale, reporting, export and permission requirement from sections 14 and 17. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 508,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-12",
+      "index": "Promotions: Real targets, draft/preview/activation, eligibility/dates, public evidence and approved deposit-preserving calculations.",
+      "definition": "| PAGE-12 | Promotions | Real targets, draft/preview/activation, eligibility/dates, public evidence and approved deposit-preserving calculations. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 509,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-13",
+      "index": "Subscription: Plan/entitlement information, repaired payment-method management and unchanged billing for a method-only update.",
+      "definition": "| PAGE-13 | Subscription | Plan/entitlement information, repaired payment-method management and unchanged billing for a method-only update. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 510,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "PAGE-14",
+      "index": "Settings: Existing account/business preferences, language and relevant assistant-avatar controls, clear forms and appropriate permissions.",
+      "definition": "| PAGE-14 | Settings | Existing account/business preferences, language and relevant assistant-avatar controls, clear forms and appropriate permissions. |",
+      "detail_sections": [
+        "4",
+        "18",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 511,
+      "implementation_paths": [
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/OwnerDashboardShell.tsx",
+        "tests/browser/p0-owner-inventory.spec.ts"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-01",
+      "index": "Start by reading project instructions and inspecting the current repository, open changes, current main, migrations, routes, connected services and…",
+      "definition": "Start by reading project instructions and inspecting the current repository, open changes, current main, migrations, routes, connected services and…",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 681,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-02",
+      "index": "Build a requirement-to-code-and-evidence map from section 20 before editing",
+      "definition": "Build a requirement-to-code-and-evidence map from section 20 before editing",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 682,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "DONE",
+      "acceptance": "PASS",
+      "blocker": "",
+      "changes": [
+        "Full source and all 140 unique requirement mappings recorded before application edits."
+      ],
+      "verification": [
+        "Checklist extraction asserted exactly 140 unique IDs."
+      ],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-03",
+      "index": "Resolve the two material business-rule decisions in one concise batch after inspecting the current implementation and preparing concrete alternatives: (1)…",
+      "definition": "Resolve the two material business-rule decisions in one concise batch after inspecting the current implementation and preparing concrete alternatives: (1)…",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 683,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-04",
+      "index": "Use working authorized sessions across related checks",
+      "definition": "Use working authorized sessions across related checks",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 684,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-05",
+      "index": "Keep existing OpenAI/DeepL integrations, four supported assistant languages, opt-in memory, calendar conflict/preview safeguards, public-profile data and…",
+      "definition": "Keep existing OpenAI/DeepL integrations, four supported assistant languages, opt-in memory, calendar conflict/preview safeguards, public-profile data and…",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 685,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-06",
+      "index": "Reuse real content across the reported 25 businesses and prepare the requested three-to-five richer demonstrations without overwriting live identity or…",
+      "definition": "Reuse real content across the reported 25 businesses and prepare the requested three-to-five richer demonstrations without overwriting live identity or…",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 686,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-07",
+      "index": "Use focused tests and direct visual review for changed behavior, then satisfy the repository's actual required CI/release gates",
+      "definition": "Use focused tests and direct visual review for changed behavior, then satisfy the repository's actual required CI/release gates",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 687,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-08",
+      "index": "Verify live provider functionality with the minimum sufficient authenticated checks for changed tool/data paths, reusing valid unchanged evidence",
+      "definition": "Verify live provider functionality with the minimum sufficient authenticated checks for changed tool/data paths, reusing valid unchanged evidence",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 688,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-09",
+      "index": "Inspect attached images; follow dashboard references closely and verify selective website polish against its existing design",
+      "definition": "Inspect attached images; follow dashboard references closely and verify selective website polish against its existing design",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 689,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-10",
+      "index": "Prepare backward-compatible data changes where necessary, preserve existing business/policy/payment history, and apply only reviewed pending migrations…",
+      "definition": "Prepare backward-compatible data changes where necessary, preserve existing business/policy/payment history, and apply only reviewed pending migrations…",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 690,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-11",
+      "index": "Verify the actual production deployment and relevant routes/actions after publication",
+      "definition": "Verify the actual production deployment and relevant routes/actions after publication",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 691,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    },
+    {
+      "id": "EXEC-12",
+      "index": "Deliver a final report mapping every requirement to implementation and verification evidence",
+      "definition": "Deliver a final report mapping every requirement to implementation and verification evidence",
+      "detail_sections": [
+        "8",
+        "19"
+      ],
+      "source": "founder-handoff.md",
+      "source_line": 692,
+      "implementation_paths": [
+        "AGENTS.md",
+        ".github/workflows",
+        "docs/dashboard-redesign/requirements.json"
+      ],
+      "state": "PENDING",
+      "acceptance": "BLOCKED",
+      "blocker": "Implementation and verification not completed",
+      "changes": [],
+      "verification": [],
+      "live_evidence": []
+    }
+  ]
+}

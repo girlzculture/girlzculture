@@ -112,6 +112,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     }
     await page.screenshot({ path: `${gallery}/conversation.png`, ...screenshotCaret });
     next = { clarification: t('What would you like help with?') };
+    await dialog.getByText(t('Conversation options'), { exact: true }).click();
     await dialog.getByRole('button', { name: t('Set up with GC Assistant'), exact: true }).click();
     await expect(dialog.locator('article').last()).toContainText(t('What would you like help with?'));
     const skills = [
@@ -160,6 +161,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     await expect(dialog.locator('article').last()).toContainText(fixture.business.description);
     const dimensions = [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 1180, height: 820 }];
     await page.setViewportSize(dimensions[['en', 'fr', 'wo', 'es', 'zh-CN'].indexOf(locale)]);
+    await dialog.getByText(t('Conversation options'), { exact: true }).click();
     await dialog.getByRole('button', { name: t('New conversation'), exact: true }).click();
     await expect(dialog.locator('article')).toHaveCount(0);
     next = { navigate: 'photos' };

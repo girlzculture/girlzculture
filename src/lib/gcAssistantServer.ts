@@ -9,6 +9,8 @@ import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { isSubscriptionActive } from "@/lib/plans";
 import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gcAssistantPresentation";
+import { matchBusinessCatalog } from "@/lib/businessCatalogSearch";
+import { businessMediaInventory } from "@/lib/businessMediaInventory";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
@@ -57,9 +59,12 @@ export async function searchPublishedKnowledge(context: Pick<Context, "admin">, 
   const query = safeKnowledgeText(queryValue, 240).toLocaleLowerCase();
   const tokens = [...new Set(query.split(/[^\p{L}\p{N}]+/u).filter(token => token.length > 1))].slice(0, 12);
   if (!query || !tokens.length) throw new AssistantError("ASSISTANT_INVALID_INPUT");
-  const published = await context.admin.rpc("get_public_content_pages");
-  if (published.error) throw published.error;
-  const pages = Array.isArray(published.data) ? published.data.slice(0, 120) : [];
+  // Read only general platform guidance. Never load the full public page
+  // inventory, business profiles or a user-supplied URL into owner context.
+  const published = await Promise.all(["help", "faq", "how-it-works", "pricing", "terms", "privacy"].map(slug => context.admin.rpc("get_public_content_page", { p_slug: slug })));
+  const failure = published.find(result => result.error);
+  if (failure?.error) throw failure.error;
+  const pages = published.map(result => result.data).filter(Boolean);
   const scored = pages.flatMap(knowledgeSegments).map(segment => {
     const haystack = `${segment.title} ${segment.question} ${segment.answer}`.toLocaleLowerCase();
     const score = (haystack.includes(query) ? 20 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 2 : 0), 0);
@@ -86,16 +91,41 @@ export async function assertAssistantAccess(context: Context, permission: string
 async function readTool(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
-  if (tool === "get_business_profile") return selected(salon, profileFields);
+  if (tool === "get_business_profile") return { ...selected(salon, profileFields), walk_ins_welcome: (salon.trust_info as Row | null)?.walk_ins_welcome === true };
+  if (tool === "get_business_media") {
+    const media = await admin.from("salons").select("gallery_photos,cover_photo_url,logo_url,photo_metadata").eq("id", salon.id).maybeSingle();
+    if (media.error) throw media.error;
+    if (!media.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
+    const visible = await admin.rpc("is_marketplace_visible", { target_salon_id: salon.id });
+    // A visibility check failure must not erase verified saved counts or claim
+    // that the business is unpublished. Unknown is represented explicitly.
+    return businessMediaInventory(media.data, !visible.error && typeof visible.data === "boolean" ? visible.data : null);
+  }
   if (tool === "get_business_policies") {
     const result = await admin.from("business_policy_revisions").select("id,policy,version,source_locale,published_at").eq("salon_id", salon.id).eq("id", salon.business_policy_revision_id || "00000000-0000-0000-0000-000000000000").maybeSingle();
     if (result.error) throw result.error; return { policy: result.data, platform_rules_apply: true };
   }
   if (tool === "get_services_and_prices") {
-    const query = String(args.query).replace(/[\\%_]/g, character => `\\${character}`);
-    const result = await admin.from("styles").select("id,name,base_price,duration_min_hours,duration_max_hours,size_options,length_options,addons,is_draft", { count: "exact" }).eq("salon_id", salon.id).is("archived_at", null).ilike("name", `%${query}%`).order("name").limit(100);
-    if (result.error) throw result.error;
-    return { services: result.data || [], total: result.count, capped_at: 100, currency: "USD" };
+    const query = String(args.query).trim();
+    const escaped = query.replace(/[\\%_]/g, character => `\\${character}`);
+    const fields = "id,name,base_price,duration_min_hours,duration_max_hours,size_options,length_options,addons,is_draft";
+    const scoped = () => admin.from("styles").select(fields, { count: "exact" }).eq("salon_id", salon.id).is("archived_at", null);
+    // Count the inventory without the name filter. Preserve direct database
+    // matches beyond the bounded fuzzy-search page, always within this business.
+    const [inventory, literal] = await Promise.all([
+      scoped().order("name").limit(1000),
+      query ? scoped().ilike("name", `%${escaped}%`).order("name").limit(100) : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (inventory.error) throw inventory.error;
+    if (literal.error) throw literal.error;
+    const records = new Map<string, Row>();
+    for (const row of [...(inventory.data || []), ...(literal.data || [])]) records.set(String(row.id || row.name), row);
+    const matches = matchBusinessCatalog([...records.values()], query);
+    const total = inventory.count;
+    const complete = typeof total === "number" && total <= (inventory.data || []).length;
+    const exact = matches.some(match => match.exact);
+    return { services: matches.slice(0, 100).map(match => match.record), total, inventory_total: total, matching_total: query ? matches.length : total,
+      query, search_complete: complete, exact_match: exact, match_status: total === 0 ? "empty_inventory" : !query ? "inventory" : exact ? "exact" : matches.length ? "related" : complete ? "no_match" : "incomplete_search", capped_at: 100, currency: "USD" };
   }
   if (tool === "get_availability" && args.style_id) {
     if (args.stylist_id) { const stylist = await admin.from("stylists").select("id").eq("id", args.stylist_id).eq("salon_id", salon.id).maybeSingle(); if (stylist.error || !stylist.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404); }
@@ -154,7 +184,7 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     payload = { customer_name: booking.data.guest_name || customer?.name || null, public_reference: booking.data.public_reference, time_zone: salon.time_zone };
   }
   if (tool === "prepare_business_policy_update") { validateBusinessPolicy(args.policy); before = { revision_id: salon.business_policy_revision_id || null }; notices.push("POLICY_REVIEW_REQUIRED"); }
-  const prose = tool === "prepare_customer_message" ? String(args.body) : tool === "prepare_business_profile_update" ? String(args.text || "") : tool === "prepare_business_policy_update" ? `${(args.policy as Row).preparation}\n${(args.policy as Row).notes}\n${(args.policy as Row).refund_terms || ""}` : String(args.name || args.title || "") + "\n" + String(args.description || args.bio || "");
+  const prose = tool === "prepare_customer_message" ? String(args.body) : tool === "prepare_business_profile_update" ? String(args.text || "") : tool === "prepare_business_policy_update" ? `${(args.policy as Row).business_policy_text || ""}\n${(args.policy as Row).preparation}\n${(args.policy as Row).notes}\n${(args.policy as Row).refund_terms || ""}` : String(args.name || args.title || "") + "\n" + String(args.description || args.bio || "");
   const moderation = await moderatePublicContent(admin, { body: prose });
   if (!moderation.allowed) throw new AssistantError("ASSISTANT_CONTENT_REVIEW_REQUIRED");
   return { before, payload, notices };

@@ -72,6 +72,7 @@ for (const width of [390, 768, 1440]) {
       const t = (text: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[text] || text;
       await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
       await expect.poll(fixture.accountLocale).toBe(locale);
+      await page.locator('form').getByText(t('Booking rules'), { exact: true }).click();
       const cancellation = page.getByLabel(t('Cancellation notice (hours)'), { exact: true });
       await cancellation.fill('-1');
       const actionCount = fixture.actions.length;
@@ -79,7 +80,7 @@ for (const width of [390, 768, 1440]) {
       await expect.poll(() => cancellation.evaluate((node: HTMLInputElement) => node.validationMessage)).toBe(t('Enter a value within the allowed range.'));
       expect(fixture.actions).toHaveLength(actionCount);
       await cancellation.fill('24');
-      const notes = page.getByLabel(t('Additional business notes'), { exact: true });
+      const notes = page.getByLabel(t('Business Policy'), { exact: true });
       await notes.fill('Original policy — Save, $180, GC123');
       await page.getByRole('button', { name: t('Save draft and review'), exact: true }).click();
       await expect(page.getByRole('heading', { name: t('Review policy draft'), exact: true })).toBeVisible();

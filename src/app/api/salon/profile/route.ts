@@ -5,6 +5,7 @@ import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { normalizeSalonVanitySlug } from "@/lib/salonVanity";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
+import { profilePatchPermissions, validateBusinessTrustInfo } from "@/lib/businessProfileFields";
 
 const TEXT_FIELDS = new Set(["name", "description", "address_street", "address_line2", "address_city", "address_state", "address_zip", "phone", "email", "logo_url", "cover_photo_url"]);
 const ALLOWED_FIELDS = new Set([...TEXT_FIELDS, "description_ai_assisted", "description_ai_draft_id", "stylist_section_fallback", "gallery_photos", "languages", "trust_info", "media_consent", "hours", "booking_settings", "notification_preferences"]);
@@ -80,19 +81,12 @@ function sanitizePatch(body: Record<string, unknown>) {
     patch.languages = body.languages.slice(0, 5).map((value) => cleanText(value, 50)).filter(Boolean);
   }
   if ("media_consent" in body) patch.media_consent = body.media_consent === true;
-  if ("trust_info" in body) patch.trust_info = objectValue(body.trust_info, "Trust information");
+  if ("trust_info" in body) patch.trust_info = validateBusinessTrustInfo(body.trust_info);
   if ("hours" in body) patch.hours = objectValue(body.hours, "Store hours");
   if ("booking_settings" in body) patch.booking_settings = objectValue(body.booking_settings, "Booking settings");
   if ("notification_preferences" in body) patch.notification_preferences = objectValue(body.notification_preferences, "Notification preferences");
   if (!Object.keys(patch).length) throw new Error("Choose at least one salon field to update.");
   return patch;
-}
-
-function permissionFor(keys: string[]) {
-  if (keys.some((key) => ["notification_preferences"].includes(key))) return "settings";
-  if (keys.some((key) => ["hours", "booking_settings"].includes(key))) return "availability";
-  if (keys.every((key) => ["cover_photo_url", "gallery_photos", "media_consent"].includes(key))) return "photos";
-  return "my_page";
 }
 
 async function GETHandler(request: Request) {
@@ -182,8 +176,8 @@ async function PATCHHandler(request: Request) {
     admin = context.admin;
     salonId = context.salon.id;
     const body = await request.json() as Record<string, unknown>;
-    const permission = permissionFor(Object.keys(body));
-    if (!context.isOwner && !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission]) {
+    const permissions = profilePatchPermissions(Object.keys(body));
+    if (!context.isOwner && permissions.some(permission => !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission])) {
       throw new Error("Forbidden: this salon role cannot update these profile fields.");
     }
     const patch = sanitizePatch(body);

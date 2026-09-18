@@ -14,7 +14,7 @@ const hours = object(Object.fromEntries(
   ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     .map(day => [day, object({ closed: { type: "boolean" }, open: { ...clockTime, pattern: "^([01][0-9]|2[0-3]):(00|15|30|45)$" }, close: { ...clockTime, pattern: "^([01][0-9]|2[0-3]):(00|15|30|45)$" } })]),
 ));
-const policy = object({ refund_satisfaction: enumeration("contact_business", "case_by_case", "redo_or_refund"), refund_terms: string(1200), cancellation_hours: { type: "integer", minimum: 0, maximum: 168 }, rescheduling_hours: { type: "integer", minimum: 0, maximum: 168 }, grace_minutes: { type: "integer", minimum: 0, maximum: 60 }, no_show: enumeration("contact_business", "reschedule_request"), late_arrival: enumeration("contact_business", "reschedule_request"), deposit_treatment: enumeration("platform_rules"), balance_due: enumeration("after_service"), satisfaction: enumeration("contact_business"), guests: enumeration("welcome", "ask_first", "appointment_only"), children: enumeration("welcome", "ask_first", "appointment_only"), walk_ins: enumeration("welcome", "ask_first", "appointment_only"), preparation: string(1200), notes: string(1200) });
+const policy = object({ business_policy_text: { type: ["string", "null"], maxLength: 12000 }, refund_satisfaction: enumeration("contact_business", "case_by_case", "redo_or_refund"), refund_terms: string(1200), cancellation_hours: { type: "integer", minimum: 0, maximum: 168 }, rescheduling_hours: { type: "integer", minimum: 0, maximum: 168 }, grace_minutes: { type: "integer", minimum: 0, maximum: 60 }, no_show: enumeration("contact_business", "reschedule_request"), late_arrival: enumeration("contact_business", "reschedule_request"), deposit_treatment: enumeration("platform_rules"), balance_due: enumeration("after_service"), satisfaction: enumeration("contact_business"), guests: enumeration("welcome", "ask_first", "appointment_only"), children: enumeration("welcome", "ask_first", "appointment_only"), walk_ins: enumeration("welcome", "ask_first", "appointment_only"), preparation: string(1200), notes: string(1200) });
 const date = { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" };
 const manualAppointment = {
   guest_name: { ...string(120), minLength: 1 }, guest_phone: string(40), guest_email: string(254),
@@ -26,6 +26,7 @@ export const ASSISTANT_TOOLS = {
   get_bookings: { risk: 1, permission: "bookings", schema: object(range) },
   get_availability: { risk: 1, permission: "availability", schema: object({ style_id: nullableId, stylist_id: nullableId, date: { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" } }) },
   get_business_profile: { risk: 1, permission: "my_page", schema: object({}) },
+  get_business_media: { risk: 1, permission: "photos", schema: object({}) },
   get_services_and_prices: { risk: 1, permission: "styles", schema: object({ query: string(120) }) },
   get_business_policies: { risk: 1, permission: "my_page", schema: object({}) },
   search_platform_knowledge: { risk: 1, permission: "overview", schema: object({ query: { ...string(240), minLength: 2 } }) },
@@ -92,8 +93,12 @@ export function validateTool(name: unknown, input: unknown) {
   if (typeof name !== "string" || !Object.hasOwn(ASSISTANT_TOOLS, name)) throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
   const tool = name as AssistantTool;
   const schema: ToolSchema = ASSISTANT_TOOLS[tool].schema;
-  const candidate = tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object" && !Object.hasOwn(input.policy, "refund_satisfaction") && !Object.hasOwn(input.policy, "refund_terms")
-    ? { ...input, policy: { ...input.policy, refund_satisfaction: "contact_business", refund_terms: "" } } : input;
+  const candidate = tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object"
+    ? { ...input, policy: {
+      ...(!Object.hasOwn(input.policy, "refund_satisfaction") && !Object.hasOwn(input.policy, "refund_terms") ? { refund_satisfaction: "contact_business", refund_terms: "" } : {}),
+      business_policy_text: null,
+      ...input.policy,
+    } } : input;
   assertSchema(candidate, schema);
   const args = input as Record<string, unknown>;
   if ("start" in args) {
