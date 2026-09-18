@@ -1,0 +1,23 @@
+const rows=[
+ ['Product catalog','Catalogue de produits','Catálogo de productos','商品目录'],
+ ['Your catalog, stock and orders, together.','Votre catalogue, votre stock et vos commandes au même endroit.','Tu catálogo, existencias y pedidos en un solo lugar.','集中管理商品目录、库存和订单。'],
+ ['Product workspace','Espace produits','Espacio de productos','商品工作区'],
+ ['Catalog','Catalogue','Catálogo','目录'],
+ ['Orders and pickups','Commandes et retraits','Pedidos y recogidas','订单与自提'],
+ ['Total products','Total produits','Total de productos','商品总数'],
+ ['Low stock','Stock faible','Pocas existencias','库存不足'],
+ ['Out of stock','Épuisé','Agotado','缺货'],
+ ['Stock not tracked','Stock non suivi','Stock sin seguimiento','未跟踪库存'],
+ ['Stock unavailable','Stock indisponible','Stock no disponible','库存数据不可用'],
+ ['In stock','En stock','En stock','有货'],
+ ['Stock level','Niveau de stock','Nivel de existencias','库存水平'],
+ ['All stock levels','Tous les niveaux','Todos los niveles','所有库存状态'],
+ ['More filters','Plus de filtres','Más filtros','更多筛选'],
+ ['Offer labels show active promotions. Customer eligibility and the final price are checked at checkout.','Les étiquettes indiquent les promotions actives. L’éligibilité du client et le prix final sont vérifiés au paiement.','Las etiquetas muestran promociones activas. La elegibilidad del cliente y el precio final se verifican al pagar.','优惠标签显示正在进行的促销。客户资格及最终价格将在结账时核实。'],
+ ['Import or export products','Importer ou exporter des produits','Importar o exportar productos','导入或导出商品'],
+ ['Edit product','Modifier le produit','Editar producto','编辑商品'],
+ ['No product photo uploaded','Aucune photo du produit','Sin foto del producto','尚未上传商品照片'],
+ ['No products match these filters.','Aucun produit ne correspond aux filtres.','Ningún producto coincide con los filtros.','没有符合这些筛选条件的商品。'],
+ ['Add products sold at your salon.','Ajoutez les produits vendus dans votre salon.','Añade los productos que vendes en tu salón.','添加您的店内出售的商品。'],
+] as const;
+export const BUSINESS_PRODUCTS_SOURCE_MESSAGES:Record<string,Record<string,string>>=Object.fromEntries(['fr','es','zh-CN'].map((locale,index)=>[locale,Object.fromEntries(rows.map(row=>[row[0],row[index+1]]))]));

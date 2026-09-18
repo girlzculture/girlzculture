@@ -8,6 +8,7 @@ import { assistantAvatar } from "@/lib/assistantAppearance";
 import BusinessPolicies from "@/components/owner/BusinessPolicies";
 import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
 import BusinessOverview from "@/components/owner/BusinessOverview";
+import ProductsWorkspace from "@/components/owner/ProductsWorkspace";
 import BusinessFinances from "@/components/owner/BusinessFinances";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import { useI18n } from "@/components/i18n/LocaleProvider";
@@ -29,9 +30,7 @@ import {
   Crown,
   Eye,
   ExternalLink,
-  ImageOff,
   ImagePlus,
-  Info,
   LockKeyhole,
   Megaphone,
   MessageCircle as Sparkles,
@@ -2226,25 +2225,8 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         ? [String(active.photo_url)]
       : [],
   );
-  const [productQuery, setProductQuery] = useState(searchParams.get("q") || "");
-  const [productStatus, setProductStatus] = useState(searchParams.get("status") || "all");
-  const [fulfillment, setFulfillment] = useState(searchParams.get("fulfillment") || "all");
-  const [promotionFilter, setPromotionFilter] = useState(searchParams.get("promotion") || "all");
-  const hasPromotion = (product: Row) => c.promotions.some((promotion) => {
-    if (promotion.is_active === false) return false;
-    const scope = String(promotion.target_scope || "all").toLowerCase();
-    const targets = Array.isArray(promotion.target_ids) ? promotion.target_ids.map(String) : [];
-    return scope === "all" || targets.includes(String(product.id));
-  });
-  const productParams = new URLSearchParams({ ...(productQuery ? { q: productQuery } : {}), ...(productStatus !== "all" ? { status: productStatus } : {}), ...(fulfillment !== "all" ? { fulfillment } : {}), ...(promotionFilter !== "all" ? { promotion: promotionFilter } : {}) });
-  const productListHref = `/salon/dashboard/products${productParams.toString() ? `?${productParams}` : ""}`;
-  const visibleProducts = c.products.filter((product) => {
-    const needle = productQuery.trim().toLowerCase();
-    const status = String(product.product_status || "Draft").toLowerCase();
-    const promoted = hasPromotion(product);
-    const matchesFulfillment = fulfillment === "all" || (fulfillment === "pickup" ? product.pickup_enabled === true : fulfillment === "shipping" ? product.shipping_enabled === true : product.pickup_enabled !== true && product.shipping_enabled !== true);
-    return (!needle || [product.name, product.description, product.sku].some((value)=>String(value || "").toLowerCase().includes(needle))) && (productStatus === "all" || status === productStatus) && matchesFulfillment && (promotionFilter === "all" || (promotionFilter === "promoted" ? promoted : !promoted));
-  });
+  const productParams = new URLSearchParams(searchParams.toString());
+  const productListHref = `/salon/dashboard/products${productParams.size ? `?${productParams}` : ""}`;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -2309,97 +2291,11 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   }
   return (
     <>
-      {!recordId ? <Title
-        title="Products"
-        subtitle="Manage your catalog, stock, pickup, shipping, and online sales."
-        action={
-          <Link
-            href={`/salon/dashboard/products/new${productParams.toString() ? `?${productParams}` : ""}`}
-            className="rounded-[8px] bg-magenta px-6 py-3 text-xs font-bold text-white"
-          >
-            <Plus className="mr-1 inline" size={16} />
-            Add Product
-          </Link>
-        }
-      /> : null}
-      {!recordId ? <SalonSpreadsheetPanel
-        kind="products"
-        onImported={(records) => {
-          c.setProducts(records as Row[]);
-          if (
-            c.selectedProduct &&
-            !records.some((record) => record.id === c.selectedProduct)
-          ) {
-            c.setSelectedProduct(null);
-          }
-        }}
-      /> : null}
-      {!recordId ? <div className="mb-4 flex items-start gap-2 rounded-[9px] border border-blue-200 bg-blue-50 px-4 py-3 text-xs gc-text-link">
-        <Info size={16} className="shrink-0" aria-hidden="true" />
-        <span>
-          Published products can be purchased securely for pickup or shipping.
-          Live prices and inventory are rechecked before every payment.
-        </span>
-      </div> : null}
+      {!recordId ? <>
+        <ProductsWorkspace products={c.products} promotions={c.promotions} params={productParams}/>
+        <details className="my-5 rounded-xl border border-border bg-white p-4"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">{c.translateSource("Import or export products")}</summary><SalonSpreadsheetPanel kind="products" onImported={records=>{c.setProducts(records as Row[]);if(c.selectedProduct&&!records.some(record=>record.id===c.selectedProduct))c.setSelectedProduct(null);}}/></details>
+      </> : null}
       <div className="block">
-        {!recordId ? <div className="mb-4 grid gap-2 rounded-xl border border-plum/10 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4"><input aria-label="Search products" value={productQuery} onChange={(event)=>setProductQuery(event.target.value)} placeholder="Search name or SKU" className="min-h-10 rounded-lg border border-plum/15 px-3 text-xs"/><select aria-label="Product status" value={productStatus} onChange={(event)=>setProductStatus(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All statuses</option>{[...new Set(c.products.map((product)=>String(product.product_status || "Draft")))].map((value)=><option key={value} value={value.toLowerCase()}>{value}</option>)}</select><select aria-label="Fulfillment" value={fulfillment} onChange={(event)=>setFulfillment(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All fulfillment</option><option value="pickup">Pickup enabled</option><option value="shipping">Shipping enabled</option><option value="in_person">In-person only</option></select><select aria-label="Promotion state" value={promotionFilter} onChange={(event)=>setPromotionFilter(event.target.value)} className="min-h-10 rounded-lg border border-plum/15 bg-white px-3 text-xs"><option value="all">All promotion states</option><option value="promoted">Promotion attached</option><option value="standard">No promotion</option></select><p className="sm:col-span-2 xl:col-span-4 text-[10px] text-ink/50">{c.translateSource("Matching products: {value0}", { value0: c.formatNumber(visibleProducts.length) })}</p></div> : null}
-        {!recordId ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {visibleProducts.map((product) => (
-            <button
-              key={product.id}
-              onClick={() => router.push(`/salon/dashboard/products/${product.id}${productParams.toString() ? `?${productParams}` : ""}`)}
-              className="overflow-hidden rounded-[10px] border border-plum/10 bg-white text-left"
-            >
-              <div className="grid aspect-square w-full place-items-center bg-blush/35 text-plum/30">
-                {product.photo_url ? (
-                  <SafeImage
-                    src={String(product.photo_url)}
-                    fallbackSrc={String(product.photo_url)}
-                    alt={product.name || "Product"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImageOff
-                    size={30}
-                    strokeWidth={1.2}
-                    aria-label="No product photo uploaded"
-                  />
-                )}
-              </div>
-              <div className="p-2.5">
-                <b data-no-translate className="line-clamp-1 text-xs">{product.name}</b>
-                <p className="mt-1 line-clamp-1 text-[9px] text-ink/60">
-                  <span data-no-translate>{String(product.description || "")}</span>
-                </p>
-                <p className="mt-2 text-sm font-semibold">
-                  {product.sale_price !== null &&
-                  product.sale_price !== undefined ? (
-                    <>
-                      <span className="mr-1 text-[10px] gc-text-secondary line-through">
-                        {c.formatCurrency(Number(product.price || 0))}
-                      </span>
-                      <span className="text-magenta">
-                        {c.formatCurrency(Number(product.sale_price || 0))}
-                      </span>
-                    </>
-                  ) : (
-                    c.formatCurrency(Number(product.price || 0))
-                  )}
-                </p>
-                <p className="mt-1 text-[9px] font-semibold text-ink/50">
-                  {String(product.product_status || "Draft")}
-                  {product.track_inventory
-                    ? ` · ${Number(product.inventory_quantity || 0)} in stock`
-                    : " · stock not tracked"}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1 text-[8px] font-bold"><span className={`rounded-full px-2 py-1 ${product.pickup_enabled ? "bg-white gc-text-success" : "bg-cream gc-text-disabled"}`}>{product.pickup_enabled ? "Pickup" : "No pickup"}</span><span className={`rounded-full px-2 py-1 ${product.shipping_enabled ? "bg-blue-100 gc-text-link" : "bg-cream gc-text-disabled"}`}>{product.shipping_enabled ? "Shipping" : "No shipping"}</span>{hasPromotion(product) ? <span className="rounded-full bg-blush px-2 py-1 text-magenta">Promotion</span> : null}</div>
-              </div>
-            </button>
-          ))}
-          {!visibleProducts.length ? (
-            <Empty text={c.products.length ? "No products match these filters." : "Add products sold at your salon."} />
-          ) : null}
-        </div> : null}
         <MobileRecordEditor
           open={Boolean(recordId)}
           title={active ? `Edit ${active.name || "product"}` : "Add product"}
@@ -2576,7 +2472,7 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         </Panel>
         </MobileRecordEditor>
       </div>
-      {!recordId ? <SalonProductOrders /> : null}
+      {!recordId ? <div id="product-orders" className="scroll-mt-28"><SalonProductOrders /></div> : null}
     </>
   );
 }

@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED; catalog, team and new service-assignment boundaries verified locally; remaining 140-requirement scope continues",
+  "status": "IMPLEMENTING; NOT RELEASED; Products catalog verified locally; inventory reconciliation and remaining detailed scope continue",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -2941,16 +2941,21 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/SalonProductOrders.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/components/owner/ProductsWorkspace.tsx",
+        "src/lib/businessProductInventory.ts"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
       "live_evidence": [],
       "detailed_clause": "STOCK-01 — Track retail products (such as wigs, oils, edge control and accessories) and key business supplies, with appropriate quantities and configurable low-stock alerts. Make current stock and alerts available to the assistant. Reconcile logged sales, restocks and stock corrections without duplicating existing inventory deductions.",
-      "detailed_clause_line": 429
+      "detailed_clause_line": 429,
+      "evidence": [
+        "Products: 16 browser checks Chromium/WebKit EN/FR/ES/zh-CN; core2; build/types/lint pass. Catalog filters/grid-list survive edit/back/reload; genuine stock/unknown distinction. Inventory/supplies/reconciliation and live verification still required."
+      ]
     },
     {
       "id": "STOCK-02",
@@ -3639,16 +3644,21 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/owner/ProductsWorkspace.tsx",
+        "src/lib/businessProductInventory.ts"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
       "live_evidence": [],
       "detailed_clause": "| PAGE-06 | Products | Catalog, stock/supplies, images, relevant orders/pickups, alerts, sales records and integration with Finances. |",
-      "detailed_clause_line": 503
+      "detailed_clause_line": 503,
+      "evidence": [
+        "Products: 16 browser checks Chromium/WebKit EN/FR/ES/zh-CN; core2; build/types/lint pass. Catalog filters/grid-list survive edit/back/reload; genuine stock/unknown distinction. Inventory/supplies/reconciliation and live verification still required."
+      ]
     },
     {
       "id": "PAGE-07",

@@ -1,0 +1,45 @@
+"use client";
+import {useState} from "react";
+import Link from "next/link";
+import {Boxes,LayoutGrid,List,Package,Plus} from "lucide-react";
+import SafeImage from "@/components/site/SafeImage";
+import {useI18n} from "@/components/i18n/LocaleProvider";
+import {productHasOffer,productStock} from "@/lib/businessProductInventory";
+type Row=Record<string,unknown>&{id?:string;name?:string};
+export default function ProductsWorkspace({products,promotions,params}:{products:Row[];promotions:Row[];params:URLSearchParams}){
+ const {translateSource:t,formatNumber,formatCurrency}=useI18n();const [now]=useState(()=>Date.now());
+ const q=params.get('q')||'',status=params.get('status')||'all',fulfillment=params.get('fulfillment')||'all',promotion=params.get('promotion')||'all',stock=params.get('stock')||'all',view=params.get('view')==='list'?'list':'grid';
+ function set(key:string,value:string){const next=new URLSearchParams(window.location.search);if(!value||value==='all'||value==='grid')next.delete(key);else next.set(key,value);window.history.replaceState(null,'',window.location.pathname+(next.size?'?'+next:''));}
+ const hasOffer=(product:Row)=>productHasOffer(product,promotions,now);
+ const visible=products.filter(row=>[row.name,row.description,row.sku].some(value=>String(value||'').toLocaleLowerCase().includes(q.trim().toLocaleLowerCase()))&&(status==='all'||String(row.product_status||'Draft').toLowerCase()===status)&&(fulfillment==='all'||(fulfillment==='pickup'?row.pickup_enabled===true:fulfillment==='shipping'?row.shipping_enabled===true:row.pickup_enabled!==true&&row.shipping_enabled!==true))&&(stock==='all'||productStock(row).state===stock)&&(promotion==='all'||hasOffer(row)===(promotion==='promoted')));
+ const labels={untracked:'Stock not tracked',unknown:'Stock unavailable',out:'Out of stock',low:'Low stock',available:'In stock'};
+ const control='min-h-11 min-w-0 rounded-lg border border-border bg-white px-3 py-2 text-sm';
+ const url=(id:string)=>`/salon/dashboard/products/${id}${params.size?'?'+params:''}`;
+ return <section id="product-catalog" aria-label={t('Product catalog')} className="scroll-mt-24 space-y-4">
+  <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2"><h1 className="font-serif text-3xl sm:text-4xl">{t('Products')}</h1><Link href={url('new')} className="flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white"><Plus size={17}/>{t('Add Product')}</Link><p className="col-span-2 text-sm text-text-secondary">{t('Your catalog, stock and orders, together.')}</p></header>
+  <nav aria-label={t('Product workspace')} className="flex flex-wrap gap-2 border-b border-border pb-3"><a href="#product-catalog" className={control+' content-center text-primary'}>{t('Catalog')}</a><a href="#product-orders" className={control+' content-center text-primary'}>{t('Orders and pickups')}</a></nav>
+  <div className="grid grid-cols-4 gap-2 sm:gap-3">{[['Total products',products.length],['Published',products.filter(row=>row.product_status==='Active'&&row.is_visible===true).length],['Low stock',products.filter(row=>productStock(row).state==='low').length],['Out of stock',products.filter(row=>productStock(row).state==='out').length]].map(([label,value])=><div key={String(label)} className="min-w-0 rounded-xl border border-border bg-white p-2 sm:p-3"><p className="text-xs text-text-secondary">{t(String(label))}</p><p className="mt-2 font-serif text-2xl">{formatNumber(Number(value))}</p></div>)}</div>
+  <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-white p-3 lg:grid-cols-3">
+   <input aria-label={t('Search products')} placeholder={t('Search name or SKU')} value={q} onChange={event=>set('q',event.target.value)} className={control+' col-span-2 lg:col-span-1'}/>
+   <select aria-label={t('Stock level')} value={stock} onChange={event=>set('stock',event.target.value)} className={control}><option value="all">{t('All stock levels')}</option>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{t(label)}</option>)}</select>
+   <div className="flex items-center gap-2"><button aria-label={t('Grid view')} aria-pressed={view==='grid'} onClick={()=>set('view','grid')} className={control+(view==='grid'?' !border-primary text-primary':'')}><LayoutGrid size={18}/></button><button aria-label={t('List view')} aria-pressed={view==='list'} onClick={()=>set('view','list')} className={control+(view==='list'?' !border-primary text-primary':'')}><List size={18}/></button></div>
+   <details className="col-span-2 lg:col-span-3"><summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">{t("More filters")}</summary><div className="grid gap-2 sm:grid-cols-3">   <select aria-label={t('Product status')} value={status} onChange={event=>set('status',event.target.value)} className={control}><option value="all">{t('All statuses')}</option>{[...new Set(products.map(row=>String(row.product_status||'Draft')))].map(value=><option key={value} value={value.toLowerCase()}>{t(value)}</option>)}</select>
+   <select aria-label={t('Fulfillment')} value={fulfillment} onChange={event=>set('fulfillment',event.target.value)} className={control}><option value="all">{t('All fulfillment')}</option><option value="pickup">{t('Pickup enabled')}</option><option value="shipping">{t('Shipping enabled')}</option><option value="in_person">{t('In-person only')}</option></select>
+   <select aria-label={t('Promotion state')} value={promotion} onChange={event=>set('promotion',event.target.value)} className={control}><option value="all">{t('All promotion states')}</option><option value="promoted">{t('Promotion attached')}</option><option value="standard">{t('No promotion')}</option></select></div></details>
+  </div>
+  <p className="text-xs text-text-secondary">{t('Matching products: {value0}',{value0:formatNumber(visible.length)})}</p>
+  <div className={view==='grid'?'grid gap-4 sm:grid-cols-2 xl:grid-cols-3':'grid gap-3'}>{visible.map(row=>{const inventory=productStock(row);return <article key={row.id} aria-labelledby={`product-${row.id}`} className={'min-w-0 overflow-hidden rounded-xl border border-border bg-white '+(view==='list'?'flex gap-3 p-3':'flex gap-3 p-3 sm:block sm:p-0')}>
+   <div className={'grid place-items-center overflow-hidden bg-subtle text-primary/50 '+(view==='grid'?'h-20 w-20 shrink-0 rounded-lg sm:aspect-[4/3] sm:h-auto sm:w-full sm:rounded-none':'h-24 w-24 shrink-0 rounded-lg')}>{row.photo_url?<SafeImage src={String(row.photo_url)} fallbackSrc={String(row.photo_url)} alt={String(row.name||'')} className="h-full w-full object-cover"/>:<Package size={36} aria-label={t('No product photo uploaded')}/>}</div>
+   <div className={'min-w-0 flex-1 space-y-2 '+(view==='grid'?'sm:p-4':'')}><div className="flex flex-wrap items-start justify-between gap-2"><h2 id={`product-${row.id}`} data-no-translate className="break-words font-serif text-xl">{row.name}</h2><span className="rounded-full bg-primary/5 px-2 py-1 text-xs text-primary">{t(String(row.product_status||'Draft'))}</span></div>
+    {row.sku?<p data-no-translate className="break-words text-xs text-text-secondary">SKU: {String(row.sku)}</p>:null}
+    <p data-no-translate className="line-clamp-2 break-words text-sm text-text-secondary">{String(row.description||'')}</p>
+    <p className="font-semibold">{row.sale_price!=null?<><span className="mr-2 text-sm font-normal text-text-secondary line-through">{formatCurrency(Number(row.price||0))}</span>{formatCurrency(Number(row.sale_price))}</>:formatCurrency(Number(row.price||0))}</p>
+    <p className={'flex items-center gap-2 text-sm '+(['low','out'].includes(inventory.state)?'gc-text-warning':'text-text-secondary')}><Boxes size={16}/>{t(labels[inventory.state])}{inventory.quantity!==null?` · ${formatNumber(inventory.quantity)}`:''}</p>
+    <div className="flex flex-wrap gap-1.5 text-xs">{row.pickup_enabled?<span className="rounded-lg bg-subtle px-2 py-1">{t('Pickup')}</span>:null}{row.shipping_enabled?<span className="rounded-lg bg-subtle px-2 py-1">{t('Shipping')}</span>:null}{!row.pickup_enabled&&!row.shipping_enabled?<span className="rounded-lg bg-subtle px-2 py-1">{t('In-person only')}</span>:null}{hasOffer(row)?<span className="rounded-lg bg-primary/10 px-2 py-1 text-primary">{t('Promotion attached')}</span>:null}</div>
+    <Link href={url(String(row.id))} className="flex min-h-11 items-center text-sm font-semibold text-primary">{t('Edit product')}</Link>
+   </div>
+  </article>;})}</div>
+  {!visible.length?<div className="rounded-xl border border-dashed border-border p-6 text-center"><Package size={28} className="mx-auto mb-3 text-primary"/><p className="text-sm">{t(products.length?'No products match these filters.':'Add products sold at your salon.')}</p><Link href={url('new')} className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary">{t('Add Product')}</Link></div>:null}
+  <p className="text-xs text-text-secondary">{t('Offer labels show active promotions. Customer eligibility and the final price are checked at checkout.')}</p>
+ </section>;
+}

@@ -136,3 +136,9 @@ Prior main release CI `35272232878` passed 580 tests with five existing viewport
 - Local latest fresh database: girlzculture_assignments_clean, localhost55432. Production untouched, no push/PR, no remoteCI. Both caps unchanged. Destination-stream-close log on reload preserved; no hydration/assertion failure, cause not claimed established.
 - Catalog/team prior commit is ae121ec, superseding prior checkpoint pending-commit wording. Continue Products/inventory, remaining page designs and detailed finance/client/advisor/comms/waitlist/billing/public requirements. Do not claim all140 or release complete.
 - Final assignment changed-file lint: zero errors and zero warnings; git diff --check passed.
+
+## Products catalog continuation
+
+- Assignment work committed c8f9eb8. Products catalog now has actual stock states (unknown never zero), own active-offer markers, image/cards/list, URL filters retained through edit/back/reload, import/export secondary. Original missing workspace reproduced and preserved in products-before. Mobile screenshot prompted compact filters and horizontal cards, with first product name required in initial viewport. Desktop and phone captures inspected.
+- Evidence ../redesign-evidence/products-browser-final.log16/16 Chromium+WebKit four languages/viewports plus original imported order checks; products-core.log2; products-build-compact.log and products-types.log pass; products-lint-final.log0errors0warnings. Reload destination-stream-close log remains recorded, no assertion failures.
+- Not released. Inventory supplies/restock/correction ledger, stock-linked finance and remaining full140 scope still required. Next correction: stale full-product forms currently write absolute stock; separate guarded adjustments and immutable history without duplicating checkout deductions. Both caps unchanged; no production mutation.

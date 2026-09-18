@@ -14,7 +14,7 @@ test(`P0 populated owner legacy and imported catalog order survives refresh at $
   test.setTimeout(60_000);
   const fixture = await p0OwnerFixture(page, { populated: true });
   await page.setViewportSize({ width, height });
-  for (const [table, route, price] of [['styles', 'styles', '180'], ['salon_products', 'products', '25']]) {
+  for (const [table, route] of [['styles', 'styles', '180'], ['salon_products', 'products', '25']]) {
     const base = fixture.records[table][0];
     fixture.records[table] = [
       { ...base, id: '33000000-0000-4000-8000-000000000011', name: 'Knotless', sort_order: null },
@@ -22,7 +22,7 @@ test(`P0 populated owner legacy and imported catalog order survives refresh at $
       { ...base, id: '33000000-0000-4000-8000-000000000013', name: 'Silk', sort_order: null },
     ];
     await page.goto(`/salon/dashboard/${route}`);
-    const names = table === 'styles' ? page.getByRole('article').locator('h3[data-no-translate]') : page.getByRole('button').filter({ hasText: price }).locator('b[data-no-translate]');
+    const names = table === 'styles' ? page.getByRole('article').locator('h3[data-no-translate]') : page.getByRole('article').locator('h2[data-no-translate]');
     await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
     await page.reload();
     await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
