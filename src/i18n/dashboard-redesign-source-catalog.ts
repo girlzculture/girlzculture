@@ -1,5 +1,11 @@
 // Interface copy only. Business prose stays in the existing content translation flow.
+import { BUSINESS_FINANCE_SOURCE_MESSAGES } from "./business-finance-source-catalog";
 const rows: readonly (readonly [string, string, string, string])[] = [
+  ["For Businesses", "Pour les entreprises", "Para negocios", "商家专区"],
+  ["Business center", "Espace entreprises", "Centro de negocios", "商家中心"],
+  ["Pricing", "Tarifs", "Precios", "价格"],
+  ["Explore", "Explorer", "Explorar", "探索"],
+  ["Business login", "Connexion entreprise", "Acceso para negocios", "商家登录"],
   ["Conversation options", "Options de conversation", "Opciones de conversación", "对话选项"],
   ["Assistant appearance", "Apparence de l’assistant", "Apariencia del asistente", "助手外观"],
   ["Friendly woman", "Femme souriante", "Mujer amable", "亲切的女士"],
@@ -123,5 +129,5 @@ const rows: readonly (readonly [string, string, string, string])[] = [
   ["These settings control booking behavior. Writing a different time in your policy does not change them.", "Ces paramètres déterminent les règles de réservation. Indiquer un autre délai dans votre texte ne les modifie pas.", "Estos ajustes controlan las reservas. Escribir un plazo diferente en la política no los modifica.", "这些设置决定预约规则。在政策中写入不同时间不会更改这些设置。"],
 ];
 export const DASHBOARD_REDESIGN_SOURCE_MESSAGES: Record<string, Record<string, string>> = Object.fromEntries(
-  ['fr', 'es', 'zh-CN'].map((locale, index) => [locale, Object.fromEntries(rows.map(row => [row[0], row[index + 1]]))]),
+  ['fr', 'es', 'zh-CN'].map((locale, index) => [locale, { ...BUSINESS_FINANCE_SOURCE_MESSAGES[locale], ...Object.fromEntries(rows.map(row => [row[0], row[index + 1]])) }]),
 );

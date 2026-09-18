@@ -119,8 +119,8 @@ export default function CustomerAccount() {
   const firstName = name.split(" ")[0];
   return <div key={actorId} className="gc-dashboard min-h-screen bg-white pb-20 text-ink lg:pb-0"><RoleSessionBoundary scope="customer" />
     <header className="gc-brand-header flex min-h-20 flex-wrap gap-3 py-3 items-center justify-between border-b border-plum/10 px-5 lg:px-10">
-      <Link href="/" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
-      <nav className="hidden gap-6 text-sm xl:flex"><Link href="/">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
+      <Link href="/site-access" className="font-serif text-3xl font-bold text-plum">Girlz Culture</Link>
+      <nav className="hidden gap-6 text-sm xl:flex"><Link href="/site-access">Home</Link><Link href="/salons">Search Salons</Link><Link href="/partner">For Professionals</Link><Link href="/how-it-works">Why Girlz Culture</Link></nav>
       <div data-language-selector-host className="flex items-center gap-2 sm:gap-4"><LanguageSelector compact/><Link href="/account?tab=upcoming" aria-label="Upcoming appointments" className="grid h-11 w-11 place-items-center"><Bell size={20}/></Link><Link href="/account?tab=inbox" aria-label="Booking messages" className="grid h-11 w-11 place-items-center"><MessageSquare size={20}/></Link><span data-no-translate className="hidden font-semibold sm:block">{firstName}</span><RoleLogoutButton scope="customer" compact className="flex h-10 w-10 items-center justify-center rounded-full text-plum hover:bg-blush lg:hidden" /></div>
     </header>
     <div className="mx-auto grid max-w-[1720px] lg:grid-cols-[270px_1fr]">

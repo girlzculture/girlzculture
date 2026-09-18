@@ -40,6 +40,15 @@ function fixture(options = {}) {
   return { calls, saved, context, server, run: (tool, args) => server.executeAssistantTool(context, { requestId, locale: 'fr', tool, args }) };
 }
 
+test('a replayed read rechecks current records instead of returning stale authorized data',async()=>{
+  const f=fixture({tables:{gc_assistant_requests:[{id:requestId,salon_id:business,requested_by:actor,tool:'get_services_and_prices',arguments:{query:''},locale:'fr',result:{services:[{name:'Removed private service'}]}}],styles:[{id:actor,salon_id:business,name:'Current service',base_price:100}]}});
+  const result=await f.run('get_services_and_prices',{query:''});
+  assert.equal(result.replayed,true);
+  assert.equal(JSON.stringify(result).includes('Removed private service'),false);
+  assert.equal(result.request.result.services[0].name,'Current service');
+  assert.equal(f.saved.length,0,'read refresh does not rewrite the original audit');
+});
+
 test('service search applies the requested name before the bounded database result limit', async () => {
   const styles = [...Array.from({ length: 100 }, (_,i) => ({ id: String(i), salon_id: business, name: `A service ${i}` })), { id: 'wanted', salon_id: business, name: 'Z medium knotless', base_price: 180 }];
   const f = fixture({ tables: { styles } });

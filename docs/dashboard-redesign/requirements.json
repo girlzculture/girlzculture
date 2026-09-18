@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IMPLEMENTING; NOT RELEASED",
+  "status": "IMPLEMENTING; NOT RELEASED; 157 local migrations verified; reports implemented, browser routing investigation in progress",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -36,7 +36,9 @@
       "verification": [
         "Screenshot review exposed and corrected dashboard font override and stacked setup banners"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| UI-01 | Apply a coherent redesign to all 14 owner navigation sections: Overview, My Page, Photos, Styles & Pricing, Stylists, Products, Availability & Calendar, Bookings, Messages, Reviews, Finances (renamed from Earnings & Payouts), Promotions, Subscription, Settings. Include their editing/detail views and dialogs. | A page inventory and matched screenshots account for every section; no old landing screen is silently excluded. |",
+      "detailed_clause_line": 49
     },
     {
       "id": "UI-02",
@@ -51,14 +53,21 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "public/fonts/montserrat"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Reproduced hairline Montserrat rendering in Windows WebKit with Google resource; official pinned static weights render correctly with the same family and weight. Included upstream OFL."
+      ],
+      "verification": [
+        "Isolated Chromium/WebKit comparison preserved outsideGit; two focused390finance browser tests passed and native header crop visually inspected. Global final regression still pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| UI-02 | Match the references' layout and visual hierarchy: compact header, recognizable navigation, useful page headings, organized cards, imagery, clear actions, consistent spacing and typography. | Review composition as well as colors/fonts. |",
+      "detailed_clause_line": 50
     },
     {
       "id": "UI-03",
@@ -84,7 +93,9 @@
       "verification": [
         "Local screenshots reviewed; combined layout tests running"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| UI-03 | Reduce the stacked header, assistant-button strip, breadcrumb/search strip, and oversized route cards that push actual work down the page. | Owners reach the main editor, calendar, gallery, list, or conversation directly. |",
+      "detailed_clause_line": 51
     },
     {
       "id": "UI-04",
@@ -106,7 +117,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| UI-04 | Preserve existing functions, data, validation, permissions, and save/publish behavior while changing their presentation. Spreadsheet import/export remains accessible as a secondary task instead of dominating everyday work. | Existing important workflows remain reachable and functional. |",
+      "detailed_clause_line": 52
     },
     {
       "id": "UI-05",
@@ -128,7 +141,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| UI-05 | Use plain business language. Replace implementation-oriented explanations in ordinary screens with useful labels, statuses, help, and recoverable errors. | For example, media owners see uploading/saved/published/retry status rather than a permanent explanation of storage stages. |",
+      "detailed_clause_line": 53
     },
     {
       "id": "UI-06",
@@ -150,7 +165,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| UI-06 | Design loading, empty, error, and populated states deliberately. | A business without transactions or bookings still gets a useful screen; missing activity is never replaced with fabricated live figures. |",
+      "detailed_clause_line": 54
     },
     {
       "id": "UI-07",
@@ -172,7 +189,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| UI-07 | Extend the founder's modern, bright, colorful, conversational and interactive design direction and plain-language copy review across the main website and app as well as the owner dashboard. | Keep the detailed dashboard references as the current visual specification; incorporate further customer-facing design instructions as they arrive. Public profile, policy, promotion and booking changes below are already explicit scope. |",
+      "detailed_clause_line": 55
     },
     {
       "id": "MOB-01",
@@ -188,14 +207,22 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "src/components/owner/GcAssistant.tsx"
+        "src/components/owner/GcAssistant.tsx",
+        "src/app/globals.css",
+        "public/fonts/montserrat"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Reproduced hairline Montserrat rendering in Windows WebKit with Google resource; official pinned static weights render correctly with the same family and weight. Included upstream OFL."
+      ],
+      "verification": [
+        "Isolated Chromium/WebKit comparison preserved outsideGit; two focused390finance browser tests passed and native header crop visually inspected. Global final regression still pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| MOB-01 | Keep every necessary feature accessible on mobile, using compact cards, lists, tabs, and menus suitable for touch. |",
+      "detailed_clause_line": 63
     },
     {
       "id": "MOB-02",
@@ -218,7 +245,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| MOB-02 | Keep a clearly labeled GC Assistant icon/button near the top on every owner page. Open the conversation only on a tap; do not automatically cover the mobile screen. |",
+      "detailed_clause_line": 64
     },
     {
       "id": "MOB-03",
@@ -247,7 +276,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "| MOB-03 | Use shorter My Page labels: Info, Services, Location, More. Desktop retains fuller labels such as Services & Pricing and Location & Hours. |",
+      "detailed_clause_line": 65
     },
     {
       "id": "MOB-04",
@@ -276,7 +307,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "| MOB-04 | More exposes Amenities & Policies, Social & Links, and other overflow content. Selecting an item displays its actual editable content. |",
+      "detailed_clause_line": 66
     },
     {
       "id": "MOB-05",
@@ -299,7 +332,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| MOB-05 | Actions that do not fit, including calendar availability/full-day actions, go in an accessible three-line/menu or More control. Do not remove them on mobile. |",
+      "detailed_clause_line": 67
     },
     {
       "id": "MOB-06",
@@ -326,7 +361,9 @@
       "verification": [
         "390px browser verifies category selection and metadata recovery; real upload test pending"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| MOB-06 | Mobile photo uploads inherit the selected category and allow titles/captions and editing. |",
+      "detailed_clause_line": 68
     },
     {
       "id": "MOB-07",
@@ -349,7 +386,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| MOB-07 | Match the references' compact navigation and content hierarchy, including the mobile bottom navigation where appropriate. Keep Save, Upload, Send, and Close usable when the keyboard is open. |",
+      "detailed_clause_line": 69
     },
     {
       "id": "GC-01",
@@ -377,7 +416,9 @@
       "verification": [
         "18/18 Chromium/WebKit interaction tests; desktop 1440x900 geometry and route continuity."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| GC-01 | On desktop, show the assistant alongside the workspace by default on every owner page. | Current int10 is a large overlay that tints and obscures the page. Target is the reference's adjacent panel. |",
+      "detailed_clause_line": 163
     },
     {
       "id": "GC-02",
@@ -405,7 +446,9 @@
       "verification": [
         "18/18 interaction tests across four viewports."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| GC-02 | Provide X to close and an obvious way to reopen. | Closing must work immediately and not be instantly undone by a rerender. The assistant stays available on each page. |",
+      "detailed_clause_line": 164
     },
     {
       "id": "GC-03",
@@ -433,7 +476,9 @@
       "verification": [
         "18/18 interaction tests across four viewports."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| GC-03 | On mobile, show the top entry button; open only on tap. | The conversation must not automatically cover the working screen. |",
+      "detailed_clause_line": 165
     },
     {
       "id": "GC-04",
@@ -463,7 +508,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "| GC-04 | Use “GC Assistant” and “Your business co-pilot.” Remove “AI” and generic “Ask about…” phrasing from assistant-facing labels and copy. | Current footer says “Review AI suggestions before saving changes.” Use plain wording such as “Review suggested changes before saving.” Preserve the review behavior. |",
+      "detailed_clause_line": 166
     },
     {
       "id": "GC-05",
@@ -493,7 +540,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "| GC-05 | Keep voice interaction and read-aloud controls understandable and compact. | Current repeated device-voice explanations take significant message space; place necessary information in suitable help/settings. |",
+      "detailed_clause_line": 167
     },
     {
       "id": "GC-06",
@@ -523,7 +572,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "| GC-06 | Update assistant context to the current page and business. Keep the conversation coherent as the owner navigates. | int10 shows booking/calendar/overview suggestion chips while Products is open. Provide contextually useful actions rather than repeating the same generic chips after each answer. |",
+      "detailed_clause_line": 168
     },
     {
       "id": "GC-07",
@@ -547,7 +598,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| GC-07 | Retrieve relevant authorized business facts when needed and preserve language preferences. | A static reply asking for service details does not establish a backend defect; inspect actual retrieval before diagnosing. Do not make owners repeat information the assistant can legitimately read. |",
+      "detailed_clause_line": 169
     },
     {
       "id": "GC-08",
@@ -571,7 +624,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| GC-08 | Keep changes reviewable and verify actual outcomes through existing tools/permissions. | Do not replace real operations with decorative success messages. Existing confirmation requirements remain in effect. |",
+      "detailed_clause_line": 170
     },
     {
       "id": "GC-09",
@@ -601,7 +656,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "| GC-09 | Retain the existing consent-based memory behavior. | A persistent panel or route change must not silently enable transcript storage or cross-business access. |",
+      "detailed_clause_line": 171
     },
     {
       "id": "CHAT-01",
@@ -625,7 +682,9 @@
       "verification": [
         "Baseline failed before response arrived; corrected 18/18 browser checks plus five actor/session tests. Timeout/offline and actual mobile keyboard/live checks still required."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "CHAT-01 — Immediately insert submitted messages, clear the composer, and show a separate assistant loading state; implement and verify every interaction below.",
+      "detailed_clause_line": 175
     },
     {
       "id": "NL-01",
@@ -651,7 +710,9 @@
       "verification": [
         "tests/p0-assistant-execution.test.mjs: related styles and literal wildcard regressions"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NL-01 — Accept everyday wording, abbreviations, common service aliases, punctuation differences, misspellings, spoken rambling and multilingual phrasing. “How much is boho braids?” should search relevant current-business service names, including compound names such as Boho / Knotless Braids when present. A missing exact string is not a reason to stop searching.",
+      "detailed_clause_line": 238
     },
     {
       "id": "NL-02",
@@ -677,7 +738,9 @@
       "verification": [
         "14 execution tests passed"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NL-02 — Resolve wording to real catalog records. Search broadly enough within the authorized business, rank plausible matches and return their actual names, prices, price ranges and relevant options. Do not blindly equate all Boho, Goddess, Mermaid, Box and Knotless services; they may be distinct records or variants. For an informational question, list plausible matches and their prices when useful. Ask a short clarification only when a meaningful distinction remains; a change or booking must use the intended specific record.",
+      "detailed_clause_line": 240
     },
     {
       "id": "NL-03",
@@ -703,7 +766,9 @@
       "verification": [
         "31 planning tests passed; live provider check pending"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NL-03 — Preserve intent across follow-ups. “My photos” after a question about photo counts still means count the owner's saved business photos. “That service” should resolve from the active conversation. Changing pages should update context without erasing the question. The current page guides relevance but does not limit access to other authorized modules of the same business.",
+      "detailed_clause_line": 242
     },
     {
       "id": "NL-04",
@@ -725,7 +790,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NL-04 — Answer first, then offer a relevant next action if helpful. Avoid long explanations of how the assistant works, speculation about why a previous answer was wrong, and questions asking the owner to supply facts already held by the platform. After a correction, reread authoritative data and acknowledge the corrected fact plainly.",
+      "detailed_clause_line": 244
     },
     {
       "id": "NL-05",
@@ -751,7 +818,9 @@
       "verification": [
         "14 execution tests passed"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NL-05 — Distinguish zero records, zero search matches, unavailable data and an unsuccessful lookup. A failed or empty tool response must not become “you have no services/photos/bookings” without evidence. Use concise error language with retry when a read fails. Never invent a price, count, policy or calculation to avoid admitting a failure.",
+      "detailed_clause_line": 246
     },
     {
       "id": "DATA-01",
@@ -772,7 +841,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "DATA-01 — Connect the assistant to the same authoritative business records used by the dashboard, using authorized lookups on demand and maintained Girlz Culture product guidance. A responding model does not itself establish complete access to application data. The implementation needs an explicit inventory of reads, calculations and permitted actions for every module; do not rely on a static prompt containing a partial snapshot.",
+      "detailed_clause_line": 248
     },
     {
       "id": "DATA-02",
@@ -793,7 +864,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "DATA-02 — Use authoritative amounts/counts and reliable calculation code for arithmetic, percentages, financial rounding and date filters. Return the period and basis where relevant. Write actions retain review/confirmation as required and report success only after a verified save.",
+      "detailed_clause_line": 268
     },
     {
       "id": "SCOPE-01",
@@ -808,18 +881,24 @@
         "src/lib/gcAssistantServer.ts",
         "src/lib/ownerReadServer.ts",
         "src/lib/assistantMemoryServer.ts",
-        "src/app/api/salon/assistant/route.ts"
+        "src/app/api/salon/assistant/route.ts",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
       "changes": [
-        "Current-business services/media reads and platform-guidance allowlist; no foreign ID/URL accepted."
+        "Current-business services/media reads and platform-guidance allowlist; no foreign ID/URL accepted.",
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
       ],
       "verification": [
-        "API and execution fixtures include two separate businesses"
+        "API and execution fixtures include two separate businesses",
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "SCOPE-01 — The assistant serves the currently selected, authorized business only, plus general Girlz Culture platform guidance. It must refuse requests for information about another business, including publicly available profiles, prices, services, reviews or images. A public webpage is not an exception. Do not browse or query other businesses to satisfy such requests.",
+      "detailed_clause_line": 272
     },
     {
       "id": "SCOPE-02",
@@ -834,14 +913,30 @@
         "src/lib/gcAssistantServer.ts",
         "src/lib/ownerReadServer.ts",
         "src/lib/assistantMemoryServer.ts",
-        "src/app/api/salon/assistant/route.ts"
+        "src/app/api/salon/assistant/route.ts",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "SCOPE-02 — Enforce that boundary in the application's server-side authorization and data access, not merely in conversational instructions. Derive the active business from the authenticated and authorized session. An owner-supplied prompt, URL or model-supplied business ID must not expand scope. Preserve staff-role permissions within the business as well.",
+      "detailed_clause_line": 274
     },
     {
       "id": "SCOPE-03",
@@ -856,20 +951,35 @@
         "src/lib/gcAssistantServer.ts",
         "src/lib/ownerReadServer.ts",
         "src/lib/assistantMemoryServer.ts",
-        "src/app/api/salon/assistant/route.ts"
+        "src/app/api/salon/assistant/route.ts",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
       ],
-      "state": "PENDING",
+      "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Implementation and verification not completed",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
       "changes": [
-        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels.",
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
       ],
-      "verification": [],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+      ],
       "live_evidence": [],
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "SCOPE-03 — Apply the same boundary to searches, tools, file/media reads, aggregates, caches, conversation context, saved memory, exports and write actions. Only authorized current-business results should reach the model. Prevent other-business information from entering shared caches or reply suggestions.",
+      "detailed_clause_line": 276
     },
     {
       "id": "SCOPE-04",
@@ -884,20 +994,27 @@
         "src/lib/gcAssistantServer.ts",
         "src/lib/ownerReadServer.ts",
         "src/lib/assistantMemoryServer.ts",
-        "src/app/api/salon/assistant/route.ts"
+        "src/app/api/salon/assistant/route.ts",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
       ],
-      "state": "PENDING",
+      "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Implementation and verification not completed",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
       "changes": [
-        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels.",
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
       ],
-      "verification": [],
+      "verification": [
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+      ],
       "live_evidence": [],
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "SCOPE-04 — If the application allows a user to manage multiple businesses, a deliberate authorized business switch sets a new context; do not carry one business's facts or memory into the other. Asking the assistant to name or select Business B must not itself switch authorization.",
+      "detailed_clause_line": 278
     },
     {
       "id": "SCOPE-05",
@@ -912,18 +1029,32 @@
         "src/lib/gcAssistantServer.ts",
         "src/lib/ownerReadServer.ts",
         "src/lib/assistantMemoryServer.ts",
-        "src/app/api/salon/assistant/route.ts"
+        "src/app/api/salon/assistant/route.ts",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
       ],
       "state": "IMPLEMENTING",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Full detailed-clause, visual and live release verification remains pending",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
       "changes": [
-        "Direct foreign IDs, foreign public guidance, revoked permissions, and history replay tested at backend boundary."
+        "Direct foreign IDs, foreign public guidance, revoked permissions, and history replay tested at backend boundary.",
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
       ],
       "verification": [
-        "14 execution + 31 planning + 4 profile/media tests; live interface refusal still pending"
+        "14 execution + 31 planning + 4 profile/media tests; live interface refusal still pending",
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "SCOPE-05 — Verify direct requests, indirect comparisons, guessed record IDs and follow-up questions across two isolated test businesses. Confirm both refusal in the interface and rejection at data/tool boundaries. Preserve the explicit public-information restriction even if ordinary website visitors can view those profiles manually.",
+      "detailed_clause_line": 280
     },
     {
       "id": "POL-01",
@@ -949,7 +1080,9 @@
       "verification": [
         "Read-only historical incident HTTP409 confirmed. Reproduced API failure before fix; 3/3 API/audit tests after fix. Live publication still pending."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-01 — Fix the reported unavailable/save/confirm/publish failure. Start from support reference 70ad1644-c08f-4a16-af76-014d9b58b0df and correlate the request/logs when implementation begins. Preserve the owner's draft during failures. A success message must correspond to a real save and, when requested, publication.",
+      "detailed_clause_line": 284
     },
     {
       "id": "POL-02",
@@ -975,7 +1108,9 @@
       "verification": [
         "Three editor/conversion tests passing; browser contract update in progress."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-02 — Replace the collection of refund/satisfaction, missed-appointment, late-arrival, guest and children dropdowns with one main text editor titled Business Policy. The founder's spoken instruction is for one coherent policy write-up; do not preserve the old form solely because one field lacks a drawn X.",
+      "detailed_clause_line": 286
     },
     {
       "id": "POL-03",
@@ -1001,7 +1136,9 @@
       "verification": [
         "Policy editor unit and focused mobile publish test passed"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-03 — Give optional writing guidance or an editable starting outline covering cancellation notice, missed appointments, late arrivals, rescheduling, guests/children and applicable refund/service concerns. The owner can write everything in normal language. Do not impose invented policy terms or populate public text without an intentional save.",
+      "detailed_clause_line": 288
     },
     {
       "id": "POL-04",
@@ -1027,7 +1164,9 @@
       "verification": [
         "Policy conversion tests passed"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-04 — Keep an optional Before your appointment text area, as expressly allowed. Fold additional business notes into the main write-up instead of retaining a separate large duplicate field.",
+      "detailed_clause_line": 290
     },
     {
       "id": "POL-05",
@@ -1053,7 +1192,9 @@
       "verification": [
         "390px save-refresh plus permission/validation unit pass; public live check pending"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-05 — Move walk-in acceptance to a Walk-ins welcome checkbox in My Page. Saving it displays/removes the corresponding label on the correct public business page. This label must not silently modify online appointment capacity or availability rules.",
+      "detailed_clause_line": 292
     },
     {
       "id": "POL-06",
@@ -1075,7 +1216,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-06 — Publish a clear Business Policy link on the public business page. Link the applicable published policy from a required acknowledgement checkbox during booking before completion. Customers must be able to read it on mobile without losing their booking progress. Retain the policy version/reference associated with the acknowledgement rather than retrospectively changing what an existing booking agreed to.",
+      "detailed_clause_line": 294
     },
     {
       "id": "POL-07",
@@ -1101,7 +1244,9 @@
       "verification": [
         "Three editor/conversion tests plus four disclosure tests pass; historical and live acceptance still pending."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-07 — Carry existing saved policy content into the new editor without loss. The interface simplification must not silently change already enforced deposit, cancellation or platform booking rules. Identify any structured settings the transaction engine still relies on and reconcile the published narrative with actual behavior as part of implementation.",
+      "detailed_clause_line": 296
     },
     {
       "id": "POL-08",
@@ -1123,7 +1268,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "POL-08 — Acceptance follows the full path: edit → save/review → publish → refresh → public policy link → booking acknowledgement, including a failed-save recovery. The owner must be able to preview exactly what customers will read.",
+      "detailed_clause_line": 298
     },
     {
       "id": "BILL-01",
@@ -1147,7 +1294,9 @@
       "status": "INVESTIGATING",
       "evidence": [
         "Read-only production Engine event b19ef999-8b7b-4a21-811f-6e1de5a443cf: two /api/stripe/portal failures, Sep17 22:17 and23:34UTC, STRIPE_PROVIDER_FAILURE:400. Provider reason absent. No diagnosis of account/card/configuration cause is yet proven."
-      ]
+      ],
+      "detailed_clause": "BILL-01 — The founder reports Subscription → Manage payment method shows an unavailable/support-reference error. It remains a reported functional failure, with no dedicated error screenshot supplied. Diagnose the actual subscription-billing flow rather than assuming the separate payout-account connection is the cause.",
+      "detailed_clause_line": 302
     },
     {
       "id": "BILL-02",
@@ -1167,7 +1316,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "BILL-02 — Let the authorized business owner update the payment method attached to the correct existing subscription/billing customer. Do not create a new subscription, immediate purchase, upgrade, proration or payment merely to save a replacement method. Updating the card must not itself charge the owner.",
+      "detailed_clause_line": 304
     },
     {
       "id": "BILL-03",
@@ -1187,7 +1338,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "BILL-03 — Reuse the secure Stripe integration for collecting/updating payment details. After return, show the updated masked/default method and persist it for the intended subsequent subscription payments. Do not put raw card details into application logs or the assistant conversation.",
+      "detailed_clause_line": 306
     },
     {
       "id": "BILL-04",
@@ -1207,7 +1360,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "BILL-04 — Verify update and cancellation paths, persistence/default selection, correct business association and absence of an app-initiated charge from this action. Keep the existing subscription price, billing schedule and plan intact. Any independent existing invoice/payment behavior must be identified accurately; the card-edit flow must not promise that all future or unrelated charges cease.",
+      "detailed_clause_line": 308
     },
     {
       "id": "FIN-01",
@@ -1230,7 +1385,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "FIN-01 — Rename Earnings & Payouts to Finances in navigation, headings, breadcrumbs, page search, assistant guidance and translated labels. Preserve route compatibility where useful. The deeper financial scope is now specified by the attached Software Value Build Spec, incorporated in section 17.",
+      "detailed_clause_line": 312
     },
     {
       "id": "PROMO-01",
@@ -1253,7 +1410,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PROMO-01 — A promotion can target selected styles/services, a service group or the business's eligible services as a whole. Save the exact targets, percentage and applicable dates/conditions. Define how a business-wide scope applies to services versus products rather than extending it to subscriptions or unrelated payments automatically.",
+      "detailed_clause_line": 314
     },
     {
       "id": "PROMO-02",
@@ -1276,7 +1435,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PROMO-02 — Show clear evidence of an active offer on the relevant public business/service views and through booking: original price, offer/discount, revised payable amount, unchanged required deposit and remaining balance. Keep owner promotion records, booking details, customer confirmation and Finances consistent. Expired/ineligible offers must not apply, and unrelated businesses/services must be unaffected.",
+      "detailed_clause_line": 316
     },
     {
       "id": "PROMO-03",
@@ -1299,7 +1460,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PROMO-03 — The founder explicitly requires the booking deposit to remain unchanged; deduct the promotion's monetary saving from the remaining amount due. Do not apply the discount to, or automatically reduce/recalculate, the protected deposit. Do not stack a discount twice or generate a negative balance.",
+      "detailed_clause_line": 318
     },
     {
       "id": "PROMO-04",
@@ -1324,7 +1487,9 @@
         "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms."
       ],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PROMO-04 — Percentage basis needs an explicit final rule. “20% off the service with an unchanged deposit” and “20% off only the remaining balance” produce different totals. The founder's message establishes deposit protection but does not finally settle that distinction. Record it for the final consolidated specification; do not silently choose a formula or interrupt the current intake with a question.",
+      "detailed_clause_line": 320
     },
     {
       "id": "PROMO-05",
@@ -1347,7 +1512,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PROMO-05 — Define rounding, eligibility, overlapping promotions, optional add-ons and discounts larger than the available balance against the real pricing engine before implementation. Never silently cut a protected deposit or advertise a saving the customer cannot receive. Verify the approved arithmetic and evidence from public offer through booking and Finances; no real charge is needed to record these requirements.",
+      "detailed_clause_line": 324
     },
     {
       "id": "COPY-01",
@@ -1368,7 +1535,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "COPY-01 — Audit user-facing copy throughout the platform, especially GC Assistant. Replace mechanical phrases such as “Ask about your business, find an answer, or prepare a change. I will keep it conversational…” with short, natural, useful wording. Remove unnecessary self-description and repeated system-process explanations. Keep internal diagnostic detail available to support rather than filling ordinary screens with it.",
+      "detailed_clause_line": 328
     },
     {
       "id": "COPY-02",
@@ -1395,7 +1564,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "COPY-02 — A concise greeting can identify the assistant and offer relevant help without claiming to be a human. Answer the owner's question directly; use a short list or detail view only when it helps. Preserve necessary transaction confirmations and understandable errors while removing the “AI” branding requested earlier.",
+      "detailed_clause_line": 330
     },
     {
       "id": "AVATAR-01",
@@ -1422,7 +1593,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "AVATAR-01 — Replace the robot-only presentation with a choice of friendly illustrated/emoticon avatars: smiling men, smiling women and optional pets. A single default can be used initially, but the requested finished scope includes a small selectable set and a saved business preference. This is an in-product avatar selector, not a request to install a ChatGPT pet/plugin.",
+      "detailed_clause_line": 332
     },
     {
       "id": "AVATAR-02",
@@ -1449,7 +1622,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "AVATAR-02 — Use the selected avatar consistently in the assistant launcher, header and messages on desktop and mobile. The avatar setting must stay within its business context. Provide descriptive accessible names and a sensible default.",
+      "detailed_clause_line": 334
     },
     {
       "id": "MOB-08",
@@ -1478,7 +1653,9 @@
       "status": "IMPLEMENTING",
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
-      ]
+      ],
+      "detailed_clause": "MOB-08 — Review the supplied real mobile assistant captures for excessive header/footer/composer space, long low-information replies, repeated Read aloud explanations and irrelevant chips. Prioritize the conversation and practical controls. Preserve the user's ability to enlarge text and use assistive technology; do not solve crowding by making essential text tiny.",
+      "detailed_clause_line": 336
     },
     {
       "id": "VALUE-01",
@@ -1499,7 +1676,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "VALUE-01 — Girlz Culture should help the owner run the whole business, including activity originating outside the marketplace. The intended value is an invisible bookkeeper, a reliable client record, and an informed advisor in the owner's language. It must remain useful on days when customers come through walk-ins, repeat visits, phone calls or social media rather than a Girlz Culture booking.",
+      "detailed_clause_line": 352
     },
     {
       "id": "VALUE-02",
@@ -1520,7 +1699,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "VALUE-02 — The supplied specification requires deposits to route directly to the business, no Girlz Culture commission or Girlz Culture processing fee, and subscription charges as the money Girlz Culture collects for itself. Offline cash/card/transfer entries are records of payments handled outside the app, not instructions to charge customers.",
+      "detailed_clause_line": 354
     },
     {
       "id": "VALUE-03",
@@ -1534,14 +1715,25 @@
       "implementation_paths": [
         "src/lib/financeLedgerCore.ts",
         "src/lib/bookingCommunications.ts",
-        "src/i18n"
+        "src/i18n",
+        "src/lib/businessFinanceReport.ts",
+        "src/lib/businessFinanceExportServer.ts",
+        "src/app/api/salon/finances/export/route.ts",
+        "src/components/owner/FinanceReportControls.tsx",
+        "src/i18n/business-finance-source-catalog.ts"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected PDF/XLSX finance reports from the same ledger in EN/FR/ES/zh-CN, embedded Chinese-capable font, preserved original names, numeric spreadsheet values and original refund links. Binary downloads reject actor changes; front-desk logging does not grant export access."
+      ],
+      "verification": [
+        "Five focused report/download tests passed. Four generated PDFs preserve extracted names/numbers/Chinese/footers; corrected blank footer pages. Four spreadsheets read back matching totals and formula-like names stay text. Browser8/8 failed before dashboard mounted with local Nextdev404; investigating, not passed."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "VALUE-03 — Keep every screen, label, export and assistant reply available in EN/FR/ES/ZH, using the existing language preference and DeepL integration where appropriate. Include new modules, validation, empty/error states, PDFs, spreadsheets and customer communications. Preserve names, actual amounts, dates and service facts during translation. This adds to the existing four-language implementation; Wolof remains separately deferred as previously agreed.",
+      "detailed_clause_line": 358
     },
     {
       "id": "FIN-02",
@@ -1557,14 +1749,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-02 — Automatic platform records | Capture service, agreed/listed price, actual deposit, stylist, customer, booking identity and date/time from platform bookings. Keep pending, paid, refunded, cancelled and completed states accurate. Repeated events must not duplicate a transaction. |",
+      "detailed_clause_line": 364
     },
     {
       "id": "FIN-03",
@@ -1580,14 +1788,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-03 — Fast walk-in/off-platform entry | Make service, price, stylist and payment method the minimal required fields; client name is optional. Use sensible editable date/time defaults. Entry must work in seconds on a phone or at the front desk. Record this source distinctly from platform bookings. |",
+      "detailed_clause_line": 365
     },
     {
       "id": "FIN-04",
@@ -1603,14 +1827,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-04 — Balance at the chair | From a platform booking, provide a one-tap or comparably short action to record the remaining balance and its payment method. Link it to the already-recorded deposit and service. This records a payment, without processing a new charge. |",
+      "detailed_clause_line": 366
     },
     {
       "id": "FIN-05",
@@ -1626,14 +1866,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-05 — Consistent transaction details | Store date, service/product, amount, deposit/balance/full-payment stage, cash/card/transfer method label, stylist where relevant and platform/walk-in/off-platform source. Preserve history and clear correction/refund links. |",
+      "detailed_clause_line": 367
     },
     {
       "id": "FIN-06",
@@ -1649,14 +1905,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-06 — Stylist reporting | Earnings for any requested day/week/month/period, clients served and top earner. State whether a number means gross service sales, earned compensation or cash already paid out. |",
+      "detailed_clause_line": 368
     },
     {
       "id": "FIN-07",
@@ -1672,14 +1944,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-07 — Business reporting | Daily/weekly/monthly/custom-period totals, cash/card/transfer breakdown, deposit and balance position, revenue by service, platform versus walk-in activity, busiest/slowest days and client counts across sources. |",
+      "detailed_clause_line": 369
     },
     {
       "id": "FIN-08",
@@ -1695,14 +1983,26 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Finance implementation remains partial: online product reconciliation, compensation management/completion, exports, complete date controls/localization and live release verification still required",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-08 — Daily close and summaries | Provide an understandable end-of-day summary plus automatic weekly and monthly totals. Summarize from the same ledger used by screens, exports and assistant answers. Distinguish visits/transactions from distinct identified clients when walk-ins have no name. |",
+      "detailed_clause_line": 370
     },
     {
       "id": "FIN-09",
@@ -1718,14 +2018,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-09 — Commission arrangements | Owner configures a stylist's percentage and calculation basis. Compute earnings from eligible completed transactions; show earned, paid and outstanding amounts with a payout history. Define treatment of discounts, refunds and relevant amounts explicitly. |",
+      "detailed_clause_line": 371
     },
     {
       "id": "FIN-10",
@@ -1741,14 +2057,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-10 — Booth rent | Configure weekly/monthly rent; track rent owed and paid and the stylist retaining their service income. Do not automatically treat the stylist's full service sales as salon-owned revenue or a debt the salon owes them. |",
+      "detailed_clause_line": 372
     },
     {
       "id": "FIN-11",
@@ -1764,14 +2096,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-11 — Employee/flat arrangements | Record the agreed wage amount/period and other inputs required by that arrangement. Compute the amount due and record actual payments. A flat wage cannot be inferred from service turnover alone. Preserve arrangement history so later edits do not silently rewrite prior payouts. |",
+      "detailed_clause_line": 373
     },
     {
       "id": "FIN-12",
@@ -1787,14 +2135,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-12 — Deposit clarity | Clearly distinguish collected deposits, booked/unpaid balances and fully paid transactions, with a usable view of who still owes money at the chair. Money collected before a visit must not become an additional sale on top of that visit. |",
+      "detailed_clause_line": 374
     },
     {
       "id": "FIN-13",
@@ -1810,14 +2174,25 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceReport.ts",
+        "src/lib/businessFinanceExportServer.ts",
+        "src/app/api/salon/finances/export/route.ts",
+        "src/components/owner/FinanceReportControls.tsx",
+        "src/i18n/business-finance-source-catalog.ts"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected PDF/XLSX finance reports from the same ledger in EN/FR/ES/zh-CN, embedded Chinese-capable font, preserved original names, numeric spreadsheet values and original refund links. Binary downloads reject actor changes; front-desk logging does not grant export access."
+      ],
+      "verification": [
+        "Five focused report/download tests passed. Four generated PDFs preserve extracted names/numbers/Chinese/footers; corrected blank footer pages. Four spreadsheets read back matching totals and formula-like names stay text. Browser8/8 failed before dashboard mounted with local Nextdev404; investigating, not passed."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-13 — Reports and exports | Monthly, quarterly and yearly income summaries, payment-method breakdowns, downloadable PDF and spreadsheet exports suitable for sharing with an accountant. Include consistent dates, currency, periods and totals in the selected language. Exports are organized records, not a claim that the app files or certifies tax returns. |",
+      "detailed_clause_line": 375
     },
     {
       "id": "FIN-14",
@@ -1840,7 +2215,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| FIN-14 — Owner-set deposits | Let businesses configure their deposit rate, including a higher rate above a service-price threshold. Source examples are 20% normally and 40% above $300; these are examples, not hardcoded rates. Calculate and snapshot the applicable terms for each booking. |",
+      "detailed_clause_line": 376
     },
     {
       "id": "FIN-15",
@@ -1856,14 +2233,31 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "src/lib/gcAssistantServer.ts",
+        "supabase/migrations/20260918060000_assistant_scoped_history.sql"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "| FIN-15 — Owner-controlled access | Owner sees the business's complete finance view and decides whether a stylist sees only their own earnings or none, and what front-desk/staff roles may view and log. Enforce equivalent permissions in UI, assistant answers, exports and server operations. |",
+      "detailed_clause_line": 377
     },
     {
       "id": "FIN-16",
@@ -1886,7 +2280,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "FIN-16 — Owner-set deposit rates extend the earlier fixed-deposit assumptions; they do not erase the instruction that a promotion must leave the applicable deposit unchanged. Use the business's applicable booking deposit rule and explicitly settle its price basis with the promotion formula. Existing booking amounts must not change retroactively when a rate is edited. Model the relationship between threshold rates and any no-show-related higher rate; do not accidentally apply both twice.",
+      "detailed_clause_line": 379
     },
     {
       "id": "FIN-17",
@@ -1902,14 +2298,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "FIN-17 — Correct the source document's closing shorthand before it becomes code. “Platform + walk-in + cash + deposits + product sales - expenses” combines overlapping categories. Source, payment method and payment stage are separate attributes of the same underlying transactions; adding all of them together would double-count money.",
+      "detailed_clause_line": 383
     },
     {
       "id": "FIN-18",
@@ -1925,14 +2337,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "FIN-18 — Keep agreed sale value, completed service/product sales, cash received, unpaid balances, expenses and recorded profit distinct. Define each reporting period and calculation consistently. Discounts and refunds reduce the relevant amounts once; stylist compensation and recorded payouts must not count as the same expense twice. Inventory restock costs and the cost attributed to sold products need a consistent treatment to avoid deducting both twice.",
+      "detailed_clause_line": 387
     },
     {
       "id": "FIN-19",
@@ -1948,14 +2376,30 @@
         "src/lib/financeLedgerCore.ts",
         "src/lib/assistantFinance.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "FIN-19 — Show profit from recorded revenue and applicable recorded costs. If expenses or service costs are incomplete, make that limit visible and do not claim an exact margin or “most profitable service” without supporting cost data. Do not equate the highest revenue service with the most profitable. This is needed for trustworthy assistant advice as well as screens and exports.",
+      "detailed_clause_line": 389
     },
     {
       "id": "CLIENT-01",
@@ -1976,7 +2420,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "CLIENT-01 — Maintain a business-specific client record containing past services/dates, exact service details or formula (color, size, length, technique and similar instructions), preferences, notes, allergies/sensitivities/cautions, photos of prior work and spend history. The owner's example includes medium waist-length box braids, approximately four hours, and a preference against excessive tightness.",
+      "detailed_clause_line": 393
     },
     {
       "id": "CLIENT-02",
@@ -1997,7 +2443,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "CLIENT-02 — Make a returning client's history easy for the owner or an authorized relevant stylist to open before service. Apply owner-set permissions to fields, photos, assistant retrieval and updates. Support the required languages while preserving the meaning of formulas, numerical quantities and cautions. A shared customer identity must not expose another business's private formula card or notes.",
+      "detailed_clause_line": 395
     },
     {
       "id": "ADVISE-01",
@@ -2018,7 +2466,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "ADVISE-01 — Deepen the existing assistant; preserve its working language, memory and action functionality. Ground answers in this business's actual bookings, finances, staff, services, calendar, inventory and authorized client history. Every claim about a trend, profit opportunity or available capacity must have a real data basis and period.",
+      "detailed_clause_line": 399
     },
     {
       "id": "ADVISE-02",
@@ -2039,7 +2489,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "ADVISE-02 — Provide proactive, specific suggestions: slow Tuesday afternoons; a genuinely profitable but underbooked service; own-business regulars absent for six weeks; uneven stylist utilization; open Thursday slots; and low stock before the weekend. Explain the relevant numbers briefly. Do not hardcode the sample “8%”, “6 clients” or “3 slots” as facts.",
+      "detailed_clause_line": 401
     },
     {
       "id": "ADVISE-03",
@@ -2060,7 +2512,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "ADVISE-03 — Offer useful next steps such as preparing a promotion, featuring a service, drafting a rebooking message, suggesting a schedule adjustment or a restock action. Execute only the authorized/approved operation through the real workflow. Suggesting a message, purchase or reschedule is not evidence it was sent, bought or saved.",
+      "detailed_clause_line": 403
     },
     {
       "id": "ADVISE-04",
@@ -2081,7 +2535,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "ADVISE-04 — Retain natural-language matching and follow-up continuity from sections 10–11. Be warm, concise and specific in each language, and explain genuine data limitations instead of providing generic advice or invented figures. Finance questions must respect staff-role access, not just business ownership.",
+      "detailed_clause_line": 405
     },
     {
       "id": "COMMS-01",
@@ -2103,7 +2559,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "COMMS-01 — Maintain one shareable business booking link showing its page, services, prices, availability and booking/deposit flow. It should be usable in Instagram, TikTok, WhatsApp, Google and printed materials, with bookings feeding the same business record.",
+      "detailed_clause_line": 409
     },
     {
       "id": "COMMS-02",
@@ -2125,7 +2583,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "COMMS-02 — Create the two-way booking conversation automatically when a booking is made. Translate both directions through DeepL so business and customer each use their chosen language. Include automatic welcome messages, questions, confirmations and the stylist-substitution flow. The requested active window ends 24 hours after the appointment; define how rescheduling/cancellation affects that window and distinguish closing a chat from deleting its history.",
+      "detailed_clause_line": 411
     },
     {
       "id": "COMMS-03",
@@ -2147,7 +2607,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "COMMS-03 — Add automatic booking confirmation, day-before reminder, and post-visit thank-you/rebooking nudge in the customer's language. Respect actual booking status, timezones, delivery preferences and channel configuration; avoid duplicate or inappropriate reminders after cancellation/rescheduling.",
+      "detailed_clause_line": 413
     },
     {
       "id": "COMMS-04",
@@ -2169,7 +2631,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "COMMS-04 — Let the business send promotions/updates to its own eligible client list, translated to customer languages. Use the existing permissions and messaging consent/preferences, with clear recipient selection and send behavior. This requirement describes a product feature; it is not an instruction to send any real campaign during requirements capture.",
+      "detailed_clause_line": 415
     },
     {
       "id": "COMMS-05",
@@ -2191,7 +2655,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "COMMS-05 — Position this as retaining and rebooking customers served by the business. The source refers to a separate Booking Conversation document for fuller details; that document's full text is not present in this attachment. Record the dependency for consolidation without inventing its contents or dropping the specified chat capabilities.",
+      "detailed_clause_line": 417
     },
     {
       "id": "NOSHOW-01",
@@ -2213,7 +2679,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NOSHOW-01 — Capture the requested customer no-show and late-cancellation history and support a higher deposit for repeat incidents. The source asks for a cross-platform history visible before booking confirmation. It does not specify the incident definitions, correction/dispute handling, visibility details or how the rule fits the existing instant-booking flow; these are concrete design points for the implementation specification.",
+      "detailed_clause_line": 421
     },
     {
       "id": "NOSHOW-02",
@@ -2237,7 +2705,9 @@
         "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording."
       ],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "NOSHOW-02 — Reconcile this new cross-platform request with the founder's earlier absolute restriction on an assistant using another business's information. Do not silently expose other-business bookings, identities or incidents. A possible design is a tightly limited platform-level eligibility indicator without other-business details, but that is a proposal requiring an explicit boundary decision, not an already-approved exception. Own-business history, platform-level indicators and another business's private records must remain distinguishable.",
+      "detailed_clause_line": 423
     },
     {
       "id": "WAIT-01",
@@ -2258,7 +2728,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "WAIT-01 — Provide a waitlist by service, stylist and requested time. When an eligible booking cancels, automatically offer the slot to suitable waitlisted clients. Implement offer expiry and atomic slot claiming so one cancellation cannot create multiple confirmed bookings. Keep the owner informed and preserve availability/conflict rules. Offering a slot must not silently charge or confirm every notified customer.",
+      "detailed_clause_line": 425
     },
     {
       "id": "STOCK-01",
@@ -2279,7 +2751,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "STOCK-01 — Track retail products (such as wigs, oils, edge control and accessories) and key business supplies, with appropriate quantities and configurable low-stock alerts. Make current stock and alerts available to the assistant. Reconcile logged sales, restocks and stock corrections without duplicating existing inventory deductions.",
+      "detailed_clause_line": 429
     },
     {
       "id": "STOCK-02",
@@ -2300,7 +2774,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "STOCK-02 — Log product sales into the same financial reporting model as services, preserving product identity, quantity, price, source and payment records. The owner can ask for product revenue over any supported period. Record payments handled outside the app as such; do not introduce an unintended new checkout or payment-processing scope.",
+      "detailed_clause_line": 431
     },
     {
       "id": "EXPENSE-01",
@@ -2314,14 +2790,30 @@
       "implementation_paths": [
         "src/lib/financeLedgerCore.ts",
         "src/components/owner/OwnerDashboardApp.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessFinanceCore.ts",
+        "src/lib/businessFinanceData.ts",
+        "src/lib/businessFinanceServer.ts",
+        "src/app/api/salon/finances/route.ts",
+        "src/components/owner/BusinessFinances.tsx",
+        "supabase/migrations/20260918050000_business_operating_books.sql",
+        "src/components/owner/FinanceRecords.tsx",
+        "src/components/owner/FinanceCompensation.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Remaining detailed clauses, final combined verification and protected production release are not complete",
+      "changes": [
+        "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
+        "Verified online merchandise/orders/refunds now join the same scoped ledger with separate tax/shipping. Added immutable commission/wage/booth arrangements, period obligations, paid/outstanding/advance positions, mobile record cards, balance/refund entry, date presets and retained idempotent retry. No charges or transfers. Unknown historic costs remain explicit."
+      ],
+      "verification": [
+        "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
+        "Core12/12,adapter10/10,routes5/5; finance browser12/12 Chromium/WebKit including390,768,1440,landscape and wage100/payment40/outstanding60. Local157 SQL chain passed; final/live gates pending."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "EXPENSE-01 — Let the business log supplies, rent, restocks and other expenses with dates, amounts and useful categories. Feed these into expense breakdowns and recorded-profit reporting, subject to the reconciliation definitions above. The assistant must answer what was spent, the largest categories and profit for a requested period from actual records.",
+      "detailed_clause_line": 433
     },
     {
       "id": "PUBLIC-01",
@@ -2339,12 +2831,18 @@
         "src/app/page.tsx",
         "src/components/SalonBookingWizard.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Final loaded visual review, remaining public clauses and live publication verification pending",
+      "changes": [
+        "Retired public demo gate/banner while preserving root business landing; /site-access uses real customer marketplace and eligible public businesses. Grouped customer/business navigation preserves existing pages and canonical /plans pricing."
+      ],
+      "verification": [
+        "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-01 — Use the established project/domain girlzculture.com. Preserve the root landing page and its existing approved purpose; the founder explicitly likes the page currently reached there. Capture its current behavior before editing and ensure the requested marketplace changes do not overwrite or incorrectly redirect it.",
+      "detailed_clause_line": 454
     },
     {
       "id": "PUBLIC-02",
@@ -2362,12 +2860,18 @@
         "src/app/page.tsx",
         "src/components/SalonBookingWizard.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Final loaded visual review, remaining public clauses and live publication verification pending",
+      "changes": [
+        "Retired public demo gate/banner while preserving root business landing; /site-access uses real customer marketplace and eligible public businesses. Grouped customer/business navigation preserves existing pages and canonical /plans pricing."
+      ],
+      "verification": [
+        "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-02 — /site-access must provide the complete working customer homepage/marketplace entry and access to its other public pages. It must not strand visitors in a demo-only presentation. Keep the customer navigation and Home destinations coherent with this entry. Inventory and preserve valid existing salon, style, booking and shared-business deep links instead of inventing an incompatible duplicate route tree.",
+      "detailed_clause_line": 456
     },
     {
       "id": "PUBLIC-03",
@@ -2385,12 +2889,18 @@
         "src/app/page.tsx",
         "src/components/SalonBookingWizard.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Final loaded visual review, remaining public clauses and live publication verification pending",
+      "changes": [
+        "Retired public demo gate/banner while preserving root business landing; /site-access uses real customer marketplace and eligible public businesses. Grouped customer/business navigation preserves existing pages and canonical /plans pricing."
+      ],
+      "verification": [
+        "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-03 — Remove public demo/demonstration banners, demo-only labels, preview/demo disclaimers, sample-only notices and demo-specific restrictions on real booking actions from the production customer experience. Search all relevant components, route wrappers, translations, feature/configuration flags and cached production assets. Do not merely hide one banner on one viewport. This includes the visible top banner the founder explicitly says was missed earlier.",
+      "detailed_clause_line": 458
     },
     {
       "id": "PUBLIC-04",
@@ -2408,12 +2918,18 @@
         "src/app/page.tsx",
         "src/components/SalonBookingWizard.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Final loaded visual review, remaining public clauses and live publication verification pending",
+      "changes": [
+        "Retired public demo gate/banner while preserving root business landing; /site-access uses real customer marketplace and eligible public businesses. Grouped customer/business navigation preserves existing pages and canonical /plans pricing."
+      ],
+      "verification": [
+        "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-04 — Make the public marketplace accessible and real eligible salons/services bookable. Follow an actual supported path through discovery, business profile, availability, policy acknowledgement, deposit and booking confirmation, using authorized verification methods. Buttons must not end in simulated success or a disabled demo flow. Preserve legitimate account requirements, business permissions, capacity checks, payment verification and booking protections; a public-site demo restriction is distinct from those controls.",
+      "detailed_clause_line": 460
     },
     {
       "id": "PUBLIC-05",
@@ -2431,12 +2947,18 @@
         "src/app/page.tsx",
         "src/components/SalonBookingWizard.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Final loaded visual review, remaining public clauses and live publication verification pending",
+      "changes": [
+        "Retired public demo gate/banner while preserving root business landing; /site-access uses real customer marketplace and eligible public businesses. Grouped customer/business navigation preserves existing pages and canonical /plans pricing."
+      ],
+      "verification": [
+        "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-05 — Removing public demo notices does not authorize passing invented reviews, transactions, availability or synthetic sample businesses off as real. Reuse actual approved business content and eligibility. Keep the previously requested enriched demonstrations isolated from genuine customer operations; internal test/demo fixtures can remain labeled internally. Do not fabricate live financial or booking activity to make the redesign look populated.",
+      "detailed_clause_line": 462
     },
     {
       "id": "PUBLIC-06",
@@ -2454,12 +2976,18 @@
         "src/app/page.tsx",
         "src/components/SalonBookingWizard.tsx"
       ],
-      "state": "PENDING",
-      "acceptance": "BLOCKED",
-      "blocker": "Implementation and verification not completed",
-      "changes": [],
-      "verification": [],
-      "live_evidence": []
+      "state": "IMPLEMENTING",
+      "acceptance": "AUTOMATED ONLY",
+      "blocker": "Final loaded visual review, remaining public clauses and live publication verification pending",
+      "changes": [
+        "Retired public demo gate/banner while preserving root business landing; /site-access uses real customer marketplace and eligible public businesses. Grouped customer/business navigation preserves existing pages and canonical /plans pricing."
+      ],
+      "verification": [
+        "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5."
+      ],
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-06 — Primary customer navigation should expose Explore, For Businesses and How It Works, together with appropriate existing search, account and booking actions. Remove the standalone subscription Pricing item from the customer top-level navigation. Place Pricing inside For Businesses/the business center and link to a three-tier business subscription comparison using the actual current plans, entitlements and billing configuration. The founder's final instruction to nest pricing supersedes their earlier verbal hesitation. Preserve approved prices unless explicitly changed elsewhere; do not infer new prices from a mockup.",
+      "detailed_clause_line": 466
     },
     {
       "id": "PUBLIC-07",
@@ -2482,7 +3010,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-07 — Provide a mobile hamburger menu with access to the same relevant navigation, including For Businesses → Pricing. Menus must work by touch and keyboard, close predictably and keep visible focus. Retain useful existing mobile bottom navigation where appropriate; do not copy an image's control if it lacks a real route/action.",
+      "detailed_clause_line": 468
     },
     {
       "id": "PUBLIC-08",
@@ -2505,7 +3035,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-08 — Customer discovery is currently for the supported hair-salon category. Keep future-category information, applications and category waitlists inside For Businesses/the business center. Remove “More beauty categories coming soon” grids, category waitlist banners and join-waitlist prompts from the customer homepage and comparable customer discovery marketing areas. Do not offer booking for business categories that are not launched.",
+      "detailed_clause_line": 470
     },
     {
       "id": "PUBLIC-09",
@@ -2528,7 +3060,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-09 — Preserve the appointment/cancellation waitlist specified in part 5 of the Software Value Build Spec. It is a separate operational feature from future-business-category applications; the request to remove homepage category waitlists does not cancel appointment waitlists.",
+      "detailed_clause_line": 472
     },
     {
       "id": "PUBLIC-10",
@@ -2551,7 +3085,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-10 — Preserve the existing public website's approved layout, sections, content and customer journeys while refining its appearance in teal, white and black. The website mockups are inspiration only, not a replacement design to reproduce. Interpret “glows” as polished contrast, clean surfaces, appealing component shapes, restrained depth and modern interaction. Do not rebuild or reorder whole public pages solely to match an image, replace the palette, import new slogans or add harsh glow effects. Apply the founder's separately specified functional and navigation corrections; this restraint on the public website does not reduce the full business-dashboard redesign scope.",
+      "detailed_clause_line": 476
     },
     {
       "id": "PUBLIC-11",
@@ -2574,7 +3110,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-11 — Adapt the rounded/pill-shaped search bars and category controls, soft card corners, clear active tabs, compact header, balanced whitespace and prominent actions. Use a consistent radius/spacing/type system across desktop and mobile. Inputs should look like one intentional search experience, with location, query and submit clearly related. Keep labels readable and avoid oversized stacked bars consuming the mobile viewport.",
+      "detailed_clause_line": 478
     },
     {
       "id": "PUBLIC-12",
@@ -2597,7 +3135,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-12 — Homepage reference (08_38_15), visual inspiration: a polished image-led hero, readable heading, rounded location/query/search control, clear actions and neatly shaped photo-led business cards. Mobile visual cues include wide rounded search, touch-friendly category controls and compact cards. Apply suitable component styling to the existing homepage; do not replace its hero, sections or ordering simply to copy the reference. Keep existing approved imagery/content unless a requested correction needs a change. Do not hardcode the sample New York location, copy invented counts or add every illustrated module.",
+      "detailed_clause_line": 480
     },
     {
       "id": "PUBLIC-13",
@@ -2620,7 +3160,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-13 — Discovery/results reference (08_38_33), visual inspiration: rounded search, neat service chips, concise sorting and consistently shaped salon cards. Refine the existing discovery layout and controls; do not add a new map, sidebar or layout merely because one appears in the image. Where list/map functionality already exists, maintain and polish it. Display actual images, names, valid ratings/location/open status, tags and prices with clear profile/booking actions. Preserve working filters/location behavior and readable mobile results.",
+      "detailed_clause_line": 482
     },
     {
       "id": "PUBLIC-14",
@@ -2643,7 +3185,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-14 — Public salon reference (08_38_47), visual inspiration: polished cover/profile imagery, a clear business identity, compact tabs and rounded service/staff/gallery cards. The illustration places booking alongside desktop content and uses an accessible mobile Book action; these demonstrate clarity and component treatment rather than requiring wholesale replacement of the existing public profile. Improve the existing profile and booking controls while preserving its approved content and flow, conflict/availability/payment rules and required stylist/options. Implement the requested Business Policy link and acknowledgement and display only supported verification/rating claims.",
+      "detailed_clause_line": 484
     },
     {
       "id": "PUBLIC-15",
@@ -2666,7 +3210,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-15 — Mockups are visual references, not copy or fact specifications. The founder rejects the displayed “Easy online booking”, “Secure & reliable”, “A community that uplifts” promotional blocks and “Confidence looks good on you” wording. Do not import these or other unwanted sample slogans merely because they appear in the image, including text baked into a replacement image. Preserve approved site wording except for requested navigation/copy corrections. Never copy illustrative claims such as 10K+ salons, 250K+ clients, sample ratings, background checks, health-standard certification or free rescheduling without actual support.",
+      "detailed_clause_line": 486
     },
     {
       "id": "PUBLIC-16",
@@ -2689,7 +3235,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-16 — Desktop and mobile each require intentional layouts. Verify the new component shapes, tabs, search, cards, menus and booking controls at representative narrow phone, wider phone, tablet and desktop sizes, with translated labels and mobile keyboard behavior. Avoid horizontal page overflow, clipped text, hidden primary actions and decorative controls that do not work.",
+      "detailed_clause_line": 488
     },
     {
       "id": "PUBLIC-17",
@@ -2712,7 +3260,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "PUBLIC-17 — Verify demo removal and public routing on the deployed production site, not only a local build or preview. Confirm the published deployment/source identity; check the root landing, /site-access, connected public pages and representative business/booking deep links after refresh and direct navigation. Account for service-worker/CDN/browser caching in the existing app. Save desktop and mobile screenshots showing the correct production UI and absence of demo presentation.",
+      "detailed_clause_line": 490
     },
     {
       "id": "PAGE-01",
@@ -2735,7 +3285,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-01 | Overview | Personalized welcome/date, useful summaries and metrics, schedule/trends where data supports them, page health, quick actions, status and responsive assistant layout. |",
+      "detailed_clause_line": 498
     },
     {
       "id": "PAGE-02",
@@ -2762,7 +3314,9 @@
       "verification": [
         "390px edit-save-refresh browser check passed; other widths running"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-02 | My Page | Cover/profile editing, tabbed content, correct public synchronization, policies/preparation, walk-ins and mobile More. |",
+      "detailed_clause_line": 499
     },
     {
       "id": "PAGE-03",
@@ -2789,7 +3343,9 @@
       "verification": [
         "390px edit-failure-retry-refresh browser check passed; upload-category persistence and public evidence still pending"
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-03 | Photos | Visible categorized gallery, selected-category upload, title/caption editing, cover/logo controls, ordering/status/retry and mobile flow. |",
+      "detailed_clause_line": 500
     },
     {
       "id": "PAGE-04",
@@ -2812,7 +3368,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-04 | Styles & Pricing | Rich service organization/cards/table, actual images and prices, featured/popular distinction, filters, service management and accessible secondary import/export. |",
+      "detailed_clause_line": 501
     },
     {
       "id": "PAGE-05",
@@ -2835,7 +3393,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-05 | Stylists | Consistent staff cards, assignments and schedules, permissions, payout-arrangement configuration and usable details. |",
+      "detailed_clause_line": 502
     },
     {
       "id": "PAGE-06",
@@ -2858,7 +3418,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-06 | Products | Catalog, stock/supplies, images, relevant orders/pickups, alerts, sales records and integration with Finances. |",
+      "detailed_clause_line": 503
     },
     {
       "id": "PAGE-07",
@@ -2881,7 +3443,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-07 | Availability & Calendar | Calendar-first layout, staff selection, labeled colors, availability/blocks/actions, mobile controls, conflicts and reliable saving. |",
+      "detailed_clause_line": 504
     },
     {
       "id": "PAGE-08",
@@ -2904,7 +3468,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-08 | Bookings | Filters, useful desktop/mobile records, correct statuses/prices/deposits, manual/walk-in capture where appropriate and client-history access. |",
+      "detailed_clause_line": 505
     },
     {
       "id": "PAGE-09",
@@ -2927,7 +3493,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-09 | Messages | Inbox/conversation layout, booking/customer context, translation, approved reply/send flows, reminders and client communications. |",
+      "detailed_clause_line": 506
     },
     {
       "id": "PAGE-10",
@@ -2950,7 +3518,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-10 | Reviews | Real summaries and filters, review/detail/response management and contextual assistant behavior. |",
+      "detailed_clause_line": 507
     },
     {
       "id": "PAGE-11",
@@ -2973,7 +3543,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-11 | Finances | Every finance, payout-arrangement, expense, deposit, product-sale, reporting, export and permission requirement from sections 14 and 17. |",
+      "detailed_clause_line": 508
     },
     {
       "id": "PAGE-12",
@@ -2996,7 +3568,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-12 | Promotions | Real targets, draft/preview/activation, eligibility/dates, public evidence and approved deposit-preserving calculations. |",
+      "detailed_clause_line": 509
     },
     {
       "id": "PAGE-13",
@@ -3019,7 +3593,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-13 | Subscription | Plan/entitlement information, repaired payment-method management and unchanged billing for a method-only update. |",
+      "detailed_clause_line": 510
     },
     {
       "id": "PAGE-14",
@@ -3042,7 +3618,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "| PAGE-14 | Settings | Existing account/business preferences, language and relevant assistant-avatar controls, clear forms and appropriate permissions. |",
+      "detailed_clause_line": 511
     },
     {
       "id": "EXEC-01",
@@ -3064,7 +3642,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-01 — Start by reading project instructions and inspecting the current repository, open changes, current main, migrations, routes, connected services and deployment state. Work in an isolated branch/worktree as appropriate. Preserve unrelated user work. Use the existing Girlz Culture GitHub/Netlify/database connections and secrets securely; never ask the founder to paste keys into chat or print secret values.",
+      "detailed_clause_line": 517
     },
     {
       "id": "EXEC-02",
@@ -3090,7 +3670,9 @@
       "verification": [
         "Checklist extraction asserted exactly 140 unique IDs."
       ],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-02 — Build a requirement-to-code-and-evidence map from section 20 before editing. Inventory existing functions, distinguish defects from missing capability, and implement the full specified scope. Treat each checklist row as all of its detailed clauses, including interactions, responsive behavior, translations, failure states and data rules. Do not reduce the request to a theme update or mark a backend feature done solely because a button exists.",
+      "detailed_clause_line": 521
     },
     {
       "id": "EXEC-03",
@@ -3112,7 +3694,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-03 — Resolve the two material business-rule decisions in one concise batch after inspecting the current implementation and preparing concrete alternatives: (1) the percentage-promotion basis while preserving the applicable business-set deposit, and (2) the visibility boundary for cross-platform no-show signals alongside the strict no-other-business-information rule. Do not silently choose a money formula, leak another business's records, remove cross-platform protection from scope or hold unrelated work while these decisions are pending. Show actual numerical examples and exact proposed visibility, not an open-ended design questionnaire.",
+      "detailed_clause_line": 523
     },
     {
       "id": "EXEC-04",
@@ -3134,7 +3718,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-04 — Use working authorized sessions across related checks. Do not repeatedly request owner, staff, admin or customer logins without a demonstrated missing permission/session need; never use an owner's privileges to simulate a restricted user's authorization. The founder already completed the customer-account check. Use fixtures/test roles and existing evidence where suitable. Request a secure sign-in only when actually necessary for a concrete remaining check.",
+      "detailed_clause_line": 525
     },
     {
       "id": "EXEC-05",
@@ -3156,7 +3742,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-05 — Keep existing OpenAI/DeepL integrations, four supported assistant languages, opt-in memory, calendar conflict/preview safeguards, public-profile data and financial records intact while extending them. Do not select a different model, increase caps, reset authentication or rewrite core integrations as a shortcut. Any required underlying change must address an observed implementation need and receive proportionate verification.",
+      "detailed_clause_line": 527
     },
     {
       "id": "EXEC-06",
@@ -3178,7 +3766,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-06 — Reuse real content across the reported 25 businesses and prepare the requested three-to-five richer demonstrations without overwriting live identity or inventing real transactions/reviews. Verify the inventory first. Keep public, bookable records and isolated synthetic examples distinguishable internally while removing the general production-site demo presentation as required.",
+      "detailed_clause_line": 529
     },
     {
       "id": "EXEC-07",
@@ -3200,7 +3790,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-07 — Use focused tests and direct visual review for changed behavior, then satisfy the repository's actual required CI/release gates. Avoid repeated unchanged full-suite/provider reruns. Investigate failures from logs and reproducible evidence, fix the cause or explain the genuine infrastructure issue, and rerun the relevant check for a reason. Do not weaken assertions, skip failing coverage or claim success from an unrelated passing workflow.",
+      "detailed_clause_line": 531
     },
     {
       "id": "EXEC-08",
@@ -3222,7 +3814,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-08 — Verify live provider functionality with the minimum sufficient authenticated checks for changed tool/data paths, reusing valid unchanged evidence. Provider success alone does not prove the assistant knows every module. Include natural-language service queries, photo-count follow-ups, real permitted reads/calculations, translation, action review/save and explicit forbidden cross-business requests. Respect the existing $25 caps and clean up authorized test data.",
+      "detailed_clause_line": 533
     },
     {
       "id": "EXEC-09",
@@ -3244,7 +3838,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-09 — Inspect all attached reference images and review visual results across owner and customer pages at matched mobile/desktop sizes. For the business dashboard, compare layout, hierarchy, tabs, cards, imagery, assistant placement and interaction closely with the reference designs. For the public website, compare before/after against the existing approved site: preserve its structure/content and brand while showing selective component polish inspired by the website images. Do not judge public-site completion by whether it copies a mockup. Use written descriptions only for missing references, and provide before/after implementation screenshots as evidence.",
+      "detailed_clause_line": 535
     },
     {
       "id": "EXEC-10",
@@ -3266,7 +3862,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-10 — Prepare backward-compatible data changes where necessary, preserve existing business/policy/payment history, and apply only reviewed pending migrations through the actual protected workflow. Merge through the repository's required checks and deploy through the existing Netlify release process using the authorization already available. Preserve a viable rollback and publication controls. If a real control requires additional explicit approval, identify the exact prepared migration or release action and the source of that requirement; do not invent a new blanket approval ceremony.",
+      "detailed_clause_line": 537
     },
     {
       "id": "EXEC-11",
@@ -3288,7 +3886,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-11 — Verify the actual production deployment and relevant routes/actions after publication. Record deployment ID, source commit, migration outcome and public behavior. A merged PR or green build is not a statement that customers are seeing the new release. The final public demo-banner/routing checks in PUBLIC-17 are mandatory and must have their own production evidence.",
+      "detailed_clause_line": 539
     },
     {
       "id": "EXEC-12",
@@ -3310,7 +3910,9 @@
       "blocker": "Implementation and verification not completed",
       "changes": [],
       "verification": [],
-      "live_evidence": []
+      "live_evidence": [],
+      "detailed_clause": "EXEC-12 — Deliver a final report mapping every requirement to implementation and verification evidence. Use Completed/Verified, Implemented/Not verified, Needs decision or Blocked with the exact reason. No silent omissions, invented passes or “all done” while rows remain unresolved. Include what is live, remaining exceptions, links to the relevant PR/workflows, exact deployment/commit and rollback. Distinguish historical evidence from new checks and partial releases from full-scope completion.",
+      "detailed_clause_line": 541
     }
   ]
 }

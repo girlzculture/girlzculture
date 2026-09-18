@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3104";
+const acceptancePort = new URL(baseURL).port || "3104";
 const acceptanceSupabaseURL =
   process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || "http://127.0.0.1:3105";
 const useProductionServer =
@@ -12,11 +13,10 @@ const acceptanceEnvironment = {
   NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true",
   NEXT_PUBLIC_SITE_URL: baseURL,
   NEXT_PUBLIC_SUPABASE_URL: acceptanceSupabaseURL,
+  PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: acceptanceSupabaseURL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "acceptance-fixture-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "acceptance-fixture-service-role-key",
-  // Existing marketplace suites exercise the live-state contract using local
-  // fixtures. The separate prelaunch suite exercises the missing/off flag.
-  CUSTOMER_MARKETPLACE_LIVE: "true",
+  // The separate legacy-gate suite also proves an unset flag does not restore demo mode.
 };
 
 const publicResponsiveSpec = /public-responsive\.spec\.ts/;
@@ -35,7 +35,7 @@ const tabletLandscapeChecks =
 
 export default defineConfig({
   testDir: "./tests/browser",
-  // The off-state suite starts its own server without the launch flag.
+  // The legacy-gate suite starts its own server without the former launch flag.
   testIgnore: /p0-prelaunch\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 8_000 },
@@ -55,16 +55,16 @@ export default defineConfig({
       command: "node scripts/start-acceptance-supabase-fixture.mjs",
       url: `${acceptanceSupabaseURL}/health`,
       env: acceptanceEnvironment,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 30_000,
     },
     {
       command: useProductionServer
-        ? "npm run start -- -H 127.0.0.1 -p 3104"
-        : "npm run dev -- -H 127.0.0.1 -p 3104",
+        ? `npm run start -- -H 127.0.0.1 -p ${acceptancePort}`
+        : `npm run dev -- -H 127.0.0.1 -p ${acceptancePort}`,
       url: baseURL,
       env: acceptanceEnvironment,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],
@@ -81,8 +81,8 @@ export default defineConfig({
     },
     {
       name: "webkit",
-      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-owner-inventory\.spec\.ts/, /p0-owner-populated\.spec\.ts/, /p0-assistant-skills\.spec\.ts/, /p0-assistant-speech\.spec\.ts/, /p0-assistant-memory\.spec\.ts/, /p0-assistant-interaction\.spec\.ts/, /dashboard-redesign\.spec\.ts/, /p0-locale-lifecycle\.spec\.ts/, /p0-booking-recipients\.spec\.ts/, /p0-public-policy\.spec\.ts/, /p0-operational-calendar\.spec\.ts/, /p0-customer-support\.spec\.ts/, /p0-customer-account\.spec\.ts/],
-      grep: /Dashboard redesign|P0 customer account|P0 customer support|homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 policy publication|P0 owner route inventory|P0 populated owner|P0 booking composer|P0 original service|P0 Assistant launcher|P0 Assistant all skills|P0 Assistant spoken controls|P0 Assistant memory|P0 Assistant submission|P0 Assistant workspace|P0 Assistant respects|P0 account locale|P0 booking recipient|P0 public policy|P0 operational calendar/,
+      testMatch: [publicResponsiveSpec, /business-onboarding\.spec\.ts/, /p0-owner\.spec\.ts/, /p0-owner-inventory\.spec\.ts/, /p0-owner-populated\.spec\.ts/, /p0-assistant-skills\.spec\.ts/, /p0-assistant-speech\.spec\.ts/, /p0-assistant-memory\.spec\.ts/, /p0-assistant-interaction\.spec\.ts/, /dashboard-redesign\.spec\.ts/, /business-finances\.spec\.ts/, /p0-locale-lifecycle\.spec\.ts/, /p0-booking-recipients\.spec\.ts/, /p0-public-policy\.spec\.ts/, /p0-operational-calendar\.spec\.ts/, /p0-customer-support\.spec\.ts/, /p0-customer-account\.spec\.ts/],
+      grep: /Business finance|front desk logging|Dashboard redesign|P0 customer account|P0 customer support|homepage shell has no overflow|promotion rail respects reduced motion|business cards open the correct flow directly|P0 owner core language flow|P0 policy publication|P0 owner route inventory|P0 populated owner|P0 booking composer|P0 original service|P0 Assistant launcher|P0 Assistant all skills|P0 Assistant spoken controls|P0 Assistant memory|P0 Assistant submission|P0 Assistant workspace|P0 Assistant respects|P0 account locale|P0 booking recipient|P0 public policy|P0 operational calendar/,
       use: { ...devices["Desktop Safari"] },
     },
     {

@@ -13,6 +13,7 @@ import {
   uniquePromotionCards,
 } from "@/lib/homePromotionCore";
 import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
+import { isFutureBusinessWaitlist } from "@/lib/customerDiscoveryContent";
 
 const PUBLIC_PROMOTION_READ_TIMEOUT_MS = 2_500;
 
@@ -152,6 +153,7 @@ export async function resolvePublishedHomepagePromotions(
     ...completePublished,
     ...HOMEPAGE_EDITORIAL_FALLBACKS,
   ])
+    .filter(card => !isFutureBusinessWaitlist(card.href))
     .map((card) => ({ ...card, display_limit: poolLimit }));
 }
 

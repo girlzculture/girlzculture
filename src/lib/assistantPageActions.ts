@@ -30,5 +30,5 @@ const pages: Record<string, Action[]> = {
 // authorized by the server against the current identity and business.
 export function assistantPageActions(page: string | null, business: AssistantBusinessContext | null): Action[] {
   const available = pages[page || ""] || [profile, services, policies];
-  return available.filter(action => !business || business.isOwner || business.permissions?.[action.permission] === true);
+  return available.filter(action => !business || business.isOwner || business.permissions?.[action.permission] === true || action.permission === "earnings" && business.permissions?.earnings_own === true);
 }

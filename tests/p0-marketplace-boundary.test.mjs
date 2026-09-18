@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
@@ -88,25 +88,19 @@ test('marketplace checkout requires separate explicit acknowledgements before pa
   }
 });
 
-for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation']) {
-  test(`${path} fails closed before database access or Stripe session creation`, async () => {
-    let providerCalls = 0;
-    const failProvider = () => { providerCalls++; throw new Error('A disabled marketplace reached a provider'); };
-    const route = loadModule(`src/app/api/stripe/${path}/route.ts`, (name) => {
-      if (name === '@/lib/marketplaceLaunchCore' && existsSync(new URL('src/lib/marketplaceLaunchCore.ts', root))) {
-        return loadModule('src/lib/marketplaceLaunchCore.ts', () => { throw new Error('Launch guard must have no provider dependency'); });
-      }
-      if (name === '@/lib/operationalMonitoring') return {
-        withOperationalMonitoring: (_profile, handler) => handler,
-        routeMonitoringProfile: () => ({}), noteOperationalFailure() {},
-      };
-      return new Proxy({}, { get: () => failProvider });
-    });
-    const result = await route.POST(new Request(`https://girlzculture.test/api/stripe/${path}`, {
-      method: 'POST', body: JSON.stringify({ salon_id: 'demo-business', style_id: 'demo-style' }),
-    }));
-    assert.equal(result.status, 503);
-    assert.equal((await result.json()).code, 'CUSTOMER_MARKETPLACE_NOT_LIVE');
-    assert.equal(providerCalls, 0, 'Neither Supabase nor Stripe should be contacted');
+// With the retired presentation gate removed, real eligibility must still fail closed.
+for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation']) test(path+' registry outage cannot reach Stripe', async()=>{
+  let stripeCalls=0;
+  const route=loadModule('src/app/api/stripe/'+path+'/route.ts',name=>{
+    if(name==='node:crypto')return{randomUUID,createHash};
+    if(name==='@/lib/operationalMonitoring')return{withOperationalMonitoring:(_p,h)=>h,routeMonitoringProfile:()=>({}),noteOperationalFailure(){}};
+    if(name==='@/lib/requestSecurity')return{cleanText:v=>String(v||'').trim(),cleanEmail:v=>v,cleanUsPhone:v=>v,enforceRateLimit(){},rejectBot(){},errorResponse:()=>Response.json({error:'Unable to start secure checkout.'},{status:500})};
+    if(name==='@/lib/supabaseAdmin')return{getSupabaseAdmin:()=>({})};
+    if(name==='@/lib/marketplaceEligibilityServer')return{rejectRegisteredTestCheckout:async()=>{throw Error('MARKETPLACE_ELIGIBILITY_UNAVAILABLE')}};
+    if(name==='@/lib/platformErrors')return{capturePlatformError:async()=> 'registry-outage-reference'};
+    if(name==='@/lib/stripeServer')return{stripeRequest(){stripeCalls++;throw Error('Registry failure reached Stripe')}};
+    return new Proxy({},{get:()=>()=>{throw Error('Unexpected downstream '+name)}});
   });
-}
+  const result=await route.POST(new Request('https://girlzculture.test/api/stripe/'+path,{method:'POST',body:JSON.stringify({salon_id:'22000000-0000-4000-8000-000000000001',style_id:'33000000-0000-4000-8000-000000000006',product_id:'33000000-0000-4000-8000-000000000006',guest_name:'Fixture',guest_email:'fixture@example.test',quantity:1,items:[{product_id:'33000000-0000-4000-8000-000000000006',quantity:1}]})}));
+  assert.ok(result.status>=400);assert.match(result.headers.get('content-type'),/application\/json/);assert.equal(stripeCalls,0);
+});

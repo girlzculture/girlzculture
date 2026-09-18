@@ -130,6 +130,18 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   }
 
   if (tool === "get_earnings_summary") {
+    if (typeof result.completed_sales_cents === "number" && typeof result.cash_received_cents === "number") {
+      const sales = currency(result.completed_sales_cents / 100, locale), receipts = currency(result.cash_received_cents / 100, locale);
+      const balances = currency(number(result.unpaid_balance_cents) / 100, locale), period = row(result.period);
+      const label = `${text(period.from)} – ${text(period.to)}`;
+      const messages: Record<string, string> = {
+        en: `${label}: completed sales ${sales}, payments received ${receipts}, unpaid balances ${balances}. Sales and receipts are separate figures. These are recorded amounts, not verified bank payouts.`,
+        fr: `${label} : ventes réalisées ${sales}, paiements reçus ${receipts}, soldes impayés ${balances}. Les ventes et les encaissements sont distincts. Ces montants sont enregistrés et ne prouvent pas un versement bancaire.`,
+        es: `${label}: ventas completadas ${sales}, pagos recibidos ${receipts}, saldos pendientes ${balances}. Las ventas y los cobros son cifras distintas. Son importes registrados, no pagos bancarios verificados.`,
+        "zh-CN": `${label}：已完成销售额 ${sales}，已收款 ${receipts}，未付余额 ${balances}。销售额与收款是不同的金额。这些是已记录的金额，并非已核实的银行到账款项。`,
+      };
+      return { message: messages[locale] || messages.en, suggestions: suggest(["Open Finances"]) };
+    }
     const amount = currency(result.completed_booking_value, locale);
     return { message: [t("Completed booking value"), amount || t("not available"), t("This is booking value, not verified cash revenue or a payout.")].join(" — "), suggestions: suggest(["Open finances"]) };
   }

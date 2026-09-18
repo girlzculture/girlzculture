@@ -14,7 +14,6 @@ import {
   estimateStripeCommerceTax,
 } from "@/lib/commerceCheckoutServer";
 import { hasPlanFeature } from "@/lib/plans";
-import { customerMarketplaceLive, marketplaceUnavailable } from "@/lib/marketplaceLaunchCore";
 import { rejectRegisteredTestCheckout } from "@/lib/marketplaceEligibilityServer";
 import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
 
@@ -25,7 +24,6 @@ type ServiceOptionGroup = { id?: string; label?: string; selection?: string; req
 const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(value) ? value as ServiceOptionGroup[] : [];
 
 async function POSTHandler(request: Request) {
-  if (!customerMarketplaceLive()) return marketplaceUnavailable();
   const admin = getSupabaseAdmin();
   let intentId = "";
   let commerceIntentId = "";

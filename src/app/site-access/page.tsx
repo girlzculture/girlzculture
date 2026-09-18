@@ -3,8 +3,9 @@ import Home from "@/app/page";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Girlz Culture marketplace demonstration",
-  robots: { index: false, follow: false, noarchive: true },
+  title: "Explore Girlz Culture salons",
+  alternates: { canonical: "/site-access" },
+  robots: { index: true, follow: true },
 };
 
 export default function SiteAccessPage({

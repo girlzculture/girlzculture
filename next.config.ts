@@ -21,8 +21,9 @@ const nextConfig: NextConfig = {
   // only the native files required by the image-finalization route. Netlify's
   // Next runtime packages these traced files with that function; a global
   // `included_files` rule would copy them into unrelated functions as well.
-  serverExternalPackages: ["sharp"],
+  serverExternalPackages: ["sharp", "pdfkit"],
   outputFileTracingIncludes: {
+    "/api/salon/finances/export": ["./src/assets/report-fonts/*"],
     "/api/media/upload/finalize": [
       "./node_modules/sharp/**/*",
       "./node_modules/@img/sharp-linux-x64/**/*",

@@ -82,7 +82,10 @@ export async function assertAssistantAccess(context: Context, permission: string
   const { admin, salon, user } = context;
   const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: permission });
   if (access.error) throw access.error;
-  if (access.data !== true) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  if (access.data !== true) {
+    const ownFinance = permission === "earnings" ? await admin.rpc("business_finance_scope", { p_salon: salon.id, p_user: user.id }) : null;
+    if (!ownFinance || ownFinance.error || ownFinance.data?.kind !== "own") throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  }
   const subscription = await admin.from("subscriptions").select("status,current_period_end").eq("salon_id", salon.id).maybeSingle();
   if (subscription.error) throw subscription.error;
   if (!isSubscriptionActive(subscription.data?.status || salon.subscription_status, subscription.data?.current_period_end)) throw new AssistantError("ASSISTANT_PLAN_REQUIRED", 403);
@@ -198,10 +201,14 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   if (existing.error) throw existing.error;
   if (existing.data) {
     if (existing.data.tool !== checked.tool || stableJson(existing.data.arguments) !== stableJson(checked.args) || existing.data.locale !== input.locale) throw new AssistantError("ASSISTANT_IDEMPOTENCY_CONFLICT", 409);
+    // Read permissions may narrow without changing the tool-level permission
+    // (for example business finance -> own earnings). Refresh through the
+    // authorized query instead of replaying a previously broader payload.
+    const request = checked.risk === 1 ? { ...existing.data, result: await readTool(context, checked.tool, checked.args) } : existing.data;
     const presentation = checked.risk === 1
-      ? presentAssistantResult(checked.tool, existing.data.result, input.locale)
+      ? presentAssistantResult(checked.tool, request.result, input.locale)
       : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
-    return { request: existing.data, preview_required: checked.risk >= 3, replayed: true, assistant_message: presentation.message, suggestions: presentation.suggestions };
+    return { request, preview_required: checked.risk >= 3, replayed: true, assistant_message: presentation.message, suggestions: presentation.suggestions };
   }
   const prepared = checked.risk >= 3 ? await prepare(context, checked.tool, checked.args) : { before: {}, payload: {}, notices: [] };
   const result = checked.risk === 1 ? await readTool(context, checked.tool, checked.args) : null;
@@ -215,7 +222,7 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   const presentation = checked.risk === 1
     ? presentAssistantResult(checked.tool, result, input.locale)
     : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
-  return { request: saved.data, preview_required: checked.risk >= 3, notices: prepared.notices, assistant_message: presentation.message, suggestions: presentation.suggestions };
+  return { request: checked.risk === 1 ? { ...saved.data, result } : saved.data, preview_required: checked.risk >= 3, notices: prepared.notices, assistant_message: presentation.message, suggestions: presentation.suggestions };
 }
 
 export async function confirmAssistantTool(context: Context, requestId: string, previewDigest: string, policyReviewed: boolean) {

@@ -134,7 +134,7 @@ export default function OwnerDashboardShell({
   const canAccess = (id: string) =>
     access === null ||
     (id !== "subscription" &&
-      Boolean(access[id === "messages" ? "bookings" : id.replace("-", "_")]));
+      Boolean(access[id === "messages" ? "bookings" : id.replace("-", "_")] || id === "earnings" && (access.earnings_own || access.finance_log || access.finance_manage)));
   const visibleNav = nav.filter(([id]) => canAccess(id));
   const homeHref = visibleNav.length
     ? hrefFor(visibleNav[0][0])

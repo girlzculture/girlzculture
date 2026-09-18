@@ -89,15 +89,17 @@ test('overview permission alone does not expose calendar gaps', async () => {
   assert.equal(f.calls.some(call => call.calendar), false);
 });
 
-test('earnings evidence is an authorized appointment cohort and excludes foreign and manual money', async () => {
+test('operating earnings use verified receipts and exclude foreign or invented manual money', async () => {
   const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
   const paid = { salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 100, payment_mode: 'live', payment_verified_at: range.start, stripe_charge_id: 'ch_fixture', deposit_status: 'Paid', deposit_amount: 20 };
   const f = fixture({ tables: { bookings: [paid, { ...paid, salon_id: actor, deposit_amount: 999 }, { ...paid, booking_origin: 'business_added', deposit_amount: 888 }] } });
   const result = (await f.run('get_earnings_summary', range)).request.result;
-  assert.equal(result.finance.scope, 'current_ledger_for_appointments_in_range');
-  assert.equal(result.finance.live.recorded_verified_deposits, 20);
-  assert.equal(result.finance.payment_date_cash_flow, null);
-  assert.equal(result.finance.bank_settlement_verified, false);
+  assert.equal(result.scope, 'authenticated_business_only');
+  assert.equal(result.by_stage.deposit, 2000);
+  assert.equal(result.cash_received_cents, 2000);
+  assert.equal(result.evidence.provider_bank_settlement_verified, false);
+  assert.equal(result.evidence.unverified_deposit_records, 1);
+  assert.equal(result.completed_sales_cents, 20000);
   const overview = (await f.run('get_business_summary', range)).request.result;
   assert.equal(Object.hasOwn(overview, 'finance'), false);
   const denied = fixture({ denied: ['earnings'] });
@@ -107,7 +109,13 @@ test('earnings evidence is an authorized appointment cohort and excludes foreign
 function fixture(overrides = {}) {
   const calls = [];
   const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
-  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
+  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'business_finance_scope') return overrides.ownFinance ? {data:{kind:'own',stylist_id:professional}} : {error:{message:'FINANCE_ACCESS_DENIED'}};
+    if (name === 'read_business_finance') {
+      assert.equal(args.p_salon,business); assert.equal(args.p_user,actor);
+      const bookings=tables.bookings.filter(row=>row.salon_id===args.p_salon && (!overrides.ownFinance || row.stylist_id===professional)).map((row,index)=>({...row,id:row.id??`booking-${index}`,created_at:row.created_at||row.appointment_datetime,name:row.name||'Service',verified_charge:Boolean(row.stripe_charge_id),verified_refund:Boolean(row.stripe_refund_id),operating_compensation:{kind:'none',version:null}}));
+      return {data:{scope:{kind:overrides.ownFinance?'own':'business',stylist_id:overrides.ownFinance?professional:null},bookings,sales:[],receipts:[],expenses:[],arrangements:[],obligations:[],compensation_payments:[],stylists:tables.stylists.filter(row=>row.salon_id===business && (!overrides.ownFinance || row.id===professional))}};
+    }
+    if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
     const filters = []; let one = false, first = 0, last = Infinity;
     const q = { select() { return q; }, in(k,v) { filters.push(row => v.includes(row[k])); return q; }, neq(k,v) { filters.push(row => row[k] != null && row[k] !== v); return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
   } };
@@ -168,7 +176,7 @@ test('broader reads use business filters and safe authoritative fields',async()=
     const result=(await f.run(tool,args)).request.result;assert.equal(result[key].length,1,tool);assert.equal(JSON.stringify(result).includes('Foreign'),false,tool);
   }
   const earnings=(await f.run('get_earnings_summary',range)).request.result;
-  assert.equal(earnings.completed_booking_value,100);assert.equal(earnings.cash_revenue,null);
+  assert.equal(earnings.completed_sales_cents,10000);assert.equal(earnings.cash_received_cents,0);assert.equal(earnings.evidence.provider_bank_settlement_verified,false);
   const summary=(await f.run('get_business_summary',range)).request.result;
   assert.equal(summary.total_appointments,1);assert.equal(summary.profile_views,29);assert.ok(summary.calendar_gaps);
   assert.equal(JSON.stringify(summary).includes('Sheila'),false);assert.equal(JSON.stringify(summary).includes('private@example.test'),false);

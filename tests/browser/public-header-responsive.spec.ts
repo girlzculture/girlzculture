@@ -3,7 +3,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 const routes = [
-  { name: "homepage", path: "/" },
+  { name: "homepage", path: "/site-access" },
   { name: "browse-styles", path: "/styles" },
   { name: "find-salons", path: "/salons" },
   { name: "how-it-works", path: "/how-it-works" },
@@ -227,7 +227,7 @@ test("responsive menus keep every control inside a scrollable viewport panel", a
   test.setTimeout(60_000);
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/site-access", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Open navigation menu" }).click();
     const menu = page.locator("[data-public-mobile-menu]");
     await expect(menu).toBeVisible();
@@ -250,7 +250,10 @@ test("responsive menus keep every control inside a scrollable viewport panel", a
     expect(["auto", "scroll"]).toContain(menuAudit.overflowY);
 
     await expect(menu.getByLabel("Select language")).toBeAttached();
+    await menu.getByText("Explore", { exact: true }).click();
+    await menu.getByText("For Businesses", { exact: true }).click();
     for (const name of [
+      "Pricing",
       "Browse Styles",
       "Find Salons",
       "How It Works",

@@ -5,6 +5,7 @@ import { useAssistantBusinessBinding } from "@/components/owner/GcAssistant";
 import { assistantAvatar } from "@/lib/assistantAppearance";
 import BusinessPolicies from "@/components/owner/BusinessPolicies";
 import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
+import BusinessFinances from "@/components/owner/BusinessFinances";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { intlLocale } from "@/i18n/catalog";
@@ -731,7 +732,7 @@ export default function OwnerDashboardApp({
   const firstAllowedSection = teamPermissions
     ? Object.entries(teamPermissions)
         .find(([key, allowed]) => key !== "subscription" && allowed)?.[0]
-        .replace("_", "-") || "settings"
+        .replace(/^(earnings_own|finance_log|finance_manage)$/, "earnings").replace("_", "-") || "settings"
     : "overview";
   const firstAllowedHref =
     firstAllowedSection === "overview"
@@ -739,7 +740,7 @@ export default function OwnerDashboardApp({
       : `/salon/dashboard/${firstAllowedSection}`;
   if (
     teamPermissions &&
-    (section === "subscription" || !teamPermissions[permissionKey])
+    (section === "subscription" || !(teamPermissions[permissionKey] || section === "earnings" && (teamPermissions.earnings_own || teamPermissions.finance_log || teamPermissions.finance_manage)))
   )
     return (
       <OwnerDashboardShell
@@ -960,7 +961,7 @@ function DashboardContent({
   if (section === "bookings") return <Bookings c={c} recordId={c.focusedRecordId || c.initialBookingId} />;
   if (section === "messages") return <BookingInbox scope="salon" initialBookingId={c.focusedRecordId} focused={Boolean(c.focusedRecordId)} />;
   if (section === "reviews") return <Reviews c={c} recordId={c.focusedRecordId} />;
-  if (section === "earnings") return <Earnings c={c} recordId={c.focusedRecordId} />;
+  if (section === "earnings") return <BusinessFinances key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
   if (section === "promotions")
     return (
       <SalonPromotionsManager

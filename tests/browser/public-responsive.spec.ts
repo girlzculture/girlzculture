@@ -64,7 +64,7 @@ test("homepage shell has no overflow, broken images, console failures, or raw er
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   await expect(page.getByRole("banner")).toBeVisible();
   const horizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth + 1,
@@ -95,7 +95,7 @@ test("homepage promotion rail advances through all eight cards and loops without
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   const rail = page.getByRole("region", {
     name: "Featured Girlz Culture promotions",
   });
@@ -131,7 +131,7 @@ test("focused homepage promotion rail resumes automatically without requiring bl
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   const region = page.getByRole("region", {
     name: "Featured Girlz Culture promotions",
   });
@@ -184,7 +184,7 @@ test("homepage removes the intro and keeps mobile/tablet focused on promotions a
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   const intro = page.locator("[data-home-intro]");
   await expect(intro).toHaveCount(0);
   const usesDesktopSearchLayout = await page.evaluate(() =>
@@ -466,7 +466,7 @@ test("phone and tablet landscape layouts do not overflow and promotion cards sta
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   const layout = await page.locator("[data-promotion-card]").first().evaluate(
     (card) => ({
       cardHeight: card.getBoundingClientRect().height,
@@ -490,7 +490,7 @@ test("mobile promotion swipe pauses temporarily, resumes, and cards fit without 
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   const region = page.getByRole("region", {
     name: "Featured Girlz Culture promotions",
   });
@@ -537,7 +537,7 @@ test("promotion rail respects reduced motion and remains manually operable", asy
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/site-access", { waitUntil: "domcontentloaded" });
   const rail = page.getByRole("region", {
     name: "Featured Girlz Culture promotions",
   });
@@ -1001,7 +1001,7 @@ test("first relevant visit requests location once and reuses it across discovery
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -1122,7 +1122,7 @@ test("primary mobile controls provide usable touch targets", async ({
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
 
   const controls = [
     page.getByRole("button", { name: "Open navigation menu" }),
@@ -1156,7 +1156,7 @@ test("mobile public navigation closes with Escape, outside click, and destinatio
       JSON.stringify({ dismissedAt: Date.now(), outcome: "dismissed" }),
     );
   });
-  await page.goto("/");
+  await page.goto("/site-access");
   const open = page.getByRole("button", { name: "Open navigation menu" });
   await open.click();
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
@@ -1169,6 +1169,7 @@ test("mobile public navigation closes with Escape, outside click, and destinatio
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toHaveCount(0);
 
   await open.click();
+  await page.getByRole("navigation", { name: "Mobile navigation" }).getByText("Explore", { exact: true }).click();
   await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: "Browse Styles" }).click();
   await expect(page).toHaveURL(/\/styles$/);
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toHaveCount(0);

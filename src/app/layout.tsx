@@ -4,7 +4,7 @@ import PwaRegistration from "@/components/PwaRegistration";
 import InlineFormValidation from "@/components/InlineFormValidation";
 import CustomerLocationProvider from "@/components/location/CustomerLocationProvider";
 import LocaleProvider from "@/components/i18n/LocaleProvider";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { localeDirection, normalizeLocale } from "@/i18n/catalog";
 import { getEngineBrandTheme } from "@/lib/engineConfigServer";
 import type { CSSProperties } from "react";
@@ -13,9 +13,6 @@ import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import NativeSearchKeyboardBridge from "@/components/NativeSearchKeyboardBridge";
 import PublicContentLiveRefresh from "@/components/PublicContentLiveRefresh";
 import OwnerDashboardResponsiveBridge from "@/components/owner/OwnerDashboardResponsiveBridge";
-import SiteAccessProvider from "@/components/site/SiteAccessProvider";
-import SiteAccessBanner from "@/components/site/SiteAccessBanner";
-import { SITE_ACCESS_HEADER } from "@/lib/marketplaceLaunchCore";
 
 export async function generateMetadata(): Promise<Metadata> {
   const assets = await getPublishedBrandAssets();
@@ -74,12 +71,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [cookieStore, requestHeaders] = await Promise.all([
-    cookies(),
-    headers(),
-  ]);
+  const cookieStore = await cookies();
   const locale = normalizeLocale(cookieStore.get("gc_locale")?.value);
-  const siteAccess = requestHeaders.get(SITE_ACCESS_HEADER) === "1";
   const brand = await getEngineBrandTheme();
   const headingFont = `"${brand.headingFont}", Georgia, "Times New Roman", serif`;
   const bodyFont = `"${brand.bodyFont}", Arial, Helvetica, sans-serif`;
@@ -118,16 +111,12 @@ export default async function RootLayout({
     >
       <body
         className="min-h-full flex flex-col"
-        data-site-access={siteAccess ? "true" : undefined}
       >
         <LocaleProvider initialLocale={locale}>
-          <SiteAccessProvider active={siteAccess}>
-            {siteAccess ? <SiteAccessBanner /> : null}
             <CustomerLocationProvider>
               {children}
               <PublicContentLiveRefresh />
             </CustomerLocationProvider>
-          </SiteAccessProvider>
           <OwnerDashboardResponsiveBridge />
           <DocumentLocalizationBridge />
           <InlineFormValidation />

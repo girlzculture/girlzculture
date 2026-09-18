@@ -1246,6 +1246,8 @@ const memoryOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verif
 if (memoryOutput) process.stdout.write(`${memoryOutput}\n`);
 const redesignOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-dashboard-redesign.sql")], "Dashboard business isolation and metadata assertions");
 if (redesignOutput) process.stdout.write(`${redesignOutput}\n`);
+const businessFinanceOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-finances.sql")], "Business finance isolation and reconciliation assertions");
+if (businessFinanceOutput) process.stdout.write(`${businessFinanceOutput}\n`);
 if (deployedMigration !== expectedMigration) {
   console.error(
     `Engine expected migration ${deployedMigration || "<missing>"} does not match repository head ${expectedMigration}.`,

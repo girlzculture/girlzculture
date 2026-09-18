@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
+import PublicNavigationMenu from "@/components/site/PublicNavigationMenu";
+import { publicNavigationGroups } from "@/lib/publicNavigation";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 import {
   getNavigationItems,
@@ -26,7 +28,6 @@ import LanguageSelector, {
 import { getPublishedBrandAssets } from "@/lib/brandAssets";
 import {
   marketplaceHomeHref,
-  siteAccessActive,
 } from "@/lib/marketplaceAccessServer";
 
 type ActiveTab = "home" | "search" | "bookings" | "social" | "profile";
@@ -155,10 +156,9 @@ export async function PublicHeader({
 }: {
   active?: "styles" | "salons" | "how" | "about" | "blog";
 }) {
-  const [headerItems, mobileItems, siteAccess] = await Promise.all([
+  const [headerItems, mobileItems] = await Promise.all([
     getNavigationItems("header", defaultHeader),
     getNavigationItems("mobile_menu", defaultMobileMenu),
-    siteAccessActive(),
   ]);
   return (
     <header
@@ -169,7 +169,7 @@ export async function PublicHeader({
     >
       <div data-public-header-layout className="mx-auto flex h-16 w-full max-w-[1760px] items-center gap-2 px-3 sm:px-6 lg:px-10 xl:px-12 2xl:px-10 min-[1700px]:px-16">
         <div data-public-header-zone="brand" className="flex min-w-0 shrink-0 items-center gap-1">
-          <MobilePublicMenu links={mobileItems} />
+          <MobilePublicMenu groups={publicNavigationGroups(mobileItems)} />
           <Wordmark compact />
         </div>
 
@@ -178,55 +178,33 @@ export async function PublicHeader({
           data-public-header-zone="navigation"
           className="hidden min-w-0 flex-1 items-center justify-center gap-5 whitespace-nowrap text-[13px] font-semibold text-ink 2xl:flex min-[1700px]:gap-8"
         >
-          {headerItems.map((item) => (
-            <Link
-              key={item.item_key}
-              href={item.href}
-              className={`inline-flex items-center gap-2 border-b-2 py-5 transition-colors hover:text-magenta ${
-                active === item.item_key
-                  ? "border-magenta text-magenta"
-                  : "border-transparent"
-              }`}
-            >
-              <LocalizedText
-                messageKey={
-                  item.translation_key || `navigation.${item.item_key}`
-                }
-                fallback={item.label}
-              />
-              {item.show_new_badge ? (
-                <span className="rounded-full bg-magenta px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
-                  <LocalizedText messageKey="nav.new" fallback="New" />
-                </span>
-              ) : null}
-            </Link>
-          ))}
-        </nav>
+          {publicNavigationGroups(headerItems).map(group => <PublicNavigationMenu key={group.id} group={group} active={active} />)}
+          <Link href="/how-it-works" aria-current={active === "how" ? "page" : undefined} className="inline-flex min-h-11 items-center rounded-lg px-2 hover:bg-teal/5"><LocalizedText messageKey="nav.how" fallback="How It Works" /></Link>        </nav>
 
         <div data-public-header-zone="actions" className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
           <div className="hidden 2xl:block">
             <LanguageSelector compact />
           </div>
           <HeaderStyleSearch />
-          {!siteAccess ? <Link
+          {<Link
             href="/account?tab=favorites"
             aria-label="View favorite salons"
             className="hidden h-11 w-11 items-center justify-center rounded-xl text-ink transition-colors hover:bg-blush/50 hover:text-magenta 2xl:inline-flex"
           >
             <Heart aria-hidden="true" size={21} strokeWidth={1.7} />
-          </Link> : null}
-          {!siteAccess ? <Link
+          </Link>}
+          {<Link
             href="/login"
             className="hidden min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-semibold text-ink transition-colors hover:text-magenta 2xl:inline-flex"
           >
             <LocalizedText messageKey="nav.login" fallback="Log in" />
-          </Link> : null}
-          {!siteAccess ? <Link
+          </Link>}
+          {<Link
             href="/login"
             className="gc-brand-primary-action hidden min-h-11 items-center whitespace-nowrap rounded-[10px] bg-magenta px-4 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(0,131,166,0.18)] transition hover:-translate-y-0.5 2xl:inline-flex min-[1700px]:px-5"
           >
             <LocalizedText messageKey="nav.signup" fallback="Sign up" />
-          </Link> : null}
+          </Link>}
         </div>
       </div>
     </header>
@@ -292,23 +270,18 @@ export async function CustomerBottomNav({
     social: Share2,
     profile: UserRound,
   };
-  const [records, homeHref, siteAccess] = await Promise.all([
+  const [records, homeHref] = await Promise.all([
     getNavigationItems("mobile_bottom", fallback),
     marketplaceHomeHref(),
-    siteAccessActive(),
   ]);
   const items = records.slice(0, 5).map((item) => ({
     ...item,
     href:
       item.item_key === "home" || item.href === "/"
         ? homeHref
-        : siteAccess && ["bookings", "profile"].includes(item.item_key)
-          ? homeHref
-          : item.href,
+        : item.href,
     label:
-      siteAccess && ["bookings", "profile"].includes(item.item_key)
-        ? "Demo"
-        : item.label,
+      item.label,
     id: item.item_key as ActiveTab,
     key: item.translation_key || `navigation.${item.item_key}`,
     icon: iconMap[item.item_key as keyof typeof iconMap] || Home,
@@ -342,9 +315,7 @@ export async function CustomerBottomNav({
                   size={20}
                   strokeWidth={isActive ? 2.4 : 1.8}
                 />
-                {siteAccess && ["bookings", "profile"].includes(item.id) ? (
-                  item.label
-                ) : (
+                {(
                   <LocalizedText messageKey={item.key} fallback={item.label} />
                 )}
               </Link>

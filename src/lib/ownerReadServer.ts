@@ -5,12 +5,29 @@ import { ownerBusinessMetrics, profileCompletion } from "@/lib/ownerBusinessMetr
 import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
 import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
-import { assistantFinanceEvidence } from "@/lib/assistantFinance";
+import { readBusinessFinances } from "@/lib/businessFinanceServer";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
 export async function readOwnerOperation(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  if (tool === "get_earnings_summary") {
+    const timeZone = String(salon.time_zone || "America/New_York");
+    const day = (instant: number) => {
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(instant));
+      return ["year", "month", "day"].map(key => parts.find(part => part.type === key)?.value).join("-");
+    };
+    const result = await readBusinessFinances(context, { from: day(Date.parse(String(args.start))), to: day(Date.parse(String(args.end)) - 1), timeZone });
+    // Keep individual receipt IDs, client identities and raw books out of model
+    // context. A stylist's protected RPC contains only their own earnings.
+    const { balances, by_stylist, compensation_position, ...summary } = result.summary;
+    const names = new Map(result.stylists.map(row => [String(row.id), String(row.name)]));
+    return { scope: result.scope.kind === "own" ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: result.scope.stylist_id, ...summary,
+      unpaid_balance_cents: balances.reduce((sum, row) => sum + row.unpaid_cents, 0),
+      professional_earnings: Object.entries(by_stylist).map(([id, values]) => ({ name: names.get(id) || null, ...values })), evidence: result.evidence,
+      compensation_position: Object.entries(compensation_position).map(([id,values]) => ({ name:names.get(id)||null,...values })),
+      definitions: "Integer cents in USD. Completed sales, receipts, costs, earned compensation and payouts are separate. Payments taken outside the app are recorded, not provider-processed. Recorded profit is not an exact margin when costs or expenses are incomplete." };
+  }
   if (tool === "get_calendar_gaps" || tool === "get_availability") return calendarAvailability({ salonId: salon.id, date: String(args.date), stylistId: args.stylist_id ? String(args.stylist_id) : null });
   if (tool === "get_plan_status") {
     const result = await admin.from("subscriptions").select("tier,status,current_period_end,scheduled_tier,cancel_at_period_end").eq("salon_id", salon.id).maybeSingle();
@@ -73,7 +90,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     if (result.error) throw result.error;
     return { [list.key]: result.data, total: result.count, capped_at: 100 };
   }
-  if (["get_business_summary", "get_earnings_summary", "get_customers", "get_upcoming_appointments"].includes(tool)) {
+  if (["get_business_summary", "get_customers", "get_upcoming_appointments"].includes(tool)) {
     // Paginate authoritative bookings, as the existing finance ledger does.
     // Aggregate numeric facts stay server-side; private bodies are never sent to
     // the planner. A bounded range prevents unbounded historical requests.
@@ -102,7 +119,6 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const comparisonStart = new Date(start - (end - start)).toISOString();
     const previousPeriod = assistantPeriodMetrics(await readPeriod(comparisonStart, args.start, true));
     const comparison = { method: "preceding_equal_elapsed_duration", current: { start: args.start, end: args.end, ...currentPeriod }, previous: { start: comparisonStart, end: args.start, ...previousPeriod }, changes: compareAssistantPeriods(currentPeriod, previousPeriod) };
-    if (tool === "get_earnings_summary") return { ...currentPeriod, comparison, finance: assistantFinanceEvidence(bookings), start: args.start, end: args.end, time_zone: salon.time_zone, currency: "USD", definition: "Completed Booking Value", cash_revenue: null };
     async function performance(permission: "styles" | "stylists", field: "style_id" | "stylist_id") {
       const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: permission });
       if (access.error) throw access.error;

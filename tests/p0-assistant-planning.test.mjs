@@ -14,6 +14,7 @@ function fixture(options = {}) {
       calls.push({ name, args });
       if (name === 'p0_business_plan_active') return { data: options.planActive !== false };
       if (name === 'p0_actor_has_permission') return { data: !(options.denied || []).includes(args.p_permission) };
+      if (name === 'business_finance_scope') return options.ownFinance ? { data: { kind: 'own', stylist_id: 'professional-A' } } : { error: { message: 'FINANCE_ACCESS_DENIED' } };
       if (name === 'reserve_gc_assistant_usage') return { data: options.budget === false ? null : 'local-reservation' };
       throw Error(`Unexpected RPC ${name}`);
     },
@@ -67,6 +68,26 @@ function fixture(options = {}) {
   const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: history.length ? ['request-A'] : [], conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
   return { run, calls, requests, updates };
 }
+
+test('finance downgrade discards broader results and conversation before the provider', async () => {
+  const f = fixture({ denied:['earnings'], ownFinance:true,
+    history:[{tool:'get_earnings_summary',permission:'earnings',arguments:{},result:{scope:'authenticated_business_only',business_sales_cents:987654321}}],
+    conversation:[{role:'assistant',text:'The whole business earned 987654321 cents.'}],
+  });
+  await f.run('en','And last month?');
+  const context=JSON.parse(f.requests[0].messages[1].content);
+  assert.deepEqual(context.previous,[]);
+  assert.deepEqual(context.conversation,[]);
+  assert.equal(JSON.stringify(f.requests).includes('987654321'),false);
+});
+
+test('own-finance history must match the currently assigned stylist', async () => {
+  for (const stylist of ['professional-A','professional-B',null]) {
+    const f=fixture({denied:['earnings'],ownFinance:true,history:[{tool:'get_earnings_summary',permission:'earnings',arguments:{},result:{scope:'own_stylist_only',scope_stylist_id:stylist,completed_sales_cents:10000}}]});
+    await f.run('en','And yesterday?');
+    assert.equal(JSON.parse(f.requests[0].messages[1].content).previous.length,stylist==='professional-A'?1:0);
+  }
+});
 
 test('photo follow-ups reach the planner and answer only through fresh authorized business reads', async () => {
   const history = [{ tool:'get_business_media', permission:'photos', arguments:{}, result:{ gallery_count:3, distinct_saved_images:4, publicly_visible:true } }];

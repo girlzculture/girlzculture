@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown } from "lucide-react";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
-import { useSiteAccess } from "@/components/site/SiteAccessProvider";
 
 type StyleRecord = {
   id?: string;
@@ -82,7 +81,6 @@ function formatAddOnPrice(value: number) {
 }
 
 export default function SalonStyles({ styles, styleMaterialsByStyleId, salonSlug, salonId, promotions = [] }: SalonStylesProps) {
-  const siteAccess = useSiteAccess();
   const [openId, setOpenId] = useState<string | null>(null);
 
   const styleCards = useMemo(() => styles.map((style, index) => {
@@ -196,7 +194,7 @@ export default function SalonStyles({ styles, styleMaterialsByStyleId, salonSlug
                   </div>
                 </div>
                 <p className="mt-4 text-[9px] font-medium text-magenta">Price may vary based on hair density and length.</p>
-                {card.offer ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-magenta/20 bg-white/75 p-3"><p className="text-[10px] text-ink/70"><b className="text-plum">{card.offer.promotion.public_headline || card.offer.promotion.title}</b><br/><span className="line-through">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span> <span className="font-bold text-magenta">From ${card.offer.price.total.toFixed(2)}</span></p>{siteAccess ? <span aria-disabled="true" className="gc-state-disabled inline-flex min-h-10 items-center rounded-lg border px-4 text-[10px] font-bold">Demo browsing only</span> : <Link href={`/salon/${salonSlug}/book?style=${encodeURIComponent(String(card.style.id || ""))}&promotion=${encodeURIComponent(String(card.offer.promotion.id || ""))}`} className="inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white">Book this offer</Link>}</div> : null}
+                {card.offer ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-magenta/20 bg-white/75 p-3"><p className="text-[10px] text-ink/70"><b className="text-plum">{card.offer.promotion.public_headline || card.offer.promotion.title}</b><br/><span className="line-through">{formatRange(card.style.price_display_min, card.style.price_display_max)}</span> <span className="font-bold text-magenta">From ${card.offer.price.total.toFixed(2)}</span></p>{<Link href={`/salon/${salonSlug}/book?style=${encodeURIComponent(String(card.style.id || ""))}&promotion=${encodeURIComponent(String(card.offer.promotion.id || ""))}`} className="inline-flex min-h-10 items-center rounded-lg bg-magenta px-4 text-[10px] font-bold text-white">Book this offer</Link>}</div> : null}
               </div>
             ) : null}
           </div>

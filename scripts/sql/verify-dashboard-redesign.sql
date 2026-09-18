@@ -42,7 +42,7 @@ begin
   perform pg_temp.redesign_reject(format('select public.update_business_assistant_avatar(%L,%L,%L)',other_business,actor,'dog'),'ASSISTANT_ACCESS_DENIED');
   perform pg_temp.redesign_reject(format('select public.update_business_assistant_avatar(%L,%L,%L)',business,other_actor,'dog'),'ASSISTANT_ACCESS_DENIED');
   perform pg_temp.redesign_reject(format('select public.update_business_assistant_avatar(%L,%L,%L)',business,actor,'https://foreign.invalid/photo'),'ASSISTANT_INVALID_AVATAR');
-  update public.platform_identities set status='Suspended' where user_id=actor;
+  update public.platform_identities set status='Disabled' where user_id=actor;
   perform pg_temp.redesign_reject(format('select public.update_business_assistant_avatar(%L,%L,%L)',business,actor,'dog'),'ASSISTANT_ACCESS_DENIED');
   perform pg_temp.redesign_reject(format('select public.update_business_photo_details(%L,%L,%L,%L::jsonb,null)',business,actor,first_url,first_details),'PHOTO_ACCESS_DENIED');
   update public.platform_identities set status='Active' where user_id=actor;
