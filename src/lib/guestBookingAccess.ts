@@ -96,6 +96,7 @@ export async function issueGuestBookingToken(
     reason?: string;
     rotatedFromId?: string | null;
     rootUrl?: string;
+    reuseActive?: boolean;
   } = {},
 ) {
   const hours = await configuredExpiryHours(admin);
@@ -108,6 +109,15 @@ export async function issueGuestBookingToken(
     e: Math.floor(expiresAt.getTime() / 1000),
   };
   const token = signGuestToken(payload, signingSecret());
+  if (options.reuseActive) {
+    const { data, error } = await admin.rpc("claim_booking_communication_token", { p_booking: bookingId, p_id: tokenId, p_hash: guestTokenHash(token), p_expires: expiresAt.toISOString() });
+    if (error) throw error;
+    const saved = data as { id: string; expires_at: string; token_hash: string };
+    const reused = signGuestToken({ v: 1, b: bookingId, t: saved.id, e: Math.floor(new Date(saved.expires_at).getTime() / 1000) }, signingSecret());
+    if (guestTokenHash(reused) !== saved.token_hash) throw new Error("BOOKING_COMMUNICATION_TOKEN_INVALID");
+    const root = String(options.rootUrl || process.env.NEXT_PUBLIC_SITE_URL || "https://girlzculture.com").replace(/\/$/, "");
+    return { token: reused, tokenId: saved.id, expiresAt: saved.expires_at, url: `${root}/booking/manage/${encodeURIComponent(reused)}` };
+  }
   const now = new Date().toISOString();
   const { data: active, error: activeError } = await admin
     .from("booking_guest_access_tokens")

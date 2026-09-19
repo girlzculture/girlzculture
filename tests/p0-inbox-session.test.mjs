@@ -9,20 +9,22 @@ function inboxHarness(translateSource = value => value) {
   const slots = []; let cursor = 0; let effects = []; let dirty = true; let tree; let changeAuth = () => {};
   let session = { user: { id: 'customer-a' }, access_token: 'local-a' }; let sessionWait;
   const requests = []; const responses = [];
+  const params = new URLSearchParams();
+  const booking = { id: 'booking-a', guest_name: 'PRIVATE A', status: 'Confirmed', duration_hours: 1, appointment_datetime: new Date(Date.now() + 86_400_000).toISOString() };
   const react = {
     useRef: value => { const index = cursor++; return slots[index] ??= { current: value }; },
-    useState: initial => { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], value => { const next = typeof value === 'function' ? value(slots[index]) : value; if (next !== slots[index]) { slots[index] = next; dirty = true; } }]; },
+    useState: initial => { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial; return [slots[index], value => { const next = typeof value === 'function' ? value(slots[index]) : value; if (next !== slots[index]) { slots[index] = next; dirty = true; } }]; },
     useEffect: (effect, deps) => { const index = cursor++; const old = slots[index]; if (!old || deps.some((value, i) => value !== old.deps[i])) { slots[index] = { deps, cleanup: old?.cleanup }; effects.push(() => { old?.cleanup?.(); slots[index].cleanup = effect(); }); } },
   };
   const Component = typescriptLoader(process.cwd(), {
-    react, 'next/link': { default: 'a' }, 'lucide-react': { Languages: 'i', MessageSquare: 'i', Send: 'i' },
+    react, 'next/link': { default: 'a' }, 'next/navigation': { useSearchParams: () => params }, 'lucide-react': { Languages: 'i', MessageSquare: 'i', Send: 'i' },
     '@/components/booking/MessageDisplay': { default: 'message-display' }, '@/components/booking/BookingWelcome': { default: 'booking-welcome' }, '@/components/booking/BookingPolicyEvidence': { default: 'policy-evidence' },
     '@/components/i18n/LocaleProvider': { useI18n: () => ({ locale: 'fr', translateSource, formatDate: value => value }) },
     '@/lib/supabase': {
       getSessionForScope: async () => sessionWait ? sessionWait.promise : session,
       getSupabaseForScope: () => ({ auth: { onAuthStateChange: callback => { changeAuth = callback; callback('INITIAL_SESSION', session); return { data: { subscription: { unsubscribe() {} } } }; } } }),
     },
-  }, { crypto: { randomUUID }, AbortController, fetch: async (url, options) => { requests.push({ url, ...options }); const response = deferred(); responses.push(response); return response.promise; } })('src/components/BookingInbox.tsx').default;
+  }, { crypto: { randomUUID }, AbortController, window: { innerWidth: 1280 }, setTimeout: (callback, delay) => setTimeout(callback, delay).unref(), fetch: async (url, options) => { requests.push({ url, ...options }); const response = deferred(); responses.push(response); return response.promise; } })('src/components/BookingInbox.tsx').default;
   function render() { do { dirty = false; cursor = 0; tree = Component({ scope: 'customer' }); const pending = effects; effects = []; pending.forEach(effect => effect()); } while (dirty); return tree; }
   function find(predicate) { function walk(node) { if (!node || typeof node !== 'object') return null; if (Array.isArray(node)) return node.map(walk).find(Boolean); return predicate(node) ? node : walk(node.props?.children); } return walk(render()); }
   async function settle() { for (let i = 0; i < 4; i++) { await tick(); render(); } }
@@ -31,7 +33,7 @@ function inboxHarness(translateSource = value => value) {
     switchActor(id) { session = id ? { user: { id }, access_token: `local-${id}` } : null; changeAuth(id ? 'SIGNED_IN' : 'SIGNED_OUT', session); render(); },
     holdSession() { return sessionWait = deferred(); },
     draft(text) { find(node => node.type === 'textarea').props.onChange({ target: { value: text } }); render(); },
-    async ready(messages = []) { await settle(); responses[0].resolve(Response.json({ threads: [{ booking: { id: 'booking-a', guest_name: 'PRIVATE A', appointment_datetime: '2026-09-13T12:00:00Z' }, messages: [] }], role: 'customer' })); await settle(); responses[1].resolve(Response.json({ booking: { id: 'booking-a', guest_name: 'PRIVATE A', appointment_datetime: '2026-09-13T12:00:00Z' }, messages, role: 'customer' })); await settle(); },
+    async ready(messages = []) { await settle(); responses[0].resolve(Response.json({ threads: [{ booking, messages: [] }], role: 'customer' })); await settle(); responses[1].resolve(Response.json({ booking, messages, role: 'customer' })); await settle(); },
   };
 }
 
@@ -89,5 +91,5 @@ test('a delayed empty inbox is translated in the render that introduces it', asy
   app.responses[0].resolve(Response.json({ threads: [], role: 'customer' }));
   await app.settle();
   assert.equal(app.find(node => node.type === 'h2').props.children, labels['No booking conversations yet']);
-  assert.equal(app.find(node => node.type === 'p').props.children, labels['A conversation becomes available after a real appointment is booked.']);
+  assert.equal(app.find(node => node.type === 'p' && node.props.children === labels['A conversation becomes available after a real appointment is booked.']).props.children, labels['A conversation becomes available after a real appointment is booked.']);
 });

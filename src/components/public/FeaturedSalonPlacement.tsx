@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Megaphone, RotateCcw } from "lucide-react";
 import { useCustomerLocation } from "@/components/location/CustomerLocationProvider";
 import MarketplaceSalonCard from "@/components/public/MarketplaceSalonCard";
+import SalonCardSkeletons from "@/components/public/SalonCardSkeletons";
 import { validCoordinates } from "@/lib/location";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 import { readApiResponse } from "@/lib/apiResponseClient";
@@ -146,7 +147,7 @@ export default function FeaturedSalonPlacement({
         ) : null}
       </div>
       {!customerLocation.ready ? (
-        <Skeletons count={viewAll ? 8 : 4} />
+        <SalonCardSkeletons label="Loading featured salons" count={viewAll ? 8 : 4} grid={viewAll} />
       ) : !location ? (
         <div className="rounded-[15px] border border-plum/10 bg-white p-6 text-center">
           <h3 className="font-serif text-xl text-plum">
@@ -179,7 +180,7 @@ export default function FeaturedSalonPlacement({
           </button>
         </div>
       ) : loading && !salons.length ? (
-        <Skeletons count={viewAll ? 8 : 4} />
+        <SalonCardSkeletons label="Loading featured salons" count={viewAll ? 8 : 4} grid={viewAll} />
       ) : salons.length ? (
         <>
           <div ref={viewAll ? undefined : carousel} tabIndex={viewAll ? undefined : 0} role={viewAll ? undefined : "region"} aria-label={viewAll ? undefined : "Featured salons carousel"}
@@ -224,29 +225,5 @@ export default function FeaturedSalonPlacement({
         </Link>
       )}
     </section>
-  );
-}
-
-function Skeletons({ count }: { count: number }) {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label="Loading featured salons"
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-    >
-      {Array.from({ length: count }, (_, index) => (
-        <div
-          key={index}
-          className="animate-pulse overflow-hidden rounded-[14px] border border-plum/10 bg-white"
-        >
-          <div className="aspect-[16/10] bg-blush/70" />
-          <div className="space-y-2 p-3">
-            <div className="h-5 w-2/3 rounded bg-blush" />
-            <div className="h-3 w-1/2 rounded bg-blush/60" />
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }

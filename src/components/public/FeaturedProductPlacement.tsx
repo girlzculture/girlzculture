@@ -9,7 +9,6 @@ import {
   promotionLabel,
   type SalonPromotion,
 } from "@/lib/salonPromotions";
-import { siteAccessActive } from "@/lib/marketplaceAccessServer";
 
 type Row = Record<string, unknown>;
 const PUBLIC_PRODUCT_READ_TIMEOUT_MS = 2_500;
@@ -138,10 +137,7 @@ export default async function FeaturedProductPlacement({
   description?: string | null;
   maxCards?: number;
 }) {
-  const [data, siteAccess] = await Promise.all([
-    loadFeaturedProducts(maxCards),
-    siteAccessActive(),
-  ]);
+  const data = await loadFeaturedProducts(maxCards);
   if (!data) return null;
   const { eligible, promotions } = data;
   return (
@@ -243,7 +239,7 @@ export default async function FeaturedProductPlacement({
                       </span>
                     </div>
                     <span className="mt-3 flex min-h-10 items-center justify-center rounded-lg bg-teal text-xs font-bold text-white">
-                      {siteAccess ? "View product" : "Reserve for Pickup"}
+                      {"Reserve for Pickup"}
                     </span>
                   </div>
                 </Link>

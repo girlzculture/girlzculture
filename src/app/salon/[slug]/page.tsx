@@ -1,13 +1,13 @@
 import Link from "next/link";
+import { featuredFirst } from "@/lib/businessCatalogPerformance";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import {
-  marketplaceBrowsingAvailable,
   marketplaceHomeHref,
-  siteAccessActive,
 } from "@/lib/marketplaceAccessServer";
 import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
-import PrelaunchPage from "@/app/prelaunch/page";
 import BusinessPolicyDisclosure from "@/components/booking/BusinessPolicyDisclosure";
+import BusinessMarketingUpdates, { type PublicMarketingPost } from "@/components/public/BusinessMarketingUpdates";
+import { capturePublicPageFailure } from "@/lib/publicPageMonitoring";
 import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -31,8 +31,11 @@ import { getContentPage } from "@/lib/content";
 import { getSalonStatusLabel, isSalonClosedToday } from "@/lib/salonOpenStatus";
 import { getEngineText } from "@/lib/engineConfigServer";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
+import { readBusinessDepositRule } from "@/lib/businessDepositServer";
+import { bookingDepositTerms } from "@/lib/businessDepositRules";
 import { getSalonPublicMetadata } from "@/lib/salonPublicMetadata";
 import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescription";
+import { publicGalleryPhotos, type BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import SalonRatingSummary from "@/components/public/SalonRatingSummary";
 import SalonStylistFallback from "@/components/public/SalonStylistFallback";
 import SalonTrustLabels, {
@@ -61,6 +64,8 @@ type SalonRecord = {
   languages?: string[] | string | null;
   logo_url?: string | null;
   cover_photo_url?: string | null;
+  trust_info?: Record<string, boolean> | null;
+  photo_metadata?: BusinessPhotoMetadata | null;
   gallery_photos?: string[] | string | null;
   verification_status?: string | null;
   rating_overall?: number | null;
@@ -76,6 +81,7 @@ type SalonRecord = {
 };
 
 type StyleRecord = {
+  is_featured?: boolean | null;
   id?: string;
   salon_id?: string | null;
   service_group_id?: string | null;
@@ -220,11 +226,8 @@ export async function generateMetadata({
 }
 
 export default async function SalonPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  if (!(await marketplaceBrowsingAvailable())) return <PrelaunchPage />;
-  const [siteAccess, homeHref] = await Promise.all([
-    siteAccessActive(),
-    marketplaceHomeHref(),
-  ]);
+
+  const homeHref = await marketplaceHomeHref();
   const supabase = getSupabaseAdmin();
   const { slug } = await params;
   const incomingQuery = await searchParams;
@@ -237,7 +240,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     || { slug: "salon-profile", title: "Salon profile", labels: {} };
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,trust_info,photo_metadata,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -247,9 +250,9 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     if (redirectRecord?.new_slug) permanentRedirect(`/salon/${redirectRecord.new_slug}`);
     notFound();
   }
-  if (!siteAccess && await isRegisteredTestBusiness(supabase, salon.id)) notFound();
+  if (await isRegisteredTestBusiness(supabase, salon.id)) notFound();
   let publiclyVisible = true;
-  if (!siteAccess) {
+  {
     const profileVisibility = await supabase.rpc("is_salon_profile_public", {
       target_salon_id: salon.id,
     });
@@ -264,15 +267,19 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   ) notFound();
 
   const now = new Date().toISOString();
-  const [stylesResult, stylistsResult, reviewsResult, productsResult, promotionsResult] = await Promise.all([
-    supabase.from("styles").select("id,sort_order,service_group_id,master_style_id,name,price_display_min,price_display_max,duration_min_hours,duration_max_hours,base_price,size_options,length_options,addons,hair_included,included_items,photos").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
+  const depositRule = await readBusinessDepositRule(supabase,salon.id);
+  const [stylesResult, stylistsResult, reviewsResult, productsResult, promotionsResult, marketingResult] = await Promise.all([
+    supabase.from("styles").select("id,sort_order,is_featured,service_group_id,master_style_id,name,price_display_min,price_display_max,duration_min_hours,duration_max_hours,base_price,size_options,length_options,addons,hair_included,included_items,photos").eq("salon_id", salon.id).is("archived_at", null).or("is_draft.is.null,is_draft.eq.false").order("created_at", { ascending: true }),
     supabase.from("stylists").select("id,slug,name,specialties,bio,avatar_url,photos,years_experience").eq("salon_id", salon.id).eq("is_active", true).eq("is_draft", false).is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("reviews").select("id,display_name,review_title,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,result_photos,salon_reply,created_at").eq("salon_id", salon.id).eq("moderation_status", "Published").is("archived_at", null).or("dispute_status.is.null,dispute_status.neq.Removed").order("created_at", { ascending: false }),
     supabase.from("salon_products").select("id,sort_order,name,description,price,photo_url").eq("salon_id", salon.id).eq("is_visible", true).eq("product_status", "Active").is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("salon_id",salon.id).eq("status","Active").eq("is_active",true).is("archived_at",null).or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order("created_at",{ascending:false}),
+    supabase.rpc("public_business_marketing_posts", { p_salon: salon.id }),
   ]);
+  if (marketingResult.error) await capturePublicPageFailure(marketingResult.error, "business-marketing", "public-posts");
+  const marketingPosts = marketingResult.error || !Array.isArray(marketingResult.data) ? [] : marketingResult.data as PublicMarketingPost[];
 
-  const styles = sortCatalogRecords((stylesResult.data || []) as StyleRecord[], { preserveSourceOrder: true });
+  const styles = featuredFirst(sortCatalogRecords((stylesResult.data || []) as StyleRecord[], { preserveSourceOrder: true }));
   const stylists = (stylistsResult.data || []) as StylistRecord[];
   const products = sortCatalogRecords((productsResult.data || []) as ProductRecord[], { preserveSourceOrder: true });
   const promotions = hasPlanFeature(salon.subscription_tier, "promotions") ? (promotionsResult.data || []) as SalonPromotion[] : [];
@@ -284,7 +291,8 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
       masterStyleId: style.master_style_id,
       basePrice: Number(style.base_price || style.price_display_min || 0),
       selectedAddons: [],
-      subtotal: Number(style.price_display_min || style.base_price || 0),
+      subtotal: Number(style.base_price ?? style.price_display_min ?? 0),
+      protectedDeposit: bookingDepositTerms(Number(style.base_price ?? style.price_display_min ?? 0),depositRule).deposit,
     }));
     const eligibleProducts = products.filter((product) => bestPromotionForContext([promotion], {
       salonId: salon.id,
@@ -320,14 +328,13 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const rating = typeof salon.rating_overall === "number" ? salon.rating_overall : 0;
   const closedToday = isSalonClosedToday(salon);
   const acceptingBookings = salon.accepting_bookings !== false;
-  const canBook = !siteAccess && acceptingBookings && !closedToday;
-  const statusLabel = siteAccess
-    ? "Demo browsing only"
-    : !acceptingBookings
+  const canBook = acceptingBookings && !closedToday;
+  const statusLabel = !acceptingBookings
     ? "Bookings paused"
     : getSalonStatusLabel(salon);
   const reviewCount = typeof salon.review_count === "number" ? salon.review_count : reviews.length;
-  const uploadedGallery = [salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)].filter((photo): photo is string => Boolean(photo));
+  const uploadedGallery = publicGalleryPhotos([salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)]);
+  const displayedPhotoMetadata = Object.fromEntries(uploadedGallery.filter(url => salon.photo_metadata?.[url]).map(url => [url, salon.photo_metadata![url]]));
   const locationLine = [salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
   const addressLine = [salon.address_street, salon.address_line2, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
   const mapQuery = salon.latitude != null && salon.longitude != null ? `${salon.latitude},${salon.longitude}` : addressLine;
@@ -351,7 +358,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </nav>
 
         <section className="grid gap-5 pb-5 pt-3 md:pt-0 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8">
-          <SalonPhotoGallery photos={uploadedGallery} salonName={salon.name || "Salon"} />
+          <SalonPhotoGallery photos={uploadedGallery} salonName={salon.name || "Salon"} metadata={displayedPhotoMetadata} />
 
           <div className="flex flex-col justify-center lg:py-1">
             {salon.logo_url ? <SafeImage src={salon.logo_url} fallbackSrc={salon.logo_url} alt={`${salon.name || "Salon"} logo`} className="mb-3 h-16 w-16 rounded-[14px] border border-plum/10 bg-white object-cover shadow-sm" /> : null}
@@ -361,11 +368,12 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             <SalonRatingSummary rating={rating} reviewCount={reviewCount} />
 
             <SalonTrustLabels labels={trustLabels} verified={isVerified} />
+            {salon.trust_info?.walk_ins_welcome === true ? <p className="mt-3 text-sm font-semibold text-primary">Walk-ins welcome</p> : null}
 
             {salon.description?.trim() ? <ExpandableSalonDescription description={salon.description} aiAssisted={salon.description_ai_assisted === true} /> : null}
 
             <div className="mt-4 flex items-center gap-2">
-              {canBook ? <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link> : <span aria-disabled="true" data-visual-state="disabled" className="gc-state-disabled inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] border px-6 text-[12px] font-semibold">{siteAccess ? "Demo browsing only" : closedToday ? "Closed today" : "Bookings paused"}</span>}
+              {canBook ? <Link href={`/salon/${salon.slug || slug}/book${bookingContext.size ? `?${bookingContext}` : ""}`} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] bg-magenta px-6 text-[12px] font-semibold text-white shadow-[0_9px_22px_rgba(0,131,166,0.18)] transition hover:bg-primary-hover">Book Appointment</Link> : <span aria-disabled="true" data-visual-state="disabled" className="gc-state-disabled inline-flex min-h-11 flex-1 items-center justify-center rounded-[9px] border px-6 text-[12px] font-semibold">{closedToday ? "Closed today" : "Bookings paused"}</span>}
               <SalonProfileActions
                 salonId={salon.id}
                 salonName={salon.name || "Salon"}
@@ -389,7 +397,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
                   <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-ink/65">{promotion.description || promotionLabel(promotion)}</p>
                   <p className="mt-2 text-[10px] font-bold text-magenta">{promotionLabel(promotion)}{(promotion.restrictions as Record<string,unknown> | null)?.terms ? ` · ${String((promotion.restrictions as Record<string,unknown>).terms)}` : ""}</p>
                   <p className="mt-2 line-clamp-1 text-[10px] leading-5 text-ink/60"><b>Eligible:</b> {[...eligibleStyles.map((item) => item.name), ...eligibleProducts.map((item) => item.name)].filter(Boolean).join(", ")}</p>
-                  {siteAccess ? <span aria-disabled="true" className="gc-state-disabled mt-2 inline-flex min-h-9 items-center rounded-lg border px-3 text-[10px] font-bold">Demo browsing only</span> : <Link href={href} className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-magenta px-3 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>}
+                  {<Link href={href} className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-magenta px-3 text-[10px] font-bold text-white">{eligibleStyles.length ? "Book this offer" : "View product offer"}</Link>}
                 </article>
               ))}
             </div>
@@ -400,7 +408,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
             <h2 className="font-serif text-[22px] font-semibold text-ink">Styles & Pricing</h2>
             <p className="mt-1 text-[9px] text-ink/55">Select a style to see full pricing and time details.</p>
-            <div className="mt-3"><SalonStyles styles={styles} styleMaterialsByStyleId={styleMaterialsByStyleId} salonSlug={salon.slug || slug} salonId={salon.id} promotions={promotions} /></div>
+            <div className="mt-3"><SalonStyles styles={styles} styleMaterialsByStyleId={styleMaterialsByStyleId} salonSlug={salon.slug || slug} salonId={salon.id} promotions={promotions} depositRule={depositRule}/></div>
           </div>
 
           <div className="min-w-0 rounded-[12px] border border-plum/10 bg-white/65 p-4 sm:p-5">
@@ -447,6 +455,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
         </section>
       </div>
 
+        <BusinessMarketingUpdates posts={marketingPosts} />
         <div className="mx-auto max-w-6xl px-4"><BusinessPolicyDisclosure businessName={salon.name} revision={await currentBusinessPolicy(supabase, salon.id)} /></div>
         <CustomerBottomNav active="home" />
     </main>

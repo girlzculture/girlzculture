@@ -3,6 +3,7 @@ import ExpandableSalonDescription from "@/components/public/ExpandableSalonDescr
 import SalonRatingSummary from "@/components/public/SalonRatingSummary";
 import SalonReviews from "@/components/SalonReviews";
 import SalonStyles from "@/components/SalonStyles";
+import { defaultDepositRule } from "@/lib/businessDepositRules";
 import SalonTrustLabels, {
   SalonVerificationBadge,
 } from "@/components/public/SalonTrustLabels";
@@ -82,6 +83,7 @@ export default function SalonProfileAcceptancePage() {
       <section aria-label="Styles and pricing fixture" className="mt-6">
         <h2 className="mb-3 font-serif text-2xl">Styles &amp; Pricing</h2>
         <SalonStyles
+          depositRule={defaultDepositRule(10)}
           salonId="11111111-1111-4111-8111-111111111111"
           salonSlug="acceptance-salon"
           styles={[

@@ -6,7 +6,6 @@ import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
 import { bestPromotionForContext, promotionLabel, type SalonPromotion } from "@/lib/salonPromotions";
 import ProductPurchaseActions from "@/components/commerce/ProductPurchaseActions";
-import { siteAccessActive } from "@/lib/marketplaceAccessServer";
 
 type Salon = { id: string; name?: string | null; slug?: string | null; address_city?: string | null; address_state?: string | null };
 type Product = {
@@ -29,7 +28,6 @@ type Product = {
 
 export default async function ProductDetailPage({ params, searchParams }: { params: Promise<{ slug: string; productId: string }>; searchParams: Promise<Record<string,string | string[] | undefined>> }) {
   const { slug, productId } = await params;
-  const siteAccess = await siteAccessActive();
   const query = await searchParams;
   const { data: salon } = await supabase.from("salons").select("id,name,slug,address_city,address_state").eq("slug", slug).maybeSingle<Salon>();
   if (!salon) notFound();
@@ -59,15 +57,7 @@ export default async function ProductDetailPage({ params, searchParams }: { para
             <div className="mt-7 grid gap-3">
               {product.pickup_enabled ? <div className="rounded-[13px] border border-amber/30 bg-blush/70 p-4"><p className="flex items-start gap-3 text-[12px] font-semibold text-ink"><Store size={19} className="shrink-0 text-amber" />Pickup from {salon.name || "the salon"}</p><p className="ml-8 mt-1 text-[11px] text-ink/55">{Number(product.pickup_prep_minutes || 0) > 0 ? `Usually ready in about ${Number(product.pickup_prep_minutes)} minutes` : "Pickup timing is confirmed by the salon"}{location ? ` · ${location}` : ""}</p></div> : null}
             </div>
-            {siteAccess ? (
-              <span
-                aria-disabled="true"
-                data-visual-state="disabled"
-                className="gc-state-disabled mt-7 inline-flex min-h-12 items-center justify-center rounded-[10px] border px-7 text-[12px] font-bold"
-              >
-                Demo browsing only — purchasing opens at launch
-              </span>
-            ) : <ProductPurchaseActions
+            {<ProductPurchaseActions
               salonSlug={String(salon.slug || slug)}
               productId={product.id}
               promotionId={offer?.promotion.id || null}
@@ -75,7 +65,7 @@ export default async function ProductDetailPage({ params, searchParams }: { para
               availableQuantity={product.track_inventory ? Number(product.inventory_quantity || 0) : null}
               pickupEnabled={product.pickup_enabled === true}
             />}
-            {!siteAccess ? <Link href={`/salon/${slug}/book`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-mist px-7 text-[12px] font-bold text-charcoal hover:border-teal hover:text-teal"><Box size={16} />Book an appointment separately</Link> : null}
+            {<Link href={`/salon/${slug}/book`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-mist px-7 text-[12px] font-bold text-charcoal hover:border-teal hover:text-teal"><Box size={16} />Book an appointment separately</Link>}
           </div>
         </section>
       </div>

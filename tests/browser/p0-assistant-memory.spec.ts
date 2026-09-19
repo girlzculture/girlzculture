@@ -9,6 +9,7 @@ test('P0 Assistant memory failure shows its exact protected reference without pr
   await page.goto('/salon/dashboard');
   await page.getByRole('button',{name:'GC Assistant',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'GC Assistant',exact:true});
+  await dialog.getByText('Conversation options',{exact:true}).click();
   await dialog.getByRole('button',{name:'Saved conversation context',exact:true}).click();
   await expect(dialog.getByText('Saved context could not be loaded or changed. Your current conversation is still available.',{exact:true})).toBeVisible();
   await expect(dialog.getByText('MEMORY-FIXTURE-REFERENCE',{exact:true})).toBeVisible();
@@ -46,7 +47,8 @@ for (const [width,height] of [[390,844],[768,900],[1440,900],[844,390]]) {
     await dialog.getByRole('button',{name:'Ask GC Assistant',exact:true}).click();
     await expect(dialog.locator('article').last()).toContainText('Silk Press cuesta 120 USD.');
     expect(writes).toEqual([]);
-    await dialog.getByRole('button',{name:'Saved conversation context',exact:true}).click();
+    await dialog.getByText('Conversation options',{exact:true}).click();
+  await dialog.getByRole('button',{name:'Saved conversation context',exact:true}).click();
     await expect(dialog.getByText('No saved context is available.',{exact:true})).toBeVisible();
     await dialog.getByRole('button',{name:'Save this context for 30 days',exact:true}).click();
     await expect(dialog.getByText('Context saved for 30 days. Only you can resume it in this business.',{exact:true})).toBeVisible();
@@ -56,7 +58,8 @@ for (const [width,height] of [[390,844],[768,900],[1440,900],[844,390]]) {
     await page.getByRole('button',{name:'GC Assistant',exact:true}).click();
     dialog=page.getByRole('dialog',{name:'GC Assistant',exact:true});
     await expect(dialog.locator('article')).toHaveCount(0);
-    await dialog.getByRole('button',{name:'Saved conversation context',exact:true}).click();
+    await dialog.getByText('Conversation options',{exact:true}).click();
+  await dialog.getByRole('button',{name:'Saved conversation context',exact:true}).click();
     await expect(dialog.getByRole('button',{name:'Resume saved context',exact:true})).toBeEnabled();
     await dialog.getByRole('button',{name:'Resume saved context',exact:true}).click();
     await expect(dialog.getByText('Saved context resumed. Ask a new question to read current information.',{exact:true})).toBeVisible();
@@ -68,6 +71,7 @@ for (const [width,height] of [[390,844],[768,900],[1440,900],[844,390]]) {
     try {
       const second=await secondContext.newPage();
       const next=await configure(second);
+      await next.getByText('Conversation options',{exact:true}).click();
       await next.getByRole('button',{name:'Saved conversation context',exact:true}).click();
       await expect(next.getByRole('button',{name:'Resume saved context',exact:true})).toBeEnabled();
       await next.getByRole('button',{name:'Delete saved context',exact:true}).click();

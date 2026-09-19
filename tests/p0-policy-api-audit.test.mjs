@@ -2,6 +2,37 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
 
+test('policy load includes the current own-business revision beyond thirty newer drafts and gives its canonical public anchor', async () => {
+  const current = { id: 'current-policy', salon_id: 'business-a', policy: { business_policy_text: 'Retained published terms' }, version: 1, created_at: '2020-01-01', published_at: '2020-01-01' };
+  const records = [...Array.from({ length: 31 }, (_, i) => ({ id: `draft-${i}`, salon_id: 'business-a', created_at: `2030-${String(i).padStart(2, '0')}`, published_at: null })), current,
+    { ...current, id: 'foreign', salon_id: 'business-b', policy: { business_policy_text: 'PRIVATE B terms' } }];
+  const context = { salon: { id: 'business-a', slug: 'business-a', vanity_slug: 'studio-a', business_policy_revision_id: current.id }, user: { id: 'actor-a' }, admin: { from(table) {
+    assert.equal(table, 'business_policy_revisions');
+    const filters = []; let limit = Infinity, single = false;
+    const q = { select() { return q; }, eq(key, value) { filters.push(row => row[key] === value); return q; }, order() { return q; }, limit(n) { limit = n; return q; }, maybeSingle() { single = true; return q; },
+      then(resolve) { const rows = records.filter(row => filters.every(filter => filter(row))).slice(0, limit); return Promise.resolve({ data: single ? rows[0] || null : rows }).then(resolve); } }; return q;
+  } } };
+  const load = typescriptLoader(process.cwd(), {
+    '@/lib/supabaseAdmin': { requireSalonPermission: async () => context },
+    '@/lib/requestSecurity': { enforceRateLimit() {}, RateLimitError: class extends Error {} },
+    '@/lib/operationalMonitoring': { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile() {} },
+    '@/lib/platformErrors': { capturePlatformError: async () => 'CURRENT-REFERENCE', safeFailure: (_message, id, status = 500, details = {}) => Response.json({ request_id: id, ...details }, { status }) },
+  }, { Error, SyntaxError });
+  const { GET } = load('src/app/api/salon/policies/route.ts');
+  const response = await GET(new Request('http://localhost/api/salon/policies'));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.revisions.find(row => row.id === body.current)?.policy.business_policy_text, 'Retained published terms');
+  assert.equal(body.public_policy_path, '/studio-a#business-policies');
+  assert.doesNotMatch(JSON.stringify(body), /PRIVATE B/);
+  context.salon.business_policy_revision_id = 'foreign';
+  const foreign = await GET(new Request('http://localhost/api/salon/policies'));
+  assert.equal(foreign.status, 500, 'a missing own published revision must not enable saving blank defaults');
+  const error = await foreign.json();
+  assert.equal(error.code, 'POLICY_UNAVAILABLE');
+  assert.equal(error.request_id, 'CURRENT-REFERENCE');
+});
+
 for (const method of ['GET', 'POST']) test(`policy ${method} failure retains the authenticated Engine context and exact incident reference`, async () => {
   const incidents = [];
   const reference = '44000000-0000-4000-8000-000000000001';
@@ -26,4 +57,51 @@ for (const method of ['GET', 'POST']) test(`policy ${method} failure retains the
   assert.equal(result.code, 'POLICY_UNAVAILABLE'); assert.equal(result.request_id, reference);
   assert.equal(response.headers.get('X-Request-ID'), reference);
   assert.doesNotMatch(JSON.stringify(result), /Private|connection/);
+});
+
+test('an unchanged policy draft publishes after the JSONB round trip reorders its keys', async () => {
+  const id = '44000000-0000-4000-8000-000000000002';
+  let stored;
+  let published = 0;
+  const context = { salon: { id: 'business-a', subscription_status: 'active', business_policy_revision_id: null }, user: { id: 'actor-a' }, admin: {
+    from(table) {
+      const q = { select() { return q; }, eq() { return q; }, maybeSingle() { return q; }, single() { return q; },
+        insert(row) {
+          // Postgres JSONB does not retain JavaScript insertion order.
+          stored = { id, ...row, policy: Object.fromEntries(Object.entries(row.policy).sort(([a], [b]) => a.localeCompare(b))), version: null, published_at: null };
+          return q;
+        },
+        then(resolve, reject) { return Promise.resolve({ data: table === 'subscriptions' ? { status: 'active' } : stored }).then(resolve, reject); },
+      }; return q;
+    },
+    async rpc(name, input) {
+      assert.equal(name, 'publish_business_policy');
+      assert.deepEqual(JSON.parse(JSON.stringify(input)), { p_salon: 'business-a', p_user: 'actor-a', p_revision: id, p_expected_revision: null });
+      published++;
+      return { data: { ...stored, version: 1, published_at: new Date().toISOString() } };
+    },
+  } };
+  const load = typescriptLoader(process.cwd(), {
+    '@/lib/supabaseAdmin': { requireSalonPermission: async () => context },
+    '@/lib/requestSecurity': { enforceRateLimit() {}, RateLimitError: class extends Error {} },
+    '@/lib/plans': { isSubscriptionActive: () => true },
+    '@/lib/operationalMonitoring': { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile() {} },
+    '@/lib/platformErrors': { capturePlatformError: async () => 'unexpected-error', safeFailure: () => Response.json({}, { status: 500 }) },
+  }, { Error, SyntaxError });
+  const { POLICY_DEFAULTS } = load('src/lib/businessPolicyCore.ts');
+  const { POST } = load('src/app/api/salon/policies/route.ts');
+  const request = body => new Request('http://localhost/api/salon/policies', { method: 'POST', body: JSON.stringify(body) });
+  const draftResponse = await POST(request({ action: 'draft', locale: 'en', policy: { ...POLICY_DEFAULTS, notes: 'Please arrive with clean hair.' } }));
+  assert.equal(draftResponse.status, 200);
+  const draft = await draftResponse.json();
+  const approval = { action: 'publish', revision_id: id, digest: draft.digest, expected_revision: draft.expected_revision, confirm: true, platform_rules_acknowledged: true, source_reviewed: true };
+  const response = await POST(request(approval));
+  assert.equal(response.status, 200, JSON.stringify(await response.json()));
+  assert.equal(published, 1);
+  stored.policy.notes = 'Changed after the owner reviewed the draft.';
+  const stale = await POST(request(approval));
+  assert.equal(stale.status, 409, 'an actual content change must still invalidate approval');
+  assert.equal((await stale.json()).code, 'POLICY_PREVIEW_STALE');
+  assert.equal(stale.headers.get('X-Request-ID'), 'unexpected-error', 'the exact conflict reference must survive the monitoring wrapper');
+  assert.equal(published, 1, 'a stale preview must never publish');
 });

@@ -106,6 +106,8 @@ const applicationProjection = [
 ].join(",");
 
 const subscriptionProjection = [
+  "price_id",
+  "recurring_price_snapshot",
   "id",
   "salon_id",
   "tier",

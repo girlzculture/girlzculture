@@ -12,7 +12,7 @@ async function GETHandler(request: Request) {
     const styleId = cleanText(query.get("style_id"), 50);
     const stylistId = cleanText(query.get("stylist_id"), 50) || null;
     const date = cleanText(query.get("date"), 10);
-    if (!salonId || !styleId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Salon, style, and date are required.");
+    if (!salonId || !styleId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return Response.json({code:"AVAILABILITY_INPUT_REQUIRED",error:"Choose a business, service and date to see availability."},{status:400,headers:{"Cache-Control":"no-store"}});
     const result = await bookingAvailability({ salonId, styleId, stylistId, date });
     const next = result.slots.length ? null : await nextAvailableSlot({ salonId, styleId, stylistId, afterDate: date });
     return Response.json({ ...result, next });

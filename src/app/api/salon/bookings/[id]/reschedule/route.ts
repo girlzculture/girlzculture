@@ -5,6 +5,8 @@ import {
 } from "@/lib/operationalMonitoring";
 import { createCustomerApprovedReschedule } from "@/lib/bookingRescheduleServer";
 import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
+import { rescheduleLocalTimestamp } from "@/lib/bookingRescheduleCore";
+import { salonTimeZone } from "@/lib/dateTime";
 import {
   enforceRateLimit,
   publicErrorResponse,
@@ -44,6 +46,7 @@ async function GETHandler(
     const { admin, booking, salon } = await contextFor(request, id);
     const date = new URL(request.url).searchParams.get("date");
     if (date) {
+      if (!Number.isFinite(Number(booking.duration_hours)) || Number(booking.duration_hours) < 0.25) throw new RescheduleInputError("This booking duration must be corrected before proposing a change.");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new RescheduleInputError("Choose a valid date.");
       }
@@ -55,11 +58,13 @@ async function GETHandler(
         date,
         excludeBookingId: String(booking.id),
         includeAllStylists: true,
+        durationMinutes: Number(booking.duration_hours) * 60,
+        bufferMinutes: Math.max(0, Number(booking.buffer_minutes ?? 15)),
       });
       return Response.json({
         date,
         time_zone: salon.time_zone,
-        slots: availability.slots,
+        slots: new URL(request.url).searchParams.get("kind") === "substitution" ? availability.slots.filter(slot => `${date}T${slot.value}` === rescheduleLocalTimestamp(booking.appointment_datetime, salonTimeZone(salon.time_zone)) && slot.stylistId && slot.stylistId !== booking.stylist_id) : availability.slots,
         reason: availability.reason,
       });
     }
@@ -112,6 +117,7 @@ async function POSTHandler(
     const { id } = await route.params;
     const context = await contextFor(request, id);
     const body = (await request.json()) as Record<string, unknown>;
+    if (!body.client_request_id) throw new RescheduleInputError("Choose a valid proposal request.");
     try {
       const result = await createCustomerApprovedReschedule({
         admin: context.admin,
@@ -125,6 +131,8 @@ async function POSTHandler(
         reason: body.reason,
         message: body.message,
         localOptions: body.options,
+        requestId: body.client_request_id,
+        changeKind: body.change_kind,
         rootUrl: (
           process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
         ).replace(/\/$/, ""),

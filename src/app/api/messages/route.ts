@@ -10,11 +10,14 @@ import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { bookingMessageTranslation } from "@/lib/bookingMessageTranslationServer";
 import { translationProviderFailure } from "@/lib/translationProviderErrors";
 
+import { bookingConversationWindow } from "@/lib/bookingConversation";
+
 type Row = Record<string, unknown>;
 type Role = "customer" | "salon" | "admin";
 async function messageFailure(request: Request, error: unknown) {
   if (error instanceof RateLimitError) return Response.json({ code: "MESSAGE_RATE_LIMIT" }, { status: 429, headers: { "Retry-After": String(error.retryAfter), "Cache-Control": "private, no-store" } });
-  const message = error instanceof Error ? error.message : "";
+  const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String(error.message) : "";
+  if (["MESSAGE_CONVERSATION_CLOSED", "MESSAGE_ACCESS_DENIED"].includes(message)) return Response.json({ code: message }, { status: message === "MESSAGE_ACCESS_DENIED" ? 403 : 409, headers: { "Cache-Control": "private, no-store" } });
   const translation = translationProviderFailure(error);
   if (translation) {
     const reference = await capturePlatformError({ request, error, feature: "booking-messages", action: "translation", actorRole: "authenticated", safeMessage: translation.error });
@@ -43,49 +46,52 @@ async function identity(request: Request) {
   return { admin, user: data.user };
 }
 
-async function accessForBooking(admin: ReturnType<typeof getSupabaseAdmin>, userId: string, email: string, bookingId: string) {
-  const { data: booking, error } = await admin.from("bookings").select("*,salon:salons(id,name,slug,email,phone,user_id,cover_photo_url,time_zone),style:styles(name)").eq("id", bookingId).single();
-  if (error || !booking) throw new Error("Booking not found.");
+async function messageScope(admin: ReturnType<typeof getSupabaseAdmin>, userId: string, email: string) {
   const canonical = await admin.from("platform_identities").select("primary_role,status,email_normalized").eq("user_id", userId).maybeSingle();
   if (canonical.error) throw canonical.error;
   if (!canonical.data || canonical.data.status !== "Active" || canonical.data.email_normalized !== email.trim().toLowerCase()) throw new Error("Forbidden");
-  if (canonical.data.primary_role === "customer" && booking.customer_id === userId) return { booking, role: "customer" as Role };
-  const [teamResult, adminsResult] = await Promise.all([
-    admin.from("salon_team_members").select("id,permissions,status").eq("salon_id", booking.salon_id).eq("user_id", userId).eq("status", "Active").limit(1).maybeSingle(),
-    admin.from("admin_users").select("permissions,is_super_admin,status").eq("user_id", userId).ilike("email", email).eq("status", "Active"),
-  ]);
-  if (teamResult.error) throw teamResult.error;
-  if (adminsResult.error) throw adminsResult.error;
-  const team = teamResult.data, adminUsers = adminsResult.data;
-  const salon = booking.salon as Row | null;
-  if ((canonical.data.primary_role === "salon_owner" && salon?.user_id === userId) || (canonical.data.primary_role === "salon_team" && team && Boolean((team.permissions as Row | null)?.bookings))) return { booking, role: "salon" as Role };
-  const platformAdmin = (adminUsers || []).find((row) => row.is_super_admin || Boolean((row.permissions as Row | null)?.support));
-  if (canonical.data.primary_role === "admin" && platformAdmin) return { booking, role: "admin" as Role };
-  throw new Error("You do not have access to this booking conversation.");
-}
-
-async function authorizedBookings(admin: ReturnType<typeof getSupabaseAdmin>, userId: string, email: string) {
-  const canonical = await admin.from("platform_identities").select("primary_role,status,email_normalized").eq("user_id", userId).maybeSingle();
-  if (canonical.error) throw canonical.error;
-  if (!canonical.data || canonical.data.status !== "Active" || canonical.data.email_normalized !== email.trim().toLowerCase()) throw new Error("Forbidden");
-  const [ownedResult, teamResult, adminsResult] = await Promise.all([
+  const [owned, team, admins] = await Promise.all([
     admin.from("salons").select("id").eq("user_id", userId).limit(1).maybeSingle(),
-    admin.from("salon_team_members").select("salon_id,permissions").eq("user_id", userId).eq("status", "Active").limit(1).maybeSingle(),
+    admin.from("salon_team_members").select("salon_id,stylist_id,permissions,status").eq("user_id", userId).eq("status", "Active").limit(1).maybeSingle(),
     admin.from("admin_users").select("permissions,is_super_admin,status").eq("user_id", userId).ilike("email", email).eq("status", "Active"),
   ]);
-  for (const result of [ownedResult, teamResult, adminsResult]) if (result.error) throw result.error;
-  const owned = ownedResult.data, team = teamResult.data, adminUsers = adminsResult.data;
-  const platformAdmin = canonical.data.primary_role === "admin" && (adminUsers || []).some((row) => row.is_super_admin || Boolean((row.permissions as Row | null)?.support));
-  let query = admin.from("bookings").select("*,salon:salons(id,name,slug,cover_photo_url,time_zone),style:styles(name)").order("appointment_datetime", { ascending: false }).limit(platformAdmin ? 300 : 100);
-  let role: Role = "customer";
-  if (platformAdmin) role = "admin";
-  else if (canonical.data.primary_role === "salon_owner" && owned?.id) { role = "salon"; query = query.eq("salon_id", owned.id); }
-  else if (canonical.data.primary_role === "salon_team" && team?.salon_id && Boolean((team.permissions as Row | null)?.bookings)) { role = "salon"; query = query.eq("salon_id", team.salon_id); }
-  else if (canonical.data.primary_role === "customer") query = query.eq("customer_id", userId);
-  else throw new Error("Forbidden");
-  const { data, error } = await query;
-  if (error) throw error;
-  return { bookings: data || [], role };
+  for (const result of [owned, team, admins]) if (result.error) throw result.error;
+  const primary = canonical.data.primary_role;
+  if (primary === "salon_owner" && owned.data?.id) return { role: "salon" as Role, salonId: owned.data.id, stylistId: null, customerId: null };
+  if (primary === "salon_team" && team.data?.salon_id && Boolean((team.data.permissions as Row)?.bookings)) return { role: "salon" as Role, salonId: team.data.salon_id, stylistId: team.data.stylist_id, customerId: null };
+  if (primary === "customer") return { role: "customer" as Role, salonId: null, stylistId: null, customerId: userId };
+  if (primary === "admin" && (admins.data || []).some(row => row.is_super_admin || Boolean((row.permissions as Row)?.support))) return { role: "admin" as Role, salonId: null, stylistId: null, customerId: null };
+  throw new Error("Forbidden");
+}
+function bookingQuery(admin: ReturnType<typeof getSupabaseAdmin>, scope: Awaited<ReturnType<typeof messageScope>>) {
+  let query = admin.from("bookings").select("*,salon:salons(id,name,slug,cover_photo_url,time_zone),style:styles(name)");
+  if (scope.salonId) query = query.eq("salon_id", scope.salonId);
+  if (scope.stylistId) query = query.eq("stylist_id", scope.stylistId);
+  if (scope.customerId) query = query.eq("customer_id", scope.customerId);
+  return query;
+}
+async function accessForBooking(admin: ReturnType<typeof getSupabaseAdmin>, userId: string, email: string, bookingId: string) {
+  const scope = await messageScope(admin, userId, email);
+  const result = await bookingQuery(admin, scope).eq("id", bookingId).maybeSingle();
+  if (result.error) throw result.error;
+  if (!result.data) throw new Error("Forbidden");
+  return { booking: result.data, role: scope.role };
+}
+async function authorizedBookings(admin: ReturnType<typeof getSupabaseAdmin>, userId: string, email: string) {
+  const scope = await messageScope(admin, userId, email);
+  const bookings = await messagePages(() => bookingQuery(admin, scope).order("appointment_datetime", { ascending: false }).order("id"));
+  return { bookings, role: scope.role };
+}
+// Stable ordering, explicit pages and a fail-closed bound avoid silent provider caps.
+async function messagePages(query: () => ReturnType<ReturnType<ReturnType<typeof getSupabaseAdmin>["from"]>["select"]>): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (let offset = 0; offset < 100_000; offset += 1000) {
+    const result = await query().range(offset, offset + 999);
+    if (result.error) throw result.error;
+    rows.push(...((result.data || []) as Row[]));
+    if ((result.data || []).length < 1000) return rows;
+  }
+  throw new Error("MESSAGE_PAGE_LIMIT");
 }
 
 async function GETHandler(request: Request) {
@@ -97,26 +103,27 @@ async function GETHandler(request: Request) {
       const access = await accessForBooking(admin, user.id, user.email || "", requestedBookingId);
       const welcome = await admin.from("booking_conversation_events").select("event_type,facts,created_at").eq("booking_id", requestedBookingId).maybeSingle();
       if (welcome.error) throw welcome.error;
-      const { data: messages, error } = await admin.from("booking_messages").select("*").eq("booking_id", requestedBookingId).order("created_at");
-      if (error) throw error;
+      const messages = await messagePages(() => admin.from("booking_messages").select("*").eq("booking_id", requestedBookingId).order("created_at").order("id"));
+      const readAt = new Date().toISOString();
       const readColumn = access.role === "customer" ? "read_by_customer_at" : "read_by_salon_at";
       if (access.role !== "admin") {
-        const marked = await admin.from("booking_messages").update({ [readColumn]: new Date().toISOString() }).eq("booking_id", requestedBookingId).neq("sender_role", access.role).is(readColumn, null);
+        const marked = await admin.from("booking_messages").update({ [readColumn]: readAt }).eq("booking_id", requestedBookingId).neq("sender_role", access.role).is(readColumn, null);
         if (marked.error) throw marked.error;
       }
-      return Response.json({ role: access.role, booking: access.booking, messages: messages || [], welcome: welcome.data }, { headers: { "Cache-Control": "private, no-store" } });
+      return Response.json({ role: access.role, booking: access.booking, messages: messages.map(message => access.role !== "admin" && message.sender_role !== access.role && !message[readColumn] ? { ...message, [readColumn]: readAt } : message), welcome: welcome.data, conversation: bookingConversationWindow(access.booking) }, { headers: { "Cache-Control": "private, no-store" } });
     }
     const access = await authorizedBookings(admin, user.id, user.email || "");
     const ids = access.bookings.map((booking) => booking.id).filter(Boolean);
-    const { data: messages, error } = ids.length
-      ? await admin.from("booking_messages").select("*").in("booking_id", ids).order("created_at", { ascending: false }).limit(1000)
-      : { data: [], error: null };
-    if (error) throw error;
+    const messages: Row[] = [];
+    for (let offset = 0; offset < ids.length; offset += 200) {
+      const batch = ids.slice(offset, offset + 200);
+      messages.push(...await messagePages(() => admin.from("booking_messages").select("*").in("booking_id", batch).order("created_at", { ascending: false }).order("id")));
+    }
     const grouped = new Map<string, Row[]>();
-    for (const message of messages || []) grouped.set(message.booking_id, [...(grouped.get(message.booking_id) || []), message]);
+    for (const message of messages || []) grouped.set(String(message.booking_id), [...(grouped.get(String(message.booking_id)) || []), message]);
     const threads = access.bookings
 
-      .map((booking) => ({ booking, messages: grouped.get(booking.id) || [] }));
+      .map((booking) => ({ booking, messages: grouped.get(String(booking.id)) || [], conversation: bookingConversationWindow(booking) }));
     return Response.json({ role: access.role, threads }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     noteOperationalFailure("Booking message load failed", error);
@@ -150,6 +157,18 @@ async function POSTHandler(request: Request) {
     if (!bookingId || !messageBody) throw new Error("Enter a message before sending.");
     const access = await accessForBooking(admin, user.id, user.email || "", bookingId);
     if (access.booking.booking_origin === "business_added" && !access.booking.customer_id) return Response.json({ code: "MESSAGE_CUSTOMER_PARTICIPANT_REQUIRED" }, { status: 409 });
+    if (access.role === "admin") throw new Error("Forbidden");
+    // Allow acknowledgement of a previously saved request after closure, never a new send.
+    if (body.client_request_id != null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(body.client_request_id))) return Response.json({ code: "MESSAGE_INVALID" }, { status: 400 });
+    if (body.action === undefined && body.client_request_id) {
+      const prior = await admin.from("booking_messages").select("*").eq("sender_user_id", user.id).eq("client_request_id", body.client_request_id).maybeSingle();
+      if (prior.error) throw prior.error;
+      if (prior.data) {
+        if (prior.data.booking_id !== bookingId || prior.data.original_body !== messageBody || (prior.data.source_locale ?? null) !== (body.source_locale ?? null)) return Response.json({ code: "MESSAGE_IDEMPOTENCY_CONFLICT" }, { status: 409 });
+        if (!bookingConversationWindow(access.booking).open) return Response.json({ message: prior.data, warnings: [], replayed: true }, { headers: { "Cache-Control": "private, no-store" } });
+      }
+    }
+    if (!bookingConversationWindow(access.booking).open) return Response.json({ code: "MESSAGE_CONVERSATION_CLOSED", conversation: bookingConversationWindow(access.booking) }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
     const moderation = await moderatePublicContent(admin, { body: messageBody });
     if (!moderation.allowed) {
       return Response.json(

@@ -10,6 +10,8 @@ test('plan answers use the canonical entitlement catalog and do not infer an unk
   assert.equal(result.current_plan.name, 'Premium');
   assert.equal(result.current_plan.entitlements.productListings.limit, null);
   assert.equal(result.available_plans.length, 3);
+  assert.equal(result.current_plan.monthly_amount_cents, null, 'missing agreement must not invent a catalog charge');
+  assert.deepEqual(Array.from(result.available_plans, plan => plan.monthly_amount_cents), [8900,10900,12900]);
   assert.equal(result.revenue_uplift_projection, null);
   const unknown = fixture({ tables: { subscriptions: [{ salon_id: business, status: 'active', tier: 'Unknown' }] } });
   assert.equal((await unknown.run('get_plan_status', {})).request.result.current_plan, null);
@@ -89,15 +91,17 @@ test('overview permission alone does not expose calendar gaps', async () => {
   assert.equal(f.calls.some(call => call.calendar), false);
 });
 
-test('earnings evidence is an authorized appointment cohort and excludes foreign and manual money', async () => {
+test('operating earnings use verified receipts and exclude foreign or invented manual money', async () => {
   const range = { start: '2030-09-24T00:00:00.000Z', end: '2030-09-25T00:00:00.000Z' };
   const paid = { salon_id: business, appointment_datetime: range.start, status: 'Completed', estimated_total: 100, payment_mode: 'live', payment_verified_at: range.start, stripe_charge_id: 'ch_fixture', deposit_status: 'Paid', deposit_amount: 20 };
   const f = fixture({ tables: { bookings: [paid, { ...paid, salon_id: actor, deposit_amount: 999 }, { ...paid, booking_origin: 'business_added', deposit_amount: 888 }] } });
   const result = (await f.run('get_earnings_summary', range)).request.result;
-  assert.equal(result.finance.scope, 'current_ledger_for_appointments_in_range');
-  assert.equal(result.finance.live.recorded_verified_deposits, 20);
-  assert.equal(result.finance.payment_date_cash_flow, null);
-  assert.equal(result.finance.bank_settlement_verified, false);
+  assert.equal(result.scope, 'authenticated_business_only');
+  assert.equal(result.by_stage.deposit, 2000);
+  assert.equal(result.cash_received_cents, 2000);
+  assert.equal(result.evidence.provider_bank_settlement_verified, false);
+  assert.equal(result.evidence.unverified_deposit_records, 1);
+  assert.equal(result.completed_sales_cents, 20000);
   const overview = (await f.run('get_business_summary', range)).request.result;
   assert.equal(Object.hasOwn(overview, 'finance'), false);
   const denied = fixture({ denied: ['earnings'] });
@@ -106,12 +110,23 @@ test('earnings evidence is an authorized appointment cohort and excludes foreign
 });
 function fixture(overrides = {}) {
   const calls = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
-  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
+  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], product_orders: [], salon_promotions: [], ...overrides.tables };
+  const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'business_finance_scope') return overrides.ownFinance ? {data:{kind:'own',stylist_id:professional}} : {error:{message:'FINANCE_ACCESS_DENIED'}};
+    if(name==='read_business_stock'){assert.equal(args.p_salon,business);assert.equal(args.p_user,actor);return {data:{products:tables.salon_products.filter(row=>row.salon_id===business),supplies:(tables.business_supplies||[]).filter(row=>row.salon_id===business)}};}
+    if (name === 'read_business_finance') {
+      assert.equal(args.p_salon,business); assert.equal(args.p_user,actor);
+      const bookings=tables.bookings.filter(row=>row.salon_id===args.p_salon && (!overrides.ownFinance || row.stylist_id===professional)).map((row,index)=>({...row,id:row.id??`booking-${index}`,created_at:row.created_at||row.appointment_datetime,name:row.name||'Service',verified_charge:Boolean(row.stripe_charge_id),verified_refund:Boolean(row.stripe_refund_id),operating_compensation:{kind:'none',version:null}}));
+      return {data:{scope:{kind:overrides.ownFinance?'own':'business',stylist_id:overrides.ownFinance?professional:null},bookings,sales:[],receipts:[],expenses:[],arrangements:[],obligations:[],compensation_payments:[],stylists:tables.stylists.filter(row=>row.salon_id===business && (!overrides.ownFinance || row.id===professional))}};
+    }
+    if (name === 'save_gc_assistant_request') return { data: args.p_request }; throw Error(name); }, from(table) {
     const filters = []; let one = false, first = 0, last = Infinity;
     const q = { select() { return q; }, in(k,v) { filters.push(row => v.includes(row[k])); return q; }, neq(k,v) { filters.push(row => row[k] != null && row[k] !== v); return q; }, ilike(k,v) { filters.push(row => String(row[k]).toLowerCase().includes(v.replaceAll("%", "").toLowerCase())); return q; }, eq(k,v) { filters.push(row => row[k] === v); return q; }, is(k,v) { filters.push(row => (row[k] ?? null) === v); return q; }, gte(k,v) { filters.push(row => row[k] >= v); return q; }, lt(k,v) { filters.push(row => row[k] < v); return q; }, order() { return q; }, limit(n) { last = n-1; return q; }, range(a,b) { first=a;last=b;return q; }, maybeSingle() { one=true;return q; }, then(resolve,reject) { return Promise.resolve().then(() => { calls.push({ table }); if (!tables[table]) throw Error(`Unspecified table ${table}`); const rows=tables[table].filter(row=>filters.every(f=>f(row)));return { data: one?rows[0]||null:rows.slice(first,last+1),count:rows.length }; }).then(resolve,reject); } }; return q;
   } };
-  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/contentModerationServer': { moderatePublicContent: async()=>({allowed:true}) }, '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
+  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/contentModerationServer': { moderatePublicContent: async()=>({allowed:true}) },
+    // These period/read fixtures have no seven-day hours or occupancy source.
+    // Dedicated schedule tests exercise its real authorization/projection.
+    '@/lib/businessScheduleOpportunitiesServer': { readBusinessScheduleOpportunities: async context => { assert.equal(context.salon.id,business);throw Error('SCHEDULE_HOURS_UNAVAILABLE'); } },
+    '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
   const server = load('src/lib/gcAssistantServer.ts');
   const context = { admin, salon: { id: business, subscription_status:'active',time_zone:'America/New_York',profile_views:29 }, user:{id:actor},isOwner:!overrides.teamMember, teamMember:overrides.teamMember };
   return { calls, load, run:(tool,args)=>server.executeAssistantTool(context,{tool,args,locale:'en',requestId:professional}) };
@@ -168,7 +183,7 @@ test('broader reads use business filters and safe authoritative fields',async()=
     const result=(await f.run(tool,args)).request.result;assert.equal(result[key].length,1,tool);assert.equal(JSON.stringify(result).includes('Foreign'),false,tool);
   }
   const earnings=(await f.run('get_earnings_summary',range)).request.result;
-  assert.equal(earnings.completed_booking_value,100);assert.equal(earnings.cash_revenue,null);
+  assert.equal(earnings.completed_sales_cents,10000);assert.equal(earnings.cash_received_cents,0);assert.equal(earnings.evidence.provider_bank_settlement_verified,false);
   const summary=(await f.run('get_business_summary',range)).request.result;
   assert.equal(summary.total_appointments,1);assert.equal(summary.profile_views,29);assert.ok(summary.calendar_gaps);
   assert.equal(JSON.stringify(summary).includes('Sheila'),false);assert.equal(JSON.stringify(summary).includes('private@example.test'),false);
@@ -192,4 +207,36 @@ test('catalog and hours preparations share dashboard validation and never publis
   const hours=Object.fromEntries(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day=>[day,{open:'09:00',close:'18:00',closed:false}]));
   assert.equal((await f.run('prepare_business_hours',{hours})).request.execution_payload.hours.Mon.close,'18:00');
   await assert.rejects(fixture().run('prepare_service_edit',{style_id:service,name:'Braids',price:180,duration_hours:2,buffer_minutes:15}),/ASSISTANT_DRAFT_REQUIRED/);
+});
+
+
+test('assigned stylist reads exclude other appointments, clients, messages and availability before model access',async()=>{
+ const range={start:'2030-09-24T00:00:00.000Z',end:'2030-09-25T00:00:00.000Z'};
+ const own={id:service,salon_id:business,stylist_id:professional,guest_name:'Assigned client',customer_id:service,appointment_datetime:range.start,status:'Confirmed',estimated_total:100};
+ const other={...own,id:actor,stylist_id:actor,guest_name:'OTHER_PRIVATE_CLIENT',estimated_total:999};
+ const tables={bookings:[own,other,{...other,salon_id:actor,id:business}],booking_messages:[{id:actor,salon_id:business,booking_id:actor,body:'OTHER_PRIVATE_MESSAGE'}]};
+ const f=fixture({teamMember:{stylist_id:professional},tables});
+ for(const tool of ['get_bookings','get_customers','get_upcoming_appointments','get_business_summary']){const result=(await f.run(tool,range)).request.result;assert.doesNotMatch(JSON.stringify(result),/OTHER_PRIVATE_CLIENT|999/);if(tool==='get_bookings')assert.equal(result.total,1);if(tool==='get_business_summary')assert.equal(result.bookings,1);}
+ await assert.rejects(f.run('get_booking_messages',{booking_id:actor}),e=>e.code==='ASSISTANT_RECORD_NOT_FOUND');
+ assert.equal(f.calls.some(c=>c.table==='booking_messages'),false);
+ await f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:null});assert.equal(f.calls.filter(c=>c.calendar).at(-1).calendar.stylistId,professional);
+ await assert.rejects(f.run('get_calendar_gaps',{date:'2030-09-24',stylist_id:actor}),e=>e.code==='ASSISTANT_ACCESS_DENIED');
+});
+
+test('assistant separates an existing provider agreement from new-sale prices without exposing Stripe IDs', async () => {
+  const snapshot={price_id:'price_retired',amount_cents:5900,currency:'usd',interval:'month',interval_count:1,quantity:1,observed_at:'2026-09-18T21:35:00Z'};
+  const f=fixture({tables:{subscriptions:[
+    {salon_id:actor,tier:'Premium',status:'active',price_id:'price_other',recurring_price_snapshot:{...snapshot,price_id:'price_other',amount_cents:99999}},
+    {salon_id:business,tier:'Starter',status:'active',price_id:'price_retired',recurring_price_snapshot:snapshot},
+  ]}});
+  const result=(await f.run('get_plan_status',{})).request.result;
+  assert.equal(result.current_plan.monthly_amount_cents,5900);
+  assert.equal(result.available_plans[0].monthly_amount_cents,8900);
+  assert.doesNotMatch(JSON.stringify(result),/price_retired|price_other|99999/);
+});
+
+test('assistant stock uses own-business quantities and thresholds, excludes foreign supplies, and checks revoked permissions',async()=>{
+ const tables={salon_products:[{id:service,salon_id:business,name:'Own oil',inventory_quantity:2,track_inventory:true,low_stock_threshold:3},{id:professional,salon_id:actor,name:'Foreign oil',inventory_quantity:0,track_inventory:true,low_stock_threshold:5}],business_supplies:[{id:service,salon_id:business,name:'Own gloves',inventory_quantity:0,track_inventory:true,low_stock_threshold:2},{id:actor,salon_id:actor,name:'Foreign formula supply',inventory_quantity:0,track_inventory:true,low_stock_threshold:10}]};
+ const f=fixture({tables});for(const query of ['', 'Own oil', 'Foreign formula supply']){const result=(await f.run('get_products',{query})).request.result;assert.equal(JSON.stringify(result).includes('Foreign'),false);assert.equal(result.stock_alerts_total,2);assert.equal(result.stock_alerts[0].quantity,2);}
+ const denied=fixture({tables,denied:['products']});await assert.rejects(denied.run('get_products',{query:''}),error=>error.code==='ASSISTANT_ACCESS_DENIED');assert.equal(denied.calls.some(call=>call.name==='read_business_stock'||call.table==='salon_products'),false);
 });

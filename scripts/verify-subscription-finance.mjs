@@ -66,7 +66,7 @@ requireMatch("webhook rejects unknown plan mappings", subscriptionSync, /STRIPE_
 if (/normalizePlan\(/.test(subscriptionSync)) failures.push("webhook subscription sync must not normalize unknown provider values to Starter");
 if (/featured_weight/.test(subscriptionSync)) failures.push("webhook subscription sync must not write organic or featured placement weights");
 
-for (const [plan, amount] of [["Starter", 59], ["Growth", 69], ["Premium", 89]]) {
+for (const [plan, amount] of [["Starter", 89], ["Growth", 109], ["Premium", 129]]) {
   requireMatch(`application includes ${plan}`, salonApplication, new RegExp(`PLAN_ORDER|${plan}`));
   requireMatch(`canonical plan catalog price ${amount}`, read("src/lib/plans.ts"), new RegExp(`monthlyAmountCents:\\s*${amount}00`));
 }

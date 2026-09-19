@@ -1,18 +1,31 @@
+import { readAssistantServiceCalculation } from "@/lib/assistantServiceCalculation";
+import { readAssistantBookingPrice } from "@/lib/assistantBookingPriceRead";
 import "server-only";
+import { bookingConversationWindow } from "@/lib/bookingConversation";
 import { createHash } from "node:crypto";
 import { AssistantError, stableJson, validateTool, serviceLengthOptions, type AssistantTool } from "@/lib/gcAssistantCore";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { readOwnerOperation } from "@/lib/ownerReadServer";
 import { prepareOwnerOperation } from "@/lib/ownerOperationalServer";
-import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
+import { readBusinessServiceCapacity } from "@/lib/businessServiceCapacityServer";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { isSubscriptionActive } from "@/lib/plans";
 import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gcAssistantPresentation";
+import { readAssistantServices } from "@/lib/assistantServiceRead";
+import { readAssistantBusinessProfile, readAssistantBusinessSettings } from "@/lib/assistantBusinessProfileRead";
+import { businessMediaInventory } from "@/lib/businessMediaInventory";
+import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
+import { readBusinessDepositRule } from "@/lib/businessDepositServer";
+import { bookingDepositTerms } from "@/lib/businessDepositRules";
+import { readBusinessClientCard } from "@/lib/businessClientServer";
+import { readManualSaleOptions, prepareManualSale } from "@/lib/assistantManualSaleServer";
+import { readAssistantOutstandingBalances } from "@/lib/assistantOutstandingBalances";
+import { prepareAssistantBookingReschedule, assertAssistantRescheduleScope } from "@/lib/assistantBookingReschedule";
+import { assistantAssignedProfessional, assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
-const profileFields = ["name", "description", "address_street", "address_city", "address_state", "address_zip", "hours", "instagram_url", "tiktok_url", "google_business_url", "slug", "vanity_slug", "time_zone"];
 const digest = (input: unknown) => createHash("sha256").update(stableJson(input)).digest("hex");
 const selected = (row: Row, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key] ?? null]));
 
@@ -57,9 +70,12 @@ export async function searchPublishedKnowledge(context: Pick<Context, "admin">, 
   const query = safeKnowledgeText(queryValue, 240).toLocaleLowerCase();
   const tokens = [...new Set(query.split(/[^\p{L}\p{N}]+/u).filter(token => token.length > 1))].slice(0, 12);
   if (!query || !tokens.length) throw new AssistantError("ASSISTANT_INVALID_INPUT");
-  const published = await context.admin.rpc("get_public_content_pages");
-  if (published.error) throw published.error;
-  const pages = Array.isArray(published.data) ? published.data.slice(0, 120) : [];
+  // Read only general platform guidance. Never load the full public page
+  // inventory, business profiles or a user-supplied URL into owner context.
+  const published = await Promise.all(["help", "faq", "how-it-works", "pricing", "terms", "privacy"].map(slug => context.admin.rpc("get_public_content_page", { p_slug: slug })));
+  const failure = published.find(result => result.error);
+  if (failure?.error) throw failure.error;
+  const pages = published.map(result => result.data).filter(Boolean);
   const scored = pages.flatMap(knowledgeSegments).map(segment => {
     const haystack = `${segment.title} ${segment.question} ${segment.answer}`.toLocaleLowerCase();
     const score = (haystack.includes(query) ? 20 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 2 : 0), 0);
@@ -77,34 +93,64 @@ export async function assertAssistantAccess(context: Context, permission: string
   const { admin, salon, user } = context;
   const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: permission });
   if (access.error) throw access.error;
-  if (access.data !== true) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  let effectivePermission = permission;
+  if (permission === "finance_log" && access.data !== true) {
+    const manage = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: "finance_manage" });
+    if (manage.error) throw manage.error;
+    if (manage.data !== true) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+    effectivePermission = "finance_manage";
+  } else if (access.data !== true) {
+    const ownFinance = permission === "earnings" ? await admin.rpc("business_finance_scope", { p_salon: salon.id, p_user: user.id }) : null;
+    if (!ownFinance || ownFinance.error || ownFinance.data?.kind !== "own") throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  }
   const subscription = await admin.from("subscriptions").select("status,current_period_end").eq("salon_id", salon.id).maybeSingle();
   if (subscription.error) throw subscription.error;
   if (!isSubscriptionActive(subscription.data?.status || salon.subscription_status, subscription.data?.current_period_end)) throw new AssistantError("ASSISTANT_PLAN_REQUIRED", 403);
+  return effectivePermission;
 }
 
-async function readTool(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
+export async function readAssistantData(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  if (tool === "calculate_service_selection") return readAssistantServiceCalculation(context, args);
+  if (tool === "get_booking_price_details") return readAssistantBookingPrice(context, args);
+  if (tool === "get_outstanding_balances") return readAssistantOutstandingBalances(context, args);
+  if (tool === "get_manual_sale_options") return readManualSaleOptions(context);
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
-  if (tool === "get_business_profile") return selected(salon, profileFields);
+  if (tool === "get_client_record") return readBusinessClientCard(context, String(args.booking_id));
+  if (tool === "get_business_profile") return readAssistantBusinessProfile(context);
+  if (tool === "get_business_settings") return readAssistantBusinessSettings(context);
+  if (tool === "get_business_media") {
+    const media = await admin.from("salons").select("gallery_photos,cover_photo_url,logo_url,photo_metadata").eq("id", salon.id).maybeSingle();
+    if (media.error) throw media.error;
+    if (!media.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
+    // Pausing bookings/discovery does not unpublish the readable profile.
+    // Match the public page's profile and registered-test checks instead.
+    const [visible, registeredTest] = await Promise.all([
+      admin.rpc("is_salon_profile_public", { target_salon_id: salon.id }),
+      isRegisteredTestBusiness(admin, salon.id).catch(() => null),
+    ]);
+    // A visibility check failure must not erase verified saved counts or claim
+    // that the business is unpublished. Unknown is represented explicitly.
+    return businessMediaInventory(media.data, !visible.error && typeof visible.data === "boolean" && registeredTest !== null ? visible.data && !registeredTest : null);
+  }
   if (tool === "get_business_policies") {
     const result = await admin.from("business_policy_revisions").select("id,policy,version,source_locale,published_at").eq("salon_id", salon.id).eq("id", salon.business_policy_revision_id || "00000000-0000-0000-0000-000000000000").maybeSingle();
-    if (result.error) throw result.error; return { policy: result.data, platform_rules_apply: true };
-  }
-  if (tool === "get_services_and_prices") {
-    const query = String(args.query).replace(/[\\%_]/g, character => `\\${character}`);
-    const result = await admin.from("styles").select("id,name,base_price,duration_min_hours,duration_max_hours,size_options,length_options,addons,is_draft", { count: "exact" }).eq("salon_id", salon.id).is("archived_at", null).ilike("name", `%${query}%`).order("name").limit(100);
     if (result.error) throw result.error;
-    return { services: result.data || [], total: result.count, capped_at: 100, currency: "USD" };
+    const rule = await readBusinessDepositRule(admin, salon.id);
+    return { policy: result.data, platform_rules_apply: true, deposit_rules: {
+      ...rule, basis: "eligible_service_subtotal_before_discounts", incident_scope: "this_business_only",
+      combination: "highest_applicable_rate_once", promotion_preserves_deposit: true,
+      existing_bookings: "original_snapshot_unchanged", currency: "USD",
+    } };
   }
-  if (tool === "get_availability" && args.style_id) {
-    if (args.stylist_id) { const stylist = await admin.from("stylists").select("id").eq("id", args.stylist_id).eq("salon_id", salon.id).maybeSingle(); if (stylist.error || !stylist.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404); }
-    const available = await bookingAvailability({ salonId: salon.id, styleId: String(args.style_id), stylistId: args.stylist_id ? String(args.stylist_id) : null, date: String(args.date) });
-    return { date: args.date, time_zone: available.timeZone, duration_minutes: available.durationMinutes, buffer_minutes: available.bufferMinutes, slots: available.slots.map(slot => ({ time: slot.value, stylist_id: slot.stylistId || null, professional_name: slot.stylistId ? slot.stylistName : null })) };
-  }
+  if (tool === "get_services_and_prices") return readAssistantServices(context, args);
+  if (tool === "get_availability" && args.style_id) return readBusinessServiceCapacity(context, args);
   if (tool === "get_bookings") {
     const fields = "id,public_reference,appointment_datetime,status,guest_name,booking_origin,source,style:styles(name),stylist:stylists(name)";
-    const result = await admin.from("bookings").select(fields, { count: "exact" }).eq("salon_id", salon.id).gte("appointment_datetime", args.start).lt("appointment_datetime", args.end).order("appointment_datetime").limit(300);
+    let query = admin.from("bookings").select(fields, { count: "exact" }).eq("salon_id", salon.id);
+    const assigned = assistantAssignedProfessional(context);
+    if (assigned) query = query.eq("stylist_id", assigned);
+    const result = await query.gte("appointment_datetime", args.start).lt("appointment_datetime", args.end).order("appointment_datetime").limit(300);
     if (result.error) throw result.error;
     return { bookings: result.data, total: result.count, time_zone: salon.time_zone, capped_at: 300 };
   }
@@ -112,6 +158,8 @@ async function readTool(context: Context, tool: AssistantTool, args: Row): Promi
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if (tool === "prepare_booking_reschedule_proposal") return prepareAssistantBookingReschedule(context, args);
+  if (tool === "prepare_manual_service_sale") return prepareManualSale(context, args);
   const { admin, salon } = context;
   const operation = await prepareOwnerOperation(context, tool, args);
   let before: Row = operation.before; let payload: Row = operation.payload; const notices: string[] = operation.notices;
@@ -132,12 +180,10 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     const catalog = await admin.from("master_styles").select("id,name,category,category_id,service_group_id").eq("id", args.master_style_id).eq("is_active", true).maybeSingle();
     if (catalog.error) throw catalog.error;
     if (!catalog.data) throw new AssistantError("ASSISTANT_CATALOG_CLARIFICATION_REQUIRED", 409);
-    const deposit = await admin.from("engine_settings").select("published_value").eq("setting_key", "booking.deposit_percentage").eq("status", "Published").maybeSingle();
-    if (deposit.error) throw deposit.error;
-    const percentage = Number(deposit.data?.published_value ?? 10);
-    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
-    const platformDeposit = Math.round(Number(args.price) * percentage) / 100;
-    if (args.requested_deposit !== null && Math.abs(Number(args.requested_deposit) - platformDeposit) > 0.001) throw new AssistantError("ASSISTANT_DEPOSIT_PLATFORM_RULE", 409);
+    if (args.requested_deposit !== null) {
+      const rule = await readBusinessDepositRule(admin, salon.id);
+      if (Math.abs(Number(args.requested_deposit) - bookingDepositTerms(Number(args.price), rule).deposit) > 0.001) throw new AssistantError("ASSISTANT_DEPOSIT_PLATFORM_RULE", 409);
+    }
     // Managed master styles enforce their canonical name. The established
     // service-group path preserves an owner's custom name instead of silently
     // replacing it at the database trigger after confirmation.
@@ -145,16 +191,20 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
     notices.push("SERVICE_SAVED_AS_DRAFT");
   }
   if (tool === "prepare_customer_message") {
-    const booking = await admin.from("bookings").select("id,status,appointment_datetime,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id).maybeSingle();
+    let query = admin.from("bookings").select("id,status,appointment_datetime,duration_hours,public_reference,guest_name,booking_origin,customer_id,customer:customers(name)").eq("id", args.booking_id).eq("salon_id", salon.id);
+    const assigned = assistantAssignedProfessional(context);
+    if (assigned) query = query.eq("stylist_id", assigned);
+    const booking = await query.maybeSingle();
     if (booking.error) throw booking.error;
     if (!booking.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
     before = selected(booking.data, ["id", "status", "appointment_datetime"]);
     if (booking.data.booking_origin === "business_added" && !booking.data.customer_id) throw new AssistantError("ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED", 409);
+    if (!bookingConversationWindow(booking.data).open) throw new AssistantError("ASSISTANT_CONVERSATION_CLOSED", 409);
     const customer = booking.data.customer as unknown as { name?: string } | null;
     payload = { customer_name: booking.data.guest_name || customer?.name || null, public_reference: booking.data.public_reference, time_zone: salon.time_zone };
   }
   if (tool === "prepare_business_policy_update") { validateBusinessPolicy(args.policy); before = { revision_id: salon.business_policy_revision_id || null }; notices.push("POLICY_REVIEW_REQUIRED"); }
-  const prose = tool === "prepare_customer_message" ? String(args.body) : tool === "prepare_business_profile_update" ? String(args.text || "") : tool === "prepare_business_policy_update" ? `${(args.policy as Row).preparation}\n${(args.policy as Row).notes}\n${(args.policy as Row).refund_terms || ""}` : String(args.name || args.title || "") + "\n" + String(args.description || args.bio || "");
+  const prose = tool === "prepare_customer_message" ? String(args.body) : tool === "prepare_business_profile_update" ? String(args.text || "") : tool === "prepare_business_policy_update" ? `${(args.policy as Row).business_policy_text || ""}\n${(args.policy as Row).preparation}\n${(args.policy as Row).notes}\n${(args.policy as Row).refund_terms || ""}` : String(args.name || args.title || "") + "\n" + String(args.description || args.bio || "");
   const moderation = await moderatePublicContent(admin, { body: prose });
   if (!moderation.allowed) throw new AssistantError("ASSISTANT_CONTENT_REVIEW_REQUIRED");
   return { before, payload, notices };
@@ -162,20 +212,26 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
 
 export async function executeAssistantTool(context: Context, input: { requestId: string; locale: string; tool: unknown; args: unknown }) {
   const checked = validateTool(input.tool, input.args);
-  await assertAssistantAccess(context, checked.permission);
+  const effectivePermission = await assertAssistantAccess(context, checked.permission);
+  if (checked.risk >= 3) await assertAssistantProposalScope(context, checked.tool, checked.args);
+  if (checked.tool === "prepare_booking_reschedule_proposal") await assertAssistantRescheduleScope(context, checked.args.booking_id);
   const { admin, salon, user } = context;
   const existing = await admin.from("gc_assistant_requests").select("*").eq("id", input.requestId).eq("salon_id", salon.id).eq("requested_by", user.id).maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data) {
     if (existing.data.tool !== checked.tool || stableJson(existing.data.arguments) !== stableJson(checked.args) || existing.data.locale !== input.locale) throw new AssistantError("ASSISTANT_IDEMPOTENCY_CONFLICT", 409);
+    // Read permissions may narrow without changing the tool-level permission
+    // (for example business finance -> own earnings). Refresh through the
+    // authorized query instead of replaying a previously broader payload.
+    const request = checked.risk === 1 ? { ...existing.data, result: await readAssistantData(context, checked.tool, checked.args) } : existing.data;
     const presentation = checked.risk === 1
-      ? presentAssistantResult(checked.tool, existing.data.result, input.locale)
+      ? presentAssistantResult(checked.tool, request.result, input.locale)
       : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
-    return { request: existing.data, preview_required: checked.risk >= 3, replayed: true, assistant_message: presentation.message, suggestions: presentation.suggestions };
+    return { request, preview_required: checked.risk >= 3, replayed: true, assistant_message: presentation.message, suggestions: presentation.suggestions };
   }
   const prepared = checked.risk >= 3 ? await prepare(context, checked.tool, checked.args) : { before: {}, payload: {}, notices: [] };
-  const result = checked.risk === 1 ? await readTool(context, checked.tool, checked.args) : null;
-  const row = { id: input.requestId, salon_id: salon.id, requested_by: user.id, locale: input.locale, tool: checked.tool, arguments: checked.args, execution_payload: prepared.payload, risk_class: checked.risk, permission: checked.permission, before_summary: prepared.before, result,
+  const result = checked.risk === 1 ? await readAssistantData(context, checked.tool, checked.args) : null;
+  const row = { id: input.requestId, salon_id: salon.id, requested_by: user.id, locale: input.locale, tool: checked.tool, arguments: checked.args, execution_payload: prepared.payload, risk_class: checked.risk, permission: effectivePermission, before_summary: prepared.before, result,
     digest: digest({ id: input.requestId, salon: salon.id, user: user.id, locale: input.locale, tool: checked.tool, args: checked.args, before: prepared.before, payload: prepared.payload }) };
   const saved = await admin.rpc("save_gc_assistant_request", { p_request: row, p_notices: prepared.notices });
   if (saved.error) {
@@ -185,7 +241,7 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   const presentation = checked.risk === 1
     ? presentAssistantResult(checked.tool, result, input.locale)
     : { message: presentPreparedAssistantAction(checked.tool, input.locale) };
-  return { request: saved.data, preview_required: checked.risk >= 3, notices: prepared.notices, assistant_message: presentation.message, suggestions: presentation.suggestions };
+  return { request: checked.risk === 1 ? { ...saved.data, result } : saved.data, preview_required: checked.risk >= 3, notices: prepared.notices, assistant_message: presentation.message, suggestions: presentation.suggestions };
 }
 
 export async function confirmAssistantTool(context: Context, requestId: string, previewDigest: string, policyReviewed: boolean) {
@@ -194,6 +250,7 @@ export async function confirmAssistantTool(context: Context, requestId: string, 
   if (!row.data) throw new AssistantError("ASSISTANT_REQUEST_NOT_FOUND", 404);
   const checked = validateTool(row.data.tool, row.data.arguments);
   await assertAssistantAccess(context, checked.permission);
+  await assertAssistantProposalScope(context, checked.tool, checked.args);
   if (checked.tool === "prepare_business_policy_update" && !policyReviewed) throw new AssistantError("ASSISTANT_POLICY_REVIEW_REQUIRED", 409);
   // Re-run deterministic catalog/moderation checks at execution time as well.
   if (!row.data.confirmed_at) {

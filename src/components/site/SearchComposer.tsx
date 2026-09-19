@@ -66,7 +66,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
       ? "Choose a different location"
       : "City, neighborhood, or ZIP";
 
-  return <form role="search" onSubmit={submit} className={`relative z-[70] overflow-visible border border-plum/10 bg-white shadow-[0_12px_34px_rgba(13,17,20,.10)] ${compact ? "rounded-[14px] p-2.5" : "rounded-[16px] p-2.5 sm:p-3 md:p-1.5"}`}>
+  return <form role="search" onSubmit={submit} className={`relative z-[70] overflow-visible border border-plum/10 bg-white shadow-[0_12px_34px_rgba(13,17,20,.10)] ${compact ? "rounded-3xl p-2.5" : "rounded-3xl p-2.5 sm:p-3 md:rounded-full md:p-1.5"}`}>
     <div className="grid gap-2 md:grid-cols-[1.15fr_1fr_auto] md:items-stretch">
       <label className="block min-w-0 rounded-[10px] px-3 py-1 focus-within:bg-cream/55"><span className="block text-[10px] font-bold text-ink">What service are you looking for?</span><StyleAutocomplete value={style} onChange={(value) => { setStyle(value); setServiceId(""); }} onService={(service) => { setStyle(service.name); setServiceId(service.id); }} onLocation={resolve} placeholder="e.g., Knotless Braids" className="mt-0.5"/></label>
       <div className="block min-w-0 border-t border-plum/10 px-3 py-1 focus-within:bg-cream/55 md:border-l md:border-t-0">
@@ -78,7 +78,7 @@ export default function SearchComposer({ compact = false }: { compact?: boolean 
         <button type="button" onClick={() => void requestDeviceLocation()} className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-[10px] font-bold text-magenta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-magenta"><LocateFixed size={13}/>Use my location</button>
         {customerLocation.permissionError ? <p role="alert" className="mt-1 text-[10px] gc-text-danger">{customerLocation.permissionError}</p> : null}
       </div>
-      <button type="submit" className="min-h-11 rounded-[10px] bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover">Search</button>
+      <button type="submit" className="min-h-11 rounded-full bg-magenta px-8 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(0,131,166,.18)] transition hover:-translate-y-0.5 hover:bg-primary-hover">Search</button>
     </div>
   </form>;
 }

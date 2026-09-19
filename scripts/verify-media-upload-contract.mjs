@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import nextConfig from "../next.config.ts";
 import * as protocol from "../src/lib/mediaUploadProtocol.ts";
 import {
   reportMediaUploadProfileFallback,
@@ -27,7 +28,10 @@ const nextConfigSource = read("next.config.ts");
 
 assert.match(netlifyConfigSource, /NODE_VERSION\s*=\s*["']22["']/);
 assert.doesNotMatch(netlifyConfigSource, /external_node_modules|included_files/);
-assert.match(nextConfigSource, /serverExternalPackages:\s*\[["']sharp["']\]/);
+assert.ok(
+  nextConfig.serverExternalPackages?.includes("sharp"),
+  "Sharp must remain external; unrelated server-only packages may also be external.",
+);
 assert.match(
   nextConfigSource,
   /["']\/api\/media\/upload\/finalize["']:\s*\[/,

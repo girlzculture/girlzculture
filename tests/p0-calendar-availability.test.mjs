@@ -31,3 +31,35 @@ test('incomplete occupancy or roster responses fail closed instead of inventing 
     await assert.rejects(fixture({truncated}).calendarAvailability(input), /RESULT_TRUNCATED/);
   }
 });
+test('operating calendar includes configured draft hours while public service-fit excludes them; missing professional hours never create a gap',async()=>{
+ const draft={id:'one',salon_id:'business',name:'Draft',is_active:true,is_draft:true,availability:{Tue:'09:00 - 19:00'}};
+ const f=fixture({roster:[draft]});assert.equal((await f.calendarAvailability(input)).gaps.length,1);assert.equal((await f.bookingAvailability({...input,styleId:'service'})).slots.length,0);
+ assert.equal((await fixture({roster:[{...draft,is_active:false}]}).calendarAvailability(input)).gaps.length,0);
+ assert.equal((await fixture({roster:[{...draft,is_draft:false,availability:{}}]}).calendarAvailability(input)).gaps.length,0);
+});
+
+test('service assignments exclude unassigned professionals without falling back to a salon slot',async()=>{
+  const professional={id:'one',salon_id:'business',name:'One',is_active:true,is_draft:false,availability:{Tue:'09:00 - 19:00'}};
+  for(const assigned_service_ids of [[],['other-service']]) {
+    const f=fixture({roster:[{...professional,assigned_service_ids}]});
+    assert.equal((await f.bookingAvailability({...input,styleId:'service'})).slots.length,0);
+    assert.equal((await f.bookingAvailability({...input,styleId:'service',stylistId:'one'})).slots.length,0);
+    assert.equal((await f.calendarAvailability(input)).gaps.length,1,'general calendar still reports working hours');
+  }
+  for(const assigned_service_ids of [null,['service']]) {
+    assert.ok((await fixture({roster:[{...professional,assigned_service_ids}]}).bookingAvailability({...input,styleId:'service'})).slots.length>0);
+  }
+  for(const status of [{is_active:false},{is_draft:true}]) {
+    assert.equal((await fixture({roster:[{...professional,...status}]}).bookingAvailability({...input,styleId:'service'})).slots.length,0);
+  }
+});
+
+test('existing appointment availability reserves its full duration and buffer after a catalog edit',async()=>{
+ const f=fixture();
+ const current=await f.bookingAvailability({...input,styleId:'service'});
+ assert.ok(current.slots.some(slot=>slot.value==='17:30'),'edited one-hour catalog service fits');
+ const booked=await f.bookingAvailability({...input,styleId:'service',durationMinutes:180,bufferMinutes:30});
+ assert.equal(booked.durationMinutes,180);
+ assert.ok(!booked.slots.some(slot=>slot.value==='17:30'),'three-hour booked service cannot fit before closing');
+ assert.ok(booked.slots.some(slot=>slot.value==='15:30'),'complete booked duration plus buffer fits exactly');
+});

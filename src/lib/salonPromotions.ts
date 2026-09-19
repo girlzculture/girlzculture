@@ -26,6 +26,8 @@ export type PromotionPriceContext = {
   basePrice: number;
   selectedAddons: Array<{ value: string; label?: string; price: number }>;
   subtotal: number;
+  /** Applicable pre-discount booking deposit. Product-only carts pass zero. */
+  protectedDeposit?: number;
   now?: Date;
 };
 
@@ -44,9 +46,11 @@ export function isPromotionActive(promotion: SalonPromotion, at = new Date()) {
 }
 
 function targetMatches(promotion: SalonPromotion, context: PromotionPriceContext) {
+  if (promotion.salon_id !== context.salonId) return false;
   const targets = new Set((promotion.target_ids || []).map(normalized).filter(Boolean));
   switch (promotion.target_scope || "salon") {
-    case "salon": return promotion.salon_id === context.salonId;
+    // Business-wide means its eligible services. Product offers require explicit targets.
+    case "salon": return Boolean(context.styleId && !context.productId);
     case "services": return Boolean(context.styleId && targets.has(normalized(context.styleId)));
     case "service_groups": return Boolean(context.serviceGroupId && targets.has(normalized(context.serviceGroupId)));
     case "master_styles": return Boolean(context.masterStyleId && targets.has(normalized(context.masterStyleId)));
@@ -70,27 +74,45 @@ export function bestPromotionForContext(
 }
 
 export function calculateSalonPromotion(promotion: SalonPromotion | null | undefined, context: PromotionPriceContext) {
-  if (!promotion || !isPromotionActive(promotion, context.now) || !targetMatches(promotion, context)) return { eligible: false, discount: 0, total: context.subtotal };
+  const rejected = { eligible: false, discount: 0, total: context.subtotal };
+  const deposit = context.protectedDeposit ?? 0;
+  if (![context.subtotal, context.basePrice, deposit, ...context.selectedAddons.map(addon => addon.price)].every(value => Number.isFinite(value) && value >= 0) || deposit > context.subtotal) return rejected;
+  if (!promotion || !isPromotionActive(promotion, context.now) || !targetMatches(promotion, context)) return rejected;
   const restrictions = promotion.restrictions || {};
   const minimumSubtotal = Number(restrictions.minimum_subtotal || 0);
-  if (!Number.isFinite(minimumSubtotal) || context.subtotal < minimumSubtotal) return { eligible: false, discount: 0, total: context.subtotal };
+  if (!Number.isFinite(minimumSubtotal) || minimumSubtotal < 0 || context.subtotal < minimumSubtotal) return rejected;
 
-  const value = Math.max(0, Number(promotion.discount_value || 0));
+  const value = Number(promotion.discount_value || 0);
+  if (!Number.isFinite(value) || value < 0) return rejected;
+  const targets = new Set((promotion.target_ids || []).map(normalized));
+  const eligibleAddons = context.selectedAddons.filter(addon => promotion.target_scope !== "addons" || targets.has(normalized(addon.value)) || targets.has(normalized(addon.label)));
+  const eligibleSubtotal = promotion.target_scope === "addons" ? eligibleAddons.reduce((sum, addon) => sum + addon.price, 0) : context.subtotal;
   let discount = 0;
-  if (promotion.promotion_type === "percentage") discount = context.subtotal * Math.min(100, value) / 100;
+  if (promotion.promotion_type === "percentage") discount = eligibleSubtotal * Math.min(100, value) / 100;
   else if (promotion.promotion_type === "fixed") discount = value;
   else if (promotion.promotion_type === "free_service") discount = context.basePrice;
   else if (promotion.promotion_type === "free_addon") {
-    const targets = new Set((promotion.target_ids || []).map(normalized));
-    discount = context.selectedAddons
-      .filter((addon) => promotion.target_scope !== "addons" || targets.has(normalized(addon.value)) || targets.has(normalized(addon.label)))
+    discount = eligibleAddons
       .reduce((highest, addon) => Math.max(highest, addon.price), 0);
   }
-  discount = roundMoney(Math.min(context.subtotal, Math.max(0, discount)));
+  else if (promotion.promotion_type !== "descriptive") return rejected;
+  // Round the selected saving once, then cap in cents so the deposit never changes.
+  const maximumCents = Math.min(Math.round(eligibleSubtotal * 100), Math.round(context.subtotal * 100) - Math.round(deposit * 100));
+  discount = Math.min(maximumCents, Math.max(0, Math.round(discount * 100))) / 100;
   return { eligible: true, discount, total: roundMoney(context.subtotal - discount) };
 }
 
-export function promotionLabel(promotion: SalonPromotion) {
+export function promotionLabel(promotion: SalonPromotion, appliedDiscount?: number) {
+  if (appliedDiscount !== undefined && Number.isFinite(appliedDiscount)) return `$${Math.max(0, appliedDiscount).toFixed(2)} saving`;
+  // Before a selection is priced, never promise that a service offer waives
+  // its protected deposit, including legacy "free service" offers.
+  if (promotion.target_scope !== "products") {
+    const value = Number(promotion.discount_value || 0);
+    if (promotion.promotion_type === "percentage") return `Up to ${value}% off · deposit protected`;
+    if (promotion.promotion_type === "fixed") return `Up to $${value.toFixed(2)} off · deposit protected`;
+    if (promotion.promotion_type === "free_service") return "Service offer · deposit protected";
+    if (promotion.promotion_type === "free_addon") return "Add-on offer · deposit protected";
+  }
   if (promotion.discount_label?.trim()) return promotion.discount_label.trim();
   const value = Number(promotion.discount_value || 0);
   if (promotion.promotion_type === "percentage") return `${value}% off`;

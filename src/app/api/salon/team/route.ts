@@ -6,7 +6,7 @@ import { compensateFailedInvitation } from "@/lib/teamInviteAtomicity";
 import { compensateFailedTeamMutation } from "@/lib/teamMutationAtomicity";
 import { assertRecentHighRiskVerification, identityDependencySummary, prepareAndDeleteIdentity } from "@/lib/identityDeletionServer";
 
-const SALON_PERMISSION_KEYS = ["overview","my_page","photos","styles","stylists","products","availability","bookings","reviews","earnings","promotions","settings"] as const;
+const SALON_PERMISSION_KEYS = ["overview","my_page","photos","styles","stylists","products","availability","bookings","reviews","earnings","earnings_own","finance_log","finance_manage","client_history","client_formulas","client_notes","client_cautions","client_photos","client_spend","client_edit","promotions","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(SALON_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
 async function owner(request: Request) { const context = await requireSalonOwner(request); if (!context.isOwner) throw new Error("Only the salon owner can manage team users."); return context; }
 function teamAuditSnapshot(value: Record<string, unknown> | null | undefined) {

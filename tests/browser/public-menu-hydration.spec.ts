@@ -13,7 +13,7 @@ test("public menu waits for hydration before accepting its first interaction", a
   });
   await page.setViewportSize({ width: 390, height: 844 });
   try {
-    await page.goto("/", { waitUntil: "commit" });
+    await page.goto("/site-access", { waitUntil: "commit" });
     const trigger = page.getByRole("button", { name: "Open navigation menu", exact: true });
     await expect(trigger).toBeVisible();
     await expect.poll(() => heldScripts).toBeGreaterThan(0);

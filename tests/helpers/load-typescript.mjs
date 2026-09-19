@@ -15,7 +15,13 @@ export function typescriptLoader(root, overrides = {}, globals = {}) {
     runInNewContext(code, { exports, require: name => {
       if (Object.hasOwn(overrides, name)) return overrides[name];
       if (name === 'server-only') return {};
+      if (name.startsWith('@/') && /\.[cm]?js$/.test(name)) return require(path.resolve(root, `src/${name.slice(2)}`));
       if (name.startsWith('@/')) return load(`src/${name.slice(2)}${existsSync(path.resolve(root, `src/${name.slice(2)}.tsx`)) ? ".tsx" : ".ts"}`);
+      if (name.startsWith('.')) {
+        const local = path.resolve(path.dirname(resolved), name);
+        if (/\.[cm]?js$/.test(name) && existsSync(local)) return require(local);
+        for (const extension of ['.ts', '.tsx']) if (existsSync(local + extension)) return load(local + extension);
+      }
       return require(name);
     }, Request, Response, URL, AbortSignal, Buffer, structuredClone, setTimeout, clearTimeout, process, ...globals });
     return exports;

@@ -1,0 +1,23 @@
+const rows:readonly(readonly[string,string,string,string])[]=[
+ ["Communication preferences","Préférences de communication","Preferencias de comunicación","通信偏好"],
+ ["Email updates","Informations par e-mail","Actualizaciones por correo","电子邮件通知"],
+ ["Text message updates","Informations par SMS","Actualizaciones por SMS","短信通知"],
+ ["Device notifications","Notifications sur l’appareil","Notificaciones del dispositivo","设备通知"],
+ ["Appointment reminders","Rappels de rendez-vous","Recordatorios de citas","预约提醒"],
+ ["Thank-you and rebooking messages","Messages de remerciement et de nouvelle réservation","Mensajes de agradecimiento y nueva reserva","感谢和再次预约消息"],
+ ["Promotions and business news","Offres et actualités de l’établissement","Promociones y noticias del negocio","商家优惠和资讯"],
+ ["These choices apply to your appointments with this business only.","Ces choix concernent uniquement vos rendez-vous avec cet établissement.","Estas opciones se aplican solo a tus citas con este negocio.","这些设置仅适用于您与该商家的预约。"],
+ ["These choices apply to this booking only.","Ces choix concernent uniquement cette réservation.","Estas opciones se aplican solo a esta reserva.","这些设置仅适用于本次预约。"],
+ ["Promotional and rebooking messages are optional. The business cannot opt you in. Availability depends on its enabled delivery channels.","Les offres et invitations à réserver sont facultatives. L’établissement ne peut pas vous y inscrire. La disponibilité dépend des canaux activés.","Los mensajes promocionales y de nueva reserva son opcionales. El negocio no puede suscribirte. La disponibilidad depende de sus canales habilitados.","优惠和再次预约消息是可选的，商家不能替您订阅。实际发送方式取决于商家启用的渠道。"],
+ ["Communication preferences saved.","Préférences de communication enregistrées.","Preferencias de comunicación guardadas.","通信偏好已保存。"],
+ ["These preferences changed elsewhere. Reload to review the latest choices.","Ces préférences ont été modifiées ailleurs. Rechargez pour consulter les choix actuels.","Estas preferencias cambiaron en otro lugar. Recarga para revisar las opciones actuales.","这些设置已在其他位置更改。请重新加载并查看最新设置。"],
+ ["Communication preferences could not be saved or loaded. Your choices are retained.","Impossible d’enregistrer ou de charger les préférences. Vos choix sont conservés.","No se pudieron guardar o cargar las preferencias. Se conservan tus opciones.","无法保存或加载通信偏好。您选择的内容已保留。"],
+ ["Save communication preferences","Enregistrer les préférences","Guardar preferencias de comunicación","保存通信偏好"],
+ ["Reload preferences","Recharger les préférences","Recargar preferencias","重新加载偏好"],
+ ["Stop optional business messages","Arrêter les messages facultatifs de l’établissement","Dejar de recibir mensajes opcionales del negocio","停止接收商家的可选消息"],
+ ["You are unsubscribed from promotional and rebooking messages covered by this link. Your bookings are unchanged.","Vous ne recevrez plus les offres et invitations à réserver concernées par ce lien. Vos réservations restent inchangées.","Has cancelado la suscripción a los mensajes promocionales y de nueva reserva de este enlace. Tus reservas no cambian.","您已退订此链接对应的优惠和再次预约消息。您的预约保持不变。"],
+ ["This stops promotional and rebooking messages covered by this link. It does not cancel an appointment or change essential booking updates.","Cela arrête les offres et invitations à réserver concernées par ce lien, sans annuler de rendez-vous ni modifier les informations essentielles sur les réservations.","Esto detiene los mensajes promocionales y de nueva reserva de este enlace. No cancela una cita ni cambia las actualizaciones esenciales de reservas.","这会停止此链接对应的优惠和再次预约消息，不会取消预约或更改重要的预约通知。"],
+ ["Opt-out could not be saved. Please try again.","Impossible d’enregistrer votre désinscription. Réessayez.","No se pudo guardar la cancelación de suscripción. Inténtalo de nuevo.","无法保存退订设置，请重试。"],
+ ["Unsubscribe","Se désinscrire","Cancelar suscripción","退订"],
+];
+export const BUSINESS_COMMUNICATION_SOURCE_MESSAGES:Record<string,Record<string,string>>=Object.fromEntries(['fr','es','zh-CN'].map((locale,index)=>[locale,Object.fromEntries(rows.map(row=>[row[0],row[index+1]]))]));

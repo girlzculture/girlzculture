@@ -1,0 +1,31 @@
+# Assistant profile and settings reads — local acceptance
+
+Status: **AUTOMATED ONLY; not released.** This is a bounded DATA-01 / GC-07 / NL-05 correction. It does not establish completion of the full assistant inventory, hosted operation or the 140-requirement handoff.
+
+## Reproduced boundary
+
+`assistant-profile-settings-before.log` records nine failing baseline cases against the prior dispatcher/planner. The real omissions were saved contact/address/language/publication facts, an absent Settings read, and previous-request-only profile history retaining old values. New direct-helper authorization assertions also failed against the old snapshot branch; those failures are not evidence that the existing authenticated route allowed unauthorized reads.
+
+## Implemented
+
+- Existing `get_business_profile` retains risk1, `my_page` and an empty argument schema. It reads the current own-business row rather than returning the older request snapshot. It includes business contact details, the second address line, saved spoken languages with exact count/excerpt metadata, hours, explicit walk-in/appointment-only flags and separate profile-public/discovery/accepting-bookings states. Canonical public visibility still excludes registered test businesses; failed visibility evidence is unknown, not false.
+- New `get_business_settings` is risk1, requires the existing `settings` permission, and accepts no IDs or mutation fields. It reads saved optional notification choices, explicit mandatory-booking-channel policy, business assistant avatar/default and the authenticated user's current saved interface locale. Reply language is distinct from saved interface language. Navigation points at existing controls; owner-only appearance authority is freshly verified. No password, account-security or preference changes were added.
+- Both readers check present permission and owner/membership binding before and after reads. Returned identity mismatch, revoked membership/grant, foreign auth user or unavailable source fails closed. Only the requested user's locale is projected from the auth response; user-wide description drafts and unsaved editor text are not queried.
+- Exact business phone/email can reach the model only from a fresh helper result held in a private WeakMap with matching business and actor. General redaction runs first; only these two validated scalar fields are restored. Copies, persisted markers, foreign scope, arbitrary objects and unrelated prose receive no exception. Customer/contact redaction elsewhere is unchanged.
+- Both tools refresh on previous-request-only follow-ups. A reproduced timestamp bug is corrected using semantic JSON comparison and excluding only the known valid server observation clocks: profile/settings/promotion top-level `as_of`, and product `order_operations.as_of`. Booking, order, promotion and publication record dates remain meaningful. The current observation timestamp is still sent as evidence. Changed/denied facts invalidate prior prose; unchanged authorized facts retain anchored conversation context.
+- Migration `20260919134859_assistant_profile_settings_read.sql` preserves the complete prior audit tool/permission lists and appends only this read and the already-existing Settings permission. It changes no actor grants, table access, profile write allowlist or confirmation workflow. Both $25 caps and consent-based memory behavior are unchanged.
+
+## Evidence
+
+Evidence is under the sibling `../redesign-evidence` directory, outside Git.
+
+- Initial after check: `assistant-profile-settings-after.log`,11/11 passed. Expanded cases include invalid/forged contacts, exact registry retention, four release language payloads and settings acknowledgements, and missing-versus-default values.
+- Initial integrated run: `assistant-profile-settings-integrated.log`,112/113 passed. The remaining test's hardcoded denial list omitted the newly registered Settings permission. It now derives all tool permissions while retaining the rejection and zero-provider-call assertions; `assistant-profile-settings-permission-regression.log` passes that exact case. No application access check was weakened.
+- `assistant-profile-settings-timestamp-before.log` reproduces loss of unchanged follow-up prose. `assistant-profile-settings-timestamp-after.log` passes the captured-payload case covering16 combinations of four readers, two model phases and changed/unchanged facts. The final suite additionally covers malformed observation metadata and an unrelated timestamp path.
+- `assistant-profile-settings-sql.log`: a disposable local PostgreSQL database, `girlzculture_profile_185_release`, cloned from verified `girlzculture_combined_183_release`, applied185 and passed the actual service-role audit save, fresh replay, foreign-business rejection and revoked-permission rejection. Assertions roll back their synthetic rows. This is **183 plus185 incremental evidence**, not a complete184–185 migration-chain run or production migration.
+- Final profile/settings, planner and language regressions: `assistant-profile-settings-final.log`, **79/79 passed,0 skipped,111.75seconds**. This includes16 focused profile/settings cases and the timestamp/no-permissions regression corrections. The earlier passing execution, balances, reschedule and appearance cases remain valid; they were not repeated after a planner-only timestamp correction.
+- Final full TypeScript and targeted ESLint passed: `assistant-profile-settings-types-final.log`, `assistant-profile-settings-lint-final.log`. Root independent review passed the current authorization, exact contact restoration, timestamp comparison and append-only registry changes. A second agent review may add further evidence; it is not assumed here.
+
+## Limits
+
+Database/auth/model transports are simulated in Node tests; the SQL verifier uses isolated local fixtures and actual database roles. No real model request, hosted auth account read, browser/server/build, production migration, message, payment or preference change was performed for this slice. Four-language checks prove localized acknowledgements and exact facts in captured model input, not live model answer quality. A current combined build, required release checks and authorized hosted owner/staff acceptance remain for the release workflow.

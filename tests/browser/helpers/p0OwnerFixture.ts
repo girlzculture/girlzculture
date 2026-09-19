@@ -1,8 +1,11 @@
 import type { Page } from "@playwright/test";
 import { buildAuthStorageKeys } from "../../../src/lib/authSessionCore";
 import { POLICY_DEFAULTS } from "../../../src/lib/businessPolicyCore";
+import { summarizeOperatingBooks, type OperatingBooks } from "../../../src/lib/businessFinanceCore";
+import { businessBookingMoney } from "../../../src/lib/businessBookingMoney";
 import { createHash } from "node:crypto";
 import { IMAGE_UPLOAD_PROFILES, type ImagePresetKey } from "../../../src/lib/imageUpload";
+import { publicGalleryPhotos } from "../../../src/lib/businessPhotoMetadata";
 
 /** Browser-only API fixture. The real owner components render real route/state
  * transitions; database authorization/mutation is separately tested in SQL. */
@@ -41,7 +44,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     records.styles = [{ id: ids.service, salon_id: business.id, name: 'Save', description: 'Original service prose — $180 GCABC12', category: 'Braids', category_id: ids.category, service_group_id: ids.group, master_style_id: null, base_price: 180, price_display_min: 180, price_display_max: 180, duration_min_hours: 2, duration_max_hours: 2, buffer_minutes: 15, is_active: true, is_draft: false, photos: [], size_options: [], length_options: [], addons: [], included_items: [] }];
     records.stylists = [{ id: ids.professional, salon_id: business.id, name: 'Save', bio: 'Original professional prose', status: 'Active', is_active: true, availability: hours, specialties: ['Box Braids'], years_experience: 5, photos: [] }];
     records.salon_products = [{ id: ids.product, salon_id: business.id, name: 'Save', description: 'Original product prose', price: 25, stock_quantity: 5, track_inventory: true, is_active: true, product_status: 'Published', pickup_enabled: true, shipping_enabled: false, photos: [], sku: 'GC-FIXTURE-SKU' }];
-    records.bookings = [{ id: ids.booking, salon_id: business.id, style_id: ids.service, stylist_id: ids.professional, public_reference: 'GCABC12', guest_name: 'Save', guest_email: 'customer@example.test', appointment_datetime: appointment, status: 'Confirmed', deposit_amount: 18, balance_due: 162, total_amount: 180, booking_policy_snapshot: {}, booking_policy_revision_id: null, created_at: new Date().toISOString() }];
+    records.bookings = [{ customer_id: "11000000-0000-4000-8000-000000000002", duration_hours: 2, id: ids.booking, salon_id: business.id, style_id: ids.service, stylist_id: ids.professional, public_reference: 'GCABC12', guest_name: 'Save', guest_email: 'customer@example.test', appointment_datetime: appointment, status: 'Confirmed', deposit_amount: 18, balance_due: 162, total_amount: 180, booking_policy_snapshot: {}, booking_policy_revision_id: null, created_at: new Date().toISOString() }];
     records.reviews = [{ id: ids.review, salon_id: business.id, booking_id: ids.booking, display_name: 'Save', rating_overall: 5, written_review: 'Original customer review — Save $180', moderation_status: 'Published', verified_booking: true, created_at: new Date().toISOString() }];
   }
   await page.route(`${provider}/rest/v1/**`, route => {
@@ -62,12 +65,50 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (path === "/api/i18n") return route.continue();
     if (path === "/api/i18n/preference") { accountLocale = req.postDataJSON().locale; return respond({ locale: accountLocale }); }
     if (path === "/api/salon/workspace") return respond({ salon: business, isOwner: true, isTeamMember: false, permissions: {}, records });
+    // Existing fixtures supply no seven-day calendar evidence; dedicated
+    // opportunity cases provide that response instead of inventing zero capacity.
+    if (req.method() === "GET" && path === "/api/salon/schedule-opportunities") return respond({code:"SCHEDULE_HOURS_UNAVAILABLE"},409);
+    // These generic fixtures do not supply a complete linked visit history.
+    // Dedicated returning-client cases provide verified evidence explicitly.
+    if (req.method() === "GET" && path === "/api/salon/rebooking-advice") return respond({code:"REBOOKING_UNAVAILABLE"},503);
+    if (req.method() === "GET" && path === "/api/salon/service-contribution") {
+      const query=new URL(req.url()).searchParams;
+      const period={from:query.get("from")||"2026-08-01",to:query.get("to")||"2026-08-28",timeZone:business.time_zone};
+      return respond({period,previous_period:period,as_of:new Date().toISOString(),fingerprint:"a".repeat(32),currency:"USD",rows:[],recommendations:[],cost_sources:[],excluded_unattributed_service_records:0,net_profit_verified:false,cost_completeness_source:"owner_recorded",can_review:false});
+    }
+    if (req.method() === "GET" && path === "/api/salon/marketing") return respond({
+      posts: [], time_zone: business.time_zone, external_posting: false,
+      sources: {
+        photos: publicGalleryPhotos(business.gallery_photos).map(url => ({ url })),
+        services: records.styles.filter(row => row.salon_id === business.id && !row.archived_at && row.is_draft !== true).map(({ id, name, base_price, price_display_min, price_display_max, service_group_id, master_style_id }) => ({ id, name, base_price, price_display_min, price_display_max, service_group_id, master_style_id })),
+        promotions: records.salon_promotions.filter(row => row.salon_id === business.id && row.status === "Active" && row.is_active === true && !row.archived_at).map(({ id, title, public_headline, target_scope, target_ids, starts_at, ends_at }) => ({ id, title, public_headline, target_scope, target_ids, starts_at, ends_at })),
+        completed_services: records.bookings.filter(row => row.salon_id === business.id && row.status === "Completed").map(({ id, style_id, appointment_datetime }) => ({ id, style_id, appointment_datetime })),
+      },
+    });
+    // Existing workspace tests do not supply operating-book/queue evidence.
+    // Dedicated Morning Brief cases replace this route with their own records.
+    if (req.method() === "GET" && path === "/api/salon/morning-brief") {
+      const unavailable={status:"unavailable",request_id:"55000000-0000-4000-8000-000000000001"};
+      return respond({date:new Date().toISOString().slice(0,10),time_zone:business.time_zone,generated_at:new Date().toISOString(),appointments:unavailable,money:unavailable,availability:unavailable,inventory:unavailable,followups:unavailable});
+    }
     if (req.method() === "GET" && /^\/api\/salon\/bookings\/[^/]+\/notes$/.test(path)) return respond({ notes: [] });
     if (path === "/api/salon/actionable-booking-count") return respond({ count: 0 });
     if (req.method() === "GET" && path === "/api/salon/profile") return respond({ salon: business, vanity_request: null });
     if (req.method() === "GET" && path === `/api/salon/bookings/${ids.booking}/reschedule`) return respond({ proposals: [] });
     if (req.method() === "GET" && path === "/api/salon/team") return respond({ users: [], stylists: records.stylists, can_manage: true });
     if (req.method() === "GET" && path === "/api/salon/product-orders") return respond({ orders: [] });
+    if (req.method() === "GET" && path === "/api/salon/finances") {
+      const query = new URL(req.url()).searchParams;
+      if (query.get('options') === 'entry') return respond({ stylists: records.stylists, products: records.salon_products });
+      const books: OperatingBooks = { sales: [], payments: [], expenses: [], obligations: [], compensation_payments: [] };
+      return respond({ scope: { kind: 'business' }, books, summary: summarizeOperatingBooks(business.id, books, { from: query.get('from')!, to: query.get('to')!, timeZone: business.time_zone }), evidence: {}, stylists: records.stylists, arrangements: [] });
+    }
+    if (req.method() === "GET" && path === "/api/salon/booking-money") {
+      // The default synthetic finance fixture above contains no bookings.
+      // Cohort-specific tests supply their actual booked/payment evidence.
+      const query = new URL(req.url()).searchParams;
+      return respond(businessBookingMoney(business.id, { sales: [], payments: [], expenses: [], obligations: [], compensation_payments: [] }, { scope: { kind: "business", stylist_id: null }, bookings: [], sales: [], receipts: [], expenses: [], arrangements: [], obligations: [], compensation_payments: [], stylists: [] }, [], { from: query.get("from")!, to: query.get("to")!, timeZone: business.time_zone }));
+    }
     if (req.method() === "GET" && path === "/api/messages") {
       if (!options.populated) return respond({ threads: [], role: 'salon' });
       const booking = { ...records.bookings[0], salon: business, style: { name: 'Save' } };
@@ -108,6 +149,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (path === "/api/location/resolve") return respond({ location: null, available: false, precision: "city" });
     if (path.startsWith("/api/notifications") || path.startsWith("/api/push")) return respond({ notifications: [], counts: {}, publicKey: "", enabled: false });
     if (path.startsWith("/api/monitoring")) return respond({ request_id: "P0-LOCAL-REFERENCE" });
+    if (path === "/api/salon/onboarding-instagram" && req.method() === "GET") return respond({ status: "unavailable", reason: "configuration" });
     if (path === "/api/salon/policies") {
       if (req.method() === "GET") return respond({ revisions, current: business.business_policy_revision_id });
       const input = req.postDataJSON(); actions.push(input);

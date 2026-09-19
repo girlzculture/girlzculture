@@ -26,7 +26,7 @@ const validPrice = {
   id: configuredPriceId,
   active: true,
   currency: "usd",
-  unit_amount: 5900,
+  unit_amount: 8900,
   type: "recurring",
   recurring: { interval: "month", interval_count: 1 },
 };
@@ -35,7 +35,7 @@ function expectValidationFailure(overrides, reason) {
   assert.throws(
     () => validateStripeSubscriptionPrice({
       configuredPriceId,
-      expectedAmountCents: 5900,
+      expectedAmountCents: 8900,
       price: { ...validPrice, ...overrides },
     }),
     (error) => {
@@ -43,7 +43,7 @@ function expectValidationFailure(overrides, reason) {
       assert.equal(error.reason, reason);
       assert.equal(error.code, "SUBSCRIPTION_PRICE_CONFIGURATION_INVALID");
       assert.equal(error.status, 503);
-      assert.doesNotMatch(error.message, /price_test|5900|secret|token/i);
+      assert.doesNotMatch(error.message, /price_test|8900|secret|token/i);
       return true;
     },
   );
@@ -53,7 +53,7 @@ let retrievalCount = 0;
 await assert.rejects(
   resolveStripeSubscriptionPrice({
     configuredPriceId: "",
-    expectedAmountCents: 5900,
+    expectedAmountCents: 8900,
     retrievePrice: async () => {
       retrievalCount += 1;
       return validPrice;
@@ -84,7 +84,7 @@ expectValidationFailure({ id: "price_different" }, "PRICE_ID_MISMATCH");
 await assert.rejects(
   resolveStripeSubscriptionPrice({
     configuredPriceId,
-    expectedAmountCents: 5900,
+    expectedAmountCents: 8900,
     retrievePrice: async () => { throw new Error("raw provider credential response"); },
   }),
   (error) => {
@@ -97,7 +97,7 @@ await assert.rejects(
 
 const resolved = await resolveStripeSubscriptionPrice({
   configuredPriceId,
-  expectedAmountCents: 5900,
+  expectedAmountCents: 8900,
   retrievePrice: async (priceId) => {
     retrievalCount += 1;
     assert.equal(priceId, configuredPriceId);
@@ -106,15 +106,15 @@ const resolved = await resolveStripeSubscriptionPrice({
 });
 assert.deepEqual(resolved, {
   priceId: configuredPriceId,
-  amountCents: 5900,
+  amountCents: 8900,
   currency: "usd",
   interval: "month",
 });
 
 const catalogEntries = [
-  { key: "Starter", configuredPriceId: "price_test_starter", expectedAmountCents: 5900 },
-  { key: "Growth", configuredPriceId: "price_test_growth", expectedAmountCents: 6900 },
-  { key: "Premium", configuredPriceId: "price_test_premium", expectedAmountCents: 8900 },
+  { key: "Starter", configuredPriceId: "price_test_starter", expectedAmountCents: 8900 },
+  { key: "Growth", configuredPriceId: "price_test_growth", expectedAmountCents: 10900 },
+  { key: "Premium", configuredPriceId: "price_test_premium", expectedAmountCents: 12900 },
 ];
 let catalogRetrievals = 0;
 await assert.rejects(

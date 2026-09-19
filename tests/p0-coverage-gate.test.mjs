@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import { ownerCoverageReport } from '../scripts/owner-localization-core.mjs';
 const empty = { entries: [] };
 const inventory = (source, kind = 'literal', context = 'reviewed') => ({ entries: { one: { source, occurrences: [{ file: 'owner.tsx', kind, context }] } } });
+
+test('the four release languages remain mandatory while Wolof gaps stay explicitly reported as deferred', () => {
+  const catalogs = Object.fromEntries(['fr', 'es', 'zh-CN'].map(locale => [locale, { Save: 'Translated save' }]));
+  const result = ownerCoverageReport(inventory('Save', 'localized-source'), catalogs, empty, empty);
+  assert.equal(result.status, 'AUTOMATED ONLY');
+  assert.equal(result.locales.wo.missing_count, 1);
+  assert.match(result.deferred_locales.wo, /not release-verified/);
+  for (const locale of ['fr', 'es', 'zh-CN']) {
+    const missing = structuredClone(catalogs); delete missing[locale].Save;
+    assert.equal(ownerCoverageReport(inventory('Save', 'localized-source'), missing, empty, empty).status, 'FAIL');
+  }
+});
 test('new dynamic labels and error literals fail coverage even without an explicit JSX occurrence', () => {
   for (const [copy, kind] of [['Unable to save appointment.', 'literal'], ['Bookings: {value0}', 'template']]) {
     const result = ownerCoverageReport(inventory(copy, kind), {}, empty, empty);

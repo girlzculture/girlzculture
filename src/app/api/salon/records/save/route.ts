@@ -25,6 +25,16 @@ async function POSTHandler(request: Request) {
     const id = cleanText(body.id, 60) || null;
     const rawValues = body.values && typeof body.values === "object" && !Array.isArray(body.values) ? body.values as Record<string, unknown> : {};
     const values = sanitize(table, rawValues, !id);
+    if (table === "stylists" && "assigned_service_ids" in values) {
+      // Authorization is repeated on the server; hiding the controls is insufficient.
+      const servicesContext = await requireSalonPermission(request, "styles");
+      if (servicesContext.salon.id !== salonId) throw new Error("Forbidden");
+      if (Array.isArray(values.assigned_service_ids) && values.assigned_service_ids.length) {
+        const services = await admin.from("styles").select("id").eq("salon_id", salonId).in("id", values.assigned_service_ids);
+        if (services.error) throw services.error;
+        if (services.data?.length !== values.assigned_service_ids.length) throw new Error("Choose valid services from this business.");
+      }
+    }
     if (table === "salon_products" || table === "salon_promotions") {
       await validateSalonRecordEntitlements({
         admin,

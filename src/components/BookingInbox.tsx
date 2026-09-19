@@ -1,8 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 "use client";
 
+import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
+import BookingAttendance from "@/components/booking/BookingAttendance";
+import CommunicationPreferences from "@/components/booking/CommunicationPreferences";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { bookingConversationWindow, conversationUnread } from "@/lib/bookingConversation";
 import { Languages, MessageSquare, Send } from "lucide-react";
 import { getSessionForScope, getSupabaseForScope, type AuthScope } from "@/lib/supabase";
 import MessageDisplay from "@/components/booking/MessageDisplay";
@@ -12,7 +17,7 @@ import { translationProviderFailure } from "@/lib/translationProviderErrors";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { LOCALE_NAMES } from "@/i18n/catalog";
 import { bookingReference } from "@/lib/bookingReference";
-import { OwnerActionError, ownerResponseError } from "@/lib/ownerActionError";
+import { OwnerActionError, readOwnerResponse } from "@/lib/ownerActionError";
 
 type Row = Record<string, any>;
 type Thread = { booking: Row; messages: Row[] };
@@ -29,6 +34,18 @@ function bookingLabel(booking: Row) {
 
 export default function BookingInbox({ scope, initialBookingId = "", focused = false }: { scope: AuthScope; initialBookingId?: string; focused?: boolean }) {
   const { locale, formatDate, translateSource: t } = useI18n();
+  const params = useSearchParams();
+  const drafts = useRef(new Map<string, { text: string; locale: string }>());
+  const [conversationLoading, setConversationLoading] = useState(false);
+  const [clock, setClock] = useState(() => Date.now());
+  const query = params.get("messageSearch") || "";
+  const filter = params.get("messageView") || "all";
+  const mobileConversation = focused || Boolean(initialBookingId) || Boolean(params.get("conversation"));
+  function updateInbox(values: Record<string, string>, push = false) {
+    const next = new URLSearchParams(window.location.search);
+    Object.entries(values).forEach(([key,value]) => value ? next.set(key,value) : next.delete(key));
+    window.history[push ? "pushState" : "replaceState"](null,"",window.location.pathname+"?"+next);
+  }
   const [welcome, setWelcome] = useState<Row | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedId, setSelectedId] = useState(initialBookingId);
@@ -52,7 +69,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   const operation = useRef(0);
   const busy = useRef(false);
   function showFailure(error: unknown, fallback: string) {
-    const messages: Record<string, string> = { AUTH_REQUIRED: "Please sign in again to view messages.", MESSAGE_ACCESS_DENIED: "You do not have access to this booking conversation.", MESSAGE_NOT_FOUND: "This booking conversation is unavailable.", MESSAGE_RATE_LIMIT: "Too many requests. Please try again shortly.", MESSAGE_CONTENT_REVIEW_REQUIRED: "Please revise the message to remove abusive, hateful, threatening, or unsafe language.", MESSAGE_INVALID: "Enter a message of up to 2,000 characters." };
+    const messages: Record<string, string> = { AUTH_REQUIRED: "Please sign in again to view messages.", MESSAGE_ACCESS_DENIED: "You do not have access to this booking conversation.", MESSAGE_NOT_FOUND: "This booking conversation is unavailable.", MESSAGE_RATE_LIMIT: "Too many requests. Please try again shortly.", MESSAGE_CONTENT_REVIEW_REQUIRED: "Please revise the message to remove abusive, hateful, threatening, or unsafe language.", MESSAGE_INVALID: "Enter a message of up to 2,000 characters.", MESSAGE_CONVERSATION_CLOSED: "This conversation is closed. Its history is still available.", MESSAGE_CUSTOMER_PARTICIPANT_REQUIRED: "This appointment has no customer account participant." };
     setReference(error instanceof OwnerActionError ? error.reference : "");
     setNotice(error instanceof OwnerActionError ? messages[error.code] || translationProviderFailure(error)?.error || fallback : fallback);
   }
@@ -69,13 +86,12 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   async function loadThreads(generation: number) {
     const headers = await authHeaders(generation);
     const response = await fetch("/api/messages", { headers, cache: "no-store" });
-    const body = await response.json();
+    const body = await readOwnerResponse(response, "MESSAGE_UNAVAILABLE");
     if (generation !== actorGeneration.current) return;
-    if (!response.ok) throw ownerResponseError(body, "MESSAGE_UNAVAILABLE");
     const next = Array.isArray(body.threads) ? body.threads : [];
     setThreads(next);
     setRole(body.role || "");
-    setSelectedId((current) => current || next[0]?.booking?.id || "");
+    setSelectedId((current) => current || initialBookingId || params.get("conversation") || (window.innerWidth >= 1024 ? next[0]?.booking?.id || "" : ""));
   }
 
   async function loadConversation(bookingId: string, identity: number) {
@@ -83,13 +99,13 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
     if (!bookingId) { setMessages([]); return; }
     const headers = await authHeaders(identity);
     const response = await fetch(`/api/messages?booking_id=${encodeURIComponent(bookingId)}`, { headers, cache: "no-store" });
-    const body = await response.json();
+    const body = await readOwnerResponse(response, "MESSAGE_UNAVAILABLE");
     if (generation !== conversationGeneration.current || identity !== actorGeneration.current) return;
-    if (!response.ok) throw ownerResponseError(body, "MESSAGE_UNAVAILABLE");
+    setClock(Date.now());
     setMessages(Array.isArray(body.messages) ? body.messages : []);
     setWelcome(body.welcome?.facts || null);
     setThreads(current => current.some(thread => thread.booking.id === bookingId)
-      ? current.map(thread => thread.booking.id === bookingId ? { ...thread, booking: body.booking } : thread)
+      ? current.map(thread => thread.booking.id === bookingId ? { ...thread, booking: body.booking, messages: [...(body.messages || [])].reverse() } : thread)
       : [{ booking: body.booking, messages: body.messages || [] }, ...current]);
     setRole(body.role || "");
   }
@@ -100,12 +116,14 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
       if (nextActor !== actor.current) {
         actorGeneration.current++; conversationGeneration.current++; operation.current++;
         draftGeneration.current++; previewGeneration.current++; actor.current = nextActor; busy.current = false;
-        setThreads([]); setMessages([]); setWelcome(null); setRole(""); setSelectedId("");
+        drafts.current.clear(); setThreads([]); setMessages([]); setWelcome(null); setRole(""); setSelectedId("");
         setDraft(""); setMessageLocale(currentLocale.current); setTranslationPreview(null); sendAttempt.current = null;
         setNotice(""); setReference(""); setSending(false); setLoading(Boolean(nextActor));
       }
       setActorId(nextActor);
     });
+    // Invalidate pending operations using the latest counters, not mount-time values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { actorGeneration.current++; conversationGeneration.current++; subscription.data.subscription.unsubscribe(); };
   }, [scope]);
 
@@ -121,23 +139,26 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   }, [actorId, scope]);
 
   useEffect(() => {
-    if (actorId && initialBookingId) setSelectedId(initialBookingId);
-  }, [actorId, initialBookingId]);
+    if (actorId && (initialBookingId || params.get("conversation"))) setSelectedId(initialBookingId || params.get("conversation") || "");
+  }, [actorId, initialBookingId, params]);
 
   useEffect(() => {
     draftGeneration.current++; previewGeneration.current++;
-    setDraft(""); setTranslationPreview(null); sendAttempt.current = null;
+    const retained = drafts.current.get(selectedId);
+    setDraft(retained?.text || ""); setMessageLocale(retained?.locale || currentLocale.current); setTranslationPreview(null); sendAttempt.current = null;
   }, [selectedId]);
 
   useEffect(() => {
     if (!selectedId || !actorId) return;
-    setMessages([]); setWelcome(null);
+    setMessages([]); setWelcome(null); setConversationLoading(true);
     const identity = actorGeneration.current;
     let live = true;
-    void loadConversation(selectedId, identity).catch(error => { if (live && identity === actorGeneration.current) showFailure(error, "Unable to load this conversation."); });
+    void loadConversation(selectedId, identity).catch(error => { if (live && identity === actorGeneration.current) showFailure(error, "Unable to load this conversation."); }).finally(() => { if(live && identity===actorGeneration.current) setConversationLoading(false); });
+    // Invalidate the latest request when the selected conversation is left.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { live = false; conversationGeneration.current++; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, locale, actorId]);
+  }, [selectedId, actorId]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -177,11 +198,11 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
           translation_previewed: translationPreview?.original === draft,
         }),
       });
-      const body = await response.json();
+      const body = await readOwnerResponse(response, "MESSAGE_UNAVAILABLE");
       if (identity !== actorGeneration.current || conversation !== conversationGeneration.current) return;
-      if (!response.ok) throw ownerResponseError(body, "MESSAGE_UNAVAILABLE");
-      if (revision === draftGeneration.current) { setDraft(""); sendAttempt.current = null; setTranslationPreview(null); }
-      await Promise.all([loadConversation(selectedId, identity), loadThreads(identity)]);
+        if (revision === draftGeneration.current) { drafts.current.delete(selectedId); setDraft(""); sendAttempt.current = null; setTranslationPreview(null); }
+      await loadConversation(selectedId, identity);
+      await loadThreads(identity);
       if (identity !== actorGeneration.current) return;
       if (body.warnings?.length) { setNotice("The message was saved, but a notification could not be delivered."); setReference(body.warnings[0].request_id || ""); }
     } catch (error) {
@@ -210,10 +231,8 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
           target_locale: targetLocale,
         }),
       });
-      const body = await response.json();
+      const body = await readOwnerResponse(response, "MESSAGE_UNAVAILABLE");
       if (identity !== actorGeneration.current || conversation !== conversationGeneration.current || revision !== previewGeneration.current) return;
-      if (!response.ok)
-        throw ownerResponseError(body, "MESSAGE_UNAVAILABLE");
       setTranslationPreview(body.preview || null);
     } catch (error) {
       if (identity === actorGeneration.current && revision === previewGeneration.current) {
@@ -224,21 +243,66 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
     }
   }
 
-  if (loading) return <div className="rounded-[18px] border border-plum/10 bg-white p-8 text-center text-sm text-ink/55">{t("Loading booking messages…")}</div>;
-  const failure = notice ? <div role="alert" className="border-t border-red-200 bg-red-50 p-4 text-sm gc-text-danger"><p>{t(notice)}</p>{reference ? <p>{t("Support reference")}: <span data-no-translate>{reference}</span></p> : null}<button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg border px-4">{t("Try again")}</button></div> : null;
-  if (!threads.length && failure) return failure;
-  if (!threads.length) return <div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center"><MessageSquare className="mx-auto text-magenta" /><h2 className="mt-4 font-serif text-2xl text-plum">{t("No booking conversations yet")}</h2><p className="mt-2 text-sm text-ink/55">{t("A conversation becomes available after a real appointment is booked.")}</p></div>;
-
-  const selected = threads.find((thread) => thread.booking.id === selectedId);
-  if (!selected) return failure || <p role="status" className="p-8 text-sm gc-text-secondary">{t("Loading booking messages…")}</p>;
-  return <><div className={focused ? "mb-4" : "hidden"}><Link href={scope === "admin" ? "/admin/bookings" : "/salon/dashboard/messages"} className="inline-flex min-h-11 items-center rounded-lg border border-plum/15 bg-white px-4 text-xs font-bold text-plum">Back to conversations</Link></div><section className={`grid min-h-[610px] overflow-hidden rounded-[18px] border border-plum/10 bg-white ${focused ? "grid-cols-1" : "xl:grid-cols-[330px_1fr]"}`}>
-    {!focused ? <aside className="border-b border-plum/10 xl:border-b-0 xl:border-r"><div className="p-5"><h2 className="font-serif text-2xl text-plum">Booking Messages</h2><p className="mt-1 text-[11px] text-ink/55">Private conversations linked to appointments.</p></div><div className="max-h-[545px] overflow-y-auto">{threads.map((thread) => {
-      const latest = thread.messages[0];
-      return <button key={thread.booking.id} disabled={sending} onClick={() => { if (scope === "salon" && !focused) window.location.assign(`/salon/dashboard/messages/${thread.booking.id}`); else setSelectedId(thread.booking.id); }} className={`w-full border-t border-plum/10 p-4 text-left ${selectedId === thread.booking.id ? "bg-blush/40" : "hover:bg-cream"}`}><span className="flex items-start justify-between gap-2"><b className="font-serif text-base text-plum"><span data-no-translate>{bookingLabel(thread.booking)}</span></b><small className="shrink-0 text-[9px] gc-text-muted">{formatDate(thread.booking.appointment_datetime, { dateStyle: "medium", timeZone: thread.booking.salon?.time_zone || "America/New_York" })}</small></span><span className="mt-1 block text-[10px] text-ink/60"><span data-no-translate>{bookingReference(thread.booking)} · {role === "customer" ? thread.booking.salon?.name : thread.booking.guest_name}</span></span><span className="mt-2 block truncate text-[10px] gc-text-secondary">{latest?.body ? <span data-no-translate>{latest.body}</span> : t("Start a conversation about this booking.")}</span></button>;
-    })}</div></aside> : null}
-    <div className="flex min-h-[520px] flex-col"><header className="border-b border-plum/10 p-5"><h3 className="font-serif text-xl text-plum"><span data-no-translate>{bookingLabel(selected.booking)}</span></h3><p className="mt-1 text-[11px] text-ink/55"><span data-no-translate>{bookingReference(selected.booking)} · {role === "customer" ? selected.booking.salon?.name : selected.booking.guest_name}</span> · {formatDate(selected.booking.appointment_datetime, { dateStyle: "medium", timeStyle: "short", timeZone: selected.booking.salon?.time_zone || "America/New_York" })}</p></header><div className="flex-1 space-y-3 overflow-y-auto bg-cream/35 p-5">{welcome ? <BookingWelcome facts={welcome}/> : null}<BookingPolicyEvidence booking={selected.booking}/>{messages.map((message, index) => {
-      const mine = message.sender_role === role;
-      return <article key={message.id} className={`max-w-[82%] rounded-[14px] px-4 py-3 text-sm ${mine ? "ml-auto bg-plum text-white" : "bg-white text-ink shadow-sm"}`}><MessageDisplay messageId={message.id} bookingId={selectedId} original={message.original_body || message.body} scope={scope} autoTranslate={index >= messages.length - 5}/><small className={`mt-2 block text-[9px] ${mine ? "gc-text-on-dark-muted" : "text-ink/40"}`}>{t(message.sender_role === "customer" ? "Customer" : message.sender_role === "salon" ? "Business" : "Girlz Culture Support")} · {formatDate(message.created_at, { dateStyle: "medium", timeStyle: "short" })}</small></article>;
-    })}{!messages.length ? <p className="py-20 text-center text-sm gc-text-primary">No messages yet. Ask a question about this appointment.</p> : null}</div>{scope !== "admin" ? <form onSubmit={send} className="border-t border-plum/10 p-4"><label className="sr-only" htmlFor="booking-message">Message</label><label className="mb-2 block text-xs">{t("Message language")}<select value={messageLocale} onChange={event => { previewGeneration.current++; setTranslationPreview(null); setMessageLocale(event.target.value); }} className="ml-2 min-h-11 rounded-lg border bg-white px-2">{["en", "fr", "wo", "es", "zh-CN"].map(code => <option key={code} value={code} data-no-translate>{LOCALE_NAMES[code]}</option>)}<option value="unknown">{t("Mixed or unknown language")}</option></select></label><div className="flex gap-2"><textarea id="booking-message" value={draft} onChange={(event) => { draftGeneration.current++; previewGeneration.current++; setDraft(event.target.value.slice(0, 2000)); setTranslationPreview(null); }} rows={2} placeholder="Type a private booking message…" className="min-w-0 flex-1 resize-none rounded-[10px] border border-plum/15 p-3 text-sm outline-none focus:border-magenta" /><button disabled={sending || !draft.trim()} className="grid w-14 place-items-center rounded-[10px] bg-magenta text-white gc-disabled-control" aria-label={translationPreview ? "Send original and previewed translation" : "Send message"}><Send size={19} /></button></div><div className="mt-2 flex flex-wrap items-center gap-2"><select value={targetLocale} onChange={(event) => { previewGeneration.current++; setTargetLocale(event.target.value); setTranslationPreview(null); }} aria-label="Translation language" className="min-h-9 rounded-lg border border-plum/15 bg-white px-2 text-[10px]"><option value="fr">French</option><option value="es">Spanish</option><option value="wo">Wolof</option><option value="zh-CN">中文（简体）</option><option value="en">English</option></select><button type="button" disabled={sending || !draft.trim()} onClick={() => void previewTranslation()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-magenta px-3 text-[10px] font-bold text-magenta gc-disabled-control"><Languages size={13}/>Preview translation</button><span className="text-[9px] gc-text-primary">The original is always preserved. Nothing translated is sent until you preview and press Send.</span></div>{translationPreview?.original === draft ? <div className="mt-3 grid gap-2 rounded-[10px] border border-magenta/20 bg-blush/25 p-3 sm:grid-cols-2"><div><b className="text-[9px] uppercase gc-text-muted">Original</b><p className="mt-1 whitespace-pre-wrap text-xs"><span data-no-translate>{translationPreview.original}</span></p></div><div><b className="text-[9px] uppercase text-magenta">Translation preview · {translationPreview.locale}</b><p className="mt-1 whitespace-pre-wrap text-xs"><span data-no-translate>{translationPreview.translated}</span></p></div></div> : null}</form> : <p className="border-t border-plum/10 p-4 text-center text-xs text-ink/50">Admin read-only view for support and safety.</p>}{notice ? <p className="border-t border-red-200 bg-red-50 p-3 text-xs gc-text-danger">{t(notice)}{reference ? <><br/>{t("Support reference")}: <span data-no-translate>{reference}</span></> : null}</p> : null}</div>
-  </section></>;
+  const selected = threads.find(thread => thread.booking.id === selectedId);
+  const windowState = bookingConversationWindow(selected?.booking || {}, clock);
+  useEffect(() => {
+    if (!windowState.open || !windowState.closesAt) return;
+    // Refresh at the deadline, not on an arbitrary polling interval.
+    const delay = Math.min(2_147_483_647, Math.max(0, Date.parse(windowState.closesAt) - clock));
+    const timer = setTimeout(() => setClock(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [windowState.open, windowState.closesAt, clock]);
+  const visibleThreads = threads.filter(thread => {
+    const open = bookingConversationWindow(thread.booking, clock).open;
+    if (filter === "unread" && !conversationUnread(thread.messages, role)) return false;
+    if (filter === "active" && !open || filter === "closed" && open) return false;
+    return [bookingLabel(thread.booking), thread.booking.guest_name, bookingReference(thread.booking), ...thread.messages.map(message => message.original_body || message.body)].join(" ").toLocaleLowerCase().includes(query.toLocaleLowerCase());
+  });
+  function editDraft(value: string) {
+    draftGeneration.current++; previewGeneration.current++;
+    setDraft(value); setTranslationPreview(null); drafts.current.set(selectedId, {text:value,locale:messageLocale});
+  }
+  if (loading) return <p role="status" className="p-8 text-center">{t("Loading booking messages…")}</p>;
+  const failure = notice ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm gc-text-danger"><p>{t(notice)}</p>{reference ? <p>{t("Support reference")}: <span data-no-translate>{reference}</span></p> : null}<button type="button" onClick={() => { setNotice(""); void loadThreads(actorGeneration.current).catch(error => showFailure(error,"Unable to load messages.")); }} className="mt-2 min-h-11 rounded-lg border px-4">{t("Refresh conversations")}</button></div> : null;
+  return <section aria-label={t("Messages workspace")} className={`min-w-0 space-y-4 ${scope==="salon" ? "max-lg:[@media(max-height:600px)]:space-y-2" : ""}`}>
+    <header className={scope==="salon" ? "max-lg:[@media(max-height:600px)]:flex max-lg:[@media(max-height:600px)]:flex-wrap max-lg:[@media(max-height:600px)]:items-baseline max-lg:[@media(max-height:600px)]:gap-x-3 max-lg:[@media(max-height:600px)]:gap-y-1" : undefined}><h1 className={`font-serif text-3xl text-plum ${scope==="salon" ? "max-lg:[@media(max-height:600px)]:text-xl" : ""}`}>{t("Messages")}</h1><p className={`mt-1 text-sm gc-text-secondary ${scope==="salon" ? "max-lg:[@media(max-height:600px)]:mt-0" : ""}`}>{t("Connect with clients and keep appointment conversations together.")}</p></header>
+    {failure}
+    {!threads.length ? <div className="rounded-2xl border bg-white p-8 text-center"><MessageSquare className="mx-auto text-magenta"/><h2 className="mt-4 font-serif text-xl">{t("No booking conversations yet")}</h2><p className="mt-2 text-sm gc-text-secondary">{t("A conversation becomes available after a real appointment is booked.")}</p></div> :
+    <div className={`grid min-w-0 overflow-hidden rounded-2xl border border-plum/10 bg-white ${focused ? "" : "lg:grid-cols-[minmax(240px,30%)_minmax(0,1fr)]"}`}>
+      {!focused && <aside className={`min-w-0 border-plum/10 lg:border-r ${mobileConversation ? "hidden lg:block" : ""}`}>
+        <div className={`space-y-3 border-b p-4 ${scope==="salon" ? "max-lg:[@media(max-height:600px)]:grid max-lg:[@media(max-height:600px)]:grid-cols-[minmax(0,1fr)_minmax(160px,30%)] max-lg:[@media(max-height:600px)]:items-end max-lg:[@media(max-height:600px)]:gap-2 max-lg:[@media(max-height:600px)]:space-y-0 max-lg:[@media(max-height:600px)]:p-2" : ""}`}><div className="flex flex-wrap gap-1" aria-label={t("Inbox categories")}>{[["all","All"],["unread","Unread"],["active","Active conversations"],["closed","Closed conversations"]].map(([key,label]) => <button key={key} type="button" aria-pressed={filter===key} onClick={() => updateInbox({messageView:key})} className={`min-h-11 rounded-lg px-3 text-xs ${filter===key ? "bg-magenta text-white" : "bg-slate-50 text-plum"}`}>{t(label)}{key==="unread" ? ` (${threads.reduce((sum,thread)=>sum+conversationUnread(thread.messages,role),0)})` : ""}</button>)}</div>
+          <label className="block text-xs">{t("Search conversations")}<input value={query} onChange={event => updateInbox({messageSearch:event.target.value})} className="mt-1 min-h-11 w-full rounded-lg border px-3"/></label>
+        </div>
+        <div className="max-h-[70dvh] overflow-y-auto">{visibleThreads.map(thread => {
+          const latest=thread.messages[0]; const unread=conversationUnread(thread.messages,role); const open=bookingConversationWindow(thread.booking,clock).open;
+          return <button key={thread.booking.id} type="button" disabled={sending} aria-pressed={selectedId===thread.booking.id} onClick={() => { setNotice(""); setReference(""); setSelectedId(thread.booking.id); updateInbox({conversation:thread.booking.id},true); }} className={`w-full border-b p-4 text-left ${selectedId===thread.booking.id ? "border-l-4 border-l-magenta bg-sky-50" : "hover:bg-slate-50"}`}>
+            <span className="flex justify-between gap-3"><b className="text-sm" data-no-translate>{role==="customer" ? thread.booking.salon?.name : thread.booking.guest_name || bookingReference(thread.booking)}</b>{unread>0 && <span aria-label={t("Unread messages")} className="rounded-full bg-magenta px-2 text-xs text-white">{unread}</span>}</span>
+            <span className="mt-1 block text-xs gc-text-secondary" data-no-translate>{bookingLabel(thread.booking)} · {bookingReference(thread.booking)}</span>
+            <span className="mt-2 line-clamp-2 text-sm" data-no-translate>{latest?.original_body || latest?.body || t("Start a conversation about this booking.")}</span>
+            <span className="mt-2 flex justify-between gap-2 text-xs gc-text-muted"><span>{formatDate(thread.booking.appointment_datetime,{dateStyle:"medium",timeZone:thread.booking.salon?.time_zone||"America/New_York"})}</span><span>{t(open ? "Active" : "Closed")}</span></span>
+          </button>;
+        })}{!visibleThreads.length && <p className="p-6 text-sm gc-text-secondary">{t("No conversations match these filters.")}</p>}</div>
+      </aside>}
+      {selected && <div className={`min-w-0 flex-col ${!mobileConversation ? "hidden lg:flex" : "flex"}`}>
+        <header className="border-b border-slate-200 p-4">
+          {focused ? <Link href={scope==="salon" ? `/salon/dashboard/messages?${new URLSearchParams(Object.fromEntries([...params].filter(([key])=>key!=="conversation")))}` : scope==="admin" ? "/admin/bookings" : "/account?tab=inbox"} className="mb-2 inline-flex min-h-11 items-center text-sm text-magenta">{t("Back to conversations")}</Link> : <button type="button" onClick={() => updateInbox({conversation:""},true)} className="mb-2 min-h-11 text-sm text-magenta lg:hidden">{t("Back to conversations")}</button>}
+          <div className="flex items-center justify-between gap-3"><h2 className="font-serif text-xl" data-no-translate>{role==="customer" ? selected.booking.salon?.name : selected.booking.guest_name || bookingReference(selected.booking)}</h2><span className="rounded-full bg-slate-100 px-3 py-1 text-xs">{t(windowState.open ? "Active" : "Closed")}</span></div>
+          <p className="mt-1 text-xs gc-text-secondary"><span data-no-translate>{bookingLabel(selected.booking)} · {bookingReference(selected.booking)}</span> · {formatDate(selected.booking.appointment_datetime,{dateStyle:"medium",timeStyle:"short",timeZone:selected.booking.salon?.time_zone||"America/New_York"})}</p>
+          <details className="mt-3 rounded-xl border border-slate-200 p-3" open={scope!=="salon" || undefined}><summary className="cursor-pointer text-sm font-semibold">{t("Booking and customer context")}</summary><div className="mt-3 space-y-3">{welcome && <BookingWelcome facts={welcome}/>}<BookingPriceEvidence booking={selected.booking}/><BookingPolicyEvidence booking={selected.booking}/>{scope==="salon" && <Link href={`/salon/dashboard/bookings/${selectedId}`} className="inline-flex min-h-11 items-center text-sm text-magenta">{t("View booking")}</Link>}{scope==="customer" && <><BookingAttendance key={`${actorId}:${selectedId}`} bookingId={selectedId} scope="customer"/><CommunicationPreferences key={`communications:${actorId}:${selectedId}`} bookingId={selectedId}/></>}</div></details>
+        </header>
+        <div aria-label={t("Conversation history")} className="max-h-[55dvh] min-h-36 flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4">
+          {conversationLoading ? <p role="status">{t("Loading booking messages…")}</p> : messages.map((message,index) => <article key={message.id} className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm sm:max-w-[82%] ${message.sender_role===role ? "ml-auto bg-plum text-white" : "border border-slate-200 bg-white text-ink"}`}><MessageDisplay messageId={message.id} bookingId={selectedId} original={message.original_body||message.body} scope={scope} autoTranslate={index>=messages.length-5}/><small className={`mt-2 block text-xs ${message.sender_role===role ? "gc-text-on-dark-muted" : "gc-text-muted"}`}>{t(message.sender_role==="customer"?"Customer":message.sender_role==="salon"?"Business":"Girlz Culture Support")} · {formatDate(message.created_at,{dateStyle:"medium",timeStyle:"short"})}</small></article>)}
+          {!conversationLoading && !messages.length && <p className="py-8 text-center text-sm gc-text-secondary">{t("No messages yet. Ask a question about this appointment.")}</p>}
+        </div>
+        <div className="border-t border-slate-200 p-4 text-xs gc-text-secondary"><p>{t(windowState.open ? "Replies close 24 hours after the appointment ends. A confirmed reschedule updates the deadline; cancellation closes replies immediately." : "This conversation is closed. Its history is still available.")}</p>{windowState.closesAt && windowState.reason!=="cancelled" && <p className="mt-1">{t("Conversation deadline")}: {formatDate(windowState.closesAt,{dateStyle:"medium",timeStyle:"short",timeZone:selected.booking.salon?.time_zone||"America/New_York"})}</p>}</div>
+        {scope!=="admin" && windowState.open && <form onSubmit={send} className="space-y-3 border-t p-4">
+          <label className="block text-xs">{t("Message language")}<select value={messageLocale} onChange={event => { previewGeneration.current++; setTranslationPreview(null); setMessageLocale(event.target.value); drafts.current.set(selectedId,{text:draft,locale:event.target.value}); }} className="ml-2 min-h-11 rounded-lg border bg-white px-2">{["en","fr","es","zh-CN"].map(code=><option key={code} value={code} data-no-translate>{LOCALE_NAMES[code]}</option>)}<option value="unknown">{t("Mixed or unknown language")}</option></select></label>
+          <label htmlFor="booking-message" className="sr-only">{t("Message")}</label><div className="flex gap-2"><textarea id="booking-message" value={draft} disabled={conversationLoading} onChange={event => editDraft(event.target.value.slice(0,2000))} rows={3} placeholder={t("Type a private booking message…")} className="min-w-0 flex-1 resize-y rounded-xl border p-3 text-sm"/><button disabled={sending||conversationLoading||!draft.trim()} className="grid min-h-11 w-12 shrink-0 place-items-center rounded-xl bg-magenta text-white gc-disabled-control" aria-label={t(translationPreview ? "Send original and previewed translation" : "Send message")}><Send size={19}/></button></div>
+          <details><summary className="cursor-pointer text-sm text-magenta">{t("Preview translation")}</summary><div className="mt-2 flex flex-wrap items-center gap-2"><select value={targetLocale} onChange={event => {previewGeneration.current++;setTargetLocale(event.target.value);setTranslationPreview(null);}} aria-label={t("Translation language")} className="min-h-11 rounded-lg border bg-white px-2 text-sm">{["en","fr","es","zh-CN"].map(code=><option key={code} value={code} data-no-translate>{LOCALE_NAMES[code]}</option>)}</select><button type="button" disabled={sending||conversationLoading||!draft.trim()} onClick={() => void previewTranslation()} className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm gc-disabled-control"><Languages size={16}/>{t("Preview translation")}</button><p className="text-xs gc-text-secondary">{t("The original is always preserved. Nothing translated is sent until you preview and press Send.")}</p></div></details>
+          {translationPreview?.original===draft && <div className="grid gap-3 rounded-xl border bg-sky-50 p-3 sm:grid-cols-2"><div><b className="text-xs">{t("Original")}</b><p data-no-translate className="mt-1 whitespace-pre-wrap text-sm">{translationPreview.original}</p></div><div><b className="text-xs">{t("Translation preview")} · {translationPreview.locale}</b><p data-no-translate className="mt-1 whitespace-pre-wrap text-sm">{translationPreview.translated}</p></div></div>}
+        </form>}
+        {scope==="admin" && <p className="border-t p-4 text-center text-sm gc-text-secondary">{t("Admin read-only view for support and safety.")}</p>}
+      </div>}
+    </div>}
+  </section>;
 }

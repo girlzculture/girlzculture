@@ -7,6 +7,7 @@ import { Archive, Eye, Pause, Pencil, Play, Plus, Tag } from "lucide-react";
 import NumericInput from "@/components/forms/NumericInput";
 import { OwnerDetailHeader } from "@/components/owner/OwnerWorkflowUi";
 import { useI18n } from "@/components/i18n/LocaleProvider";
+import { promotionDateWindow, promotionLocalDateTime } from "@/lib/promotionDateTime";
 
 type Row = Record<string, unknown> & { id?: string };
 type Props = {
@@ -21,7 +22,6 @@ type Props = {
 
 const inputClass = "mt-1 min-h-11 w-full rounded-lg border border-plum/15 bg-white px-3 text-xs outline-none focus:border-magenta";
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
-const localDateTime = (value: unknown) => value ? new Date(String(value)).toISOString().slice(0, 16) : "";
 const values = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
 
 export default function SalonPromotionsManager({ promotions, styles, products, setPromotions, saveRecord, removeRecord, recordId = "" }: Props) {
@@ -32,6 +32,7 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
     ? promotions.find((promotion) => promotion.id === recordId) || null
     : null;
   const [editingId, setEditingId] = useState<string | null>(recordId && recordId !== "new" ? recordId : null);
+  const [dateError, setDateError] = useState("");
   const [scope, setScope] = useState(() => String(routedPromotion?.target_scope || "salon"));
   const [selectedTargets, setSelectedTargets] = useState<string[]>(() => values(routedPromotion?.target_ids));
   const editing = promotions.find((promotion) => promotion.id === editingId) || null;
@@ -46,6 +47,7 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
     : [];
 
   function startEdit(row: Row | null) {
+    setDateError("");
     setEditingId(row?.id || null);
     setScope(String(row?.target_scope || "salon"));
     setSelectedTargets(values(row?.target_ids));
@@ -64,6 +66,14 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
     const start = String(form.get("starts_at") || "");
     const end = String(form.get("ends_at") || "");
     const minimum = String(form.get("minimum_subtotal") || "");
+    let dates;
+    try {
+      dates = promotionDateWindow(start, end, String(form.get("timezone") || ""), { ...editing, timezone: editing?.timezone || timeZone });
+      setDateError("");
+    } catch (error) {
+      setDateError(error instanceof Error ? error.message : "Choose a valid offer date and time.");
+      return;
+    }
     const saved = await saveRecord("salon_promotions", {
       title: form.get("title"),
       public_headline: form.get("public_headline"),
@@ -71,9 +81,7 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
       promotion_type: type,
       discount_value: ["percentage", "fixed"].includes(type) ? form.get("discount_value") : 0,
       discount_label: form.get("discount_label"),
-      starts_at: start ? new Date(start).toISOString() : null,
-      ends_at: end ? new Date(end).toISOString() : null,
-      timezone: form.get("timezone") || timeZone,
+      ...dates,
       status,
       is_active: status === "Active",
       paused_at: status === "Paused" ? new Date().toISOString() : null,
@@ -92,7 +100,6 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
     setPromotions((current) => editing ? current.map((row) => row.id === editing.id ? saved : row) : [saved, ...current]);
     setEditingId(saved.id || null);
     if (saved.id) router.replace(`/salon/dashboard/promotions/${saved.id}`);
-    event.currentTarget.reset();
   }
 
   async function changeStatus(promotion: Row, status: "Active" | "Paused") {
@@ -119,11 +126,13 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
         <Label text="Offer type"><select name="promotion_type" defaultValue={String(editing?.promotion_type || "percentage")} className={inputClass}><option value="percentage">Percentage discount</option><option value="fixed">Fixed discount</option><option value="free_addon">Free eligible add-on</option><option value="free_service">Free eligible service</option><option value="descriptive">Descriptive offer</option></select></Label>
         <Label text="Discount value"><NumericInput name="discount_value" min={0} max={10000} decimalPlaces={2} defaultValue={String(editing?.discount_value ?? "")} placeholder="20" className={inputClass}/></Label>
         <Label text="Customer-facing discount label"><input name="discount_label" defaultValue={String(editing?.discount_label || "")} placeholder="20% off" className={inputClass}/></Label>
-        <Label text="Status"><select name="status" defaultValue={String(editing?.status || "Draft")} className={inputClass}><option>Draft</option><option>Active</option><option>Paused</option></select></Label>
-        <Label text="Starts"><input name="starts_at" type="datetime-local" defaultValue={localDateTime(editing?.starts_at)} className={inputClass}/></Label>
-        <Label text="Ends"><input name="ends_at" type="datetime-local" defaultValue={localDateTime(editing?.ends_at)} className={inputClass}/></Label>
+        <Label text="Status"><select name="status" defaultValue={String(editing?.status || "Draft")} className={inputClass}><option value="Draft">Draft</option><option value="Active">Active</option><option value="Paused">Paused</option></select></Label>
+        <Label text="Starts"><input name="starts_at" type="datetime-local" defaultValue={promotionLocalDateTime(editing?.starts_at, String(editing?.timezone || timeZone))} className={inputClass}/></Label>
+        <Label text="Ends"><input name="ends_at" type="datetime-local" defaultValue={promotionLocalDateTime(editing?.ends_at, String(editing?.timezone || timeZone))} className={inputClass}/></Label>
         <Label text="Time zone"><input name="timezone" defaultValue={String(editing?.timezone || timeZone)} className={inputClass}/></Label>
-        <Label text="Applies to"><select value={scope} onChange={(event) => { setScope(event.target.value); setSelectedTargets([]); }} className={inputClass}><option value="salon">Entire salon</option><option value="services">Selected services</option><option value="service_groups">Selected service groups</option><option value="master_styles">Selected styles</option><option value="products">Selected products</option><option value="addons">Selected add-ons</option></select></Label>
+        <p className="text-sm gc-text-secondary" data-no-translate>{t("Offer dates use this time zone.")}</p>
+        {dateError ? <p role="alert" data-no-translate className="text-sm gc-text-danger md:col-span-2 xl:col-span-4">{t(dateError)}</p> : null}
+        <p className="text-sm gc-text-secondary">{t("Service offers keep the required deposit unchanged. One eligible offer applies at a time, and savings cannot exceed the remaining balance. Product offers must be selected separately.")}</p><Label text="Applies to"><select value={scope} onChange={(event) => { setScope(event.target.value); setSelectedTargets([]); }} className={inputClass}><option value="salon">All eligible services</option><option value="services">Selected services</option><option value="service_groups">Selected service groups</option><option value="master_styles">Selected styles</option><option value="products">Selected products</option><option value="addons">Selected add-ons</option></select></Label>
         <Label text="Minimum booking subtotal"><NumericInput name="minimum_subtotal" min={0} max={10000} decimalPlaces={2} defaultValue={String((editing?.restrictions as Row | undefined)?.minimum_subtotal ?? "")} className={inputClass}/></Label>
         <Label text="Total use limit (0 = unlimited)"><NumericInput name="usage_limit" integer min={0} max={1000000} defaultValue={String((editing?.restrictions as Row | undefined)?.usage_limit ?? 0)} className={inputClass}/></Label>
         <Label text="Uses per customer (0 = unlimited)"><NumericInput name="per_customer_limit" integer min={0} max={1000000} defaultValue={String((editing?.restrictions as Row | undefined)?.per_customer_limit ?? 0)} className={inputClass}/></Label>
@@ -143,6 +152,6 @@ export default function SalonPromotionsManager({ promotions, styles, products, s
 
 function Label({ text, children }: { text: string; children: React.ReactNode }) { return <label><span className="text-[10px] font-bold">{text}</span>{children}</label>; }
 function Status({ value }: { value: string }) { const color = value === "Active" ? "bg-green-100 gc-text-success" : value === "Paused" ? "bg-amber/20 gc-text-warning" : "bg-blush text-plum"; return <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${color}`}>{value}</span>; }
-function scopeLabel(scope: string) { return ({ salon: "Entire salon", services: "Selected services", service_groups: "Selected service groups", master_styles: "Selected styles", products: "Selected products", addons: "Selected add-ons" } as Record<string, string>)[scope] || scope; }
+function scopeLabel(scope: string) { return ({ salon: "All eligible services", services: "Selected services", service_groups: "Selected service groups", master_styles: "Selected styles", products: "Selected products", addons: "Selected add-ons" } as Record<string, string>)[scope] || scope; }
 function uniqueTargets(rows: Row[], idKey: string, labelKey: string) { const map = new Map<string, string>(); for (const row of rows) { const id = String(row[idKey] || ""); if (id) map.set(id, String(row[labelKey] || "Service group")); } return [...map].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)); }
 function uniqueAddons(styles: Row[]) { const map = new Map<string, string>(); for (const style of styles) for (const addon of Array.isArray(style.addons) ? style.addons as Row[] : []) { const id = String(addon.value || addon.label || addon.name || ""); if (id) map.set(id, String(addon.label || addon.name || addon.value)); } return [...map].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)); }

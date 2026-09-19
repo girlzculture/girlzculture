@@ -536,9 +536,14 @@ test.describe("Workstream 1 deterministic state semantics", () => {
   test("representative public, booking, owner, and platform-admin surfaces work by keyboard", async ({ page }) => {
     await page.setViewportSize({ width: 1720, height: 1000 });
 
-    await visitReady(page, "/");
-    const publicStylesLink = page.locator('header a[href="/styles"]:visible').first();
+    await visitReady(page, "/site-access");
+    const exploreMenu = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Explore', exact: true });
     await clearDocumentFocus(page);
+    await tabUntilFocused(page, exploreMenu, 'public Explore menu');
+    await expectVisibleFocusIndicator(exploreMenu, 'public Explore menu');
+    await page.keyboard.press('Enter');
+    await expect(exploreMenu).toHaveAttribute('aria-expanded', 'true');
+    const publicStylesLink = page.locator('header a[href="/styles"]:visible').first();
     await tabUntilFocused(page, publicStylesLink, "public Browse Styles navigation link");
     await expectVisibleFocusIndicator(publicStylesLink, "public Browse Styles navigation link");
     await page.keyboard.press("Shift+Tab");

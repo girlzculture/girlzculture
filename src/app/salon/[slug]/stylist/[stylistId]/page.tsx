@@ -4,7 +4,6 @@ import { ArrowLeft, BriefcaseBusiness, CalendarDays, Scissors, Star, UserRound }
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import SafeImage from "@/components/site/SafeImage";
 import { CustomerBottomNav, PublicFooter, PublicHeader } from "@/components/site/PublicChrome";
-import { siteAccessActive } from "@/lib/marketplaceAccessServer";
 
 type Salon = {
   id: string;
@@ -34,7 +33,6 @@ function normalizeList(value: string[] | string | null | undefined) {
 
 export default async function StylistProfilePage({ params }: { params: Promise<{ slug: string; stylistId: string }> }) {
   const { slug, stylistId } = await params;
-  const siteAccess = await siteAccessActive();
   const admin = getSupabaseAdmin();
   const salonResult = await admin
     .from("salons")
@@ -61,7 +59,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
   const salon = salonResult.data;
   if (salon.status !== "Active" || salon.is_discoverable !== true) notFound();
   let canBook = false;
-  if (!siteAccess) {
+  {
     const [profileVisibility, bookingVisibility] = await Promise.all([
       admin.rpc("is_salon_profile_public", {
         target_salon_id: salon.id,
@@ -128,7 +126,7 @@ export default async function StylistProfilePage({ params }: { params: Promise<{
               {canBook ? (
                 <Link href={`/salon/${canonicalSalonSlug}/book?stylist=${stylist.id}`} className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-magenta px-7 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(0,131,166,0.2)] hover:bg-primary-hover"><CalendarDays size={17} />Book with {stylist.name || "this stylist"}</Link>
               ) : (
-                <span className="gc-state-disabled mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border px-7 text-[13px] font-bold" aria-disabled="true" data-visual-state="disabled"><CalendarDays size={17} />{siteAccess ? "Demo browsing only" : "Bookings are paused"}</span>
+                <span className="gc-state-disabled mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border px-7 text-[13px] font-bold" aria-disabled="true" data-visual-state="disabled"><CalendarDays size={17} />{"Bookings are paused"}</span>
               )}
             </div>
           </div>

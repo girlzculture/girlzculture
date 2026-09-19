@@ -185,14 +185,15 @@ export async function createScopedJsonApiClient(input: {
     return candidate;
   }
 
-  async function request<T extends ScopedApiResponseBody = ScopedApiResponseBody>(
+  async function authenticatedResponse(
     target: RequestInfo | URL,
     init: RequestInit = {},
-  ): Promise<T> {
+    accept = "application/json",
+  ): Promise<Response> {
     const send = async (candidate: ScopedApiSession) => {
       const headers = new Headers(init.headers);
       headers.set("Authorization", `Bearer ${candidate.access_token}`);
-      headers.set("Accept", "application/json");
+      headers.set("Accept", accept);
       headers.set("X-Requested-With", requestedWith);
       return fetcher(target, {
         ...init,
@@ -217,14 +218,33 @@ export async function createScopedJsonApiClient(input: {
       }
       response = await send(session);
     }
+    return response;
+  }
+
+  async function request<T extends ScopedApiResponseBody = ScopedApiResponseBody>(target: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
+    const response = await authenticatedResponse(target, init);
     const body = await responseBody(response);
     if (!response.ok) throw apiError(response, body);
     return body as T;
   }
 
+  async function download(target: RequestInfo | URL, contentType: string): Promise<Blob> {
+    const response = await authenticatedResponse(target, {}, contentType);
+    if (!response.ok) throw apiError(response, await responseBody(response));
+    if (response.headers.get('content-type')?.split(';')[0] !== contentType) {
+      throw new ScopedApiError({message:'The download returned an invalid response.',status:502,code:'INVALID_DOWNLOAD_RESPONSE',requestId:uuid(response.headers.get('x-request-id'))});
+    }
+    const blob = await response.blob();
+    // An account switch while a large export is loading must not deliver the
+    // previous account's document to the newly active UI.
+    await verifiedSession(false);
+    return blob;
+  }
+
   return {
     actingUserId,
     request,
+    download,
   };
 }
 

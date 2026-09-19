@@ -4,10 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /** Device notification subscriptions can outlive a team invitation, permission
  * or canonical identity. Recheck the same authorization used by conversations
  * immediately before selecting destinations; fail closed on lookup failure. */
-export async function authorizedMessageRecipients(admin: SupabaseClient, salonId: string, userIds: string[]) {
+export async function authorizedMessageRecipients(admin: SupabaseClient, salonId: string, bookingId: string, userIds: string[]) {
   const candidates = [...new Set(userIds.filter(Boolean))];
   const checks = await Promise.all(candidates.map(async userId => {
-    const result = await admin.rpc("p0_actor_has_permission", { p_salon: salonId, p_user: userId, p_permission: "bookings" });
+    const result = await admin.rpc("booking_message_business_recipient", { p_salon: salonId, p_booking: bookingId, p_user: userId });
     if (result.error) throw result.error;
     return result.data === true ? userId : null;
   }));

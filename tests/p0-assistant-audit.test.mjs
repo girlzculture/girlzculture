@@ -78,6 +78,7 @@ test('private-note confirmation never dispatches a customer message notification
 test('conversational answers use only the current authorized lookup, not an older service excerpt', async () => {
   const olderRequestId = '55000000-0000-4000-8000-000000000001';
   const planning = [], execution = [], incidents = [];
+  const conversation = [{ role: 'user', text: 'Tell me about Silk Press.' }, { role: 'assistant', text: 'It is listed in your services.' }];
   const context = { admin: {}, user: { id: actor }, salon: { id: business, time_zone: 'America/New_York' }, isOwner: true };
   const load = typescriptLoader(process.cwd(), {
     '@/lib/supabaseAdmin': { requireSalonOwner: async () => context },
@@ -96,7 +97,7 @@ test('conversational answers use only the current authorized lookup, not an olde
     '@/lib/platformErrors': { capturePlatformError: async input => { incidents.push(input); return reference; } },
   });
   const response = await load('src/app/api/salon/assistant/route.ts').POST(new Request('http://localhost/api/salon/assistant', {
-    method: 'POST', body: JSON.stringify({ action: 'plan', request_id: requestId, locale: 'en', text: 'How much is Silk Press?', previous_request_ids: [olderRequestId] }),
+    method: 'POST', body: JSON.stringify({ action: 'plan', request_id: requestId, locale: 'en', text: 'How much is that service?', previous_request_ids: [olderRequestId], conversation, page: 'photos' }),
   }));
   assert.equal(response.status, 200);
   assert.equal((await response.json()).assistant_message, 'Silk Press starts at $120.');
@@ -104,6 +105,9 @@ test('conversational answers use only the current authorized lookup, not an olde
   assert.equal(execution[0].args.query, 'Silk Press');
   assert.deepEqual(Array.from(planning[0].previousRequestIds), [olderRequestId]);
   assert.deepEqual(Array.from(planning[1].previousRequestIds), [requestId]);
+  assert.deepEqual(JSON.parse(JSON.stringify(planning[1].conversation)), conversation);
+  assert.deepEqual(Array.from(planning[1].conversationRequestIds), [olderRequestId]);
+  assert.equal(planning[1].page, 'photos');
   assert.equal(planning[1].answerOnly, true);
   assert.equal(incidents.length, 0);
 });

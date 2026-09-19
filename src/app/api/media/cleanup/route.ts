@@ -10,6 +10,7 @@ import {
   runIsolatedCleanupBatch,
 } from "@/lib/mediaCleanupCore";
 import { removePreparedMediaObjects } from "@/lib/mediaUploadServer";
+import { processInstagramOnboardingCleanup } from "@/lib/instagramOnboardingCleanupServer";
 
 export const runtime = "nodejs";
 
@@ -310,6 +311,9 @@ async function POSTHandler(request: Request) {
       (error) => failures.record("video-sources", error),
     );
 
+    let instagram = { examined: 0, completed: 0, failed: 0, pending: 0, remaining_batch_possible: false };
+    try { instagram = await processInstagramOnboardingCleanup(admin); }
+    catch (error) { instagram.failed = 1; failures.record("instagram-imports", error); }
     const loadFailureTotal = Object.values(loadFailures).reduce(
       (sum, count) => sum + count,
       0,
@@ -318,11 +322,12 @@ async function POSTHandler(request: Request) {
       stagedImages.failed +
       expiredImageUploads.failed +
       applicationDocuments.failed +
-      videoSources.failed;
+      videoSources.failed + instagram.failed;
     const failureSummary = failures.summary();
     const partialFailure = loadFailureTotal + failedItemTotal > 0;
 
     return Response.json({
+      instagram_import_cleanup: instagram,
       staged_images_examined: stagedImages.attempted,
       staged_images_cleaned: stagedImages.succeeded,
       staged_images_failed: stagedImages.failed,
@@ -347,7 +352,7 @@ async function POSTHandler(request: Request) {
         expiredSessions.length === CLEANUP_BATCH_LIMIT ||
         expiredApplicationDocuments.length === CLEANUP_BATCH_LIMIT ||
         videoJobs.length === CLEANUP_BATCH_LIMIT ||
-        partialFailure,
+        partialFailure || instagram.pending > 0 || instagram.remaining_batch_possible,
     });
   } catch (error) {
     return monitoredRouteFailure({

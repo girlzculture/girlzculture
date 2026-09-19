@@ -20,8 +20,8 @@ test('memory has explicit opt-in, a fixed retention window, and no free-text sto
 
 test('memory stores only scoped successful public-business topic references, never customer or write context', () => {
   assert.deepEqual(selectMemoryContext([safe], [id], new Set(['styles'])), [id]);
-  for (const row of [{...safe,tool:'get_customers'}, {...safe,tool:'get_booking_messages'}, {...safe,tool:'prepare_service',risk_class:3}, {...safe,failure_code:'FAILED'}]) {
-    assert.deepEqual(selectMemoryContext([row], [id], new Set(['styles','bookings'])), []);
+  for (const row of [{...safe,tool:'get_customers'}, {...safe,tool:'get_client_record',permission:'client_history'}, {...safe,tool:'get_booking_messages'}, {...safe,tool:'prepare_service',risk_class:3}, {...safe,failure_code:'FAILED'}]) {
+    assert.deepEqual(selectMemoryContext([row], [id], new Set(['styles','bookings','client_history'])), []);
   }
 });
 

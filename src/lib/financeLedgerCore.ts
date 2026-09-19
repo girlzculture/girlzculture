@@ -79,8 +79,8 @@ export function bookingTransaction(
   style?: FinanceRow,
   stylist?: FinanceRow,
 ) {
-  const paid = /paid|succeeded|complete/i.test(
-    String(booking.deposit_status || booking.payment_status || ""),
+  const paid = ["paid", "succeeded", "complete", "completed", "refunded", "partiallyrefunded", "refundpending"].includes(
+    String(booking.deposit_status || booking.payment_status || "").trim().toLowerCase().replace(/[ _-]/g, ""),
   );
   const deposit = paid ? number(booking.deposit_amount) : 0;
   const processingFee = number(booking.stripe_processing_fee);

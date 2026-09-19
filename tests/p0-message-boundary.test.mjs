@@ -10,12 +10,12 @@ class RateLimitError extends Error { retryAfter = 30; }
 function fixture(options = {}) {
   const mutations = [], deliveries = [], incidents = [];
   const canonical = { status: 'Active', email_normalized: 'owner@example.test', primary_role: 'salon_owner', ...options.canonical };
-  const booking = { id: bookingId, salon_id: 'business-a', customer_id: 'customer-a', salon: { user_id: actor, name: 'Save' }, style: { name: 'Original service' }, ...options.booking };
+  const booking = { appointment_datetime:'2099-01-01T10:00:00Z', duration_hours:1, status:'Confirmed', id: bookingId, salon_id: 'business-a', customer_id: 'customer-a', salon: { user_id: actor, name: 'Save' }, style: { name: 'Original service' }, ...options.booking };
   const prior = { id: messageId, booking_id: bookingId, original_body: '  Bonjour — $180, GC123  ', ...options.prior };
   const admin = {
     auth: { getUser: async () => ({ data: { user: { id: actor, email: 'owner@example.test' } } }) },
     from(table) {
-      let operation = 'read', payload;
+      let operation = 'read', payload, offset=0, end=999;
       const filters = [];
       const response = (single = false) => {
         if (options.failTable === table) return { data: null, error: new Error('private connection/provider details') };
@@ -24,12 +24,13 @@ function fixture(options = {}) {
           if (operation === 'insert' && options.replay) return { data: null, error: { code: '23505' } };
           return { data: { id: messageId, ...payload }, error: null };
         }
-        const row = table === 'platform_identities' ? canonical : table === 'bookings' ? booking : table === 'salon_team_members' ? options.team || null : table === 'admin_users' ? options.admin || null : table === 'booking_conversation_events' ? { event_type: 'booking_created', facts: { business: 'Save' } } : table === 'booking_messages' ? prior : null;
+        if (options.tables?.[table]) { const rows=options.tables[table].filter(row=>filters.every(([key,value])=>row[key]===value)).slice(offset,end+1); return {data:single?rows[0]||null:rows,error:null}; }
+        const row = table === 'platform_identities' ? canonical : table === 'salons' ? (booking.salon?.user_id===actor?{id:'business-a'}:null) : table === 'bookings' ? (filters.every(([k,v])=>booking[k]===v)?booking:null) : table === 'salon_team_members' ? options.team ? {salon_id:'business-a',...options.team} : null : table === 'admin_users' ? options.admin || null : table === 'booking_conversation_events' ? { event_type: 'booking_created', facts: { business: 'Save' } } : table === 'booking_messages' ? (filters.some(([k])=>k==='client_request_id')&&!options.replay?null:prior) : null;
         if (table === 'salon_team_members' && filters.some(([key, value]) => key === 'status' && value !== row?.status)) return { data: single ? null : [], error: null };
         return { data: single ? row : row ? [row] : [], error: null };
       };
       const query = {
-        select() { return query; }, eq(key, value) { filters.push([key, value]); return query; }, neq() { return query; }, is() { return query; }, in() { return query; }, ilike() { return query; }, limit() { return query; }, order() { return query; },
+        select() { return query; }, eq(key, value) { filters.push([key, value]); return query; }, neq() { return query; }, is() { return query; }, in() { return query; }, ilike() { return query; }, limit() { return query; }, order() { return query; }, range(from,to) { offset=from;end=to;return query; },
         insert(value) { operation = 'insert'; payload = value; return query; }, update(value) { operation = 'update'; payload = value; return query; },
         single: async () => response(true), maybeSingle: async () => response(true), then(resolve, reject) { return Promise.resolve(response()).then(resolve, reject); },
       };
@@ -124,4 +125,36 @@ test('blocked message moderation returns its stable code without saving or notif
   assert.equal((await response.json()).code, 'MESSAGE_CONTENT_REVIEW_REQUIRED');
   assert.deepEqual(f.mutations, []);
   assert.deepEqual(f.deliveries, []);
+});
+
+test('expired and cancelled conversations retain readable history but reject new sends', async () => {
+  for (const booking of [
+    { status: 'Completed', appointment_datetime: '2020-01-01T10:00:00Z', duration_hours: 1 },
+    { status: 'Cancelled', appointment_datetime: '2099-01-01T10:00:00Z', duration_hours: 1 },
+  ]) {
+    const f = fixture({ booking }); const response = await send(f);
+    assert.equal(response.status, 409); assert.equal((await response.json()).code, 'MESSAGE_CONVERSATION_CLOSED');
+    assert.equal(f.mutations.length, 0); assert.equal(f.deliveries.length, 0);
+    assert.equal((await read(f)).status, 200);
+  }
+});
+test('assigned staff cannot read, translate or send into another professional conversation', async () => {
+  const f = fixture({ canonical: { primary_role: 'salon_team' }, team: { status: 'Active', stylist_id: 'assigned', permissions: { bookings: true } }, booking: { stylist_id: 'other-professional' } });
+  assert.equal((await read(f)).status, 403);
+  assert.equal((await send(f)).status, 403);
+  assert.equal((await send(f, { action: 'translate_display', message_id: messageId, locale: 'fr' })).status, 403);
+  assert.equal(f.mutations.length, 0); assert.equal(f.deliveries.length, 0);
+});
+test('support role is read-only even through a direct POST', async () => {
+  const f = fixture({ canonical: { primary_role: 'admin' }, admin: { status: 'Active', permissions: { support: true } } });
+  assert.equal((await send(f)).status, 403); assert.equal(f.mutations.length, 0);
+});
+
+test('inbox loads authorized booking and conversation history beyond provider page caps',async()=>{
+ const own=Array.from({length:1002},(_,index)=>({id:'own-'+index,salon_id:'business-a',customer_id:'c',appointment_datetime:'2099-01-01',duration_hours:1}));
+ const messages=Array.from({length:1002},(_,index)=>({id:'m-'+index,booking_id:bookingId,body:'Original '+index}));
+ const f=fixture({tables:{bookings:own.concat({id:'foreign',salon_id:'business-b'})}});
+ const response=await f.route.GET(new Request('http://localhost/api/messages',{headers:{authorization:'Bearer fixture-only'}}));
+ assert.equal(response.status,200);const body=await response.json();assert.equal(body.threads.length,1002);assert.equal(body.threads.some(t=>t.booking.salon_id!=='business-a'),false);
+ const g=fixture({tables:{booking_messages:messages}});const detail=await read(g);assert.equal(detail.status,200);assert.equal((await detail.json()).messages.length,1002);
 });

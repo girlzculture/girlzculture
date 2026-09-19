@@ -136,6 +136,7 @@ function pendingSubscriptionValues(
     status: "checkout_pending",
     stripe_customer_id: customerId,
     price_id: priceId,
+    recurring_price_snapshot: null,
     stripe_schedule_id: null,
     scheduled_tier: null,
     scheduled_price_id: null,

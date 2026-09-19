@@ -5,7 +5,6 @@ import { CalendarDays, MapPin, ShieldCheck, Star } from "lucide-react";
 import SafeImage from "@/components/site/SafeImage";
 import type { PublicSalonResult } from "@/lib/discoveryServer";
 import { formatDistanceMiles } from "@/lib/location";
-import { useSiteAccess } from "@/components/site/SiteAccessProvider";
 
 type ExtendedSalon = PublicSalonResult & {
   matched_service?: {
@@ -62,7 +61,6 @@ export default function MarketplaceSalonCard({
   mobileDistanceOnly = false,
   surface = "default",
 }: Props) {
-  const siteAccess = useSiteAccess();
   const verified = String(salon.verification_status || "")
     .toLowerCase()
     .startsWith("verified");
@@ -263,16 +261,7 @@ export default function MarketplaceSalonCard({
           >
             View
           </Link>
-          {siteAccess ? (
-            <span
-              aria-disabled="true"
-              data-visual-state="disabled"
-              className="gc-state-disabled inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-[8px] border px-4 text-[11px] font-bold"
-            >
-              <CalendarDays aria-hidden="true" size={13} />
-              Demo only
-            </span>
-          ) : <Link
+          {<Link
             data-salon-navigation
             href={bookHref}
             onClick={onNavigate}

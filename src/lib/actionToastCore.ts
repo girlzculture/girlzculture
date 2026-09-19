@@ -10,5 +10,10 @@ export function actionToastIsError(message: string) {
 }
 
 export function actionToastReference(message: string) {
-  return message.match(UUID_PATTERN)?.[0] || "";
+  return message.match(/\bReference ([A-Za-z0-9][A-Za-z0-9._:-]{2,127}?)\.?$/)?.[1] || message.match(UUID_PATTERN)?.[0] || "";
+}
+
+/** Keep the static sentence translatable and the exact incident ID separate. */
+export function actionToastMessage(message: string) {
+  return message.replace(/\s+Reference [A-Za-z0-9][A-Za-z0-9._:-]{2,127}?\.?$/, "");
 }

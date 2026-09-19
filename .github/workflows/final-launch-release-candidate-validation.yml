@@ -17,6 +17,13 @@ on:
       - ".github/workflows/database-migrations.yml"
       - ".github/workflows/final-launch-release-candidate-validation.yml"
   workflow_dispatch:
+    inputs:
+      billing_sandbox_mode:
+        description: Optional protected sandbox verification; never uses production
+        type: choice
+        required: true
+        default: 'off'
+        options: ['off', 'read-only', 'setup-cancel']
 
 permissions:
   contents: read
@@ -33,11 +40,12 @@ env:
   CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
 
 concurrency:
-  group: final-launch-release-candidate-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && contains(fromJSON('["read-only","setup-cancel"]'), inputs.billing_sandbox_mode || 'off') && 'final-launch-billing-sandbox-protected' || format('final-launch-release-candidate-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && contains(fromJSON('["read-only","setup-cancel"]'), inputs.billing_sandbox_mode || 'off')) }}
 
 jobs:
   owner-localization:
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.billing_sandbox_mode || 'off') == 'off' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -54,10 +62,19 @@ jobs:
       - name: Exercise strict P0 tool, policy, message and launch boundaries
         if: ${{ !cancelled() }}
         run: npm run test:p0:core
+      - name: Verify subscription payment-method isolation and no-charge boundary
+        if: ${{ !cancelled() }}
+        run: node --test tests/subscription-payment-method.test.mjs tests/subscription-payment-explicit.test.mjs tests/subscription-mutation-guard.test.mjs tests/subscription-downgrade.test.mjs
+      - name: Verify isolated business demo scenarios
+        if: ${{ !cancelled() }}
+        run: node --test tests/business-demo-scenarios.test.mjs
 
   browser-acceptance:
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.billing_sandbox_mode || 'off') == 'off' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Run 35412096899: shard 3 passed 277 tests in 42m, but setup and artifact
+    # upload exceeded the old 45m job envelope. Per-test timeouts stay unchanged.
+    timeout-minutes: 60
     permissions:
       contents: read
     strategy:
@@ -98,6 +115,7 @@ jobs:
           retention-days: 14
 
   release-candidate:
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.billing_sandbox_mode || 'off') == 'off' }}
     needs: [owner-localization, browser-acceptance]
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -291,3 +309,65 @@ jobs:
             jq -n --arg body "$body" '{body:$body}' \
               | gh api "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments" --method POST --input - >/dev/null
           fi
+
+  billing-sandbox:
+    if: ${{ github.event_name == 'workflow_dispatch' && contains(fromJSON('["read-only","setup-cancel"]'), inputs.billing_sandbox_mode || 'off') && github.repository == 'girlzculture/girlzculture' }}
+    environment: billing-sandbox
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: girlzculture_clean
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d girlzculture_clean"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies without provider credentials
+        run: npm ci
+      - name: Check sandbox safety gates without provider access
+        run: node --test scripts/billing-sandbox-guards.test.mjs
+      - name: Verify the complete schema on an isolated local database
+        if: ${{ inputs.billing_sandbox_mode == 'setup-cancel' }}
+        env:
+          CLEAN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/girlzculture_clean
+        run: npm run verify:database-clean
+      - name: Exercise actual local attempt RPCs with a simulated provider
+        if: ${{ inputs.billing_sandbox_mode == 'setup-cancel' }}
+        env:
+          BILLING_SANDBOX_TEST_DATABASE: girlzculture_clean
+        run: node --test scripts/billing-sandbox-database.test.mjs
+      - name: Protected exact-account verification
+        env:
+          STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+          BILLING_SANDBOX_MODE: ${{ inputs.billing_sandbox_mode }}
+          BILLING_SANDBOX_ACCOUNT_ID: ${{ vars.BILLING_SANDBOX_ACCOUNT_ID }}
+          BILLING_SANDBOX_CUSTOMER_ID: ${{ vars.BILLING_SANDBOX_CUSTOMER_ID }}
+          BILLING_SANDBOX_SUBSCRIPTION_ID: ${{ vars.BILLING_SANDBOX_SUBSCRIPTION_ID }}
+          BILLING_SANDBOX_APPROVED_SHA: ${{ vars.BILLING_SANDBOX_APPROVED_SHA }}
+          BILLING_SANDBOX_AUTHORIZE_SETUP_CANCEL: ${{ vars.BILLING_SANDBOX_AUTHORIZE_SETUP_CANCEL }}
+          BILLING_SANDBOX_EVENT_ROUTING_REVIEWED: ${{ vars.BILLING_SANDBOX_EVENT_ROUTING_REVIEWED }}
+          BILLING_SANDBOX_LOCAL_DATABASE: girlzculture_clean
+        run: node scripts/verify-billing-sandbox.mjs
+      - name: Upload sanitized sandbox verdict only
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: billing-sandbox-${{ github.run_id }}-${{ github.run_attempt }}
+          path: billing-sandbox-evidence/report.json
+          if-no-files-found: warn
+          retention-days: 7
