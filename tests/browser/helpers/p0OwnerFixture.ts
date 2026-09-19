@@ -63,6 +63,12 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (path === "/api/i18n") return route.continue();
     if (path === "/api/i18n/preference") { accountLocale = req.postDataJSON().locale; return respond({ locale: accountLocale }); }
     if (path === "/api/salon/workspace") return respond({ salon: business, isOwner: true, isTeamMember: false, permissions: {}, records });
+    // Existing workspace tests do not supply operating-book/queue evidence.
+    // Dedicated Morning Brief cases replace this route with their own records.
+    if (req.method() === "GET" && path === "/api/salon/morning-brief") {
+      const unavailable={status:"unavailable",request_id:"55000000-0000-4000-8000-000000000001"};
+      return respond({date:new Date().toISOString().slice(0,10),time_zone:business.time_zone,generated_at:new Date().toISOString(),appointments:unavailable,money:unavailable,availability:unavailable,inventory:unavailable,followups:unavailable});
+    }
     if (req.method() === "GET" && /^\/api\/salon\/bookings\/[^/]+\/notes$/.test(path)) return respond({ notes: [] });
     if (path === "/api/salon/actionable-booking-count") return respond({ count: 0 });
     if (req.method() === "GET" && path === "/api/salon/profile") return respond({ salon: business, vanity_request: null });

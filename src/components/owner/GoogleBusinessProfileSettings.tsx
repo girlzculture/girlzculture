@@ -7,7 +7,7 @@ type Row=Record<string,unknown>;
 type State={available:boolean;status:string;auto_sync?:boolean;last_success_at?:string;last_error?:string;operations?:Array<{id:string;kind:string;status:string;created_at:string}>};
 type Choice={account:string;name:string;title:string;address:Row};
 type Preview={before:Row;after:Row;review_hash:string};
-const control="min-h-11 rounded-xl border border-border bg-white px-3 py-2 text-sm disabled:opacity-50";
+const control="min-h-11 rounded-xl border border-border bg-white px-3 py-2 text-sm disabled:bg-subtle disabled:text-muted disabled:cursor-not-allowed";
 export default function GoogleBusinessProfileSettings({businessId,photos=[]}:{businessId:string;photos?:string[]}){
  const {translateSource:t,locale,formatDate}=useI18n();
  const [state,setState]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");

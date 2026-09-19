@@ -2294,6 +2294,10 @@
         {
           "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessMorningBrief.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -3080,6 +3084,26 @@
         {
           "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
           "context": "7c9963c13d3b00c97557df8e8768d6d9f41d3c1826224960ae9a06241254eb46"
+        }
+      ]
+    },
+    {
+      "source": "booking:{value0}",
+      "reason": "Reviewed internal record key or navigation URL; not rendered copy.",
+      "contexts": [
+        {
+          "file": "src/lib/businessMorningBrief.ts",
+          "context": "4c5200036d89b04d35e66c0cd8816862fd2891a802a8eeb640c045c6f966343b"
+        }
+      ]
+    },
+    {
+      "source": "products?tab=inventory",
+      "reason": "Reviewed internal record key or navigation URL; not rendered copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMorningBrief.tsx",
+          "context": "89fb09c3ea4deaefee37a9de36722d261c87462492cfe33ab11591b0e8aadd1e"
         }
       ]
     }

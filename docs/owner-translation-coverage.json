@@ -10,8 +10,8 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 2739,
-  "excluded_code_count": 195,
+  "candidate_count": 2771,
+  "excluded_code_count": 197,
   "intentional_untranslated": [
     "Girlz Culture",
     "Girlz",
@@ -99,22 +99,33 @@
   ],
   "locales": {
     "en": {
-      "source_count": 2471,
-      "covered": 2471,
+      "source_count": 2501,
+      "covered": 2501,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 2471,
-      "covered": 2471,
+      "source_count": 2501,
+      "covered": 2501,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 2471,
+      "source_count": 2501,
       "covered": 1739,
-      "missing_count": 732,
+      "missing_count": 762,
       "missing": [
+        {
+          "source": "{value0} appointments · {value1} cancellations · {value2} no-shows",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 42,
+              "kind": "localized-source",
+              "context": "cfe57c6457346cbb190de6ef0112701c5e317884422780b135e5a4905026ee9d"
+            }
+          ]
+        },
         {
           "source": "{value0} hours",
           "occurrences": [
@@ -131,9 +142,20 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 33,
+              "line": 35,
               "kind": "localized-source",
               "context": "c56a33529d95b09f2c167ad2002064d458cbe8a185acbcf201f1899eec1d8798"
+            }
+          ]
+        },
+        {
+          "source": "{value0} open intervals · {value1} waiting requests to review",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 44,
+              "kind": "localized-source",
+              "context": "713adc126a0df1bb70aad0febf9c8b3cf679f44985d2d16c7fb64aca14c3c540"
             }
           ]
         },
@@ -145,6 +167,28 @@
               "line": 59,
               "kind": "localized-source",
               "context": "a1e611953fcfcc8d017a8642c83637e7ac50183e8dd6ac86f5a0b14df10fabd7"
+            }
+          ]
+        },
+        {
+          "source": "{value0} overlapping pairs · {value1} unassigned · {value2} started, status to check",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 42,
+              "kind": "localized-source",
+              "context": "54f7a188d6f45f219f90fda86e33e60c55e181ffdf9ef6cecfa43a1fef4c59d8"
+            }
+          ]
+        },
+        {
+          "source": "{value0} queued follow-ups due for review",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 46,
+              "kind": "localized-source",
+              "context": "e842e698e5a68cdac8628526fd9d15540a1e2f0aa1548c83db868ce34a28c6be"
             }
           ]
         },
@@ -738,7 +782,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 30,
+              "line": 32,
               "kind": "localized-source",
               "context": "02e4b95e2dd00448855519403b2afa4f6bc56442e37b8eb4ccf607734bec8d01"
             }
@@ -781,6 +825,12 @@
               "line": 40,
               "kind": "localized-source",
               "context": "e3a866ca1c803733281b55b70ff2a3d930c151c601e7456c3d2e3e53e33e0e05"
+            },
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 44,
+              "kind": "localized-source",
+              "context": "d91b0f0f4ec416f20356810ebb746950cfa7bd28c9da881a5a0ec00112ee234e"
             }
           ]
         },
@@ -795,19 +845,19 @@
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 20,
+              "line": 21,
               "kind": "literal",
               "context": "1a4dd691e11d1dba333c7d5dee9c884a8672d24209871ce3e736a5c3520558f4"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "c48bec70be7273472ffd237b5a1595797eb17dc23982f17337065d97be3965b1"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "c48bec70be7273472ffd237b5a1595797eb17dc23982f17337065d97be3965b1"
             },
@@ -1045,7 +1095,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "e49456cc54707a6389b0e3d3f8d7530a9ee1508c8ce8502581e85e3f7db66512"
             }
@@ -1195,25 +1245,25 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 33,
+              "line": 35,
               "kind": "localized-source",
               "context": "55a1d5f328715ba9f1dd989cac99c648505e5f03475765cd38b5eca09ed3ca28"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "literal",
               "context": "0fac1a8f8e376828b85239d1fef721381f46a990022b94abefcc2046dff6d17a"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 36,
+              "line": 38,
               "kind": "literal",
               "context": "4a9d60dfa89e7b52fce67fd1c60e0257fd3699c7c9d57aceb66ad8382a1c6722"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 40,
+              "line": 42,
               "kind": "literal",
               "context": "89a2958933e51b54228b5a5d2e305dd1272bfc579fa426543a26647163ef8036"
             }
@@ -1252,13 +1302,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "82a353cd6a1a9dd6509399154e8533339d2ec6b477763926a3f7a3d8df11d06a"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "82a353cd6a1a9dd6509399154e8533339d2ec6b477763926a3f7a3d8df11d06a"
             }
@@ -1347,7 +1397,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 23,
+              "line": 24,
               "kind": "literal",
               "context": "969f7e6b02e0a6d7272c1a91418435e44c6244b2270c1990e368f77cd7cda12d"
             }
@@ -1358,7 +1408,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 31,
+              "line": 33,
               "kind": "localized-source",
               "context": "8ab80f0788ab3004eb61b5fe3e6343849c9c20e65f66c94b587f95d1b8fb4215"
             }
@@ -1664,6 +1714,17 @@
               "line": 25,
               "kind": "localized-source",
               "context": "1904aa6e9ce08f6cb5e12fd67e7371510de2f16d7b77c75756dcfd19399bec36"
+            }
+          ]
+        },
+        {
+          "source": "Check the status of appointments that have already started.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 30,
+              "kind": "literal",
+              "context": "7c427b950161fc925d7647228f562b91d38ae33e2b0da1fd43c60df1bf36c2a5"
             }
           ]
         },
@@ -2167,7 +2228,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 39,
+              "line": 41,
               "kind": "literal",
               "context": "21e6eb3b13f4d5383c5a1bbad4e155679bfaabed82acffbe9a59ae6267ed9092"
             },
@@ -2201,13 +2262,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 22,
+              "line": 23,
               "kind": "literal",
               "context": "24b18e17b1061c1dd6a780445cf5faa70a9704ff4126b206608762cec9007e71"
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "6d86697d1df0db02e9bf4c10123dd229c0d7ef8daa88c9744bb257a3dc727e6d"
             }
@@ -2489,7 +2550,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 43,
+              "line": 45,
               "kind": "literal",
               "context": "a5549206220dbe54cafdc4d2a5ab3797f56af59c36d382e4613285c9cd41ddb6"
             }
@@ -2991,6 +3052,28 @@
               "line": 46,
               "kind": "literal",
               "context": "11f4f8943c479351bda2cd1e8e70abab99b4bdd6bd119a155b03485076e4e504"
+            }
+          ]
+        },
+        {
+          "source": "Expected service value",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 43,
+              "kind": "literal",
+              "context": "d1b46d4da75a95ac88aeae1375d1755badacb3db735fda0811e93f25e7fa68e4"
+            }
+          ]
+        },
+        {
+          "source": "Expected value is not revenue received. Deposits are included in receipts, not added again. Cancelled appointments and no-shows are excluded from these money totals.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 43,
+              "kind": "localized-source",
+              "context": "4be19d6a0db69b5f9cd352c8b581a96701a88443268e2d7841d1c7caba82a6fc"
             }
           ]
         },
@@ -3694,7 +3777,7 @@
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 21,
+              "line": 22,
               "kind": "literal",
               "context": "e74012b7ad403820aed28a96931a32d9e54f86d3e9e1449f33833c4c0bfe4c89"
             }
@@ -3771,7 +3854,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 39,
+              "line": 41,
               "kind": "localized-source",
               "context": "ba4c9d351e5497834767fb41cf34b56f4aa245bc0fa97381460be91df479139a"
             },
@@ -3993,7 +4076,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "4409de7ab332132746214462e73f91e40476c2bed1d05854ce981c70ab360c2a"
             }
@@ -4211,11 +4294,22 @@
           ]
         },
         {
+          "source": "Loading today's brief…",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 39,
+              "kind": "localized-source",
+              "context": "4af50d5ca16429faa37dd70da8a7753acdb364d72bfb5e060ad9668fb8d4a1b2"
+            }
+          ]
+        },
+        {
           "source": "Location",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 18,
+              "line": 19,
               "kind": "literal",
               "context": "8233d2bef07d028c9f8e17e46a6971a74adbe4f3e875073bf9c02f9b71757f79"
             },
@@ -4344,7 +4438,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 43,
+              "line": 45,
               "kind": "literal",
               "context": "5089c7e5ff18fde9528a03e2de151f994cfd601bba4bebde5de074f421fa45c3"
             },
@@ -4466,7 +4560,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "ea052ced35d3eb0059fc8da5bfdfbb03e461c9bf9ca4b2c1c2e18aaf4086ed6c"
             }
@@ -4491,6 +4585,34 @@
               "line": 34,
               "kind": "localized-source",
               "context": "081c49c33d286e3f3c3028516ebe014ce1d85f91c2ed2c1cbd490082bc6b90f2"
+            }
+          ]
+        },
+        {
+          "source": "Morning brief",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 36,
+              "kind": "localized-source",
+              "context": "48c8326b54d34f0071291ee5568956a92055aa9e1fb4e251221b31e42d742507"
+            },
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 37,
+              "kind": "localized-source",
+              "context": "48c8326b54d34f0071291ee5568956a92055aa9e1fb4e251221b31e42d742507"
+            }
+          ]
+        },
+        {
+          "source": "Morning brief could not be loaded.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 17,
+              "kind": "localized-source",
+              "context": "288a4f2abb5a53d36c761d02f2ff6b86758ea2ff4fcb925cdddd59ddf30ac028"
             }
           ]
         },
@@ -4609,7 +4731,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "literal",
               "context": "0fac1a8f8e376828b85239d1fef721381f46a990022b94abefcc2046dff6d17a"
             }
@@ -4641,8 +4763,14 @@
           "source": "No appointments today.",
           "occurrences": [
             {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 42,
+              "kind": "localized-source",
+              "context": "a8e019e984580825ee1a05ff08d4f596e1409af33f4b66d3668cb0f8c6e984f3"
+            },
+            {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 36,
+              "line": 38,
               "kind": "literal",
               "context": "4a9d60dfa89e7b52fce67fd1c60e0257fd3699c7c9d57aceb66ad8382a1c6722"
             }
@@ -4770,6 +4898,17 @@
           ]
         },
         {
+          "source": "No low-stock warnings in tracked inventory.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 45,
+              "kind": "localized-source",
+              "context": "3735371a9b6be15497501bfacc2003900377a514e3a370e1c10407e3872b7eee"
+            }
+          ]
+        },
+        {
           "source": "No matching finance records.",
           "occurrences": [
             {
@@ -4887,6 +5026,17 @@
               "line": 54,
               "kind": "localized-source",
               "context": "915792cef66e9ef201470834ba0e98a20a20026003e33ccfe4eb1ecce23a898e"
+            }
+          ]
+        },
+        {
+          "source": "No urgent recommendation from the available records. Review today's calendar for the next appointment.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 47,
+              "kind": "localized-source",
+              "context": "4f2a6ade2360b7e63019aacb1ba2fe43061876e25d304d97b76395bb4dceace9"
             }
           ]
         },
@@ -5111,6 +5261,12 @@
           "source": "Open Finances",
           "occurrences": [
             {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 43,
+              "kind": "localized-source",
+              "context": "e5c70f3a6167739be9b4619a5d3c2a702147a658698a42c4c28f7f6efc44605e"
+            },
+            {
               "file": "src/lib/gcAssistantPresentation.ts",
               "line": 145,
               "kind": "literal",
@@ -5148,6 +5304,28 @@
               "line": 65,
               "kind": "literal",
               "context": "270845af149f463e2fe70d1e9351b5a80feb6217e37c343f8915b664d0431ad7"
+            }
+          ]
+        },
+        {
+          "source": "Open time and waitlist",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 44,
+              "kind": "localized-source",
+              "context": "85defb19156cc8a9bb04612bd9e77bfc08ae4ffe74d844014398e54820eb06d5"
+            }
+          ]
+        },
+        {
+          "source": "Open time includes current holds and blocks. A waiting request still needs a service-fit check; no offer or booking is created here.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 44,
+              "kind": "localized-source",
+              "context": "5f0d9989b82c6b87b632cec74e119680382f97390faddb2f976442de2581fc92"
             }
           ]
         },
@@ -5281,6 +5459,17 @@
           ]
         },
         {
+          "source": "Outstanding balance",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 43,
+              "kind": "literal",
+              "context": "85778328a2590b7201e2d24c6d58e7c54f580a32b498f07aff14b5d33619313d"
+            }
+          ]
+        },
+        {
           "source": "Outstanding compensation",
           "occurrences": [
             {
@@ -5329,7 +5518,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 39,
+              "line": 41,
               "kind": "localized-source",
               "context": "9550d48905e89730002616176a7857f8a8f0b5609f0d45e734d81cf3c3d6dbf5"
             }
@@ -5594,6 +5783,17 @@
               "line": 61,
               "kind": "literal",
               "context": "0ec490c864786acef47c2375732451381e2fff936ea34d4f8e8e861da00967d2"
+            }
+          ]
+        },
+        {
+          "source": "Post-visit follow-ups",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 46,
+              "kind": "localized-source",
+              "context": "036f4e20c1b3a1e034b734e34302baee15e942020672c3a78d7aa0a680b4afc8"
             }
           ]
         },
@@ -5947,6 +6147,17 @@
           ]
         },
         {
+          "source": "Quantity unavailable",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 45,
+              "kind": "localized-source",
+              "context": "2b8adfce59305c31210683eb341d0c3e8a7da2548ad4c3f1032c41b11e232a6e"
+            }
+          ]
+        },
+        {
           "source": "Rating and service filters",
           "occurrences": [
             {
@@ -5987,6 +6198,17 @@
               "line": 67,
               "kind": "localized-source",
               "context": "ca920343018a292035ed04df951c49aec826780973fb8706338c402fc108aad3"
+            }
+          ]
+        },
+        {
+          "source": "Received after refunds",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 43,
+              "kind": "literal",
+              "context": "e8ea0fd839acf116e3f76e852c84d595678764eef8f214da7541b5311d3987ce"
             }
           ]
         },
@@ -6654,6 +6876,17 @@
           ]
         },
         {
+          "source": "Review inventory",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 45,
+              "kind": "localized-source",
+              "context": "6e02eea12024657049db238f97391be821ade2853af753ab67cb489a1af89509"
+            }
+          ]
+        },
+        {
           "source": "Review latest reply",
           "occurrences": [
             {
@@ -6672,6 +6905,17 @@
               "line": 45,
               "kind": "localized-source",
               "context": "0f6b799a773336c70bdc0adc95275280f0018dc9526f7fbf77064db841198f65"
+            }
+          ]
+        },
+        {
+          "source": "Review low stock before today's services.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 32,
+              "kind": "literal",
+              "context": "89fb09c3ea4deaefee37a9de36722d261c87462492cfe33ab11591b0e8aadd1e"
             }
           ]
         },
@@ -6698,6 +6942,17 @@
           ]
         },
         {
+          "source": "Review overlapping or unassigned appointments.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 29,
+              "kind": "literal",
+              "context": "fcd0253db159d5c13e57eff340dd5d50353883592741ed13383fc819b9e18762"
+            }
+          ]
+        },
+        {
           "source": "Review pages",
           "occurrences": [
             {
@@ -6705,6 +6960,17 @@
               "line": 94,
               "kind": "localized-source",
               "context": "c408b7c0796357cca9a1f029918a8ba415fb656b9d3d97198fafeee3b2f8fa1a"
+            }
+          ]
+        },
+        {
+          "source": "Review pending post-visit follow-ups.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 34,
+              "kind": "literal",
+              "context": "b6c99f8d22253555764821a08d1f7f04a9b49b239aa449598c20017f9184abf0"
             }
           ]
         },
@@ -6753,11 +7019,22 @@
           ]
         },
         {
+          "source": "Review waiting clients against today's open time.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 33,
+              "kind": "literal",
+              "context": "d80ecdb93b59a60082c5c8037681a9bb0c706f18ec6b889a3bc7e9b31ff10ca3"
+            }
+          ]
+        },
+        {
           "source": "Reviews are not assigned to this role.",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 41,
+              "line": 43,
               "kind": "literal",
               "context": "3c08d47f91642c98b2b9fde1fa7a681b1b5a24629a3fc3f790461925ab3b1b6f"
             }
@@ -7152,6 +7429,17 @@
           ]
         },
         {
+          "source": "Sending still requires current customer consent and eligibility. Opening this brief sends nothing.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 46,
+              "kind": "localized-source",
+              "context": "d60c18438bee092b3293912f09ad2fe378213ffa83b401298cdfebae210976c1"
+            }
+          ]
+        },
+        {
           "source": "Service assignments",
           "occurrences": [
             {
@@ -7484,7 +7772,7 @@
             },
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 33,
+              "line": 35,
               "kind": "localized-source",
               "context": "02d644597a89b6c9d68d528fd86bcf8c772f75803bc08ca3e23208357bc0e760"
             }
@@ -7681,6 +7969,17 @@
           ]
         },
         {
+          "source": "Stock to review",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 45,
+              "kind": "localized-source",
+              "context": "b507237524a68a705a934c8363745ec109e9000f7c430785c431831e1a3c04b5"
+            }
+          ]
+        },
+        {
           "source": "Stock unavailable",
           "occurrences": [
             {
@@ -7790,7 +8089,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 30,
+              "line": 32,
               "kind": "localized-source",
               "context": "723bc3f26c5d4a33437af3ddea9dc6408f0fa2b9cd59cfa63c74b0bd757f561a"
             }
@@ -8374,7 +8673,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 30,
+              "line": 32,
               "kind": "localized-source",
               "context": "df7bc205951e25c993cb9032b4bc7141481251b259f15602dd46e62f1494d8d3"
             }
@@ -8473,7 +8772,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 30,
+              "line": 32,
               "kind": "localized-source",
               "context": "bf4560fcce4b75127e2f38beb3ed67732d0ff7271384b374af276e7bff8074f6"
             }
@@ -8502,8 +8801,25 @@
           ]
         },
         {
+          "source": "Today's appointment money",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 43,
+              "kind": "localized-source",
+              "context": "36a2c3d786337a6f00e51927278c7127ec37f3000775f6f9f05394875d7f7ecb"
+            }
+          ]
+        },
+        {
           "source": "Today's appointments",
           "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 42,
+              "kind": "localized-source",
+              "context": "46c298108afbeba7347d30edd8e0a1f01d25197a99d2eb95ac385643b5ba04ea"
+            },
             {
               "file": "src/lib/assistantPageActions.ts",
               "line": 9,
@@ -8517,7 +8833,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 36,
+              "line": 38,
               "kind": "localized-source",
               "context": "830eefc8a8055f0c27d461d9fdef64bc9f3a19be0a3907405b45ec08e2e2e5be"
             }
@@ -8605,7 +8921,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "de0b6dddb492ee9a9921eee0c8b4e2e067edb6594f716eb88218afd27e6eb738"
             }
@@ -8666,10 +8982,27 @@
               "context": "05339ae7c9e53e7f4e2f546e0fc206c628a18f53fb62c18e25d108e61b9ebaf0"
             },
             {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 42,
+              "kind": "localized-source",
+              "context": "05339ae7c9e53e7f4e2f546e0fc206c628a18f53fb62c18e25d108e61b9ebaf0"
+            },
+            {
               "file": "src/components/owner/FinanceCompensation.tsx",
               "line": 17,
               "kind": "localized-source",
               "context": "05339ae7c9e53e7f4e2f546e0fc206c628a18f53fb62c18e25d108e61b9ebaf0"
+            }
+          ]
+        },
+        {
+          "source": "Unavailable, not zero. Refresh to try again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 25,
+              "kind": "localized-source",
+              "context": "0ceb5979ccacc8f43fd110567bd70f85cad4410f00e156a00eb427de0110262a"
             }
           ]
         },
@@ -8779,6 +9112,17 @@
           ]
         },
         {
+          "source": "Updated {value0}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 40,
+              "kind": "localized-source",
+              "context": "baf73872e475b45c0e9b3a16ac449226965526bb4001c27855c96ccc2b56e5a1"
+            }
+          ]
+        },
+        {
           "source": "Upload Photos",
           "occurrences": [
             {
@@ -8866,7 +9210,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 35,
+              "line": 37,
               "kind": "localized-source",
               "context": "5bdbe7fc4352fee52543b2975be2e00cc4d298033f59b1304532782d27e8ed24"
             }
@@ -9023,7 +9367,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 28,
+              "line": 29,
               "kind": "localized-source",
               "context": "f7dcf965a0bbc53a52917d6b00441d226f8271970eddc49a671b1580372095c2"
             }
@@ -9034,7 +9378,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessOverview.tsx",
-              "line": 28,
+              "line": 29,
               "kind": "localized-source",
               "context": "ab8dd4f003d74583d86df41cd0bb64acaeca6eefe843897b672f46d01ad08441"
             }
@@ -9190,6 +9534,17 @@
           ]
         },
         {
+          "source": "Your business today. Facts first, next steps ready.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 37,
+              "kind": "localized-source",
+              "context": "f9fb5b3cddd3770874263f3faaacc879ce5b478f329d459923408599a44e381d"
+            }
+          ]
+        },
+        {
           "source": "Your catalog, stock and orders, together.",
           "occurrences": [
             {
@@ -9219,6 +9574,17 @@
               "line": 45,
               "kind": "localized-source",
               "context": "2d65d3603c7c106bc4d24f91774da14af2e050ab7befc96c97ebced0cc65843c"
+            }
+          ]
+        },
+        {
+          "source": "Your next steps",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessMorningBrief.tsx",
+              "line": 47,
+              "kind": "localized-source",
+              "context": "5f29dec74f7afaf66adcb81f43e30e9563c290d62f87b969cd59ddf100d9447d"
             }
           ]
         },
@@ -9280,14 +9646,14 @@
       ]
     },
     "es": {
-      "source_count": 2471,
-      "covered": 2471,
+      "source_count": 2501,
+      "covered": 2501,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 2471,
-      "covered": 2471,
+      "source_count": 2501,
+      "covered": 2501,
       "missing_count": 0,
       "missing": []
     }

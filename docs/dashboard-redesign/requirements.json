@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; waitlist and review correction locally verified; Google live activation founder-deferred; full201-group release not complete",
+  "status": "IN PROGRESS; Google code and Morning Brief automated only; live Google founder-deferred; full 201-group release not complete",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -19622,18 +19622,25 @@
       "source_line": 618,
       "added_specification": "software-first-2026-09-18",
       "requirement_kind": "product",
-      "assessment": "partial",
-      "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "assessment": "implemented",
+      "implementation_status": "IMPLEMENTED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
+        "src/components/owner/BusinessMorningBrief.tsx",
         "src/components/owner/BusinessOverview.tsx",
-        "src/lib/businessOverview.ts"
+        "src/app/api/salon/morning-brief/route.ts",
+        "src/lib/businessMorningBrief.ts",
+        "src/lib/businessMorningBriefServer.ts"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Owner-only read-only daily brief from scoped canonical appointments, finance books, live availability, waiting windows, stock and post-visit queue. Explicit unavailable states and 1–2 factual next steps; four-language interface."
+      ],
+      "verification": [
+        "docs/dashboard-redesign/MORNING-BRIEF-ACCEPTANCE.md: 5 server/core and 12 Chromium/WebKit brief tests pass; 8 existing overview/calendar regressions pass. Build/TypeScript/lint/design/monitoring/localization pass. 172 migrations and database checks pass with UTC sessions."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Required CI on updated source and final hosted authorized-business acceptance of daily records, refresh, current authorization, incident recovery and links. Full platform release gates remain; no live acceptance claimed.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -19739,7 +19746,7 @@
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
       },
-      "progress_status": "In progress"
+      "progress_status": "Implemented / unverified"
     },
     {
       "id": "SF-MONEY",
@@ -24525,11 +24532,11 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-18T23:40:01.584Z",
-    "head": "b8271a8ffe92a2383c1e9ce205388520babe8f85",
+    "at": "2026-09-19T01:11:50.482Z",
+    "head": "8479deffa87de217f55f1dffb4559cf635896893 (previous pushed checkpoint)",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
     "provider_access": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
-    "local_checkpoint": "Waitlist and review correction verified locally; checkpoint commit pending"
+    "local_checkpoint": "Morning Brief, semantic disabled styling and finance UTC fixture correction verified locally; committed with this checkpoint"
   }
 }

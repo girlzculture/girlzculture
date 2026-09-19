@@ -1,5 +1,8 @@
 -- Disposable fixture only. Transaction always rolls back; never production.
 begin;
+-- Match the CI database clock while deriving business dates from the salon.
+-- UTC midnight must not activate tomorrow's local compensation agreement.
+set local time zone 'UTC';
 create function pg_temp.finance_assert(ok boolean,label text) returns void language plpgsql as $$
 begin if ok is distinct from true then raise exception 'Finance assertion failed: %',label; end if; end $$;
 create function pg_temp.finance_reject(command text,expected text) returns void language plpgsql as $$
@@ -12,7 +15,9 @@ do $$
 declare owner_a uuid:=gen_random_uuid(); owner_b uuid:=gen_random_uuid(); staff_a uuid:=gen_random_uuid(); desk_a uuid:=gen_random_uuid();
   business_a uuid:=gen_random_uuid(); business_b uuid:=gen_random_uuid(); stylist_a uuid:=gen_random_uuid(); stylist_b uuid:=gen_random_uuid(); stylist_peer uuid:=gen_random_uuid();
   request_key uuid:=gen_random_uuid(); payload jsonb; result jsonb; same_result jsonb; own_data jsonb; sale_id uuid; receipt_id uuid;
-  agreement_id uuid; obligation_id uuid; booking_key uuid:=gen_random_uuid();
+  agreement_id uuid; future_agreement_id uuid; obligation_id uuid; booking_key uuid:=gen_random_uuid();
+  business_today date := (now() at time zone 'America/New_York')::date;
+  tomorrow_boundary timestamptz := ((now() at time zone 'America/New_York')::date+1)::timestamp at time zone 'America/New_York';
 begin
   insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values
     (owner_a,'books-owner-a@example.test','',now(),'{"role":"salon_owner"}'),(owner_b,'books-owner-b@example.test','',now(),'{"role":"salon_owner"}'),
@@ -22,6 +27,7 @@ begin
     (business_a,owner_a,'Books A','books-a','books-owner-a@example.test','Active','active','Gold'),
     (business_b,owner_b,'Books B','books-b','books-owner-b@example.test','Active','active','Gold');
   insert into public.stylists(id,salon_id,name) values(stylist_a,business_a,'Stylist A'),(stylist_peer,business_a,'Peer A'),(stylist_b,business_b,'Stylist B');
+  update public.salons set time_zone='America/New_York' where id in (business_a,business_b);
   insert into public.salon_team_members(salon_id,user_id,stylist_id,email,name,role,status,permissions) values
     (business_a,staff_a,stylist_a,'books-stylist@example.test','Stylist A','Stylist','Active','{"earnings_own":true}'),
     (business_a,desk_a,null,'books-desk@example.test','Desk A','Front Desk','Active','{"finance_log":true}');
@@ -62,17 +68,22 @@ begin
   perform public.record_business_finance(business_a,owner_a,gen_random_uuid(),'refund',payload);
   perform pg_temp.finance_reject(format('select public.record_business_finance(%L,%L,%L,%L,%L::jsonb)',business_a,owner_a,gen_random_uuid(),'refund',payload||'{"amount_cents":7000}'),'FINANCE_INVALID_REFUND');
   perform pg_temp.finance_assert((select sum(case stage when 'refund' then -amount_cents else amount_cents end)=6000 from public.business_finance_receipts r where r.salon_id=business_a and r.sale_id=finance_test.sale_id),'refund linked once without rewriting receipt');
-  payload:=jsonb_build_object('stylist_id',stylist_a,'effective_from',current_date,'kind','commission','basis','after_discount','percent',50);
+  payload:=jsonb_build_object('stylist_id',stylist_a,'effective_from',business_today,'kind','commission','basis','after_discount','percent',50);
   result:=public.record_business_finance(business_a,owner_a,gen_random_uuid(),'arrangement',payload);
   agreement_id:=(result->>'id')::uuid;
   perform pg_temp.finance_assert((select compensation->>'kind'='none' from public.business_finance_sales s where s.id=finance_test.sale_id),'new arrangement leaves prior sale unchanged');
   payload:=jsonb_build_object('kind','service','source','phone','name','Silk Press','stylist_id',stylist_a,'list_cents',10000,'discount_cents',2000,'method','transfer');
   result:=public.record_business_finance(business_a,owner_a,gen_random_uuid(),'sale',payload);
   perform pg_temp.finance_assert((select compensation->>'version'=agreement_id::text and compensation->>'percent'='50.00' from public.business_finance_sales where id=(result->>'id')::uuid),'sale freezes effective commission version');
-  payload:=jsonb_build_object('stylist_id',stylist_peer,'effective_from',current_date,'kind','booth','amount_cents',25000,'period','week');
+  payload:=jsonb_build_object('stylist_id',stylist_a,'effective_from',business_today+1,'kind','commission','basis','after_discount','percent',60);
+  result:=public.record_business_finance(business_a,owner_a,gen_random_uuid(),'arrangement',payload);
+  future_agreement_id:=(result->>'id')::uuid;
+  perform pg_temp.finance_assert(public.business_compensation_snapshot(business_a,stylist_a,tomorrow_boundary-interval '1 second')->>'version'=agreement_id::text,'current agreement lasts until business midnight, not UTC midnight');
+  perform pg_temp.finance_assert(public.business_compensation_snapshot(business_a,stylist_a,tomorrow_boundary)->>'version'=future_agreement_id::text,'future agreement starts exactly at business midnight');
+  payload:=jsonb_build_object('stylist_id',stylist_peer,'effective_from',business_today,'kind','booth','amount_cents',25000,'period','week');
   result:=public.record_business_finance(business_a,owner_a,gen_random_uuid(),'arrangement',payload);
   agreement_id:=(result->>'id')::uuid;
-  payload:=jsonb_build_object('arrangement_version',agreement_id,'period_start',current_date,'due_at',now());
+  payload:=jsonb_build_object('arrangement_version',agreement_id,'period_start',business_today,'due_at',now());
   result:=public.record_business_finance(business_a,owner_a,gen_random_uuid(),'obligation',payload);
   obligation_id:=(result->>'id')::uuid;
   perform pg_temp.finance_assert((select amount_cents=25000 and period_end=period_start+6 from public.business_compensation_obligations where id=obligation_id),'rent obligation uses recorded agreement and exact week');

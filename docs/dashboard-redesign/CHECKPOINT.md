@@ -1,3 +1,19 @@
+# Latest checkpoint — Morning Brief and demonstrated CI corrections
+
+Branch `codex/business-dashboard-value-redesign`, Draft PR80 open/unmerged. Previous pushed head `8479deffa87de217f55f1dffb4559cf635896893`; this checkpoint adds Morning Brief and the two evidenced CI corrections. Production remains last verified `d37cbf4` / `6aac503fa5eacb00089c6d87`; no deployment, production migration, provider/configuration/cap change or live notification occurred.
+
+Google founder deferral remains exact: **Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification.** Full implementation/simulated evidence and the single activation checklist are in GOOGLE-BUSINESS-PROFILE-ACCESS.md. No further Google quota/profile requests.
+
+Morning Brief: scoped owner-only appointments/clients/stylists, schedule risks, canonical finance receipts/estimates/balances, cancellations/no-shows, live-calendar intervals and waiting opportunities, low inventory, due post-visit records, 1–2 actionable links. Failures are unavailable rather than zero, exact Engine reference, no writes/provider calls. 5 server/core tests + 12 Chromium/WebKit brief cases pass. Existing overview/calendar 8/8 pass. Four languages covered 2501/2501. Build, TypeScript, targeted lint, design, monitoring and local read-only schema checks pass. Detailed clause evidence in MORNING-BRIEF-ACCEPTANCE.md.
+
+8479 CI: all three browser shards and localization passed in release run35409827609. Final job failed finance SQL fixture because UTC current_date selected tomorrow's New York commission version. Exact failure reproduced locally; fixture now uses salon-local date and adds midnight boundary assertions. Original assertion preserved. New empty local UTC database executes172migrations and all assertions, including waitlist concurrency, successfully. Required35409827640 failed only generic disabled opacity; corrected semantic colors, unchanged design audit passes. Original logs preserved outside Git. Updated source still needs fresh required CI.
+
+Counts across201wholegroups: 1Completed/verified (governance),20Implemented/unverified,155Inprogress,20Notstarted,5Explicitlydeferred. No new product requirement claimed live. All140originalIDs and61addedIDs retained. See requirements.json and regenerated SOFTWARE-FIRST-MAP.md.
+
+Next implementation: onboarding permitted-source draft/provenance/manual fallback, marketing drafts/owner-approved scheduling, configurable inactive referrals, remaining voice/action and business-specific advice clauses. Also complete pricing/provider acceptance preserving existing subscriptions, final full design/permission/persistence evidence, required PR/main CI, compare production migration history, protected pending reviewed migrations, one stable held candidate, bounded changed-path hosted acceptance, then authorized publication and public readback. No new generic deployment permission needed. Both USD25 caps unchanged; Wolof and specified later growth phases deferred.
+
+---
+
 # Current continuation — Google deferred integration and CI corrections
 
 PR80 is Draft/open on codex/business-dashboard-value-redesign. Latest pushed head before this checkpoint: a04d1a8ca66f8071aa391f6ebfcc9aced35fcd53. No production migration/publication; last-known production6aac503fa5eacb00089c6d87/d37cbf4. BothUSD25caps unchanged.
