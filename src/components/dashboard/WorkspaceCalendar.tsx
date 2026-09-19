@@ -15,7 +15,7 @@ export function calendarDayKey(date: Date, timeZone: string) {
 function utcDay(value: string) { return new Date(`${value}T12:00:00Z`); }
 function addDays(date: Date, amount: number) { const next = new Date(date); next.setUTCDate(next.getUTCDate() + amount); return next; }
 
-export default function WorkspaceCalendar({ events, timeZone = "UTC", initialView = "week", initialDate, title = "Appointment calendar" }: { events: WorkspaceEvent[]; timeZone?: string; initialView?: View; initialDate?: string; title?: string }) {
+export default function WorkspaceCalendar({ events, timeZone = "UTC", initialView = "week", initialDate, title = "Appointment calendar", compactHeader = false }: { events: WorkspaceEvent[]; timeZone?: string; initialView?: View; initialDate?: string; title?: string; compactHeader?: boolean }) {
   const { translateSource: t, formatDate } = useI18n();
   const [view, setView] = useState<View>(initialView);
   const [anchor, setAnchor] = useState(() => initialDate || calendarDayKey(new Date(), timeZone));
@@ -30,23 +30,30 @@ export default function WorkspaceCalendar({ events, timeZone = "UTC", initialVie
     const next = view === "month" ? new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + amount, 1, 12)) : addDays(date, amount * (view === "week" ? 7 : 1));
     setAnchor(next.toISOString().slice(0, 10));
   }
-  return <section className="gc-panel" aria-label={t(title)}>
+  const viewControls = <div className="flex gap-1 rounded-xl border border-border p-1" aria-label={t("Calendar view")}>
+    {(["day", "week", "month"] as const).map(mode => <button type="button" key={mode} onClick={() => setView(mode)} aria-pressed={view === mode} className={`${compactHeader ? "min-h-11 px-3" : "min-h-10 px-4"} rounded-lg text-sm font-semibold ${view === mode ? "bg-primary-hover text-white" : "hover:bg-subtle"}`}>{viewLabels[mode]}</button>)}
+  </div>;
+  const dateControls = <div className={`flex min-w-0 flex-wrap items-center ${compactHeader ? "gap-1" : "gap-2"}`}>
+    <button type="button" aria-label={t("Previous {value0}", { value0: viewLabels[view] })} onClick={() => shift(-1)} className={`grid ${compactHeader ? "h-11 w-11" : "h-10 w-10"} place-items-center rounded-lg border border-border`}><ChevronLeft size={18}/></button>
+    <button type="button" onClick={() => setAnchor(calendarDayKey(new Date(), timeZone))} className={`${compactHeader ? "min-h-11 px-2" : "min-h-10 px-3"} rounded-lg border border-border font-semibold`}>{t("Today")}</button>
+    <button type="button" aria-label={t("Next {value0}", { value0: viewLabels[view] })} onClick={() => shift(1)} className={`grid ${compactHeader ? "h-11 w-11" : "h-10 w-10"} place-items-center rounded-lg border border-border`}><ChevronRight size={18}/></button>
+    <label><span className="sr-only">{t("Calendar date")}</span><input type="date" value={anchor} onChange={event => { if (event.target.value && Number.isFinite(Date.parse(event.target.value))) setAnchor(event.target.value); }} className={`${compactHeader ? "min-h-11 w-[124px]" : "min-h-10 max-w-40"} border px-2 text-sm`}/></label>
+  </div>;
+  const searchControl = <input aria-label={t("Filter calendar appointments")} value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Find a client, service or status")} className={`${compactHeader ? "min-h-11 w-full sm:w-40" : "min-h-10 w-full sm:w-64"} rounded-lg border px-3 text-sm`}/>;
+  return <section className={compactHeader ? "rounded-2xl border border-border bg-white p-3 shadow-sm lg:p-[22px]" : "gc-panel"} aria-label={t(title)}>
+    {compactHeader ? <>
+      <div className="hidden lg:block"><h2 className="flex items-center gap-2 text-xl"><CalendarDays size={20} aria-hidden/>{t(title)}</h2><p className="mt-1 text-sm">{timeZone.replaceAll("_", " ")} · {t("Loaded appointments and availability overrides")}</p></div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 lg:mt-4 max-lg:[@media(max-height:600px)]:mb-2">{viewControls}{dateControls}{searchControl}</div>
+    </> : <>
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div><h2 className="flex items-center gap-2 text-xl"><CalendarDays size={20} aria-hidden/>{t(title)}</h2><p className="mt-1 text-sm">{timeZone.replaceAll("_", " ")} · {t("Loaded appointments and availability overrides")}</p></div>
-      <div className="flex gap-1 rounded-xl border border-border p-1" aria-label={t("Calendar view")}>
-        {(["day", "week", "month"] as const).map(mode => <button type="button" key={mode} onClick={() => setView(mode)} aria-pressed={view === mode} className={`min-h-10 rounded-lg px-4 text-sm font-semibold ${view === mode ? "bg-primary-hover text-white" : "hover:bg-subtle"}`}>{viewLabels[mode]}</button>)}
-      </div>
+      {viewControls}
     </header>
     <div className="my-5 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" aria-label={t("Previous {value0}", { value0: viewLabels[view] })} onClick={() => shift(-1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border"><ChevronLeft size={18}/></button>
-        <button type="button" onClick={() => setAnchor(calendarDayKey(new Date(), timeZone))} className="min-h-10 rounded-lg border border-border px-3 font-semibold">{t("Today")}</button>
-        <button type="button" aria-label={t("Next {value0}", { value0: viewLabels[view] })} onClick={() => shift(1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border"><ChevronRight size={18}/></button>
-        <label><span className="sr-only">{t("Calendar date")}</span><input type="date" value={anchor} onChange={event => { if (event.target.value && Number.isFinite(Date.parse(event.target.value))) setAnchor(event.target.value); }} className="min-h-10 max-w-40 border px-2 text-sm"/></label>
-      </div>
-      <input aria-label={t("Filter calendar appointments")} value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Find a client, service or status")} className="min-h-10 w-full rounded-lg border px-3 text-sm sm:w-64"/>
+      {dateControls}{searchControl}
     </div>
-    <h3 className="mb-3 text-base" aria-live="polite">{formatDate(date, { month: "long", year: "numeric", ...(view === "day" ? { day: "numeric" } : {}), timeZone: "UTC" })}</h3>
+    </>}
+    <h3 className={compactHeader ? "sr-only lg:not-sr-only lg:mb-3 lg:text-base" : "mb-3 text-base"} aria-live="polite">{formatDate(date, { month: "long", year: "numeric", ...(view === "day" ? { day: "numeric" } : {}), timeZone: "UTC" })}</h3>
     <div className="max-w-full overflow-x-auto rounded-xl border border-border" tabIndex={0} role="region" aria-label={t("{value0} calendar", { value0: viewLabels[view] })}>
       <div className={view === "day" ? "grid grid-cols-1" : view === "week" ? "grid grid-cols-1 sm:min-w-[770px] sm:grid-cols-7" : "grid min-w-[560px] grid-cols-7"}>
         {days.map(day => {

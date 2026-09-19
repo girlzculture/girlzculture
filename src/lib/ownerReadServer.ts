@@ -6,11 +6,15 @@ import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
 import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
 import { readBusinessFinances } from "@/lib/businessFinanceServer";
+import { readAssistantServiceContribution } from "@/lib/assistantServiceContribution";
 import { assistantAssignedProfessional, assistantRequestedProfessional } from "@/lib/assistantProfessionalScope";
 import { productStock } from "@/lib/businessProductInventory";
 import { recordedSubscriptionMonthlyAmount } from "@/lib/subscriptionAgreement";
 import { readBusinessScheduleOpportunities } from "@/lib/businessScheduleOpportunitiesServer";
 import { businessScheduleOpportunitiesSummary } from "@/lib/businessScheduleOpportunities";
+import { readBusinessRebookingAdvice } from "@/lib/businessRebookingAdviceServer";
+import { businessRebookingAdviceSummary } from "@/lib/businessRebookingAdvice";
+import { businessAppointmentPatterns } from "@/lib/businessAppointmentPatterns";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -28,7 +32,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     // context. A stylist's protected RPC contains only their own earnings.
     const { balances, by_stylist, compensation_position, ...summary } = result.summary;
     const names = new Map(result.stylists.map(row => [String(row.id), String(row.name)]));
-    return { scope: result.scope.kind === "own" ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: result.scope.stylist_id, ...summary,
+    return { scope: result.scope.kind === "own" ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: result.scope.stylist_id, service_contribution: result.scope.kind === "business" ? await readAssistantServiceContribution(context, args) : null, ...summary,
       unpaid_balance_cents: balances.reduce((sum, row) => sum + row.unpaid_cents, 0),
       professional_earnings: Object.entries(by_stylist).map(([id, values]) => ({ name: names.get(id) || null, ...values })), evidence: result.evidence, insights: result.scope.kind === "business" ? result.insights : null,
       compensation_position: Object.entries(compensation_position).map(([id,values]) => ({ name:names.get(id)||null,...values })),
@@ -167,6 +171,11 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const [services, professionals] = await Promise.all([performance("styles", "style_id"), performance("stylists", "stylist_id")]);
     const byStatus: Record<string, number> = {};
     for (const row of bookings) byStatus[String(row.status)] = (byStatus[String(row.status)] || 0) + 1;
+    let patterns: unknown = { available: false, definition: "No complete historical local-day evidence is available in this requested range. Do not infer slow periods or zero demand." };
+    if (start < Math.min(end, Date.now())) {
+      try { patterns = { available: true, ...businessAppointmentPatterns(bookings, { start: args.start, end: args.end, timeZone: String(salon.time_zone) }) }; }
+      catch (error) { if (!/^PATTERN_INVALID_(RECORD|WINDOW)$/.test(String((error as Error)?.message))) throw error; }
+    }
     // Overview permission allows aggregates, not customer identities or contacts.
     const calendarDate = new Intl.DateTimeFormat("en-CA", { timeZone: String(salon.time_zone), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     const calendarAccess = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: "availability" });
@@ -181,7 +190,18 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
         opportunities = { available: false, reason: message, definition: "Current future capacity could not be verified. Unavailable is not zero; do not infer free time or utilization." };
       }
     }
-    return { calendar_gaps: calendar, schedule_opportunities: opportunities, ...metrics, ...currentPeriod, comparison, service_performance: services, professional_performance: professionals, no_show_definition: "Recorded booking status only; a past uncompleted appointment is not evidence of a no-show.", upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
+    const rebookingAccess = await Promise.all(["bookings", "client_history"].map(permission => admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: permission })));
+    for (const access of rebookingAccess) if (access.error) throw access.error;
+    let rebookingAdvice: unknown = null;
+    if (rebookingAccess.every(access => access.data === true)) {
+      try { rebookingAdvice = businessRebookingAdviceSummary(await readBusinessRebookingAdvice(context)); }
+      catch (error) {
+        const message = String((error as { message?: string })?.message || "");
+        if (message === "REBOOKING_ACCESS_DENIED") throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+        rebookingAdvice = { available: false, definition: "Current returning-client history could not be verified. Unavailable is not zero; do not invent clients, counts or contact permission." };
+      }
+    }
+    return { calendar_gaps: calendar, schedule_opportunities: opportunities, rebooking_advice: rebookingAdvice, service_contribution: await readAssistantServiceContribution(context, args), appointment_patterns: patterns, ...metrics, ...currentPeriod, comparison, service_performance: services, professional_performance: professionals, no_show_definition: "Recorded booking status only; a past uncompleted appointment is not evidence of a no-show.", upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
   }
   throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
 }

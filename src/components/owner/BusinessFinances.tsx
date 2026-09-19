@@ -16,6 +16,7 @@ import BusinessDepositSettings from "./BusinessDepositSettings";
 import BusinessMoneyInsights from "./BusinessMoneyInsights";
 import BusinessBookingMoney from "./BusinessBookingMoney";
 import BusinessScheduleOpportunities from "./BusinessScheduleOpportunities";
+import BusinessServiceContribution from "./BusinessServiceContribution";
 import { FinanceField, financePanel as panel, financeInput as input, financeButton as button, financePrimary as primary } from "./FinanceUI";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 
@@ -150,6 +151,7 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
       {data.scope.kind === "business" ? <BusinessMoneyInsights salonId={salonId} books={data.books} period={{from,to,timeZone}}/> : null}
       {data.scope.kind === "business" && (isOwner || (access?.earnings === true && access?.bookings === true)) ? <BusinessBookingMoney key={`${binding}:${from}:${to}`} businessId={salonId} period={{from,to,timeZone}}/> : null}
       {isOwner || access?.availability === true ? <BusinessScheduleOpportunities key={binding}/> : null}
+      {data.scope.kind === "business" && (isOwner || access?.earnings === true && access?.bookings === true && access?.styles === true) ? <BusinessServiceContribution key={`contribution:${binding}`} businessId={salonId} period={{from,to,timeZone}}/> : null}
       </div><div {...panelProps("transactions")}><FinanceRecords books={data.books} summary={s} names={names} loggable={loggable} manageable={manageable} onAction={choose} timeZone={timeZone}/></div>
       {fullScope ? <div {...panelProps("expenses")}><FinancePeriodRecords kind="expenses" includeExpenses={true} salonId={salonId} books={data.books} period={{from,to,timeZone}} summary={s}/></div> : null}
       <div {...panelProps("team")}><section className={panel}><h2 className="font-serif text-xl font-bold">{t("Stylist earnings")}</h2><p className="mt-1 text-xs gc-text-secondary">{t("Service sales, earned compensation and money paid are different figures.")}</p><div className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(s.by_stylist).map(([id, row]) => <div key={id} className="rounded-lg border border-plum/10 p-3 text-sm"><b>{names.get(id) || t("Unassigned")}</b><dl className="mt-2 space-y-1">{[["Service sales", row.service_sales_cents], ["Commission earned", row.commission_earned_cents], ["Wages due", row.wage_due_cents], ["Compensation paid", row.paid_cents], ["Booth rent due", row.booth_rent_due_cents], ["Booth rent received", row.booth_rent_paid_cents]].map(([label, value]) => <div key={label} className="flex justify-between gap-2"><dt>{t(String(label))}</dt><dd>{money(Number(value))}</dd></div>)}</dl></div>)}</div>{!Object.keys(s.by_stylist).length ? <div className="mt-3 space-y-3"><p className="text-sm gc-text-secondary">{t("No stylist earnings in this period.")}</p>{loggable ? <button className={button} onClick={() => choose("sale")}>{t("Record a sale")}</button> : <button className={button} onClick={() => periodControls.current?.querySelector<HTMLInputElement>('input[type="date"]')?.focus()}>{t("Change reporting period")}</button>}</div> : null}</section>

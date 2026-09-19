@@ -33,3 +33,49 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,900],['es',1440,100
   expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
  });
 }
+for (const [locale,width,height,staff] of [['en',390,844,false],['fr',768,1024,false],['es',1440,1000,false],['zh-CN',844,390,false],['en',390,844,true]] as const) {
+ test(`Business products put required details before photos and preserve drafts at ${width}x${height}${staff?' for permitted staff':''}`,async({page},info)=>{
+  const f=await p0OwnerFixture(page,{populated:true,locale});
+  if(staff)await page.route('**/api/salon/workspace',route=>route.fulfill({json:{salon:f.business,isOwner:false,isTeamMember:true,permissions:{products:true},records:f.records}}));
+  const t=(s:string)=>(DASHBOARD_SOURCE_MESSAGES as Record<string,Record<string,string>>)[locale]?.[s]||s;
+  await page.setViewportSize({width,height});await page.goto('/salon/dashboard/products/new');
+  const editor=page.getByRole('dialog',{name:t('Add product'),exact:true});
+  const name=editor.getByRole('textbox',{name:t('Name'),exact:true});
+  const price=editor.getByRole('textbox',{name:t('Regular price (USD)'),exact:true});
+  await expect(name).toBeVisible();await page.screenshot({path:info.outputPath('product-required-first.png')});
+  const photoLabel=editor.getByText(t('Product Photos'),{exact:true});
+  const layout=await Promise.all([name.boundingBox(),price.boundingBox(),photoLabel.boundingBox()]);
+  expect(layout.every(Boolean)).toBe(true);
+  expect(layout[0]!.y+layout[0]!.height).toBeLessThan(layout[2]!.y);
+  expect(layout[1]!.y+layout[1]!.height).toBeLessThan(layout[2]!.y);
+  await name.fill('Owner product draft');await price.fill('37');
+  await editor.getByRole('textbox',{name:t('SKU'),exact:true}).fill('DRAFT-37');
+  await editor.getByRole('textbox',{name:t('Description'),exact:true}).fill('Original unsaved product description');
+  const photos=editor.locator('details').filter({has:page.getByText(t('Product Photos'),{exact:true})});await photos.locator('summary').click();
+  await expect(photos).toContainText(t('Save the record details before adding photos'));
+  await expect(photos.locator('input[type="file"]:enabled')).toHaveCount(0);
+  await photos.locator('summary').click();await photos.locator('summary').click();
+  await expect(name).toHaveValue('Owner product draft');await expect(price).toHaveValue('37');
+  await expect(editor.getByRole('textbox',{name:t('SKU'),exact:true})).toHaveValue('DRAFT-37');
+  await expect(editor.getByRole('textbox',{name:t('Description'),exact:true})).toHaveValue('Original unsaved product description');
+  expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
+  expect(await editor.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+  f.failNextSave();
+  const failure=page.waitForResponse(response=>response.url().endsWith('/api/salon/records/save')&&response.status()===503);
+  await editor.getByRole('button',{name:t('Save Product'),exact:true}).click();await failure;
+  await expect(name).toHaveValue('Owner product draft');await expect(price).toHaveValue('37');
+  await editor.getByRole('button',{name:t('Save Product'),exact:true}).click();
+  await expect.poll(()=>f.records.salon_products.find(row=>row.name==='Owner product draft')?.price).toBe(37);
+  await expect(page).toHaveURL(/\/products\/[0-9a-f-]{36}$/);
+  await page.reload();
+  const saved=page.getByRole('dialog',{name:/Owner product draft/});
+  await expect(saved.getByRole('textbox',{name:t('Description'),exact:true})).toHaveValue('Original unsaved product description');
+  const savedPhotos=saved.locator('details').filter({has:page.getByText(t('Product Photos'),{exact:true})});
+  await savedPhotos.locator('summary').click();await expect(savedPhotos.locator('input[type="file"]')).toBeEnabled();
+  await saved.getByRole('textbox',{name:t('Name'),exact:true}).fill('Another unsaved title');
+  await savedPhotos.locator('summary').click();await savedPhotos.locator('summary').click();
+  await expect(saved.getByRole('textbox',{name:t('Name'),exact:true})).toHaveValue('Another unsaved title');
+  await expect(savedPhotos.locator('input[type="file"]')).toHaveCount(1);
+  expect(f.actions).toHaveLength(2);expect(f.unexpected).toEqual([]);
+ });
+}

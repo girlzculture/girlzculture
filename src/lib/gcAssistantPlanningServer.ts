@@ -66,9 +66,11 @@ function planningResult(tool: string, result: unknown, granted: ReadonlySet<stri
     return { ...card, is_excerpt: Number(card.visit_count) > 12, text_may_be_excerpted: true,
       photo_evidence: "Authorized metadata only; image contents have not been analyzed." };
   }
-  if (tool === "get_business_summary" && typeof result === "object") {
+  if ((tool === "get_business_summary" || tool === "get_earnings_summary") && typeof result === "object") {
     const value = result as Record<string, unknown>;
-    return { ...value, calendar_gaps: granted.has("availability") ? value.calendar_gaps : null, schedule_opportunities: granted.has("availability") ? value.schedule_opportunities : null, service_performance: granted.has("styles") ? value.service_performance : null, professional_performance: granted.has("stylists") ? value.professional_performance : null };
+    const contribution = granted.has("earnings") && granted.has("bookings") && granted.has("styles") ? value.service_contribution : null;
+    if (tool === "get_earnings_summary") return { ...value, service_contribution: contribution };
+    return { ...value, service_contribution: contribution, rebooking_advice: granted.has("bookings") && granted.has("client_history") ? value.rebooking_advice : null, calendar_gaps: granted.has("availability") ? value.calendar_gaps : null, schedule_opportunities: granted.has("availability") ? value.schedule_opportunities : null, service_performance: granted.has("styles") ? value.service_performance : null, professional_performance: granted.has("stylists") ? value.professional_performance : null };
   }
   if (tool === "get_plan_status" && typeof result === "object") {
     const value = result as { business_usage?: Record<string, unknown> };
@@ -160,6 +162,8 @@ export async function planOwnerRequest(input: {
   // the tool's broad permission. Reproject from current SQL authorization on
   // every follow-up/answer, before old facts or transcript reach the model.
   const refreshedHistory = await Promise.all((previous.data || []).map(async row => {
+    if (["get_business_summary", "get_earnings_summary"].includes(row.tool) && row.result?.service_contribution != null && (!granted.has("earnings") || !granted.has("bookings") || !granted.has("styles"))) clientHistoryChanged = true;
+    if (row.tool === "get_business_summary" && row.result?.rebooking_advice != null && (!granted.has("bookings") || !granted.has("client_history"))) clientHistoryChanged = true;
     if (granted.has(row.permission) && Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as AssistantTool].risk >= 3) {
       try { await assertAssistantProposalScope(input.context, row.tool, row.arguments || {}); if (row.tool === "prepare_booking_reschedule_proposal") await assertAssistantRescheduleScope(input.context, row.arguments?.booking_id); }
       catch (error) {
@@ -168,7 +172,7 @@ export async function planOwnerRequest(input: {
       }
     }
     const transcriptRead = conversationIds.includes(row.id) && Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as AssistantTool].risk === 1;
-    if (granted.has(row.permission) && (transcriptRead || ["get_outstanding_balances", "get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_booking_messages", "get_availability", "get_calendar_gaps", "get_manual_sale_options"].includes(row.tool))) {
+    if (granted.has(row.permission) && (transcriptRead || ["get_outstanding_balances", "get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_earnings_summary", "get_booking_messages", "get_availability", "get_calendar_gaps", "get_manual_sale_options"].includes(row.tool))) {
       try {
         const fresh = await readAssistantData(input.context, row.tool, row.arguments);
         if (JSON.stringify(fresh) !== JSON.stringify(row.result)) clientHistoryChanged = true;

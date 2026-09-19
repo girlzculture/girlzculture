@@ -11,6 +11,8 @@ import { DASHBOARD_REDESIGN_SOURCE_MESSAGES } from "@/i18n/dashboard-redesign-so
 import { BOOKING_MONEY_COPY } from "@/i18n/business-booking-money-copy";
 import { REFERRAL_COPY_ROWS } from "@/i18n/business-referral-copy";
 import { CUSTOMER_CAMPAIGN_COPY_ROWS } from "@/i18n/business-customer-campaign-copy";
+import { SERVICE_CONTRIBUTION_COPY_ROWS } from "@/i18n/business-service-contribution-copy";
+import { BUSINESS_REBOOKING_COPY } from "@/i18n/business-rebooking-copy";
 type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
@@ -209,7 +211,8 @@ const wo: SourceCatalog = {
 };
 
 const operationalMoneyMessages = (column: 1 | 2 | 3): SourceCatalog => Object.fromEntries(
-  [...BOOKING_MONEY_COPY, ...REFERRAL_COPY_ROWS, ...CUSTOMER_CAMPAIGN_COPY_ROWS].map(row => [row[0], row[column]]),
+  [...BOOKING_MONEY_COPY, ...REFERRAL_COPY_ROWS, ...CUSTOMER_CAMPAIGN_COPY_ROWS, ...SERVICE_CONTRIBUTION_COPY_ROWS,
+    ...Object.keys(BUSINESS_REBOOKING_COPY.en).map(key => ["en", "fr", "es", "zh-CN"].map(locale => BUSINESS_REBOOKING_COPY[locale][key as keyof typeof BUSINESS_REBOOKING_COPY.en]))].map(row => [row[0], row[column]]),
 );
 
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {

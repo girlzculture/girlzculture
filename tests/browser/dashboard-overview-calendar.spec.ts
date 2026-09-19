@@ -37,3 +37,44 @@ for(const [width,height] of [[390,844],[768,900],[1440,1000],[844,390]]){
   expect(fixture.unexpected).toEqual([]);
  });
 }
+
+for(const [width,height] of [[320,844],[390,844],[844,390]]) {
+ test(`Dashboard redesign Calendar starts with visible dates and keeps controls at ${width}x${height}`,async({page},info)=>{
+  await page.clock.setFixedTime(new Date('2026-09-21T14:00:00Z'));
+  const fixture=await p0OwnerFixture(page,{populated:true});
+  fixture.records.bookings[0]={...fixture.records.bookings[0],appointment_datetime:'2026-09-21T17:00:00Z',guest_name:'Calendar layout client'};
+  fixture.records.stylists.push({id:'professional-B',salon_id:fixture.business.id,name:'Second professional',is_active:true});
+  await page.setViewportSize({width,height}); await page.goto('/salon/dashboard/availability');
+  const calendar=page.getByRole('region',{name:'Appointment calendar',exact:true});
+  const dates=calendar.getByRole('region',{name:'Week calendar',exact:true});
+  await expect(dates).toBeVisible(); await page.evaluate(()=>document.fonts.ready);
+  const geometry=await dates.evaluate(element=>{const rect=element.getBoundingClientRect();const header=document.querySelector('.gc-owner-header')!.getBoundingClientRect();const nav=document.querySelector('[data-owner-mobile-navigation]')!.getBoundingClientRect();return{top:rect.top,visibleHeight:Math.min(rect.bottom,nav.top)-Math.max(rect.top,header.bottom),scrollY:window.scrollY,navTop:nav.top};});
+  await info.attach('initial-calendar-geometry',{body:JSON.stringify(geometry),contentType:'application/json'});
+  await page.screenshot({path:info.outputPath('calendar-initial-viewport.png')});
+  expect(geometry.scrollY).toBe(0);
+  expect(geometry.visibleHeight,JSON.stringify(geometry)).toBeGreaterThanOrEqual(Math.min(96,height/8));
+  for(const control of [calendar.getByRole('button',{name:'Day',exact:true}),calendar.getByRole('button',{name:'Today',exact:true}),calendar.getByLabel('Calendar date',{exact:true}),page.getByRole('combobox',{name:'Calendar professional',exact:true}),page.getByRole('link',{name:'Add an appointment',exact:true})]) {
+    expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await expect(calendar.getByText('Calendar layout client',{exact:true})).toHaveCount(1);
+  await page.getByRole('combobox',{name:'Calendar professional',exact:true}).selectOption('professional-B');
+  await expect(calendar.getByText('Calendar layout client',{exact:true})).toHaveCount(0);
+  await page.getByRole('combobox',{name:'Calendar professional',exact:true}).selectOption('');
+  await calendar.getByRole('button',{name:'Day',exact:true}).click();
+  await calendar.getByLabel('Calendar date',{exact:true}).fill('2026-09-22');
+  await expect(calendar.getByText('Calendar layout client',{exact:true})).toHaveCount(0);
+  await calendar.getByRole('button',{name:'Today',exact:true}).click();
+  await expect(calendar.getByText('Calendar layout client',{exact:true})).toHaveCount(1);
+  await calendar.getByRole('textbox',{name:'Filter calendar appointments',exact:true}).fill('No such client');
+  await expect(calendar.getByText('Calendar layout client',{exact:true})).toHaveCount(0);
+  await calendar.getByRole('textbox',{name:'Filter calendar appointments',exact:true}).fill('');
+  await expect(page.getByRole('link',{name:'Add an appointment',exact:true})).toHaveAttribute('href','/salon/dashboard/bookings/new');
+  await expect(page.getByRole('link',{name:'Add Availability',exact:true})).toHaveAttribute('href','/salon/dashboard/availability/stylists');
+  await page.getByText('Calendar tools',{exact:true}).click();
+  for(const [label,path] of [['Store hours','hours'],['Bookable time slots','slots'],['Per-stylist availability','stylists'],['Overrides & blockouts','overrides']]) await expect(page.getByRole('link',{name:label,exact:true})).toHaveAttribute('href','/salon/dashboard/availability/'+path);
+  await page.getByText('Calendar tools',{exact:true}).click();
+  await expect(page.getByRole('button',{name:'Mark Full Today',exact:true})).toBeVisible();
+  expect(fixture.actions).toEqual([]); expect(fixture.unexpected).toEqual([]);
+ });
+}

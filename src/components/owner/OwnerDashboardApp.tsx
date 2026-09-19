@@ -5,6 +5,7 @@ import ReviewsWorkspace from "./ReviewsWorkspace";
 import GoogleBusinessProfileSettings from "./GoogleBusinessProfileSettings";
 import BusinessInventory from "./BusinessInventory";
 import BookingsWorkspace from "./BookingsWorkspace";
+import BusinessRebookingAdvice from "./BusinessRebookingAdvice";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
@@ -1487,7 +1488,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           ) : null}
         </div>
       ) : null}
-      <Panel className="mt-5 overflow-x-auto" role="region" aria-label="Stripe billing history" tabIndex={0}>
+      <Panel className="mt-5 min-w-0" role="region" aria-label="Stripe billing history" tabIndex={0}>
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-serif text-xl text-plum">
@@ -1502,7 +1503,23 @@ function SubscriptionV2({ c }: { c: Ctx }) {
             Test mode
           </span>
         </div>
-        <table className="mt-4 w-full min-w-[760px] text-left text-[10px]">
+        {c.billingEvents.length ? <>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:hidden">
+          {c.billingEvents.map((event) => <article key={event.id} className="min-w-0 rounded-xl border border-border p-4 text-sm">
+            <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-4">
+              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">Event</dt><dd className="mt-1 break-words font-semibold">{String(event.event_type || "Billing event")}</dd>{event.failure_reason ? <dd className="mt-1 break-words gc-text-danger">{String(event.failure_reason)}</dd> : null}</div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Date</dt><dd className="mt-1 break-words">{dateText(event.event_date, c.salon.time_zone, c.locale)}</dd></div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Plan</dt><dd className="mt-1 break-words">{[event.previous_plan,event.new_plan].filter(Boolean).join(" → ") || "—"}</dd></div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Collected</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_collected || 0) / 100)}</dd></div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Refunded</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_refunded || 0) / 100)}</dd></div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Credited</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_credited || 0) / 100)}</dd></div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Payment</dt><dd className="mt-1"><Status value={String(event.payment_status || "Not recorded")} /></dd></div>
+              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">Stripe reference</dt><dd className="mt-1 break-all" data-no-translate>{String(event.stripe_invoice_id || event.stripe_event_id || "—")}</dd></div>
+            </dl>
+          </article>)}
+        </div>
+        <div className="mt-4 hidden overflow-x-auto lg:block">
+        <table className="w-full min-w-[760px] text-left text-[10px]">
           <thead>
             <tr>
               {[
@@ -1515,7 +1532,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 "Payment",
                 "Stripe reference",
               ].map((label) => (
-                <th key={label} className="border-b border-plum/10 py-2 pr-3">
+                <th key={label} scope="col" className="border-b border-plum/10 py-2 pr-3">
                   {label}
                 </th>
               ))}
@@ -1559,15 +1576,10 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 </td>
               </tr>
             ))}
-            {!c.billingEvents.length ? (
-              <tr>
-                <td colSpan={8}>
-                  <Empty text="No signed Stripe billing events have been received for this salon yet." />
-                </td>
-              </tr>
-            ) : null}
           </tbody>
         </table>
+        </div>
+        </> : <div className="mt-4"><Empty text="No signed Stripe billing events have been received for this salon yet." /></div>}
       </Panel>
     </>
   );
@@ -2316,19 +2328,31 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         >
         <OwnerDetailHeader hideOnMobile title={active ? `Edit ${active.name || "product"}` : "Add product"} subtitle="Manage product media, price, inventory, pickup, shipping, and publication in one focused workspace." fallbackHref={productListHref} status={active ? String(active.product_status || "Draft") : "New product"}/>
         <Panel>
-          <h2 className="font-serif text-xl text-plum">Add / Edit Product</h2>
+          <h2 className="hidden font-serif text-xl text-plum lg:block">Add / Edit Product</h2>
           <form
             key={active?.id || "new"}
             onSubmit={submit}
-            className="mt-4 space-y-4"
+            className="space-y-4 lg:mt-4"
           >
-            <ImageUpload
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Name" name="name" defaultValue={active?.name} required />
+              <Field label="Regular price (USD)" name="price" type="number" defaultValue={active?.price ?? ""} required />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="SKU" name="sku" defaultValue={active?.sku} placeholder="Optional internal SKU" />
+              <Field label="Sale price (optional)" name="sale_price" type="number" defaultValue={active?.sale_price ?? ""} />
+            </div>
+            <TextArea label="Description" name="description" defaultValue={active?.description} />
+            <details className="rounded-xl border border-border p-3">
+              <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">Product Photos</summary>
+              <div className="mt-3">
+            {active?.id ? <ImageUpload
               bucket="salon-photos"
               preset="product"
               multiple
               maxFiles={12}
               folder={`salons/${c.salon.id}/products`}
-              label="Product Photos"
+              label="Upload Photos"
               value={images}
               attachment={
                 active?.id
@@ -2370,25 +2394,9 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                   );
                 }
               }}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Name" name="name" defaultValue={active?.name} required />
-              <Field
-                label="SKU"
-                name="sku"
-                defaultValue={active?.sku}
-                placeholder="Optional internal SKU"
-              />
-            </div>
-            <TextArea
-              label="Description"
-              name="description"
-              defaultValue={active?.description}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Regular price (USD)" name="price" type="number" defaultValue={active?.price ?? ""} required />
-              <Field label="Sale price (optional)" name="sale_price" type="number" defaultValue={active?.sale_price ?? ""} />
-            </div>
+            /> : <p className="text-sm gc-text-secondary">{c.translateSource("Save the record details before adding photos")}</p>}
+              </div>
+            </details>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-[10px] font-bold">Status</span>
@@ -2685,25 +2693,24 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   };
   const workspace = workspaces[recordId];
 
-  const calendar = <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <label className="text-sm font-semibold">{c.translateSource("Calendar professional")}<select value={calendarStylist} onChange={event=>setCalendarStylist(event.target.value)} className="ml-2 min-h-11 max-w-56 rounded-xl border border-border bg-white px-3"><option value="">{c.translateSource("All staff")}</option>{c.stylists.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-      <Link href="/salon/dashboard/bookings/new" className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white"><Plus size={17}/>{c.translateSource("Add an appointment")}</Link>
+  const calendar = <div className="space-y-3 lg:space-y-4 max-lg:[@media(max-height:600px)]:space-y-2">
+    <div className="flex items-center justify-between gap-2 lg:gap-3">
+      <label className="min-w-0 flex-1 text-sm font-semibold lg:flex-none"><span className="sr-only lg:not-sr-only">{c.translateSource("Calendar professional")}</span><select value={calendarStylist} onChange={event=>setCalendarStylist(event.target.value)} className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-white px-2 lg:ml-2 lg:w-auto lg:max-w-56 lg:px-3"><option value="">{c.translateSource("All staff")}</option>{c.stylists.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+      <Link href="/salon/dashboard/bookings/new" className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-white lg:px-4"><Plus size={17}/>{c.translateSource("Add an appointment")}</Link>
     </div>
-    <WorkspaceCalendar key={`${initialCalendarDate || "today"}:${initialCalendarStylist}`} timeZone={timeZone} initialDate={initialCalendarDate} initialView={initialCalendarDate ? "day" : "week"} events={[
+    <WorkspaceCalendar compactHeader key={`${initialCalendarDate || "today"}:${initialCalendarStylist}`} timeZone={timeZone} initialDate={initialCalendarDate} initialView={initialCalendarDate ? "day" : "week"} events={[
       ...activeBookings.filter(row=>!calendarStylist||row.stylist_id===calendarStylist).map(row=>({id:String(row.id),start:String(row.appointment_datetime),end:Number(row.duration_hours)>0&&Number.isFinite(Date.parse(String(row.appointment_datetime)))?new Date(Date.parse(String(row.appointment_datetime))+Number(row.duration_hours)*3600000).toISOString():undefined,title:String(row.guest_name||c.translateSource("Appointment")),subtitle:[row.manual_service_name||styleText(c,row.style_id),stylistText(c,row.stylist_id)].join(" · "),status:String(row.status),href:"/salon/dashboard/bookings/"+row.id})),
       ...c.blockouts.filter(row=>(!calendarStylist||!row.stylist_id||row.stylist_id===calendarStylist)&&Number.isFinite(Date.parse(String(row.starts_at)))&&Number.isFinite(Date.parse(String(row.ends_at)))).map(row=>({id:String(row.id),start:String(row.starts_at),end:new Date(Math.min(Date.parse(String(row.ends_at)),row.released_at&&Number.isFinite(Date.parse(String(row.released_at)))?Date.parse(String(row.released_at)):Infinity)).toISOString(),title:String(row.reason||c.translateSource("Unavailable")),subtitle:row.stylist_id?stylistText(c,row.stylist_id):c.translateSource("Whole salon"),status:row.released_at?"Released override":"Availability override",kind:"unavailable" as const,href:"/salon/dashboard/availability/"+row.id})),
     ]}/>
   </div>;
   if (!recordId || recordId === "calendar") {
-    return <div className="space-y-4">
-      <Title title="Availability & Calendar" subtitle={c.translateSource("Manage your team's schedule in {value0}.",{value0:timeZone.replaceAll("_"," ")})}/>
-      <div className="flex flex-wrap gap-2">
+    return <div className="flex flex-col gap-3 lg:gap-4 max-lg:[@media(max-height:600px)]:gap-2">
+      <header className="order-1 flex flex-wrap items-end justify-between gap-3"><div><h1 className="font-serif text-2xl font-semibold tracking-tight text-plum lg:text-5xl max-lg:[@media(max-height:600px)]:text-xl">{c.translateSource("Availability & Calendar")}</h1><p className="mt-1 text-xs text-muted lg:mt-2 lg:text-sm max-lg:[@media(max-height:600px)]:mt-0.5">{c.translateSource("Manage your team's schedule in {value0}.",{value0:timeZone.replaceAll("_"," ")})}</p></div><div className="flex flex-wrap gap-2">
         <Link href="/salon/dashboard/availability/stylists" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{c.translateSource("Add Availability")}</Link>
         <details className="relative"><summary className="flex min-h-11 cursor-pointer list-none items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{c.translateSource("Calendar tools")}</summary><div className="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-border bg-white p-2 shadow-lg">{[["hours","Store hours"],["slots","Bookable time slots"],["stylists","Per-stylist availability"],["overrides","Overrides & blockouts"]].map(([path,label])=><Link key={path} href={"/salon/dashboard/availability/"+path} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}</div></details>
-      </div>
-      <SalonOpenStatusControl salon={c.salon}/>
-      {calendar}
+      </div></header>
+      <div className="order-3 lg:order-2"><SalonOpenStatusControl salon={c.salon} compact/></div>
+      <div className="order-2 lg:order-3">{calendar}</div>
     </div>;
   }
 
@@ -3198,7 +3205,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     }
   }
   if (recordId === "new") return <><OwnerDetailHeader title="Add an appointment" subtitle="Record appointments received by your business." fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(c.salon.id)} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => { c.setBookings(current => [row, ...current.filter(item => item.id !== row.id)]); router.push(`/salon/dashboard/bookings/${row.id}`); }}/></>;
-  if (!recordId) return <BookingsWorkspace bookings={c.bookings} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} canUseCalendar={!c.access || c.access.availability === true}/>;
+  if (!recordId) return <><BookingsWorkspace bookings={c.bookings} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} canUseCalendar={!c.access || c.access.availability === true}/>{(c.isOwner || c.access?.client_history === true) && <BusinessRebookingAdvice businessId={String(c.salon.id)} accessKey={JSON.stringify([c.isOwner, c.access])} canReviewUpdates={c.isOwner && (!c.access || c.access.promotions === true)}/>}</>;
   if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}</>;
   return (
     <>

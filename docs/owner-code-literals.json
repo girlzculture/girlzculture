@@ -648,6 +648,22 @@
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "context": "3e9af128d2873e06bd2c5df4a0c04639078d7e8b92fdf8c46bf3fbf8fbd2e285"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "528d5b3e9d2399be8475177a138388d8facd389fe151848cc39f81799c819a7a"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "413788027170931b2c091f4f22b2d3e17e72a8d6a83fa2b5efe4eebf8f27250f"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "8b466f3e0eee500cf8ec62ce0d68a5df16a190ff6975720eb77460159daac339"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "54c191930c30e1fdbc3526cbb1efba0cfaa14ca593e20af00445338473a6a672"
         }
       ]
     },
@@ -672,6 +688,10 @@
         {
           "file": "src/components/ImageUpload.tsx",
           "context": "a6b5df829dee9383ced78eb9d183d680bb43f8d0fe37600dc39da1d159146254"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "0f87449f5e6d1c61177ac476c3af7cdac51031c926816d80bf3f08ea652513fa"
         }
       ]
     },
@@ -1429,6 +1449,10 @@
         },
         {
           "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         }
       ]
@@ -2442,6 +2466,14 @@
         {
           "file": "src/components/owner/BusinessScheduleOpportunities.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessRebookingAdvice.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -3044,6 +3076,18 @@
         {
           "file": "src/components/owner/FinancePeriodRecords.tsx",
           "context": "de28e2d619f59ffbd7ee83304969d9590f3a4b7662e86e45d1d19270a44f53f1"
+        },
+        {
+          "file": "src/components/owner/BusinessRebookingAdvice.tsx",
+          "context": "271338eb79136f5780fa5da5072960a99bda85cc09bbefe17807898a1a358306"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "a815fbf793f7610c9dc3a3482f4d63ab5934bcfc1f51213513b6f706b0275979"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "271338eb79136f5780fa5da5072960a99bda85cc09bbefe17807898a1a358306"
         }
       ]
     },
@@ -3670,6 +3714,56 @@
         {
           "file": "src/components/owner/BusinessScheduleOpportunities.tsx",
           "context": "35ff0d54f5387a68d510ce6c6517b6c4d69a14cf51de82afab90bf09225d2eee"
+        }
+      ]
+    },
+    {
+      "source": "{value0}?{value1}",
+      "reason": "API endpoint and URLSearchParams request URL composition; never rendered interface wording.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "fd5cb6f7ae7ae5112aac4dd4b24ad455b94f09208141164811480aba9fc8bae2"
+        }
+      ]
+    },
+    {
+      "source": "contribution:{value0}",
+      "reason": "React component identity key for business and permission binding; not rendered copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "context": "37bc88aa7d5ecdb05528ed2eca1cdfc006254a6315b70d34a1f6e3456bd2f7b7"
+        }
+      ]
+    },
+    {
+      "source": "dateBasis",
+      "reason": "Typed key passed to the four-language rebooking dictionary. The rendered English sentence and its translations remain in the dashboard source catalog and dictionary parity test.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessRebookingAdvice.tsx",
+          "context": "947dec3e062d1fecd5b88f3ddc56f198b22b1c448ddda65d8d78931852d74e6c"
+        }
+      ]
+    },
+    {
+      "source": "noHistory",
+      "reason": "Typed key passed to the four-language rebooking dictionary. The rendered English sentence and its translations remain in the dashboard source catalog and dictionary parity test.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessRebookingAdvice.tsx",
+          "context": "22aa8fe54073216ee086ac5e4060cd91608e07f9ee313d24d28acbf2117d9291"
+        }
+      ]
+    },
+    {
+      "source": "space-y-4 {value0}",
+      "reason": "Tailwind className expression toggling mobile photo tools visibility. No displayed text is classified here.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessPhotoLibrary.tsx",
+          "context": "ff6fa0801482b9cc0118e004e3567d631b902efed92a39481b0dae9fc446225d"
         }
       ]
     }

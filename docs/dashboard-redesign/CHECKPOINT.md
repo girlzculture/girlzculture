@@ -1,4 +1,46 @@
-# Current checkpoint — reviewed181 workflows and CI fixture correction
+# Current checkpoint — scoped advice, service contribution and mobile corrections
+
+PR [#80](https://github.com/girlzculture/girlzculture/pull/80) remains Draft/open/unmerged on `codex/business-dashboard-value-redesign`. This checkpoint follows pushed `8e89743b48274ce4acdb2515f31a62ec3fc9a300`; its new commit and automatic CI links are recorded on the PR. Production was last rechecked read-only and remains locked on deployment `6aac503fa5eacb00089c6d87`, source `d37cbf4ef3954063797946b7508352470653a739`, at https://girlzculture.com. No PR80 changes are claimed live.
+
+The final production build passes with identical before/after source digest `bc3a57809a3a5a60141e27ffe0438f83f6b22e3dc8e8d3da625e4cca55f0d200` across803 application/assets/config files. TypeScript passes. Lint passes with14 warnings and no errors; subsequent Calendar/test edits have targeted lint passes. Design checks,160-route monitoring,183-file migration order and strict owner localization pass. Required EN/FR/ES/Simplified Chinese each cover2722/2722 sources;991 measured Wolof gaps remain deferred. Independent source/security/SQL review found no blocker in these bounded changes.
+
+## Implemented and locally verified
+
+- Own-business historical appointment patterns use completed local days and measured own-booking counts. Empty periods are never inferred to be slow opening periods. Aggregate evidence reaches the actual planner/answer path without customer identities.
+- Returning-client check-in uses canonical own-business identities, at least three completed visits since the displayed lookback start,42local days since the last visit and no active current/future appointment. Assigned staff and secondary permissions are enforced before model input. It provides existing record navigation; it does not authorize contact or send messages.
+- Owner-reviewed service contribution binds canonical service appointments to existing recorded expense/wage allocations, explicit completeness/zero declarations, source budgets, revisions and fingerprints. Stale/lost-response recovery preserves the draft without silently applying changes. Fresh authoritative readback is required. Assistant projections exclude clients, notes and source IDs. Recorded contribution with fewer appointments is **not** proof of net profit, spare capacity or the complete profitable-but-underbooked requirement.
+- Photos and Calendar now bring actual gallery/date content into the mobile viewport while retaining tools and44px controls. Product required fields precede optional photo setup. Mobile subscription history cards retain every recorded amount, status, failure explanation and full provider reference.
+
+## Exact browser evidence
+
+**112 unique relevant cases have passing local production-fixture evidence**, assembled without repeating valid unchanged results:
+
+| Run | Passing evidence | Other results |
+| --- | --- | --- |
+| `combined-183-final-advice-products-browser.log` |61 | One WebKit Subscription fixture failure; four cases did not run. Original runner error retained. Includes all14 returning-client and20 contribution cases passing. |
+| `combined-183-final-subscription-browser.log` |5 in22.4seconds | Failed WebKit case corrected and four previously unrun cases pass; no retries, skips or app changes. |
+| `combined-183-advice-products-browser.log` |4 retained original Chromium Product cases | Original new Product test locator failure is preserved. The locator was corrected without dropping save/draft/upload assertions. |
+| `combined-183-final-mobile-calendar-browser.log` |34 in2.7minutes | Both engines:6 Calendar geometry,8 overview/calendar,8 profile/photo persistence,10 original-name/search and2 remaining WebKit Finance draft recovery. |
+| `combined-183-mobile-calendar-browser.log` |2 retained Chromium Finance draft cases | Initial Calendar landscape failure preserved; other Calendar passes were reverified after source correction and are not counted twice. |
+| `combined-183-photo-geometry.log` |6 retained Photos cases | Both engines; Photos source unchanged by the subsequent Calendar correction. |
+
+The Calendar landscape failure was real:43.375px of visible dates missed the unchanged48.75px requirement. A low-height-only spacing correction passes without reducing controls. The Subscription failure was a test isolation defect: the initial workspace request was fulfilled by the fixture; after `/sw.js` registered, reload bypassed page-route mocks and reached the deliberately rejecting local backend. This spec now blocks service workers, as the existing fixture contract requires. The same frozen application build passes all five affected WebKit cases. No production authentication change was made. Screenshots of Photos, Calendar portrait/landscape, Product required fields, subscription cards and both advice panels were visually inspected for the bounded changed states. Full14-section/editor/keyboard acceptance remains incomplete.
+
+Logs and traces reside in sibling `redesign-evidence` outside Git. Feature acceptance documents retain exact failed-before and passed-after evidence. The unchanged operational Calendar Wolof record-name test does not establish Wolof assistant language support.
+
+## Database, CI and release boundaries
+
+Migrations182/183 and actual-role SQL checks pass incrementally on disposable `girlzculture_combined_183_release`, cloned from verified181, including affected180/181 verifiers. Pinned Supabase2.111.0 read-only advisors report0errors and77warnings identical to181, with0new findings. This is not a fresh183 full-chain or production application. No production migration ran.
+
+Original required [run35436470099](https://github.com/girlzculture/girlzculture/actions/runs/35436470099) remains failed:1134passed,9failed,5skipped. Original release [run35436470116](https://github.com/girlzculture/girlzculture/actions/runs/35436470116) had the same receipt-alert ambiguity and a stale historical tool-inventory assertion. Exact causes and focused corrections are in CI-8E89743-CORRECTION.md; original artifacts remain intact. Current required CI must pass on the new commit; no unchanged workflow rerun was dispatched.
+
+The Stripe400 diagnosis is confirmed: stored objects exist in the separate Girlz Culture sandbox, while the failing request used the live account. The existing secure request to configure `STRIPE_SANDBOX_SECRET_KEY` in the protected GitHub `billing-sandbox` environment remains pending at the latest check. The sandbox webhook currently targets production and needs isolated routing before provider mutations. Explicit phase payment-method overrides remain required unfinished work; a safe external-edit concurrency contract is not established. No replacement subscription/customer, charge, secret copy or billing configuration change occurred.
+
+Whole-group tracker: **201 retained =171 In progress,20 Implemented/unverified,4 Not started,1 Completed governance,5 Explicitly deferred**. Counts preserve all original140 plus61 later groups and every detailed clause; they are not a completion percentage. Remaining work includes detailed advice/actions, all14-screen/editor acceptance, changed-provider/hosted persistence, reviewed protected migrations, final PR/main checks and public deployment verification. BothUSD25 caps remain unchanged. Google remains **Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification.** Publication is already authorized after the agreed conditions pass.
+
+---
+
+# Historical checkpoint — reviewed181 workflows and CI fixture correction
 
 PR [#80](https://github.com/girlzculture/girlzculture/pull/80) remains Draft/open/unmerged on `codex/business-dashboard-value-redesign`. This checkpoint follows pushed `c0fc677103b8999863d6d009939bcdb72c5842d8`. Netlify was rechecked read-only: production is still locked on deployment `6aac503fa5eacb00089c6d87`, source `d37cbf4ef3954063797946b7508352470653a739`, at https://girlzculture.com. None of the new PR work is claimed live.
 

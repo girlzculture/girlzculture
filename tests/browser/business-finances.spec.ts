@@ -97,9 +97,11 @@ test(`Business finance ${kind} draft retains entry choices through a pending and
   await period.getByLabel('From',{exact:true}).fill('2026-08-01');await period.getByLabel('To',{exact:true}).fill('2026-08-31');
   await period.getByRole('button',{name:'Apply dates',exact:true}).click();await nextRequested;
   try{await expect(finances.getByRole('status').filter({hasText:'Loading finance records'})).toBeVisible();await assertDraft();}finally{releaseNext();}
-  const failure=finances.getByRole('alert');await expect(failure).toContainText('99000000-0000-4000-8000-000000000802');await assertDraft();
+  const failure=finances.locator(':scope > [role="alert"]').filter({has:page.getByRole('button',{name:'Reload',exact:true})});
+  await expect(failure).toHaveCount(1);await expect(failure).toContainText('99000000-0000-4000-8000-000000000802');await assertDraft();
   await failure.getByRole('button',{name:'Reload',exact:true}).click();
   await expect(failure).toHaveCount(0);await expect(finances.getByRole('status').filter({hasText:'Loading finance records'})).toHaveCount(0);await assertDraft();
+  await expect(finances.getByRole('region',{name:'Schedule opportunities',exact:true}).getByRole('alert')).toContainText('Unavailable, not zero.');
   await expect(finances.getByRole('form',{name:'Record balance',exact:true})).toHaveCount(0);
   expect(fixture.unexpected).toEqual([]);
 });
@@ -211,7 +213,9 @@ for (const [width,height] of [[390,844],[768,900],[1440,1000],[844,390]]) {
     await form.getByLabel('Price paid',{exact:true}).fill('125.50');
     await form.getByLabel('Stylist',{exact:true}).selectOption(fixture.ids.professional);
     await form.getByRole('button',{name:'Save record',exact:true}).click();
-    await expect(page.getByRole('region',{name:'Finances',exact:true}).getByRole('alert')).toContainText('99000000-0000-4000-8000-000000000077');
+    const recordError=page.getByRole('region',{name:'Finances',exact:true}).locator(':scope > [role=\"alert\"]').filter({has:page.getByRole('button',{name:'Reload',exact:true})});
+    await expect(recordError).toHaveCount(1);
+    await expect(recordError).toContainText('99000000-0000-4000-8000-000000000077');
     await expect(form.getByLabel('Price paid',{exact:true})).toHaveValue('125.50');
     await expect(form.getByLabel('Service or product',{exact:true})).toHaveValue('Box Braids GC-2026');
     await form.getByRole('button',{name:'Save record',exact:true}).click();

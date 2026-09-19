@@ -68,6 +68,14 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     // Existing fixtures supply no seven-day calendar evidence; dedicated
     // opportunity cases provide that response instead of inventing zero capacity.
     if (req.method() === "GET" && path === "/api/salon/schedule-opportunities") return respond({code:"SCHEDULE_HOURS_UNAVAILABLE"},409);
+    // These generic fixtures do not supply a complete linked visit history.
+    // Dedicated returning-client cases provide verified evidence explicitly.
+    if (req.method() === "GET" && path === "/api/salon/rebooking-advice") return respond({code:"REBOOKING_UNAVAILABLE"},503);
+    if (req.method() === "GET" && path === "/api/salon/service-contribution") {
+      const query=new URL(req.url()).searchParams;
+      const period={from:query.get("from")||"2026-08-01",to:query.get("to")||"2026-08-28",timeZone:business.time_zone};
+      return respond({period,previous_period:period,as_of:new Date().toISOString(),fingerprint:"a".repeat(32),currency:"USD",rows:[],recommendations:[],cost_sources:[],excluded_unattributed_service_records:0,net_profit_verified:false,cost_completeness_source:"owner_recorded",can_review:false});
+    }
     if (req.method() === "GET" && path === "/api/salon/marketing") return respond({
       posts: [], time_zone: business.time_zone, external_posting: false,
       sources: {

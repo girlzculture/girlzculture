@@ -1,5 +1,7 @@
 # Inherited schedule payment-method support
 
+Independent read-only review on19September confirms the explicit-phase limitation is still unresolved. Stripe's [inheritance rules](https://docs.stripe.com/billing/subscriptions/subscription-schedules) give a phase method precedence over the schedule default; the [update contract](https://docs.stripe.com/api/subscription_schedules/update) requires retaining every desired current/future phase setting. A version-pinned lossless phase serializer and durable exact payload are implementable, but the documented endpoint exposes no revision precondition. A local lease and post-write comparison cannot prevent overwriting a concurrent external Stripe Dashboard/integration edit. Automatic full-phase application therefore requires an enforceable external single-writer window or a supported conditional/method-only provider operation. Neither has been established. No schedule was released, recreated, overwritten or marked accepted to bypass this condition. This remains required work, not founder-deferred functionality.
+
 Status: **IN PROGRESS / AUTOMATED ONLY / NOT RELEASED**. No real Stripe request, payment, invoice, schedule mutation or production migration was performed for this work.
 
 The original server rejected every attached subscription schedule before opening setup. A simulated inherited schedule reproduced that409; the preserved log is `redesign-evidence/payment-schedule-before.log` outside Git.

@@ -221,3 +221,55 @@ for (const [width,height] of [[390,844],[1440,1000]]) {
     expect(saves).toBe(2);expect(fixture.unexpected).toEqual([]);
   });
 }
+
+for (const [width,height] of [[320,844],[390,844],[844,390]]) {
+  test(`Dashboard redesign Photos starts with visible gallery and keeps tools usable at ${width}x${height}`, async ({ page }, info) => {
+    const fixture = await p0OwnerFixture(page, { populated:true });
+    const urls = ['/images/hero-braids.jpg','/images/salon-modern.jpg'];
+    Object.assign(fixture.business, { gallery_photos:urls, cover_photo_url:urls[1], logo_url:'/pwa-icon-192.png', photo_metadata:{
+      [urls[0]]:{ ...defaultPhotoDetails('services'), title:'Braids gallery proof', featured:true },
+      [urls[1]]:{ ...defaultPhotoDetails('space'), title:'Salon gallery proof' },
+    } });
+    await page.setViewportSize({width,height});
+    await page.goto('/salon/dashboard/photos');
+    const first = page.getByRole('article').filter({has:page.getByRole('heading',{name:'Braids gallery proof',exact:true})});
+    await expect(first).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const initial = await first.evaluate(element => {
+      const card = element.getBoundingClientRect();
+      const header = document.querySelector('.gc-owner-header')!.getBoundingClientRect();
+      const nav = document.querySelector('[data-owner-mobile-navigation]')!.getBoundingClientRect();
+      return { top:card.top, visibleHeight:Math.min(card.bottom,nav.top)-Math.max(card.top,header.bottom), scrollY:window.scrollY, headerBottom:header.bottom, navTop:nav.top };
+    });
+    await info.attach('initial-gallery-geometry', {body:JSON.stringify(initial),contentType:'application/json'});
+    await page.screenshot({path:info.outputPath('photos-initial-viewport.png')});
+    expect(initial.scrollY).toBe(0);
+    expect(initial.top).toBeGreaterThanOrEqual(initial.headerBottom);
+    expect(initial.visibleHeight, JSON.stringify(initial)).toBeGreaterThanOrEqual(Math.min(96,height/8));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1)).toBe(true);
+    const tools = page.getByRole('button',{name:'Photo tools',exact:true});
+    const panel = page.getByRole('region',{name:'Photo tools',exact:true});
+    await expect(tools).toHaveAttribute('aria-expanded','false');
+    await expect(panel).not.toBeVisible();
+    await tools.click();
+    await expect(tools).toHaveAttribute('aria-expanded','true');
+    for(const label of ['Gallery photos','Cover photo','Salon logo','Featured photos']) await expect(panel.getByText(label,{exact:true})).toBeVisible();
+    await expect(panel.getByRole('link',{name:'View public gallery',exact:true})).toHaveAttribute('href','/salon/p0-browser');
+    await expect(panel.getByRole('link',{name:'Change cover photo',exact:true})).toHaveAttribute('href','/salon/dashboard/photos/cover');
+    await expect(panel.getByRole('link',{name:'Change business logo',exact:true})).toHaveAttribute('href','/salon/dashboard/photos/logo');
+    await expect(panel.getByRole('button',{name:/Add photos of your work/})).toBeVisible();
+    await tools.click();
+    await expect(panel).not.toBeVisible();
+    await page.getByRole('button',{name:'Services (1)',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Salon gallery proof',exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Edit photo details 1',exact:true}).click();
+    const editor=page.getByRole('dialog',{name:'Edit photo details',exact:true});
+    await expect(editor.getByRole('textbox',{name:'Title',exact:true})).toHaveValue('Braids gallery proof');
+    await editor.getByRole('button',{name:'Close',exact:true}).click();
+    await page.getByRole('button',{name:'Team (0)',exact:true}).click();
+    await page.getByRole('button',{name:'Upload Photos',exact:true}).first().click();
+    await expect(page.locator('details[open]')).toContainText('New photos will be added to: Team');
+    expect(fixture.actions).toEqual([]);
+    expect(fixture.unexpected).toEqual([]);
+  });
+}

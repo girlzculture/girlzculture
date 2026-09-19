@@ -22,6 +22,19 @@ test('schedule summary preserves exact gap times and complete totals through act
  const row=payload.opportunities[0];assert.equal(row.gap_count,1);assert.equal(row.gaps_are_excerpt,false);assert.deepEqual(row.gap_intervals,['2026-09-21T13:00:00.000Z / 2026-09-21T21:00:00.000Z']);assert.equal(row.href,'/salon/dashboard/availability?date=2026-09-21&stylist=33000000-0000-4000-8000-000000000001');
  }
 });
+test('historical patterns use the scoped complete booking read and reach planner and answer with real numbers',async()=>{
+ const rows=[{id:'one',appointment_datetime:'2026-08-04T18:00:00Z',status:'Completed',estimated_total:10,guest_name:'PRIVATE_VISITOR'},...['05','12','19','26'].map((day,i)=>({id:`w${i}`,appointment_datetime:`2026-08-${day}T18:00:00Z`,status:'Completed',estimated_total:10}))];
+ const queries=[];
+ const context={salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:true,admin:{rpc:async()=>({data:false,error:null}),from(table){assert.equal(table,'bookings');const filters=[];const q={select(){return q;},eq(k,v){filters.push([k,v]);return q;},gte(k,v){filters.push([k,v]);return q;},lt(k,v){filters.push([k,v]);return q;},order(){return q;},range(){queries.push(filters);assert(filters.some(([k,v])=>k==='salon_id'&&v==='business-A'));return Promise.resolve({data:filters.some(([k,v])=>k==='appointment_datetime'&&v==='2026-08-03T04:00:00Z')&&filters.some(([k,v])=>k==='appointment_datetime'&&v==='2026-08-31T04:00:00Z')?rows:[],error:null});}};return q;}}};
+ const read=typescriptLoader(root)('src/lib/ownerReadServer.ts').readOwnerOperation;
+ const summary=await read(context,'get_business_summary',{start:'2026-08-03T04:00:00Z',end:'2026-08-31T04:00:00Z'});
+ assert.equal(queries.length,2);assert.equal(summary.appointment_patterns.available,true);assert.equal(summary.appointment_patterns.completed_count,5);
+ for(const answerOnly of [false,true]){
+  const f=fixture({answerOnly,history:[{tool:'get_business_summary',permission:'overview',arguments:{},result:summary}],...(answerOnly?{output:{reply:'Tuesday afternoons had fewer recorded completed appointments.'}}:{})});
+  await f.run('en','Which past periods had fewer appointments?');const sent=JSON.parse(f.requests[0].messages[1].content).previous[0].result.appointment_patterns;
+  assert.equal(sent.completed_count,5);assert.equal(sent.complete_local_days,28);assert.equal(sent.lower_observed_periods[0].weekday,'Tue');assert.equal(sent.lower_observed_periods[0].completed_count,1);assert.equal(sent.lower_observed_periods[0].comparison_median,0.63);assert.equal(JSON.stringify(sent).includes('PRIVATE_VISITOR'),false);
+ }
+});
 function fixture(options = {}) {
   const calls = []; const requests = []; const updates = [];
   const history = (options.history || []).map((row, index) => ({ id: `request-${index}`, ...row }));
@@ -593,4 +606,42 @@ test('a prepared action transcript is reauthorized after professional reassignme
     if (!assignedBookingAvailable) assert.doesNotMatch(JSON.stringify(facts), /Private prepared client detail|Private draft/);
     assert.doesNotMatch(JSON.stringify(facts.previous), /Private draft/);
   }
+});
+
+
+test('returning-client summary follow-ups recheck both grants and drop prior private prose before either model phase',async()=>{
+ const old={bookings:3,rebooking_advice:{available:true,absent_count:713,definition:'PRIVATE_REBOOKING_FACT'}};
+ for(const denied of [[],['bookings'],['client_history']])for(const answerOnly of [false,true]){
+  const f=fixture({denied,answerOnly,history:[{tool:'get_business_summary',permission:'overview',arguments:{},result:old}],conversation:[{role:'assistant',text:'PRIVATE_REBOOKING_FACT has 713 absent clients.'}],...(answerOnly?{output:{reply:'Current authorized result.'}}:{})});
+  await f.run('en','Tell me more about those returning clients');const payload=JSON.parse(f.requests[0].messages[1].content);assert.equal(f.calls.filter(c=>c.refresh==='get_business_summary').length,1);
+  if(denied.length){assert.equal(payload.previous[0].result.rebooking_advice,null);assert.deepEqual(payload.conversation,[]);assert.doesNotMatch(JSON.stringify(payload),/PRIVATE_REBOOKING_FACT|713/);}else assert.equal(payload.previous[0].result.rebooking_advice.absent_count,713);
+ }
+ const f=fixture({history:[{tool:'get_business_summary',permission:'overview',arguments:{},result:old}],historyRead:{bookings:3,rebooking_advice:{available:true,absent_count:1}},conversation:[{role:'assistant',text:'PRIVATE_REBOOKING_FACT has 713 absent clients.'}]});await f.run('en','What about now?');const payload=JSON.parse(f.requests[0].messages[1].content);assert.equal(payload.previous[0].result.rebooking_advice.absent_count,1);assert.deepEqual(payload.conversation,[]);assert.doesNotMatch(JSON.stringify(payload),/PRIVATE_REBOOKING_FACT|713/);
+});
+
+
+test('service contribution is freshly read and secondary-grant loss removes older advice and prose from planning and answers',async()=>{
+ for(const tool of ['get_business_summary','get_earnings_summary'])for(const denied of [['earnings'],['bookings'],['styles']])for(const answerOnly of [false,true]){
+  const history=[{tool,permission:tool==='get_business_summary'?'overview':'earnings',arguments:{},result:{service_contribution:{available:true,recommendation_count:1,recommendations:[{service_name:'PRIVATE_SERVICE_ADVICE',contribution_cents:71300}]}}},{id:'other',tool:'get_business_media',permission:'photos',arguments:{},result:{gallery_count:2}}];
+  const f=fixture({denied,answerOnly,history,conversationRequestIds:answerOnly?['request-0']:undefined,conversation:[{role:'assistant',text:'PRIVATE_SERVICE_ADVICE has713 dollars contribution.'}],...(answerOnly?{output:{reply:'Current authorized result.'}}:{})});
+  await f.run('en','What about that advice?');const payload=JSON.parse(f.requests[0].messages[1].content);assert.doesNotMatch(JSON.stringify(payload),/PRIVATE_SERVICE_ADVICE|71300|has713/);assert.deepEqual(payload.conversation,[]);
+  if(tool==='get_business_summary'||!denied.includes('earnings')){assert.equal(payload.previous.find(row=>row.tool===tool).result.service_contribution,null);assert.equal(f.calls.filter(c=>c.refresh===tool).length,1);}
+ }
+ for(const tool of ['get_business_summary','get_earnings_summary']){
+  const f=fixture({history:[{tool,permission:tool==='get_business_summary'?'overview':'earnings',arguments:{},result:{service_contribution:{recommendation_count:1,recommendations:[{service_name:'OLD_SERVICE_CONTRIBUTION'}]}}}],historyRead:{service_contribution:{available:true,recommendation_count:0,recommendations:[]}},conversation:[{role:'assistant',text:'OLD_SERVICE_CONTRIBUTION is a prior candidate.'}]});
+  await f.run('en','Which service should I review now?');const payload=JSON.parse(f.requests[0].messages[1].content);assert.equal(f.calls.filter(c=>c.refresh===tool).length,1);assert.equal(payload.previous[0].result.service_contribution.recommendation_count,0);assert.deepEqual(payload.conversation,[]);assert.doesNotMatch(JSON.stringify(payload),/OLD_SERVICE_CONTRIBUTION/);
+ }
+});
+
+
+test('actual contribution projection retains measured dates values counts and action links through both model serializers',async()=>{
+ const service='18300000-0000-4000-8000-000000000002',period={from:'2026-08-01',to:'2026-08-28',timeZone:'America/New_York'};
+ const value={period,previous_period:{...period,from:'2026-07-04',to:'2026-07-31'},as_of:'2026-09-19T12:00:00Z',currency:'USD',rows:[{service_id:service,name:'Own reviewed service',completed_count:2,previous_count:3,contribution_cents:5700,review_status:'owner_reviewed',review:{note:'PRIVATE_COST_REVIEW'},href:'/salon/dashboard/services/'+service}]};
+ const context={salon:{id:'business-A',time_zone:period.timeZone},user:{id:'owner-A'},admin:{rpc:async()=>({data:true})}};
+ const read=typescriptLoader(root,{'@/lib/businessServiceContributionServer':{readServiceContribution:async()=>value}},{URLSearchParams})('src/lib/assistantServiceContribution.ts').readAssistantServiceContribution;
+ const summary=await read(context,{start:'2026-08-01T04:00:00Z',end:'2026-08-29T04:00:00Z'});
+ for(const tool of ['get_business_summary','get_earnings_summary'])for(const answerOnly of [false,true]){
+  const f=fixture({answerOnly,history:[{tool,permission:tool==='get_business_summary'?'overview':'earnings',arguments:{},result:{service_contribution:summary}}],...(answerOnly?{output:{reply:'Review the measured service contribution.'}}:{})});await f.run('en','Which own service should I review?');
+  const out=JSON.parse(f.requests[0].messages[1].content).previous[0].result.service_contribution;assert.deepEqual(out.period,period);assert.equal(out.as_of,value.as_of);assert.equal(out.recommendation_count,1);assert.equal(out.recommendations[0].service_name,'Own reviewed service');assert.equal(out.recommendations[0].contribution_cents,5700);assert.equal(out.recommendations[0].completed_count,2);assert.equal(out.recommendations[0].previous_count,3);assert.equal(out.recommendations[0].href,'/salon/dashboard/services/'+service);assert.doesNotMatch(JSON.stringify(out),/PRIVATE_COST_REVIEW|allocations|customer/);
+ }
 });
