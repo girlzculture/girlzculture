@@ -3,13 +3,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { UserSafeRequestError } from "@/lib/platformErrors";
 import { siteUrl, stripeGet, stripeRequest } from "@/lib/stripeServer";
 import { assertPaymentMethodAssociation, assertPaymentMethodSetup, maskedPaymentMethod, stripeIdentity, type PaymentMethod, type StripeIdentity, type SubscriptionBillingIdentity } from "@/lib/subscriptionPaymentMethodCore";
-import { assertScheduleUnchanged, inspectInheritedSchedule, scheduleMethodPayload, type PaymentScheduleBaseline } from "@/lib/subscriptionPaymentSchedule";
+import { assertScheduleUnchanged, inspectInheritedSchedule, scheduleMethodPayload, subscriptionFingerprint, type PaymentScheduleBaseline } from "@/lib/subscriptionPaymentSchedule";
+import { inspectExplicitPhaseSchedule, prepareExplicitPhasePlan, assertExplicitPlan, type ExplicitPhaseBaseline, type ExplicitPhasePlan } from '@/lib/subscriptionPaymentExplicitPhase';
+import { PAYMENT_PHASE_REVIEW_API_VERSION, paymentPhaseSourceFingerprint } from '@/lib/subscriptionPaymentPhaseReview';
 
 type Attempt = {
   id: string; salon_id: string; stripe_customer_id: string; stripe_subscription_id: string;
   stripe_checkout_session_id: string | null; stripe_payment_method_id?: string | null;
   baseline_payment_method_id: string | null; first_apply_at: string | null;
   schedule_baseline?:PaymentScheduleBaseline|null; schedule_first_apply_at?:string|null; schedule_verified_at?:string|null;
+  phase_apply_plan?:ExplicitPhasePlan|null;
   livemode: boolean; status: string; created_at: string;
 };
 type Customer = { id?: string; livemode?: boolean; deleted?: boolean;
@@ -33,7 +36,7 @@ function paymentMethodProvider() {
   // their existing behavior because the shared transport option is optional.
   const signal=AbortSignal.timeout(45_000);
   return {
-    get:<T>(path:string)=>stripeGet<T>(path,{signal}),
+    get:<T>(path:string,options?:Parameters<typeof stripeGet>[1])=>stripeGet<T>(path,{...options,signal}),
     post:<T>(path:string,values:Parameters<typeof stripeRequest>[1],options?:Parameters<typeof stripeRequest>[2])=>stripeRequest<T>(path,values,{...options,signal}),
     assertActive:()=>signal.throwIfAborted(),
   };
@@ -68,12 +71,17 @@ function assertCanUpdate(subscription: Subscription) {
   }
 }
 
-async function readSchedule(identity:Awaited<ReturnType<typeof billingIdentity>>,provider:PaymentMethodProvider) {
+async function readSchedule(identity:Awaited<ReturnType<typeof billingIdentity>>,provider:PaymentMethodProvider,admin:SupabaseClient,salonId:string) {
  const id=stripeIdentity(identity.subscription.schedule);
  if(!id)return null;
  if(!safeId(id,"sub_sched"))throw new Error("PAYMENT_SCHEDULE_IDENTITY_CONFLICT");
  const schedule=await provider.get(`/subscription_schedules/${id}`);
- return inspectInheritedSchedule(schedule,identity.subscription,identity.customerId,identity.livemode);
+ try{return inspectInheritedSchedule(schedule,identity.subscription,identity.customerId,identity.livemode);}
+ catch(error){
+  if(!(error instanceof Error)||error.message!=='PAYMENT_SCHEDULE_EXPLICIT_OVERRIDE')throw error;
+  const pinned=await provider.get(`/subscription_schedules/${id}`,{apiVersion:PAYMENT_PHASE_REVIEW_API_VERSION});
+  return inspectExplicitPhaseSchedule(admin,salonId,pinned,identity.subscription,identity.customerId,identity.livemode);
+ }
 }
 function assertRetryWindow(first:string|null|undefined) {
  if(first&&(!Number.isFinite(Date.parse(first))||Date.now()-Date.parse(first)>=23*60*60_000))throw new UserSafeRequestError("The earlier payment update is too old to retry safely. Billing support must review the current payment method.",409);
@@ -109,7 +117,7 @@ export async function subscriptionPaymentMethodStatus(admin: SupabaseClient,salo
   const paymentMethod = await readMasked(identity,provider);
   const hasEffective = Boolean(identity.subscription.default_payment_method || identity.subscription.default_source || identity.customer.invoice_settings?.default_payment_method || identity.customer.default_source);
   let scheduleAllowed=true;
-  try{await readSchedule(identity,provider);}catch(error){if(error instanceof Error&&/^PAYMENT_SCHEDULE_/.test(error.message))scheduleAllowed=false;else throw error;}
+  try{await readSchedule(identity,provider,admin,salonId);}catch(error){if(error instanceof Error&&/^PAYMENT_SCHEDULE_/.test(error.message))scheduleAllowed=false;else throw error;}
   return { paymentMethod,status: paymentMethod ? "available" : hasEffective ? "unavailable" : "none",
     updatePending:Boolean(pending.data),billingMode:identity.livemode ? "live" : "test",
     updateAllowed:scheduleAllowed && !["canceled","incomplete_expired"].includes(identity.subscription.status || ""),
@@ -122,7 +130,7 @@ export async function beginSubscriptionPaymentMethod(input: { admin: SupabaseCli
   const identity = await billingIdentity(admin,salonId,provider);
   assertCanUpdate(identity.subscription);
   let schedule:PaymentScheduleBaseline|null;
-  try{schedule=await readSchedule(identity,provider);}catch(error){if(error instanceof Error&&/^PAYMENT_SCHEDULE_/.test(error.message))throw new UserSafeRequestError("This subscription has a scheduled plan change. Its payment method needs billing support review so the scheduled plan remains unchanged.",409);throw error;}
+  try{schedule=await readSchedule(identity,provider,admin,salonId);}catch(error){if(error instanceof Error&&/^PAYMENT_SCHEDULE_/.test(error.message))throw new UserSafeRequestError("This subscription has a scheduled plan change. Its payment method needs billing support review so the scheduled plan remains unchanged.",409);throw error;}
   const attempt = await rpc<Attempt>(admin,schedule?"reserve_scheduled_payment_method_attempt":"reserve_subscription_payment_method_attempt",{
     p_salon_id:salonId,p_actor_id:actorId,p_customer_id:identity.customerId,p_subscription_id:identity.subscriptionId,p_livemode:identity.livemode,
     p_baseline_method_id:effectiveMethodId(identity),
@@ -278,7 +286,8 @@ export async function completeSubscriptionPaymentMethod(admin: SupabaseClient,se
 async function applyScheduleMethod(input:{admin:SupabaseClient;attempt:Attempt;lease:string;setupId:string;methodId:string;provider:PaymentMethodProvider;before:Awaited<ReturnType<typeof billingIdentity>>}) {
  const {admin,attempt,lease,setupId,methodId,provider}=input,baseline=attempt.schedule_baseline!;
  let methodRequestId:string|null=null;
- let identity=input.before,current=await readSchedule(identity,provider);
+ if('kind' in baseline&&baseline.kind==='explicit_phases')return applyExplicitScheduleMethod({...input,baseline:baseline as ExplicitPhaseBaseline});
+ let identity=input.before,current=await readSchedule(identity,provider,admin,attempt.salon_id);
  if(!current)throw new Error("PAYMENT_SCHEDULE_BASELINE_CHANGED");
  assertScheduleUnchanged(current,baseline);
  const mark=(verified:boolean,requestId:string|null=null)=>rpc<Attempt>(admin,"mark_payment_schedule_apply",{p_attempt_id:attempt.id,p_lease_id:lease,p_setup_intent_id:setupId,p_payment_method_id:methodId,p_verified:verified,p_request_id:requestId});
@@ -290,7 +299,7 @@ async function applyScheduleMethod(input:{admin:SupabaseClient;attempt:Attempt;l
   if(!marked.schedule_first_apply_at)throw new Error("PAYMENT_SCHEDULE_STAGE_MISSING");
   let requestId:string|null=null;provider.assertActive();
   await provider.post(`/subscription_schedules/${String(baseline.schedule.id)}`,scheduleMethodPayload(methodId),{idempotencyKey:`payment-method-schedule:${attempt.id}`,onResponse:evidence=>{requestId=evidence.requestId;}});
-  identity=await billingIdentity(admin,attempt.salon_id,provider);current=await readSchedule(identity,provider);
+  identity=await billingIdentity(admin,attempt.salon_id,provider);current=await readSchedule(identity,provider,admin,attempt.salon_id);
   if(!current||current.default_method!==methodId)throw new Error("PAYMENT_SCHEDULE_READBACK_FAILED");
   assertScheduleUnchanged(current,baseline);await mark(true,requestId);
  }else await mark(true);
@@ -302,9 +311,57 @@ async function applyScheduleMethod(input:{admin:SupabaseClient;attempt:Attempt;l
   provider.assertActive();
   await provider.post(`/subscriptions/${attempt.stripe_subscription_id}`,{default_payment_method:methodId},{idempotencyKey:`payment-method-apply:${attempt.id}`,onResponse:evidence=>{methodRequestId=evidence.requestId;}});
  }
- const after=await billingIdentity(admin,attempt.salon_id,provider),scheduleAfter=await readSchedule(after,provider);
+ const after=await billingIdentity(admin,attempt.salon_id,provider),scheduleAfter=await readSchedule(after,provider,admin,attempt.salon_id);
  if(after.customerId!==attempt.stripe_customer_id||after.subscriptionId!==attempt.stripe_subscription_id||after.livemode!==attempt.livemode||stripeIdentity(after.subscription.default_payment_method)!==methodId||!scheduleAfter||scheduleAfter.default_method!==methodId)throw new Error("PAYMENT_SCHEDULE_READBACK_FAILED");
  assertScheduleUnchanged(scheduleAfter,baseline);
+ return methodRequestId;
+}
+
+async function applyExplicitScheduleMethod(input:{admin:SupabaseClient;attempt:Attempt;lease:string;setupId:string;methodId:string;provider:PaymentMethodProvider;before:Awaited<ReturnType<typeof billingIdentity>>;baseline:ExplicitPhaseBaseline}){
+ const {admin,attempt,lease,setupId,methodId,provider,baseline}=input;
+ let plan=attempt.phase_apply_plan;
+ if(plan)assertExplicitPlan(plan,baseline,methodId);
+ else{
+  plan=prepareExplicitPhasePlan(baseline,methodId);
+  const prepared=await rpc<Attempt>(admin,'prepare_payment_phase_apply',{p_attempt_id:attempt.id,p_lease_id:lease,p_setup_intent_id:setupId,p_payment_method_id:methodId,p_plan:plan});
+  if(!prepared.phase_apply_plan)throw new Error('PAYMENT_SCHEDULE_DURABLE_PLAN_MISSING');
+  plan=prepared.phase_apply_plan;assertExplicitPlan(plan,baseline,methodId);
+ }
+ const read=async()=>{
+  const identity=await billingIdentity(admin,attempt.salon_id,provider);
+  if(identity.customerId!==attempt.stripe_customer_id||identity.subscriptionId!==attempt.stripe_subscription_id||identity.livemode!==attempt.livemode||stripeIdentity(identity.subscription.schedule)!==baseline.schedule.id||subscriptionFingerprint(identity.subscription)!==baseline.subscription_fingerprint)throw new Error('PAYMENT_SCHEDULE_BASELINE_CHANGED');
+  const schedule=await provider.get<Record<string,unknown>>(`/subscription_schedules/${String(baseline.schedule.id)}`,{apiVersion:PAYMENT_PHASE_REVIEW_API_VERSION});
+  return{identity,schedule,digest:paymentPhaseSourceFingerprint(schedule,PAYMENT_PHASE_REVIEW_API_VERSION)};
+ };
+ let current=await read();
+ const mark=(verified:boolean,requestId:string|null=null)=>rpc<Attempt>(admin,'mark_payment_schedule_apply',{p_attempt_id:attempt.id,p_lease_id:lease,p_setup_intent_id:setupId,p_payment_method_id:methodId,p_verified:verified,p_request_id:requestId});
+ if(current.digest!==plan.expected_fingerprint){
+  if(current.digest!==plan.source_fingerprint)throw new Error('PAYMENT_SCHEDULE_BASELINE_CHANGED');
+  if(effectiveMethodId(current.identity)!==attempt.baseline_payment_method_id)throw new Error('PAYMENT_SCHEDULE_CURRENT_METHOD_CHANGED');
+  const phaseEnd=Number((baseline.schedule.current_phase as {end_date:number}).end_date);
+  if(phaseEnd-Math.floor(Date.now()/1000)<=60)throw new Error('PAYMENT_SCHEDULE_PHASE_TRANSITION_REVIEW_REQUIRED');
+  assertRetryWindow(attempt.schedule_first_apply_at);provider.assertActive();
+  const marked=await mark(false);assertRetryWindow(marked.schedule_first_apply_at);
+  if(!marked.schedule_first_apply_at)throw new Error('PAYMENT_SCHEDULE_STAGE_MISSING');
+  // No provider compare-and-swap is claimed. This fresh preflight plus the
+  // shared app mutation guard catches observed drift; concurrent external
+  // Dashboard/API writes remain an operational coordination boundary.
+  current=await read();if(current.digest!==plan.source_fingerprint||effectiveMethodId(current.identity)!==attempt.baseline_payment_method_id)throw new Error('PAYMENT_SCHEDULE_BASELINE_CHANGED');
+  let requestId:string|null=null;provider.assertActive();
+  await provider.post(`/subscription_schedules/${String(baseline.schedule.id)}`,plan.request,{apiVersion:plan.api_version,idempotencyKey:`payment-method-phases:${attempt.id}`,onResponse:evidence=>{requestId=evidence.requestId;}});
+  current=await read();if(current.digest!==plan.expected_fingerprint)throw new Error('PAYMENT_SCHEDULE_READBACK_FAILED');
+  await mark(true,requestId);
+ }else await mark(true);
+ let methodRequestId:string|null=null;
+ if(stripeIdentity(current.identity.subscription.default_payment_method)!==methodId){
+  if(effectiveMethodId(current.identity)!==attempt.baseline_payment_method_id)throw new Error('PAYMENT_SCHEDULE_CURRENT_METHOD_CHANGED');
+  assertRetryWindow(attempt.first_apply_at);provider.assertActive();
+  const marked=await rpc<Attempt>(admin,'mark_subscription_payment_method_apply',{p_attempt_id:attempt.id,p_lease_id:lease,p_setup_intent_id:setupId,p_payment_method_id:methodId});
+  assertRetryWindow(marked.first_apply_at);if(!marked.first_apply_at)throw new Error('PAYMENT_METHOD_STAGE_MISSING');
+  provider.assertActive();await provider.post(`/subscriptions/${attempt.stripe_subscription_id}`,{default_payment_method:methodId},{idempotencyKey:`payment-method-apply:${attempt.id}`,onResponse:evidence=>{methodRequestId=evidence.requestId;}});
+ }
+ current=await read();
+ if(current.digest!==plan.expected_fingerprint||stripeIdentity(current.identity.subscription.default_payment_method)!==methodId)throw new Error('PAYMENT_SCHEDULE_READBACK_FAILED');
  return methodRequestId;
 }
 

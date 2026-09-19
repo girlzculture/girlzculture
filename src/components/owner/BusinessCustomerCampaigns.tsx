@@ -18,7 +18,7 @@ function campaignErrorMessage(error: unknown, locale: string) {
 }
 export function CustomerCampaignNavigation({ campaigns }: { campaigns: boolean }) {
  const { locale } = useI18n(); const t = (s: string) => campaignCopy(locale, s);
- return <nav className="mb-4 flex flex-wrap gap-2" aria-label={t("Client updates")} data-no-translate><Link className={button} href="/salon/dashboard/messages" aria-current={!campaigns ? "page" : undefined}>{t("Booking messages")}</Link><Link className={button} href="/salon/dashboard/messages/campaigns" aria-current={campaigns ? "page" : undefined}>{t("Client updates")}</Link></nav>;
+ return <nav className={`mb-4 flex flex-wrap gap-2 ${!campaigns ? "max-lg:[@media(max-height:600px)]:mb-2" : ""}`} aria-label={t("Client updates")} data-no-translate><Link className={button} href="/salon/dashboard/messages" aria-current={!campaigns ? "page" : undefined}>{t("Booking messages")}</Link><Link className={button} href="/salon/dashboard/messages/campaigns" aria-current={campaigns ? "page" : undefined}>{t("Client updates")}</Link></nav>;
 }
 export default function BusinessCustomerCampaigns({ businessId }: { businessId: string }) { return <CampaignPanel key={businessId}/>; }
 function CampaignPanel() {

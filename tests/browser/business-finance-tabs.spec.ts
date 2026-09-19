@@ -47,3 +47,26 @@ for(const [locale,width,height] of [['en',1440,1000],['fr',390,844],['es',768,10
   await page.screenshot({path:info.outputPath('finance-tabbed-reports.png'),fullPage:true});expect(f.unexpected).toEqual([]);
  });
 }
+
+for(const [locale,width,height] of [['en',1440,1000],['fr',390,844],['es',768,1000],['zh-CN',844,390]] as const){
+ test(`Business finance ranked team summary preserves ties and selected-period evidence in ${locale}`,async({page},info)=>{
+  const f=await p0OwnerFixture(page,{populated:true,locale});const t=(source:string)=>messages[locale]?.[source]||source;
+  const stylists=Array.from({length:15},(_,index)=>({id:`ranking-professional-${index}`,salon_id:f.business.id,name:`Own professional ${index}`}));
+  const books:OperatingBooks={sales:[],payments:[],expenses:[],compensation_payments:[],obligations:stylists.map((row,index)=>({id:`ranking-wage-${index}`,salon_id:f.business.id,stylist_id:row.id,due_at:'2026-09-15T14:00:00Z',kind:'wage',amount_cents:index<13?99000:1000,arrangement_version:'saved'}))};
+  await page.route('**/api/salon/finances?*',async route=>{const url=new URL(route.request().url());if(url.searchParams.get('options'))return route.fulfill({json:{stylists:f.records.stylists}});return route.fulfill({json:{scope:{kind:'business'},books,summary:summarizeOperatingBooks(f.business.id,books,{from:url.searchParams.get('from')!,to:url.searchParams.get('to')!,timeZone:f.business.time_zone}),stylists,arrangements:[],evidence:{}}});});
+  await page.setViewportSize({width,height});await page.goto('/salon/dashboard/earnings?finance=team&finance_from=2026-09-01&finance_to=2026-09-30');
+  const ranking=page.getByRole('region',{name:t('Highest recorded earned compensation'),exact:true});await expect(ranking).toBeVisible();await expect(ranking).toContainText(new Intl.NumberFormat(locale,{style:'currency',currency:'USD'}).format(990));await expect(ranking).toContainText(`${t('Professionals tied at this amount')}: 13`);await expect(ranking).toContainText(`${t('Showing tied leaders')}: 12 / 13`);await expect(ranking.getByRole('listitem')).toHaveCount(12);await expect(ranking).toContainText('2026-09-01');await expect(ranking).toContainText('2026-09-30');await expect(ranking).toContainText(f.business.time_zone);await expect(ranking).toContainText('USD');await expect(ranking).toContainText(t('Commission earned plus wages due in the selected period. Service sales and compensation already paid are separate.'));
+  await ranking.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('finance-earned-compensation-ranking.png'),fullPage:false});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const audit=await new AxeBuilder({page}).include('main').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(audit.violations).toEqual([]);
+  const period=page.getByRole('form',{name:t('Reporting period'),exact:true});await period.getByLabel(t('From'),{exact:true}).fill('2026-08-01');await period.getByLabel(t('To'),{exact:true}).fill('2026-08-31');await period.getByRole('button',{name:t('Apply dates'),exact:true}).click();await expect(ranking).toContainText(t('No assigned professional earnings in this period.'));await expect(ranking.getByRole('listitem')).toHaveCount(0);await expect(ranking).not.toContainText('990');expect(f.unexpected).toEqual([]);
+ });
+}
+
+test('Business finance ranked team summary is withheld from an own-earnings-only professional',async({page})=>{
+ const f=await p0OwnerFixture(page,{populated:true,role:'salon_team'});
+ await page.route('**/api/salon/workspace',route=>route.fulfill({json:{salon:f.business,isOwner:false,isTeamMember:true,permissions:{earnings_own:true},records:{subscriptions:f.records.subscriptions}}}));
+ const books:OperatingBooks={sales:[],payments:[],expenses:[],compensation_payments:[],obligations:[{id:'own-wage',salon_id:f.business.id,stylist_id:f.ids.professional,due_at:'2026-09-15T14:00:00Z',kind:'wage',amount_cents:75000,arrangement_version:'saved'}]};
+ await page.route('**/api/salon/finances?*',async route=>{const url=new URL(route.request().url());expect(url.searchParams.get('options')).toBeNull();return route.fulfill({json:{scope:{kind:'own',stylist_id:f.ids.professional},books,summary:summarizeOperatingBooks(f.business.id,books,{from:url.searchParams.get('from')!,to:url.searchParams.get('to')!,timeZone:f.business.time_zone}),stylists:f.records.stylists,arrangements:[],evidence:{}}});});
+ await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/earnings?finance=team&finance_from=2026-09-01&finance_to=2026-09-30');
+ await expect(page.getByRole('heading',{name:'Stylist earnings',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Highest recorded earned compensation',exact:true})).toHaveCount(0);await expect(page.getByRole('tabpanel',{name:'Team earnings',exact:true})).toContainText('$750.00');expect(f.unexpected).toEqual([]);
+});

@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-19. This inventory covers 160 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-19. This inventory covers 166 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -19,6 +19,7 @@ Updated: 2026-09-19. This inventory covers 160 API route files and is enforced b
 | `/api/salon/referrals` | GET, POST | protected | Covered |
 | `/api/salon/booking-money` | GET | protected | Covered |
 | `/api/salon/schedule-opportunities` | GET | protected | Covered |
+| `/api/salon/service-capacity` | GET | protected | Covered |
 | `/api/salon/customer-campaigns` | GET, POST | protected | Covered |
 | `/api/salon/rebooking-advice` | GET | protected | Covered |
 | `/api/salon/service-contribution` | GET, POST | protected | Covered |
@@ -26,6 +27,11 @@ Updated: 2026-09-19. This inventory covers 160 API route files and is enforced b
 | `/api/salon/marketing` | GET, POST | protected | Covered |
 | `/api/salon/marketing/publish-due` | POST | protected | Covered |
 | `/api/salon/onboarding-draft` | GET, POST | protected | Covered |
+| `/api/salon/onboarding-instagram` | GET, POST | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/callback` | GET | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/data-deletion` | POST | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/deauthorization` | POST | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/deletion-status` | GET | public/read-only | Covered |
 | `/api/salon/morning-brief` | GET | protected | Covered |
 | `/api/salon/waitlist` | GET | protected | Covered |
 | `/api/salon/integrations/google` | GET, POST | protected | Covered |

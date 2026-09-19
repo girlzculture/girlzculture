@@ -7,6 +7,72 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
+test('fresh observation timestamps preserve unchanged authorized follow-up facts while recorded dates and values still invalidate prose', async () => {
+  const earlier = '2026-09-19T12:00:00.000Z', later = '2026-09-19T13:00:00.000Z';
+  for (const [tool, permission, facts, next] of [
+    ['get_business_profile', 'my_page', { name: 'Own studio', as_of: earlier, publication: { owner_unpublished_at: null } }, { publication: { owner_unpublished_at: later } }],
+    ['get_business_settings', 'settings', { saved_ui_locale: 'fr', as_of: earlier }, { saved_ui_locale: 'es' }],
+    ['get_promotions', 'promotions', { promotions: [{ title: 'Own offer', target_scope: 'salon', ends_at: earlier, active_now: true }], as_of: earlier }, { promotions: [{ title: 'Own offer', target_scope: 'salon', ends_at: later, active_now: true }] }],
+    ['get_products', 'products', { products: [], order_operations: { as_of: earlier, orders: [{ public_reference: 'OWN', created_at: earlier }] } }, { order_operations: { as_of: later, orders: [{ public_reference: 'OWN', created_at: later }] } }],
+  ]) for (const answerOnly of [false, true]) for (const changed of [false, true]) {
+    const updated = tool === 'get_products' ? { ...facts, order_operations: { ...facts.order_operations, as_of: later } } : { ...facts, as_of: later };
+    // PostgreSQL jsonb may return keys in another order: meaning, not property
+    // insertion order or the server observation clock, governs invalidation.
+    const fresh = Object.fromEntries(Object.entries({ ...updated, ...(changed ? next : {}) }).reverse());
+    const row = { tool, permission, arguments: {}, result: facts };
+    const f = fixture({ answerOnly, history: answerOnly ? [row, row] : [row], historyRead: fresh, previousRequestIds: ['request-0'], ...(answerOnly ? { conversationRequestIds: ['request-1'], output: { reply: 'Current authorized facts.' } } : {}), conversation: [{ role: 'user', text: 'UNCHANGED_FOLLOWUP_CONTEXT' }] });
+    await f.run('en', 'What about that one?'); const payload = JSON.parse(f.requests[0].messages[1].content);
+    assert.equal(JSON.stringify(payload.conversation).includes('UNCHANGED_FOLLOWUP_CONTEXT'), !changed, `${tool} answer=${answerOnly} changed=${changed}`);
+    assert.equal(tool === 'get_products' ? payload.previous[0].result.order_operations.as_of : payload.previous[0].result.as_of, later);
+  }
+});
+
+test('unknown timestamp paths and malformed observation metadata still invalidate historical prose', async () => {
+  for (const [tool, permission, before, after] of [
+    ['get_business_profile', 'my_page', 'malformed-old', 'malformed-new'],
+    ['get_business_summary', 'overview', '2026-09-19T12:00:00.000Z', '2026-09-19T13:00:00.000Z'],
+  ]) {
+    const f = fixture({ history: [{ tool, permission, arguments: {}, result: { as_of: before } }], historyRead: { as_of: after }, conversation: [{ role: 'user', text: 'UNTRUSTED_OLD_PROSE' }] });
+    await f.run('en', 'What about it?'); assert.deepEqual(JSON.parse(f.requests[0].messages[1].content).conversation, []);
+  }
+});
+
+test('product order follow-ups refresh status and preserve item facts with exact excerpt counts in both model phases',async()=>{
+ const current={products:[],total:0,supplies:[],supplies_total:0,stock_alerts:[],stock_alerts_total:0,order_operations:{total:103,shown_count:100,is_excerpt:true,as_of:'2026-09-19T16:00:00Z',period:'all_time',query_applies_to_orders:false,orders:Array.from({length:100},(_,i)=>({public_reference:`GC-${i}`,reservation_status:'Collected',created_at:'2026-09-18T12:00:00Z',items:[{product_name:'Own item snapshot',quantity:2}],item_count:1,shown_item_count:1,items_are_excerpt:false}))}};
+ for(const answerOnly of [false,true]){
+  const f=fixture({answerOnly,history:[{tool:'get_products',permission:'products',arguments:{query:''},result:{products:[],order_operations:{orders:[{public_reference:'STALE_PRIVATE_REFERENCE',reservation_status:'Ready for pickup'}]}}}],historyRead:current,...(answerOnly?{output:{reply:'The current order is recorded as collected.'}}:{})});
+  await f.run('en','Is that pickup still ready?');assert.ok(f.calls.some(call=>call.refresh==='get_products'));
+  const facts=JSON.parse(f.requests[0].messages[1].content).previous[0].result,operations=facts.order_operations;
+  assert.equal(operations.total,103);assert.equal(operations.shown_count,12);assert.equal(operations.is_excerpt,true);assert.equal(operations.orders.length,12);
+  assert.equal(operations.orders[0].reservation_status,'Collected');assert.deepEqual(operations.orders[0].item_lines,['2 × Own item snapshot']);assert.equal(operations.orders[0].item_count,1);
+  assert.doesNotMatch(JSON.stringify(f.requests),/STALE_PRIVATE_REFERENCE/);
+ }
+});
+
+test('promotion facts are freshly read for planner and answer after catalog permission changes',async()=>{
+ for(const answerOnly of [false,true]){
+  const current={total:1,shown_count:1,is_excerpt:false,as_of:'2026-09-19T16:00:00Z',monetary_quote_available:false,promotions:[{id:'own-offer',title:'Current own offer',target_scope:'services',targets:null,target_resolution:'not_authorized',active_now:false}]};
+  const f=fixture({answerOnly,denied:['styles','products'],history:[{tool:'get_promotions',permission:'promotions',arguments:{},result:{promotions:[{title:'Old offer',targets:[{id:'old-id',name:'REVOKED_PRIVATE_TARGET'}],active_now:true}]}}],historyRead:current,...(answerOnly?{output:{reply:'The offer is currently inactive.'}}:{})});
+  await f.run('en','Is that offer still active?');
+  assert.ok(f.calls.some(call=>call.refresh==='get_promotions'),'current role and saved offer must be read again');
+  const facts=JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+  assert.equal(facts.promotions[0].title,'Current own offer');assert.equal(facts.promotions[0].active_now,false);
+  assert.equal(facts.promotions[0].targets,null);assert.doesNotMatch(JSON.stringify(f.requests),/REVOKED_PRIVATE_TARGET|old-id/);
+ }
+});
+
+test('promotion model excerpts retain exact list and target counts without invented monetary quotes',async()=>{
+ const current={total:103,shown_count:100,is_excerpt:true,as_of:'2026-09-19T16:00:00Z',monetary_quote_available:false,promotions:Array.from({length:100},(_,n)=>({id:`offer-${n}`,title:`Own offer ${n}`,active_now:true,target_scope:'services',target_count:20,shown_target_count:12,targets_are_excerpt:true,targets:Array.from({length:12},(_,i)=>({id:`service-${i}`,name:`Own service ${i}`})),restrictions:{minimum_subtotal:100,new_customers_only:true,terms:'Saved condition. '.repeat(30)},terms_are_excerpt:true}))};
+ for(const answerOnly of [false,true]){
+  const f=fixture({answerOnly,history:[{tool:'get_promotions',permission:'promotions',arguments:{},result:current}],historyRead:current,...(answerOnly?{output:{reply:'The current offer list is an excerpt.'}}:{})});
+  await f.run('en','Which offers are available?');const facts=JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+  assert.equal(facts.total,103);assert.equal(facts.shown_count,12);assert.equal(facts.is_excerpt,true);assert.equal(facts.promotions.length,12);
+  assert.equal(facts.promotions[0].target_count,20);assert.equal(facts.promotions[0].shown_target_count,12);assert.equal(facts.promotions[0].targets_are_excerpt,true);assert.equal(facts.promotions[0].targets[0].name,'Own service 0');
+  assert.equal(facts.promotions[0].restrictions.minimum_subtotal,100);assert.equal(facts.monetary_quote_available,false);assert.equal(Object.hasOwn(facts.promotions[0],'savings'),false);
+  assert.equal(facts.promotions[0].terms_are_excerpt,true);assert.equal(facts.promotions[0].restrictions.terms,'Saved condition. '.repeat(30));
+ }
+});
+
 test('schedule summary preserves exact gap times and complete totals through actual planner and answer serialization with explicit excerpts',async()=>{
  const load=typescriptLoader(root,{}, {URLSearchParams}),hours=Object.fromEntries(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day=>[day,{open:'09:00',close:'17:00'}]));
  const roster=[1,2,3].map(n=>({id:`33000000-0000-4000-8000-00000000000${n}`,salon_id:'business-A',name:`Own professional ${n}`,is_active:true,availability:hours}));
@@ -400,9 +466,10 @@ test('all five locales are explicit in governed planning, with untrusted input k
 });
 
 test('disabled, unconfigured, unauthorized and out-of-budget planning never calls the provider', async () => {
+  const allPermissions = [...new Set([...Object.values(typescriptLoader(root)('src/lib/gcAssistantCore.ts').ASSISTANT_TOOLS).map(tool => tool.permission), 'finance_manage'])];
   for (const [options, code] of [
     [{ enabled: false }, 'ASSISTANT_UNAVAILABLE'], [{ configured: false }, 'ASSISTANT_UNAVAILABLE'],
-    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'photos', 'styles', 'stylists', 'products', 'reviews', 'promotions', 'earnings', 'client_history', 'finance_log', 'finance_manage'] }, 'ASSISTANT_ACCESS_DENIED'],
+    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: allPermissions }, 'ASSISTANT_ACCESS_DENIED'],
     [{ budget: false }, 'ASSISTANT_BUDGET_LIMIT'],
   ]) {
     const f = fixture(options); await assert.rejects(f.run(), new RegExp(code)); assert.equal(f.requests.length, 0);
@@ -482,7 +549,7 @@ test('the answer receives a named response language and unchanged authorized fac
     assert.ok(f.requests[0].messages[0].content.includes(`RESPONSE LANGUAGE: ${name}`));
     assert.match(f.requests[0].messages[0].content, /Write the entire reply in this language/);
     const facts = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
-    assert.deepEqual(facts, { services: [{ name: 'Silk Press', base_price: 120 }], currency: 'USD' });
+    assert.deepEqual(facts, { services: [{ name: 'Silk Press', base_price: 120, option_groups: [], choices_are_excerpt: false }], currency: 'USD', shown_count: 1, is_excerpt: false, generic_option_choices: [], generic_option_choice_count: 0, generic_options_are_excerpt: false });
     assert.equal(f.requests.length, 1, 'No hidden translation provider or retry');
   }
 });

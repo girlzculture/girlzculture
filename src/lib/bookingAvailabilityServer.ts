@@ -246,6 +246,27 @@ export function loadCalendarOpportunityEvidence(salonId: string, date: string) {
   return loadAvailabilityData({ salonId }, date, 7, true);
 }
 
+/** Private service-fit reader. Callers supply only server-verified duration;
+ * unlike the public endpoint this requires complete own-business evidence. */
+export async function serviceAvailabilityWindow(input: { salonId: string; styleId: string; stylistId: string | null; date: string; days: number; durationMinutes: number; bufferMinutes?: number }) {
+  if (!Number.isInteger(input.days) || input.days < 1 || input.days > 7 || !Number.isInteger(input.durationMinutes) || input.durationMinutes < 15 || input.durationMinutes > 1440) throw Error("SERVICE_CAPACITY_INVALID_INPUT");
+  const data = await loadAvailabilityData(input, input.date, input.days, true);
+  if (data.style.id !== input.styleId || data.style.salon_id !== input.salonId) throw Error("SCHEDULE_ACCESS_DENIED");
+  // Unknown occupancy must never become apparently available time.
+  for (const [rows, start, end] of [[data.bookings, "appointment_datetime", "blocked_until"], [data.intents, "appointment_datetime", "blocked_until"], [data.blockouts, "starts_at", "ends_at"]] as const) {
+    for (const row of rows) if (!Number.isFinite(Date.parse(String(row[start]))) || !Number.isFinite(Date.parse(String(row[end]))) || Date.parse(String(row[end])) <= Date.parse(String(row[start]))) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+  }
+  const buffer = input.bufferMinutes ?? data.style.buffer_minutes ?? (data.salon.booking_settings as Row | null)?.buffer_minutes ?? 15;
+  const step = (data.salon.booking_settings as Row | null)?.slot_minutes ?? 30;
+  if (typeof buffer !== "number" || !Number.isInteger(buffer) || buffer < 0 || buffer > 180 || typeof step !== "number" || !Number.isInteger(step) || step < 15 || step > 1440) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+  return { style: data.style, timeZone: data.timeZone, bufferMinutes: buffer,
+    dates: Array.from({ length: input.days }, (_, offset) => {
+      const date = addMinutesToLocal(input.date, "00:00", offset * 1440).date;
+      return { date, ...availabilityForDate(data, { ...input, bufferMinutes: buffer, includeAllStylists: true }, date) };
+    }),
+  };
+}
+
 function availabilityForDate(
   data: AvailabilityData,
   input: AvailabilityInput,

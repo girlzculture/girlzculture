@@ -314,7 +314,7 @@ export default function OwnerDashboardShell({
               href={hrefFor(id)}
               aria-label={localized?.accessibleName}
               data-no-translate={localized ? true : undefined}
-              className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 px-1 text-center font-semibold ${localized ? "flex-auto text-[13px] leading-normal" : "flex-1 text-[11px] leading-tight"} ${
+              className={`relative flex min-h-12 flex-col items-center justify-center gap-1 px-1 text-center font-semibold ${localized ? "min-w-11 flex-auto text-[13px] leading-normal" : "min-w-0 flex-1 text-[11px] leading-tight"} ${
                 active ? "text-magenta" : "text-ink/70"
               }`}
             >

@@ -1,3 +1,5 @@
+import { readAssistantServiceCalculation } from "@/lib/assistantServiceCalculation";
+import { readAssistantBookingPrice } from "@/lib/assistantBookingPriceRead";
 import "server-only";
 import { bookingConversationWindow } from "@/lib/bookingConversation";
 import { createHash } from "node:crypto";
@@ -5,12 +7,13 @@ import { AssistantError, stableJson, validateTool, serviceLengthOptions, type As
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { readOwnerOperation } from "@/lib/ownerReadServer";
 import { prepareOwnerOperation } from "@/lib/ownerOperationalServer";
-import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
+import { readBusinessServiceCapacity } from "@/lib/businessServiceCapacityServer";
 import { moderatePublicContent } from "@/lib/contentModerationServer";
 import { isSubscriptionActive } from "@/lib/plans";
 import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gcAssistantPresentation";
-import { matchBusinessCatalog } from "@/lib/businessCatalogSearch";
+import { readAssistantServices } from "@/lib/assistantServiceRead";
+import { readAssistantBusinessProfile, readAssistantBusinessSettings } from "@/lib/assistantBusinessProfileRead";
 import { businessMediaInventory } from "@/lib/businessMediaInventory";
 import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
 import { readBusinessDepositRule } from "@/lib/businessDepositServer";
@@ -19,11 +22,10 @@ import { readBusinessClientCard } from "@/lib/businessClientServer";
 import { readManualSaleOptions, prepareManualSale } from "@/lib/assistantManualSaleServer";
 import { readAssistantOutstandingBalances } from "@/lib/assistantOutstandingBalances";
 import { prepareAssistantBookingReschedule, assertAssistantRescheduleScope } from "@/lib/assistantBookingReschedule";
-import { assistantAssignedProfessional, assistantRequestedProfessional, assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
+import { assistantAssignedProfessional, assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
-const profileFields = ["name", "description", "address_street", "address_city", "address_state", "address_zip", "hours", "instagram_url", "tiktok_url", "google_business_url", "slug", "vanity_slug", "time_zone"];
 const digest = (input: unknown) => createHash("sha256").update(stableJson(input)).digest("hex");
 const selected = (row: Row, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key] ?? null]));
 
@@ -109,11 +111,14 @@ export async function assertAssistantAccess(context: Context, permission: string
 
 export async function readAssistantData(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  if (tool === "calculate_service_selection") return readAssistantServiceCalculation(context, args);
+  if (tool === "get_booking_price_details") return readAssistantBookingPrice(context, args);
   if (tool === "get_outstanding_balances") return readAssistantOutstandingBalances(context, args);
   if (tool === "get_manual_sale_options") return readManualSaleOptions(context);
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
   if (tool === "get_client_record") return readBusinessClientCard(context, String(args.booking_id));
-  if (tool === "get_business_profile") return { ...selected(salon, profileFields), walk_ins_welcome: (salon.trust_info as Row | null)?.walk_ins_welcome === true };
+  if (tool === "get_business_profile") return readAssistantBusinessProfile(context);
+  if (tool === "get_business_settings") return readAssistantBusinessSettings(context);
   if (tool === "get_business_media") {
     const media = await admin.from("salons").select("gallery_photos,cover_photo_url,logo_url,photo_metadata").eq("id", salon.id).maybeSingle();
     if (media.error) throw media.error;
@@ -138,33 +143,8 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
       existing_bookings: "original_snapshot_unchanged", currency: "USD",
     } };
   }
-  if (tool === "get_services_and_prices") {
-    const query = String(args.query).trim();
-    const escaped = query.replace(/[\\%_]/g, character => `\\${character}`);
-    const fields = "id,name,base_price,duration_min_hours,duration_max_hours,size_options,length_options,addons,is_draft";
-    const scoped = () => admin.from("styles").select(fields, { count: "exact" }).eq("salon_id", salon.id).is("archived_at", null);
-    // Count the inventory without the name filter. Preserve direct database
-    // matches beyond the bounded fuzzy-search page, always within this business.
-    const [inventory, literal] = await Promise.all([
-      scoped().order("name").limit(1000),
-      query ? scoped().ilike("name", `%${escaped}%`).order("name").limit(100) : Promise.resolve({ data: [], error: null }),
-    ]);
-    if (inventory.error) throw inventory.error;
-    if (literal.error) throw literal.error;
-    const records = new Map<string, Row>();
-    for (const row of [...(inventory.data || []), ...(literal.data || [])]) records.set(String(row.id || row.name), row);
-    const matches = matchBusinessCatalog([...records.values()], query);
-    const total = inventory.count;
-    const complete = typeof total === "number" && total <= (inventory.data || []).length;
-    const exact = matches.some(match => match.exact);
-    return { services: matches.slice(0, 100).map(match => match.record), total, inventory_total: total, matching_total: query ? matches.length : total,
-      query, search_complete: complete, exact_match: exact, match_status: total === 0 ? "empty_inventory" : !query ? "inventory" : exact ? "exact" : matches.length ? "related" : complete ? "no_match" : "incomplete_search", capped_at: 100, currency: "USD" };
-  }
-  if (tool === "get_availability" && args.style_id) {
-    if (args.stylist_id) { const stylist = await admin.from("stylists").select("id").eq("id", args.stylist_id).eq("salon_id", salon.id).maybeSingle(); if (stylist.error || !stylist.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404); }
-    const available = await bookingAvailability({ salonId: salon.id, styleId: String(args.style_id), stylistId: assistantRequestedProfessional(context, args.stylist_id), date: String(args.date) });
-    return { date: args.date, time_zone: available.timeZone, duration_minutes: available.durationMinutes, buffer_minutes: available.bufferMinutes, slots: available.slots.map(slot => ({ time: slot.value, stylist_id: slot.stylistId || null, professional_name: slot.stylistId ? slot.stylistName : null })) };
-  }
+  if (tool === "get_services_and_prices") return readAssistantServices(context, args);
+  if (tool === "get_availability" && args.style_id) return readBusinessServiceCapacity(context, args);
   if (tool === "get_bookings") {
     const fields = "id,public_reference,appointment_datetime,status,guest_name,booking_origin,source,style:styles(name),stylist:stylists(name)";
     let query = admin.from("bookings").select(fields, { count: "exact" }).eq("salon_id", salon.id);

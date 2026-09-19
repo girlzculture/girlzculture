@@ -8,6 +8,7 @@ import { moneyCents, type FinancePeriod } from "@/lib/businessFinanceCore";
 import { contributionCopy } from "@/i18n/business-service-contribution-copy";
 import { dateKeyInTimeZone } from "@/lib/dateTime";
 import { updateFinanceLocation } from "@/lib/financeWorkspace";
+import BusinessServiceCapacity from "./BusinessServiceCapacity";
 // The view consumes the public response shape without importing server evidence
 // calculation or its private diagnostic vocabulary into the client graph.
 type Allocation = { kind: "expense" | "wage"; id: string; cents: number };
@@ -28,16 +29,16 @@ type Data = {
 const button = "inline-flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-sm font-semibold gc-disabled-control";
 const input = "min-h-11 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm";
 const endpoint = "/api/salon/service-contribution";
-export default function BusinessServiceContribution({ businessId, period }: { businessId: string; period: FinancePeriod }) {
+export default function BusinessServiceContribution({ businessId, period, canCheckCapacity = false }: { businessId: string; period: FinancePeriod; canCheckCapacity?: boolean }) {
  const { locale } = useI18n();
  const today = dateKeyInTimeZone(new Date(), period.timeZone);
  if (period.to >= today) {
   const shifted = (days: number) => { const date = new Date(today + "T12:00:00Z"); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
   return <section aria-label={contributionCopy(locale, "Service contribution")} data-no-translate className="space-y-3 rounded-xl border border-border bg-surface p-4 sm:p-5"><h2 className="font-serif text-xl font-bold">{contributionCopy(locale, "Service contribution")}</h2><p className="text-sm">{contributionCopy(locale, "Use a completed reporting period ending before today.")}</p><button className={button} onClick={() => updateFinanceLocation({ finance_from: shifted(-28), finance_to: shifted(-1) })}>{contributionCopy(locale, "Use previous 28 completed days")}</button></section>;
  }
- return <ContributionPanel key={`${businessId}:${period.from}:${period.to}:${period.timeZone}`} period={period}/>;
+ return <ContributionPanel key={`${businessId}:${period.from}:${period.to}:${period.timeZone}:${canCheckCapacity}`} period={period} canCheckCapacity={canCheckCapacity}/>;
 }
-function ContributionPanel({ period }: { period: FinancePeriod }) {
+function ContributionPanel({ period, canCheckCapacity }: { period: FinancePeriod; canCheckCapacity: boolean }) {
  const { locale, formatCurrency, formatDate, formatNumber } = useI18n();
  const copy = (source: string, values: Record<string, string> = {}) => contributionCopy(locale, source, values);
  const money = (cents: number) => formatCurrency(cents / 100);
@@ -85,18 +86,25 @@ function ContributionPanel({ period }: { period: FinancePeriod }) {
  const financeHref = (tab: string) => `/salon/dashboard/earnings?${new URLSearchParams({ finance: tab, finance_from: period.from, finance_to: period.to })}`;
  return <section aria-label={copy("Service contribution")} aria-busy={busy} data-no-translate className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5">
   <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-serif text-xl font-bold">{copy("Service contribution")}</h2><button className={button} disabled={busy} onClick={() => void load()}>{copy("Refresh evidence")}</button></div>
-  <p className="text-sm">{copy("Completed appointments with a saved service identity only. Fewer appointments do not prove spare capacity or lower demand.")}</p>
-  <p className="text-sm text-muted">{copy("Recorded contribution is not net profit or cash received. Cost completeness is declared by the owner, not verified by the platform.")}</p>
+  <p className="text-sm text-muted">{copy("Contribution uses owner-reviewed costs; it is not verified net profit or cash received.")}</p>
   {busy && <p role="status">{copy("Checking recorded costs…")}</p>}{failure && <p role="alert" className="break-words text-sm text-error">{copy(failure)}{reference && <> {copy("Support reference")}: {reference}</>}</p>}{saved && <p role="status">{copy("Saved allocation verified against current records.")}</p>}
-  {data && <><p className="text-sm">{copy("Current period: {from} to {to}. Comparison: {previousFrom} to {previousTo}.", { from: day(data.period.from), to: day(data.period.to), previousFrom: day(data.previous_period.from), previousTo: day(data.previous_period.to) })}</p>
-   {data.excluded_unattributed_service_records > 0 && <p className="text-sm">{copy("Excluded service records without a stable service identity: {count}.", { count: formatNumber(data.excluded_unattributed_service_records) })}</p>}
+  {data && <>
+   <p className="text-xs text-muted">{copy("Current period: {from} to {to}. Comparison: {previousFrom} to {previousTo}.", { from: day(data.period.from), to: day(data.period.to), previousFrom: day(data.previous_period.from), previousTo: day(data.previous_period.to) })}</p>
    {!data.rows.length && <p>{copy("No completed service appointments in either period.")}</p>}
    <ul className="space-y-3">{data.rows.map(row => <li key={row.service_id} className="space-y-3 rounded-lg border border-border p-3">
-    <h3 className="font-semibold">{row.name}</h3><p className="text-sm">{copy("Completed appointments: {current}; previous period: {previous}.", { current: formatNumber(row.completed_count), previous: formatNumber(row.previous_count) })}</p>
-    <dl className="space-y-1 text-sm">{[["Recorded value after refunds", row.net_recorded_value_cents], ["Saved commission", row.commission_cents], ["Recorded direct costs", row.recorded_cost_cents], ["Allocated expenses and wages", row.allocated_cost_cents], ["Owner-reviewed contribution", row.contribution_cents]].map(([label, value]) => <div key={String(label)} className="flex flex-wrap justify-between gap-2"><dt>{copy(String(label))}</dt><dd className="font-semibold">{value === null ? copy("Cost review required") : money(Number(value))}</dd></div>)}</dl>
-    {row.review_status !== "owner_reviewed" && <p className="text-sm text-muted">{copy(row.review_status === "stale" ? "Recorded evidence changed. Review costs again." : row.review_status === "payment_unverified" ? "Payment verification is incomplete; no contribution recommendation is available." : row.review_status === "booth" ? "Booth-rental service turnover is excluded from business contribution advice." : "Cost review required")}</p>}
-    {data.recommendations.some(item => item.service_id === row.service_id) && <p className="text-sm font-semibold">{copy("Positive recorded contribution with fewer appointments. Review this service and your current calendar before planning promotion.")}</p>}
+    <h3 className="font-semibold">{row.name}</h3>
+    <dl className="flex flex-wrap items-baseline justify-between gap-2 text-sm"><dt>{copy("Owner-reviewed contribution")}</dt><dd className="text-lg font-semibold">{row.contribution_cents === null ? copy("Cost review required") : money(row.contribution_cents)}</dd></dl>
+    <p className="text-sm">{copy("Completed appointments: {current}; previous period: {previous}.", { current: formatNumber(row.completed_count), previous: formatNumber(row.previous_count) })}</p>
     <div className="flex flex-wrap gap-2"><Link className={button} href={row.href}>{copy("Review service")}</Link><Link className={button} href="/salon/dashboard/availability">{copy("Review calendar")}</Link>{data.can_review && row.completed_count > 0 && !["booth", "payment_unverified"].includes(row.review_status) && <button disabled={busy} className={button} onClick={() => choose(row.service_id)}>{copy("Review costs")}</button>}</div>
+    {row.review_status !== "owner_reviewed" && <p className="text-sm text-muted">{copy(row.review_status === "stale" ? "Recorded evidence changed. Review costs again." : row.review_status === "payment_unverified" ? "Payment verification is incomplete; no contribution recommendation is available." : row.review_status === "booth" ? "Booth-rental service turnover is excluded from business contribution advice." : "Cost review required")}</p>}
+    {data.recommendations.some(item => item.service_id === row.service_id) && <p className="text-sm font-semibold">{copy("Positive contribution, fewer appointments. Review your calendar before promoting.")}</p>}
+    {canCheckCapacity && data.recommendations.some(item => item.service_id === row.service_id) && <BusinessServiceCapacity serviceId={row.service_id} period={period}/>}
+    <details className="border-t border-border">
+     <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">{copy("View cost breakdown")}</summary>
+     <div className="space-y-3 pb-1"><dl className="space-y-1 text-sm">{[["Recorded value after refunds", row.net_recorded_value_cents], ["Saved commission", row.commission_cents], ["Recorded direct costs", row.recorded_cost_cents], ["Allocated expenses and wages", row.allocated_cost_cents]].map(([label, value]) => <div key={String(label)} className="flex flex-wrap justify-between gap-2"><dt>{copy(String(label))}</dt><dd className="font-semibold">{value === null ? copy("Cost review required") : money(Number(value))}</dd></div>)}</dl>
+      {data.recommendations.some(item => item.service_id === row.service_id) && <p className="text-sm">{copy("Positive recorded contribution with fewer appointments. Review this service and your current calendar before planning promotion.")}</p>}
+     </div>
+    </details>
    </li>)}</ul>
    {active && data.can_review && <form onSubmit={event => void save(event)} aria-label={copy("Review costs")} className="space-y-4 rounded-xl border border-border p-4">
     <h3 className="font-semibold">{copy("Review costs")} · {active.name}</h3><p className="text-sm">{copy("Allocate existing recorded expenses and wages. This records an analysis, not a new payment or expense.")}</p>
@@ -109,6 +117,15 @@ function ContributionPanel({ period }: { period: FinancePeriod }) {
     <label className="flex min-h-11 items-start gap-3 text-sm"><input className="mt-1" type="checkbox" disabled={busy} checked={zero} onChange={event => { setZero(event.target.checked); reset(); }}/>{copy("I explicitly record zero additional allocated costs for this service period.")}</label>
     <div className="flex flex-wrap gap-2"><button className={button} disabled={busy || !complete || missingAmounts.length > 0}>{copy("Save reviewed allocation")}</button><button className={button} type="button" disabled={busy} onClick={() => setSelected("")}>{copy("Close cost review")}</button></div>
    </form>}
+   <details className="rounded-lg border border-border px-3">
+    <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary">{copy("How this is calculated")}</summary>
+    <div className="space-y-3 pb-3 text-sm text-muted">
+     <p>{copy("Business time zone: {zone}.", { zone: data.period.timeZone })}</p>
+     <p>{copy("Completed appointments with a saved service identity only. Fewer appointments do not prove spare capacity or lower demand.")}</p>
+     <p>{copy("Recorded contribution is not net profit or cash received. Cost completeness is declared by the owner, not verified by the platform.")}</p>
+     {data.excluded_unattributed_service_records > 0 && <p>{copy("Excluded service records without a stable service identity: {count}.", { count: formatNumber(data.excluded_unattributed_service_records) })}</p>}
+    </div>
+   </details>
   </>}
  </section>;
 }

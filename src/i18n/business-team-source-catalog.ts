@@ -43,6 +43,8 @@ const rows=[
  ["Stylist status","Statut du professionnel","Estado del profesional","专业人员状态"],
  ["Stylist availability","Disponibilité du professionnel","Disponibilidad del profesional","专业人员可预约时间"],
  ["All availability states","Toutes les disponibilités","Todos los estados de disponibilidad","全部可预约状态"],
+ ["All schedules","Tous","Todos","全部排班"],
+ ["Set","Défini","Definido","已设置"],
  ["Schedule set","Planning configuré","Horario configurado","已设置排班"],
  ["Schedule missing","Planning manquant","Horario sin configurar","未设置排班"],
  ["Availability configured","Disponibilité configurée","Disponibilidad configurada","已设置可预约时间"],

@@ -149,6 +149,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (path === "/api/location/resolve") return respond({ location: null, available: false, precision: "city" });
     if (path.startsWith("/api/notifications") || path.startsWith("/api/push")) return respond({ notifications: [], counts: {}, publicKey: "", enabled: false });
     if (path.startsWith("/api/monitoring")) return respond({ request_id: "P0-LOCAL-REFERENCE" });
+    if (path === "/api/salon/onboarding-instagram" && req.method() === "GET") return respond({ status: "unavailable", reason: "configuration" });
     if (path === "/api/salon/policies") {
       if (req.method() === "GET") return respond({ revisions, current: business.business_policy_revision_id });
       const input = req.postDataJSON(); actions.push(input);

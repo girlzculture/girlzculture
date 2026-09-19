@@ -10,7 +10,8 @@ const args={booking_id:booking,date:'2099-10-20',time:'15:00',reason:'Client req
 test('migration180 preserves every prior tool and registers only the new proposal action',()=>{
  const names=file=>[...readFileSync(file,'utf8').match(/check\(tool in \(([^;]+)\)\);/)[1].matchAll(/'([^']+)'/g)].map(match=>match[1]);
  const previous=names('supabase/migrations/20260919063800_assistant_outstanding_balances.sql'),current=names('supabase/migrations/20260919084221_assistant_booking_reschedule.sql');
- assert.deepEqual(current.filter(name=>!previous.includes(name)),['prepare_booking_reschedule_proposal']);assert(previous.every(name=>current.includes(name)));assert.deepEqual([...current].sort(),Object.keys(core.ASSISTANT_TOOLS).sort());
+ assert.deepEqual(current.filter(name=>!previous.includes(name)),['prepare_booking_reschedule_proposal']);assert(previous.every(name=>current.includes(name)));
+ const settings=names('supabase/migrations/20260919134859_assistant_profile_settings_read.sql');assert.deepEqual([...settings].sort(),[...current,'get_business_settings'].sort());const money=names('supabase/migrations/20260919143452_assistant_authoritative_money_reads.sql');assert.deepEqual([...money].sort(),[...settings,'calculate_service_selection','get_booking_price_details'].sort());assert.deepEqual([...money].sort(),Object.keys(core.ASSISTANT_TOOLS).sort());
 });
 test('reschedule review copy covers the same contract in all four supported languages',()=>{
  const dictionary=load('src/i18n/assistant-reschedule-copy.ts').assistantRescheduleCopy;

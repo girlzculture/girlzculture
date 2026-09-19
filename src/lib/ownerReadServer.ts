@@ -5,6 +5,7 @@ import { ownerBusinessMetrics, profileCompletion } from "@/lib/ownerBusinessMetr
 import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
 import { canonicalPlanForStored, restrictivePlanForLimits, SUBSCRIPTION_PLANS } from "@/lib/plans";
 import { assistantPeriodMetrics, assistantPerformanceGroups, compareAssistantPeriods } from "@/lib/assistantPerformance";
+import { businessFinanceRankings } from "@/lib/businessFinanceRankings";
 import { readBusinessFinances } from "@/lib/businessFinanceServer";
 import { readAssistantServiceContribution } from "@/lib/assistantServiceContribution";
 import { assistantAssignedProfessional, assistantRequestedProfessional } from "@/lib/assistantProfessionalScope";
@@ -15,12 +16,16 @@ import { businessScheduleOpportunitiesSummary } from "@/lib/businessScheduleOppo
 import { readBusinessRebookingAdvice } from "@/lib/businessRebookingAdviceServer";
 import { businessRebookingAdviceSummary } from "@/lib/businessRebookingAdvice";
 import { businessAppointmentPatterns } from "@/lib/businessAppointmentPatterns";
+import { readAssistantPromotions } from "@/lib/assistantPromotionRead";
+import { assertAssistantProductsReadAccess, readAssistantProductOperations } from "@/lib/assistantProductOperations";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
 export async function readOwnerOperation(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
   const assigned = assistantAssignedProfessional(context);
+  if (tool === "get_promotions") return readAssistantPromotions(context);
+  if (tool === "get_products") await assertAssistantProductsReadAccess(context);
   if (tool === "get_earnings_summary") {
     const timeZone = String(salon.time_zone || "America/New_York");
     const day = (instant: number) => {
@@ -32,7 +37,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     // context. A stylist's protected RPC contains only their own earnings.
     const { balances, by_stylist, compensation_position, ...summary } = result.summary;
     const names = new Map(result.stylists.map(row => [String(row.id), String(row.name)]));
-    return { scope: result.scope.kind === "own" ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: result.scope.stylist_id, service_contribution: result.scope.kind === "business" ? await readAssistantServiceContribution(context, args) : null, ...summary,
+    return { scope: result.scope.kind === "own" ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: result.scope.stylist_id, rankings: businessFinanceRankings(result.summary, names, result.scope.kind), service_contribution: result.scope.kind === "business" ? await readAssistantServiceContribution(context, args) : null, ...summary,
       unpaid_balance_cents: balances.reduce((sum, row) => sum + row.unpaid_cents, 0),
       professional_earnings: Object.entries(by_stylist).map(([id, values]) => ({ name: names.get(id) || null, ...values })), evidence: result.evidence, insights: result.scope.kind === "business" ? result.insights : null,
       compensation_position: Object.entries(compensation_position).map(([id,values]) => ({ name:names.get(id)||null,...values })),
@@ -89,8 +94,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
   }
   const lists: Partial<Record<AssistantTool, { table: string; fields: string; key: string; name?: string }>> = {
     get_professionals: { table: "stylists", fields: "id,name,bio,specialties,years_experience,is_active,is_draft,availability", key: "professionals", name: "name" },
-    get_products: { table: "salon_products", fields: "id,name,description,price,sale_price,inventory_quantity,track_inventory,low_stock_threshold,product_status,is_visible", key: "products", name: "name" },
-    get_promotions: { table: "salon_promotions", fields: "id,title,description,promotion_type,discount_value,starts_at,ends_at,status,target_scope", key: "promotions" },
+    get_products: { table: "salon_products", fields: "id,name,description,price,sale_price,inventory_quantity,track_inventory,low_stock_threshold,product_status,is_visible,pickup_enabled,pickup_prep_minutes,shipping_enabled,in_person_only", key: "products", name: "name" },
     get_reviews: { table: "reviews", fields: "id,rating_overall,written_review,salon_reply,display_name,moderation_status,created_at", key: "reviews" },
   };
   const list = lists[tool];
@@ -109,7 +113,8 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
       const inventory=[...stock.data.products.map((row:Row)=>({...row,kind:"retail"})),...stock.data.supplies.map((row:Row)=>({...row,kind:"supply"}))] as Row[];
       const search=String(args.query||"").toLocaleLowerCase();
       const supplies=(stock.data.supplies as Row[]).filter(row=>String(row.name).toLocaleLowerCase().includes(search));
-      return {products:result.data,total:result.count,capped_at:100,supplies:supplies.slice(0,100),supplies_total:supplies.length,
+      const orderOperations=await readAssistantProductOperations(context);
+      return {products:result.data,total:result.count,capped_at:100,supplies:supplies.slice(0,100),supplies_total:supplies.length,order_operations:orderOperations,
         stock_alerts:inventory.filter(row=>["low","out"].includes(productStock(row).state)).slice(0,100).map(row=>({name:row.name,kind:row.kind,unit:row.unit,quantity:row.inventory_quantity,threshold:row.low_stock_threshold})),
         stock_alerts_total:inventory.filter(row=>["low","out"].includes(productStock(row).state)).length,
         stock_definition:"Available stock excludes existing order reservations. Only this authenticated business is included. Untracked stock is not zero. Supplies are private, not customer products. Restocks and corrections require the Stock and supplies workflow. Financial product totals use get_earnings_summary; never infer profit from retail prices."};

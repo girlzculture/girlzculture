@@ -110,6 +110,21 @@ test('Dashboard redesign French mobile destinations remain readable at 320px and
   }
   expect(fixture.unexpected).toEqual([]);
 });
+test('Dashboard redesign Spanish phone destinations keep complete words and calendar navigation',async({page},info)=>{
+ const fixture=await p0OwnerFixture(page,{populated:true,locale:'es'});
+ for(const width of [320,390]){
+  await page.setViewportSize({width,height:844});await page.goto('/salon/dashboard/products');await page.evaluate(()=>document.fonts.ready);
+  const nav=page.locator('[data-owner-mobile-navigation]');await expect(nav.getByRole('link',{name:'Calendario',exact:true})).toBeVisible();await expect(nav.getByRole('link')).toHaveCount(5);await page.evaluate(()=>document.fonts.ready);
+  for(const link of await nav.getByRole('link').all()){
+   const metrics=await link.evaluate(el=>{const label=el.querySelector('span')!,range=document.createRange();range.selectNodeContents(label);const r=label.getBoundingClientRect(),cell=el.getBoundingClientRect();return{label:label.textContent,lines:range.getClientRects().length,width:cell.width,height:cell.height,fits:r.left>=cell.left&&r.right<=cell.right&&r.left>=0&&r.right<=innerWidth};});
+   expect(metrics.lines,JSON.stringify(metrics)).toBe(1);expect(metrics.fits,JSON.stringify(metrics)).toBe(true);expect(metrics.width).toBeGreaterThanOrEqual(44);expect(metrics.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.screenshot({path:info.outputPath(`spanish-phone-navigation-${width}.png`)});
+  await nav.getByRole('link',{name:'Calendario',exact:true}).click();await expect(page).toHaveURL(/\/salon\/dashboard\/availability(?:\?|$)/);
+ }
+ expect(fixture.actions).toEqual([]);expect(fixture.unexpected).toEqual([]);
+});
+
 test('Dashboard redesign mobile chrome keeps scrolled content out of header and navigation surfaces',async({page},info)=>{
  await p0OwnerFixture(page,{populated:true});await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/my-page');
  await expect(page.getByRole('textbox',{name:'Business Name',exact:true})).toBeVisible();

@@ -61,9 +61,11 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,1000
   if(width>=1280)await region.getByRole('button',{name:t('Open review'),exact:true}).click();else await region.getByRole('link',{name:t('Open review'),exact:true}).click();
   const editor=region.getByRole('textbox',{name:t('Reply as the salon'),exact:true});await editor.fill(draft);await region.getByRole('button',{name:t('Save reply'),exact:true}).click();
   await expect(region.getByRole('alert')).toContainText(reference);await expect(editor).toHaveValue(draft);
+  if(locale==='en'){await region.getByRole('alert').scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('review-failed-reply-reference-viewport.png')});await editor.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('review-failed-reply-draft-viewport.png')});}
   await region.getByRole('button',{name:t('Save reply'),exact:true}).click();await expect(region.getByRole('region',{name:t('Unpublished reply'),exact:true})).toContainText(draft);
   expect(requests[0].request_id).toBe(requests[1].request_id);
   await expect(region.getByRole('region',{name:t('Public salon reply'),exact:true})).toHaveCount(0);
+  if(locale==='en'){await region.getByRole('region',{name:t('Unpublished reply'),exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('review-pending-reply-viewport.png')});}
   await page.reload();await expect(region.getByRole('region',{name:t('Unpublished reply'),exact:true})).toContainText(draft);
   held=false;await region.getByRole('button',{name:t('Edit reply'),exact:true}).click();await editor.fill(edited);await region.getByRole('button',{name:t('Save reply'),exact:true}).click();
   await expect(region.getByRole('region',{name:t('Public salon reply'),exact:true})).toContainText(edited);await expect(region.getByRole('region',{name:t('Unpublished reply'),exact:true})).toHaveCount(0);

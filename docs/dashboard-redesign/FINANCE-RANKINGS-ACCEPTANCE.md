@@ -1,0 +1,22 @@
+# Recorded finance rankings — 2026-09-19
+
+Status: **AUTOMATED ONLY**. Code, protected reader/model regressions and focused local production-build browser evidence are available. Final required CI, hosted/model-provider behavior and complete visual acceptance are not established by this document.
+
+The original FIN-06 / EXPENSE-01 gap is reproduced in `../redesign-evidence/finance-rankings-before-actual.log`: both assertions fail. The actual `readAssistantData` response has the highest professional among 15 and the largest expense category among 40; the actual planner/answer request loses them at the existing 32-property and 12-array bounds. Initial test harness shape mistakes are retained separately in `finance-rankings-before.log` and are not defect evidence.
+
+`businessFinanceRankings.ts` now sorts the complete already-authorized canonical summary numerically before selecting twelve rows. It reports the complete total and amount, shown/excerpt counts, exact maximum, complete tied-leader count, and bounded tied names. Stable IDs/category strings determine tie order. USD and the selected inclusive local-date period remain explicit. No additional business, customer, provider or database query is introduced.
+
+Professional earnings mean recorded commission earned (including reversals) plus wages due in that period. Gross service sales, recorded payouts, booth rent and payment receipts remain separate. Unassigned compensation is explicitly excluded from a professional winner. Negative and zero recorded values remain meaningful; an empty pool has no winner. Own-professional permission has only its canonical own scope and never establishes a business-wide winner. Operating expense ranking excludes inventory asset purchases; expense completeness remains unverified and recorded profit remains qualified.
+
+`ownerReadServer.ts` supplies the ranks from `readBusinessFinances`; `gcAssistantPlanningServer.ts` packages existing scalar totals, receipt breakdowns and explicitly excerpted record lists within the unchanged model bounds. Fresh history authorization/readback continues in both planner and answer phases. `FinanceEarningsLeaders.tsx` is mounted only in the full-business Team panel of the current matching Finance snapshot. Its seven labels are registered in the existing English/French/Spanish/Simplified Chinese source catalog.
+
+Verification:
+
+- `finance-rankings-final.log`: **13/13 passed, zero skips**. Actual protected finance transport stub → real canonical transformation/aggregation → real assistant reader → real planner/answer projection. Includes full-pool maxima, >12 ties, empty versus zero, distinct compensation/payout/turnover, unassigned and inventory exclusions, own/mixed scope, changed and revoked history, nonfinite/overflow failures, local-midnight boundaries, negative refund compensation and required-locale copy.
+- `finance-rankings-types.log`: full TypeScript exit 0. `finance-rankings-lint.log`: scoped ESLint exit 0.
+- `finance-rankings-regressions.log`: **78/78 existing finance/core/data/assistant-planning cases passed, zero skips** (81.33 seconds).
+- Independent read-only review by `reconciliation_review`: PASS; no concrete blocker. This is not hosted/model-provider acceptance.
+- The five cases in `tests/browser/business-finance-tabs.spec.ts`, prefix `Business finance ranked team summary`, passed in both Chromium and WebKit: **10/10 ranking browser cases**. EN desktop, FR phone, ES tablet, zh-CN landscape and own-earnings-only staff preserve exact amount/tie counts, period, names and basis; they check empty-period transition, no horizontal overflow/accessibility and unexpected-request rejection. Evidence: `combined-192-focused-browser.log` (16/16 overall in that run, including six separate mobile-label cases; only ten are ranking cases).
+- Local production build192 passed with identical before/after **836-file** source digest `d6e6ed7561fa7df4c73c2b38c773b83370f845b2d803570ac15b43859412ff64`, recorded in `combined-192-build.log` and `combined-192-source-{before,after}.json`. The root reviewer inspected the actual French390px and Chinese844px ranking screenshots: the reviewed content was readable. This is bounded viewport evidence, not whole-page visual or hosted acceptance; later source changes require their own verification boundary.
+
+No migration, new assistant tool, provider request, payment mutation, production deployment or change to either $25 cap is part of this correction.

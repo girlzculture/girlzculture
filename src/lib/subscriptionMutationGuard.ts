@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { stripeFailureDiagnostics, stripeGet, stripeRequest } from "@/lib/stripeServer";
 import { UserSafeRequestError } from "@/lib/platformErrors";
+import { archiveExplicitPhaseResponse } from '@/lib/subscriptionPaymentExplicitPhase';
 
 /** Serializes app-controlled plan/cancellation writes with method setup. An
  * uncertain provider response retains its durable write-started hold until
@@ -23,7 +24,7 @@ export async function withSubscriptionMutation<T>(input:{admin:SupabaseClient;sa
   // recorded before send. Opposite completed intents in one billing period
   // must never reuse Stripe's cached response from an earlier generation.
   intentKey:(stage:string)=>{if(!/^[a-z][a-z0-9-]{0,79}$/.test(stage))throw new Error('SUBSCRIPTION_MUTATION_STAGE_INVALID');return `subscription-mutation:${lease}:${stage}`;},
-  get:async<V>(path:string)=>{const value=await stripeGet<V>(path,{signal});reads[path]=createHash("sha256").update(JSON.stringify(value)).digest("hex");return value;},
+  get:async<V>(path:string,options?:Parameters<typeof stripeGet>[1])=>{const value=await stripeGet<V>(path,{...options,signal});reads[path]=createHash("sha256").update(JSON.stringify(value)).digest("hex");return value;},
   post:async<V>(path:string,values:Parameters<typeof stripeRequest>[1],options?:Parameters<typeof stripeRequest>[2])=>{
    signal.throwIfAborted();
    // Stripe previews create no invoice/subscription change. A failed preview
@@ -40,7 +41,9 @@ export async function withSubscriptionMutation<T>(input:{admin:SupabaseClient;sa
    try{
     const value=await stripeRequest<V>(path,values,{...options,signal,onResponse:evidence=>{requestId=evidence.requestId;options?.onResponse?.(evidence);}});
     const recorded=await input.admin.rpc("record_subscription_mutation_response",{...args,p_request_id:requestId});
-    if(recorded.error||recorded.data!==true)throw new Error("SUBSCRIPTION_MUTATION_EVIDENCE_FAILED");
+    if(recorded.error||recorded.data!==true)throw Object.assign(new Error("SUBSCRIPTION_MUTATION_EVIDENCE_FAILED"),{code:'SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'});
+    try{await archiveExplicitPhaseResponse({admin:input.admin,salonId:input.salonId,actorId:input.actorId,subscriptionId:input.subscriptionId,leaseId:lease,path,values,response:value,apiVersion:options?.apiVersion});}
+    catch(error){throw Object.assign(error instanceof Error?error:new Error('SUBSCRIPTION_MUTATION_EVIDENCE_FAILED'),{code:'SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'});}
     return value;
    }catch(error){
     const detail=error&&typeof error==='object'?error as {provider?:string;status?:number;deliveryUncertain?:boolean}:{};

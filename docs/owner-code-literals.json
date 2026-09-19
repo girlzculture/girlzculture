@@ -1022,6 +1022,10 @@
         {
           "file": "src/lib/businessScheduleOpportunities.ts",
           "context": "e481b5a66cc3891ae235da9e01879fe56e73d712c18264056da024954bbe93d9"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceCapacity.tsx",
+          "context": "5e74a8148500cb138afb9e1c23a06947c56dd2ddae37e6f35711a0401d0460b0"
         }
       ]
     },
@@ -2474,6 +2478,10 @@
         {
           "file": "src/components/owner/BusinessServiceContribution.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceCapacity.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2730,6 +2738,10 @@
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "context": "12eed0aa33e1e3ad7f8f922b1f50ea1027eb9653060c960dc9f33668df7e1557"
+        },
+        {
+          "file": "src/components/owner/BusinessServiceCapacity.tsx",
+          "context": "ee438f03a37e0174ac2370c0b74c8d256b341acb3fd0a5a9389ac0a5a1747234"
         }
       ]
     },
@@ -3764,6 +3776,66 @@
         {
           "file": "src/components/owner/BusinessPhotoLibrary.tsx",
           "context": "ff6fa0801482b9cc0118e004e3567d631b902efed92a39481b0dae9fc446225d"
+        }
+      ]
+    },
+    {
+      "source": "countOne",
+      "reason": "Typed rebooking dictionary key; actual singular copy is present in English, French, Spanish and Simplified Chinese and checked by dictionary parity.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessRebookingAdvice.tsx",
+          "context": "6010c3b4c77a025d1967bb6d873a46589f31c055728308b840b1609f90ba06e3"
+        }
+      ]
+    },
+    {
+      "source": "mb-5 {value0}",
+      "reason": "Exact className template for the Stylists-only compact heading layout. Reviewed CSS expression, not rendered interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "89ea2db7d01b6335751238d85a85ddd6a6a3e84a76917bede1b0b41ead760887"
+        }
+      ]
+    },
+    {
+      "source": "flex items-center justify-between gap-3 {value0}",
+      "reason": "Exact className template for the Stylists-only compact heading layout. Reviewed CSS expression, not rendered interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "4a2ae7f964c08b608cd95eb80ba869668115c1733be5679dc73c9857e8c14a5a"
+        }
+      ]
+    },
+    {
+      "source": "shrink-0 {value0}",
+      "reason": "Exact className template for the Stylists-only compact heading layout. Reviewed CSS expression, not rendered interface copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/StructuredCatalogEditors.tsx",
+          "context": "a5c6c0147e7ad87ed9e58008293d612d1a6fb8b916df2a06b8884a398b652417"
+        }
+      ]
+    },
+    {
+      "source": "{value0}:{value1}:{value2}:{value3}:{value4}",
+      "reason": "React remount identity binding business, historical period, time zone and capacity permission; not rendered copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "0dae45c68078447191684f6273cacf45f2ce5da35b78b74bb681726cdf3239d1"
+        }
+      ]
+    },
+    {
+      "source": "{value0}: {value1}; duration adjustment {value2} minutes",
+      "reason": "Bounded model-only option evidence assembled by serviceCapacityAssistantFacts for the authorized planner. The owner component imports only the response type and renders separately localized interface copy; this protocol template is never rendered as interface text.",
+      "contexts": [
+        {
+          "file": "src/lib/businessServiceCapacity.ts",
+          "context": "03cdd6dec6833bdef5b2e84e3f7ff0ee746ff7db026e46dd044d4c183792f752"
         }
       ]
     }

@@ -24,9 +24,12 @@ const manualAppointment = {
 export const ASSISTANT_TOOLS = {
   get_business_summary: { risk: 1, permission: "overview", schema: object(range) },
   get_bookings: { risk: 1, permission: "bookings", schema: object(range) },
-  get_availability: { risk: 1, permission: "availability", schema: object({ style_id: nullableId, stylist_id: nullableId, date: { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" } }) },
+  get_availability: { risk: 1, permission: "availability", schema: object({ style_id: nullableId, stylist_id: nullableId, date: { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, days: { type: "integer", minimum: 1, maximum: 7 }, selected_options: { type: "array", maxItems: 12, items: object({ group_id: { ...string(40), minLength: 1 }, values: { type: "array", items: { ...string(80), minLength: 1 }, maxItems: 12 } }) } }) },
   get_business_profile: { risk: 1, permission: "my_page", schema: object({}) },
+  get_business_settings: { risk: 1, permission: "settings", schema: object({}) },
   get_business_media: { risk: 1, permission: "photos", schema: object({}) },
+  calculate_service_selection: { risk: 1, permission: "styles", schema: object({ service_id: uuid, selected_size: { type: ["string", "null"], maxLength: 80 }, selected_length: { type: ["string", "null"], maxLength: 80 }, selected_addons: { type: "array", items: { ...string(80), minLength: 1 }, maxItems: 20 }, selected_options: { type: "array", maxItems: 30, items: object({ group_id: { ...string(40), minLength: 1 }, values: { type: "array", items: { ...string(80), minLength: 1 }, maxItems: 30 } }) }, selected_material_id: nullableId, promotion_id: nullableId }) },
+  get_booking_price_details: { risk: 1, permission: "bookings", schema: object({ booking_id: uuid }) },
   get_services_and_prices: { risk: 1, permission: "styles", schema: object({ query: string(120) }) },
   get_business_policies: { risk: 1, permission: "my_page", schema: object({}) },
   search_platform_knowledge: { risk: 1, permission: "overview", schema: object({ query: { ...string(240), minLength: 2 } }) },
@@ -103,9 +106,13 @@ export function validateTool(name: unknown, input: unknown) {
       ...(!Object.hasOwn(input.policy, "refund_satisfaction") && !Object.hasOwn(input.policy, "refund_terms") ? { refund_satisfaction: "contact_business", refund_terms: "" } : {}),
       business_policy_text: null,
       ...input.policy,
-    } } : input;
+    } } : tool === "get_availability" && input && typeof input === "object" && !Array.isArray(input) ? { days: 1, selected_options: [], ...input } : input;
   assertSchema(candidate, schema);
   const args = input as Record<string, unknown>;
+  if (tool === "get_availability") {
+    const groups = (candidate as { selected_options: { group_id: string; values: string[] }[] }).selected_options;
+    if (new Set(groups.map(group => group.group_id)).size !== groups.length || groups.some(group => new Set(group.values).size !== group.values.length) || !args.style_id && (Number(args.days ?? 1) !== 1 || groups.length)) throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
   if ("start" in args) {
     const start = Date.parse(String(args.start)); const end = Date.parse(String(args.end));
     if (!validCalendarDate(String(args.start)) || !validCalendarDate(String(args.end)) || !Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 31 * 86400_000 || !/Z$|[+-]\d{2}:\d{2}$/.test(String(args.start)) || !/Z$|[+-]\d{2}:\d{2}$/.test(String(args.end))) throw new AssistantError("ASSISTANT_INVALID_DATE_RANGE");

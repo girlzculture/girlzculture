@@ -1,5 +1,8 @@
+import { assistantMoneyReadText } from "@/i18n/assistant-money-read-copy";
 import { manualSaleText } from "@/i18n/assistant-manual-sale-source-catalog";
 import { assistantBalancesCopy } from "@/i18n/assistant-balances-copy";
+import { assistantSettingsReadMessage } from "@/i18n/assistant-profile-settings-copy";
+import { serviceCapacityCopy } from "@/i18n/business-service-capacity-copy";
 type Row = Record<string, unknown>;
 
 export type AssistantPresentation = {
@@ -61,6 +64,12 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   const t = (source: string, values?: Record<string, string | number>) => launchWorkspaceText(source, language, values);
   const suggest = (items: string[]) => items.map(source => t(source));
 
+  if (tool === "calculate_service_selection" || tool === "get_booking_price_details") {
+    if (result.available !== true) return { message: assistantMoneyReadText("missing", locale) };
+    const money = row(tool === "calculate_service_selection" ? result.money : result.original), current = row(result.current);
+    const cents = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) ? currency(value / 100, locale) : assistantMoneyReadText("unavailable", locale);
+    return { message: assistantMoneyReadText(tool === "calculate_service_selection" ? "selection" : "booking", locale, { total: cents(money.total_cents ?? money.agreed_total_cents), saving: cents(money.discount_cents), deposit: cents(money.protected_deposit_cents), balance: cents(money.remaining_balance_cents), unpaid: current.available === true ? cents(current.unpaid_cents) : assistantMoneyReadText("unavailable", locale) }) };
+  }
   if (tool === "get_manual_sale_options") return { message: manualSaleText("I found the services and professionals you can use for a received-payment draft. Confirm the service, professional, amount and payment method.", locale) };
   if (tool === "get_outstanding_balances") {
     const balanceCopy=assistantBalancesCopy(locale);
@@ -96,6 +105,8 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
     return { message: [words.profile(name, location), text(result.description, 320)].filter(Boolean).join("\n\n"), suggestions: suggest(["Show my hours", "Update my description", "Open My Page"]) };
   }
 
+  if (tool === "get_business_settings") return { message: assistantSettingsReadMessage(locale), suggestions: suggest(["Open Settings"]) };
+
   if (tool === "get_bookings" || tool === "get_upcoming_appointments") {
     const bookings = rows(result.bookings);
     const count = Math.max(number(result.total), bookings.length);
@@ -109,6 +120,13 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   }
 
   if (tool === "get_availability" || tool === "get_calendar_gaps") {
+    if (tool === "get_availability" && result.service_id) {
+      const copy = (source: string, values: Record<string, string> = {}) => serviceCapacityCopy(locale, source, values);
+      const message = result.available !== true
+        ? copy(result.reason === "selection_required" ? "Choose the required service options, then check again." : "Service choices changed. Review the saved service before continuing.")
+        : [copy("{total} start-time alternatives; showing {shown}.", { total: String(number(result.total)), shown: String(number(result.shown_count)) }), copy("{duration} minutes plus {buffer} minutes of buffer.", { duration: String(number(result.duration_minutes)), buffer: String(number(result.buffer_minutes)) }), copy("Start times overlap; this is not a count of extra appointments. No time is reserved. Booking checks customer eligibility and availability again.")].join(" ");
+      return { message, suggestions: suggest(["Check another day", "Open calendar"]) };
+    }
     const slots = rows(result.slots || result.gaps);
     const labels = slots.slice(0, 4).map(slot => text(slot.label || slot.time, 40) || [dateTime(slot.start, locale, text(result.time_zone)), dateTime(slot.end, locale, text(result.time_zone)), text(slot.professional_name, 80)].filter(Boolean).join(" — ")).filter(Boolean);
     return { message: words.availability(slots.length, text(result.date, 20), list(labels, locale)), suggestions: suggest(["Check another day", "Block time", "Open calendar"]) };

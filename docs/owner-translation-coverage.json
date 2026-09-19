@@ -10,8 +10,8 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 3031,
-  "excluded_code_count": 235,
+  "candidate_count": 3066,
+  "excluded_code_count": 241,
   "intentional_untranslated": [
     "Girlz Culture",
     "Girlz",
@@ -99,21 +99,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 2722,
-      "covered": 2722,
+      "source_count": 2751,
+      "covered": 2751,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 2722,
-      "covered": 2722,
+      "source_count": 2751,
+      "covered": 2751,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 2722,
-      "covered": 1731,
-      "missing_count": 991,
+      "source_count": 2751,
+      "covered": 1728,
+      "missing_count": 1023,
       "missing": [
         {
           "source": "{completed} completed · {cancelled} cancelled · {noShow} no-show · {other} other current states",
@@ -145,6 +145,51 @@
               "line": 44,
               "kind": "localized-source",
               "context": "8cdf8c25b20288ed7217e93623ac4656ff9dded92fbb7ffc393ccd9cf5262101"
+            }
+          ]
+        },
+        {
+          "source": "{duration} minutes plus {buffer} minutes of buffer.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 47,
+              "kind": "literal",
+              "context": "c75986b95c9f7a60e2005385df7c8f0d60ee5c1b329a7ab4b578ff1769c5ec49"
+            },
+            {
+              "file": "src/lib/gcAssistantPresentation.ts",
+              "line": 127,
+              "kind": "literal",
+              "context": "cd52bd74b2cfb63f68efb7cc2b2ea0c8505116104266093c2dcc037b781f4fa0"
+            }
+          ]
+        },
+        {
+          "source": "{from} to {to} · {zone}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 47,
+              "kind": "literal",
+              "context": "152748210540e348a0f067cf471a2205e9bad6064ff7787bb4edf7c3bba1deb9"
+            }
+          ]
+        },
+        {
+          "source": "{total} start-time alternatives; showing {shown}.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 48,
+              "kind": "literal",
+              "context": "6fa83e5adf5a15670697377b8e2ca01c8e3cbe7b5947504f3dbe643485c697ea"
+            },
+            {
+              "file": "src/lib/gcAssistantPresentation.ts",
+              "line": 127,
+              "kind": "literal",
+              "context": "053b444aec19b48449bda3da2240940758dfc601f0dc1e1fc35b7a78341ef2be"
             }
           ]
         },
@@ -285,7 +330,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 105,
+              "line": 113,
               "kind": "literal",
               "context": "b180b2c5ccc52400f1d678ec9bfc12e0f64c98f9746dbc48821e86b7d3e74646"
             }
@@ -329,7 +374,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 161,
+              "line": 162,
               "kind": "localized-source",
               "context": "ab76773c36cb33abca0a8bbdde798d960b6a9a4cc9c47f7a31d78b82c335ca99"
             }
@@ -445,19 +490,19 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 131,
+              "line": 132,
               "kind": "localized-source",
               "context": "f17ac5367e522387688af728b475aa2905b9f38e265f035933ad88e20d15122e"
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 134,
+              "line": 135,
               "kind": "literal",
               "context": "978a5a4cd87dc570c5fbe39878652fffca32fc2572785c73c3dc82571d2229c8"
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 135,
+              "line": 136,
               "kind": "literal",
               "context": "978a5a4cd87dc570c5fbe39878652fffca32fc2572785c73c3dc82571d2229c8"
             }
@@ -692,6 +737,17 @@
           ]
         },
         {
+          "source": "All schedules",
+          "occurrences": [
+            {
+              "file": "src/components/owner/TeamWorkspace.tsx",
+              "line": 43,
+              "kind": "localized-source",
+              "context": "3bd98d83e63ec909d9a6357829ec175ddff7ff1850bc3a09f2ec2063998fa7f4"
+            }
+          ]
+        },
+        {
           "source": "All services",
           "occurrences": [
             {
@@ -739,17 +795,12 @@
               "line": 75,
               "kind": "localized-source",
               "context": "dc24276e1c32f326e2317af58deb2a4ae07e3b2d86e09739f57a59deca1f2ece"
-            }
-          ]
-        },
-        {
-          "source": "All stock levels",
-          "occurrences": [
+            },
             {
               "file": "src/components/owner/ProductsWorkspace.tsx",
               "line": 25,
               "kind": "localized-source",
-              "context": "762dcff55bda2bb8aa0d08edfc8e2b3c1ce10a5fdff630f8f2336be83493e7ca"
+              "context": "dc24276e1c32f326e2317af58deb2a4ae07e3b2d86e09739f57a59deca1f2ece"
             }
           ]
         },
@@ -803,7 +854,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 102,
+              "line": 110,
               "kind": "literal",
               "context": "48da9239293375132b20842fd19d4637de53ff22219c5616f05e96e75ffb5a77"
             }
@@ -814,7 +865,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 106,
+              "line": 114,
               "kind": "literal",
               "context": "bc4c962de1498f8de4798208ba379d06722d3223bffa8a9399c9bbdec2ed296c"
             }
@@ -825,7 +876,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 96,
+              "line": 104,
               "kind": "literal",
               "context": "3127e58d4e66aec825a3ffa4f869da0bf6a3584e2830ed6e59cfedc757294450"
             }
@@ -836,7 +887,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 107,
+              "line": 115,
               "kind": "literal",
               "context": "38456681279613b8ba4b3f9df242107f0aa11cd8ef6e4b348d39f494eb87bbb0"
             }
@@ -858,7 +909,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 139,
+              "line": 140,
               "kind": "literal",
               "context": "054a5c767166ad0e33a7bdb30504f41bf7acc6d2f34e4c69620e118dc3829775"
             }
@@ -880,7 +931,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 140,
+              "line": 141,
               "kind": "literal",
               "context": "41c0907cb879a7e01107052b678247ff8af862709c9b820f55a8d70d354e86ad"
             }
@@ -891,7 +942,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 141,
+              "line": 142,
               "kind": "literal",
               "context": "1e4a7586ef184779e2658cab5b0702435962c9f9f16d7670b14bac4e74165e37"
             }
@@ -927,6 +978,17 @@
               "line": 48,
               "kind": "literal",
               "context": "d0298ddb59ace1c0e9c676490ddeef19a64d3f2ba1e1f33410c0b0e8a455a900"
+            }
+          ]
+        },
+        {
+          "source": "Any available professional",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 51,
+              "kind": "literal",
+              "context": "66ab8d3769b28ff6b13a22c5f644c9d16b638323d9906f6529ee9e354b156b66"
             }
           ]
         },
@@ -1415,7 +1477,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 160,
+              "line": 161,
               "kind": "localized-source",
               "context": "e2ddfdc2fb879339e25ba0ceff1fbcbd91cec0fbd8b1c15fa1ff08fe8a65beb0"
             }
@@ -1723,7 +1785,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "literal",
               "context": "227f0cdd2e21c13775f44a7ef346cbf540a07cffca3059ed585f5f3062e12871"
             }
@@ -1734,7 +1796,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "literal",
               "context": "337b16932c62568dd2be7066277e5934007ae7b99a8386bc425afea56c26f1a8"
             }
@@ -1745,7 +1807,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 97,
+              "line": 99,
               "kind": "literal",
               "context": "786f3f41440fc8646d70e1c46f3742b5cd6f0902752b76e1278951f8f8effb41"
             }
@@ -1905,6 +1967,17 @@
               "line": 130,
               "kind": "localized-source",
               "context": "6fb43edc9bdc10ce0c154d1605f65e6f5950a3f47d3eeed1e59042a1c647eecf"
+            }
+          ]
+        },
+        {
+          "source": "Business time zone: {zone}.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceContribution.tsx",
+              "line": 123,
+              "kind": "literal",
+              "context": "5cc14a9df58861c54cee88c84a34702073bcd0b8cf16675047f3eba5255b8a9c"
             }
           ]
         },
@@ -2084,7 +2157,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 129,
+              "line": 130,
               "kind": "localized-source",
               "context": "6b21e9c01ced67403df001145a60aa5eeb64ce662720ca860cf58925232fffcd"
             },
@@ -2113,7 +2186,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 129,
+              "line": 130,
               "kind": "localized-source",
               "context": "b23b932a64d4c5b987fd6272e34b49fabd76590c0afbed0b4da1d4b00da2cb60"
             },
@@ -2164,7 +2237,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "3217b32fb8a4ab79c1af14c70e9303f387fb80a8591ff96940809aba9fd842be"
             }
@@ -2209,7 +2282,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "localized-source",
               "context": "f6944d32e79b38ae073674f8f5d5947b76c398f18ee3087472197af57c9c9268"
             }
@@ -2227,11 +2300,33 @@
           ]
         },
         {
+          "source": "Check next seven days",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 41,
+              "kind": "literal",
+              "context": "bb1d0e3c0f2ce8638fd1dfdf8ebd58a4817c23abc7c1ff654594bb3e5628d6d7"
+            }
+          ]
+        },
+        {
+          "source": "Check openings for this service",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 14,
+              "kind": "literal",
+              "context": "a0a21c791074eb343d3598958acd0eb7afeaf79f60e6df01f2e10183d6248ade"
+            }
+          ]
+        },
+        {
           "source": "Check the amount and required fields.",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 107,
+              "line": 108,
               "kind": "localized-source",
               "context": "54a6a741ded0bcda61d8712f82b34a97a8c3ef15d0743e42a044355dcdf83e01"
             },
@@ -2290,6 +2385,17 @@
               "line": 115,
               "kind": "localized-source",
               "context": "f36b63e71be73e36ebffa0cf140f6b13094674e4d72a0fa71563a33eb2db7ae1"
+            }
+          ]
+        },
+        {
+          "source": "Checking openings…",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 43,
+              "kind": "literal",
+              "context": "ec51934f55b9dbde3d486b236c98916a570f0ae5827d84e239c9f255d61e3b01"
             }
           ]
         },
@@ -2397,7 +2503,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 64,
+              "line": 65,
               "kind": "localized-source",
               "context": "3422b2197b412f6cf6197441035e549446a4fdbfd3df44e3691b63a0987a9005"
             }
@@ -2437,6 +2543,17 @@
           ]
         },
         {
+          "source": "Choose an option",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 40,
+              "kind": "literal",
+              "context": "8bd35712da7b497e04c94c30065611c043d61539cff2dfdab7b57627cb2ae5b7"
+            }
+          ]
+        },
+        {
           "source": "Choose clients who have received a service and opted in to email updates from your business.",
           "occurrences": [
             {
@@ -2452,7 +2569,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "localized-source",
               "context": "ebf2b90327ee38aa14d38f683bd18cd987ab451fe7f1c615c68ab6cb029047a3"
             }
@@ -2463,7 +2580,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "localized-source",
               "context": "1f2ce3ce9334338396e606fe3cc302d66d36e614da86e5d295f6d9d83a9415c1"
             },
@@ -2472,6 +2589,23 @@
               "line": 47,
               "kind": "localized-source",
               "context": "1f2ce3ce9334338396e606fe3cc302d66d36e614da86e5d295f6d9d83a9415c1"
+            }
+          ]
+        },
+        {
+          "source": "Choose the required service options, then check again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "0316a0fc1169c05ff400327cb2040e5016a67b57dc8edde69ed0ac2f80d9c9ec"
+            },
+            {
+              "file": "src/lib/gcAssistantPresentation.ts",
+              "line": 126,
+              "kind": "literal",
+              "context": "4b502a08e5c9366fe8acdd04e46917b86ed813b1594c5a76a48122d3bf662019"
             }
           ]
         },
@@ -2574,7 +2708,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "d5bbb545c10494ba31f15666946ac4f5d36975ebc6eeb4fe13cd408a189b35ad"
             },
@@ -2697,9 +2831,20 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 110,
+              "line": 118,
               "kind": "literal",
               "context": "95fa80756af4c687569f5cb90df706a9dbb506f7b51a54415742e8710f60911e"
+            }
+          ]
+        },
+        {
+          "source": "Close openings",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 36,
+              "kind": "literal",
+              "context": "b0f804be068a475434e86b0d898e45caa6d95898960a28b89c68157f719ebf05"
             }
           ]
         },
@@ -2764,7 +2909,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "literal",
               "context": "7ceaf623438fbf0f85a750b0116cb87e695b9e6b25905702375cf13a645bec6c"
             },
@@ -2773,6 +2918,17 @@
               "line": 52,
               "kind": "literal",
               "context": "51e365d0549aacbc7193470f8284dc21b3044275577803fa3d85307d9b198737"
+            }
+          ]
+        },
+        {
+          "source": "Commission earned plus wages due in the selected period. Service sales and compensation already paid are separate.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 11,
+              "kind": "localized-source",
+              "context": "8cec7e3ab8e99844ed10d4ad1dc4fffc781c1dd30f650c0ab7eeab18877fa251"
             }
           ]
         },
@@ -2920,7 +3076,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "literal",
               "context": "6294a0a4088b3ac231789b9613e00dafc9aaef50ff43d241f16ff8d5d3eaefa5"
             },
@@ -2971,7 +3127,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 88,
+              "line": 124,
               "kind": "literal",
               "context": "c9282b914dcf8f090e5b758d41fb293531c35f2e314951bf61d29f6d39f1237f"
             }
@@ -2982,7 +3138,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 95,
+              "line": 97,
               "kind": "literal",
               "context": "ff4529358d920b2da6a4b3c6fd1b0ccd7936138e570d33ffc6dce3e8d9131feb"
             }
@@ -3010,7 +3166,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 149,
+              "line": 150,
               "kind": "literal",
               "context": "18bab7a230e699354ff62a6db498162d1ac52c0b8f01d02a28c78053a0efc470"
             },
@@ -3027,7 +3183,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 150,
+              "line": 151,
               "kind": "localized-source",
               "context": "508110bde7587aecce228da7320866cb02fb79fa56d6fa15f7230464af3cec4c"
             }
@@ -3170,9 +3326,20 @@
           "occurrences": [
             {
               "file": "src/components/dashboard/WorkspaceCalendar.tsx",
-              "line": 73,
+              "line": 74,
               "kind": "localized-source",
               "context": "fd5b596e51a323614ad84ed86a1f3c0cee2525de6be0b238d3e7765e75c28d10"
+            }
+          ]
+        },
+        {
+          "source": "Contribution uses owner-reviewed costs; it is not verified net profit or cash received.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceContribution.tsx",
+              "line": 89,
+              "kind": "literal",
+              "context": "220e2d533b7166cbb34b38e16e958d765513192fb8bdd03417d4c74a3bcb0a29"
             }
           ]
         },
@@ -3266,11 +3433,22 @@
           ]
         },
         {
+          "source": "Cost evidence changed. Refresh the contribution review first.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 27,
+              "kind": "literal",
+              "context": "4f7eaac483a36f450fb74dddd114563307d0bca180d94d122d9e7155bec02878"
+            }
+          ]
+        },
+        {
           "source": "Cost of sales",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 160,
+              "line": 161,
               "kind": "localized-source",
               "context": "eac0a655b93d7914a0398e864ee38959d9bd16aca07b5c2e14c9d1480d051b8a"
             }
@@ -3287,9 +3465,15 @@
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 97,
+              "line": 99,
               "kind": "literal",
               "context": "786f3f41440fc8646d70e1c46f3742b5cd6f0902752b76e1278951f8f8effb41"
+            },
+            {
+              "file": "src/components/owner/BusinessServiceContribution.tsx",
+              "line": 104,
+              "kind": "literal",
+              "context": "ac901528c5311bd9c3bc26ba4e1e452ae7bc1723e135e21202cac01f4637a7ba"
             }
           ]
         },
@@ -3386,7 +3570,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 91,
+              "line": 92,
               "kind": "literal",
               "context": "625c7c2cafa0b82423c365c18e2da3fb61d8c5e852957bf1b140fa5799699e36"
             }
@@ -3491,7 +3675,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 124,
+              "line": 125,
               "kind": "literal",
               "context": "76947c192feac9c3296d9b96c9bd278645101b7406c78ceec4f455c06622ec00"
             }
@@ -3879,7 +4063,7 @@
           "occurrences": [
             {
               "file": "src/components/dashboard/WorkspaceCalendar.tsx",
-              "line": 73,
+              "line": 74,
               "kind": "localized-source",
               "context": "34328c5e255301e0aa6b99fe964f514282a75a8c12fa0b0e45fa369544ccdf86"
             }
@@ -3901,7 +4085,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "localized-source",
               "context": "3672376ed083ab4b6b4d4e681e1ab84b8ab284d13332eb30b4af9c11fdc4b1ac"
             }
@@ -3935,7 +4119,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 92,
+              "line": 126,
               "kind": "literal",
               "context": "01ecf6dab45f6caab81ebe5a9f7866b1ea842d28d4846293a4a27abf48b44e76"
             }
@@ -3990,7 +4174,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 124,
+              "line": 125,
               "kind": "literal",
               "context": "33c21c69718c6d12576bfce0f5eb096c43e4cd13abd51f238d39e39742bf4d91"
             }
@@ -4218,7 +4402,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 80,
+              "line": 81,
               "kind": "localized-source",
               "context": "81885483e6833fab03c281347b4ec553492d7106926b24190aff41d81c43bfee"
             }
@@ -4229,7 +4413,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 146,
+              "line": 147,
               "kind": "localized-source",
               "context": "b4dc962dd16d3f6576c2236dbc0776438b827518ecf925035cb13fc824bc71d8"
             }
@@ -4240,13 +4424,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 130,
+              "line": 131,
               "kind": "localized-source",
               "context": "6b7daee3daf6efee5ff8661bc81098e45e6ffbc1050b0b0520aebc22a807f57a"
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 131,
+              "line": 132,
               "kind": "localized-source",
               "context": "6b7daee3daf6efee5ff8661bc81098e45e6ffbc1050b0b0520aebc22a807f57a"
             },
@@ -4311,6 +4495,17 @@
               "line": 49,
               "kind": "localized-source",
               "context": "9c48eda631049ce2fc58f05fbc3bd6e28eb6a825edc049ef60ec7ea139c14fd2"
+            }
+          ]
+        },
+        {
+          "source": "First date",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 39,
+              "kind": "literal",
+              "context": "740f68fcfecda29bd833a8ed1f43a2272facfd2c833c37ada8e2237e1e0c7a7e"
             }
           ]
         },
@@ -4665,17 +4860,6 @@
           ]
         },
         {
-          "source": "Help me find the settings for my current business.",
-          "occurrences": [
-            {
-              "file": "src/lib/assistantPageActions.ts",
-              "line": 26,
-              "kind": "literal",
-              "context": "57816a7c34c2fe41782afdd04944771c9a052c52f15373f8a89a0d3fbcb96c12"
-            }
-          ]
-        },
-        {
           "source": "Hi, I’m your GC Assistant. Let’s work on your business together.",
           "occurrences": [
             {
@@ -4709,11 +4893,39 @@
           ]
         },
         {
+          "source": "Highest recorded earned compensation",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 9,
+              "kind": "localized-source",
+              "context": "ccd1c42d83bdc37c13516348f2e920207adb4954e64d81269046a8bc7e7a1d2f"
+            },
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 10,
+              "kind": "localized-source",
+              "context": "ccd1c42d83bdc37c13516348f2e920207adb4954e64d81269046a8bc7e7a1d2f"
+            }
+          ]
+        },
+        {
+          "source": "How this is calculated",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceContribution.tsx",
+              "line": 121,
+              "kind": "literal",
+              "context": "bb8a80549ccb1fa60a130024d42282a31ed47ee7aeace486b5ca17911d734f12"
+            }
+          ]
+        },
+        {
           "source": "I explicitly record zero additional allocated costs for this service period.",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 109,
+              "line": 117,
               "kind": "literal",
               "context": "92e749cb022b75ee5ca5751f29d4cc4fab008e51d055eedf1b46f6da5d998eea"
             }
@@ -4724,7 +4936,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 129,
+              "line": 147,
               "kind": "localized-source",
               "context": "4e33b932dee9fac10096e90d064318b7234bc774268960d1923a4d5a1ad266fe"
             }
@@ -4735,7 +4947,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 64,
+              "line": 73,
               "kind": "literal",
               "context": "e5f52e07a586c1b32ce0857e826fa09c76a932ffa21fbd3d8364964433e7c194"
             }
@@ -4768,7 +4980,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 108,
+              "line": 116,
               "kind": "literal",
               "context": "c441d2374b2fed86a4a11388b4f82dce1fe09c61e6080d0008a837453d277518"
             }
@@ -4801,7 +5013,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 161,
+              "line": 162,
               "kind": "localized-source",
               "context": "31428c3fb3ccbd1a429f0cfb9d02a6247000fd978faf730e104af5aa103daf8e"
             },
@@ -5028,7 +5240,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 139,
+              "line": 140,
               "kind": "localized-source",
               "context": "f741c768bea6db222f61a0ab87c4223b123e89aa932ae95d8d574767f9888733"
             },
@@ -5106,7 +5318,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "f9155adde8eeb0725a614509a9f67cba1303f164a2d46938dfbe33cebafd7bf5"
             }
@@ -5222,7 +5434,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 143,
+              "line": 144,
               "kind": "localized-source",
               "context": "2f878ce8fb5245c54f62bfc8b3cb765ad1e19b51249f792ba0352eddfa1a7e69"
             }
@@ -5317,7 +5529,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 148,
+              "line": 149,
               "kind": "localized-source",
               "context": "0378ae7472c88a3245eab699eb86a5628541a9905cf4a4185da667c3dc2bc855"
             }
@@ -5657,7 +5869,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 84,
+              "line": 93,
               "kind": "localized-source",
               "context": "d9de7f0714c6dc69a91391e7402782d568142f3c80978221cd2444f0623313cc"
             }
@@ -5990,6 +6202,17 @@
           ]
         },
         {
+          "source": "No assigned professional earnings in this period.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 13,
+              "kind": "localized-source",
+              "context": "518943a1929d9c2bb500bb9b9826d033420259682fe27ef34f2e6e75dd195ee6"
+            }
+          ]
+        },
+        {
           "source": "No attendance incident has been recorded for this appointment.",
           "occurrences": [
             {
@@ -6038,7 +6261,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 150,
+              "line": 151,
               "kind": "localized-source",
               "context": "45336a63e0e75b962b84aa2a6758c0ff14ab6b1328c8ac63b144fd823319cc0f"
             }
@@ -6100,6 +6323,17 @@
           ]
         },
         {
+          "source": "No current bookable starts were found for this selection.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 50,
+              "kind": "literal",
+              "context": "846d392a166b25e762d0644fc9f2966ae4595aaed268745259310aa835a2951e"
+            }
+          ]
+        },
+        {
           "source": "No eligible appointment options are available. Try a different date or keep the current appointment.",
           "occurrences": [
             {
@@ -6126,7 +6360,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 104,
+              "line": 112,
               "kind": "literal",
               "context": "c4a3a4b8145bcae72d6e0a22e2810c04f694dde6d85a77a314b70b898914735f"
             }
@@ -6346,7 +6580,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 73,
+              "line": 82,
               "kind": "localized-source",
               "context": "1591c95aa09391be9917bc8a9860ccfae51ffda805a5f215425cb31f96a2fdad"
             }
@@ -6379,7 +6613,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "localized-source",
               "context": "8266d07a14093d43a2f9ad2ff38307e757dd9e0501b2c9b68babeb4ee9dbd6ad"
             }
@@ -6471,6 +6705,12 @@
               "line": 30,
               "kind": "localized-source",
               "context": "b1702cd2fce31f8590fde83ba76dd56ea21d311815d1f90a901a16d75da979fc"
+            },
+            {
+              "file": "src/components/owner/TeamWorkspace.tsx",
+              "line": 43,
+              "kind": "localized-source",
+              "context": "b1702cd2fce31f8590fde83ba76dd56ea21d311815d1f90a901a16d75da979fc"
             }
           ]
         },
@@ -6496,7 +6736,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 139,
+              "line": 140,
               "kind": "literal",
               "context": "63ea461e0301326a4c6f618c05fcb7e339d2a88869d40a34b0b1c43ae0e621f8"
             }
@@ -6623,13 +6863,13 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 72,
+              "line": 81,
               "kind": "localized-source",
               "context": "5cda47abcb3d9bbc020a4629024078cfb0a1a2f626ed7cc1b47c5a51f430e00b"
             },
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 84,
+              "line": 93,
               "kind": "localized-source",
               "context": "5cda47abcb3d9bbc020a4629024078cfb0a1a2f626ed7cc1b47c5a51f430e00b"
             }
@@ -6695,7 +6935,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 155,
+              "line": 173,
               "kind": "literal",
               "context": "cb42f1a50d639796f3331e083ca0c29f1c251503c75837219019603041714aae"
             }
@@ -6712,7 +6952,7 @@
             },
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 152,
+              "line": 170,
               "kind": "literal",
               "context": "982c232615a9118700685c6a2200024c4448ac1928eb3e3c1d550785e5195e27"
             }
@@ -6745,7 +6985,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 90,
+              "line": 99,
               "kind": "literal",
               "context": "4dcf146e032d761c678a5b51d94eac391dff124fb222c9bf9f1b8bd93adc483a"
             }
@@ -6763,11 +7003,22 @@
           ]
         },
         {
+          "source": "Open Settings",
+          "occurrences": [
+            {
+              "file": "src/lib/gcAssistantPresentation.ts",
+              "line": 108,
+              "kind": "literal",
+              "context": "3f34765e6bb18b72058008177a8678f133a8f99b189d2740caa8badcdd58c5f9"
+            }
+          ]
+        },
+        {
           "source": "Open Styles & Pricing",
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 72,
+              "line": 81,
               "kind": "literal",
               "context": "270845af149f463e2fe70d1e9351b5a80feb6217e37c343f8915b664d0431ad7"
             }
@@ -6822,7 +7073,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 139,
+              "line": 140,
               "kind": "localized-source",
               "context": "b14dea3a0fc4c53820779d360cca77e5461c0da584552ef071b5e26e0cb99d08"
             },
@@ -6839,7 +7090,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 160,
+              "line": 161,
               "kind": "localized-source",
               "context": "bacc6ac11e99130137929254838a70f19cdd2896e21a63036984ee05e1cbfeea"
             },
@@ -6873,7 +7124,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 141,
+              "line": 142,
               "kind": "literal",
               "context": "4110d5fe57aee847802ed0f593f5c3f82d856d9a831cc51637809dc2c51feaf8"
             }
@@ -6986,7 +7237,7 @@
               "file": "src/components/owner/BusinessServiceContribution.tsx",
               "line": 96,
               "kind": "literal",
-              "context": "d6c3850d23d06adfd497770e0dcaedc69f81e50bc6f65ed0ecaf6bfa958d11b5"
+              "context": "7b4bf8b2f752a058a8ea6f97450f55e5e96a0eff5bf46fd56af0704a07debded"
             }
           ]
         },
@@ -7034,7 +7285,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 129,
+              "line": 130,
               "kind": "literal",
               "context": "6da51fde60dbd56c6749c79c72172c35f69f8e18eed9683478643fabc2b3a19b"
             },
@@ -7102,7 +7353,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 150,
+              "line": 151,
               "kind": "localized-source",
               "context": "75e97b73dc8e2c0f92b359a1fd7642bedbf04260249ab0f2473629d683b4d636"
             }
@@ -7113,7 +7364,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 150,
+              "line": 151,
               "kind": "localized-source",
               "context": "dec14ee1436be23e31973627ce9363b2de1abbe40de37ec4e39184f7e0f44e07"
             }
@@ -7135,7 +7386,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 97,
+              "line": 99,
               "kind": "literal",
               "context": "267b0226f554b3a1e2bda84c36272d41fb6a894b16bc7247b04afe0de6caf4e7"
             }
@@ -7146,7 +7397,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 149,
+              "line": 150,
               "kind": "literal",
               "context": "db8f9f474b16266bc4344c92ce2b9b5a950d1e33fa5585da51e25e6d1a457774"
             },
@@ -7320,7 +7571,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 164,
+              "line": 165,
               "kind": "localized-source",
               "context": "9c640e1b5968781e016d11e7d2acf122efcc380c2c424505005eab6f7e4d9076"
             }
@@ -7360,11 +7611,22 @@
           ]
         },
         {
+          "source": "Positive contribution, fewer appointments. Review your calendar before promoting.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceContribution.tsx",
+              "line": 100,
+              "kind": "literal",
+              "context": "71a9e318491a89a67627533b931c2cd5adfd9fa63c0ecc39054c605638c7b8c8"
+            }
+          ]
+        },
+        {
           "source": "Positive recorded contribution with fewer appointments. Review this service and your current calendar before planning promotion.",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 98,
+              "line": 105,
               "kind": "literal",
               "context": "056b47820e38e8b093110300745786d6ae39ddec7ed4356d76f01609489a484e"
             }
@@ -7442,7 +7704,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "04da5bfa561b110c852e7504225101070339093289d22ae219955767d05b8b53"
             }
@@ -7564,7 +7826,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 162,
+              "line": 163,
               "kind": "localized-source",
               "context": "aed0474475752a6174920dbb6d1cd117a35dcbd6bd59c48370aede2888d00dff"
             }
@@ -7578,6 +7840,17 @@
               "line": 21,
               "kind": "localized-source",
               "context": "fa6717ef88bde769b4dc54be8298fffb0add3fa892194ed02fef4a27690b8c06"
+            }
+          ]
+        },
+        {
+          "source": "Professionals tied at this amount",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 15,
+              "kind": "localized-source",
+              "context": "edba1088cb056229936a9106e90768367fe960cb9baf139f9413a0436c91ec7c"
             }
           ]
         },
@@ -7697,7 +7970,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 90,
+              "line": 99,
               "kind": "literal",
               "context": "7be721d1d86af79e0e391dc29b232ab1cee7e654908353578283e2300cfea63f"
             }
@@ -7829,7 +8102,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "890f35ccb7386f26ace0916a976be37eb7579cc101bc03777ef294539231558f"
             }
@@ -7939,15 +8212,9 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 131,
+              "line": 132,
               "kind": "localized-source",
               "context": "dd331beba34c0c4bf3b25d9cf5a0076ef607d6e3066426b47f51897e1fb9d96a"
-            },
-            {
-              "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 134,
-              "kind": "literal",
-              "context": "a074d56c467d995632f0544ce3056c464d6c1b0d32951a0f883248b10139ac04"
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
@@ -7957,7 +8224,13 @@
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 136,
+              "kind": "literal",
+              "context": "a074d56c467d995632f0544ce3056c464d6c1b0d32951a0f883248b10139ac04"
+            },
+            {
+              "file": "src/components/owner/BusinessFinances.tsx",
+              "line": 158,
               "kind": "localized-source",
               "context": "dd331beba34c0c4bf3b25d9cf5a0076ef607d6e3066426b47f51897e1fb9d96a"
             }
@@ -7968,13 +8241,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 134,
+              "line": 135,
               "kind": "literal",
               "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 135,
+              "line": 136,
               "kind": "literal",
               "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
             },
@@ -8002,7 +8275,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 103,
+              "line": 111,
               "kind": "literal",
               "context": "85e15f5cb76be2847789df1b932afd71dbbe5390fdd2f5e045a6cd0a6dabcaca"
             }
@@ -8013,7 +8286,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 136,
+              "line": 137,
               "kind": "localized-source",
               "context": "7f8000d6c302985954a3b5a0228721b48fd153e2f2c0b962c46caf13ab7d8a92"
             }
@@ -8057,13 +8330,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 134,
+              "line": 135,
               "kind": "literal",
               "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 135,
+              "line": 136,
               "kind": "literal",
               "context": "56527e7be2a5e7bae3d70c6467df050905ca0d6708e9be9634bf189e2f56a860"
             },
@@ -8091,7 +8364,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 118,
+              "line": 119,
               "kind": "localized-source",
               "context": "b799f54189e54e01a4c5758956135e50c5c8768bf4efb16f87b982db598cfe7e"
             },
@@ -8181,7 +8454,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 89,
+              "line": 125,
               "kind": "literal",
               "context": "704c43e42f393d52a11d99a4f9e6d11974a9ea4ade59c2e4c6c8de66493ec3bf"
             }
@@ -8192,7 +8465,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 142,
+              "line": 143,
               "kind": "literal",
               "context": "61db450cce5bcb453d453392fe4452598d1abf7ff82d9666ac94b70f3e9b0ec0"
             }
@@ -8203,7 +8476,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 96,
+              "line": 104,
               "kind": "literal",
               "context": "bbf8e1be5b3e75f7f02781051a79c88dcdcd995b986614b1999a0db6197a1327"
             }
@@ -8214,7 +8487,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 97,
+              "line": 99,
               "kind": "literal",
               "context": "40d3305c1f6d7bd19afe11f9079127e8b405c8497eaf3f363396b4789426fb59"
             }
@@ -8258,7 +8531,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 160,
+              "line": 161,
               "kind": "localized-source",
               "context": "58b688f33c4aba5b8b41197a46cdea862402264c29a83dd5aab4f42ff7b19d3c"
             }
@@ -8280,7 +8553,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 149,
+              "line": 150,
               "kind": "literal",
               "context": "dc3bccd744b311ec9d38c8d4518d5c0fe53d766260fa2899db19dcfbb1664210"
             },
@@ -8308,7 +8581,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 96,
+              "line": 104,
               "kind": "literal",
               "context": "49014e6d24b21a49a0443d7f70fffc274af55ae020862ac2a705d84702a9f3cd"
             }
@@ -8319,7 +8592,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 106,
+              "line": 114,
               "kind": "literal",
               "context": "bbb812742c1d7cce3ede95ba297b315ef6745901b88e67ea084755cc3161e1bb"
             }
@@ -8413,7 +8686,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 87,
+              "line": 88,
               "kind": "literal",
               "context": "52228585f96e4c513e77fd93c8be87dec8cf1d4ded40bca188e3c58e0b3c0c9f"
             }
@@ -8490,7 +8763,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 132,
+              "line": 133,
               "kind": "localized-source",
               "context": "132c52754e8aa148a446d1d29e879790fba2d116fa7adfead41efd127337b25d"
             },
@@ -8584,7 +8857,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 105,
+              "line": 113,
               "kind": "literal",
               "context": "1b582ee4af00ac1b35a24a190ba04ecdad375386c22099ae3ee272bf4ca6cd74"
             }
@@ -8667,7 +8940,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 124,
+              "line": 125,
               "kind": "literal",
               "context": "1d460ae638244c35e44f13ec6644eb15bfec23541d1f4a433db8a7b8396a4930"
             }
@@ -8816,8 +9089,14 @@
           "source": "Review calendar",
           "occurrences": [
             {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 51,
+              "kind": "literal",
+              "context": "89c6aadab6312fc2d7755c579e64ab75c24f1fca9a9da7536e4997dcbce49a33"
+            },
+            {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 99,
+              "line": 98,
               "kind": "literal",
               "context": "89c6aadab6312fc2d7755c579e64ab75c24f1fca9a9da7536e4997dcbce49a33"
             }
@@ -8861,19 +9140,19 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 99,
+              "line": 98,
               "kind": "literal",
               "context": "bb1c62e90d27898001f7694b6d1200d59e80f74dd5ed0062c84e0f306081dd87"
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 101,
+              "line": 109,
               "kind": "literal",
               "context": "bb1c62e90d27898001f7694b6d1200d59e80f74dd5ed0062c84e0f306081dd87"
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 102,
+              "line": 110,
               "kind": "literal",
               "context": "bb1c62e90d27898001f7694b6d1200d59e80f74dd5ed0062c84e0f306081dd87"
             }
@@ -9099,7 +9378,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 99,
+              "line": 98,
               "kind": "literal",
               "context": "08904840aea3bd29abdc78ca8188964b202538187a7f64f6babe652f1c1b6868"
             }
@@ -9132,7 +9411,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 103,
+              "line": 111,
               "kind": "literal",
               "context": "cc5380d8adc36f407683075d0effcfa9f41988e99e8396b933e0b39d2160f1f2"
             }
@@ -9221,7 +9500,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 160,
+              "line": 161,
               "kind": "localized-source",
               "context": "e2c4ce47f463547cdbf48eb4ae473bbfbdf0047c07c29ed4ab21d1119baa1170"
             }
@@ -9232,7 +9511,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 131,
+              "line": 132,
               "kind": "literal",
               "context": "79bd992a94739583ab19d9cc4a18dbc587dc363a9750ee0b998e49c3e04b13ea"
             }
@@ -9331,7 +9610,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 143,
+              "line": 144,
               "kind": "literal",
               "context": "a586c9bf9788faefd97b2a1c40074578c11c04c7d6140a621bad5db1b9321b56"
             },
@@ -9348,7 +9627,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 110,
+              "line": 118,
               "kind": "literal",
               "context": "81083b08dd5c2a8754fef5307f69b459c07daeaee05e9249aeebbe3440ea5eb0"
             }
@@ -9403,7 +9682,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 96,
+              "line": 104,
               "kind": "literal",
               "context": "02ad618486b9b1bd31288eec72f9beba1d0b4963a3b20894ee4c9974d1f7d518"
             }
@@ -9791,29 +10070,46 @@
           ]
         },
         {
+          "source": "Service choices changed. Review the saved service before continuing.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "0316a0fc1169c05ff400327cb2040e5016a67b57dc8edde69ed0ac2f80d9c9ec"
+            },
+            {
+              "file": "src/lib/gcAssistantPresentation.ts",
+              "line": 126,
+              "kind": "literal",
+              "context": "4b502a08e5c9366fe8acdd04e46917b86ed813b1594c5a76a48122d3bf662019"
+            }
+          ]
+        },
+        {
           "source": "Service contribution",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "literal",
               "context": "31c89f12c8f6e4553153d4e80962b5863fce2183ee085e8fa686a8c6e81dfcb2"
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "literal",
               "context": "31c89f12c8f6e4553153d4e80962b5863fce2183ee085e8fa686a8c6e81dfcb2"
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 86,
+              "line": 87,
               "kind": "literal",
               "context": "29921e1c530d26255f76a11f84974a28c2438c6fe863df247aec25b641a4cd60"
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 87,
+              "line": 88,
               "kind": "literal",
               "context": "29921e1c530d26255f76a11f84974a28c2438c6fe863df247aec25b641a4cd60"
             }
@@ -9824,7 +10120,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 53,
+              "line": 54,
               "kind": "literal",
               "context": "5e299ed2b679268b60a4007d8fd2ff16432ff12b8e95ffd6c8eb8c80de939194"
             }
@@ -9875,11 +10171,39 @@
           ]
         },
         {
+          "source": "Service openings",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 35,
+              "kind": "literal",
+              "context": "bfb217e577e0f84cd2c55a4b55c5069d4751fbdec99304f8a2bfff9bb32ce98b"
+            },
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 36,
+              "kind": "literal",
+              "context": "bfb217e577e0f84cd2c55a4b55c5069d4751fbdec99304f8a2bfff9bb32ce98b"
+            }
+          ]
+        },
+        {
+          "source": "Service openings could not be verified. Refresh the current records and try again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 27,
+              "kind": "literal",
+              "context": "4f7eaac483a36f450fb74dddd114563307d0bca180d94d122d9e7155bec02878"
+            }
+          ]
+        },
+        {
           "source": "Service or product",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "027675b3745c848bf17391897c3362544908638cf33d48ef968e83150b00c0df"
             },
@@ -9896,7 +10220,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "literal",
               "context": "e57a393077cc487373a948be310eeed4842090b6fc2f077e746f04a806d34043"
             }
@@ -9907,7 +10231,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "localized-source",
               "context": "13c0fe9896f08351d66688a8bf03090c9def46fd178b1734bb12a98c19ffb2cd"
             }
@@ -9921,6 +10245,17 @@
               "line": 1691,
               "kind": "literal",
               "context": "dae6d564a837b4ddf21ab116897069858cc60a8c420290e165dceb8cb1aab31e"
+            }
+          ]
+        },
+        {
+          "source": "Set",
+          "occurrences": [
+            {
+              "file": "src/components/owner/TeamWorkspace.tsx",
+              "line": 43,
+              "kind": "localized-source",
+              "context": "83ccc79f58c0ca3eac8778217afd890d3a3dcef4c2fc2bd371c5d6001a99ff42"
             }
           ]
         },
@@ -10030,6 +10365,17 @@
           ]
         },
         {
+          "source": "Showing tied leaders",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 17,
+              "kind": "localized-source",
+              "context": "02c9062f7bbf308c996ed7d9738fb32ad88873fe9ce97f305186b5e79033c55c"
+            }
+          ]
+        },
+        {
           "source": "Sign in again to manage this connection.",
           "occurrences": [
             {
@@ -10134,7 +10480,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "localized-source",
               "context": "3a0e40cf4ef10f56039d13d7fe5411e804da0ecc32109d55edea092bbfdfec14"
             },
@@ -10213,7 +10559,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "350efb2a9eba8a8549e3582744d79914d410a7477a7b4c6c0a6c65256f686eae"
             },
@@ -10230,7 +10576,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 106,
+              "line": 114,
               "kind": "literal",
               "context": "14ab33693257b9fc0a24e3e4fe4e74bc422383b4033a657aace83a25e19f774c"
             }
@@ -10255,6 +10601,23 @@
               "line": 36,
               "kind": "localized-source",
               "context": "46dd27056c678b9cd75de16dc47fccade8ec18fde1fd903fb67e4584b7e7543c"
+            }
+          ]
+        },
+        {
+          "source": "Start times overlap; this is not a count of extra appointments. No time is reserved. Booking checks customer eligibility and availability again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 49,
+              "kind": "literal",
+              "context": "5a6cf61bf2942084f259c0b04fc6111b986ff4bc644b1d75d71eed6493b74a08"
+            },
+            {
+              "file": "src/lib/gcAssistantPresentation.ts",
+              "line": 127,
+              "kind": "literal",
+              "context": "5a6cf61bf2942084f259c0b04fc6111b986ff4bc644b1d75d71eed6493b74a08"
             }
           ]
         },
@@ -10453,7 +10816,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "localized-source",
               "context": "ad20f7a036fbb7d8e0930275f60124f797baad3801236c830ce3e1990643ff12"
             }
@@ -10669,7 +11032,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 124,
+              "line": 125,
               "kind": "literal",
               "context": "55413c9c16ce15a45ef4deb94576d3af016887ecc7ee584cb46f58a7b396aecc"
             }
@@ -10980,7 +11343,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 119,
+              "line": 120,
               "kind": "localized-source",
               "context": "bd7fef8bc7ba177e6dea1482d63c01307a0e8ea7cfb7d4ffa108bffbf2986024"
             },
@@ -11076,7 +11439,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 84,
+              "line": 93,
               "kind": "localized-source",
               "context": "8f6a2ba6fd710b83d3eed2e9bd4c754cfd69119a6ce61bec3a5e9f7b1b82e9dc"
             }
@@ -11212,6 +11575,17 @@
               "line": 99,
               "kind": "literal",
               "context": "8f699820885675d8af6f3a05df09f50b4e3da92314c72e0504bd8af95faa2723"
+            }
+          ]
+        },
+        {
+          "source": "This future calendar check is separate from the historical contribution period. Positive recorded contribution does not prove demand or net profit.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 37,
+              "kind": "literal",
+              "context": "2fa9872c42d9a7044613d98c148fb6cc2c42ff52ed5e41bb3f4c669e8a2422ec"
             }
           ]
         },
@@ -11468,7 +11842,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 124,
+              "line": 125,
               "kind": "literal",
               "context": "6dd7ee1b70507f5b19fb808293d990ec1ef6c6ce69af536a31301170bc44baf9"
             }
@@ -11490,7 +11864,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 139,
+              "line": 140,
               "kind": "literal",
               "context": "e8fe9f79ebce093c88357c9a5fdc813b5ddd5f4c5de9a237db38f300f0b2e101"
             }
@@ -11523,7 +11897,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 138,
+              "line": 139,
               "kind": "literal",
               "context": "97f4e3d7fd109f705b1639b8148bd9a47b1889bb092a1e9e2ac7f6d2665ab3bf"
             }
@@ -11557,7 +11931,7 @@
             },
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "localized-source",
               "context": "05339ae7c9e53e7f4e2f546e0fc206c628a18f53fb62c18e25d108e61b9ebaf0"
             },
@@ -11576,11 +11950,22 @@
           ]
         },
         {
+          "source": "Unassigned earned compensation is excluded from this ranking",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 19,
+              "kind": "localized-source",
+              "context": "6e7ad8c4dcbcbdc75319d9d9a4bdb6a2cd18df3a90ab72b8fc6c420b17c8401f"
+            }
+          ]
+        },
+        {
           "source": "Unavailable cost allocation: {amount}",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 105,
+              "line": 113,
               "kind": "literal",
               "context": "8f3d4dc0aaf83111cf6740a061499c98bf174114670c80044fa670a6a926aafe"
             }
@@ -11631,11 +12016,22 @@
           ]
         },
         {
+          "source": "Unnamed professional",
+          "occurrences": [
+            {
+              "file": "src/components/owner/FinanceEarningsLeaders.tsx",
+              "line": 16,
+              "kind": "localized-source",
+              "context": "a45c3069a8874175699e9c03ceb8148f768f392d7dbd2718872faa638ea4b5e8"
+            }
+          ]
+        },
+        {
           "source": "Unnamed visits",
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 161,
+              "line": 162,
               "kind": "localized-source",
               "context": "e7b9c3d4c9913d2b48e35bbbd6c5f28adf5a85029a46307e5bc0e79c790c75eb"
             }
@@ -11646,7 +12042,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 149,
+              "line": 150,
               "kind": "literal",
               "context": "262722c3858a5c043f492c869442c69b24efdec68e6e872f64e26da536cda952"
             },
@@ -11763,13 +12159,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "literal",
               "context": "1f1a8ac89b4cc10ae610e9c3875e4084fde2467690b9f6e0b74245309dbdc65e"
             },
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 53,
+              "line": 54,
               "kind": "literal",
               "context": "5e299ed2b679268b60a4007d8fd2ff16432ff12b8e95ffd6c8eb8c80de939194"
             }
@@ -11780,9 +12176,20 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessServiceContribution.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "literal",
               "context": "5dce6f63fa2f23672f6217d111548ee02b2e7a2910bdc7db5015954084b89084"
+            }
+          ]
+        },
+        {
+          "source": "Uses the longest saved duration for this service range.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceCapacity.tsx",
+              "line": 47,
+              "kind": "literal",
+              "context": "01c728dd76d35eb0bd943c89ac324fc0188199e562e10d3c0776d041cc59f950"
             }
           ]
         },
@@ -11791,7 +12198,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 161,
+              "line": 162,
               "kind": "localized-source",
               "context": "db7a5e3b80777fb2a1bf93aa8210124de3fb9c0d5bcf3a55d11e068a2c92a065"
             }
@@ -11842,6 +12249,17 @@
           ]
         },
         {
+          "source": "View cost breakdown",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessServiceContribution.tsx",
+              "line": 103,
+              "kind": "literal",
+              "context": "915e0ba95eb37478b549833b6366a1ef0e406ba05d10b678d4a08e935f58c86c"
+            }
+          ]
+        },
+        {
           "source": "View professional",
           "occurrences": [
             {
@@ -11885,7 +12303,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 161,
+              "line": 162,
               "kind": "localized-source",
               "context": "0c9498f8e197ca5009c631f923324054641dcc737c028100d7f551629b4c47c5"
             },
@@ -11947,7 +12365,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 157,
+              "line": 158,
               "kind": "literal",
               "context": "efddb28662e395cc5ffbfc715d09c98c6d9afc59a87781f575df71513af6de05"
             },
@@ -12136,7 +12554,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 167,
+              "line": 168,
               "kind": "localized-source",
               "context": "93d419992b83074433b058694236cfeef3c5e0742df55d7c91c787d0045ea89a"
             }
@@ -12158,7 +12576,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 90,
+              "line": 99,
               "kind": "localized-source",
               "context": "31726e4360334817937c1828ab2f4c71cfb5c4f02655dbdc4d7a77afd5a1c296"
             }
@@ -12202,7 +12620,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 90,
+              "line": 99,
               "kind": "literal",
               "context": "7be721d1d86af79e0e391dc29b232ab1cee7e654908353578283e2300cfea63f"
             }
@@ -12235,7 +12653,7 @@
           "occurrences": [
             {
               "file": "src/lib/gcAssistantPresentation.ts",
-              "line": 90,
+              "line": 99,
               "kind": "literal",
               "context": "b93de42ff0858a35b3c9df28e272dd7c3d72ebbdd8345ca822ab36aadb659d2f"
             }
@@ -12356,7 +12774,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessFinances.tsx",
-              "line": 131,
+              "line": 132,
               "kind": "literal",
               "context": "79bd992a94739583ab19d9cc4a18dbc587dc363a9750ee0b998e49c3e04b13ea"
             }
@@ -12393,14 +12811,14 @@
       ]
     },
     "es": {
-      "source_count": 2722,
-      "covered": 2722,
+      "source_count": 2751,
+      "covered": 2751,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 2722,
-      "covered": 2722,
+      "source_count": 2751,
+      "covered": 2751,
       "missing_count": 0,
       "missing": []
     }

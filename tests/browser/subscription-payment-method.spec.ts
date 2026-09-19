@@ -4,13 +4,14 @@ import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { SUBSCRIPTION_PAYMENT_SOURCE_MESSAGES as messages } from '../../src/components/owner/subscriptionPaymentMessages';
 
 test.use({ serviceWorkers: 'block' });
-test('Subscription payment method lifecycle uncertainty preserves its exact protected support reference',async({page})=>{
+test('Subscription payment method lifecycle uncertainty preserves its exact protected support reference',async({page},info)=>{
  const f=await p0OwnerFixture(page,{populated:true});Object.assign(f.records.subscriptions[0],{stripe_customer_id:'cus_fixture',stripe_subscription_id:'sub_fixture',cancel_at_period_end:true,current_period_end:'2026-10-01T00:00:00.000Z'});
  const reference='17800000-0000-4000-8000-000000000091',message='The earlier subscription update has an uncertain result. Billing support must reconcile it before another change; no further change was sent.';let attempts=0;
  await page.route('**/api/stripe/portal',route=>route.fulfill({json:{status:'none',updateAllowed:true,updatePending:false,billingMode:'test',paymentMethod:null}}));
  await page.route('**/api/stripe/subscription/lifecycle',route=>{expect(route.request().postDataJSON()).toEqual({action:'reactivate'});attempts++;return route.fulfill({status:409,json:{error:message,request_id:reference,code:'SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'}});});
- await page.goto('/salon/dashboard/subscription');const button=page.getByRole('button',{name:'Reactivate subscription',exact:true});await button.click();
+ await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/subscription');const button=page.getByRole('button',{name:'Reactivate subscription',exact:true});await button.click();
  const alert=page.getByRole('alert').filter({hasText:reference});await expect(alert).toContainText(message);await expect(alert.getByText(reference,{exact:true})).toBeVisible();await expect(alert.getByRole('button',{name:'Copy reference',exact:true})).toBeVisible();await expect(button).toBeEnabled();expect(attempts).toBe(1);await expect(page.getByText('Cancellation scheduled',{exact:true})).toBeVisible();
+ await alert.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('subscription-lifecycle-uncertainty-viewport.png')});
 });
 const saved = (last4 = '4242') => ({ status: 'available', updateAllowed: true, updatePending: false, billingMode: 'test', paymentMethod: { type: 'card', brand: 'visa', last4, expMonth: 10, expYear: 2030 } });
 for (const [locale, width, height] of [['en',390,844],['fr',768,1024],['es',1440,1000],['zh-CN',844,390]] as const) {

@@ -23,7 +23,7 @@ const pages: Record<string, Action[]> = {
   earnings: [{ label: "This month's finances", permission: "earnings", prompt: "Summarize my finances this month, distinguishing booking value, received payments, refunds and payouts." }, { label: "Explain my balances", permission: "earnings", prompt: "Explain the deposits and remaining balances in my current business finances." }, { label: "Compare financial periods", permission: "earnings", prompt: "Compare my business finances this month with last month using consistent periods and actual amounts." }],
   promotions: [{ label: "My promotions", permission: "promotions", tool: "get_promotions" }, { label: "Draft a promotion", permission: "promotions", prompt: "Help draft a promotion for my business. Use my actual services and keep the required deposit unchanged." }, services],
   subscription: [plan, { label: "Explain plan benefits", permission: "overview", prompt: "Explain the actual benefits and limits of my current Girlz Culture plan." }, { label: "Update payment method", permission: "overview", prompt: "Where can I securely update my existing subscription payment method?" }],
-  settings: [plan, policies, { label: "My business settings", permission: "my_page", prompt: "Help me find the settings for my current business." }],
+  settings: [plan, policies, { label: "My business settings", permission: "settings", tool: "get_business_settings" }],
 };
 
 // This controls visibility, not authority. Each action is independently

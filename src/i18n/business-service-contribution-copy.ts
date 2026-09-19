@@ -1,6 +1,11 @@
 export const SERVICE_CONTRIBUTION_COPY_ROWS = [
  ["Service contribution", "Contribution des prestations", "Contribución por servicio", "服务贡献额"],
  ["Refresh evidence", "Actualiser les données", "Actualizar datos", "刷新记录"],
+ ["Contribution uses owner-reviewed costs; it is not verified net profit or cash received.", "La contribution utilise les coûts revus par le propriétaire ; ce n’est ni un bénéfice net vérifié ni de l’argent encaissé.", "La contribución usa costes revisados por el propietario; no es beneficio neto verificado ni dinero cobrado.", "贡献额采用店主审核的成本，并非经核实的净利润或已收现金。"],
+ ["View cost breakdown", "Voir le détail des coûts", "Ver desglose de costes", "查看成本明细"],
+ ["How this is calculated", "Comment ce résultat est calculé", "Cómo se calcula", "计算方法"],
+ ["Business time zone: {zone}.", "Fuseau horaire de l’établissement : {zone}.", "Zona horaria del negocio: {zone}.", "商家时区：{zone}。"],
+ ["Positive contribution, fewer appointments. Review your calendar before promoting.", "Contribution positive, moins de rendez-vous. Consultez le calendrier avant de prévoir une promotion.", "Contribución positiva y menos citas. Revisa tu calendario antes de promocionar.", "贡献额为正但预约减少。推广前请查看日历。"],
  ["Checking recorded costs…", "Vérification des coûts enregistrés…", "Comprobando costes registrados…", "正在检查已记录成本…"],
  ["Use a completed reporting period ending before today.", "Choisissez une période terminée avant aujourd’hui.", "Elige un periodo terminado antes de hoy.", "请选择今天之前已结束的报告期间。"],
  ["Use previous 28 completed days", "Afficher les 28 derniers jours terminés", "Usar los últimos 28 días completos", "使用过去28个完整日期"],

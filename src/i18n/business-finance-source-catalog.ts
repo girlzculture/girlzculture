@@ -1,6 +1,13 @@
 // Interface terminology, shared by finance screens and reports. Business names,
 // original entries, dates and numerical amounts are never translated here.
 const rows: readonly (readonly [string,string,string,string])[] = [
+  ["Highest recorded earned compensation","Rémunération acquise enregistrée la plus élevée","Mayor remuneración ganada registrada","最高已记录应得薪酬"],
+  ["Commission earned plus wages due in the selected period. Service sales and compensation already paid are separate.","Commissions acquises et salaires dus pour la période choisie. Les ventes de services et les rémunérations déjà versées sont distinctes.","Comisiones ganadas más salarios adeudados en el período seleccionado. Las ventas de servicios y la remuneración ya pagada son cifras distintas.","所选期间已赚取佣金与应付工资之和。服务销售额与已支付薪酬为独立金额。"],
+  ["No assigned professional earnings in this period.","Aucune rémunération attribuée à un professionnel pour cette période.","No hay remuneración asignada a profesionales en este período.","此期间没有分配给专业人员的薪酬记录。"],
+  ["Professionals tied at this amount","Professionnels à égalité pour ce montant","Profesionales empatados en este importe","此金额并列人数"],
+  ["Unnamed professional","Professionnel sans nom","Profesional sin nombre","未命名专业人员"],
+  ["Showing tied leaders","Professionnels à égalité affichés","Líderes empatados que se muestran","已显示的并列人员"],
+  ["Unassigned earned compensation is excluded from this ranking","La rémunération acquise non attribuée est exclue de ce classement","La remuneración ganada sin asignar se excluye de esta clasificación","未分配的应得薪酬不计入此排名"],
   ["Overview","Vue d’ensemble","Resumen","概览"],
   ["Transactions","Transactions","Transacciones","交易"],
   ["Expenses","Dépenses","Gastos","支出"],

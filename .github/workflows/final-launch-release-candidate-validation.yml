@@ -64,7 +64,10 @@ jobs:
         run: npm run test:p0:core
       - name: Verify subscription payment-method isolation and no-charge boundary
         if: ${{ !cancelled() }}
-        run: node --test tests/subscription-payment-method.test.mjs tests/subscription-mutation-guard.test.mjs tests/subscription-downgrade.test.mjs
+        run: node --test tests/subscription-payment-method.test.mjs tests/subscription-payment-explicit.test.mjs tests/subscription-mutation-guard.test.mjs tests/subscription-downgrade.test.mjs
+      - name: Verify isolated business demo scenarios
+        if: ${{ !cancelled() }}
+        run: node --test tests/business-demo-scenarios.test.mjs
 
   browser-acceptance:
     if: ${{ github.event_name != 'workflow_dispatch' || (inputs.billing_sandbox_mode || 'off') == 'off' }}

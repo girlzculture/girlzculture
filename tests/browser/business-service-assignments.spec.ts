@@ -4,7 +4,7 @@ import {p0OwnerFixture} from './helpers/p0OwnerFixture';
 import {DASHBOARD_SOURCE_MESSAGES} from '../../src/i18n/dashboard-source-catalog';
 test.use({serviceWorkers:'block'});
 for(const [locale,width,height] of [['en',390,844],['fr',768,900],['es',1440,1000],['zh-CN',844,390]] as const){
- test(`Service assignments retain drafts on failure and persist verified selections in ${locale}`,async({page})=>{
+ test(`Service assignments retain drafts on failure and persist verified selections in ${locale}`,async({page},info)=>{
   const f=await p0OwnerFixture(page,{populated:true,locale});
   const t=(s:string)=>(DASHBOARD_SOURCE_MESSAGES as Record<string,Record<string,string>>)[locale]?.[s]||s;
   f.records.styles[0].name='Box Braids';f.records.stylists[0].name='Awa';
@@ -19,6 +19,10 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,900],['es',1440,100
   await expect(assignments.getByRole('alert')).toContainText('P0-SAVE-FAILURE');
   await expect(assignments.getByRole('checkbox',{name:'Box Braids',exact:true})).toBeChecked();
   expect(f.records.stylists[0].assigned_service_ids).toBeUndefined();
+  if(locale==='en'){
+   await assignments.getByRole('alert').scrollIntoViewIfNeeded();
+   await page.screenshot({path:info.outputPath('service-assignment-failure-draft-viewport.png')});
+  }
   await assignments.getByRole('button',{name:t('Save service assignments'),exact:true}).click();
   await expect(assignments.getByRole('status')).toHaveText(t('Service assignments saved and verified.'));
   expect(f.records.stylists[0].assigned_service_ids).toEqual([f.ids.service]);

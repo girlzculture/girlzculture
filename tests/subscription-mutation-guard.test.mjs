@@ -8,7 +8,7 @@ import ts from 'typescript';
 function fixture(){
  const calls=[],state={busy:false,valid:true,uncertain:false};
  const admin={rpc:async(name,args)=>{calls.push({rpc:name,args});return state.busy&&name==='acquire_subscription_mutation'?{error:{message:'SUBSCRIPTION_MUTATION_BUSY'}}:{data:name==='record_subscription_mutation_request'?state.valid:true};}};
- const stripe={stripeFailureDiagnostics:error=>error.diagnostics,stripeGet:async(path,options)=>{calls.push({get:path,signal:options.signal});return state.drift&&calls.some(c=>c.post)?{changed:true}:{};},stripeRequest:async(path,values,options)=>{calls.push({post:path,values,signal:options.signal});if(state.uncertain)throw Error('UNCERTAIN');if(state.rejection)throw state.rejection;return{};}};
+ const stripe={stripeFailureDiagnostics:error=>error.diagnostics,stripeGet:async(path,options)=>{calls.push({get:path,signal:options.signal,apiVersion:options.apiVersion});return state.drift&&calls.some(c=>c.post)?{changed:true}:{};},stripeRequest:async(path,values,options)=>{calls.push({post:path,values,signal:options.signal});if(state.uncertain)throw Error('UNCERTAIN');if(state.rejection)throw state.rejection;return{};}};
  const api=loadNodeTypescript(process.cwd(),{'@/lib/stripeServer':stripe,'@/lib/platformErrors':{UserSafeRequestError:class extends Error{constructor(message,status){super(message);this.status=status;}}}})('src/lib/subscriptionMutationGuard.ts');
  const run=callback=>api.withSubscriptionMutation({admin,salonId:'own-business',actorId:'own-user',subscriptionId:'sub_own'},callback);
  return{calls,state,run};
@@ -29,6 +29,7 @@ test('ownership or expired lease denies the provider mutation',async()=>{
  const f=fixture();f.state.valid=false;await assert.rejects(()=>f.run(provider=>provider.post('/subscriptions/sub_own',{cancel_at_period_end:true})),/LEASE_LOST/);assert.equal(f.calls.some(c=>c.post),false);
 });
 test('validation before provider writes releases the lease',async()=>{const f=fixture();await assert.rejects(()=>f.run(async()=>{throw Error('VALIDATION');}),/VALIDATION/);assert.equal(f.calls.some(c=>c.rpc==='release_subscription_mutation'),true);});
+test('guard forwards the exact read API version while retaining its own bounded signal',async()=>{const f=fixture(),caller=new AbortController().signal;await f.run(provider=>provider.get('/subscription_schedules/sub_sched_own',{apiVersion:'2025-06-30.basil',signal:caller}));const read=f.calls.find(c=>c.get);assert.equal(read.apiVersion,'2025-06-30.basil');assert.ok(read.signal instanceof AbortSignal);assert.notEqual(read.signal,caller);});
 test('failed read-only invoice preview releases the lease without marking a provider mutation',async()=>{
  const f=fixture();f.state.uncertain=true;await assert.rejects(()=>f.run(provider=>provider.post('/invoices/create_preview',{subscription:'sub_own'})),/UNCERTAIN/);
  assert.equal(f.calls.some(c=>c.rpc==='release_subscription_mutation'),true);assert.equal(f.calls.some(c=>c.rpc==='record_subscription_mutation_request'),false);

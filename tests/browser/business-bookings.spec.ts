@@ -25,9 +25,17 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,1000
   await expect(page).toHaveURL(new RegExp(`/bookings/${f.ids.booking}`));await page.goBack();await expect(page).toHaveURL(before);
   await page.reload();await expect(region.getByRole('combobox',{name:t('Staff filter'),exact:true})).toHaveValue(f.ids.professional);await expect(region.getByRole('searchbox',{name:t('Search bookings'),exact:true})).toHaveValue('Midnight');
   await region.getByLabel(t('From date'),{exact:true}).fill('2030-01-02');await region.getByRole('button',{name:t('Apply dates'),exact:true}).click();await expect(region.getByRole('alert')).toHaveText(t('End date must not precede start date.'));await expect(page).toHaveURL(before);
+  if(locale==='en'){
+   await region.getByRole('alert').scrollIntoViewIfNeeded();
+   await page.screenshot({path:info.outputPath('bookings-invalid-date-viewport.png')});
+  }
   await region.getByLabel(t('From date'),{exact:true}).fill('2029-12-31');await region.getByRole('button',{name:t('Apply dates'),exact:true}).click();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:info.outputPath('bookings-workspace.png'),fullPage:true});
   await region.getByRole('searchbox',{name:t('Search bookings'),exact:true}).fill('No match');await region.getByRole('button',{name:t('Search'),exact:true}).click();await expect(region.getByRole('heading',{name:t('No appointments match these filters'),exact:true})).toBeVisible();expect(f.unexpected).toEqual([]);
+  if(locale==='en'){
+   await region.getByRole('heading',{name:t('No appointments match these filters'),exact:true}).scrollIntoViewIfNeeded();
+   await page.screenshot({path:info.outputPath('bookings-no-match-viewport.png')});
+  }
  });
 }
 

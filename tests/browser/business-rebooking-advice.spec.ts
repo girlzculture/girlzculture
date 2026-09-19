@@ -17,9 +17,18 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,10
  test('Business rebooking advice shows exact own-client evidence and opens the existing record in '+locale,async({page},info)=>{
   const f=await fixture(page,locale),t=(key:Parameters<typeof rebookingCopy>[1])=>rebookingCopy(locale,key);
   await page.setViewportSize({width,height});await page.goto('/salon/dashboard/bookings');const region=page.getByRole('region',{name:t('title'),exact:true});
-  await expect(region).toContainText('Own returning client');await expect(region).toContainText(t('definition'));await expect(region).toContainText(t('consent'));
+  await expect(region.getByText('Own returning client',{exact:true})).toBeVisible();await expect(region.getByText(t('countOne'),{exact:true})).toBeVisible();await expect(region.getByText(t('contact'),{exact:true})).toBeVisible();
   await expect(region.getByRole('link',{name:t('review'),exact:true})).toHaveAttribute('href','/salon/dashboard/bookings/'+f.ids.booking);
   await expect(region.getByRole('link',{name:t('updates'),exact:true})).toHaveAttribute('href','/salon/dashboard/messages/campaigns');
+  const method=region.locator('details'),summary=method.locator('summary');await expect(summary).toHaveText(t('method'));await expect(method).toHaveJSProperty('open',false);
+  await expect(region.getByText(t('definition'),{exact:true})).not.toBeVisible();
+  expect((await region.getByRole('link',{name:t('review'),exact:true}).boundingBox())!.y).toBeLessThan((await summary.boundingBox())!.y);
+  expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await summary.focus();await page.keyboard.press('Enter');await expect(method).toHaveJSProperty('open',true);
+  for(const key of ['intro','definition','dateBasis','identity','consent']as const)await expect(method.getByText(t(key),{exact:true})).toBeVisible();
+  const day=(value:string)=>new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'));
+  await expect(method.getByText(rebookingCopy(locale,'period',{from:day(f.proof.from),to:day(f.proof.through),zone:f.proof.time_zone,time:new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short',timeZone:f.proof.time_zone}).format(new Date(f.proof.as_of))}),{exact:true})).toBeVisible();
+  await summary.focus();await page.keyboard.press('Space');await expect(method).toHaveJSProperty('open',false);await expect(region.getByText('Own returning client',{exact:true})).toBeVisible();expect(f.state.reads).toBe(1);expect(f.actions).toEqual([]);
   await region.evaluate(element=>window.scrollTo(0,element.getBoundingClientRect().top+window.scrollY-110));
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:info.outputPath('rebooking-'+locale+'-'+width+'-viewport.png')});
   await region.getByRole('button',{name:t('refresh'),exact:true}).click();await expect(region.getByRole('link',{name:t('review'),exact:true})).toBeVisible();expect(f.state.reads).toBe(2);
@@ -37,7 +46,7 @@ test('Business rebooking advice does not request private history without that gr
  const f=await fixture(page);let permitted=false;
  await page.route('**/api/salon/workspace',route=>route.fulfill({json:{salon:f.business,isOwner:false,isTeamMember:true,permissions:{bookings:true,client_history:permitted},records:f.records}}));
  await page.goto('/salon/dashboard/bookings');await expect(page.getByRole('heading',{name:'Bookings',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Returning-client check-in',exact:true})).toHaveCount(0);expect(f.state.reads).toBe(0);
- permitted=true;f.state.data=businessRebookingAdvice(f.business.id,{...f.proof,scope:'assigned_professional',stylist_id:f.ids.professional});await page.reload();const region=page.getByRole('region',{name:'Returning-client check-in',exact:true});await expect(region).toContainText(rebookingCopy('en','scope'));await expect(region.getByRole('link',{name:'Review eligible email updates',exact:true})).toHaveCount(0);expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
+ permitted=true;f.state.data=businessRebookingAdvice(f.business.id,{...f.proof,scope:'assigned_professional',stylist_id:f.ids.professional});await page.reload();const region=page.getByRole('region',{name:'Returning-client check-in',exact:true});await expect(region.getByText(rebookingCopy('en','scope'),{exact:true})).toBeVisible();await expect(region.locator('details')).toHaveJSProperty('open',false);await expect(region.getByRole('link',{name:'Review eligible email updates',exact:true})).toHaveCount(0);expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
 });
 test('Business rebooking advice distinguishes incomplete evidence, no history and a verified empty cohort',async({page})=>{
  const f=await fixture(page);f.state.data=businessRebookingAdvice(f.business.id,{...f.proof,complete:false,record_count:5001,records:[]});await page.goto('/salon/dashboard/bookings');const region=page.getByRole('region',{name:'Returning-client check-in',exact:true});await expect(region).toContainText(rebookingCopy('en','unavailable'));await expect(region).not.toContainText(rebookingCopy('en','empty'));

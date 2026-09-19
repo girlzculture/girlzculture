@@ -1,6 +1,7 @@
 import { POLICY_DEFAULTS, validateBusinessPolicy, type BusinessPolicy } from "@/lib/businessPolicyCore";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { cleanUsPhone } from "@/lib/requestSecurity";
+import { instagramOnboardingAssetId, type InstagramOnboardingProvenance } from "@/lib/instagramOnboardingMedia";
 
 export const ONBOARDING_SECTIONS = ["identity", "services", "hours", "photos", "team", "policies"] as const;
 export const ONBOARDING_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -15,7 +16,7 @@ export type OnboardingFacts = {
   policies: BusinessPolicy | null;
 };
 export type OnboardingSource = { kind: "manual" | "instagram" | "website"; reference: string; permitted: true; text?: string };
-export type OnboardingDraft = { id: string; revision: number; status: "draft" | "applied"; source: OnboardingSource & { locale?: string; extraction?: { method: string; evidence: { field: string; quote?: string; excerpt?: string }[]; unresolved: (string | number)[]; owner_review_edited?: boolean } }; facts: OnboardingFacts; uncertain: string[]; result: Record<string, unknown> | null; created_at: string };
+export type OnboardingDraft = { id: string; revision: number; status: "draft" | "applied"; source: OnboardingSource & { locale?: string; provider_import?: InstagramOnboardingProvenance; extraction?: { method: string; evidence: { field: string; quote?: string; excerpt?: string }[]; unresolved: (string | number)[]; owner_review_edited?: boolean } }; facts: OnboardingFacts; uncertain: string[]; result: Record<string, unknown> | null; created_at: string };
 export class OnboardingInputError extends Error {
   constructor(public code: string) { super(code); }
 }
@@ -97,7 +98,8 @@ export function onboardingFacts(input: unknown, ownedPhotos: readonly string[]):
   }
   const photos = rows(facts.photos, 16).map(value => {
     const photo = text(value, 1200);
-    if (!photo || !onboardingOwnedPhotos(ownedPhotos).includes(photo)) throw new OnboardingInputError("ONBOARDING_PHOTO_NOT_OWNED");
+    const allowed = instagramOnboardingAssetId(photo) ? ownedPhotos.includes(photo) : onboardingOwnedPhotos(ownedPhotos).includes(photo);
+    if (!photo || !allowed) throw new OnboardingInputError("ONBOARDING_PHOTO_NOT_OWNED");
     return photo;
   });
   const team = rows(facts.team, 30).map(raw => {

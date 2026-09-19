@@ -56,7 +56,7 @@ export function stripeConfigured() {
 export async function stripeRequest<T>(
   path: string,
   values: Record<string, string | number | boolean | null | undefined>,
-  options?: { idempotencyKey?: string; signal?: AbortSignal; onResponse?: (evidence: { requestId: string | null }) => void },
+  options?: { idempotencyKey?: string; signal?: AbortSignal; apiVersion?: '2025-06-30.basil'; onResponse?: (evidence: { requestId: string | null }) => void },
 ) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
@@ -72,6 +72,7 @@ export async function stripeRequest<T>(
       headers: {
         Authorization: `Bearer ${secret}`,
         "Content-Type": "application/x-www-form-urlencoded",
+        ...(options?.apiVersion ? { "Stripe-Version": options.apiVersion } : {}),
         ...(options?.idempotencyKey
           ? { "Idempotency-Key": options.idempotencyKey }
           : {}),
@@ -118,14 +119,14 @@ export async function stripeRequest<T>(
   return data;
 }
 
-export async function stripeGet<T>(path: string, options?: { signal?: AbortSignal }) {
+export async function stripeGet<T>(path: string, options?: { signal?: AbortSignal; apiVersion?: '2025-06-30.basil' }) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
 
   let response: Response;
   try {
     response = await fetch(`${STRIPE_API}${path}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { Authorization: `Bearer ${secret}`, ...(options?.apiVersion ? { "Stripe-Version": options.apiVersion } : {}) },
       cache: "no-store",
       signal: options?.signal,
     });

@@ -71,7 +71,7 @@ function assertDowngradeReadback(schedule:StripeSchedule,after:StripeSubscriptio
   for(const [key,expected] of Object.entries(values)){
     // Top-level proration_behavior and phase duration are request-only values.
     // The concrete period boundaries and unchanged live subscription are read below.
-    if(key==='proration_behavior'||key.includes('[duration]'))continue;
+    if(key==='proration_behavior'||key.includes('[duration]')||key.endsWith('[iterations]'))continue;
     let actual:unknown=schedule;
     for(const part of key.split(/[\[\]]/).filter(Boolean))actual=actual&&typeof actual==='object'?(actual as Record<string,unknown>)[part]:undefined;
     if(actual&&typeof actual==='object'&&typeof expected==='string')actual=(actual as {id?:unknown}).id;
@@ -242,8 +242,7 @@ async function POSTHandler(request: Request) {
           "phases[0][items][0][quantity]": item.quantity || 1,
           "phases[0][proration_behavior]": "none",
           "phases[1][start_date]": currentPeriodEnd,
-          "phases[1][duration][interval]": "month",
-          "phases[1][duration][interval_count]": 1,
+          "phases[1][iterations]": 1,
           "phases[1][items][0][price]": priceId,
           "phases[1][items][0][quantity]": item.quantity || 1,
           "phases[1][proration_behavior]": "none",
@@ -269,16 +268,17 @@ async function POSTHandler(request: Request) {
         });
         await stripeRequest<StripeSchedule>(`/subscription_schedules/${schedule.id}`, scheduleValues, {
           idempotencyKey: intentKey('downgrade-phases'),
+          apiVersion: '2025-06-30.basil',
         });
         verifyingSchedule = true;
-        const verifiedSchedule=await stripeGet<StripeSchedule>(`/subscription_schedules/${schedule.id}`);
+        const verifiedSchedule=await stripeGet<StripeSchedule>(`/subscription_schedules/${schedule.id}`,{apiVersion:'2025-06-30.basil'});
         const verifiedSubscription=await stripeGet<StripeSubscription>(`/subscriptions/${current.id}?expand[]=latest_invoice.payment_intent`);
         if(verifiedSchedule.id!==schedule.id)throw new Error('SUBSCRIPTION_DOWNGRADE_READBACK_FAILED');
         assertDowngradeReadback(verifiedSchedule,verifiedSubscription,current,scheduleValues);
       } catch (scheduleError) {
         // A mismatched authoritative snapshot can be an external edit. Never
         // compensate by releasing an agreement whose state was not verified.
-        if (schedule?.id && !verifyingSchedule) {
+        if (schedule?.id && !verifyingSchedule && (scheduleError as {code?:string})?.code!=='SUBSCRIPTION_MUTATION_REVIEW_REQUIRED') {
           await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {preserve_cancel_date:true}, { idempotencyKey: intentKey('release-failed-schedule') }).catch((releaseError) => {
             noteOperationalFailure("Failed downgrade schedule cleanup failed", { salonId: salon.id, scheduleId: schedule?.id, releaseError });
           });

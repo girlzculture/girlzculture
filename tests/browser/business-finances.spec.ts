@@ -62,7 +62,7 @@ test('Business finance period change suppresses unmatched totals and stale recor
 });
 
 for(const kind of ['service','product'] as const){
-test(`Business finance ${kind} draft retains entry choices through a pending and failed period read`,async({page})=>{
+test(`Business finance ${kind} draft retains entry choices through a pending and failed period read`,async({page},info)=>{
   const fixture=await p0OwnerFixture(page,{populated:true});
   const books:OperatingBooks={sales:[],payments:[],expenses:[],obligations:[],compensation_payments:[]};
   let releaseNext!:()=>void,observeNext!:()=>void,failNext=true;
@@ -75,6 +75,7 @@ test(`Business finance ${kind} draft retains entry choices through a pending and
     if(from==='2026-08-01'&&failNext){observeNext();await nextReleased;failNext=false;await route.fulfill({status:503,json:{code:'FINANCE_UNAVAILABLE',request_id:'99000000-0000-4000-8000-000000000802'}});return;}
     await route.fulfill({json:{scope:{kind:'business'},books,summary:summarizeOperatingBooks(fixture.business.id,books,{from,to,timeZone:fixture.business.time_zone}),evidence:{},stylists:fixture.records.stylists,arrangements:[]}});
   });
+  if(kind==='service')await page.setViewportSize({width:390,height:844});
   await page.goto('/salon/dashboard/earnings?finance_from=2026-07-01&finance_to=2026-07-31');
   const finances=page.getByRole('region',{name:'Finances',exact:true});
   await expect(finances.getByRole('status').filter({hasText:'Loading finance records'})).toHaveCount(0);
@@ -96,9 +97,10 @@ test(`Business finance ${kind} draft retains entry choices through a pending and
   const period=page.getByRole('form',{name:'Reporting period',exact:true});
   await period.getByLabel('From',{exact:true}).fill('2026-08-01');await period.getByLabel('To',{exact:true}).fill('2026-08-31');
   await period.getByRole('button',{name:'Apply dates',exact:true}).click();await nextRequested;
-  try{await expect(finances.getByRole('status').filter({hasText:'Loading finance records'})).toBeVisible();await assertDraft();}finally{releaseNext();}
+  try{await expect(finances.getByRole('status').filter({hasText:'Loading finance records'})).toBeVisible();await assertDraft();if(kind==='service'){await finances.getByRole('status').filter({hasText:'Loading finance records'}).scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('finance-held-period-status-viewport.png')});await form.getByLabel('Price paid',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('finance-held-period-draft-viewport.png')});}}finally{releaseNext();}
   const failure=finances.locator(':scope > [role="alert"]').filter({has:page.getByRole('button',{name:'Reload',exact:true})});
   await expect(failure).toHaveCount(1);await expect(failure).toContainText('99000000-0000-4000-8000-000000000802');await assertDraft();
+  if(kind==='service'){await failure.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('finance-failed-period-reference-viewport.png')});await form.getByLabel('Price paid',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('finance-failed-period-draft-viewport.png')});}
   await failure.getByRole('button',{name:'Reload',exact:true}).click();
   await expect(failure).toHaveCount(0);await expect(finances.getByRole('status').filter({hasText:'Loading finance records'})).toHaveCount(0);await assertDraft();
   await expect(finances.getByRole('region',{name:'Schedule opportunities',exact:true}).getByRole('alert')).toContainText('Unavailable, not zero.');

@@ -6,7 +6,7 @@ const actor = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const requestId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 function fixture(options = {}) {
   const calls = []; const saved = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active', current_period_end: '2099-01-01T00:00:00Z' }], gc_assistant_requests: [], styles: [], bookings: [], test_data_registry: [], ...options.tables };
+  const tables = { subscriptions: [{ salon_id: business, status: 'active', current_period_end: '2099-01-01T00:00:00Z' }], gc_assistant_requests: [], styles: [], style_materials: [], bookings: [], test_data_registry: [], ...options.tables };
   const admin = {
     async rpc(name, args) {
       calls.push({ name, args });
@@ -24,6 +24,7 @@ function fixture(options = {}) {
       const q = {
         select() { return q; }, eq(key, value) { filters.push(row => row[key] === value); return q; },
         is(key, value) { filters.push(row => (row[key] ?? null) === value); return q; },
+        in(key, values) { filters.push(row => values.includes(row[key])); return q; },
         gte(key, value) { filters.push(row => row[key] >= value); return q; }, lt(key, value) { filters.push(row => row[key] < value); return q; },
         ilike(key, pattern) { calls.push({ table, pattern }); const needle = pattern.slice(1, -1).replace(/\\([\\%_])/g, '$1').toLowerCase(); filters.push(row => String(row[key]).toLowerCase().includes(needle)); return q; },
         order(key) { ordering = key; return q; }, limit(n) { cap = n; return q; }, maybeSingle() { single = true; return q; },
@@ -36,7 +37,7 @@ function fixture(options = {}) {
       }; return q;
     },
   };
-  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/bookingAvailabilityServer': { bookingAvailability: async () => ({ timeZone: 'America/New_York', durationMinutes: 60, bufferMinutes: 15, slots: [{ value: '13:00', stylistId: actor, stylistName: 'Save' }] }) }, '@/lib/contentModerationServer': { moderatePublicContent: async () => ({ allowed: true }) } });
+  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/engineConfigServer': { getEngineNumber: async (_key, fallback) => fallback }, '@/lib/bookingAvailabilityServer': { serviceAvailabilityWindow: async input => ({ style: { id: input.styleId, salon_id: business, duration_min_hours: 1, buffer_minutes: 15 }, timeZone: 'America/New_York', bufferMinutes: 15, dates: [{ date: input.date, slots: [{ value: '13:00', stylistId: actor, stylistName: 'Save' }] }] }) }, '@/lib/contentModerationServer': { moderatePublicContent: async () => ({ allowed: true }) } }, {URLSearchParams});
   const server = load('src/lib/gcAssistantServer.ts');
   const context = { admin, user: { id: actor }, salon: { id: business, subscription_status: 'active', time_zone: 'America/New_York', description: 'Original Save' }, isOwner: !options.teamMember, teamMember: options.teamMember };
   return { calls, saved, context, server, run: (tool, args) => server.executeAssistantTool(context, { requestId, locale: 'fr', tool, args }) };
@@ -60,7 +61,7 @@ test('service search applies the requested name before the bounded database resu
 });
 
 test('literal service search cannot expand percent or underscore into wildcard records', async () => {
-  const f = fixture({ tables: { styles: [{ salon_id: business, name: 'A_100% Save' }, { salon_id: business, name: 'AB1000 Save' }] } });
+  const f = fixture({ tables: { styles: [{ id: 'literal', salon_id: business, name: 'A_100% Save' }, { id: 'not-literal', salon_id: business, name: 'AB1000 Save' }] } });
   const response = await f.run('get_services_and_prices', { query: '_100%' });
   assert.equal(response.request.result.services.length, 1); assert.equal(response.request.result.services[0].name, 'A_100% Save');
 });
@@ -131,7 +132,7 @@ test('bookings are read only for the resolved business and requested interval', 
 });
 
 test('availability retains canonical professional identity for a subsequent scoped draft', async () => {
-  const f = fixture();
+  const f = fixture({tables:{salons:[{id:business,user_id:actor,time_zone:'America/New_York'}],styles:[{id:requestId,salon_id:business,name:'Own service',base_price:100,duration_min_hours:1,duration_max_hours:1,buffer_minutes:15,option_groups:[]}]}});
   const response = await f.run('get_availability', { style_id: requestId, stylist_id: null, date: '2026-09-20' });
   const slot = response.request.result.slots[0];
   assert.equal(slot.stylist_id, actor);

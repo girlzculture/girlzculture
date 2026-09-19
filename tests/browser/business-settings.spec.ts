@@ -4,7 +4,7 @@ import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 test.use({serviceWorkers:'block'});
 for (const [locale,width,height] of [['en',390,844],['es',1440,1000]] as const) {
- test(`Business settings opens the existing assistant appearance controls in ${locale}`,async({page})=>{
+ test(`Business settings opens the existing assistant appearance controls in ${locale}`,async({page},info)=>{
   const f=await p0OwnerFixture(page,{populated:true,locale});await page.setViewportSize({width,height});
   Object.assign(f.business,{gc_assistant_avatar:'woman'});let saves=0;
   const t=(text:string)=>DASHBOARD_SOURCE_MESSAGES[locale]?.[text]||text;
@@ -17,6 +17,7 @@ for (const [locale,width,height] of [['en',390,844],['es',1440,1000]] as const) 
   await launcher.click();
   const dialog=page.getByRole('dialog',{name:'GC Assistant',exact:true});
   await expect(dialog.getByRole('button',{name:t('Friendly woman'),exact:true})).toBeFocused();
+  if(locale==='en')await page.screenshot({path:info.outputPath('settings-appearance-chooser-viewport.png')});
   await dialog.getByRole('button',{name:t('Smiling cat'),exact:true}).click();
   await expect(dialog.getByText(t('Assistant appearance saved.'),{exact:true})).toBeVisible();expect(saves).toBe(1);
   await dialog.getByRole('button',{name:t('Close GC Assistant'),exact:true}).click();await expect(launcher).toBeFocused();
@@ -71,17 +72,18 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,10
  });
 }
 
-test('Business settings retains entered contact details after a failed save and retry',async({page})=>{
+test('Business settings retains entered contact details after a failed save and retry',async({page},info)=>{
  const f=await p0OwnerFixture(page,{populated:true});Object.assign(f.business,{email:'owner@example.test',phone:'+12125550128'});let attempts=0;
  await page.route('**/api/salon/profile',async route=>{
   if(route.request().method()!=='PATCH')return route.fulfill({json:{salon:f.business}});
   attempts++;if(attempts===1)return route.fulfill({status:503,json:{error:'Settings could not be saved.',request_id:'SETTINGS-RETRY'}});
   Object.assign(f.business,route.request().postDataJSON());return route.fulfill({json:{salon:f.business,verified:true}});
  });
- await page.goto('/salon/dashboard/settings/account');await page.getByLabel('Business Phone / SMS Number').fill('+12125550129');
+ await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/settings/account');await page.getByLabel('Business Phone / SMS Number').fill('+12125550129');
  const save=page.getByRole('button',{name:'Save account details',exact:true});await save.click();
  await expect(page.getByText('Settings could not be saved.',{exact:true})).toBeVisible();
  await expect(page.getByLabel('Business Phone / SMS Number')).toHaveValue('+12125550129');await expect(save).toBeEnabled();
+ await page.getByText('Settings could not be saved.',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('settings-account-retry-error-viewport.png')});await page.getByLabel('Business Phone / SMS Number').scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('settings-account-retained-contact-viewport.png')});
  await save.click();await expect.poll(()=>attempts).toBe(2);await page.reload();await expect(page.getByLabel('Business Phone / SMS Number')).toHaveValue('+12125550129');
 });
 

@@ -1,4 +1,5 @@
 const rows=[
+ ['All stock','Tout le stock','Todo el stock','全部库存'],
  ['Product catalog','Catalogue de produits','Catálogo de productos','商品目录'],
  ['Your catalog, stock and orders, together.','Votre catalogue, votre stock et vos commandes au même endroit.','Tu catálogo, existencias y pedidos en un solo lugar.','集中管理商品目录、库存和订单。'],
  ['Product workspace','Espace produits','Espacio de productos','商品工作区'],
@@ -47,7 +48,6 @@ const rows=[
  ["Save stock change","Enregistrer le changement","Guardar cambio de existencias","保存库存更改"],
  ["Search stock","Rechercher dans le stock","Buscar existencias","搜索库存"],
  ["Inventory filter","Filtre de stock","Filtro de inventario","库存筛选"],
- ["All stock","Tout le stock","Todas las existencias","全部库存"],
  ["Retail products","Produits à vendre","Productos de venta","零售商品"],
  ["Business supplies","Fournitures professionnelles","Suministros del negocio","商家耗材"],
  ["Low or zero stock","Stock faible ou épuisé","Existencias bajas o agotadas","低库存或缺货"],

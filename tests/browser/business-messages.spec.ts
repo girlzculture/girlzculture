@@ -30,6 +30,7 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,1000
   await composer.fill(original);await page.goBack();await expect(page).not.toHaveURL(/conversation=/);await expect(region.getByRole('button',{name:t('Unread')+' (1)',exact:true})).toBeVisible();
   await region.getByRole('button',{name:/Client One.*Save/}).click();await expect(page).toHaveURL(/conversation=/);await expect(composer).toHaveValue(original);
   await region.getByRole('button',{name:t('Send message'),exact:true}).click();await expect(region.getByRole('alert')).toContainText(reference);await expect(composer).toHaveValue(original);
+  if(locale==='en'){await region.getByRole('alert').scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('messages-failed-send-reference-viewport.png')});await composer.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('messages-failed-send-draft-viewport.png')});}
   await region.getByRole('button',{name:t('Send message'),exact:true}).click();await expect(composer).toHaveValue('');expect(requests).toHaveLength(2);expect(requests[0].client_request_id).toBe(requests[1].client_request_id);expect(requests[1].body).toBe(original);
   await page.reload();await expect(region.locator('article').filter({hasText:original.trim()})).toBeVisible();await expect(page).toHaveURL(/messageSearch=Client\+One/);
   if(width<1024)await region.getByRole('button',{name:t('Back to conversations'),exact:true}).click();
@@ -38,3 +39,17 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,1000
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:info.outputPath('messages-closed.png')});expect(f.unexpected).toEqual([]);
  });
 }
+
+test('Business messages low-height workspace keeps a conversation visible',async({page},info)=>{
+ const f=await p0OwnerFixture(page,{populated:true,locale:'zh-CN'}),t=(s:string)=>BUSINESS_MESSAGES_SOURCE_MESSAGES['zh-CN']?.[s]||DASHBOARD_SOURCE_MESSAGES['zh-CN']?.[s]||s;
+ const booking={...f.records.bookings[0],id:f.ids.booking,guest_name:'Landscape client',appointment_datetime:'2030-03-10T15:00:00Z',salon:f.business,style:{name:'Silk Press'},customer_id:'own-fixture-customer',duration_hours:2};
+ await page.route('**/api/messages**',route=>{expect(route.request().method()).toBe('GET');return route.fulfill({json:{role:'salon',threads:[{booking,messages:[{id:'own-message',booking_id:booking.id,sender_role:'customer',original_body:'Retained client message',body:'Retained client message',created_at:'2026-09-18T12:00:00Z'}]}]}});});
+ await page.setViewportSize({width:844,height:390});await page.goto('/salon/dashboard/messages');const region=page.getByRole('region',{name:t('Messages workspace'),exact:true}),thread=region.getByRole('button',{name:/Landscape client.*Silk Press/});await expect(thread).toBeVisible();await page.evaluate(()=>document.fonts.ready);
+ await page.evaluate(()=>window.scrollTo(0,0));const geometry=await thread.evaluate(el=>{const r=el.getBoundingClientRect(),header=document.querySelector('.gc-owner-header')!.getBoundingClientRect(),nav=document.querySelector('[data-owner-mobile-navigation]')!.getBoundingClientRect();return{top:r.top,bottom:r.bottom,visible:Math.min(r.bottom,nav.top)-Math.max(r.top,header.bottom),scrollY:window.scrollY};});
+ await info.attach('conversation-geometry',{body:JSON.stringify(geometry),contentType:'application/json'});await page.screenshot({path:info.outputPath('messages-low-height-initial.png')});
+ expect(geometry.scrollY).toBe(0);expect(geometry.visible,JSON.stringify(geometry)).toBeGreaterThanOrEqual(48);
+ for(const control of [region.getByRole('button',{name:t('All'),exact:true}),region.getByRole('button',{name:t('Unread')+' (1)',exact:true}),region.getByRole('button',{name:t('Active conversations'),exact:true}),region.getByRole('button',{name:t('Closed conversations'),exact:true}),region.getByLabel(t('Search conversations'),{exact:true})])expect(await control.evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+ await region.getByLabel(t('Search conversations'),{exact:true}).fill('Landscape');await expect(page).toHaveURL(/messageSearch=Landscape/);await expect(thread).toContainText('Retained client message');
+ await region.getByRole('button',{name:t('Closed conversations'),exact:true}).click();await expect(thread).toHaveCount(0);await region.getByRole('button',{name:t('Active conversations'),exact:true}).click();await expect(thread).toBeVisible();await expect(region.getByLabel(t('Search conversations'),{exact:true})).toHaveValue('Landscape');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
+});

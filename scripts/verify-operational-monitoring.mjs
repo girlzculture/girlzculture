@@ -19,7 +19,7 @@ function regexEscape(value) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 160, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 166, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");

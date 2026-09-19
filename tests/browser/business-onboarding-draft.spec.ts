@@ -12,6 +12,7 @@ const groupId='17400000-0000-4000-8000-000000000002';
 const original='Business name: Onboarding Fixture GC123\nDescription: Owner supplied facts only.\nPhone: 3055550123\nCity: Miami\nState: FL\nZIP: 33101\nService: Silk press | $125 | 90 minutes\nMon: 09:00–17:00\nTeam member: Fixture Aisha | Owner supplied biography\nUncertain claim: review manually';
 async function fixture(page: Page, locale='en') {
   const auth=await p0OwnerFixture(page,{locale});
+  await page.route('**/api/salon/onboarding-instagram', route => route.request().method() === 'GET' ? route.fulfill({json:{status:'unavailable',reason:'configuration'}}) : route.fallback());
   const state={draft:null as OnboardingDraft|null,saveCalls:0,applyCalls:0,aiCalls:0,live:false,published:false,failSave:false,failAi:false,failConfirm:false,denied:false};
   const handler=async(route:Route)=>{
     expect(route.request().headers().authorization).toBe(`Bearer ${auth.session.access_token}`);

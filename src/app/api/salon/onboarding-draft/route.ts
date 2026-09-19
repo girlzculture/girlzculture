@@ -8,6 +8,8 @@ import { salonPublicPath } from "@/lib/salonVanity";
 import { structureOwnerSource } from "@/lib/businessOnboardingSource";
 import { structureOnboardingWithAi } from "@/lib/businessOnboardingAiServer";
 import { OnboardingAiError } from "@/lib/businessOnboardingAiProtocol";
+import { preservedInstagramOnboardingSource } from "@/lib/instagramOnboardingMedia";
+import { instagramOnboardingPreviews, readInstagramOnboardingAssets, prepareInstagramOnboardingPhotos } from "@/lib/instagramOnboardingMediaServer";
 
 const headers = { "Cache-Control": "private, no-store" };
 const fields = "id,revision,status,source,facts,uncertain,result,created_at";
@@ -26,7 +28,8 @@ async function handle(request: Request) {
         admin.from("service_groups").select("id,name").eq("is_active", true).is("archived_at", null).order("name"),
       ]);
       if (drafts.error || groups.error) throw drafts.error || groups.error;
-      return Response.json({ drafts: drafts.data || [], groups: groups.data || [], owned_photos: ownedPhotos,
+      const privatePhotos = await instagramOnboardingPreviews(context, drafts.data || []);
+      return Response.json({ drafts: drafts.data || [], groups: groups.data || [], owned_photos: ownedPhotos, private_photos: privatePhotos,
         current_name: salon.name, live_business: salon.is_discoverable === true || salon.status === "Active", current_is_discoverable: salon.is_discoverable === true,
         workspace_path: "/salon/dashboard", page_path: salon.slug ? salonPublicPath(String(salon.slug), salon.vanity_slug ? String(salon.vanity_slug) : null) : null,
         automatic_source_import: false, source_import_status: "APPROVED_PROVIDER_CONNECTION_REQUIRED" }, { headers });
@@ -40,21 +43,28 @@ async function handle(request: Request) {
       if (Object.keys(body).some(key => !allowed.includes(key)) || !["en", "fr", "es", "zh-CN"].includes(body.locale)) throw new OnboardingInputError("ONBOARDING_INVALID");
       if (body.id !== null && body.id !== undefined && (typeof body.id !== "string" || !uuid.test(body.id) || !Number.isSafeInteger(body.revision) || body.revision < 1)) throw new OnboardingInputError("ONBOARDING_INVALID");
       const source = onboardingSource(body.source);
-      const generated = withAi ? await structureOnboardingWithAi(context, source.text || "") : null;
-      const facts = onboardingFacts(generated?.facts ?? body.facts, ownedPhotos);
-      const structured = !generated && source.text ? structureOwnerSource(source.text) : null;
-      let extraction: Record<string, unknown> | null = generated ? { method: "openai_source_quotes", model: generated.model, source_sha256: generated.source_sha256, evidence: generated.evidence, unresolved: generated.unresolved, original_facts: generated.facts } : structured ? { method: "explicit_source_labels", evidence: structured.evidence, unresolved: structured.unresolved } : null;
+      let prior: Record<string, unknown> | null = null;
       if (!withAi && body.id) {
         const previous = await admin.from("business_onboarding_drafts").select("source,revision,status").eq("id", body.id).eq("salon_id", salon.id).eq("created_by", user.id).maybeSingle();
         if (previous.error) throw previous.error;
         if (!previous.data || previous.data.status !== "draft" || previous.data.revision !== body.revision) throw new Error("ONBOARDING_STALE");
+        prior = previous.data.source;
+      }
+      const imported = preservedInstagramOnboardingSource(prior, source);
+      const generated = withAi ? await structureOnboardingWithAi(context, source.text || "") : null;
+      const inputFacts = generated?.facts ?? body.facts;
+      const privateAssets = imported ? await readInstagramOnboardingAssets(context, { ...source, provider_import: imported }, Array.isArray(inputFacts?.photos) ? inputFacts.photos : []) : [];
+      const facts = onboardingFacts(inputFacts, [...ownedPhotos, ...privateAssets.map(asset => `instagram-asset:${asset.id}`)]);
+      const structured = !generated && source.text ? structureOwnerSource(source.text) : null;
+      let extraction: Record<string, unknown> | null = generated ? { method: "openai_source_quotes", model: generated.model, source_sha256: generated.source_sha256, evidence: generated.evidence, unresolved: generated.unresolved, original_facts: generated.facts } : structured ? { method: "explicit_source_labels", evidence: structured.evidence, unresolved: structured.unresolved } : null;
+      if (prior) {
         // Keep server-generated provenance through owner review edits. Never
         // accept a client-supplied model result/evidence as a trusted extraction.
-        const prior = previous.data.source;
-        if (prior?.extraction?.method === "openai_source_quotes" && prior.text === source.text && prior.kind === source.kind && prior.reference === source.reference) extraction = { ...prior.extraction, owner_review_edited: true };
+        const priorExtraction = prior.extraction as Record<string, unknown> | undefined;
+        if (priorExtraction?.method === "openai_source_quotes" && prior.text === source.text && prior.kind === source.kind && prior.reference === source.reference) extraction = { ...priorExtraction, owner_review_edited: true };
       }
       const result = await admin.rpc("save_business_onboarding_draft", { p_salon: salon.id, p_actor: user.id,
-        p_source: { ...source, locale: body.locale, ...(extraction ? { extraction } : {}) }, p_facts: facts, p_uncertain: onboardingUncertainty(facts), p_id: body.id || null, p_revision: body.id ? body.revision : null });
+        p_source: { ...source, locale: body.locale, ...(extraction ? { extraction } : {}), ...(imported ? { provider_import: imported } : {}) }, p_facts: facts, p_uncertain: onboardingUncertainty(facts), p_id: body.id || null, p_revision: body.id ? body.revision : null });
       if (result.error) throw result.error;
       const readback = await admin.from("business_onboarding_drafts").select(fields).eq("id", result.data.id).eq("salon_id", salon.id).eq("created_by", user.id).single();
       if (readback.error || !readback.data || readback.data.revision !== result.data.revision) throw readback.error || new Error("ONBOARDING_READBACK_FAILED");
@@ -66,10 +76,13 @@ async function handle(request: Request) {
     if (!stored.data) return Response.json({ code: "ONBOARDING_NOT_FOUND" }, { status: 404, headers });
     // Apply only the saved, reviewed facts; a confirmation cannot smuggle edits.
     if (stored.data.status !== "applied") {
-      const facts = onboardingFacts(stored.data.facts, ownedPhotos);
+      if (stored.data.status !== "draft" || stored.data.revision !== confirmation.revision) throw new Error("ONBOARDING_STALE");
+      const assets = await readInstagramOnboardingAssets(context, stored.data.source, stored.data.facts.photos);
+      const facts = onboardingFacts(stored.data.facts, [...ownedPhotos, ...assets.map(asset => `instagram-asset:${asset.id}`)]);
       const copy = [facts.identity.name, facts.identity.description, ...facts.services.map(row => row.name), ...facts.team.flatMap(row => [row.name, row.bio]), facts.policies?.business_policy_text || ""].join("\n");
       const moderation = await moderatePublicContent(admin, { name: facts.identity.name, body: copy });
       if (!moderation.allowed) throw new OnboardingInputError("ONBOARDING_CONTENT_REVIEW_REQUIRED");
+      await prepareInstagramOnboardingPhotos(context, stored.data);
     }
     const result = await admin.rpc("apply_business_onboarding_draft", { p_salon: salon.id, p_actor: user.id, p_id: confirmation.id, p_revision: confirmation.revision, p_reviewed: [...ONBOARDING_SECTIONS], p_keep_unpublished: confirmation.keepUnpublished, p_public_impact: confirmation.publicImpact });
     if (result.error) throw result.error;

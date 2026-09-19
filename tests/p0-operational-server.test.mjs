@@ -110,7 +110,7 @@ test('operating earnings use verified receipts and exclude foreign or invented m
 });
 function fixture(overrides = {}) {
   const calls = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], salon_promotions: [], ...overrides.tables };
+  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], product_orders: [], salon_promotions: [], ...overrides.tables };
   const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'business_finance_scope') return overrides.ownFinance ? {data:{kind:'own',stylist_id:professional}} : {error:{message:'FINANCE_ACCESS_DENIED'}};
     if(name==='read_business_stock'){assert.equal(args.p_salon,business);assert.equal(args.p_user,actor);return {data:{products:tables.salon_products.filter(row=>row.salon_id===business),supplies:(tables.business_supplies||[]).filter(row=>row.salon_id===business)}};}
     if (name === 'read_business_finance') {
