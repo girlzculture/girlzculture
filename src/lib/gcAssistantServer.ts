@@ -16,6 +16,8 @@ import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
 import { readBusinessDepositRule } from "@/lib/businessDepositServer";
 import { bookingDepositTerms } from "@/lib/businessDepositRules";
 import { readBusinessClientCard } from "@/lib/businessClientServer";
+import { readManualSaleOptions, prepareManualSale } from "@/lib/assistantManualSaleServer";
+import { readAssistantOutstandingBalances } from "@/lib/assistantOutstandingBalances";
 import { assistantAssignedProfessional, assistantRequestedProfessional, assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
@@ -88,17 +90,26 @@ export async function assertAssistantAccess(context: Context, permission: string
   const { admin, salon, user } = context;
   const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: permission });
   if (access.error) throw access.error;
-  if (access.data !== true) {
+  let effectivePermission = permission;
+  if (permission === "finance_log" && access.data !== true) {
+    const manage = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: "finance_manage" });
+    if (manage.error) throw manage.error;
+    if (manage.data !== true) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+    effectivePermission = "finance_manage";
+  } else if (access.data !== true) {
     const ownFinance = permission === "earnings" ? await admin.rpc("business_finance_scope", { p_salon: salon.id, p_user: user.id }) : null;
     if (!ownFinance || ownFinance.error || ownFinance.data?.kind !== "own") throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
   }
   const subscription = await admin.from("subscriptions").select("status,current_period_end").eq("salon_id", salon.id).maybeSingle();
   if (subscription.error) throw subscription.error;
   if (!isSubscriptionActive(subscription.data?.status || salon.subscription_status, subscription.data?.current_period_end)) throw new AssistantError("ASSISTANT_PLAN_REQUIRED", 403);
+  return effectivePermission;
 }
 
 export async function readAssistantData(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  if (tool === "get_outstanding_balances") return readAssistantOutstandingBalances(context, args);
+  if (tool === "get_manual_sale_options") return readManualSaleOptions(context);
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
   if (tool === "get_client_record") return readBusinessClientCard(context, String(args.booking_id));
   if (tool === "get_business_profile") return { ...selected(salon, profileFields), walk_ins_welcome: (salon.trust_info as Row | null)?.walk_ins_welcome === true };
@@ -166,6 +177,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if (tool === "prepare_manual_service_sale") return prepareManualSale(context, args);
   const { admin, salon } = context;
   const operation = await prepareOwnerOperation(context, tool, args);
   let before: Row = operation.before; let payload: Row = operation.payload; const notices: string[] = operation.notices;
@@ -218,7 +230,7 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
 
 export async function executeAssistantTool(context: Context, input: { requestId: string; locale: string; tool: unknown; args: unknown }) {
   const checked = validateTool(input.tool, input.args);
-  await assertAssistantAccess(context, checked.permission);
+  const effectivePermission = await assertAssistantAccess(context, checked.permission);
   if (checked.risk >= 3) await assertAssistantProposalScope(context, checked.tool, checked.args);
   const { admin, salon, user } = context;
   const existing = await admin.from("gc_assistant_requests").select("*").eq("id", input.requestId).eq("salon_id", salon.id).eq("requested_by", user.id).maybeSingle();
@@ -236,7 +248,7 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   }
   const prepared = checked.risk >= 3 ? await prepare(context, checked.tool, checked.args) : { before: {}, payload: {}, notices: [] };
   const result = checked.risk === 1 ? await readAssistantData(context, checked.tool, checked.args) : null;
-  const row = { id: input.requestId, salon_id: salon.id, requested_by: user.id, locale: input.locale, tool: checked.tool, arguments: checked.args, execution_payload: prepared.payload, risk_class: checked.risk, permission: checked.permission, before_summary: prepared.before, result,
+  const row = { id: input.requestId, salon_id: salon.id, requested_by: user.id, locale: input.locale, tool: checked.tool, arguments: checked.args, execution_payload: prepared.payload, risk_class: checked.risk, permission: effectivePermission, before_summary: prepared.before, result,
     digest: digest({ id: input.requestId, salon: salon.id, user: user.id, locale: input.locale, tool: checked.tool, args: checked.args, before: prepared.before, payload: prepared.payload }) };
   const saved = await admin.rpc("save_gc_assistant_request", { p_request: row, p_notices: prepared.notices });
   if (saved.error) {

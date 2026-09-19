@@ -11,11 +11,16 @@ export async function p0PublicPolicyFixture(request, response, url, json, readJs
     try {
       const input = await readJson(request);
       if (input.version === null) records.delete(id);
-      else if ([1, 2].includes(input.version)) records.set(id, {version:input.version,priced:input.priced===true,assignments:input.assignments===true});
+      else if ([1, 2].includes(input.version)) records.set(id, {version:input.version,priced:input.priced===true,assignments:input.assignments===true,marketing:input.marketing===true});
       else throw Error('Invalid fixture revision');
       json(response, 200, { ok: true });
     } catch { json(response, 400, { error: 'Invalid policy fixture payload' }); }
     return true;
+  }
+  if(request.method==='POST'&&url.pathname==='/rest/v1/rpc/public_business_marketing_posts'){
+    const input=await readJson(request),id=input.p_salon,record=records.get(id);
+    const copies=Object.fromEntries(['en','fr','es','zh-CN'].map(locale=>[locale,{title:'Owner approved GC123',body:`${locale} · Fixture consultation · USD 100.00 · owner-reviewed copy.`,tags:['#GirlzCulture']}]));
+    json(response,200,record?.marketing&&record.version===1?[{id:revisionId(id,175),copies,photos:[{url:'https://maps.gstatic.com/gc-marketing-fixture/marketing-before.svg',title:'Owner approved before'},{url:'https://maps.gstatic.com/gc-marketing-fixture/marketing-after.svg',title:'Owner approved after'}],booking_path:`/salon/p0-policy-${id}/book?style=${id}`,published_at:'2026-09-19T12:00:00Z'}]:[]);return true;
   }
   if (request.method !== 'GET' || !url.pathname.startsWith('/rest/v1/')) return false;
   const table = url.pathname.split('/').at(-1);

@@ -32,24 +32,31 @@ export default function BusinessPolicies() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sourceLocale, setSourceLocale] = useState<string>(locale);
   const [publicPolicyPath, setPublicPolicyPath] = useState<string | null>(null);
-  const applyReadback = useCallback((result: { revisions?: Revision[]; current?: string | null; public_policy_path?: string | null }, expectedRevision?: string) => {
+  const applyReadback = useCallback((result: { revisions?: Revision[]; current?: string | null; public_policy_path?: string | null }, expectedRevision?: string, selectedDraftId?: string | null) => {
     if (!Array.isArray(result.revisions)) throw new Error("POLICY_UNAVAILABLE");
     const current = result.revisions.find(item => item.id === result.current);
     if (result.current && !current?.published_at || expectedRevision && current?.id !== expectedRevision) throw new Error("POLICY_UNAVAILABLE");
+    const selected = selectedDraftId ? result.revisions.find(item => item.id === selectedDraftId && !item.published_at) : current;
+    if (selectedDraftId && !selected) throw new Error("POLICY_UNAVAILABLE");
     setRevisions(result.revisions);
-    if (current) {
-      setPolicy({ ...POLICY_DEFAULTS, ...current.policy, business_policy_text: businessPolicyText(current.policy, text => DASHBOARD_SOURCE_MESSAGES[current.source_locale]?.[text] || text) });
-      setSourceLocale(current.source_locale);
+    if (selected) {
+      setPolicy({ ...POLICY_DEFAULTS, ...selected.policy, business_policy_text: businessPolicyText(selected.policy, text => DASHBOARD_SOURCE_MESSAGES[selected.source_locale]?.[text] || text) });
+      setSourceLocale(selected.source_locale);
     } else setPolicy({ ...POLICY_DEFAULTS, business_policy_text: "" });
     setPublicPolicyPath(result.public_policy_path?.startsWith("/") && !result.public_policy_path.startsWith("//") ? result.public_policy_path : null);
   }, []);
-  const call = useCallback(async (body?: Record<string, unknown>) => {
+  const call = useCallback(async (body?: Record<string, unknown>, selectedDraftId?: string | null) => {
     const session = await getSessionForScope("salon");
     if (!session) throw new Error("AUTH_REQUIRED");
-    const response = await fetch("/api/salon/policies", { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store" });
+    const response = await fetch(`/api/salon/policies${!body && selectedDraftId ? `?draft=${encodeURIComponent(selectedDraftId)}` : ""}`, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store" });
     return readOwnerResponse(response, "POLICY_UNAVAILABLE");
   }, []);
-  useEffect(() => { let active = true; void call().then(result => { if (active) { applyReadback(result); setLoaded(true); setNotice(""); setReference(""); } }).catch(error => { if (active) { setNotice("Business policies are temporarily unavailable."); setReference(error instanceof OwnerActionError ? error.reference : ""); } }); return () => { active = false; }; }, [call, applyReadback, loadAttempt]);
+  useEffect(() => { let active = true; const selectedDraftId = new URLSearchParams(window.location.search).get("draft"); void call(undefined, selectedDraftId).then(result => { if (active) { applyReadback(result, undefined, selectedDraftId); setLoaded(true); setNotice(""); setReference(""); } }).catch(error => { if (active) { setNotice("Business policies are temporarily unavailable."); setReference(error instanceof OwnerActionError ? error.reference : ""); } }); return () => { active = false; }; }, [call, applyReadback, loadAttempt]);
+  function updateDraftLocation(id: string | null) {
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set("draft", id); else url.searchParams.delete("draft");
+    window.history.replaceState(window.history.state, "", url);
+  }
   async function save(publish: boolean) {
     if (!loaded || busy) return;
     setBusy(true); setNotice(""); setReference("");
@@ -58,9 +65,11 @@ export default function BusinessPolicies() {
         const result = await call({ action: "publish", revision_id: preview.revision.id, digest: preview.digest, expected_revision: preview.expected_revision, confirm: true, platform_rules_acknowledged: true, source_reviewed: true });
         if (result.verified !== true || !result.revision?.id) throw new Error("POLICY_UNAVAILABLE");
         applyReadback(await call(), result.revision.id);
+        updateDraftLocation(null);
         setPreview(null); setReviewed(false); setNotice("Business policies published.");
       } else if (!publish) {
         const result = await call({ action: "draft", locale: sourceLocale, policy }); setPreview(result); setReviewed(false); setNotice("Draft saved. Review before publishing.");
+        if (new URLSearchParams(window.location.search).has("draft") && result.revision?.id) updateDraftLocation(result.revision.id);
       }
     } catch (error) {
       setReference(error instanceof OwnerActionError ? error.reference : "");

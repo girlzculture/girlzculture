@@ -134,8 +134,8 @@ test('own-finance history must match the currently assigned stylist', async () =
 });
 
 test('photo follow-ups reach the planner and answer only through fresh authorized business reads', async () => {
-  const history = [{ tool:'get_business_media', permission:'photos', arguments:{}, result:{ gallery_count:3, distinct_saved_images:4, publicly_visible:true } }];
-  const f=fixture({ history, answerOnly:true, output:{ reply:'You have 3 gallery photos and 4 distinct saved images.' }, conversation:[{ role:'user',text:'How many photos do I have saved?' },{ role:'assistant',text:'Which photos?' }] });
+  const history = ['older','current'].map(id => ({ id, tool:'get_business_media', permission:'photos', arguments:{}, result:{ gallery_count:3, distinct_saved_images:4, publicly_visible:true } }));
+  const f=fixture({ history, previousRequestIds:['current'], conversationRequestIds:['older'], answerOnly:true, output:{ reply:'You have 3 gallery photos and 4 distinct saved images.' }, conversation:[{ role:'user',text:'How many photos do I have saved?' },{ role:'assistant',text:'Which photos?' }] });
   await f.run('en','They are in my photos');
   const facts=JSON.parse(f.requests[0].messages[1].content);
   assert.match(JSON.stringify(facts), /gallery_count/);
@@ -356,7 +356,7 @@ test('all five locales are explicit in governed planning, with untrusted input k
 test('disabled, unconfigured, unauthorized and out-of-budget planning never calls the provider', async () => {
   for (const [options, code] of [
     [{ enabled: false }, 'ASSISTANT_UNAVAILABLE'], [{ configured: false }, 'ASSISTANT_UNAVAILABLE'],
-    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'photos', 'styles', 'stylists', 'products', 'reviews', 'promotions', 'earnings', 'client_history'] }, 'ASSISTANT_ACCESS_DENIED'],
+    [{ planActive: false }, 'ASSISTANT_PLAN_REQUIRED'], [{ denied: ['overview', 'bookings', 'availability', 'my_page', 'photos', 'styles', 'stylists', 'products', 'reviews', 'promotions', 'earnings', 'client_history', 'finance_log', 'finance_manage'] }, 'ASSISTANT_ACCESS_DENIED'],
     [{ budget: false }, 'ASSISTANT_BUDGET_LIMIT'],
   ]) {
     const f = fixture(options); await assert.rejects(f.run(), new RegExp(code)); assert.equal(f.requests.length, 0);
@@ -527,6 +527,20 @@ test('answer transcripts are discarded for foreign, revoked, reassigned or chang
     assert.equal(facts.previous.length, 1);
     assert.equal(facts.previous[0].result.gallery_count, 2);
     assert.doesNotMatch(JSON.stringify(facts), /Private older detail|Changed service/);
+  }
+});
+
+test('an answer cannot use unanchored prior user or assistant prose as current business facts', async () => {
+  for (const conversationRequestIds of [undefined, [], ['current']]) {
+    const f = fixture({ previousRequestIds: ['current'], conversationRequestIds, answerOnly: true,
+      history: [{ id: 'current', tool: 'get_business_media', permission: 'photos', arguments: {}, result: { gallery_count: 3 } }],
+      conversation: [{ role: 'user', text: 'UNANCHORED_PRIVATE_USER_DETAIL costs USD 999.' }, { role: 'assistant', text: 'UNANCHORED_PRIVATE_ASSISTANT_DETAIL has 500 appointments.' }],
+      output: { reply: 'Three current photos.' } });
+    await f.run('fr', 'How many saved photos?');
+    const facts = JSON.parse(f.requests[0].messages[1].content);
+    assert.deepEqual(facts.conversation, []);
+    assert.equal(facts.previous[0].result.gallery_count, 3);
+    assert.doesNotMatch(JSON.stringify(f.requests), /UNANCHORED_PRIVATE|USD 999|500 appointments/);
   }
 });
 

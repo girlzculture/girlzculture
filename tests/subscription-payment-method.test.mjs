@@ -12,20 +12,23 @@ function fixture(){
   const calls=[];
   const state={
     attempt:null,leaseActive:false,uncertain:false,
+    schedule:{id:'sub_sched_owned',object:'subscription_schedule',status:'active',customer,subscription,livemode:false,current_phase:{start_date:100,end_date:200},default_settings:{default_payment_method:null,collection_method:'charge_automatically'},phases:[{start_date:100,end_date:200,default_payment_method:null,items:[{price:'price_current',quantity:1}]},{start_date:200,end_date:300,default_payment_method:null,items:[{price:'price_future',quantity:1}]}],metadata:{agreement:'preserve'},end_behavior:'release'},
     subscription:{id:subscription,customer:{id:customer,livemode:false,invoice_settings:{default_payment_method:card('pm_customer','1111')}},livemode:false,status:'active',default_payment_method:card('pm_old','4242'),schedule:null,items:{data:[{price:{id:'price_unchanged'},quantity:1}]},billing_cycle_anchor:123,cancel_at_period_end:false},
     session:{id:'cs_owned',mode:'setup',status:'open',customer,livemode:false,metadata:{...metadata},setup_intent:'seti_owned',subscription:null,payment_intent:null,url:'https://checkout.stripe.com/c/pay/cs_owned'},
     setup:{id:'seti_owned',status:'succeeded',customer,livemode:false,metadata:{...metadata},payment_method:'pm_new'},
     method:card('pm_new','4444'),
   };
   const admin={from(table){let predicates=[];const q={select(){return q;},eq(key,value){predicates.push(row=>row[key]===value);return q;},in(key,values){predicates.push(row=>values.includes(row[key]));return q;},async maybeSingle(){const row=table==='subscriptions'?{salon_id:salon,stripe_customer_id:customer,stripe_subscription_id:subscription}:state.attempt;return {data:row&&predicates.every(check=>check(row))?structuredClone(row):null,error:null};}};return q;},async rpc(name,args){calls.push({rpc:name,args});
-    if(name==='reserve_subscription_payment_method_attempt'){state.attempt??={id:attemptId,salon_id:salon,stripe_customer_id:customer,stripe_subscription_id:subscription,livemode:false,status:'reserved',stripe_checkout_session_id:null,baseline_payment_method_id:args.p_baseline_method_id,first_apply_at:null,created_at:new Date().toISOString()};return {data:structuredClone(state.attempt)};}
+    if(name==='reserve_subscription_payment_method_attempt'||name==='reserve_scheduled_payment_method_attempt'){state.attempt??={id:attemptId,salon_id:salon,stripe_customer_id:customer,stripe_subscription_id:subscription,livemode:false,status:'reserved',stripe_checkout_session_id:null,baseline_payment_method_id:args.p_baseline_method_id,first_apply_at:null,schedule_baseline:args.p_schedule||null,schedule_first_apply_at:null,created_at:new Date().toISOString()};return {data:structuredClone(state.attempt)};}
     if(name==='bind_subscription_payment_method_attempt'){Object.assign(state.attempt,{stripe_checkout_session_id:args.p_session_id,status:'open'});return {data:structuredClone(state.attempt)};}
     if(name==='claim_subscription_payment_method_attempt'){if(state.leaseActive)return {data:{claimed:false,attempt:structuredClone(state.attempt)}};state.leaseActive=true;state.attempt.status='processing';state.lease=args.p_lease_id;return {data:{claimed:true,attempt:structuredClone(state.attempt)}};}
     if(name==='finish_subscription_payment_method_attempt'){if(args.p_lease_id!==state.lease)return {data:false};state.leaseActive=false;state.attempt.status=args.p_status;return {data:true};}
     if(name==='mark_subscription_payment_method_apply'){assert.equal(args.p_lease_id,state.lease);state.attempt.first_apply_at??=new Date().toISOString();state.attempt.stripe_setup_intent_id=args.p_setup_intent_id;state.attempt.stripe_payment_method_id=args.p_payment_method_id;return {data:structuredClone(state.attempt)};}
+    if(name==='mark_payment_schedule_apply'){assert.equal(args.p_lease_id,state.lease);if(args.p_verified)state.attempt.schedule_verified_at=new Date().toISOString();else state.attempt.schedule_first_apply_at??=new Date().toISOString();state.attempt.stripe_setup_intent_id=args.p_setup_intent_id;state.attempt.stripe_payment_method_id=args.p_payment_method_id;return {data:structuredClone(state.attempt)};}
     throw Error(`Unexpected RPC ${name}`);
   }};
   const stripe={siteUrl:()=> 'https://fixture.invalid',async stripeGet(path,options){calls.push({get:path,signal:options?.signal});
+    if(path.startsWith('/subscription_schedules/'))return structuredClone(state.schedule);
     if(path.startsWith('/subscriptions/'))return structuredClone(state.subscription);
     if(path.startsWith('/checkout/sessions/'))return structuredClone(state.session);
     if(path==='/setup_intents/seti_owned')return structuredClone(state.setup);
@@ -34,6 +37,14 @@ function fixture(){
   },async stripeRequest(path,values,options){calls.push({post:path,values:structuredClone(values),key:options?.idempotencyKey,signal:options?.signal});options?.onResponse?.({requestId:'req_fixture'});
     if(path==='/checkout/sessions')return structuredClone(state.session);
     if(path==='/checkout/sessions/cs_owned/expire'){state.session.status='expired';return structuredClone(state.session);}
+    if(path==='/subscription_schedules/sub_sched_owned'){
+      assert.deepEqual(values,{'default_settings[default_payment_method]':'pm_new'});
+      if(state.scheduleUncertainBefore){state.scheduleUncertainBefore=false;throw Error('SCHEDULE_NETWORK_ERROR');}
+      state.schedule.default_settings.default_payment_method='pm_new';
+      if(state.scheduleInheritsImmediately)state.subscription.default_payment_method=structuredClone(state.method);
+      if(state.scheduleUncertain){state.scheduleUncertain=false;throw Error('SCHEDULE_NETWORK_ERROR');}
+      return structuredClone(state.schedule);
+    }
     assert.equal(path,`/subscriptions/${subscription}`);assert.deepEqual(values,{default_payment_method:'pm_new'});
     if(state.uncertainBefore){state.uncertainBefore=false;throw Object.assign(Error('NETWORK_ERROR'),{deliveryUncertain:true});}
     state.subscription.default_payment_method=structuredClone(state.method);
@@ -47,6 +58,86 @@ function fixture(){
   const complete=()=>api.completeSubscriptionPaymentMethod(admin,'cs_owned',salon);
   return {state,calls,admin,api,core,begin,complete};
 }
+
+test('inherited scheduled agreement permits setup without changing its commercial fields',async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;
+ const before=structuredClone(f.state.schedule);
+ const result=await f.begin();assert.equal(result.url,f.state.session.url);
+ assert.deepEqual(f.state.schedule,before);
+ assert.equal(f.calls.filter(call=>call.post).length,1);
+ assert.equal(f.calls.find(call=>call.post).post,'/checkout/sessions');
+});
+
+for(const immediate of [false,true])test(`inherited schedule completes both defaults with commercial preservation, immediate inheritance=${immediate}`,async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;f.state.scheduleInheritsImmediately=immediate;
+ const before=structuredClone(f.state.schedule);await f.begin();f.state.session.status='complete';
+ const result=await f.complete();assert.equal(result.updated,true);assert.equal(result.updateAllowed,true);
+ before.default_settings.default_payment_method='pm_new';assert.deepEqual(f.state.schedule,before);
+ assert.equal(f.state.subscription.default_payment_method.id,'pm_new');
+ assert.deepEqual(f.calls.find(call=>call.post?.startsWith('/subscription_schedules/')).values,{'default_settings[default_payment_method]':'pm_new'});
+ assert.equal(f.calls.filter(call=>call.post?.startsWith('/subscriptions/')).length,immediate?0:1);
+ assert.ok(f.state.attempt.schedule_first_apply_at);assert.ok(f.state.attempt.schedule_verified_at);
+ assert.equal(Boolean(f.state.attempt.first_apply_at),!immediate);
+ const writes=f.calls.filter(call=>call.post).length;f.state.subscription.default_payment_method=card('pm_later','9999');await f.complete();assert.equal(f.calls.filter(call=>call.post).length,writes);
+});
+
+for(const [name,mutate] of [
+ ['future explicit override',s=>s.schedule.phases[1].default_payment_method='pm_other'],
+ ['missing inheritance field',s=>delete s.schedule.phases[1].default_payment_method],
+ ['unknown phase field',s=>s.schedule.phases[1].future_billing_setting='unknown'],
+ ['unknown item field',s=>s.schedule.phases[1].items[0].future_billing_setting='unknown'],
+ ['incomplete item',s=>delete s.schedule.phases[1].items[0].price],
+ ['wrong schedule customer',s=>s.schedule.customer='cus_other'],
+ ['wrong schedule subscription',s=>s.schedule.subscription='sub_other'],
+ ['wrong schedule mode',s=>s.schedule.livemode=true],
+ ['schedule completed',s=>s.schedule.status='completed'],
+ ['phase gap',s=>s.schedule.phases[1].start_date=201],
+])test(`scheduled setup refuses ${name} before provider writes`,async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;mutate(f.state);
+ assert.equal((await f.api.subscriptionPaymentMethodStatus(f.admin,salon)).updateAllowed,false);
+ await assert.rejects(f.begin,error=>error.status===409);assert.equal(f.calls.filter(call=>call.post).length,0);
+});
+
+for(const [name,mutate] of [
+ ['nested future quantity',s=>s.schedule.phases[1].items[0].quantity=2],
+ ['metadata',s=>s.schedule.metadata.agreement='changed'],
+ ['default sibling',s=>s.schedule.default_settings.collection_method='send_invoice'],
+ ['subscription price',s=>s.subscription.items.data[0].price.id='price_changed'],
+ ['current phase transition',s=>s.schedule.current_phase={start_date:200,end_date:300}],
+ ['schedule removal',s=>s.subscription.schedule=null],
+ ['new external method',s=>s.subscription.default_payment_method=card('pm_external','7777')],
+])test(`schedule completion detects ${name} drift before either method write`,async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;await f.begin();f.state.session.status='complete';mutate(f.state);
+ await assert.rejects(f.complete,/PAYMENT_SCHEDULE_/);assert.equal(f.calls.filter(call=>call.post&&call.post!='/checkout/sessions').length,0);
+});
+
+for(const delivered of [false,true])test(`uncertain schedule stage reconciles with its immutable key, delivered=${delivered}`,async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;await f.begin();f.state.session.status='complete';
+ f.state[delivered?'scheduleUncertain':'scheduleUncertainBefore']=true;await assert.rejects(f.complete,/SCHEDULE_NETWORK_ERROR/);
+ const first=f.state.attempt.schedule_first_apply_at;assert.ok(first);assert.equal(f.state.attempt.first_apply_at,null);
+ f.state.leaseActive=false;const result=await f.complete();assert.equal(result.updated,true);assert.equal(f.state.attempt.schedule_first_apply_at,first);
+ const writes=f.calls.filter(call=>call.post?.startsWith('/subscription_schedules/'));assert.equal(writes.length,delivered?1:2);assert.ok(writes.every(call=>call.key===`payment-method-schedule:${attemptId}`));
+});
+
+test('aged schedule-stage delivery cannot replay a pruned key; fully applied target can reconcile read-only',async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;await f.begin();f.state.session.status='complete';f.state.scheduleUncertainBefore=true;
+ await assert.rejects(f.complete,/SCHEDULE_NETWORK_ERROR/);f.state.leaseActive=false;f.state.attempt.schedule_first_apply_at=new Date(Date.now()-24*60*60_000).toISOString();
+ const writes=f.calls.filter(call=>call.post).length;await assert.rejects(f.complete,error=>error.status===409);assert.equal(f.calls.filter(call=>call.post).length,writes);
+ f.state.leaseActive=false;f.state.schedule.default_settings.default_payment_method='pm_new';f.state.subscription.default_payment_method=structuredClone(f.state.method);
+ assert.equal((await f.complete()).updated,true);assert.equal(f.calls.filter(call=>call.post).length,writes);
+});
+
+test('uncertain subscription stage never resends the already applied schedule stage',async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;await f.begin();f.state.session.status='complete';f.state.uncertainBefore=true;
+ await assert.rejects(f.complete,/NETWORK_ERROR/);const scheduleAt=f.state.attempt.schedule_first_apply_at,methodAt=f.state.attempt.first_apply_at;assert.ok(scheduleAt);assert.ok(methodAt);
+ f.state.leaseActive=false;assert.equal((await f.complete()).updated,true);assert.equal(f.state.attempt.schedule_first_apply_at,scheduleAt);assert.equal(f.state.attempt.first_apply_at,methodAt);
+ assert.equal(f.calls.filter(call=>call.post?.startsWith('/subscription_schedules/')).length,1);assert.equal(f.calls.filter(call=>call.post?.startsWith('/subscriptions/')).length,2);
+});
+test('schedule baseline ignores object key ordering but preserves nested commercial values',async()=>{
+ const f=fixture();f.state.subscription.schedule=f.state.schedule.id;await f.begin();f.state.session.status='complete';
+ f.state.schedule=Object.fromEntries(Object.entries(f.state.schedule).reverse());f.state.schedule.default_settings=Object.fromEntries(Object.entries(f.state.schedule.default_settings).reverse());
+ assert.equal((await f.complete()).updated,true);
+});
 
 test('setup creation uses existing customer, no subscription purchase or invoice, and durable stable metadata',async()=>{
   const f=fixture();const result=await f.begin();assert.equal(result.url,f.state.session.url);
@@ -195,10 +286,10 @@ test('another salon cannot complete or cancel an owned attempt',async()=>{
   assert.equal(f.calls.filter(x=>x.post?.startsWith('/subscriptions/')).length,0);
 });
 
-test('attached schedule blocks update creation and late completion without altering schedule',async()=>{
+test('unverified schedule blocks update creation and late completion without altering schedule',async()=>{
   const f=fixture();f.state.subscription.schedule='sub_sched_unchanged';await assert.rejects(f.begin,error=>error.status===409);assert.equal(f.calls.some(x=>x.post),false);
   f.state.subscription.schedule=null;await f.begin();f.state.session.status='complete';f.state.subscription.schedule='sub_sched_unchanged';
-  await assert.rejects(f.complete,error=>error.status===409);assert.equal(f.state.subscription.schedule,'sub_sched_unchanged');assert.equal(f.calls.filter(x=>x.post?.startsWith('/subscriptions/')).length,0);
+  await assert.rejects(f.complete,/PAYMENT_SCHEDULE_BASELINE_CHANGED/);assert.equal(f.state.subscription.schedule,'sub_sched_unchanged');assert.equal(f.calls.filter(x=>x.post?.startsWith('/subscriptions/')).length,0);
 });
 
 for(const [name,mutate] of [

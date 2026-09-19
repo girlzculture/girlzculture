@@ -6,6 +6,7 @@ import { assistantPageFromPath } from "@/lib/assistantPageContext";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
 import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
+import AssistantBalances from "@/components/owner/AssistantBalances";
 import { MEMORY_TOOLS } from "@/lib/assistantMemory";
 import { ArrowUp, Sparkles, X } from "lucide-react";
 import { ASSISTANT_AVATARS, type AssistantAvatar, type AssistantBusinessContext } from "@/lib/assistantAppearance";
@@ -22,7 +23,7 @@ import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gc
 type Row = Record<string, unknown>;
 type SavedRequest = { id: string; tool: string; arguments: Row; execution_payload: Row; before_summary: Row; result: unknown; risk_class: number; digest: string; confirmed_at: string | null };
 type Turn = { id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
-const AssistantOpenContext = createContext<{ open: (button: HTMLButtonElement) => void; expanded: boolean; docked: boolean; avatar: AssistantAvatar } | null>(null);
+const AssistantOpenContext = createContext<{ open: (button: HTMLButtonElement) => void; openAppearance: (button: HTMLButtonElement) => void; expanded: boolean; docked: boolean; avatar: AssistantAvatar } | null>(null);
 const AssistantBusinessBinding = createContext<((business: AssistantBusinessContext) => void) | null>(null);
 export function useAssistantBusinessBinding() { return useContext(AssistantBusinessBinding); }
 function Avatar({ value, small = false }: { value: AssistantAvatar; small?: boolean }) {
@@ -38,11 +39,18 @@ export function GcAssistantLauncher() {
   if (!assistant) return null;
   return <button data-gc-assistant-launcher onClick={event => assistant.open(event.currentTarget)} className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-primary-hover px-3 text-xs font-semibold text-white" aria-label="GC Assistant" aria-haspopup="dialog" aria-expanded={assistant.expanded}><Avatar value={assistant.avatar} small/><span data-no-translate>GC Assistant</span></button>;
 }
+export function GcAssistantAppearanceLauncher() {
+  const assistant = useContext(AssistantOpenContext);
+  const { translateSource: t } = useI18n();
+  if (!assistant) return null;
+  return <button type="button" onClick={event => assistant.openAppearance(event.currentTarget)} aria-label={t("Assistant appearance")} aria-haspopup="dialog" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm font-semibold text-primary"><Avatar value={assistant.avatar} small/>{t("Assistant appearance")}</button>;
+}
 const destinations: Record<string, [string, string]> = {
   overview: ["Overview", "/salon/dashboard"], photos: ["Photos", "/salon/dashboard/photos"], professionals: ["Stylists", "/salon/dashboard/stylists"], products: ["Products", "/salon/dashboard/products"], availability: ["Availability & Calendar", "/salon/dashboard/availability"], messages: ["Messages", "/salon/dashboard/messages"], reviews: ["Reviews", "/salon/dashboard/reviews"], earnings: ["Finances", "/salon/dashboard/earnings"], promotions: ["Promotions", "/salon/dashboard/promotions"], settings: ["Settings", "/salon/dashboard/settings"],
   profile: ["My Page", "/salon/dashboard/my-page"], services: ["Styles & Pricing", "/salon/dashboard/styles"], imports: ["Import a spreadsheet", "/salon/dashboard/styles"], policies: ["Your Business Policies", "/salon/dashboard/my-page/business-policies"], bookings: ["Bookings", "/salon/dashboard/bookings"], subscription: ["Subscription", "/salon/dashboard/subscription"], support: ["Help", "/help"], security: ["Security & sign out", "/salon/dashboard/settings/security"],
 };
 const fieldNames: Record<string, string> = {
+  amount_cents: "Received amount", occurred_at: "Received at", method: "Payment method", client_name: "Client name (optional)",
   business_policy_text: "Business Policy", preferences: "Client preferences", cautions: "Allergies, sensitivities and cautions", visits: "Past and upcoming services", formula: "Formula for this appointment", instructions: "Exact service instructions", color: "Color / formula", technique: "Technique", visit_count: "Visits in this business",
   calendar_gaps: "Calendar gaps", service_name: "Service", total_appointments: "Total Appointments", marketplace_bookings: "Girlz Culture marketplace bookings", business_added_appointments: "Business-added appointments", source_breakdown: "Booking sources", customers: "Customers", completed_booking_value: "Completed Booking Value", cancellation_rate: "Salon Cancellation Rate", upcoming: "Upcoming appointments", gaps: "Open time", profile_views: "Profile Views", profile_views_period: "Profile views period", profile_completion: "Profile Completion", professionals: "Professionals", products: "Products", messages: "Messages", original_body: "Original message", sender_role: "Sender", reviews: "Reviews", rating_overall: "Rating", written_review: "Review", salon_reply: "Business reply", display_name: "Customer", moderation_status: "Status", promotions: "Promotions", title: "Title", public_headline: "Public headline", promotion_type: "Offer type", discount_value: "Discount", starts_at: "Starts", ends_at: "Ends", subscription: "Subscription", tier: "Plan", current_period_end: "Current period ends", scheduled_tier: "Scheduled plan", cancel_at_period_end: "Cancellation scheduled", inventory_quantity: "Inventory quantity", product_status: "Status", is_visible: "Visible", sale_price: "Sale price", bio: "Biography", specialties: "Specialties", years_experience: "Years of experience", availability: "Availability", is_active: "Active", source: "Booking source", booking_origin: "Appointment origin", guest_email: "Email", guest_phone: "Phone", note: "Private booking note", payment_status: "Payment status", customer_policy_acceptance: "Customer policy acceptance", values: "Draft changes", refund_satisfaction: "Refund & Service Satisfaction Policy", refund_terms: "Business refund and satisfaction terms",
 
@@ -65,13 +73,14 @@ export function Facts({ value, name = "", group = "", depth = 0, timeZone = "Ame
     const zone = typeof (value as Row).time_zone === "string" ? String((value as Row).time_zone) : timeZone;
     return <dl className="space-y-2">{Object.entries(value).filter(([key]) => !hiddenFields.has(key) && (fieldNames[key] || weekdays[key] || (name === "by_status" || name === "source_breakdown"))).map(([key, item]) => <div key={key} className="min-w-0"><dt className="text-xs font-semibold">{t(key === "label" && group === "length_options" ? "Name" : fieldNames[key] || weekdays[key] || (name === "source_breakdown" ? BOOKING_SOURCE_LABELS[key] : null) || key)}</dt><dd className="mt-1 text-sm"><Facts value={item} name={key} group={name || group} depth={depth + 1} timeZone={zone}/></dd></div>)}</dl>;
   }
-  if (typeof value === "number") return <span>{/price|deposit|completed_booking_value/.test(name) ? formatCurrency(value) : name === "cancellation_rate" ? formatNumber(value, { style: "percent", maximumFractionDigits: 1 }) : formatNumber(value)}</span>;
+  if (typeof value === "number") return <span>{name === "amount_cents" ? formatCurrency(value / 100) : /price|deposit|completed_booking_value/.test(name) ? formatCurrency(value) : name === "cancellation_rate" ? formatNumber(value, { style: "percent", maximumFractionDigits: 1 }) : formatNumber(value)}</span>;
   if (typeof value === "boolean") return <span>{t(value ? "Yes" : "No")}</span>;
-  if (["start", "end", "starts_at", "ends_at", "current_period_end", "appointment_datetime", "published_at"].includes(name) && Number.isFinite(Date.parse(String(value)))) return <span>{formatDate(String(value), { dateStyle: "medium", timeStyle: "short", timeZone })}</span>;
+  if (["start", "end", "starts_at", "ends_at", "current_period_end", "appointment_datetime", "published_at", "occurred_at"].includes(name) && Number.isFinite(Date.parse(String(value)))) return <span>{formatDate(String(value), { dateStyle: "medium", timeStyle: "short", timeZone })}</span>;
   if (["time", "open", "close"].includes(name) && /^\d{2}:\d{2}$/.test(String(value))) return <span>{formatDate(`1970-01-01T${value}:00Z`, { hour: "numeric", minute: "2-digit", timeZone: "UTC" })}</span>;
   if (name === "date" && /^\d{4}-\d{2}-\d{2}$/.test(String(value))) return <span>{formatDate(`${value}T12:00:00Z`, { dateStyle: "medium", timeZone: "UTC" })}</span>;
   if (name === "profile_views_period") return <span>{t(value === "all_time" ? "All time" : String(value))}</span>;
-  if (name === "source") return <span>{t(({ phone: "Phone", walk_in: "Walk-in", instagram: "Instagram", whatsapp: "WhatsApp", other: "Other", marketplace: "Girlz Culture marketplace" } as Record<string, string>)[String(value)] || "Other")}</span>;
+  if (name === "method") return <span>{t(({ cash: "Cash", card: "Card", transfer: "Transfer", other: "Other" } as Record<string, string>)[String(value)] || "Other")}</span>;
+  if (name === "source") return <span>{t(({ phone: "Phone", walk_in: "Walk-in", social: "Social media", instagram: "Instagram", whatsapp: "WhatsApp", other: "Other", marketplace: "Girlz Culture marketplace" } as Record<string, string>)[String(value)] || "Other")}</span>;
   if (name === "booking_origin") return <span>{t(value === "business_added" ? "Business-added appointment" : "Girlz Culture marketplace")}</span>;
   if (["status", "product_status", "moderation_status"].includes(name)) return <span>{t(statusLabels[String(value).toLowerCase()] || String(value))}</span>;
   if (name === "sender_role") return <span>{t(senderLabels[String(value)] || String(value))}</span>;
@@ -103,6 +112,10 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const { locale, translateSource: t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
+  const conversationOptions = useRef<HTMLDetailsElement>(null);
+  const appearanceSection = useRef<HTMLFieldSetElement>(null);
+  const handledAppearanceRequest = useRef(0);
+  const [appearanceRequest, setAppearanceRequest] = useState(0);
   const conversationEnd = useRef<HTMLDivElement>(null);
   const conversationViewport = useRef<HTMLDivElement>(null);
   const followConversation = useRef(true);
@@ -185,6 +198,15 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     if (panel.open) panel.close();
     if (desktop) panel.show(); else panel.showModal();
   }, [desktop, open, hasSession]);
+  useEffect(() => {
+    if (!appearanceRequest || handledAppearanceRequest.current === appearanceRequest || !open || !hasSession || !business?.isOwner || !dialog.current?.open) return;
+    handledAppearanceRequest.current = appearanceRequest;
+    if (conversationOptions.current) conversationOptions.current.open = true;
+    followConversation.current = false;
+    const selection = appearanceSection.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]');
+    selection?.focus({ preventScroll: true });
+    appearanceSection.current?.scrollIntoView({ block: "center" });
+  }, [appearanceRequest, open, hasSession, business?.isOwner]);
   useEffect(() => {
     const viewport = conversationViewport.current;
     if (viewport && followConversation.current) viewport.scrollTop = viewport.scrollHeight;
@@ -278,7 +300,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     try {
       const result = await call({ action: "confirm", request_id: turn.request.id, digest: turn.request.digest, confirm: true, policy_reviewed: Boolean(reviewed[turn.id]) }, generation);
       if (generation !== actorGeneration.current) return;
-      setTurns(previous => previous.map(item => item.id === turn.id ? { ...item, request: { ...turn.request!, result: result.result, confirmed_at: new Date().toISOString() }, notice: "Your change was saved and verified." } : item));
+      setTurns(previous => previous.map(item => item.id === turn.id ? { ...item, request: { ...turn.request!, result: result.result, confirmed_at: new Date().toISOString() }, notice: turn.request?.tool === "prepare_manual_service_sale" ? "The received payment was recorded and verified in Finances. No customer charge was made." : "Your change was saved and verified." } : item));
       window.dispatchEvent(new Event("gc-assistant-saved"));
       if (result.warnings?.length) { setNotice("The message was saved, but a notification could not be delivered."); setReference(result.warnings[0].request_id || ""); }
     } catch (error) { if (generation !== actorGeneration.current) return; setReference(error instanceof OwnerActionError ? error.reference : ""); setNotice(errors[error instanceof Error ? error.message : ""] || "The change could not be completed. Review the dashboard before trying again."); }
@@ -304,7 +326,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       setAppearanceNotice("Assistant appearance could not be saved. Try again."); setAppearanceReference(error instanceof OwnerActionError ? error.reference : "");
     } finally { if (generation === actorGeneration.current) setAppearanceBusy(false); }
   }
-  return <AssistantBusinessBinding.Provider value={bindBusiness}><AssistantOpenContext.Provider value={{ open: button => { launcher.current = button; desktopClosed.current = false; setOpen(true); }, expanded: open && hasSession, docked: desktop && open && hasSession, avatar }}>{children}
+  return <AssistantBusinessBinding.Provider value={bindBusiness}><AssistantOpenContext.Provider value={{ open: button => { launcher.current = button; desktopClosed.current = false; setOpen(true); }, openAppearance: button => { launcher.current = button; desktopClosed.current = false; setOpen(true); setAppearanceRequest(value => value + 1); }, expanded: open && hasSession, docked: desktop && open && hasSession, avatar }}>{children}
     <dialog ref={dialog} aria-labelledby="gc-assistant-title" aria-describedby="gc-assistant-description" aria-modal={!desktop} onClose={() => { if (dialog.current?.open) return; setOpen(false); if (desktopMode.current) desktopClosed.current = true; setDictationSession(value => value + 1); launcher.current?.focus(); }} className={`gc-assistant-panel fixed inset-auto m-0 overflow-hidden border border-border bg-white p-0 font-sans text-text-primary ${desktop ? "bottom-4 right-4 top-20 z-30 h-auto max-h-none w-[320px] max-w-none rounded-2xl shadow-sm" : "bottom-0 right-0 h-[92dvh] max-h-[920px] w-full max-w-[680px] rounded-t-2xl shadow-xl backdrop:bg-black/30 sm:bottom-4 sm:right-4 sm:h-[min(860px,calc(100dvh-2rem))] sm:w-[calc(100%-2rem)] sm:rounded-2xl"}`}>
       <div className="flex h-full flex-col bg-white">
         <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-5">
@@ -323,7 +345,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
             </div>
           </section>
 
-          <details className="mt-2 text-xs text-text-secondary"><summary className="min-h-11 cursor-pointer py-3">{t("Conversation options")}</summary><div className="flex flex-wrap items-center gap-2">
+          <details ref={conversationOptions} className="mt-2 text-xs text-text-secondary"><summary className="min-h-11 cursor-pointer py-3">{t("Conversation options")}</summary><div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={busy} onClick={() => {
               actorGeneration.current++; setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setDictationSession(value => value + 1);
               setRememberedIds([]);
@@ -349,7 +371,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
             </div> : null}
           </section>
 
-          {business?.isOwner ? <fieldset className="my-3"><legend className="mb-2 text-sm font-semibold">{t("Assistant appearance")}</legend><div className="grid grid-cols-3 gap-2">{Object.entries(ASSISTANT_AVATARS).map(([key, entry]) => <button key={key} type="button" disabled={appearanceBusy} aria-label={t(entry.label)} aria-pressed={avatar === key} onClick={() => void saveAvatar(key as AssistantAvatar)} className={`flex min-h-12 items-center justify-center rounded-xl border text-2xl ${avatar === key ? "border-primary bg-teal/10" : "border-border bg-white"}`}>{entry.symbol}</button>)}</div>{appearanceNotice ? <p role="status" className="mt-2">{t(appearanceNotice)}</p> : null}{appearanceReference ? <p className="mt-1">{t("Support reference")}: <span data-no-translate>{appearanceReference}</span></p> : null}</fieldset> : null}
+          {business?.isOwner ? <fieldset ref={appearanceSection} className="my-3"><legend className="mb-2 text-sm font-semibold">{t("Assistant appearance")}</legend><div className="grid grid-cols-3 gap-2">{Object.entries(ASSISTANT_AVATARS).map(([key, entry]) => <button key={key} type="button" disabled={appearanceBusy} aria-label={t(entry.label)} aria-pressed={avatar === key} onClick={() => void saveAvatar(key as AssistantAvatar)} className={`flex min-h-12 items-center justify-center rounded-xl border text-2xl ${avatar === key ? "border-primary bg-teal/10" : "border-border bg-white"}`}>{entry.symbol}</button>)}</div>{appearanceNotice ? <p role="status" className="mt-2">{t(appearanceNotice)}</p> : null}{appearanceReference ? <p className="mt-1">{t("Support reference")}: <span data-no-translate>{appearanceReference}</span></p> : null}</fieldset> : null}
           </details>
           <nav aria-label={t("Suggested Assistant actions")} className="mt-2 grid gap-2">
             {quickActions.map(action => <button key={action.label} data-assistant-tool={action.tool} disabled={busy} onClick={() => void submit(action.tool, false, undefined, action.prompt ? t(action.prompt) : undefined)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-primary/10 bg-teal/5 px-3 text-left text-xs font-semibold text-text-primary transition hover:border-teal gc-disabled-control"><Sparkles aria-hidden size={15}/>{t(action.label)}</button>)}
@@ -369,15 +391,17 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                   {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => { if (!desktop) dialog.current?.close(); }}>{t("Open {value0}", { value0: t(destinations[turn.navigate][0]) })}</Link> : null}
                 </div></div> : null}
 
+                {turn.request?.tool === "get_outstanding_balances" ? <AssistantBalances value={turn.request.result} onNavigate={() => { if (!desktop) dialog.current?.close(); }}/> : null}
                 {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
                   <h3 className="text-base font-bold text-text-primary">{t("Review this draft")}</h3>
+                  {turn.request.tool === "prepare_manual_service_sale" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This records payment you already received in Finances. Girlz Culture will not charge the client, send a receipt or create an appointment.")}</p> : null}
                   {turn.request.tool === "prepare_service" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This service will be saved as a draft. Deposits follow platform rules.")}</p> : null}
                   {turn.request.tool === "prepare_business_profile_update" && ["tiktok_url", "instagram_url"].includes(String(turn.request.arguments.field)) ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This social link will be submitted for platform review.")}</p> : null}
                   <div className="mt-4 rounded-xl bg-subtle p-4 text-text-primary"><Facts value={{ ...turn.request.arguments, ...turn.request.execution_payload }}/></div>
                   {Object.keys(turn.request.before_summary).length ? <details className="mt-3 rounded-xl border border-border px-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-text-primary">{t("Current information")}</summary><div className="border-t border-border py-3"><Facts value={turn.request.before_summary} timeZone={String(turn.request.execution_payload.time_zone || turn.request.arguments.time_zone || "America/New_York")}/></div></details> : null}
                   {turn.request.tool === "prepare_business_policy_update" ? <label className="mt-4 flex gap-3 text-sm font-medium leading-5 text-text-primary"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-teal" checked={Boolean(reviewed[turn.id])} onChange={event => setReviewed({ ...reviewed, [turn.id]: event.target.checked })}/>{t("I reviewed this policy in its original language and understand that platform rules and legal rights take precedence.")}</label> : null}
                   {/* Keep foreground and background changes immediate so an enabled action stays readable throughout the state change. */}
-                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{t(turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
+                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
                 </section> : null}
 
                 {turn.notice ? <p role="status" className="ml-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-text-success">{t(turn.notice)}</p> : null}

@@ -25,6 +25,8 @@ import RoleLogoutButton, {
   RoleSessionBoundary,
 } from "@/components/auth/RoleLogoutButton";
 import LanguageSelector from "@/components/i18n/LanguageSelector";
+import { useI18n } from "@/components/i18n/LocaleProvider";
+import { ownerMobileDestinationCopy } from "@/i18n/owner-mobile-navigation-copy";
 import { GcAssistantLauncher, useAssistantDocked } from "@/components/owner/GcAssistant";
 import DashboardNotificationCenter, {
   type DashboardNotification,
@@ -88,6 +90,7 @@ export default function OwnerDashboardShell({
   notifications?: DashboardNotification[];
   access?: Record<string, boolean> | null;
 }) {
+  const { locale } = useI18n();
   const assistantDocked = useAssistantDocked();
   const [notificationCounts, setNotificationCounts] = useState<
     Record<string, number>
@@ -293,6 +296,7 @@ export default function OwnerDashboardShell({
 
       <nav
         aria-label="Owner mobile navigation"
+        data-owner-mobile-navigation
         className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white px-1 pb-[max(7px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(13,17,20,.08)] lg:hidden"
       >
         {mobileNav.map(([id, label, Icon]) => {
@@ -303,16 +307,19 @@ export default function OwnerDashboardShell({
                 section,
               ));
           const count = navBadge(id);
+          const localized = ownerMobileDestinationCopy(locale, id);
           return (
             <Link
               key={id}
               href={hrefFor(id)}
-              className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-tight ${
+              aria-label={localized?.accessibleName}
+              data-no-translate={localized ? true : undefined}
+              className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 px-1 text-center font-semibold ${localized ? "flex-auto text-[13px] leading-normal" : "flex-1 text-[11px] leading-tight"} ${
                 active ? "text-magenta" : "text-ink/70"
               }`}
             >
               <Icon aria-hidden="true" size={19} />
-              <span className="max-w-full break-words">{label}</span>
+              <span className={localized ? "whitespace-nowrap" : "max-w-full break-words"}>{localized?.label || label}</span>
               {count ? (
                 <span className="absolute right-1 top-0 rounded-full bg-magenta px-1.5 py-0.5 text-[9px] font-bold text-white">
                   {Math.min(count, 99)}

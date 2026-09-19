@@ -28,7 +28,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const names = new Map(result.stylists.map(row => [String(row.id), String(row.name)]));
     return { scope: result.scope.kind === "own" ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: result.scope.stylist_id, ...summary,
       unpaid_balance_cents: balances.reduce((sum, row) => sum + row.unpaid_cents, 0),
-      professional_earnings: Object.entries(by_stylist).map(([id, values]) => ({ name: names.get(id) || null, ...values })), evidence: result.evidence,
+      professional_earnings: Object.entries(by_stylist).map(([id, values]) => ({ name: names.get(id) || null, ...values })), evidence: result.evidence, insights: result.scope.kind === "business" ? result.insights : null,
       compensation_position: Object.entries(compensation_position).map(([id,values]) => ({ name:names.get(id)||null,...values })),
       definitions: "Integer cents in USD. Completed sales, receipts, costs, earned compensation and payouts are separate. Payments taken outside the app are recorded, not provider-processed. Recorded profit is not an exact margin when costs or expenses are incomplete." };
   }

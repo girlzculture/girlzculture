@@ -13,11 +13,16 @@ import FinancePeriodRecords from "./FinancePeriodRecords";
 import FinanceCompensation from "./FinanceCompensation";
 import FinanceReportControls from "./FinanceReportControls";
 import BusinessDepositSettings from "./BusinessDepositSettings";
+import BusinessMoneyInsights from "./BusinessMoneyInsights";
+import BusinessBookingMoney from "./BusinessBookingMoney";
 import { FinanceField, financePanel as panel, financeInput as input, financeButton as button, financePrimary as primary } from "./FinanceUI";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 
 type Row = Record<string, unknown>;
 type Snapshot = { scope: { kind: "business" | "own" }; books: OperatingBooks; summary: ReturnType<typeof summarizeOperatingBooks>; evidence: Record<string, unknown>; stylists: Row[]; arrangements: Row[] };
+type LoadedSnapshot = { key: string; data: Snapshot | null };
+type EntryOptions = { binding: string; stylists: Row[]; products: Row[] };
+type Editor = { binding: string; period: string; mode: string; saleId: string | null };
 const localDay = (timeZone: string) => {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   return ["year", "month", "day"].map(key => parts.find(part => part.type === key)?.value).join("-");
@@ -29,15 +34,29 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
   const params=useSearchParams();
   const {from,to,tab:requestedTab}=financeWorkspaceState(params,today,timeZone);
   const [saleKind,setSaleKind]=useState("service");
-  const [productOptions,setProductOptions]=useState<Row[]>([]);
-  const [data, setData] = useState<Snapshot | null>(null), [options, setOptions] = useState<Row[]>([]);
+  const [loaded, setLoaded] = useState<LoadedSnapshot | null>(null);
+  const [entryOptions, setEntryOptions] = useState<EntryOptions | null>(null);
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState(""), [busy, setBusy] = useState(false), [selected, setSelected] = useState<OperatingSale | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(null), [busy, setBusy] = useState(false);
+  const periodControls = useRef<HTMLDivElement>(null);
   const pending = useRef(false), generation = useRef(0), request = useRef<{ signature: string; id: string } | null>(null);
   const readable = isOwner || access?.earnings === true || access?.earnings_own === true;
   const manageable = isOwner || access?.finance_manage === true;
   const loggable = manageable || access?.finance_log === true;
   const binding = JSON.stringify([salonId, isOwner, access]);
+  const snapshotKey = JSON.stringify([binding, from, to, timeZone]);
+  // A new URL or permission binding must never label the previous response's
+  // books as the newly selected period, even before the loading effect runs.
+  const current = loaded?.key === snapshotKey ? loaded : null;
+  const data = current?.data || null;
+  // Entry choices belong to the authorized workspace, not a reporting period.
+  // Keep a same-workspace draft's uncontrolled selects mounted during a date
+  // read, but never carry choices across a changed business/permission binding.
+  const options = entryOptions?.binding === binding ? entryOptions.stylists : [];
+  const productOptions = entryOptions?.binding === binding ? entryOptions.products : [];
+  const selected = editor?.binding === binding && editor.period === snapshotKey
+    ? data?.books.sales.find(sale => sale.id === editor.saleId) || null : null;
+  const mode = editor?.binding === binding && (!editor.saleId || selected) ? editor.mode : "";
   function setPeriod(start:string,end:string) {
     try { validateFinancePeriod({from:start,to:end,timeZone});updateFinanceLocation({finance_from:start,finance_to:end});setError(""); }
     catch {setError(t("Choose a valid reporting period."));}
@@ -54,10 +73,11 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
         loggable ? api.request<{ stylists: Row[]; products?:Row[] }>("/api/salon/finances?options=entry") : null,
       ]);
       if (generation.current !== token) return;
-      setProductOptions(entry?.products||[]); setData(snapshot); setOptions(entry?.stylists || snapshot?.stylists || []);
-    } catch (failure) { if (generation.current === token) { setData(null); setError(scopedApiErrorMessage(failure, t("Finance records could not be loaded."))); } }
+      setLoaded({ key: snapshotKey, data: snapshot });
+      setEntryOptions({ binding, products: entry?.products || [], stylists: entry?.stylists || snapshot?.stylists || [] });
+    } catch (failure) { if (generation.current === token) { setLoaded({key: snapshotKey, data: null}); setError(scopedApiErrorMessage(failure, t("Finance records could not be loaded."))); } }
     finally { if (generation.current === token) setLoading(false); }
-  }, [from, to, readable, loggable, t]);
+  }, [from, to, readable, loggable, binding, snapshotKey, t, setLoading, setError, setLoaded, setEntryOptions]);
   useEffect(() => {
     let active = true;
     // Start the external read after effect setup; cancelled Strict Mode setups
@@ -70,7 +90,7 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
       generation.current++;
     };
   }, [load, binding]);
-  const choose = (value: string, sale: OperatingSale | null = null) => { setMode(value); setSelected(sale); setNotice(""); setError(""); request.current = null; };
+  const choose = (value: string, sale: OperatingSale | null = null) => { setEditor(value ? { binding, period: snapshotKey, mode: value, saleId: sale?.id || null } : null); setNotice(""); setError(""); request.current = null; };
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (pending.current) return;
     const form = new FormData(event.currentTarget); const text = (name: string) => String(form.get(name) || "").trim();
@@ -93,7 +113,7 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
       const result = await api.request("/api/salon/finances", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: mode, payload, request_id: request.current.id }) });
       if (generation.current !== token) return;
       if (result.verified !== true) throw Error("FINANCE_NOT_VERIFIED");
-      request.current = null; setMode(""); setSelected(null); setNotice(t("Record saved. No payment was processed.")); updateFinanceLocation({finance:mode==="expense"?"expenses":"transactions"}); await load();
+      request.current = null; setEditor(null); setNotice(t("Record saved. No payment was processed.")); updateFinanceLocation({finance:mode==="expense"?"expenses":"transactions"}); await load();
     } catch (failure) { if (generation.current === token) setError(scopedApiErrorMessage(failure, t("The record could not be saved. Your entry is retained."))); }
     finally { pending.current = false; setBusy(false); }
   }
@@ -122,13 +142,15 @@ export default function BusinessFinances({ salonId, timeZone, isOwner, access, p
     </form> : null}
     {readable ? <>
     <WorkspaceTabs id="finance" label={t("Finance workspace")} items={tabs} selected={tab} onSelect={value=>updateFinanceLocation({finance:value})}/>
-    <FinancePeriodControls key={`${from}:${to}`} from={from} to={to} today={today} timeZone={timeZone} busy={busy} onChange={setPeriod}/>
-        {loading ? <p role="status">{t("Loading finance records…")}</p> : null}
+    <div ref={periodControls}><FinancePeriodControls key={`${from}:${to}`} from={from} to={to} today={today} timeZone={timeZone} busy={busy} onChange={setPeriod}/></div>
+        {loading || !current ? <p role="status">{t("Loading finance records…")}</p> : null}
     {s ? <><div {...panelProps("overview")}><div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[["Completed sales", s.completed_sales_cents, CircleDollarSign], ["Payments received", s.cash_received_cents, Wallet], ["Recorded refunds", s.by_stage.refund, ArrowDownLeft], ["Unpaid balances", s.balances.reduce((sum, row) => sum + row.unpaid_cents, 0), ReceiptText]].map(([label, value, Icon]) => { const Symbol = Icon as typeof Wallet; return <div key={String(label)} className={panel}><Symbol size={20} className="mb-3 text-magenta"/><p className="text-xs gc-text-secondary">{t(String(label))}</p><strong className="mt-1 block font-serif text-2xl">{money(Number(value))}</strong></div>; })}</div>
       <div className="grid gap-4 lg:grid-cols-2"><section className={panel}><h2 className="font-serif text-xl font-bold">{t("Completed sales by day")}</h2><div className="mt-4 space-y-2">{Object.entries(s.by_day).map(([day, row]) => <div key={day} className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-3 text-xs"><span>{new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}</span><div className="h-3 overflow-hidden rounded bg-plum/5"><div className="h-full rounded bg-magenta" style={{ width: `${100 * row.sales_cents / Math.max(1, ...Object.values(s.by_day).map(row => row.sales_cents))}%` }}/></div><strong>{money(row.sales_cents)}</strong></div>)}{!Object.keys(s.by_day).length ? <p className="text-sm gc-text-secondary">{t("No completed sales in this period.")}</p> : null}</div></section><section className={panel}><h2 className="font-serif text-xl font-bold">{t("Payment methods")}</h2><dl className="mt-4 space-y-3">{Object.entries(s.by_method).map(([method, value]) => <div className="flex justify-between text-sm" key={method}><dt>{t(method[0].toUpperCase() + method.slice(1))}</dt><dd className="font-semibold">{money(value)}</dd></div>)}</dl><p className="mt-4 text-xs gc-text-secondary">{t("Payment methods and deposits are parts of the same receipts, not additional sales.")}</p></section></div>
+      {data.scope.kind === "business" ? <BusinessMoneyInsights salonId={salonId} books={data.books} period={{from,to,timeZone}}/> : null}
+      {data.scope.kind === "business" && (isOwner || (access?.earnings === true && access?.bookings === true)) ? <BusinessBookingMoney key={`${binding}:${from}:${to}`} businessId={salonId} period={{from,to,timeZone}}/> : null}
       </div><div {...panelProps("transactions")}><FinanceRecords books={data.books} summary={s} names={names} loggable={loggable} manageable={manageable} onAction={choose} timeZone={timeZone}/></div>
       {fullScope ? <div {...panelProps("expenses")}><FinancePeriodRecords kind="expenses" includeExpenses={true} salonId={salonId} books={data.books} period={{from,to,timeZone}} summary={s}/></div> : null}
-      <div {...panelProps("team")}><section className={panel}><h2 className="font-serif text-xl font-bold">{t("Stylist earnings")}</h2><p className="mt-1 text-xs gc-text-secondary">{t("Service sales, earned compensation and money paid are different figures.")}</p><div className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(s.by_stylist).map(([id, row]) => <div key={id} className="rounded-lg border border-plum/10 p-3 text-sm"><b>{names.get(id) || t("Unassigned")}</b><dl className="mt-2 space-y-1">{[["Service sales", row.service_sales_cents], ["Commission earned", row.commission_earned_cents], ["Wages due", row.wage_due_cents], ["Compensation paid", row.paid_cents], ["Booth rent due", row.booth_rent_due_cents], ["Booth rent received", row.booth_rent_paid_cents]].map(([label, value]) => <div key={label} className="flex justify-between gap-2"><dt>{t(String(label))}</dt><dd>{money(Number(value))}</dd></div>)}</dl></div>)}</div></section>
+      <div {...panelProps("team")}><section className={panel}><h2 className="font-serif text-xl font-bold">{t("Stylist earnings")}</h2><p className="mt-1 text-xs gc-text-secondary">{t("Service sales, earned compensation and money paid are different figures.")}</p><div className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(s.by_stylist).map(([id, row]) => <div key={id} className="rounded-lg border border-plum/10 p-3 text-sm"><b>{names.get(id) || t("Unassigned")}</b><dl className="mt-2 space-y-1">{[["Service sales", row.service_sales_cents], ["Commission earned", row.commission_earned_cents], ["Wages due", row.wage_due_cents], ["Compensation paid", row.paid_cents], ["Booth rent due", row.booth_rent_due_cents], ["Booth rent received", row.booth_rent_paid_cents]].map(([label, value]) => <div key={label} className="flex justify-between gap-2"><dt>{t(String(label))}</dt><dd>{money(Number(value))}</dd></div>)}</dl></div>)}</div>{!Object.keys(s.by_stylist).length ? <div className="mt-3 space-y-3"><p className="text-sm gc-text-secondary">{t("No stylist earnings in this period.")}</p>{loggable ? <button className={button} onClick={() => choose("sale")}>{t("Record a sale")}</button> : <button className={button} onClick={() => periodControls.current?.querySelector<HTMLInputElement>('input[type="date"]')?.focus()}>{t("Change reporting period")}</button>}</div> : null}</section>
       <FinanceCompensation books={data.books} summary={s} arrangements={data.arrangements} names={names} isOwner={isOwner} manageable={manageable} today={today} timeZone={timeZone} onSaved={load}/></div>
       <div {...panelProps("reports")}><FinanceReportControls key={`${binding}:${from}:${to}`} from={from} to={to}/><FinancePeriodRecords kind="daily" includeExpenses={fullScope} salonId={salonId} books={data.books} period={{from,to,timeZone}} summary={s}/>
       {data.scope.kind === "business" ? <section className={panel}><h2 className="font-serif text-xl font-bold">{t("Recorded profit")}: {money(s.recorded_profit_cents)}</h2><p className="mt-2 text-sm gc-text-secondary">{t("Based on recorded sales and costs. Missing expenses or service costs mean this is not an exact margin.")}</p><p className="mt-2 text-sm">{t("Operating expenses")}: {money(s.operating_expenses_cents)} · {t("Cost of sales")}: {money(s.cost_of_sales_cents)} · {t("Sales without cost data")}: {s.costs_missing_for_sales}</p></section> : null}

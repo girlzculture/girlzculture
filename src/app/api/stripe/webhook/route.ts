@@ -13,6 +13,7 @@ import { completePickupReservation } from "@/lib/pickupReservationsServer";
 import { productRefundSummary } from "@/lib/productCommerceCore";
 import { existingAgreementPlan, subscriptionPriceSnapshot, type SubscriptionPriceItem } from "@/lib/subscriptionAgreement";
 import { completeSubscriptionPaymentMethod } from "@/lib/subscriptionPaymentMethodServer";
+import { optionalReferralPaymentEvidence } from "@/lib/businessReferralProofServer";
 
 type StripeLine = {
   amount?: number;
@@ -338,7 +339,8 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
     failure_reason: failureReason,
     cancellation_date: cancellationDate,
     paid_through_date: paidThrough,
-    metadata: { stripe_object_id: object.id || null, billing_reason: object.billing_reason || null },
+    metadata: { stripe_object_id: object.id || null, billing_reason: object.billing_reason || null,
+      referral_payment: await optionalReferralPaymentEvidence(context.admin, { eventType: event.type, invoice: object, subscription: context.subscription, stored: context.stored, salonId: context.salonId }, stripeGet) },
   });
   if (error?.code === "23505") return;
   if (error) throw error;

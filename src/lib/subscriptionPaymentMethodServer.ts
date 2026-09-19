@@ -3,11 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { UserSafeRequestError } from "@/lib/platformErrors";
 import { siteUrl, stripeGet, stripeRequest } from "@/lib/stripeServer";
 import { assertPaymentMethodAssociation, assertPaymentMethodSetup, maskedPaymentMethod, stripeIdentity, type PaymentMethod, type StripeIdentity, type SubscriptionBillingIdentity } from "@/lib/subscriptionPaymentMethodCore";
+import { assertScheduleUnchanged, inspectInheritedSchedule, scheduleMethodPayload, type PaymentScheduleBaseline } from "@/lib/subscriptionPaymentSchedule";
 
 type Attempt = {
   id: string; salon_id: string; stripe_customer_id: string; stripe_subscription_id: string;
   stripe_checkout_session_id: string | null; stripe_payment_method_id?: string | null;
   baseline_payment_method_id: string | null; first_apply_at: string | null;
+  schedule_baseline?:PaymentScheduleBaseline|null; schedule_first_apply_at?:string|null; schedule_verified_at?:string|null;
   livemode: boolean; status: string; created_at: string;
 };
 type Customer = { id?: string; livemode?: boolean; deleted?: boolean;
@@ -64,9 +66,17 @@ function assertCanUpdate(subscription: Subscription) {
   if (["canceled","incomplete_expired"].includes(subscription.status || "")) {
     throw new UserSafeRequestError("This subscription has ended. Its payment method cannot be updated here.",409);
   }
-  if (stripeIdentity(subscription.schedule)) {
-    throw new UserSafeRequestError("This subscription has a scheduled plan change. Its payment method needs billing support review so the scheduled plan remains unchanged.",409);
-  }
+}
+
+async function readSchedule(identity:Awaited<ReturnType<typeof billingIdentity>>,provider:PaymentMethodProvider) {
+ const id=stripeIdentity(identity.subscription.schedule);
+ if(!id)return null;
+ if(!safeId(id,"sub_sched"))throw new Error("PAYMENT_SCHEDULE_IDENTITY_CONFLICT");
+ const schedule=await provider.get(`/subscription_schedules/${id}`);
+ return inspectInheritedSchedule(schedule,identity.subscription,identity.customerId,identity.livemode);
+}
+function assertRetryWindow(first:string|null|undefined) {
+ if(first&&(!Number.isFinite(Date.parse(first))||Date.now()-Date.parse(first)>=23*60*60_000))throw new UserSafeRequestError("The earlier payment update is too old to retry safely. Billing support must review the current payment method.",409);
 }
 
 async function readMasked(identity: Awaited<ReturnType<typeof billingIdentity>>,provider:PaymentMethodProvider) {
@@ -98,10 +108,12 @@ export async function subscriptionPaymentMethodStatus(admin: SupabaseClient,salo
   if (pending.error) throw pending.error;
   const paymentMethod = await readMasked(identity,provider);
   const hasEffective = Boolean(identity.subscription.default_payment_method || identity.subscription.default_source || identity.customer.invoice_settings?.default_payment_method || identity.customer.default_source);
+  let scheduleAllowed=true;
+  try{await readSchedule(identity,provider);}catch(error){if(error instanceof Error&&/^PAYMENT_SCHEDULE_/.test(error.message))scheduleAllowed=false;else throw error;}
   return { paymentMethod,status: paymentMethod ? "available" : hasEffective ? "unavailable" : "none",
     updatePending:Boolean(pending.data),billingMode:identity.livemode ? "live" : "test",
-    updateAllowed:!stripeIdentity(identity.subscription.schedule) && !["canceled","incomplete_expired"].includes(identity.subscription.status || ""),
-    ...(stripeIdentity(identity.subscription.schedule) ? { warning:"A scheduled plan change requires billing support review before updating this payment method." } : {}) };
+    updateAllowed:scheduleAllowed && !["canceled","incomplete_expired"].includes(identity.subscription.status || ""),
+    ...(!scheduleAllowed ? { warning:"A scheduled plan change requires billing support review before updating this payment method." } : {}) };
 }
 
 export async function beginSubscriptionPaymentMethod(input: { admin: SupabaseClient;salonId: string;actorId: string;request: Request }) {
@@ -109,9 +121,12 @@ export async function beginSubscriptionPaymentMethod(input: { admin: SupabaseCli
   const provider=paymentMethodProvider();
   const identity = await billingIdentity(admin,salonId,provider);
   assertCanUpdate(identity.subscription);
-  const attempt = await rpc<Attempt>(admin,"reserve_subscription_payment_method_attempt",{
+  let schedule:PaymentScheduleBaseline|null;
+  try{schedule=await readSchedule(identity,provider);}catch(error){if(error instanceof Error&&/^PAYMENT_SCHEDULE_/.test(error.message))throw new UserSafeRequestError("This subscription has a scheduled plan change. Its payment method needs billing support review so the scheduled plan remains unchanged.",409);throw error;}
+  const attempt = await rpc<Attempt>(admin,schedule?"reserve_scheduled_payment_method_attempt":"reserve_subscription_payment_method_attempt",{
     p_salon_id:salonId,p_actor_id:actorId,p_customer_id:identity.customerId,p_subscription_id:identity.subscriptionId,p_livemode:identity.livemode,
     p_baseline_method_id:effectiveMethodId(identity),
+    ...(schedule?{p_schedule:schedule}:{}),
   });
   if (attempt.stripe_checkout_session_id) {
     const session = await provider.get<Session>(`/checkout/sessions/${attempt.stripe_checkout_session_id}`);
@@ -219,6 +234,12 @@ export async function completeSubscriptionPaymentMethod(admin: SupabaseClient,se
   const before=await billingIdentity(admin,attempt.salon_id,provider);
   assertCanUpdate(before.subscription);
   if (before.customerId!==attempt.stripe_customer_id || before.subscriptionId!==attempt.stripe_subscription_id || before.livemode!==attempt.livemode) throw new Error("PAYMENT_METHOD_ATTEMPT_IDENTITY_CONFLICT");
+  if(claim.attempt.schedule_baseline){
+    const methodRequestId=await applyScheduleMethod({admin,attempt:claim.attempt,lease,setupId:setupId!,methodId:methodId!,provider,before});
+    await finish("completed",setupId,methodId,methodRequestId);
+    return {updated:true,cancelled:false,expired:false,...(await subscriptionPaymentMethodStatus(admin,attempt.salon_id,provider))};
+  }
+  if(stripeIdentity(before.subscription.schedule))throw new Error("PAYMENT_SCHEDULE_BASELINE_CHANGED");
   if (stripeIdentity(before.subscription.default_payment_method) === methodId) {
     // A lost provider response may already have applied the intended method.
     // Read-only reconciliation is safe even after Stripe prunes idempotency.
@@ -249,8 +270,42 @@ export async function completeSubscriptionPaymentMethod(admin: SupabaseClient,se
   const after=await billingIdentity(admin,attempt.salon_id,provider);
   if (stripeIdentity(after.subscription.default_payment_method)!==methodId || after.customerId!==attempt.stripe_customer_id || after.livemode!==attempt.livemode) throw new Error("PAYMENT_METHOD_AUTHORITATIVE_READBACK_FAILED");
   assertCanUpdate(after.subscription);
+  if(stripeIdentity(after.subscription.schedule))throw new Error("PAYMENT_SCHEDULE_BASELINE_CHANGED");
   await finish("completed",setupId,methodId,requestId);
   return {updated:true,cancelled:false,expired:false,...(await subscriptionPaymentMethodStatus(admin,attempt.salon_id,provider))};
+}
+
+async function applyScheduleMethod(input:{admin:SupabaseClient;attempt:Attempt;lease:string;setupId:string;methodId:string;provider:PaymentMethodProvider;before:Awaited<ReturnType<typeof billingIdentity>>}) {
+ const {admin,attempt,lease,setupId,methodId,provider}=input,baseline=attempt.schedule_baseline!;
+ let methodRequestId:string|null=null;
+ let identity=input.before,current=await readSchedule(identity,provider);
+ if(!current)throw new Error("PAYMENT_SCHEDULE_BASELINE_CHANGED");
+ assertScheduleUnchanged(current,baseline);
+ const mark=(verified:boolean,requestId:string|null=null)=>rpc<Attempt>(admin,"mark_payment_schedule_apply",{p_attempt_id:attempt.id,p_lease_id:lease,p_setup_intent_id:setupId,p_payment_method_id:methodId,p_verified:verified,p_request_id:requestId});
+ if(current.default_method!==methodId){
+  if(current.default_method!==baseline.default_method)throw new Error("PAYMENT_SCHEDULE_DEFAULT_CHANGED");
+  if(effectiveMethodId(identity)!==attempt.baseline_payment_method_id&&stripeIdentity(identity.subscription.default_payment_method)!==methodId)throw new Error("PAYMENT_SCHEDULE_CURRENT_METHOD_CHANGED");
+  assertRetryWindow(attempt.schedule_first_apply_at);provider.assertActive();
+  const marked=await mark(false);assertRetryWindow(marked.schedule_first_apply_at);
+  if(!marked.schedule_first_apply_at)throw new Error("PAYMENT_SCHEDULE_STAGE_MISSING");
+  let requestId:string|null=null;provider.assertActive();
+  await provider.post(`/subscription_schedules/${String(baseline.schedule.id)}`,scheduleMethodPayload(methodId),{idempotencyKey:`payment-method-schedule:${attempt.id}`,onResponse:evidence=>{requestId=evidence.requestId;}});
+  identity=await billingIdentity(admin,attempt.salon_id,provider);current=await readSchedule(identity,provider);
+  if(!current||current.default_method!==methodId)throw new Error("PAYMENT_SCHEDULE_READBACK_FAILED");
+  assertScheduleUnchanged(current,baseline);await mark(true,requestId);
+ }else await mark(true);
+ if(stripeIdentity(identity.subscription.default_payment_method)!==methodId){
+  if(effectiveMethodId(identity)!==attempt.baseline_payment_method_id)throw new Error("PAYMENT_SCHEDULE_CURRENT_METHOD_CHANGED");
+  assertRetryWindow(attempt.first_apply_at);provider.assertActive();
+  const marked=await rpc<Attempt>(admin,"mark_subscription_payment_method_apply",{p_attempt_id:attempt.id,p_lease_id:lease,p_setup_intent_id:setupId,p_payment_method_id:methodId});
+  assertRetryWindow(marked.first_apply_at);if(!marked.first_apply_at)throw new Error("PAYMENT_METHOD_STAGE_MISSING");
+  provider.assertActive();
+  await provider.post(`/subscriptions/${attempt.stripe_subscription_id}`,{default_payment_method:methodId},{idempotencyKey:`payment-method-apply:${attempt.id}`,onResponse:evidence=>{methodRequestId=evidence.requestId;}});
+ }
+ const after=await billingIdentity(admin,attempt.salon_id,provider),scheduleAfter=await readSchedule(after,provider);
+ if(after.customerId!==attempt.stripe_customer_id||after.subscriptionId!==attempt.stripe_subscription_id||after.livemode!==attempt.livemode||stripeIdentity(after.subscription.default_payment_method)!==methodId||!scheduleAfter||scheduleAfter.default_method!==methodId)throw new Error("PAYMENT_SCHEDULE_READBACK_FAILED");
+ assertScheduleUnchanged(scheduleAfter,baseline);
+ return methodRequestId;
 }
 
 export async function cancelSubscriptionPaymentMethod(admin:SupabaseClient,salonId:string,attemptId:string) {

@@ -1,3 +1,5 @@
+import { manualSaleText } from "@/i18n/assistant-manual-sale-source-catalog";
+import { assistantBalancesCopy } from "@/i18n/assistant-balances-copy";
 type Row = Record<string, unknown>;
 
 export type AssistantPresentation = {
@@ -59,6 +61,11 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   const t = (source: string, values?: Record<string, string | number>) => launchWorkspaceText(source, language, values);
   const suggest = (items: string[]) => items.map(source => t(source));
 
+  if (tool === "get_manual_sale_options") return { message: manualSaleText("I found the services and professionals you can use for a received-payment draft. Confirm the service, professional, amount and payment method.", locale) };
+  if (tool === "get_outstanding_balances") {
+    const balanceCopy=assistantBalancesCopy(locale);
+    return {message:result.available===false?balanceCopy.incomplete:`${balanceCopy.asOf} ${text(result.as_of_day)}. ${balanceCopy.summary.replace('{completed}',currency(number(result.completed_unpaid_cents)/100,locale)).replace('{pending}',currency(number(result.pending_unpaid_cents)/100,locale))} ${balanceCopy.caveat}`};
+  }
   if (tool === "get_services_and_prices") {
     const services = rows(result.services);
     const count = Math.max(number(result.matching_total ?? result.total), services.length);

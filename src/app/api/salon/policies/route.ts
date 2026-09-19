@@ -29,6 +29,8 @@ async function handle(request: Request) {
     context = await requireSalonPermission(request, "my_page");
     const { admin, salon, user } = context;
     if (request.method === "GET") {
+      const selectedDraft = new URL(request.url).searchParams.get("draft");
+      if (selectedDraft !== null && !uuid.test(selectedDraft)) throw new PolicyInputError("POLICY_INVALID");
       const fields = "id,policy,source_locale,version,created_at,published_at";
       const result = await admin.from("business_policy_revisions").select(fields).eq("salon_id", salon.id).order("created_at", { ascending: false }).limit(30);
       if (result.error) throw result.error;
@@ -45,6 +47,19 @@ async function handle(request: Request) {
           if (published) revisions.push(published);
         }
         if (!published?.published_at) throw new Error("POLICY_CURRENT_UNAVAILABLE");
+      }
+      // Resume one explicitly selected private draft, even after more recent
+      // revisions have pushed it off the history page. Never select a newest
+      // draft implicitly or accept an ID from another business.
+      if (selectedDraft) {
+        let draft = revisions.find(row => row.id === selectedDraft);
+        if (!draft) {
+          const selected = await admin.from("business_policy_revisions").select(fields).eq("salon_id", salon.id).eq("id", selectedDraft).maybeSingle();
+          if (selected.error) throw selected.error;
+          draft = selected.data || undefined;
+          if (draft) revisions.push(draft);
+        }
+        if (!draft || draft.published_at) return Response.json({ code: "POLICY_DRAFT_NOT_FOUND" }, { status: 404, headers });
       }
       return Response.json({ revisions, current, public_policy_path: salon.slug ? `${salonPublicPath(String(salon.slug), salon.vanity_slug ? String(salon.vanity_slug) : null)}#business-policies` : null }, { headers });
     }

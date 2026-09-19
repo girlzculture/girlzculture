@@ -36,6 +36,10 @@
         {
           "file": "src/components/owner/TeamWorkspace.tsx",
           "context": "c83dfe9bf99942bf6d50eeac0954617592d5f77e8f67a0c3fee619cd0c081f8d"
+        },
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "06bc3b6cfb7d2f6522c1c322618126bc876fb0cf6341b02117fd18e3aadfef0a"
         }
       ]
     },
@@ -98,6 +102,10 @@
         {
           "file": "src/components/owner/ServicesWorkspace.tsx",
           "context": "83d57badf3d735d02722c0ee7eb387ef9bcabe04dbb9bd10cba36f774a98276c"
+        },
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "6851960141bd12588880ae8f767967b6505980b10f0c7a28aa284440ae68d920"
         }
       ]
     },
@@ -162,6 +170,10 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "1701bed10955bc4bfdefea0b2321c2dc1e72b764bb5d97a2ec06139ec9b3c8dd"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "8c1b7197bdea41c6854faee58ad38fbefd120b755eeee70c33c8c5b66241785b"
         }
       ]
     },
@@ -286,6 +298,10 @@
         {
           "file": "src/components/owner/FinanceCompensation.tsx",
           "context": "1379423413ee067bcb138ac8fb9472a1df0c77ed209702e5b146eae1d7055fe8"
+        },
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "84845c1dcfa3dac5587196a4920625158c5c1eacf80d5da48c226753b5840fd8"
         }
       ]
     },
@@ -328,6 +344,22 @@
         {
           "file": "src/components/owner/ServicesWorkspace.tsx",
           "context": "036d0155b02ac4d36dcd11478c5a6eb9ae00dbd1018cc25b0339aaed11043fd0"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "143225cb047cd31307a8bad6929b24ff51052c01919aec4b7b0dd3915be879a4"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "9b8fcebfdb2ce42696bf6e8293131f883775486c2b2e771cb4e18759364a19df"
+        },
+        {
+          "file": "src/components/owner/BusinessReferrals.tsx",
+          "context": "d5a0e9f87e61ec68e1a65555b3f0b499472ca270776ed5ee1d94778d45952d1e"
+        },
+        {
+          "file": "src/components/owner/BusinessReferrals.tsx",
+          "context": "f6954e11951e3d606ddfb204c07e8e181f17476ac9a229553c399e837537e1cb"
         }
       ]
     },
@@ -700,6 +732,10 @@
         {
           "file": "src/components/owner/BookingChangeProposal.tsx",
           "context": "31bbe271a0de1bf14a72860b31fdd90562296536e8504bcf404dc8face21a5a6"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "7fdfb0816c7136229dd598eeb3dcfa4a4d10e0ca83cc64f4adb64f4c3bcaed43"
         }
       ]
     },
@@ -834,6 +870,14 @@
         {
           "file": "src/components/owner/BusinessOverview.tsx",
           "context": "62c7de08d610db1d20e14b6be702e2bce625aef478767b3fd844082d395f15e1"
+        },
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "46654761fafc8499cf2f2993a6d0f6e8ac9f1458e641fc9166fc8fc7e1cefcf3"
+        },
+        {
+          "file": "src/components/owner/BusinessMoneyInsights.tsx",
+          "context": "b65e4badd30204bfab2d0bdda79ad78275be0fb3ff4c8fcdd10a44b9a5bd03b3"
         }
       ]
     },
@@ -922,6 +966,18 @@
         {
           "file": "src/lib/businessOverview.ts",
           "context": "4236295705f0b9051f5b7a90c64fbf57461e5fc041e7a4b71892857cd9f6f889"
+        },
+        {
+          "file": "src/lib/businessMoneyInsights.ts",
+          "context": "68afc378f469e3d7498297c0fe8f4da8dd08b5abbd5c7958a80d9930e53a7e39"
+        },
+        {
+          "file": "src/lib/businessMoneyInsights.ts",
+          "context": "87afe47adbabafffc4206cd7f6c021101017330a5c089fb01a26ec26c2895c41"
+        },
+        {
+          "file": "src/lib/businessMoneyInsights.ts",
+          "context": "9bca3dee4629bed5003c952da494b88c3e51b4b7ce20ba1b3334e8c6372759d2"
         }
       ]
     },
@@ -1112,6 +1168,10 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "1d82d7cd49e6625e7e46585ed1aa1b5431cc4a23542f05fd1f55d6963aa20807"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "8b99d8b3c5675472fcda6baf8153b74a2ff49f00ea9010008197cbd33bc56f33"
         }
       ]
     },
@@ -1329,6 +1389,14 @@
         },
         {
           "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/BusinessReferrals.tsx",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         }
       ]
@@ -1692,6 +1760,10 @@
         {
           "file": "src/components/owner/OwnerDashboardApp.tsx",
           "context": "df0c3957bcaad2425825746aa6b648da07ba56543036318ee3713c22f304eee4"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "777f102c4014b5068c6f4e5b853e3bb1f641a19b17fe165665fb2d1548799b20"
         }
       ]
     },
@@ -2306,6 +2378,26 @@
         {
           "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessBookingMoney.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessReferrals.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessMoneyInsights.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantBalances.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2344,6 +2436,10 @@
         {
           "file": "src/lib/supabase.ts",
           "context": "70b1b644b2c3c04c60484d63926fcbbd845eadd9c897d06d65f06ab9d0e71f05"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "795ea8cd16dc269abc3b712bfe471bd456884280bf18a313bb75390efeb9ea94"
         }
       ]
     },
@@ -2416,6 +2512,14 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "89758a527c84a22833df769357dde43329f1a23595a3f6b256d4cfe03d88235d"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "eff2a56c4cf4d94d77ec4417b30b42b6736b024e7b5e215acc23967c32731227"
+        },
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "93ed9887f627f0828af7579fb1eb180c4a82cd1215ddc0463e9ef6c799c3499c"
         }
       ]
     },
@@ -2652,6 +2756,10 @@
         {
           "file": "src/components/owner/BusinessFinances.tsx",
           "context": "cbc659b7f704af116e2ab15fd72dd48079e587279ed147731e179fcf937b4b39"
+        },
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "2752a1f3cdbe50deaa25f1339e0f864942ee0c75bf9bd5f4ba08427d8aad909c"
         }
       ]
     },
@@ -2702,6 +2810,14 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "00f2ce441b4adb14a39712c8e4626ea3c912497d12093d683c7862093f8fc3b7"
+        },
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
+        },
+        {
+          "file": "src/lib/businessMoneyInsights.ts",
+          "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
         }
       ]
     },
@@ -2829,6 +2945,10 @@
         },
         {
           "file": "src/components/owner/FinanceRecords.tsx",
+          "context": "2c31a2726887a7f99cb4745f87b5af108c575bcdb41ef9ce5c478f0ab84b4dd9"
+        },
+        {
+          "file": "src/lib/businessBookingMoney.ts",
           "context": "2c31a2726887a7f99cb4745f87b5af108c575bcdb41ef9ce5c478f0ab84b4dd9"
         }
       ]
@@ -3102,6 +3222,18 @@
         {
           "file": "src/lib/businessMorningBrief.ts",
           "context": "4c5200036d89b04d35e66c0cd8816862fd2891a802a8eeb640c045c6f966343b"
+        },
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "c2ab567832d979423123db23e383fb1f3c0d55907cfeedd029e2f88a627f1d88"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "f73a3db97b3ccc4b027ce12087c73115b773684ed88883e2cc1f45e64f412274"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "287e7f782e6a8da86f1bad18a68c8d2c635514d843aae2e0df4200da804c241f"
         }
       ]
     },
@@ -3142,6 +3274,306 @@
         {
           "file": "src/components/owner/BusinessPolicies.tsx",
           "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
+        },
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
+        }
+      ]
+    },
+    {
+      "source": "?draft={value0}",
+      "reason": "Reviewed URL/query/file identifiers and protocol values; translating these breaks navigation, downloads or storage. Visible labels and content are translated separately.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessPolicies.tsx",
+          "context": "e27638b865209539c495002c4da44992ec4a9d17d1a93a526b5bb5f1f0b58c49"
+        }
+      ]
+    },
+    {
+      "source": "{value0} {value1} {value2} https://girlzculture.com{value3} {value4}",
+      "reason": "Manual export composition of owner-reviewed translated copy, original tags, canonical booking URL, and separately translated manual-posting notice. This entry exempts no caption or notice prose.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "2e8b489e2f855bbcaa1e67dece8d768e5fe723758dff4f5bc5f99227fcb20768"
+        }
+      ]
+    },
+    {
+      "source": "{value0} inline-flex items-center",
+      "reason": "Tailwind className composition only; not rendered text.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "77958023710eab3a6351a832b17f763edfddaad7934cc9c7eee220fb99e2f143"
+        }
+      ]
+    },
+    {
+      "source": "{value0} mt-3",
+      "reason": "Tailwind className composition only; not rendered text.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "d717cb7b704d0b2f0bcb0fae5c57fe102cdbcd16163ed22aec152efb2970b6c2"
+        }
+      ]
+    },
+    {
+      "source": "{value0}#business-updates",
+      "reason": "Reviewed URL/query/file identifiers and protocol values; translating these breaks navigation, downloads or storage. Visible labels and content are translated separately.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "2460c7842b11dc5cf875cfef5ed97777fd75d1408cf78d38beead0ef1d455c56"
+        }
+      ]
+    },
+    {
+      "source": "#{value0}",
+      "reason": "Hashtag assembled from the exact original business service name, without generated factual claims.",
+      "contexts": [
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "03a9e2b9ba9c5538c0039e02da890553a8d385a7b7eca279134b0d55008e5271"
+        }
+      ]
+    },
+    {
+      "source": "#GirlzCulture",
+      "reason": "Canonical Girlz Culture brand hashtag, preserved identically across language-specific drafts.",
+      "contexts": [
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "4a92c410784df0c2688a480caa964c143edf9d34c2cf3b7f4a16b468cf5609b4"
+        }
+      ]
+    },
+    {
+      "source": "business-marketing-{value0}.txt",
+      "reason": "Reviewed URL/query/file identifiers and protocol values; translating these breaks navigation, downloads or storage. Visible labels and content are translated separately.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "6ce0c6535706323d91171c90996e8c5fee9ac72483bd3b2cec67aa33bd591f0d"
+        }
+      ]
+    },
+    {
+      "source": "pending-",
+      "reason": "Reviewed URL/query/file identifiers and protocol values; translating these breaks navigation, downloads or storage. Visible labels and content are translated separately.",
+      "contexts": [
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "7bdab60af82fc64cb5d07dbae1d49fe046d56e6295c52907a2827b26010fc7d6"
+        }
+      ]
+    },
+    {
+      "source": "text/plain;charset=utf-8",
+      "reason": "Download media type and encoding declaration, not user-facing copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessMarketing.tsx",
+          "context": "955a20d3c1cabcadfde771f88fd49cc5d1833a7050d64ecd9b967018fd34aea4"
+        }
+      ]
+    },
+    {
+      "source": "USD {value0}",
+      "reason": "ISO currency code plus immutable numeric service-price fact; surrounding captions are separately localized.",
+      "contexts": [
+        {
+          "file": "src/lib/businessMarketing.ts",
+          "context": "7f470e53870291728bc67a7cb951611ed759bb9bc968624a270d4dcc2818608a"
+        }
+      ]
+    },
+    {
+      "source": "[a-fA-F0-9]{32}",
+      "reason": "Reviewed HTML referral-code pattern, not visible copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessReferrals.tsx",
+          "context": "7d22d459f27f08fa69cbee29ecdb3e1e33b5ba28d85da876d9125be10afb8669"
+        }
+      ]
+    },
+    {
+      "source": "{value0} × {value1}",
+      "reason": "Reviewed immutable booked product title, multiplication symbol and numeric quantity. No first-party words are introduced; business-entered titles remain unchanged.",
+      "contexts": [
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "410cc10c077b5457a69623c3b665a9d8e28ae556a4be3b4c42bc3facf280193f"
+        }
+      ]
+    },
+    {
+      "source": "{value0}_count",
+      "reason": "Reviewed internal outcome-count field name; outcome labels are translated.",
+      "contexts": [
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "56b3e4ec5a6c2296751b5c92d97bd006b0a25337f09e7f8a42f0beb0ef7e6d55"
+        },
+        {
+          "file": "src/components/owner/AssistantBalances.tsx",
+          "context": "6b19fb58bf67ffa38912f3a91ef1e6316b268ef9a8a5b2c981a4bec777eea006"
+        }
+      ]
+    },
+    {
+      "source": "deposit:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "c980a8b8ec9847f5220f7f0fbec94d6920d5724092d53b9440702e1fe88fe9ec"
+        },
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "e8b9213216a0b78a41cad78a9f64508ed3d0144580a711cc9cea4a4fc711920d"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "ba4cda46e09fa4a3a897d2638125cab5e93f4130976391c469f3e7f6f15a7d6f"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "9f2da6f5a9540ca7182d8722ac77b00f1005ac02082c849dab0bbf5be0a01eb5"
+        }
+      ]
+    },
+    {
+      "source": "order-payment:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "312b42b58670fa0cd670b980a28ab738b439d20b726df1ea8876ca2f69b7df69"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "f18d943f4404bb3e75c300f0e43a658152d878e6e4a0f035d00e804c47928572"
+        }
+      ]
+    },
+    {
+      "source": "order-refund:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "c143c7fb2c996e7034097006f6deb9aaa84dcaf38d227ea3419ed3f8ea788e1e"
+        }
+      ]
+    },
+    {
+      "source": "order:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "68d7cf00daaf9d8dc88947a20daf562cba11e8dad76d853cd8f9bb7025b186c7"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "287e7f782e6a8da86f1bad18a68c8d2c635514d843aae2e0df4200da804c241f"
+        }
+      ]
+    },
+    {
+      "source": "receipt:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "7937f1a3aee15d234efa11edb567731ce0f08ad69981acf76410c5fccb8ca2df"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "8afd9e61db18261c3aec2eb89617ab6118527bb361dd91fbd37109227326e681"
+        }
+      ]
+    },
+    {
+      "source": "refund:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessBookingMoney.ts",
+          "context": "a2d6ec5e13ba20332c230a6ecba5a956510ee7b04646fc3eb8cd511d9e8a0391"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "0dbe725a37dd3fd2605658048b716679402cabb686fc94786b81c078bdabc5dc"
+        }
+      ]
+    },
+    {
+      "source": "sale:{value0}",
+      "reason": "Reviewed canonical finance record/evidence identifier, not displayed first-party prose.",
+      "contexts": [
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "8377885092b17b4fa3e95edb34e05b0955f640d761a7d8c2c2f67a1f11f953ba"
+        },
+        {
+          "file": "src/lib/businessFinanceData.ts",
+          "context": "86442c5034bc803106ee702454f2e629008fb87810b65fd731d42345386d1027"
+        }
+      ]
+    },
+    {
+      "source": "button[aria-pressed=\"true\"]",
+      "reason": "DOM selector for the currently selected appearance control, not displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GcAssistant.tsx",
+          "context": "69ac01ae3c5fd8d3f3aa053bfe21873bb0bb2f3b97537343402a601f4d9bf39a"
+        }
+      ]
+    },
+    {
+      "source": "{completed}",
+      "reason": "Named placeholder key substituted into explicitly translated balance-summary copy; never standalone UI prose.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "9dce5b0003200e04eb5b9d507aafe257c22d9c81f2c5a1fbb36141a9c58eb178"
+        }
+      ]
+    },
+    {
+      "source": "{pending}",
+      "reason": "Named placeholder key substituted into explicitly translated balance-summary copy; never standalone UI prose.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "75214654c2e4f3c0c7bd93bac89ad9acc7773e6825b06a05e6688b70b4792de0"
+        }
+      ]
+    },
+    {
+      "source": "{value0} {value1}. {value2} {value3}",
+      "reason": "Composition of explicit four-locale balance copy and formatted values; no additional untranslated words.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "45637f33edc50c8e4286cf7580a039b116dd5422bb7f9c1b68b7e6021fa6e534"
+        }
+      ]
+    },
+    {
+      "source": "input[type=\"date\"]",
+      "reason": "DOM selector for the existing reporting-period date control; not rendered copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessFinances.tsx",
+          "context": "d5da043e70fc15a3b64db720f1b9d3ce83613556ae6ab0e707e7c2b7e6282a82"
         }
       ]
     }

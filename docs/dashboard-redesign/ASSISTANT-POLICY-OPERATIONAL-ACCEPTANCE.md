@@ -33,6 +33,12 @@ Policy screenshots inspected: `policy-current-browser/p0-public-policy-P0-public
 
 Existing photo-count retrieval is preserved: actual own-business gallery, cover, logo and distinct-image counts; duplicate references do not inflate totals; unavailable public visibility stays unknown; private customer attachments and another business's records do not enter the result. The focused assistant suite verifies these paths rather than replacing them.
 
+## CI-discovered unanchored answer transcript correction
+
+The first checkpoint's required CI retained ten failures in the existing language test: the answer call passed older client prose despite an empty prior-request list. This was an actual missing authorization boundary, not a language assertion to relax. The route now omits unanchored answer transcript; the planner independently requires a historical request ID distinct from the current read, with the existing fresh business/actor/permission/assignment checks. User and assistant transcript text are both discarded when that anchor is absent. Authorized follow-up intent remains available and current answer facts remain restricted to the new read. Planning-only clarification retains its existing bounded user intent contract.
+
+`assistant-unanchored-before.log` reproduces private user and assistant prose reaching the provider before this correction. `assistant-unanchored-focused.log` verifies 79/79 assistant language/planning/execution/route cases, with the original ten language assertions unchanged. `assistant-core-all-after-anchor.log` verifies 551/551 P0 cases on the combined working tree, including new onboarding/marketing cases; this is local automated evidence, not CI or real-provider acceptance of a released commit.
+
 ## Remaining hosted acceptance
 
 - On the final held candidate, ask about an actual business's Boho service using ordinary wording and a spelling variation, then a follow-up. Confirm names, prices and durations against its authorized records.

@@ -2,8 +2,114 @@ import { expect } from '@playwright/test';
 import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { defaultPhotoDetails, type BusinessPhotoMetadata } from '../../src/lib/businessPhotoMetadata';
+import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 
 test.use({ serviceWorkers: 'block' });
+for (const locale of ['en', 'fr', 'es', 'zh-CN']) {
+  test(`Dashboard redesign My Page mobile sections keep labels separate and menu routes intact in ${locale}`, async ({ page }, info) => {
+    const fixture = await p0OwnerFixture(page, { populated: true, locale });
+    const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto('/salon/dashboard/my-page');
+    const sections = page.getByRole('navigation', { name: t('My Page sections'), exact: true });
+    const mobile = sections.locator(':scope > div').first();
+    const entries = mobile.locator(':scope > a, :scope > details > summary');
+    await expect(mobile.getByRole('link', { name: t('Info'), exact: true })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await expect(entries).toHaveText(['Info', 'Services', 'Location', 'More'].map(t));
+      const metrics = await entries.evaluateAll(elements => elements.map(element => {
+        const control = element.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const text = range.getBoundingClientRect();
+        return {
+          label: element.textContent,
+          fontSize: parseFloat(getComputedStyle(element).fontSize),
+          targetHeight: control.height,
+          insideOwnControl: text.left >= control.left && text.right <= control.right,
+          left: text.left, right: text.right, top: text.top, bottom: text.bottom,
+        };
+      }));
+      for (const metric of metrics) {
+        expect(metric.insideOwnControl, `${width}px: ${JSON.stringify(metric)}`).toBe(true);
+        expect(metric.fontSize).toBeGreaterThanOrEqual(13);
+        expect(metric.targetHeight).toBeGreaterThanOrEqual(44);
+      }
+      for (let i = 0; i < metrics.length; i++) for (let j = i + 1; j < metrics.length; j++) {
+        const a = metrics[i], b = metrics[j];
+        expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top,
+          `${width}px: ${a.label} overlaps ${b.label}`).toBe(true);
+      }
+      for (const [label, path] of [['Info', 'my-page/business'], ['Services', 'styles'], ['Location', 'my-page/address']]) {
+        await expect(mobile.getByRole('link', { name: t(label), exact: true })).toHaveAttribute('href', `/salon/dashboard/${path}`);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+      const headerBottom = await page.locator('.gc-owner-header').evaluate(element => element.getBoundingClientRect().bottom);
+      await sections.evaluate((element, top) => window.scrollBy(0, element.getBoundingClientRect().top - top - 16), headerBottom);
+      await page.screenshot({ path: info.outputPath(`my-page-sections-${locale}-${width}.png`) });
+    }
+    await mobile.locator('summary').click();
+    const description = mobile.getByRole('link', { name: t('Description'), exact: true });
+    await expect(description).toBeVisible();
+    await expect(description).toHaveAttribute('href', '/salon/dashboard/my-page/description');
+    await description.click();
+    await expect(page).toHaveURL(/\/salon\/dashboard\/my-page\/description$/);
+    await expect(mobile.locator('details')).not.toHaveAttribute('open', '');
+    await page.goBack();
+    await expect(page).toHaveURL(/\/salon\/dashboard\/my-page$/);
+    await expect(mobile.getByRole('link', { name: t('Info'), exact: true })).toHaveAttribute('aria-current', 'page');
+    expect(fixture.unexpected).toEqual([]);
+  });
+}
+test('Dashboard redesign French mobile destinations remain readable at 320px and 390px', async ({ page }, info) => {
+  const fixture = await p0OwnerFixture(page, { populated: true, locale: 'fr' });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('/salon/dashboard/my-page');
+  const navigation = page.locator('[data-owner-mobile-navigation]');
+  const destinations = [
+    ['Vue d’ensemble', 'Résumé', '/salon/dashboard'],
+    ['Réservations', 'RDV', '/salon/dashboard/bookings'],
+    ['Calendrier', 'Agenda', '/salon/dashboard/availability'],
+    ['Messages', 'Messages', '/salon/dashboard/messages'],
+    ['Plus', 'Plus', '/salon/dashboard/settings'],
+  ];
+  await expect(navigation.getByRole('link', { name: 'Réservations', exact: true })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(navigation.getByRole('link')).toHaveCount(destinations.length);
+    for (const [accessibleName, label, href] of destinations) {
+      const link = navigation.getByRole('link', { name: accessibleName, exact: true });
+      await expect(link).toHaveAttribute('href', href);
+      const text = link.locator(':scope > span').first();
+      await expect(text).toHaveText(label);
+      const dimensions = await text.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        const cell = element.parentElement!.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return {
+          fontSize: parseFloat(style.fontSize),
+          lineCount: range.getClientRects().length,
+          fits: rect.left >= cell.left && rect.right <= cell.right && rect.left >= 0 && rect.right <= innerWidth,
+          clipped: element.scrollWidth > element.clientWidth,
+          ellipsis: style.textOverflow === 'ellipsis',
+        };
+      });
+      expect(dimensions.fontSize).toBeGreaterThanOrEqual(13);
+      expect(dimensions.lineCount).toBe(1);
+      expect(dimensions.fits).toBe(true);
+      expect(dimensions.clipped).toBe(false);
+      expect(dimensions.ellipsis).toBe(false);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`french-owner-navigation-${width}.png`) });
+  }
+  expect(fixture.unexpected).toEqual([]);
+});
 test('Dashboard redesign mobile chrome keeps scrolled content out of header and navigation surfaces',async({page},info)=>{
  await p0OwnerFixture(page,{populated:true});await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/my-page');
  await expect(page.getByRole('textbox',{name:'Business Name',exact:true})).toBeVisible();

@@ -19,7 +19,7 @@ function regexEscape(value) {
 }
 
 const routeFiles = walk(apiRoot).filter((file) => file.endsWith("route.ts")).sort();
-assert.equal(routeFiles.length, 150, "Update the monitoring inventory when API routes are added or removed.");
+assert.equal(routeFiles.length, 156, "Update the monitoring inventory when API routes are added or removed.");
 
 for (const file of routeFiles) {
   const source = fs.readFileSync(file, "utf8");
@@ -57,7 +57,7 @@ for (const file of routeFiles) {
   assert.ok(inventory.includes(`\`${route}\``), `${route} is missing from the committed inventory.`);
 }
 
-for (const functionName of ["booking-reminders.mjs", "media-cleanup.mjs", "pickup-reservation-cleanup.mjs", "assistant-memory-cleanup.mjs", "google-profile-sync.ts"]) {
+for (const functionName of ["booking-reminders.mjs", "media-cleanup.mjs", "pickup-reservation-cleanup.mjs", "assistant-memory-cleanup.mjs", "google-profile-sync.ts", "business-marketing-publish.ts"]) {
   const source = fs.readFileSync(path.join(root, "netlify", "functions", functionName), "utf8");
   assert.match(source, /monitoredNetlifyFailure/, `${functionName} lacks function-level monitoring.`);
   assert.doesNotMatch(source, /await response\.text\(\).*throw/, `${functionName} could echo an upstream provider body.`);
@@ -461,5 +461,5 @@ for (const file of walk(path.join(root, "src")).filter((value) => /\.(?:ts|tsx)$
 }
 
 console.log(
-  `Operational monitoring verification passed: ${routeFiles.length} API routes, 5 Netlify functions, 0 server actions, ${providerEntryPoints.length} provider entry points, representative failures across ${representativeFailures.length} protected feature groups.`,
+  `Operational monitoring verification passed: ${routeFiles.length} API routes, 6 Netlify functions, 0 server actions, ${providerEntryPoints.length} provider entry points, representative failures across ${representativeFailures.length} protected feature groups.`,
 );

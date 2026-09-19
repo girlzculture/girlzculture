@@ -10,7 +10,8 @@ function fixture(options = {}) {
   const admin = {
     async rpc(name, args) {
       calls.push({ name, args });
-      if (name === 'p0_actor_has_permission') return { data: options.allowed !== false };
+      if (name === 'p0_actor_has_permission') return { data: options.allowedPermissions ? options.allowedPermissions.includes(args.p_permission) : options.allowed !== false };
+      if (name === 'business_finance_entry_options') return { data: options.financeEntry || {stylists:[],products:[]} };
       if (name === 'get_public_content_page') return { data: (options.knowledge || []).find(page => page.slug === args.p_slug) || null };
       if (name === 'is_marketplace_visible') return options.visibilityError ? { error: { code: 'unavailable' } } : { data: options.visible ?? true };
       if (name === 'is_salon_profile_public') return options.visibilityError ? { error: { code: 'unavailable' } } : { data: options.profileVisible ?? options.visible ?? true };
@@ -253,4 +254,22 @@ test('assistant refuses to prepare new sends for a closed conversation while ret
  const f=fixture({tables:{bookings:[{id:requestId,salon_id:business,status:'Cancelled',appointment_datetime:'2099-01-01T13:00:00Z',duration_hours:1,customer_id:actor}]}});
  await assert.rejects(f.run('prepare_customer_message',{booking_id:requestId,body:'Private follow-up'}),e=>e.code==='ASSISTANT_CONVERSATION_CLOSED');
  assert.equal(f.saved.length,0);
+});
+
+const financeService = '17700000-0000-4000-8000-000000000003';
+const financeProfessional = '17700000-0000-4000-8000-000000000004';
+const manualSaleArgs = {service_id:financeService,stylist_id:financeProfessional,amount_cents:12000,method:'cash',source:'walk_in',date:'2026-09-18',time:'12:30',client_name:null,payment_received:true};
+test('manual finance execution stores the actual granted permission and only prepares a reviewed draft',async()=>{
+  for(const permission of ['finance_log','finance_manage']) {
+    const f=fixture({allowedPermissions:[permission],financeEntry:{stylists:[{id:financeProfessional,salon_id:business,name:'Aisha'}]},tables:{styles:[{id:financeService,salon_id:business,name:'Silk Press',is_draft:false,archived_at:null}]}});
+    const result=await f.run('prepare_manual_service_sale',manualSaleArgs);
+    assert.equal(result.preview_required,true);assert.equal(f.saved[0].permission,permission);assert.equal(f.saved[0].risk_class,4);
+    assert.equal(f.saved[0].execution_payload.finance_payload.list_cents,12000);assert.equal(f.saved[0].execution_payload.finance_payload.cost_cents,null);
+    assert.equal(f.calls.some(call=>call.name==='record_business_finance'||call.name==='confirm_gc_assistant_request'),false);
+  }
+});
+test('calendar access alone cannot prepare a receipt or read finance selection vocabulary',async()=>{
+  const f=fixture({allowedPermissions:['bookings']});
+  for(const [tool,args] of [['prepare_manual_service_sale',manualSaleArgs],['get_manual_sale_options',{}]])await assert.rejects(f.run(tool,args),/ASSISTANT_ACCESS_DENIED/);
+  assert.equal(f.saved.length,0);assert.equal(f.calls.some(call=>call.name==='business_finance_entry_options'),false);
 });

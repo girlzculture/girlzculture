@@ -23,7 +23,8 @@ export default async function OwnerDashboardRecordPage({
   params: Promise<{ section: string; recordId: string }>;
 }) {
   const { section, recordId } = await params;
-  if (!focusedSections.has(section as DashboardSection) || !recordId) notFound();
+  const isReferralWorkspace = section === "subscription" && recordId === "referrals";
+  if ((!focusedSections.has(section as DashboardSection) && !isReferralWorkspace) || !recordId) notFound();
 
   return (
     <OwnerDashboardApp

@@ -1,4 +1,7 @@
-import { SUBSCRIPTION_PAYMENT_SOURCE_MESSAGES } from "./subscription-payment-source-catalog";
+import { ASSISTANT_MANUAL_SALE_SOURCE_MESSAGES } from "./assistant-manual-sale-source-catalog";
+import { BUSINESS_MONEY_SOURCE_MESSAGES } from "./business-money-source-catalog";
+import { SUBSCRIPTION_PAYMENT_SOURCE_MESSAGES } from "../components/owner/subscriptionPaymentMessages";
+import { BUSINESS_MARKETING_SOURCE_MESSAGES } from "./business-marketing-source-catalog";
 import { BUSINESS_MORNING_SOURCE_MESSAGES } from "./business-morning-source-catalog";
 import { BUSINESS_RESCHEDULE_SOURCE_MESSAGES } from "./business-reschedule-source-catalog";
 import { APPOINTMENT_WAITLIST_SOURCE_MESSAGES } from "./appointment-waitlist-source-catalog";
@@ -20,6 +23,7 @@ const rows: readonly (readonly [string, string, string, string])[] = [
   ["For Businesses", "Pour les entreprises", "Para negocios", "商家专区"],
   ["Business center", "Espace entreprises", "Centro de negocios", "商家中心"],
   ["Pricing", "Tarifs", "Precios", "价格"],
+  ["Keep your business details and preferences up to date.", "Gardez les coordonnées et les préférences de votre entreprise à jour.", "Mantén actualizados los datos y las preferencias de tu negocio.", "及时更新商家资料和偏好设置。"],
   ["Explore", "Explorer", "Explorar", "探索"],
   ["Business login", "Connexion entreprise", "Acceso para negocios", "商家登录"],
   ["Conversation options", "Options de conversation", "Opciones de conversación", "对话选项"],
@@ -146,5 +150,5 @@ const rows: readonly (readonly [string, string, string, string])[] = [
   ["Prices below apply to new subscriptions. Your existing billing terms remain unchanged unless you confirm a plan change.", "Les prix ci-dessous s’appliquent aux nouveaux abonnements. Vos conditions de facturation actuelles restent inchangées, sauf si vous confirmez un changement de formule.", "Los precios siguientes se aplican a nuevas suscripciones. Tus condiciones de facturación actuales no cambian a menos que confirmes un cambio de plan.", "以下价格适用于新订阅。除非您确认更改方案，否则现有计费条款保持不变。"],
 ];
 export const DASHBOARD_REDESIGN_SOURCE_MESSAGES: Record<string, Record<string, string>> = Object.fromEntries(
-  ['fr', 'es', 'zh-CN'].map((locale, index) => [locale, { ...SUBSCRIPTION_PAYMENT_SOURCE_MESSAGES[locale], ...BUSINESS_MORNING_SOURCE_MESSAGES[locale], ...GOOGLE_BUSINESS_SOURCE_MESSAGES[locale], ...APPOINTMENT_WAITLIST_SOURCE_MESSAGES[locale], ...DASHBOARD_COMMON_CORRECTIONS[locale], ...BUSINESS_COMMUNICATION_SOURCE_MESSAGES[locale], ...BUSINESS_RESCHEDULE_SOURCE_MESSAGES[locale], ...BUSINESS_MESSAGES_SOURCE_MESSAGES[locale], ...BUSINESS_FINANCE_SOURCE_MESSAGES[locale], ...BOOKING_DEPOSIT_SOURCE_MESSAGES[locale], ...BUSINESS_OVERVIEW_SOURCE_MESSAGES[locale], ...BUSINESS_CLIENT_SOURCE_MESSAGES[locale], ...BUSINESS_CATALOG_SOURCE_MESSAGES[locale], ...BUSINESS_TEAM_SOURCE_MESSAGES[locale], ...BUSINESS_PRODUCTS_SOURCE_MESSAGES[locale], ...BUSINESS_BOOKINGS_SOURCE_MESSAGES[locale], ...BUSINESS_REVIEWS_SOURCE_MESSAGES[locale], ...Object.fromEntries(rows.map(row => [row[0], row[index + 1]])) }]),
+  ['fr', 'es', 'zh-CN'].map((locale, index) => [locale, { ...ASSISTANT_MANUAL_SALE_SOURCE_MESSAGES[locale], ...BUSINESS_MONEY_SOURCE_MESSAGES[locale], ...BUSINESS_MARKETING_SOURCE_MESSAGES[locale], ...SUBSCRIPTION_PAYMENT_SOURCE_MESSAGES[locale], ...BUSINESS_MORNING_SOURCE_MESSAGES[locale], ...GOOGLE_BUSINESS_SOURCE_MESSAGES[locale], ...APPOINTMENT_WAITLIST_SOURCE_MESSAGES[locale], ...DASHBOARD_COMMON_CORRECTIONS[locale], ...BUSINESS_COMMUNICATION_SOURCE_MESSAGES[locale], ...BUSINESS_RESCHEDULE_SOURCE_MESSAGES[locale], ...BUSINESS_MESSAGES_SOURCE_MESSAGES[locale], ...BUSINESS_FINANCE_SOURCE_MESSAGES[locale], ...BOOKING_DEPOSIT_SOURCE_MESSAGES[locale], ...BUSINESS_OVERVIEW_SOURCE_MESSAGES[locale], ...BUSINESS_CLIENT_SOURCE_MESSAGES[locale], ...BUSINESS_CATALOG_SOURCE_MESSAGES[locale], ...BUSINESS_TEAM_SOURCE_MESSAGES[locale], ...BUSINESS_PRODUCTS_SOURCE_MESSAGES[locale], ...BUSINESS_BOOKINGS_SOURCE_MESSAGES[locale], ...BUSINESS_REVIEWS_SOURCE_MESSAGES[locale], ...Object.fromEntries(rows.map(row => [row[0], row[index + 1]])) }]),
 );

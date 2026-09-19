@@ -8,6 +8,8 @@ import { P0_OWNER_SOURCE_MESSAGES } from "@/i18n/p0-owner-source-catalog";
 import { LAUNCH_WORKSPACE_SOURCE_MESSAGES } from "@/i18n/launch-workspace-source-catalog";
 import { GCIA_SOURCE_MESSAGES } from "@/i18n/gcia-source-catalog";
 import { DASHBOARD_REDESIGN_SOURCE_MESSAGES } from "@/i18n/dashboard-redesign-source-catalog";
+import { BOOKING_MONEY_COPY } from "@/i18n/business-booking-money-copy";
+import { REFERRAL_COPY_ROWS } from "@/i18n/business-referral-copy";
 type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
@@ -205,9 +207,13 @@ const wo: SourceCatalog = {
   "Filter": "Tànn",
 };
 
+const operationalMoneyMessages = (column: 1 | 2 | 3): SourceCatalog => Object.fromEntries(
+  [...BOOKING_MONEY_COPY, ...REFERRAL_COPY_ROWS].map(row => [row[0], row[column]]),
+);
+
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {
-  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es, ...GCIA_SOURCE_MESSAGES.es, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.es },
-  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr, ...GCIA_SOURCE_MESSAGES.fr, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.fr },
+  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es, ...GCIA_SOURCE_MESSAGES.es, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.es, ...operationalMoneyMessages(2) },
+  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr, ...GCIA_SOURCE_MESSAGES.fr, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.fr, ...operationalMoneyMessages(1) },
   wo: { ...P0_OWNER_SOURCE_MESSAGES.wo, ...wo, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.wo, ...GCIA_SOURCE_MESSAGES.wo },
-  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"], ...GCIA_SOURCE_MESSAGES["zh-CN"], ...DASHBOARD_REDESIGN_SOURCE_MESSAGES["zh-CN"] },
+  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"], ...GCIA_SOURCE_MESSAGES["zh-CN"], ...DASHBOARD_REDESIGN_SOURCE_MESSAGES["zh-CN"], ...operationalMoneyMessages(3) },
 };

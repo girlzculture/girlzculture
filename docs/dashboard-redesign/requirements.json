@@ -697,13 +697,25 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/owner/BusinessPhotoLibrary.tsx",
+        "src/i18n/business-photo-recovery-copy.ts",
+        "tests/browser/business-photo-conflict.spec.ts"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": "Remaining full-clause and final-candidate acceptance is unfinished; this is not an external blocker.",
+      "changes": [
+        "Short assistant copy, safe support references and explicit photo saving/retry states exist in current source. Independent bounded source review confirmed this group is partially implemented, not untouched.",
+        "Photo conflict recovery now reloads authoritative saved details through the existing protected profile read, preserves the owner draft, and discards late results after the editor closes or switches.",
+        "The reproduced320px My Page mobile section-label collision is corrected in source by intrinsic-width, nonshrinking controls with whole-control wrapping. Labels, routes, selected markers, More menu and desktop layout are unchanged."
+      ],
+      "verification": [
+        "2026-09-19 bounded source/evidence reconciliation only: corrected stale not-started label; no new execution or live acceptance claimed.",
+        "photo-conflict-before-roles.log demonstrates the missing Reload control before correction. combined-ui-final-browser.log initially passed6/8 Photo cases; two late-reload failures came from a generic open-dialog locator matching GC Assistant after the photo editor closed. The exact named photo-dialog locator preserves the assertions; combined-ui-tabs-browser.log now passes all8 Photo recovery/boundary cases plus8 existing profile/photo regressions. No hosted persistence is claimed.",
+        "The earlier320px French capture showed My Page Informations/Prestations section labels colliding. The corrected final French320px capture was independently inspected and is readable without overlap; this is bounded visual evidence, not a whole-page acceptance claim.",
+        "my-page-tabs-before.log preserves the French320px geometry failure before correction. Focused ESLint/TypeScript pass; combined-ui-tabs-browser.log passes all8 new Chromium/WebKit cases across four locales, each at320/390px with actual text/control bounds, exact routes, More-menu navigation and back."
+      ],
       "live_evidence": [],
       "detailed_clause": "| UI-05 | Use plain business language. Replace implementation-oriented explanations in ordinary screens with useful labels, statuses, help, and recoverable errors. | For example, media owners see uploading/saved/published/retry status rather than a permanent explanation of storage stages. |",
       "detailed_clause_line": 53,
@@ -711,13 +723,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
+      "remaining": "Simplify the Overview cancellation alert wording and complete the remaining changed-screen plain-language review and hosted acceptance. Photo recovery and the My Page mobile-section correction have bounded automated evidence; final-source required CI remains.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -851,13 +863,22 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/owner/BusinessFinances.tsx",
+        "src/i18n/business-finance-source-catalog.ts",
+        "tests/browser/business-finances.spec.ts"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": "Remaining full-clause and final-candidate acceptance is unfinished; this is not an external blocker.",
+      "changes": [
+        "Overview empty states, Finance loading/error/reload states and Morning Brief unavailable-not-zero behavior exist with earlier focused evidence.",
+        "Finance books and selected receipt/refund editors now require the current business, permissions, period and timezone. Independently bound entry choices preserve same-workspace free-form drafts through pending or failed period reads. Empty Team earnings provides an explanation and only the currently permitted action."
+      ],
+      "verification": [
+        "2026-09-19 bounded source/evidence reconciliation only: corrected stale not-started label; no new execution or live acceptance claimed.",
+        "finance-period-before-corrected.log reproduces old totals and an old receipt editor under newly selected dates. Source passed independent review and static checks. combined-ui-final-browser.log passes all14 new Chromium/WebKit held-snapshot, service/product draft and four-language empty-state cases plus20 affected existing Finance save/compensation/tab/draft regressions. These are local synthetic API-contract checks, not hosted role/persistence acceptance."
+      ],
       "live_evidence": [],
       "detailed_clause": "| UI-06 | Design loading, empty, error, and populated states deliberately. | A business without transactions or bookings still gets a useful screen; missing activity is never replaced with fabricated live figures. |",
       "detailed_clause_line": 54,
@@ -865,13 +886,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
+      "remaining": "Finish the remaining page-state acceptance matrix and hosted role/persistence acceptance. The bounded Finance period/draft/empty-team correction has34 passing new and affected existing browser cases; this is not full Finances completion.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -1164,19 +1185,25 @@
         "src/app/globals.css",
         "public/fonts/montserrat",
         "src/components/owner/BookingsWorkspace.tsx",
-        "src/lib/businessBookings.ts"
+        "src/lib/businessBookings.ts",
+        "src/i18n/owner-mobile-navigation-copy.ts",
+        "tests/browser/dashboard-redesign.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
         "Reproduced hairline Montserrat rendering in Windows WebKit with Google resource; official pinned static weights render correctly with the same family and weight. Included upstream OFL.",
-        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation."
+        "Bookings: real period summaries; business-local date/staff/service/status filters synchronized in the URL; original detail actions; 25-record pages; phone cards visible clear of fixed navigation. Dashboard native focus scrolling no longer races pointer activation.",
+        "An inspected French phone viewport showed mid-word bottom-navigation breaks. Explicit short French labels retain full accessible destination names, existing routes/icons/permissions and a 13px floor without truncation; other locales retain their existing rendering.",
+        "The reproduced320px My Page mobile section-label collision is corrected in source by intrinsic-width, nonshrinking controls with whole-control wrapping. Labels, routes, selected markers, More menu and desktop layout are unchanged."
       ],
       "verification": [
         "Isolated Chromium/WebKit comparison preserved outsideGit; two focused390finance browser tests passed and native header crop visually inspected. Global final regression still pending.",
         "bookings-final-browser.log: 10 Chromium/WebKit cases in EN/FR/ES/zh-CN; pagination/refresh/back, midnight date and actual source/amount facts. Four core tests. Client-link narrow controls: 8 cases. Original calendar/service-name searches:15 cases. Local synthetic evidence, live acceptance pending.",
-        "finance-localization-and-inventory-final.log: 10/10 passed, four-language finance export/error/original-data checks in Chromium/WebKit plus complete Spanish phone owner-route audit with zero unexpected requests, untranslated copy, overflow or Axe violations. Shared fixture now explicitly serves Finances. Full build and final narrow lint passed."
+        "finance-localization-and-inventory-final.log: 10/10 passed, four-language finance export/error/original-data checks in Chromium/WebKit plus complete Spanish phone owner-route audit with zero unexpected requests, untranslated copy, overflow or Axe violations. Shared fixture now explicitly serves Finances. Full build and final narrow lint passed.",
+        "Focused ESLint and TypeScript pass. combined-ui-final-browser.log passes both fixed-bottom-navigation cases, each checking320px/390px names/routes, >=13px one-line labels and no overflow. The separately exposed My Page upper-tab collision is now corrected: combined-ui-tabs-browser.log passes8 four-locale Chromium/WebKit geometry/menu/return cases at both widths, and the final French320px capture was independently inspected. Full mobile visual acceptance remains unverified.",
+        "my-page-tabs-before.log preserves the French320px pre-correction geometry failure. The subsequent intrinsic-width mobile controls pass focused ESLint/TypeScript and all8 new cases in combined-ui-tabs-browser.log, with no label shrinking/truncation or route/menu changes."
       ],
       "live_evidence": [],
       "detailed_clause": "| MOB-01 | Keep every necessary feature accessible on mobile, using compact cards, lists, tabs, and menus suitable for touch. |",
@@ -1187,7 +1214,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish matched phone/tablet/landscape review across all pages and editors, including fixed-header/footer spacing. Existing component browser passes are not full design acceptance.",
+      "remaining": "Finish matched phone/tablet/landscape review across all remaining pages and editors, including fixed-header/footer spacing. Fixed bottom navigation and My Page mobile-section corrections pass both engines, but component browser passes are not full design acceptance; final-source required CI remains.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -5675,13 +5702,20 @@
       "source_line": 599,
       "implementation_paths": [
         "src/app/api/stripe/portal/route.ts",
-        "src/components/owner/OwnerDashboardApp.tsx"
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/SubscriptionPaymentMethod.tsx",
+        "src/lib/subscriptionPaymentMethodServer.ts",
+        "supabase/migrations/20260919015517_subscription_payment_method_update_attempts.sql"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Existing setup-only payment-method workflow uses the exact saved customer/subscription with durable attempts and masked fresh readback. Stripe read-only inspection identified the affected objects in Girlz Culture sandbox; live runtime requests use a separate live account. No replacement subscription, charge or production credential change."
+      ],
+      "verification": [
+        "Operational checkpoint b7bbf1b:40 focused billing cases and24 Chromium/WebKit cases pass; isolated173-migration database verifies attempts. Live HTTP400 resource_missing/customer was traced to the exact separate sandbox. Sandbox workflow guard7 and actual local database adapter5 pass; no real sandbox workflow has run."
+      ],
       "live_evidence": [],
       "detailed_clause": "BILL-03 — Reuse the secure Stripe integration for collecting/updating payment details. After return, show the updated masked/default method and persist it for the intended subsequent subscription payments. Do not put raw card details into application logs or the assistant conversation.",
       "detailed_clause_line": 306,
@@ -5689,13 +5723,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Reported subscription payment-method incident is not resolved. Safe diagnostics exist; identify the specific Stripe portal failure and verify correct existing customer, no app-initiated charge, default-method readback and cancellation.",
+      "remaining": "Finish isolated existing-sandbox setup completion/cancel/default readback with safe event routing, scheduled agreement support, reviewed migration and final release gates. Read-only sandbox key configuration is pending; production remains unchanged.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -5771,13 +5805,20 @@
       "source_line": 600,
       "implementation_paths": [
         "src/app/api/stripe/portal/route.ts",
-        "src/components/owner/OwnerDashboardApp.tsx"
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/SubscriptionPaymentMethod.tsx",
+        "src/lib/subscriptionPaymentMethodServer.ts",
+        "supabase/migrations/20260919015517_subscription_payment_method_update_attempts.sql"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Existing setup-only payment-method workflow uses the exact saved customer/subscription with durable attempts and masked fresh readback. Stripe read-only inspection identified the affected objects in Girlz Culture sandbox; live runtime requests use a separate live account. No replacement subscription, charge or production credential change."
+      ],
+      "verification": [
+        "Operational checkpoint b7bbf1b:40 focused billing cases and24 Chromium/WebKit cases pass; isolated173-migration database verifies attempts. Live HTTP400 resource_missing/customer was traced to the exact separate sandbox. Sandbox workflow guard7 and actual local database adapter5 pass; no real sandbox workflow has run."
+      ],
       "live_evidence": [],
       "detailed_clause": "BILL-04 — Verify update and cancellation paths, persistence/default selection, correct business association and absence of an app-initiated charge from this action. Keep the existing subscription price, billing schedule and plan intact. Any independent existing invoice/payment behavior must be identified accurately; the card-edit flow must not promise that all future or unrelated charges cease.",
       "detailed_clause_line": 308,
@@ -5785,13 +5826,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Reported subscription payment-method incident is not resolved. Safe diagnostics exist; identify the specific Stripe portal failure and verify correct existing customer, no app-initiated charge, default-method readback and cancellation.",
+      "remaining": "Finish isolated existing-sandbox setup completion/cancel/default readback with safe event routing, scheduled agreement support, reviewed migration and final release gates. Read-only sandbox key configuration is pending; production remains unchanged.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -6538,11 +6579,15 @@
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/i18n"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": "Remaining full-clause and final-candidate acceptance is unfinished; this is not an external blocker.",
+      "changes": [
+        "Short greeting, collapsed voice/process explanations and safe support references already replace repeated system explanations and raw diagnostics."
+      ],
+      "verification": [
+        "2026-09-19 bounded source/evidence reconciliation only: corrected stale not-started label; no new execution or live acceptance claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "COPY-01 — Audit user-facing copy throughout the platform, especially GC Assistant. Replace mechanical phrases such as “Ask about your business, find an answer, or prepare a change. I will keep it conversational…” with short, natural, useful wording. Remove unnecessary self-description and repeated system-process explanations. Keep internal diagnostic detail available to support rather than filling ordinary screens with it.",
       "detailed_clause_line": 328,
@@ -6550,13 +6595,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete platform-wide plain-language copy review in four languages; do not confuse translated static source catalogs with verified complete screens.",
+      "remaining": "Review changed screen/error copy in four languages; source catalog coverage alone does not establish complete copy acceptance.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -9681,11 +9726,15 @@
         "src/lib/assistantPerformance.ts",
         "src/lib/ownerReadServer.ts"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": "Remaining full-clause and final-candidate acceptance is unfinished; this is not an external blocker.",
+      "changes": [
+        "Canonical finance/performance/calendar/inventory/client reads with explicit reporting periods and own-role isolation are already implemented and covered by focused automated checks."
+      ],
+      "verification": [
+        "2026-09-19 bounded source/evidence reconciliation only: corrected stale not-started label; no new execution or live acceptance claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-01 — Deepen the existing assistant; preserve its working language, memory and action functionality. Ground answers in this business's actual bookings, finances, staff, services, calendar, inventory and authorized client history. Every claim about a trend, profit opportunity or available capacity must have a real data basis and period.",
       "detailed_clause_line": 399,
@@ -9693,13 +9742,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Implement the six evidence-grounded opportunity calculations and approved next actions; no invented profit/availability/client figures. No complete dedicated advice module is verified.",
+      "remaining": "Finish final-candidate integration and genuine missing-data evidence for these reads, preserving working language/memory/actions. The six opportunity calculations remain separately tracked under ADVISE-02/03.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -9776,13 +9825,23 @@
       "implementation_paths": [
         "src/lib/gcAssistantPlanningServer.ts",
         "src/lib/assistantPerformance.ts",
-        "src/lib/ownerReadServer.ts"
+        "src/lib/ownerReadServer.ts",
+        "src/lib/businessMoneyInsights.ts",
+        "src/components/owner/BusinessMoneyInsights.tsx",
+        "src/lib/businessBookingMoney.ts",
+        "src/lib/businessBookingMoneyServer.ts",
+        "src/components/owner/BusinessBookingMoney.tsx",
+        "src/app/api/salon/booking-money/route.ts"
       ],
       "state": "PENDING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views."
+      ],
+      "verification": [
+        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint."
+      ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-02 — Provide proactive, specific suggestions: slow Tuesday afternoons; a genuinely profitable but underbooked service; own-business regulars absent for six weeks; uneven stylist utilization; open Thursday slots; and low stock before the weekend. Explain the relevant numbers briefly. Do not hardcode the sample “8%”, “6 clients” or “3 slots” as facts.",
       "detailed_clause_line": 401,
@@ -9790,13 +9849,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Implement the six evidence-grounded opportunity calculations and approved next actions; no invented profit/availability/client figures. No complete dedicated advice module is verified.",
+      "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "missing",
-      "implementation_status": "PENDING",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -9873,13 +9932,23 @@
       "implementation_paths": [
         "src/lib/gcAssistantPlanningServer.ts",
         "src/lib/assistantPerformance.ts",
-        "src/lib/ownerReadServer.ts"
+        "src/lib/ownerReadServer.ts",
+        "src/lib/businessMoneyInsights.ts",
+        "src/components/owner/BusinessMoneyInsights.tsx",
+        "src/lib/businessBookingMoney.ts",
+        "src/lib/businessBookingMoneyServer.ts",
+        "src/components/owner/BusinessBookingMoney.tsx",
+        "src/app/api/salon/booking-money/route.ts"
       ],
       "state": "PENDING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views."
+      ],
+      "verification": [
+        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint."
+      ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-03 — Offer useful next steps such as preparing a promotion, featuring a service, drafting a rebooking message, suggesting a schedule adjustment or a restock action. Execute only the authorized/approved operation through the real workflow. Suggesting a message, purchase or reschedule is not evidence it was sent, bought or saved.",
       "detailed_clause_line": 403,
@@ -9887,13 +9956,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Implement the six evidence-grounded opportunity calculations and approved next actions; no invented profit/availability/client figures. No complete dedicated advice module is verified.",
+      "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "missing",
-      "implementation_status": "PENDING",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -9972,11 +10041,15 @@
         "src/lib/assistantPerformance.ts",
         "src/lib/ownerReadServer.ts"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "blocker": "Remaining full-clause and final-candidate acceptance is unfinished; this is not an external blocker.",
+      "changes": [
+        "Natural service matching, freshly authorized follow-ups, remembered-context reauthorization and staff finance isolation already exist."
+      ],
+      "verification": [
+        "2026-09-19 bounded source/evidence reconciliation only: corrected stale not-started label; no new execution or live acceptance claimed."
+      ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-04 — Retain natural-language matching and follow-up continuity from sections 10–11. Be warm, concise and specific in each language, and explain genuine data limitations instead of providing generic advice or invented figures. Finance questions must respect staff-role access, not just business ownership.",
       "detailed_clause_line": 405,
@@ -9984,13 +10057,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Implement the six evidence-grounded opportunity calculations and approved next actions; no invented profit/availability/client figures. No complete dedicated advice module is verified.",
+      "remaining": "Finish final-candidate multilingual matching/follow-up and finance-role acceptance. Simulated cases do not establish real-provider natural-language quality; opportunity calculations stay under ADVISE-02/03.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -15164,13 +15237,21 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "tests/browser/business-settings.spec.ts",
+        "src/components/owner/GcAssistant.tsx"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Settings opens a compact horizontal-tab workspace directly. Account and notification submits patch only visible fields, preserving unrelated values. Duplicate headings and back-to-same-page controls removed. Required alerts stay enabled.",
+        "Settings compact tabs and direct forms preserve tab-owned fields; staff profile controls follow permissions. Owner Settings opens the existing Assistant appearance controls without a second preference store."
+      ],
+      "verification": [
+        "Before correction, two targeted owner cases reproduced destructive mixed-field payload/validation. Current production-build Chromium/WebKit suite passes22/22: owner14, settings-only staff4 and existing assistant appearance launcher4. Four locales and viewport classes, save/retry, permission gating, selected avatar readback, reload and focus restoration.",
+        "Scoped lint/TypeScript and independent source review pass. Screenshot evidence is local synthetic acceptance, not live deployment."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-14 | Settings | Existing account/business preferences, language and relevant assistant-avatar controls, clear forms and appropriate permissions. |",
       "detailed_clause_line": 511,
@@ -15178,13 +15259,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete this page and all its detail/edit/dialog states against the reference, four languages and actual feature clauses; component passes alone do not close the page requirement.",
+      "remaining": "Verify22 combined Settings browsers and actual desktop/mobile rendering, then hosted role/persistence acceptance and release checks.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -19249,20 +19330,29 @@
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IN_PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/components/SalonOnboarding.tsx",
         "src/lib/businessOnboarding.ts",
         "src/app/api/salon/onboarding/route.ts",
-        "src/components/SalonApplication.tsx"
+        "src/components/SalonApplication.tsx",
+        "src/components/owner/BusinessOnboardingDraft.tsx",
+        "src/app/api/salon/onboarding-draft/route.ts",
+        "src/lib/businessOnboardingDraft.ts",
+        "src/lib/businessOnboardingAiServer.ts",
+        "supabase/migrations/20260919023609_business_onboarding_reviewed_drafts.sql",
+        "docs/dashboard-redesign/ONBOARDING-DRAFT-ACCEPTANCE.md"
       ],
       "changes": [
-        "Separate local in-progress draft source/review/apply slice stores private provenance and explicit owner review, with an unpublished new-business hold and four-language manual fallback. Source-provider extraction, complete live-business application, SQL/browser acceptance and entry wiring remain under implementation; do not treat this as finished zero-setup onboarding."
+        "Separate local in-progress draft source/review/apply slice stores private provenance and explicit owner review, with an unpublished new-business hold and four-language manual fallback. Source-provider extraction, complete live-business application, SQL/browser acceptance and entry wiring remain under implementation; do not treat this as finished zero-setup onboarding.",
+        "Private source and provenance become a six-section owner-reviewed draft, explicit confirmation and atomic workspace apply. Manual fallback and existing-business change review preserve current records. Optional AI extraction shares existing cap reservation; quoted price/duration grounding rejects fabricated/range-endpoint values. Exact unpublished policy draft resumes safely."
       ],
-      "verification": [],
+      "verification": [
+        "50 focused Node/API/AI/policy cases and actual local174 SQL checks pass. Production build and all28 Chromium/WebKit cases pass with exact confirmation, persistence and error assertions. No real-provider extraction or hosted apply claim."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Finish browser and hosted source/review/apply/readback acceptance. Instagram automatic official access remains an explicit external dependency; handle alone grants no import permission. Apply reviewed migration and final release checks.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -19370,7 +19460,8 @@
       },
       "progress_status": "In progress",
       "state": "IN_PROGRESS",
-      "blocker": "Implementation and full workflow acceptance are in progress; no completion claimed."
+      "blocker": "Implementation and full workflow acceptance are in progress; no completion claimed.",
+      "acceptance": "AUTOMATED ONLY"
     },
     {
       "id": "SF-VOICE",
@@ -19398,17 +19489,33 @@
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/components/owner/AssistantDictation.tsx",
         "src/components/owner/AssistantSpeech.tsx",
-        "src/lib/assistantSpeechCore.ts"
+        "src/lib/assistantSpeechCore.ts",
+        "src/lib/assistantManualSaleServer.ts",
+        "supabase/migrations/20260919052000_assistant_manual_service_receipts.sql",
+        "tests/browser/p0-assistant-manual-sale.spec.ts",
+        "src/lib/assistantOutstandingBalances.ts",
+        "src/components/owner/AssistantBalances.tsx",
+        "src/i18n/assistant-balances-copy.ts",
+        "supabase/migrations/20260919063800_assistant_outstanding_balances.sql",
+        "tests/p0-assistant-unpaid-scope.test.mjs",
+        "tests/browser/p0-assistant-balances.spec.ts",
+        "docs/dashboard-redesign/ASSISTANT-OUTSTANDING-BALANCES-ACCEPTANCE.md"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Reviewed manual received-payment action resolves own service and professional and writes the canonical sale/receipt atomically, without a provider charge or automatic customer message.",
+        "The bounded outstanding-balances read reuses canonical own-business books with fresh finance, bookings and client-history authorization before and after the read. It separates completed balances from pending agreed amounts, preserves exact record links, and returns unavailable rather than debt/zero when payment evidence is unverified."
+      ],
+      "verification": [
+        "78 focused assistant tests and actual local177 SQL pass; independent review completed. All10 production-build Chromium/WebKit manual receipt cases pass, including review, confirmation, exact readback and no provider payment or automatic customer message.",
+        "Outstanding balances is implemented: assistant-balances-final.log passes20/20 focused core/scope cases, including13 independent two-business/direct/follow-up/revocation cases; combined-179-assistant-impacted.log passes82/82 affected assistant checks. Incremental local179 SQL passes on the verified178 baseline. All12 browser cases have composite evidence:10 in combined-179-focused-browser.log plus2 corrected Spanish FinanceRecords-format expectations in combined-179-fixture-corrections.log. Real dictation/provider interpretation and hosted acceptance remain unverified."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Finish final required CI and clean-chain migration verification, bounded hosted voice clarification/review/save/readback, and remaining voice/action clauses without treating dictated intent as implicit payment confirmation. Automated outstanding-balance facts and links do not establish real-provider interpretation quality.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -19828,18 +19935,29 @@
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/components/owner/BusinessFinances.tsx",
         "src/lib/businessFinanceCore.ts",
         "src/lib/businessFinanceData.ts",
-        "src/lib/businessFinanceExportServer.ts"
+        "src/lib/businessFinanceExportServer.ts",
+        "src/lib/businessMoneyInsights.ts",
+        "src/components/owner/BusinessMoneyInsights.tsx",
+        "src/lib/businessBookingMoney.ts",
+        "src/lib/businessBookingMoneyServer.ts",
+        "src/components/owner/BusinessBookingMoney.tsx",
+        "src/app/api/salon/booking-money/route.ts"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views."
+      ],
+      "verification": [
+        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed-date before/after evidence and actual local service_role projection verified.",
+        "All14 booking-cohort and10 MoneyInsights Chromium/WebKit cases now have composite passing evidence: initial12/14 and8/10 plus the four corrected Spanish expected-format cases in combined-179-focused-browser.log. Exact values remain asserted using the documented es-US formatter. That run also captured EN/FR/Chinese viewports. The separate fixed French bottom-navigation and My Page upper-tab corrections now pass both engines, with the final French320px capture inspected; hosted records and full visual/action acceptance remain unverified."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -20114,19 +20232,29 @@
       "source_line": 653,
       "added_specification": "software-first-2026-09-18",
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "NOT STARTED",
-      "verification_status": "UNVERIFIED",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/lib/marketingEntitlements.ts",
         "src/components/owner/BusinessPhotoLibrary.tsx",
-        "src/components/owner/OwnerDashboardApp.tsx"
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/BusinessMarketing.tsx",
+        "src/lib/businessMarketing.ts",
+        "src/components/public/BusinessMarketingUpdates.tsx",
+        "netlify/functions/business-marketing-publish.ts",
+        "supabase/migrations/20260919033712_business_marketing_publication.sql",
+        "docs/dashboard-redesign/BUSINESS-MARKETING-ACCEPTANCE.md"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Own-business media/services/promotions produce editable four-language drafts and canonical booking links; owner review approves first-party business-page publication or scheduling. Worker revalidates authorization and source facts. Social export is explicitly manual and is not represented as external posting."
+      ],
+      "verification": [
+        "19 focused core/API/worker tests and actual-role local175 SQL checks pass. Production build,18 owner/public cases and4 workspace viewport cases pass in Chromium/WebKit. Desktop viewport reviewed; corrected390px screenshot positioning awaits focused capture. Hosted scheduler/publication remains unverified."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Complete18 browsers, final visual review, reviewed migration, actual worker registration/scheduling and hosted public readback. External social publishing is not configured or claimed working.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -20232,7 +20360,9 @@
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
       },
-      "progress_status": "Not started"
+      "progress_status": "In progress",
+      "state": "IN_PROGRESS",
+      "acceptance": "AUTOMATED ONLY"
     },
     {
       "id": "SF-WEBSITE",
@@ -20680,20 +20810,31 @@
       "source_line": 701,
       "added_specification": "software-first-2026-09-18",
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "NOT STARTED",
-      "verification_status": "UNVERIFIED",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/lib/plans.ts",
         "src/lib/subscriptionPriceServer.ts",
         "src/app/api/stripe/subscription/checkout/route.ts",
-        "src/app/api/stripe/portal/route.ts"
+        "src/app/api/stripe/portal/route.ts",
+        "src/lib/businessReferrals.ts",
+        "src/lib/referralPaymentEvidence.ts",
+        "src/components/owner/BusinessReferrals.tsx",
+        "src/components/admin/ReferralCampaigns.tsx",
+        "supabase/migrations/20260919043012_business_referral_campaigns.sql",
+        "docs/dashboard-redesign/REFERRAL-ACCEPTANCE.md"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Inactive configurable campaigns, own-business opaque codes/claim, canonical verified payment qualification, immutable reward terms, duplicate/self-referral controls and private fraud holds are implemented locally. Independent review corrected optional evidence failure blocking canonical billing and missing later dispute holds. No reward issuance or live campaign."
+      ],
+      "verification": [
+        "22 focused referral/existing-agreement tests and actual local176 SQL assertions pass. Optional failed provider proof preserves canonical webhook payment processing; private generation-bound observations support retry.",
+        "Original combined24 referral cases exposed14 owner route404 and10 Admin fixture-storage failures; these outcomes remain recorded. After narrow route/fixture corrections, combined-179-focused-browser.log and combined-179-fixture-corrections.log provide22/24 composite passes. The final two French Admin cases pass in combined-ui-final-browser.log after correcting real double translation of an already-localized status, completing24/24 composite browser evidence. Original assertions, support-reference checks and permission boundaries remain unchanged; hosted/provider acceptance is unverified."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Complete hosted role/persistence and reward-workflow evidence, protected migration and inactive configuration verification. Shared owner/Admin entries and all24 composite browser cases are verified locally. Actual campaign amount/recipient/dates are unconfigured; no real rewards may be issued in tests.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -20799,7 +20940,9 @@
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
       },
-      "progress_status": "Not started"
+      "progress_status": "In progress",
+      "state": "IN_PROGRESS",
+      "acceptance": "AUTOMATED ONLY"
     },
     {
       "id": "SF-PRICING",
@@ -24553,10 +24696,10 @@
     }
   ],
   "progress_audit": {
-    "at": "2026-09-19T04:00:58.490669+00:00",
+    "at": "2026-09-19T07:13:11.716600+00:00",
     "counts": {
-      "In progress": 158,
-      "Not started": 17,
+      "In progress": 170,
+      "Not started": 5,
       "Implemented / unverified": 20,
       "Completed / verified": 1,
       "Explicitly deferred": 5
@@ -24565,21 +24708,21 @@
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
     "uncommitted": true,
-    "uncommitted_summary": "This operational checkpoint is prepared for commit; standalone onboarding/marketing work remains locally uncommitted. Production unchanged.",
+    "uncommitted_summary": "Reviewed operational/CI corrections and software-first slices after b7bbf1b; local verification only, not released.",
     "production_checked_at": "2026-09-18T19:25:03.226Z",
     "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
     "production_deployment": "6aac503fa5eacb00089c6d87",
     "production_locked": true,
     "original140_counts": {
-      "In progress": 105,
-      "Not started": 15,
+      "In progress": 115,
+      "Not started": 5,
       "Implemented / unverified": 19,
       "Completed / verified": 1
     },
     "total": 201,
-    "current_work": "Operational checkpoint verified:24 billing browsers plus6 public-policy browsers,72 assistant/policy server cases,40 billing cases and173 local migrations/assertions. Exact Stripe sandbox association identified; isolated provider acceptance remains. Onboarding and marketing implementation continues separately; full201 release unfinished.",
-    "parent_commit": "4bf477de17d45473d19c3462ce42697c72a43acb",
-    "checkpoint": "Operational code and evidence accompany this Git checkpoint; onboarding and marketing changes remain locally uncommitted."
+    "current_work": "Combined UI history52passed/2failed is preserved. Subsequent combined-ui-tabs-browser.log24/24 passes allPhoto8, MyPage navigation8 and existing profile/photo8. Finance34 and French bottom navigation2 already pass; referrals24, outstanding balances12, cohort14 and insights10 have composite browser evidence. Six disabled-opacity classnames changed after the last local build; full design guard/fixtures/contrast and2642/2642 required-locale coverage pass. Required CI must rebuild final source; clean-chain/hosted acceptance remains. No production changes.",
+    "parent_commit": "b7bbf1b4f0007a50244825e8cb279b9914c32eaf",
+    "checkpoint": "Use containing commit for final checkpoint; current local verification does not establish hosted or deployed acceptance."
   },
   "latest_authority": {
     "source": "founder-software-first-2026-09-18.md",
@@ -24590,11 +24733,11 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-19T03:11:59.625384+00:00",
-    "head": "Operational correction checkpoint follows 4bf477de17d45473d19c3462ce42697c72a43acb; use containing Git commit for exact source.",
+    "at": "2026-09-19T05:12:01.653270+00:00",
+    "head": "Latest pushed b7bbf1b4f0007a50244825e8cb279b9914c32eaf; newer documented features are local working-tree changes.",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
     "provider_access": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
-    "local_checkpoint": "Operational corrections passed focused checks; sandbox association diagnosed; onboarding/marketing and full release unfinished."
+    "local_checkpoint": "Local automated evidence now includes Photo8/8, MyPage navigation8/8, affected profile/photo8/8, Finance34, French bottom navigation2 and composite referrals24, balances12, cohort14, insights10. The final French320px navigation capture is readable. Six subsequent CSS classname corrections passed static design checks but were not in the last local build; final-source required CI remains. Sandbox proof remains external-key/event-routing dependent. Full release is unfinished."
   }
 }

@@ -9,14 +9,16 @@ import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
-import { useAssistantBusinessBinding } from "@/components/owner/GcAssistant";
+import { GcAssistantAppearanceLauncher, useAssistantBusinessBinding } from "@/components/owner/GcAssistant";
 import { assistantAvatar } from "@/lib/assistantAppearance";
 import BusinessPolicies from "@/components/owner/BusinessPolicies";
+import { onboardingText } from "@/i18n/business-onboarding-copy";
 import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
 import BusinessOverview from "@/components/owner/BusinessOverview";
 import ProductsWorkspace from "@/components/owner/ProductsWorkspace";
 import BusinessFinances from "@/components/owner/BusinessFinances";
 import SubscriptionPaymentMethod from "@/components/owner/SubscriptionPaymentMethod";
+import BusinessReferrals, { SubscriptionReferralNavigation } from "@/components/owner/BusinessReferrals";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { intlLocale } from "@/i18n/catalog";
@@ -42,8 +44,6 @@ import {
   Megaphone,
   Plus,
   Star,
-  UserRound,
-  UsersRound,
 } from "lucide-react";
 import { getSessionForScope, reportClientOperationalFailure, reportClientOperationalRecovery, salonSupabase as supabase } from "@/lib/supabase";
 import { createAuthenticatedApiClient } from "@/lib/scopedApiClient";
@@ -98,6 +98,7 @@ import {
 import BookingInbox from "@/components/BookingInbox";
 import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
+import BusinessMarketing from "@/components/owner/BusinessMarketing";
 import SalonVanityManager from "@/components/owner/SalonVanityManager";
 import { bookingReference } from "@/lib/bookingReference";
 import SalonProductOrders from "@/components/owner/SalonProductOrders";
@@ -115,7 +116,6 @@ import OwnerSetupGuideLink from "@/components/owner/OwnerSetupGuideLink";
 import StylistSectionFallbackEditor from "@/components/owner/StylistSectionFallbackEditor";
 import {
   OwnerDetailHeader,
-  OwnerSectionCard,
 } from "@/components/owner/OwnerWorkflowUi";
 import BookingCheckInExceptionForm, {
   type CheckInExceptionAnswer,
@@ -955,7 +955,7 @@ function DashboardContent({
   void Stylists;
   if (section === "subscription")
     return c.isOwner ? (
-      <SubscriptionV2 c={c} />
+      <div className="space-y-5"><SubscriptionReferralNavigation referrals={c.focusedRecordId === "referrals"} />{c.focusedRecordId === "referrals" ? <BusinessReferrals businessId={String(c.salon.id)} /> : <SubscriptionV2 c={c} />}</div>
     ) : (
       <AccessPaused isOwner={false} />
     );
@@ -978,6 +978,7 @@ function DashboardContent({
   if (section === "earnings") return <BusinessFinances key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
   if (section === "promotions")
     return (
+      <>
       <SalonPromotionsManager
         promotions={c.promotions}
         styles={c.styles}
@@ -987,6 +988,8 @@ function DashboardContent({
         removeRecord={c.removeRecord}
         recordId={c.focusedRecordId}
       />
+      {c.isOwner && !c.focusedRecordId ? <BusinessMarketing businessId={String(c.salon.id)} /> : null}
+      </>
     );
   return <SettingsWorkspace c={c} focus={c.focusedRecordId} />;
 }
@@ -1085,8 +1088,11 @@ function SubscriptionV2({ c }: { c: Ctx }) {
         body: JSON.stringify(payload),
       });
       const body = await response.json();
-      if (!response.ok)
-        throw new Error(body.error || "Unable to update the subscription.");
+      if (!response.ok) {
+        const candidate = typeof body.request_id === "string" ? body.request_id : response.headers.get("X-Request-ID") || "";
+        const reference = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate) ? candidate : "";
+        throw new Error(`${typeof body.error === "string" ? body.error : "Unable to update the subscription."}${reference ? ` Reference ${reference}.` : ""}`);
+      }
       if (body.requiresConfirmation) {
         if (!body.preview) {
           throw new Error("Stripe did not return a complete upgrade preview.");
@@ -1638,6 +1644,7 @@ function MiniLine() {
 function Overview({c}:{c:Ctx}) { return <BusinessOverview {...c}/>; }
 
 function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: string; children: React.ReactNode }) {
+  const { locale: onboardingLocale } = useI18n();
   const current = focus || "business";
   const progress = profileCompletion(c.salon, c.styles.length, c.stylists.length);
   const tabs = [["business", "Business information"], ["description", "Description"], ["address", "Location"], ["social", "Social links"], ["business-policies", "Business Policy"], ["policies", "Girlz Culture Policies"], ...(c.isOwner ? [["identity", "Public identity"]] : [])];
@@ -1650,7 +1657,7 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
     ["Stylists", c.stylists.length > 0, "stylists"],
   ];
   return <div className="space-y-5">
-    <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<Link href={`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link>}/>
+    <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<div className="flex flex-wrap gap-2">{c.isOwner ? <Link href="/salon/onboarding/import" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{onboardingText(onboardingLocale,"entry")}</Link> : null}<Link href={`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link></div>}/>
     <section className="overflow-hidden rounded-2xl border border-border bg-white">
       <div className="relative h-36 bg-gradient-to-r from-primary-hover to-primary sm:h-52">
         {c.salon.cover_photo_url ? <SafeImage src={c.salon.cover_photo_url} fallbackSrc={c.salon.cover_photo_url} alt={c.salon.name || "Business"} className="h-full w-full object-cover"/> : <div className="flex h-full items-center justify-center text-sm text-white">{c.translateSource("Add a cover photo to showcase your business.")}</div>}
@@ -1663,9 +1670,9 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
       </div>
     </section>
     <nav aria-label={c.translateSource("My Page sections")} className="relative border-b border-border pb-1">
-      <div className="grid grid-cols-4 gap-1 sm:hidden">
-        {[["business","Info","my-page/business"],["services","Services","styles"],["address","Location","my-page/address"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 items-center justify-center rounded-lg text-xs font-semibold ${current === id ? "bg-teal/10 text-primary" : "text-muted"}`}>{c.translateSource(label)}</Link>)}
-        <details className="group"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-center rounded-lg text-xs font-semibold group-open:bg-teal/10">{c.translateSource("More")}</summary><div className="absolute right-0 z-20 mt-1 min-w-56 rounded-xl border border-border bg-white p-2 shadow-lg">{tabs.filter(([id]) => !["business","address"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} onClick={event => event.currentTarget.closest("details")?.removeAttribute("open")} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}</div></details>
+      <div className="flex flex-wrap gap-1 sm:hidden">
+        {[["business","Info","my-page/business"],["services","Services","styles"],["address","Location","my-page/address"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 min-w-11 flex-[1_0_auto] items-center justify-center whitespace-nowrap rounded-lg text-xs font-semibold ${current === id ? "bg-teal/10 text-primary" : "text-muted"}`}>{c.translateSource(label)}</Link>)}
+        <details className="group min-w-11 flex-[1_0_auto]"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg text-xs font-semibold group-open:bg-teal/10">{c.translateSource("More")}</summary><div className="absolute right-0 z-20 mt-1 min-w-56 rounded-xl border border-border bg-white p-2 shadow-lg">{tabs.filter(([id]) => !["business","address"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} onClick={event => event.currentTarget.closest("details")?.removeAttribute("open")} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}</div></details>
       </div>
       <div className="hidden flex-wrap gap-1 sm:flex">{[["business","Business Information","my-page/business"],["services","Services & Pricing","styles"],["address","Location & Hours","my-page/address"],["business-policies","Amenities & Policies","my-page/business-policies"],["social","Social & Links","my-page/social"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 items-center border-b-2 px-3 text-xs ${current === id ? "border-primary font-semibold text-primary" : "border-transparent text-muted"}`}>{c.translateSource(label)}</Link>)}</div>
     </nav>
@@ -3780,34 +3787,60 @@ function Promotions({ c }: { c: Ctx }) {
 }
 
 function SettingsWorkspace({ c, focus = "" }: { c: Ctx; focus?: string }) {
-  if(focus === "integrations") return <><OwnerDetailHeader title="Google Business Profile" subtitle="Review Google integration availability and manage this business connection." fallbackHref="/salon/dashboard/settings"/>{c.isOwner&&c.salon.id?<GoogleBusinessProfileSettings key={c.salon.id} businessId={c.salon.id} photos={Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]}/>:<p>{c.translateSource("Owner-only access")}</p>}</>;
-  if (!focus) {
-    return <>
-      <Title title="Settings & Team" subtitle="Choose one area to manage without losing your place in the dashboard." />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <OwnerSectionCard href="/salon/dashboard/settings/account" icon={UserRound} title="Account details" description="Update the salon email, phone, and required booking contact details." />
-        <OwnerSectionCard href="/salon/dashboard/settings/notifications" icon={Megaphone} title="Notifications" description="Choose review and growth alerts while keeping required booking alerts on." />
-        {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/settings/marketplace" icon={Eye} title="Marketplace status" description="Pause bookings, hide or republish the salon, and request closure." status={c.salon.is_discoverable ? "Published" : "Hidden"} /> : null}
-        {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/settings/team" icon={UsersRound} title="Team & permissions" description="Invite team members and grant only the dashboard sections they need." /> : null}
-        {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/settings/integrations" icon={ExternalLink} title="Google Business Profile" description="Review Google integration availability and manage this business connection." /> : null}
-        <OwnerSectionCard href="/salon/dashboard/settings/security" icon={LockKeyhole} title="Security & sign out" description="Review password recovery guidance or securely end this salon session." />
-      </div>
-    </>;
-  }
-  if (focus === "team") return <><OwnerDetailHeader title="Team & permissions" subtitle="Choose one team member to manage without losing the settings context. Subscription and billing always remain owner-only." fallbackHref="/salon/dashboard/settings" status={c.isOwner ? "Owner access" : "Read only"}/><TeamUserManager scope="salon" /></>;
-  if (focus.startsWith("member-")) return <><OwnerDetailHeader title={focus === "member-new" ? "Add team member" : "Manage team member"} subtitle="Save identity, role, status, and dashboard permissions together." fallbackHref="/salon/dashboard/settings/team" status="Owner-only access"/><TeamUserManager scope="salon" initialUserId={focus.slice("member-".length)} showBackLink={false}/></>;
-  if (focus === "marketplace") return <><OwnerDetailHeader title="Marketplace status" subtitle="Manage publication and booking availability without changing the salon record." fallbackHref="/salon/dashboard/settings"/><PublicationControls c={c}/></>;
-  if (focus === "security") return <><OwnerDetailHeader title="Security & sign out" subtitle="Password changes use the verified email recovery flow." fallbackHref="/salon/dashboard/settings"/><Panel><h2 className="font-serif text-xl text-plum">Secure salon session</h2><p className="mt-2 max-w-2xl text-sm leading-6 gc-text-primary">Use the salon login page to request a password-reset email. Signing out here only ends this salon workspace session and does not affect a separate platform-admin session.</p><div className="mt-5"><RoleLogoutButton scope="salon" /></div></Panel></>;
+  const canEditAccount = c.isOwner || c.access?.my_page === true;
+  const knownFocus = ["account", "notifications", "marketplace", "team", "integrations", "security"].includes(focus) || focus.startsWith("member-");
+  const active = knownFocus ? focus : canEditAccount ? "account" : "notifications";
+  const tabs = [...(canEditAccount ? [["account", "Account details"]] : []), ["notifications", "Notifications"],
+    ...(c.isOwner ? [["marketplace", "Marketplace status"], ["team", "Team & permissions"], ["integrations", "Google Business Profile"]] : []),
+    ["security", "Security & sign out"]];
+  const ownerOnly = ["team", "marketplace", "integrations"].includes(active) || active.startsWith("member-");
+  return <>
+    <Title title="Settings & Team" subtitle="Keep your business details and preferences up to date." />
+    <nav aria-label={c.translateSource("Settings & Team")} className="mb-5 flex max-w-full gap-1 overflow-x-auto border-b border-border pb-1">
+      {tabs.map(([id, label]) => <Link key={id} href={`/salon/dashboard/settings/${id}`} prefetch={false}
+        aria-current={(active === id || (id === "team" && active.startsWith("member-"))) ? "page" : undefined}
+        className={`inline-flex min-h-11 shrink-0 items-center rounded-t-lg border-b-2 px-3 text-sm font-semibold ${active === id || (id === "team" && active.startsWith("member-")) ? "border-primary bg-subtle text-primary" : "border-transparent text-muted hover:bg-subtle"}`}>
+        {c.translateSource(label)}
+      </Link>)}
+    </nav>
+    {ownerOnly && !c.isOwner ? <p role="status">{c.translateSource("Owner-only access")}</p>
+      : active === "account" && !canEditAccount ? <p role="status">{c.translateSource("Access not assigned")}</p>
+      : <SettingsContent key={active} c={c} focus={active} />}
+  </>;
+}
+
+function SettingsSectionHeader({ title, subtitle, status, fallbackHref }: { title: string; subtitle: string; status?: string; fallbackHref?: string }) {
+  return <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div className="min-w-0">
+      {fallbackHref ? <Link href={fallbackHref} className="mb-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary">Back</Link> : null}
+      <h2 className="font-serif text-2xl text-plum">{title}</h2>
+      <p className="mt-1 max-w-3xl text-sm leading-6 gc-text-primary">{subtitle}</p>
+    </div>
+    {status ? <span className="rounded-full bg-subtle px-3 py-1.5 text-xs font-semibold text-primary">{status}</span> : null}
+  </header>;
+}
+
+function SettingsContent({ c, focus }: { c: Ctx; focus: string }) {
+  if(focus === "integrations") return <><SettingsSectionHeader title="Google Business Profile" subtitle="Review Google integration availability and manage this business connection."/>{c.isOwner&&c.salon.id?<GoogleBusinessProfileSettings key={c.salon.id} businessId={c.salon.id} photos={Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]}/>:<p>{c.translateSource("Owner-only access")}</p>}</>;
+  if (focus === "team") return <><SettingsSectionHeader title="Team & permissions" subtitle="Choose one team member to manage without losing the settings context. Subscription and billing always remain owner-only." status={c.isOwner ? "Owner access" : "Read only"}/><TeamUserManager scope="salon" /></>;
+  if (focus.startsWith("member-")) return <><SettingsSectionHeader title={focus === "member-new" ? "Add team member" : "Manage team member"} subtitle="Save identity, role, status, and dashboard permissions together." fallbackHref="/salon/dashboard/settings/team" status="Owner-only access"/><TeamUserManager scope="salon" initialUserId={focus.slice("member-".length)} showBackLink={false}/></>;
+  if (focus === "marketplace") return <><SettingsSectionHeader title="Marketplace status" subtitle="Manage publication and booking availability without changing the salon record."/><PublicationControls c={c}/></>;
+  if (focus === "security") return <><SettingsSectionHeader title="Security & sign out" subtitle="Password changes use the verified email recovery flow."/><Panel><h2 className="font-serif text-xl text-plum">Secure salon session</h2><p className="mt-2 max-w-2xl text-sm leading-6 gc-text-primary">Use the salon login page to request a password-reset email. Signing out here only ends this salon workspace session and does not affect a separate platform-admin session.</p><div className="mt-5"><RoleLogoutButton scope="salon" /></div></Panel></>;
   return <SettingsPage c={c} focus={focus === "notifications" ? "notifications" : "account"} />;
 }
 
 function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "notifications" }) {
+  const [saving, setSaving] = useState(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (saving) return;
     const form = new FormData(e.currentTarget);
-    await c.updateSalon({
+    // Each tab owns only its visible fields. Absent controls are not a request
+    // to erase contact details or turn off another tab's preferences.
+    const patch = focus === "account" ? {
       email: form.get("email"),
       phone: form.get("phone"),
+    } : {
       notification_preferences: {
         in_app: true,
         email: true,
@@ -3815,12 +3848,15 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
         reviews: form.get("reviews") === "on",
         marketing: form.get("marketing") === "on",
       },
-    });
+    };
+    setSaving(true);
+    try { await c.updateSalon(patch); } finally { setSaving(false); }
   }
   return (
     <>
-      <OwnerDetailHeader title={focus === "notifications" ? "Notification preferences" : "Account details"} subtitle={focus === "notifications" ? "Control optional alerts while required booking confirmations remain enabled." : "Keep the salon contact details used for booking operations current."} fallbackHref="/salon/dashboard/settings" />
-      <form onSubmit={submit} className="block">
+      <p className="mb-4 text-sm leading-6 gc-text-primary">{focus === "notifications" ? "Control optional alerts while required booking confirmations remain enabled." : "Keep the salon contact details used for booking operations current."}</p>
+      {focus === "account" && c.isOwner ? <div className="mb-4"><GcAssistantAppearanceLauncher/></div> : null}
+      <form onSubmit={submit} className="block" aria-busy={saving}>
         {focus === "account" ? <Panel>
           <h2 className="font-serif text-xl text-plum">Account Details</h2>
           <div className="mt-4 space-y-4">
@@ -3851,7 +3887,7 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
               Change password
             </button>
           </div>
-            <button className="mt-5 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">Save account details</button>
+            <button disabled={saving} className="mt-5 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white gc-disabled-control">Save account details</button>
         </Panel> : null}
         {focus === "notifications" ? <Panel>
           <h2 className="font-serif text-xl text-plum">
@@ -3904,7 +3940,7 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
               </label>
             ))}
           </div>
-          <button className="mt-5 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white">
+          <button disabled={saving} className="mt-5 min-h-11 w-full rounded-[8px] bg-magenta text-xs font-bold text-white gc-disabled-control">
             Save Settings
           </button>
         </Panel> : null}

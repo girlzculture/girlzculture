@@ -1,7 +1,8 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
-import { stripeGet, stripeRequest } from "@/lib/stripeServer";
+import { withSubscriptionMutation } from "@/lib/subscriptionMutationGuard";
+import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 
 type StripeSubscription = {
   id: string;
@@ -22,9 +23,11 @@ function isoFromSeconds(value?: number) {
 }
 
 async function POSTHandler(request: Request) {
+  let context:Awaited<ReturnType<typeof requireSalonOwner>>|undefined;
   try {
     enforceRateLimit(request, "subscription-lifecycle", 10, 10 * 60_000);
-    const { admin, salon, isOwner } = await requireSalonOwner(request);
+    context=await requireSalonOwner(request);
+    const { admin, salon, isOwner, user } = context;
     if (!isOwner) throw new Error("Only the salon owner can manage cancellation and reactivation.");
     const body = await request.json() as Record<string, unknown>;
     const action = cleanText(body.action, 40);
@@ -33,15 +36,31 @@ async function POSTHandler(request: Request) {
     const { data: stored, error: storedError } = await admin.from("subscriptions").select("*").eq("salon_id", salon.id).maybeSingle();
     if (storedError) throw storedError;
     if (!stored?.stripe_subscription_id) throw new Error("No Stripe subscription was found for this salon.");
+    return await withSubscriptionMutation({admin,salonId:salon.id,actorId:user.id,subscriptionId:stored.stripe_subscription_id},async ({get:stripeGet,post:stripeRequest,intentKey})=>{
     const current = await stripeGet<StripeSubscription>(`/subscriptions/${stored.stripe_subscription_id}`);
+    if(current.id!==stored.stripe_subscription_id)throw new Error('SUBSCRIPTION_LIFECYCLE_IDENTITY_CONFLICT');
     const scheduleId = stripeId(current.schedule) || stored.stripe_schedule_id || null;
     const currentItem = current.items?.data?.[0];
     const currentPeriodStart = current.current_period_start || currentItem?.current_period_start;
     const currentPeriodEnd = current.current_period_end || currentItem?.current_period_end;
+    const freshSubscription=async(expectedCancellation:boolean,expectedSchedule:string|null)=>{
+      const fresh=await stripeGet<StripeSubscription>(`/subscriptions/${current.id}`);
+      if(fresh.id!==current.id||fresh.cancel_at_period_end!==expectedCancellation||stripeId(fresh.schedule)!==expectedSchedule)throw new Error('SUBSCRIPTION_LIFECYCLE_READBACK_FAILED');
+      return fresh;
+    };
+    const releaseSchedule=async(stage:string)=>{
+      const path=`/subscription_schedules/${scheduleId}`;
+      const before=await stripeGet<{id:string;status:string;subscription:string|null}>(path);
+      if(before.id!==scheduleId||before.status!=='active'||before.subscription!==current.id)throw new Error('SUBSCRIPTION_LIFECYCLE_SCHEDULE_CONFLICT');
+      await stripeRequest(`${path}/release`, {preserve_cancel_date:true}, {idempotencyKey:intentKey(stage)});
+      const after=await stripeGet<{id:string;status:string;released_subscription:string|null}>(path);
+      if(after.id!==scheduleId||after.status!=='released'||after.released_subscription!==current.id)throw new Error('SUBSCRIPTION_LIFECYCLE_READBACK_FAILED');
+      await freshSubscription(current.cancel_at_period_end===true,null);
+    };
 
     if (action === "cancel_scheduled_change") {
       if (!scheduleId || !stored.scheduled_tier) return Response.json({ changed: false, message: "There is no scheduled plan change to cancel." });
-      await stripeRequest(`/subscription_schedules/${scheduleId}/release`, {}, { idempotencyKey: `owner-release-schedule:${scheduleId}` });
+      await releaseSchedule('cancel-scheduled-change');
       const { error: clearError } = await admin.from("subscriptions").update({
         stripe_schedule_id: null,
         scheduled_tier: null,
@@ -51,18 +70,19 @@ async function POSTHandler(request: Request) {
       }).eq("salon_id", salon.id);
       if (clearError) throw clearError;
       console.info("Scheduled subscription change cancelled", { salonId: salon.id, subscriptionId: current.id, scheduleId });
-      return Response.json({ changed: true, message: "The scheduled downgrade was cancelled. Your current plan will renew as usual." });
+      return Response.json({ changed: true, cancelAtPeriodEnd:current.cancel_at_period_end===true, message:current.cancel_at_period_end ? "The scheduled downgrade was cancelled. Your existing subscription cancellation remains scheduled." : "The scheduled downgrade was cancelled. Your current plan will renew as usual." });
     }
 
     if (action === "cancel_at_period_end") {
       if (!["active", "trialing"].includes(String(current.status || "").toLowerCase())) throw new Error("Only an active subscription can be scheduled for cancellation.");
       if (current.cancel_at_period_end) return Response.json({ changed: false, message: "Cancellation is already scheduled." });
-      if (scheduleId) await stripeRequest(`/subscription_schedules/${scheduleId}/release`, {}, { idempotencyKey: `release-before-cancel:${scheduleId}` });
-      const updated = await stripeRequest<StripeSubscription>(`/subscriptions/${current.id}`, {
+      if (scheduleId) await releaseSchedule('release-before-cancel');
+      await stripeRequest<StripeSubscription>(`/subscriptions/${current.id}`, {
         cancel_at_period_end: true,
         proration_behavior: "none",
         "metadata[cancellation_source]": "salon_owner",
-      }, { idempotencyKey: `cancel-at-period-end:${current.id}:${currentPeriodEnd || "current"}` });
+      }, { idempotencyKey: intentKey('cancel-at-period-end') });
+      const updated=await freshSubscription(true,null);
       const updatedItem = updated.items?.data?.[0];
       const paidThrough = isoFromSeconds(updated.current_period_end || updatedItem?.current_period_end || currentPeriodEnd);
       const { error: updateError } = await admin.from("subscriptions").update({
@@ -87,10 +107,11 @@ async function POSTHandler(request: Request) {
     }
 
     if (!current.cancel_at_period_end) return Response.json({ changed: false, message: "This subscription is already set to renew." });
-    const updated = await stripeRequest<StripeSubscription>(`/subscriptions/${current.id}`, {
+    await stripeRequest<StripeSubscription>(`/subscriptions/${current.id}`, {
       cancel_at_period_end: false,
       "metadata[cancellation_source]": "",
-    }, { idempotencyKey: `reactivate:${current.id}:${currentPeriodEnd || "current"}` });
+    }, { idempotencyKey: intentKey('reactivate') });
+    const updated=await freshSubscription(false,stripeId(current.schedule));
     const updatedItem = updated.items?.data?.[0];
     const { error: updateError } = await admin.from("subscriptions").update({
       cancel_at_period_end: false,
@@ -103,7 +124,13 @@ async function POSTHandler(request: Request) {
     if (updateError) throw updateError;
     console.info("Subscription reactivated", { salonId: salon.id, subscriptionId: current.id });
     return Response.json({ changed: true, cancelAtPeriodEnd: false, message: "Cancellation was reversed. Your current plan will renew on its normal billing date." });
+    });
   } catch (error) {
+    if((error as {code?:string})?.code==='SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'){
+      const safeMessage="The earlier subscription update has an uncertain result. Billing support must reconcile it before another change; no further change was sent.";
+      const reference=await capturePlatformError({request,admin:context?.admin,error,feature:'subscriptions',action:'reconcile_lifecycle',actorRole:'salon-owner',actorId:context?.user.id,salonId:context?.salon.id,provider:'stripe',safeMessage});
+      return safeFailure(safeMessage,reference,409,{code:'SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'});
+    }
     noteOperationalFailure("Subscription lifecycle action failed", error);
     return errorResponse(error, "Unable to update the subscription.");
   }

@@ -1249,6 +1249,12 @@ const redesignOutput = runPsql(["--file", path.join(root, "scripts", "sql", "ver
 if (redesignOutput) process.stdout.write(`${redesignOutput}\n`);
 const paymentMethodOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscription-payment-method.sql")], "Subscription payment-method attempts, ownership and lease assertions");
 if (paymentMethodOutput) process.stdout.write(`${paymentMethodOutput}\n`);
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscription-payment-schedule.sql")], "Inherited payment schedule stages and shared lifecycle mutation guards"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-onboarding-draft.sql")], "Reviewed onboarding source, draft and owner-confirmation isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-manual-sale.sql")], "Reviewed assistant manual service sale and durable receipt readback"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-outstanding-balances.sql")], "Read-only assistant outstanding balance tool registration"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-marketing.sql")], "Business marketing sources, review, scheduling and public projection isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-referrals.sql")], "Business referral campaign, qualification, evidence and reward isolation"));
 const businessFinanceOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-finances.sql")], "Business finance isolation and reconciliation assertions");
 if (businessFinanceOutput) process.stdout.write(`${businessFinanceOutput}\n`);
 const businessDepositOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-deposits.sql")], "Business deposit, attendance and protected-offer assertions");

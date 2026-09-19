@@ -13,6 +13,8 @@ const rows: readonly (readonly [string,string,string,string])[] = [
   ["About these totals","À propos de ces totaux","Acerca de estos totales","关于这些汇总"],
   ["No expenses recorded for this period.","Aucune dépense enregistrée pour cette période.","No hay gastos registrados en este período.","本期间没有已记录的支出。"],
   ["No recorded activity for this period.","Aucune activité enregistrée pour cette période.","No hay actividad registrada en este período.","本期间没有已记录的活动。"],
+  ["No stylist earnings in this period.","Aucun revenu de styliste pour cette période.","No hay ingresos de estilistas en este período.","本期间暂无造型师收入。"],
+  ["Change reporting period","Changer la période du rapport","Cambiar el período del informe","更改报告期间"],
   ["Sales follow completion dates. Payments and expenses follow their recorded dates. This is not a bank reconciliation.","Les ventes suivent leur date de réalisation. Les paiements et dépenses suivent leur date enregistrée. Il ne s’agit pas d’un rapprochement bancaire.","Las ventas se agrupan por fecha de finalización. Los pagos y gastos siguen su fecha registrada. Esto no es una conciliación bancaria.","销售按完成日期统计，付款与支出按记录日期统计。这不是银行对账。"],
   ["Date","Date","Fecha","日期"],
   ["Platform booking","Réservation sur la plateforme","Reserva en la plataforma","平台预约"],
