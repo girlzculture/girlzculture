@@ -1281,3 +1281,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-fol
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-subscription-recorded-price.sql")],"Recorded subscription price integrity and business isolation"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-appointment-waitlist.sql")],"Appointment waitlist lifecycle and isolation"));
 await verifyWaitlistConcurrency(databaseUrl,psql);
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-google-business-profile.sql")],"Google connection state, retry, disconnect and two-business isolation"));

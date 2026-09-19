@@ -1,3 +1,19 @@
+# Current continuation — Google deferred integration and CI corrections
+
+PR80 is Draft/open on codex/business-dashboard-value-redesign. Latest pushed head before this checkpoint: a04d1a8ca66f8071aa391f6ebfcc9aced35fcd53. No production migration/publication; last-known production6aac503fa5eacb00089c6d87/d37cbf4. BothUSD25caps unchanged.
+
+Google exact status: **Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification.** Code is now implemented and AUTOMATED ONLY, not an entirely completed integration. Owner-only OAuth/state/PKCE, encrypted business/purpose-bound credentials, location matching, reviewed info/hours/media/posts, conflict/readback, idempotency/audit, disconnect and separate bounded scheduler. No usable Connect control while disabled; no provider/background activity. Activation checklist has project886435271334, exact callback/API/secure-variable/verification requirements. No further zero-quota calls or profile requests.
+
+Verification:11 simulated Node tests;14 Google +10 bookings +8 owner-waitlist browser cases =32passed Chromium/WebKit on production build. Source translations2471/2471 for each EN/FR/ES/zh-CN; Wolof732measured gaps remains deferred. Build/TypeScript/targetedlint/149route-monitoring pass. Local172fresh migration chain including waitlist concurrency passes; final Google stale-generation/paused-auto guards separately reapplied as local function and rollback assertions pass. Migration172 not applied to production.
+
+At a04 required35406783003 failed monitoring inventory146vs144, corrected with actual new route coverage (now149withGoogle). Release35406783059: localization and shard2pass; Chromium and WebKit booking pagination failed first-card visibility at771.7px below bottomnav745px. Reproduced locally bothengines; waitlist row added verticalheight. Moved waitlist into existing List/Calendar navigation; original assertion unchanged and passing. OriginalCI/localbefore logs/trace preserved outsideGit. No unchanged rerun, skipped test or weakened assertion. Corrected-source CI must pass. Google firstbrowserpass exposed async controlled checkbox snapback; pending preference/rollback/save-status correction passes.
+
+Evidence: ../redesign-evidence/google-provider-simulated.log, google-clean-database.log, google-database-final.log, google-bookings-build-final.log, google-bookings-browser-final.log, google-monitoring-final.log. Screenshots google-deferred-phone.png, google-connected-simulated-desktop.png, bookings-phone-after-waitlist.png. Build printed cancelled response-stream warnings during browser navigation; hydration/assertions passed.
+
+Remaining fullscope: Morning Brief/advice/voice; marketing/referrals/assisted onboarding; remaining business website/plan promise and detailed page acceptance; actual billing/provider/legacy-price reconciliation; final requiredCI, reviewed protected pending migrations, stable held candidate and production publication with postchecks. Existing provider success retained; Google live is the only newly deferred dependency.201groups remain tracked, no wholeproduct complete claim.
+
+---
+
 # Current continuation — waitlist, review correction and Google deferral
 
 PR80 remains Draft/open on codex/business-dashboard-value-redesign. Pushed head before this checkpoint: b8271a8ffe92a2383c1e9ce205388520babe8f85. No production mutation/publication. Last-known production remains6aac503fa5eacb00089c6d87 / d37cbf4; bothUSD25caps unchanged.

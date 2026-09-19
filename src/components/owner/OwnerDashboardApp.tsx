@@ -2,6 +2,7 @@
 
 import BookingChangeProposal from "./BookingChangeProposal";
 import ReviewsWorkspace from "./ReviewsWorkspace";
+import GoogleBusinessProfileSettings from "./GoogleBusinessProfileSettings";
 import BusinessInventory from "./BusinessInventory";
 import BookingsWorkspace from "./BookingsWorkspace";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
@@ -3784,6 +3785,7 @@ function Promotions({ c }: { c: Ctx }) {
 }
 
 function SettingsWorkspace({ c, focus = "" }: { c: Ctx; focus?: string }) {
+  if(focus === "integrations") return <><OwnerDetailHeader title="Google Business Profile" subtitle="Review Google integration availability and manage this business connection." fallbackHref="/salon/dashboard/settings"/>{c.isOwner&&c.salon.id?<GoogleBusinessProfileSettings key={c.salon.id} businessId={c.salon.id} photos={Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]}/>:<p>{c.translateSource("Owner-only access")}</p>}</>;
   if (!focus) {
     return <>
       <Title title="Settings & Team" subtitle="Choose one area to manage without losing your place in the dashboard." />
@@ -3792,6 +3794,7 @@ function SettingsWorkspace({ c, focus = "" }: { c: Ctx; focus?: string }) {
         <OwnerSectionCard href="/salon/dashboard/settings/notifications" icon={Megaphone} title="Notifications" description="Choose review and growth alerts while keeping required booking alerts on." />
         {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/settings/marketplace" icon={Eye} title="Marketplace status" description="Pause bookings, hide or republish the salon, and request closure." status={c.salon.is_discoverable ? "Published" : "Hidden"} /> : null}
         {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/settings/team" icon={UsersRound} title="Team & permissions" description="Invite team members and grant only the dashboard sections they need." /> : null}
+        {c.isOwner ? <OwnerSectionCard href="/salon/dashboard/settings/integrations" icon={ExternalLink} title="Google Business Profile" description="Review Google integration availability and manage this business connection." /> : null}
         <OwnerSectionCard href="/salon/dashboard/settings/security" icon={LockKeyhole} title="Security & sign out" description="Review password recovery guidance or securely end this salon session." />
       </div>
     </>;

@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-18. This inventory covers 144 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-18. This inventory covers 149 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -15,6 +15,11 @@ Updated: 2026-09-18. This inventory covers 144 API route files and is enforced b
 
 | Route | Methods | Classification | Coverage |
 |---|---|---|---|
+| `/api/customer/waitlist` | GET, POST | protected | Covered |
+| `/api/salon/waitlist` | GET | protected | Covered |
+| `/api/salon/integrations/google` | GET, POST | protected | Covered |
+| `/api/salon/integrations/google/callback` | GET | protected | Covered |
+| `/api/salon/integrations/google/sync` | POST | protected | Covered |
 | `/api/communications/unsubscribe` | POST | expected-only | Covered |
 | `/api/customer/bookings/[id]/attendance` | GET, POST | protected | Covered |
 | `/api/customer/bookings/[id]/communications` | GET, PUT | protected | Covered |
@@ -225,3 +230,5 @@ Monitoring stores UUID/account identifiers only when verified or safely parsed, 
 ## Verification evidence
 
 `npm run verify:monitoring` executes behavior assertions for expected 400/403/404/429 outcomes, protected authentication/session failures, database/RLS, booking/availability, storage, Stripe, OpenAI, notification, client-provider bridge behavior, provider-response transport classification, reference parity, warning parity, recursive secret/contact redaction and Netlify function behavior. It also enforces the complete route/method/classification inventory and provider-entry-point table. Type checking, lint, the existing repository verification matrix and a production build are run separately before handoff.
+
+Google worker: `google-profile-sync.ts` is separately monitored and activation-gated. OAuth callback monitoring persists pathname and allowlisted error codes only; codes, state, cookies and provider bodies are excluded.

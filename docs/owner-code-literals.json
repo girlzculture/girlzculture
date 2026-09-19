@@ -1322,6 +1322,10 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "0ac0abcddd255d903bf32439a42aa1f1b7281cf20bc1e2cecfebefe5d13122b2"
+        },
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "0ac0abcddd255d903bf32439a42aa1f1b7281cf20bc1e2cecfebefe5d13122b2"
         }
       ]
     },
@@ -2286,6 +2290,10 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -3002,6 +3010,76 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "ea9288ebbf319e4da09a2cdf8937a4304ff1af2103272dddacc7c05193ab45d7"
+        }
+      ]
+    },
+    {
+      "source": "{value0}: {value1}:{value2} – {value3}:{value4}",
+      "reason": "Reviewed punctuation-only time display; weekday translated separately; no first-party words.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "0a7bc00739300215713d36fe86f59b3017765cff8cb3a822e51f37ad1c3543dd"
+        }
+      ]
+    },
+    {
+      "source": "languageCode",
+      "reason": "Reviewed Google component protocol/property or compiler directive, never displayed as UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "7c9963c13d3b00c97557df8e8768d6d9f41d3c1826224960ae9a06241254eb46"
+        }
+      ]
+    },
+    {
+      "source": "locationAssociation",
+      "reason": "Reviewed Google component protocol/property or compiler directive, never displayed as UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "7c9963c13d3b00c97557df8e8768d6d9f41d3c1826224960ae9a06241254eb46"
+        }
+      ]
+    },
+    {
+      "source": "mediaFormat",
+      "reason": "Reviewed Google component protocol/property or compiler directive, never displayed as UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "7c9963c13d3b00c97557df8e8768d6d9f41d3c1826224960ae9a06241254eb46"
+        }
+      ]
+    },
+    {
+      "source": "phoneNumbers",
+      "reason": "Reviewed Google component protocol/property or compiler directive, never displayed as UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "ae952dc3271680543df1ba48f804e2cb8521a7cc2176dfc655921bf55d0babb8"
+        }
+      ]
+    },
+    {
+      "source": "regularHours",
+      "reason": "Reviewed Google component protocol/property or compiler directive, never displayed as UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "e48094834f78bdc57001f32b6e34e5f2db2f19f88c87a5a047035fa3ce8227c5"
+        }
+      ]
+    },
+    {
+      "source": "topicType",
+      "reason": "Reviewed Google component protocol/property or compiler directive, never displayed as UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "7c9963c13d3b00c97557df8e8768d6d9f41d3c1826224960ae9a06241254eb46"
         }
       ]
     }

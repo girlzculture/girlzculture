@@ -10,8 +10,8 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 2685,
-  "excluded_code_count": 188,
+  "candidate_count": 2739,
+  "excluded_code_count": 195,
   "intentional_untranslated": [
     "Girlz Culture",
     "Girlz",
@@ -99,21 +99,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 2424,
-      "covered": 2424,
+      "source_count": 2471,
+      "covered": 2471,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 2424,
-      "covered": 2424,
+      "source_count": 2471,
+      "covered": 2471,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 2424,
-      "covered": 1738,
-      "missing_count": 686,
+      "source_count": 2471,
+      "covered": 1739,
+      "missing_count": 732,
       "missing": [
         {
           "source": "{value0} hours",
@@ -247,7 +247,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1660,
+              "line": 1661,
               "kind": "literal",
               "context": "5f57d7fe617ef1672d186a49d2d088797119802ce266d41491668148daa7f97c"
             }
@@ -269,7 +269,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2694,
+              "line": 2695,
               "kind": "literal",
               "context": "2d879c6e2e3e46b12221e3d9b1c5e1148e2444a2a933d44b6c3e1243bc769dc0"
             }
@@ -331,7 +331,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2411,
+              "line": 2412,
               "kind": "literal",
               "context": "ede20eb75e91e3e2135f402642d57ebeab87456bd0a6cada85c39c71df895e90"
             }
@@ -459,7 +459,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 39,
+              "line": 38,
               "kind": "localized-source",
               "context": "b8326774f0f33062126c73cab13ca59000e4b2c917113e5e00f70895760a6364"
             }
@@ -520,7 +520,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 46,
               "kind": "localized-source",
               "context": "8cbaf73af6db7554116f12b099b75a87cec10b815f99670619faf7dfe9ebe6b0"
             },
@@ -543,13 +543,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 46,
+              "line": 45,
               "kind": "localized-source",
               "context": "2ff7ea8a5809571f69bfc7678627397aba2c97a99170068ffd3fb52ebfb7d249"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2682,
+              "line": 2683,
               "kind": "literal",
               "context": "7921fe3da94ab8fbb9eb472db903eb33c4c4f62cf5fbe9ee229200e8825a25c7"
             }
@@ -627,7 +627,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1674,
+              "line": 1675,
               "kind": "literal",
               "context": "6f4718b1b41ac44718d329864c96fbe8be0186809e441002bd3487019abe9f95"
             }
@@ -693,7 +693,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 45,
+              "line": 44,
               "kind": "localized-source",
               "context": "a6ea8b1e9cbaeb91505fe36ee7339a799c68aa0f2dbf300bbef923efbcb84b77"
             },
@@ -749,7 +749,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 57,
+              "line": 56,
               "kind": "localized-source",
               "context": "021234cc1d544c2047e9e63ae5a634ee5836c61b99d74fcd93a99213c1cc556d"
             }
@@ -775,6 +775,12 @@
               "line": 32,
               "kind": "localized-source",
               "context": "d91b0f0f4ec416f20356810ebb746950cfa7bd28c9da881a5a0ec00112ee234e"
+            },
+            {
+              "file": "src/components/owner/BookingsWorkspace.tsx",
+              "line": 40,
+              "kind": "localized-source",
+              "context": "e3a866ca1c803733281b55b70ff2a3d930c151c601e7456c3d2e3e53e33e0e05"
             }
           ]
         },
@@ -965,6 +971,39 @@
               "line": 62,
               "kind": "literal",
               "context": "86563da7b64759d9c465845a6e984cd189cdf01ff656c9e4620122b71c3deb51"
+            }
+          ]
+        },
+        {
+          "source": "Authorize only the Google profile for this business.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 47,
+              "kind": "literal",
+              "context": "dbca3f00b4ee5c67415f52fcc098efc3f5014c3964874b392da033f19051e957"
+            }
+          ]
+        },
+        {
+          "source": "Automatic synchronization preference saved.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 62,
+              "kind": "localized-source",
+              "context": "b815b9a541c8b32924d10299cecf4a50a295ba3fcdf30b2efbae42dc5f073a57"
+            }
+          ]
+        },
+        {
+          "source": "Automatically synchronize future business information and hours changes. Stop for external Google conflicts; never automatically publish photos or posts.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 62,
+              "kind": "localized-source",
+              "context": "041a9a2cb571148591c4a6a351d0742ee9828e8ac6180a2577067af5901f01d4"
             }
           ]
         },
@@ -1202,7 +1241,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 38,
+              "line": 37,
               "kind": "localized-source",
               "context": "424abaf0567bca605ef5ef465e652456110f01ae80c8e25f687c068253314aec"
             }
@@ -1231,6 +1270,12 @@
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
               "line": 32,
+              "kind": "localized-source",
+              "context": "3c2fa748df3b1b0e1ef4defc9e272b0be81ab8861663766694ec942b12045823"
+            },
+            {
+              "file": "src/components/owner/BookingsWorkspace.tsx",
+              "line": 40,
               "kind": "localized-source",
               "context": "3c2fa748df3b1b0e1ef4defc9e272b0be81ab8861663766694ec942b12045823"
             }
@@ -1320,6 +1365,39 @@
           ]
         },
         {
+          "source": "Business information and hours",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 57,
+              "kind": "localized-source",
+              "context": "1cfa1ca656c87692efbc27726b19a659db886af35d9c588de26c5d87a5b0b088"
+            }
+          ]
+        },
+        {
+          "source": "Business name",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "literal",
+              "context": "60e16757b3920d7fb0312c8b154b58f05941784157de8fdc9f37d08067f5a6ab"
+            }
+          ]
+        },
+        {
+          "source": "Business photo",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 57,
+              "kind": "localized-source",
+              "context": "7ab2ca2210b543cdf6fb046369d136f948fe5c2927f2d1ebf071e748c9a69820"
+            }
+          ]
+        },
+        {
           "source": "Business Policy",
           "occurrences": [
             {
@@ -1342,7 +1420,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1647,
+              "line": 1648,
               "kind": "literal",
               "context": "f09ed99c1b512ad79032b1a9fe17af091e586136d5d08b18b663c97ad88d57d7"
             }
@@ -1381,7 +1459,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2682,
+              "line": 2683,
               "kind": "literal",
               "context": "b7be196fe8fcff9867f361c380905525dad9c76572b0c93e16db1e6c8558d202"
             }
@@ -1392,7 +1470,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2695,
+              "line": 2696,
               "kind": "literal",
               "context": "c94de22f4e83803e384df65aa2cdd01d046bf3fa77eb38c1c1b83fb798ddd2d1"
             }
@@ -1521,7 +1599,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1664,
+              "line": 1665,
               "kind": "literal",
               "context": "9f45daf208f1103a1cb3e9590d342c7ddb20de8c0a2d789d373a01a110ecbac9"
             }
@@ -1538,7 +1616,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1661,
+              "line": 1662,
               "kind": "literal",
               "context": "ffe15357ad13db26c57a6d74440bf016374f6118056a0203ea91497ff2056996"
             }
@@ -1597,6 +1675,17 @@
               "line": 61,
               "kind": "literal",
               "context": "ad6bfea6007d99fb38e492adbea4a0118538b4c660194239f19d2e788f41cf16"
+            }
+          ]
+        },
+        {
+          "source": "Choose a profile",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 51,
+              "kind": "localized-source",
+              "context": "84a4777628599bf7753f0fb04a2e065aa535b9d4f5dae9eae46d26d855ef4694"
             }
           ]
         },
@@ -1699,7 +1788,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 55,
+              "line": 54,
               "kind": "literal",
               "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
             }
@@ -2084,7 +2173,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1680,
+              "line": 1681,
               "kind": "literal",
               "context": "9adbedc5a26e28e4288b89d1221451ff65187ebaf598b739186337f3292277ea"
             },
@@ -2208,6 +2297,17 @@
           ]
         },
         {
+          "source": "Confirm this is my business",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 51,
+              "kind": "localized-source",
+              "context": "60377357ba4fc7a9ef7541986fce619324a2a69bcb6a6a3d57d877eb1ea4e194"
+            }
+          ]
+        },
+        {
           "source": "Confirm unlink",
           "occurrences": [
             {
@@ -2215,6 +2315,17 @@
               "line": 48,
               "kind": "literal",
               "context": "27bd6b448acc98d78d8b1991be17ebb1bbceb33cc7f2701ddf6d5990c6e96769"
+            }
+          ]
+        },
+        {
+          "source": "Connect Google profile",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 48,
+              "kind": "localized-source",
+              "context": "ff168c0dbb085c9a89bb71c5ad2924f6affc61107b1249274b4dcef146e72b14"
             }
           ]
         },
@@ -2396,6 +2507,17 @@
           ]
         },
         {
+          "source": "Current Google value",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "localized-source",
+              "context": "141efa1163a726fca79c2a4fd903b2131076ed20eedf8a31b7fa80e6f6279898"
+            }
+          ]
+        },
+        {
           "source": "Custom",
           "occurrences": [
             {
@@ -2411,7 +2533,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 46,
               "kind": "localized-source",
               "context": "7bc4f74ff99b0c4be159433784f296bba25325d95c219b0083bb315dc4cfb95f"
             }
@@ -2461,7 +2583,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 44,
+              "line": 43,
               "kind": "localized-source",
               "context": "614ad36b096a8914edcde6ea3d208cbfb793536c3a4b91e33ffc979b36afbca3"
             }
@@ -2530,6 +2652,39 @@
               "line": 7,
               "kind": "literal",
               "context": "0c7ed3620fb45b4065112349fb5896afb1ee3a27653f7816962208b5e4a2cf29"
+            }
+          ]
+        },
+        {
+          "source": "Disconnect Google profile",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 65,
+              "kind": "localized-source",
+              "context": "0b9965bf6a7b1d625f55c121f25e2ecd21c2477b2566ab4bf7a89706ddaad07b"
+            }
+          ]
+        },
+        {
+          "source": "Disconnected locally. Remove Girlz Culture access in your Google account if revocation could not be confirmed.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 65,
+              "kind": "literal",
+              "context": "b0a9edd6afae69d76580b50dbc6401ab8a21cb74cdf832ad07fa9031e630366b"
+            }
+          ]
+        },
+        {
+          "source": "Disconnected. Background synchronization has stopped.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 65,
+              "kind": "literal",
+              "context": "b0a9edd6afae69d76580b50dbc6401ab8a21cb74cdf832ad07fa9031e630366b"
             }
           ]
         },
@@ -2777,7 +2932,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 45,
+              "line": 44,
               "kind": "literal",
               "context": "1a1d33d319e4de1753f69cfa9fe5d731c03bf1776fd0f0d0275a05bbfb0bbe4d"
             }
@@ -2972,6 +3127,17 @@
           ]
         },
         {
+          "source": "Failed",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 63,
+              "kind": "literal",
+              "context": "59b05c6937f5a8cf7176cc9b0875c4adc3b900efea8a90c21cdeba70e6bc672f"
+            }
+          ]
+        },
+        {
           "source": "Feature a service below to give it a prominent place on your menu.",
           "occurrences": [
             {
@@ -3100,7 +3266,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3512,
+              "line": 3513,
               "kind": "jsx-attribute",
               "context": "822f23f9fb31d64fff97649eaf7b3156948e86f980294eff41b2e429c0075a9f"
             },
@@ -3131,6 +3297,17 @@
               "line": 10,
               "kind": "literal",
               "context": "27144ed1d87df8330eefaf0f3dd7935a1d828da45452353f68d7bf1819074e7f"
+            }
+          ]
+        },
+        {
+          "source": "Find this business profile",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 49,
+              "kind": "localized-source",
+              "context": "9c48eda631049ce2fc58f05fbc3bd6e28eb6a825edc049ef60ec7ea139c14fd2"
             }
           ]
         },
@@ -3222,7 +3399,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 45,
+              "line": 44,
               "kind": "localized-source",
               "context": "d35ee304431890c9e23ff40665e652f0429370222c940192121f26df5386b678"
             }
@@ -3247,6 +3424,130 @@
               "line": 82,
               "kind": "literal",
               "context": "192033e6507cbd86f16278d5b6adb5d120bfa5d91c6ad896d650c2ebfb20b961"
+            }
+          ]
+        },
+        {
+          "source": "Girlz Culture is authoritative for reviewed name, phone, description and published regular hours. Your Google address, categories, website and reviews are not overwritten. External changes require a new review.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 56,
+              "kind": "localized-source",
+              "context": "64363d833e8282fe816b74edcbadc0e8fbfd1d806cfaf69fc051ec4be07fce59"
+            }
+          ]
+        },
+        {
+          "source": "Google accepted the reviewed update.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "literal",
+              "context": "6b72c9e6f18d93b927a55a2b8ff00cf80c72c80798061aa63a1e01bbf9f1d36d"
+            }
+          ]
+        },
+        {
+          "source": "Google Business Profile",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 40,
+              "kind": "localized-source",
+              "context": "1ec21316cfc19a08ddba88dc887a3c68fc82a5b29d5071a802b6958523da8807"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 41,
+              "kind": "localized-source",
+              "context": "1ec21316cfc19a08ddba88dc887a3c68fc82a5b29d5071a802b6958523da8807"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 3788,
+              "kind": "jsx-attribute",
+              "context": "038889eb9d71b04f35d95e03e5707f852b15ace30940c0a52c34ef97889053b3"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 3797,
+              "kind": "jsx-attribute",
+              "context": "038889eb9d71b04f35d95e03e5707f852b15ace30940c0a52c34ef97889053b3"
+            }
+          ]
+        },
+        {
+          "source": "Google Business Profile is not available yet. Activation awaits a qualifying salon profile, Google approval and live verification.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 45,
+              "kind": "localized-source",
+              "context": "c1e729a4121fd6442f72d6e819b1d67919b98251f835326e7c85ae55421e0a15"
+            }
+          ]
+        },
+        {
+          "source": "Google may review photos and posts before displaying them publicly.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "localized-source",
+              "context": "1aa31eba40c6769e5b5b0278a12958405e13d1f3066d06a1f207c421bf4adc31"
+            }
+          ]
+        },
+        {
+          "source": "Google post",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 57,
+              "kind": "localized-source",
+              "context": "1b489cb3f7a790b6df919847c1f104a3e9e51db557cf891d9add8ed06db4740b"
+            }
+          ]
+        },
+        {
+          "source": "Google profile unavailable.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 20,
+              "kind": "literal",
+              "context": "a48ed2888af5573edb72ece1665e087c93492c98ec7b5ae7dc9ea1409fd659ca"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 24,
+              "kind": "localized-source",
+              "context": "f9426836fea1089f41e3046dc29f67f611d029354df5f54e7e3c67314f1664e5"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 25,
+              "kind": "localized-source",
+              "context": "f9426836fea1089f41e3046dc29f67f611d029354df5f54e7e3c67314f1664e5"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 48,
+              "kind": "localized-source",
+              "context": "f9426836fea1089f41e3046dc29f67f611d029354df5f54e7e3c67314f1664e5"
+            }
+          ]
+        },
+        {
+          "source": "Google profile unavailable. Your Girlz Culture information is unchanged.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 21,
+              "kind": "localized-source",
+              "context": "ebbdf862a6b0eb686b472a35b96deab0f9825fd24c109e65c1903fdb9891cd31"
             }
           ]
         },
@@ -3426,7 +3727,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2304,
+              "line": 2305,
               "kind": "literal",
               "context": "43d366342c15248d8bf939154d49d914f725e832af655475411ad3b0b3333989"
             }
@@ -3448,7 +3749,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2304,
+              "line": 2305,
               "kind": "literal",
               "context": "3b7a0bbd7becd23fa1d6fa81fea380228479d9cf53568dae6469eb98a27879f2"
             }
@@ -3490,6 +3791,17 @@
               "line": 18,
               "kind": "literal",
               "context": "874ecbdb84fac9f76e7209a4b3bc82bd44efbe149a6ae1289f4038e464024366"
+            }
+          ]
+        },
+        {
+          "source": "In progress",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 63,
+              "kind": "literal",
+              "context": "abb12cd99647ec82d77e3043a8adf64673e71888c255a4e19089a573510e8578"
             }
           ]
         },
@@ -3559,7 +3871,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1671,
+              "line": 1672,
               "kind": "literal",
               "context": "83670f8e5bc083ddfc872ef07f3d28ce39892f1b736fad06a6d2a2ffa4023094"
             }
@@ -3659,7 +3971,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1680,
+              "line": 1681,
               "kind": "literal",
               "context": "c08b1ae1441f95b9b4e7f78aa3ac5d3dac88dc502dc9a8bd917137885491741e"
             }
@@ -3695,6 +4007,17 @@
               "line": 95,
               "kind": "localized-source",
               "context": "f43d29ad175d08668405d46f11e84e04abf7b8ca88fcef0097bbdac11c2091e0"
+            }
+          ]
+        },
+        {
+          "source": "Last successful update: {value0}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 54,
+              "kind": "localized-source",
+              "context": "0dfbd6cba34fe66a3c2a56214d0d2a6d209576dfa6434c2c4d349254bf18c31e"
             }
           ]
         },
@@ -3842,7 +4165,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 41,
+              "line": 40,
               "kind": "localized-source",
               "context": "6fb14906bcac63d621491f767acdc895aff4e6545536eb778e2bbf7308106b1e"
             },
@@ -3898,19 +4221,19 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1647,
+              "line": 1648,
               "kind": "literal",
               "context": "ae85115295a4e5c469359b9475729a1227754a0ffac1c83ed45e51ac7787ecc8"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1651,
+              "line": 1652,
               "kind": "literal",
               "context": "e9b9ccf0745d627e7013483e1ca529d1884d403e8fb56f87acaee17817e98b28"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1671,
+              "line": 1672,
               "kind": "literal",
               "context": "f471ae2f564145b211eb648568a4660acb3a0f5b88e82532d081d1eb342ebfdf"
             }
@@ -3921,7 +4244,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1674,
+              "line": 1675,
               "kind": "literal",
               "context": "32c9906e73aa11cabf23f08333e48ede623ab8270c93571bab2d00c32182a8ec"
             }
@@ -3966,7 +4289,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 36,
+              "line": 35,
               "kind": "localized-source",
               "context": "79f30e8633ca95537f1ecb827dc76db0ee78bd2a15ceabe91f17087d4120ebca"
             }
@@ -4027,7 +4350,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1666,
+              "line": 1667,
               "kind": "literal",
               "context": "ef8f50369498e8fababb3e08f4c745e7b3e9a081af8c3595e0b03fe7bf326227"
             }
@@ -4038,7 +4361,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1871,
+              "line": 1872,
               "kind": "jsx-attribute",
               "context": "c7a87c6c9c0bb3d2e52e2cfaf2b08c1a0a7e07377380099deea6da36b4bc8590"
             }
@@ -4049,7 +4372,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1657,
+              "line": 1658,
               "kind": "jsx-attribute",
               "context": "73d5c743f7f88fde6d7037eb9f452d157159d34288bf35e71357f9717455f267"
             }
@@ -4060,7 +4383,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2692,
+              "line": 2693,
               "kind": "literal",
               "context": "5eb00975e5eb1fd10f4b67b309b437f4f05c48a285ec8918a0991d511db925b9"
             }
@@ -4071,9 +4394,20 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 53,
+              "line": 52,
               "kind": "localized-source",
               "context": "efddfcb57bb878c7ad2542390c8167397e45132c84ed2f04188929883d7e46ed"
+            }
+          ]
+        },
+        {
+          "source": "Matching Google profile",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 51,
+              "kind": "localized-source",
+              "context": "56c552213911a5d03de739d33a8c9f7007cd7249a8de7ca315031c9ea8674525"
             }
           ]
         },
@@ -4198,7 +4532,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1669,
+              "line": 1670,
               "kind": "literal",
               "context": "ae71bf8eff767e34394a75cb2e783019e4973bc50518174cb6c31fe853557b51"
             }
@@ -4297,7 +4631,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 56,
+              "line": 55,
               "kind": "localized-source",
               "context": "8a32e33b0759743202cc7f52e15cc3c97914edd1bd2d29ec9bb25c85214bdc93"
             }
@@ -4447,6 +4781,17 @@
           ]
         },
         {
+          "source": "No matching profile was found. Check your Google account and this business name, phone and address.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 50,
+              "kind": "localized-source",
+              "context": "6e5ce97ec222f027f1d8b4435ca3e804a57a60c1e9096cc69baf9bed7ec2c334"
+            }
+          ]
+        },
+        {
           "source": "No original record is overwritten or deleted. Other verified identity links remain in place.",
           "occurrences": [
             {
@@ -4535,6 +4880,17 @@
           ]
         },
         {
+          "source": "No successful synchronization recorded yet.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 54,
+              "kind": "localized-source",
+              "context": "915792cef66e9ef201470834ba0e98a20a20026003e33ccfe4eb1ecce23a898e"
+            }
+          ]
+        },
+        {
           "source": "No-show",
           "occurrences": [
             {
@@ -4554,6 +4910,12 @@
         {
           "source": "Not set",
           "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 33,
+              "kind": "localized-source",
+              "context": "9c76be00a85886b19d462a2565f75a3d4a0cc16064cc0ebfa347c9ccd703bc97"
+            },
             {
               "file": "src/components/owner/TeamWorkspace.tsx",
               "line": 30,
@@ -4698,6 +5060,17 @@
               "line": 77,
               "kind": "localized-source",
               "context": "5cda47abcb3d9bbc020a4629024078cfb0a1a2f626ed7cc1b47c5a51f430e00b"
+            }
+          ]
+        },
+        {
+          "source": "Only profiles matching your business name and phone or address can be selected. Other businesses are excluded.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 49,
+              "kind": "localized-source",
+              "context": "3572b3c9a970fd0a23637a088012f3c3cda5702e17ab9a633e558c2baca29f10"
             }
           ]
         },
@@ -5099,6 +5472,12 @@
               "line": 86,
               "kind": "localized-source",
               "context": "0c396d527614e539c2c22bbfafef7f5eabed0fffee81ccfac00f6b6c3659b0e0"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 58,
+              "kind": "localized-source",
+              "context": "0c396d527614e539c2c22bbfafef7f5eabed0fffee81ccfac00f6b6c3659b0e0"
             }
           ]
         },
@@ -5202,11 +5581,28 @@
           ]
         },
         {
+          "source": "Post text",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 59,
+              "kind": "localized-source",
+              "context": "846a8e36cb73557c8003396ca7361dddd5a2a3e61b4e045ebf14387362bbef63"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "literal",
+              "context": "0ec490c864786acef47c2375732451381e2fff936ea34d4f8e8e861da00967d2"
+            }
+          ]
+        },
+        {
           "source": "Previous",
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 57,
+              "line": 56,
               "kind": "localized-source",
               "context": "4dc4cfa04ce4ce2574b523d77bc7a3a2036d13c0cddc694735615c8bc80c1700"
             },
@@ -5256,7 +5652,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1188,
+              "line": 1189,
               "kind": "jsx-text",
               "context": "63966ca1de968261040db1db1a27d189df51626d0df2d6c095207e7a41ac83bd"
             }
@@ -5339,7 +5735,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2303,
+              "line": 2304,
               "kind": "literal",
               "context": "25c3351a3b7228a468ddeb778bfc90f2ad122c4756d035dc73948118a0ffce13"
             },
@@ -5425,6 +5821,17 @@
               "line": 44,
               "kind": "localized-source",
               "context": "fb168673a6485675d491a7ba61d5079c7a859aa14aa76ae7e01b2cdfd85515b4"
+            }
+          ]
+        },
+        {
+          "source": "Proposed value",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "localized-source",
+              "context": "643287541d308bb103b7104cf9a77bd66ce8b3aa27fb1edd8dbe0b857ce429a1"
             }
           ]
         },
@@ -5870,11 +6277,22 @@
           ]
         },
         {
+          "source": "Regular hours",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "literal",
+              "context": "0ac54be2d85a2f18af5f1d1752e46626da7f885bb8cff2f103623dae221231cb"
+            }
+          ]
+        },
+        {
           "source": "Released override",
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2687,
+              "line": 2688,
               "kind": "literal",
               "context": "be5df7bbebf9698c67f74089f92afd215b0cd677df2f9d4668b0d1a4aec4c8ab"
             }
@@ -6175,6 +6593,17 @@
           ]
         },
         {
+          "source": "Review before sending to Google",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "localized-source",
+              "context": "1929f7907d7dfce7397851e97a0e5ad7f4d458e00daff0d57c4bf4a8c7b3daa5"
+            }
+          ]
+        },
+        {
           "source": "Review changes before saving.",
           "occurrences": [
             {
@@ -6193,6 +6622,34 @@
               "line": 48,
               "kind": "localized-source",
               "context": "870fa0a09850dbc9717d32a1d33a38d6c8e0a9dfc9966f7d0c617264f19c9635"
+            }
+          ]
+        },
+        {
+          "source": "Review Google integration availability and manage this business connection.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 3788,
+              "kind": "jsx-attribute",
+              "context": "98aded13f10d3e216581f500b8ad928d1ca50b7849fa7c72c8e9b26023f7bf51"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 3797,
+              "kind": "jsx-attribute",
+              "context": "b1cbfeab3c92cf3ce2c45322e65c06d2b440f0ce3772452152f8cf90d68cba7c"
+            }
+          ]
+        },
+        {
+          "source": "Review Google update",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 60,
+              "kind": "localized-source",
+              "context": "692384685780d0a95511815638f01e9c297da8850e8f0e7c0aabb5c5b165f3ef"
             }
           ]
         },
@@ -6612,6 +7069,17 @@
           ]
         },
         {
+          "source": "Select an existing business photo",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 58,
+              "kind": "localized-source",
+              "context": "8ba64efb322c5668cbabd2766c757e6c2b7b715337e2f437d8f74065b7004d4b"
+            }
+          ]
+        },
+        {
           "source": "Select services this professional offers. Selecting none stops new online bookings for this professional.",
           "occurrences": [
             {
@@ -6619,6 +7087,23 @@
               "line": 16,
               "kind": "localized-source",
               "context": "b62c34ac5f4d5c3126cc24e5572d9fb1f46317270559ea66aac788540cfc9f06"
+            }
+          ]
+        },
+        {
+          "source": "Selected photo",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 37,
+              "kind": "localized-source",
+              "context": "0e0e54baf202b712c03a9e337749a355431d7a26d195030aae92e4a1c59da4d8"
+            },
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "literal",
+              "context": "9b5311f3101414681e84f7af20cbc40e36a1bec4ff9bba483aa00739230f5d25"
             }
           ]
         },
@@ -6641,6 +7126,17 @@
               "line": 61,
               "kind": "localized-source",
               "context": "cdb82d1163a0c2700b828e01ace1a9ee14804fb8788e3d9dc98a7247a175c1a3"
+            }
+          ]
+        },
+        {
+          "source": "Send reviewed update",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "localized-source",
+              "context": "55c3e89e2fb5a61acc99e1060b61060a72956c520d682538f61bc1abea360132"
             }
           ]
         },
@@ -6693,7 +7189,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 46,
               "kind": "localized-source",
               "context": "59f46341f73ee4159cd75a3889d9b5d7ace964e8ecc2f0cad44ed2da5917516d"
             }
@@ -6776,7 +7272,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1674,
+              "line": 1675,
               "kind": "literal",
               "context": "dae6d564a837b4ddf21ab116897069858cc60a8c420290e165dceb8cb1aab31e"
             }
@@ -6877,6 +7373,17 @@
           ]
         },
         {
+          "source": "Sign in again to manage this connection.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 18,
+              "kind": "localized-source",
+              "context": "2e41f7bd9d0e430900d421cb808738b9e10e8698a6d5d46a2c51f3938a4984b7"
+            }
+          ]
+        },
+        {
           "source": "Sign in to manage your waitlist",
           "occurrences": [
             {
@@ -6937,7 +7444,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1674,
+              "line": 1675,
               "kind": "literal",
               "context": "8d765e907e8c80d91ed09f9e5db6c89d2820a408d440b02db300d47ad48d0dde"
             }
@@ -6965,13 +7472,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 38,
+              "line": 37,
               "kind": "localized-source",
               "context": "911413a04e84c357d6931b81dcbe5fd82e725b85a766488c0b08f9434c3aeafb"
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 39,
+              "line": 38,
               "kind": "localized-source",
               "context": "911413a04e84c357d6931b81dcbe5fd82e725b85a766488c0b08f9434c3aeafb"
             },
@@ -7027,7 +7534,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 46,
+              "line": 45,
               "kind": "localized-source",
               "context": "5c5d02777b69d1d650ae7b528c1741ffe2e2bf042cec0d2d498552eeb82987d8"
             }
@@ -7294,13 +7801,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 38,
+              "line": 37,
               "kind": "localized-source",
               "context": "0febe9eae63078fc0557d064b2d1b52267382f9660abdf7c0d2a21e53241b809"
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 39,
+              "line": 38,
               "kind": "localized-source",
               "context": "0febe9eae63078fc0557d064b2d1b52267382f9660abdf7c0d2a21e53241b809"
             }
@@ -7325,6 +7832,28 @@
               "line": 69,
               "kind": "literal",
               "context": "beed62edd3ae8f7091f2ff5ee36f3591581b3673462b5b744a2e42cbb2590858"
+            }
+          ]
+        },
+        {
+          "source": "Synchronization history",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 63,
+              "kind": "localized-source",
+              "context": "8c57a0b6fa50cc7f27b06524287db40ce6b00e61225ac83d0a2be9d24956b03b"
+            }
+          ]
+        },
+        {
+          "source": "Synchronization needs review. Automatic updates have stopped; review the current Google profile before enabling them again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 55,
+              "kind": "localized-source",
+              "context": "f93302236a3066d53823e84f2fb558717a4db53a61c017bf1064b8b61b71989d"
             }
           ]
         },
@@ -7579,6 +8108,17 @@
           ]
         },
         {
+          "source": "The profile changed. Review the current details before trying again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 21,
+              "kind": "localized-source",
+              "context": "89ea795d8d40a5a48d4b9dc1ccd5f3a90956a6f5c51750e819b03aea3f26ca49"
+            }
+          ]
+        },
+        {
           "source": "The proposal could not be completed. Your draft is kept; review availability and try again.",
           "occurrences": [
             {
@@ -7651,7 +8191,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 524,
+              "line": 525,
               "kind": "literal",
               "context": "47aaaecbb8c003cb3e5b8d62b384309c789b44b80151667057071f950b7a499a"
             }
@@ -7748,6 +8288,17 @@
               "line": 72,
               "kind": "literal",
               "context": "e69ea327f823380324a7fd1b478c9c9bff708fdd753ff77c37b508dbf07e4c21"
+            }
+          ]
+        },
+        {
+          "source": "This business has a connected Google profile.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 47,
+              "kind": "literal",
+              "context": "dbca3f00b4ee5c67415f52fcc098efc3f5014c3964874b392da033f19051e957"
             }
           ]
         },
@@ -7852,6 +8403,17 @@
           ]
         },
         {
+          "source": "This operation needs review. Check Google before creating another update.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 61,
+              "kind": "literal",
+              "context": "6b72c9e6f18d93b927a55a2b8ff00cf80c72c80798061aa63a1e01bbf9f1d36d"
+            }
+          ]
+        },
+        {
           "source": "This photo changed in another session. Your edits are kept; reload the saved details before trying again.",
           "occurrences": [
             {
@@ -7933,7 +8495,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 45,
+              "line": 44,
               "kind": "localized-source",
               "context": "c2fa12889c44e65119ca31c8dfc84193ea7909ca79b02ccace890a0872e45981"
             }
@@ -8054,7 +8616,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 56,
+              "line": 55,
               "kind": "localized-source",
               "context": "870be9c017f7687c6aef408b7a482562004d90b0b1fd0863d8e76357fcaa3fce"
             }
@@ -8093,7 +8655,7 @@
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 46,
+              "line": 45,
               "kind": "localized-source",
               "context": "c2977c0aada8c47f1cdb3a72aa59ebcf10175713f65ad3deb71c37b42d470f59"
             },
@@ -8202,6 +8764,17 @@
               "line": 25,
               "kind": "literal",
               "context": "4a2b26d86ef724136937ed8a09e67587bdf569eaf1b6a3e08430d01d8829741a"
+            }
+          ]
+        },
+        {
+          "source": "Update type",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 57,
+              "kind": "localized-source",
+              "context": "4a958be3ce57c65e89733cf8765e5a6311c300993a277c98134a6e5104ca38f4"
             }
           ]
         },
@@ -8422,7 +8995,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1779,
+              "line": 1780,
               "kind": "literal",
               "context": "fb845e8a1748410bb4ab30207615e8dd06a743b962d0e909ad6cde54decfc4ad"
             }
@@ -8639,6 +9212,17 @@
           ]
         },
         {
+          "source": "Your Girlz Culture page and booking tools continue to work. No Google profile changes or background synchronization are running.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+              "line": 45,
+              "kind": "localized-source",
+              "context": "2d65d3603c7c106bc4d24f91774da14af2e050ab7befc96c97ebced0cc65843c"
+            }
+          ]
+        },
+        {
           "source": "Your reply is public only after it passes moderation. Customer words stay unchanged.",
           "occurrences": [
             {
@@ -8696,14 +9280,14 @@
       ]
     },
     "es": {
-      "source_count": 2424,
-      "covered": 2424,
+      "source_count": 2471,
+      "covered": 2471,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 2424,
-      "covered": 2424,
+      "source_count": 2471,
+      "covered": 2471,
       "missing_count": 0,
       "missing": []
     }

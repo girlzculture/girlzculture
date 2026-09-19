@@ -20331,20 +20331,30 @@
       "source_line": 682,
       "added_specification": "software-first-2026-09-18",
       "requirement_kind": "product",
-      "assessment": "live activation founder-deferred; code implementation required",
-      "implementation_status": "IN PROGRESS",
-      "verification_status": "UNVERIFIED",
+      "assessment": "Integration code implemented and simulated; live activation founder-deferred",
+      "implementation_status": "IMPLEMENTED",
+      "verification_status": "AUTOMATED ONLY",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
-        "docs/dashboard-redesign/GOOGLE-BUSINESS-PROFILE-ACCESS.md"
+        "docs/dashboard-redesign/GOOGLE-BUSINESS-PROFILE-ACCESS.md",
+        "src/lib/googleBusinessProfileCore.ts",
+        "src/lib/googleBusinessProfileServer.ts",
+        "src/components/owner/GoogleBusinessProfileSettings.tsx",
+        "supabase/migrations/20260918234416_business_google_profile_connections.sql",
+        "netlify/functions/google-profile-sync.ts"
       ],
       "changes": [
         "Founder-approved activation completed for Business Information API in project project-f0d9935c-69db-42c9-b22 (number886435271334). Read-only Cloud quota inspection shows0requests/minute; Google documents this as unapproved.",
-        "Founder expressly deferred live activation on 18 September; no qualifying salon available. No further profile requests or zero-quota retries. Recorded single activation checklist with reserved production callback."
+        "Founder expressly deferred live activation on 18 September; no qualifying salon available. No further profile requests or zero-quota retries. Recorded single activation checklist with reserved production callback.",
+        "Owner OAuth/state/PKCE, encrypted per-business credentials, fresh role/location binding, reviewed info/hours/media/posts, conflict/readback, idempotency/audit, disconnect and bounded separate scheduler implemented. Disabled availability UI in four languages offers no Connect. Live actions and jobs remain gated off."
       ],
-      "verification": [],
+      "verification": [
+        "11 simulated provider/core tests pass; rollback SQL covers fresh authorization, one-use/expiry, stale generations, token CAS, lease/retry, conflicts, disconnect and two-business boundaries.",
+        "Google UI14/14 plus bookings10/10 and owner waitlist8/8 =32/32 Chromium/WebKit tests passed on production build. Four languages/four viewports; no live Google calls.",
+        "172 local fresh migrations/assertions pass; final routine additions tested separately. TypeScript/build/lint/149-route monitoring/localization2471/2471 pass."
+      ],
       "live_evidence": [],
-      "remaining": "Implement and simulate-test OAuth authorization, encrypted per-business connection storage, disconnect, hours/business information synchronization, supported media/posts, conflict detection, retry/audit. Keep live actions and background sync disabled with honest unavailable UI. Follow GOOGLE-BUSINESS-PROFILE-ACCESS.md when live activation resumes.",
+      "remaining": "Protected migration and hosted unavailable-state acceptance remain release gates. Full live Google integration is not complete: qualifying salon, project approval, OAuth configuration/verification and live acceptance are founder-deferred; follow GOOGLE-BUSINESS-PROFILE-ACCESS.md. No live Google dependency blocks this release.",
       "external_blocker": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. This external dependency no longer blocks the current release.",
       "wire_coverage": [
         {
@@ -24503,7 +24513,8 @@
       "Implemented / unverified": 19,
       "Completed / verified": 1
     },
-    "total": 201
+    "total": 201,
+    "current_work": "Google disabled integration automated verification and mobile bookings visibility correction complete locally; corrected-source CI pending push. Continue remaining software-first features and hosted acceptance."
   },
   "latest_authority": {
     "source": "founder-software-first-2026-09-18.md",
