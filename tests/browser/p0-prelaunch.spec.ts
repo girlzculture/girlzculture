@@ -127,18 +127,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
   await page.screenshot({ path: `${directory}/marketplace-${viewport.width}.png`, fullPage: true, ...screenshotCaret });
 });
 
-test('demonstration replacement document waits for its stylesheet before geometry at 390x844', async ({ page, context, baseURL, browserName }, info) => {
+test('demonstration replacement document waits for its stylesheet before geometry at 390x844', async ({ page, context, baseURL }, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await context.addCookies([{ name: 'gc_site_access', value: 'marketplace-demo', url: baseURL! }]);
   await page.addInitScript(() => localStorage.setItem('girlz-culture-mobile-location-prompt-v1', JSON.stringify({ dismissedAt: Date.now(), outcome: 'dismissed' })));
   await page.goto('/site-access');
   await waitForMarketplaceDocument(page);
 
-  let releaseStylesheet!: () => void;
+  let resolveStylesheet!: () => void;
   let markStylesheetRequested!: () => void;
   let markStylesheetFinished!: () => void;
   let stylesheetStarted = false;
-  const stylesheetGate = new Promise<void>(resolve => { releaseStylesheet = resolve; });
+  let stylesheetReleased = false;
+  let stylesheetContinued = false;
+  const stylesheetGate = new Promise<void>(resolve => { resolveStylesheet = resolve; });
+  const releaseStylesheet = () => { stylesheetReleased = true; resolveStylesheet(); };
   const stylesheetRequested = new Promise<void>(resolve => { markStylesheetRequested = resolve; });
   const stylesheetFinished = new Promise<void>(resolve => { markStylesheetFinished = resolve; });
   // The original trace checked the replacement document while this actual
@@ -149,6 +152,7 @@ test('demonstration replacement document waits for its stylesheet before geometr
     markStylesheetRequested();
     try {
       await stylesheetGate;
+      stylesheetContinued = true;
       await route.continue();
     } finally { markStylesheetFinished(); }
   });
@@ -160,15 +164,15 @@ test('demonstration replacement document waits for its stylesheet before geometr
     await info.attach('marketplace-held-stylesheet-geometry', { body: JSON.stringify(premature, null, 2), contentType: 'application/json' });
     expect(premature.readyState).not.toBe('complete');
 
-    // WebKit lays out intrinsic images before this import arrives; Chromium
-    // can already fit. Both must wait for the current document before judging
-    // final layout. The original WebKit failure and BEFORE source are retained.
-    if (browserName === 'webkit') expect(premature.fits, 'WebKit reproduces the original premature overflow').toBe(false);
+    // Incomplete layout can fit or overflow in either engine. Prove that the
+    // actual stylesheet is still held instead of requiring broken geometry.
+    expect({ started: stylesheetStarted, released: stylesheetReleased, continued: stylesheetContinued }).toEqual({ started: true, released: false, continued: false });
     let ready = false;
     const currentDocument = waitForMarketplaceDocument(page).then(() => { ready = true; });
     // A protocol round trip verifies the current document is still loading;
     // no elapsed-time assumption, sleep, retry or width-based wait is involved.
     expect(await page.evaluate(() => document.readyState)).not.toBe('complete');
+    expect({ released: stylesheetReleased, continued: stylesheetContinued }).toEqual({ released: false, continued: false });
     expect(ready).toBe(false);
     releaseStylesheet();
     await currentDocument;

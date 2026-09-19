@@ -1,4 +1,17 @@
-# Current continuation — native referral save correction and release preparation
+# Current continuation — prelaunch readiness contract and provider pause
+
+Continue existing PR80 above pushed b81396ca2e3fac059248b9abc8a79ad3a0e65068. This correction changes test readiness characterization and the automatic provider-test pause only; build201 application code, all188 migrations, dependencies and both USD25 caps are unchanged. All201 requirement definitions and detailed clauses remain intact.
+
+- Release35472407837 passed all three browser shards:1397passed/5existing viewport skips/0failed. Owner checks pass958core/128unchanged billing/7demo, with EN/FR/ES/zh-CN each2809/2809. These overlapping suites are reported separately. Its final prelaunch step failed29passed/1failed because a new intermediate assertion required WebKit's unfinished document to overflow. The original held-stylesheet attachment instead records loading state and390px document/390px viewport. Final loaded geometry was never reached in that case. This is a test characterization error, not evidence of final layout failure.
+- The correction checks the actual stylesheet remains held and current-document readiness remains pending, then retains complete load, loaded fonts, exact no-overflow and usable-menu assertions. A preserved immediate-helper counterexample fails the readiness contract in both engines; the corrected boundary passes2/2. No app/CSS change, sleep, retry, larger timeout or relaxed final geometry. See PRELAUNCH-NAVIGATION-READINESS-ACCEPTANCE.md for the complete focused-suite result.
+- The automatic Stripe connectivity step now has an explicit false condition and reports the exact founder pause. Names-only GitHub evidence showed no configured repository Stripe secret, so previous runs already exited before calling the provider; the new condition prevents future secret setup from silently resuming testing. Provider-free billing regressions and application billing code are unchanged. No provider/configuration action occurred.
+- Required da1f5ec run35470814138 completed successfully; b81396c required35472407770 remains in progress at this checkpoint. The necessary correction needs new-head required checks. No unchanged workflow retry was launched, and older passing evidence is not substituted for final-head CI.
+
+Production remains locked deployment6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739. Compatible fallback6aaf038e60132299e3830c77 is ready/unpublished. No production migration, merge, publication, secret export or cap change occurred. The release transition preparation and remaining hosted/manual-setup boundaries below remain current.
+
+---
+
+# Previous continuation — native referral save correction and release preparation
 
 Continue PR80 / codex/business-dashboard-value-redesign above pushed da1f5ec5af95bd9e0d70f383e59061b4529a302d. The containing correction commit is the next exact source for CI. Latest founder instructions remain in founder-execution-2026-09-19.md; all201 groups and detailed clauses are preserved. **Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.** Completed billing code/payment protections remain. No further provider/configuration work or repeated credential request; Stripe is not a blanket non-Stripe release blocker. Owner-controlled setup is consolidated in MANUAL-CONFIGURATION-HANDOFF.md.
 

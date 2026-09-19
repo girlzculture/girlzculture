@@ -231,6 +231,9 @@ jobs:
           retention-days: 7
 
       - name: Verify Stripe test-mode connectivity without creating a payment or transfer
+        # Founder-directed pause: retain the procedure, but never invoke the
+        # provider during this release. Provider-free regressions remain above.
+        if: ${{ false }}
         id: stripe
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -273,7 +276,7 @@ jobs:
       - name: Record successful verification without replacing the PR description
         if: success()
         env:
-          STRIPE_STATUS: ${{ steps.stripe.outputs.status }}
+          STRIPE_STATUS: ${{ steps.stripe.outputs.status || 'Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.' }}
         shell: bash
         run: |
           set -euo pipefail
