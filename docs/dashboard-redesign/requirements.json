@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; ff4792f required CI running and release core step failed on missing test-harness hook; focused correction8/8 and connected policy/Finance browser acceptance pass locally; updated-source CI, protected migrations, provider and hosted acceptance remain; release unpublished",
+  "status": "IN PROGRESS; both ff4792f release failures reproduced and corrected locally (inbox8/8, dock/DST14/14); combined build200 passes; next-head required CI, reviewed migrations, changed hosted and non-Stripe provider acceptance remain; Stripe live acceptance founder-paused; release unpublished",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -10,7 +10,9 @@
     "promotion": "Founder approved percentage of eligible service price. Protect the applicable deposit, cap savings at the unpaid balance, preserve booked terms.",
     "caps": "Preserve both existing USD25 caps",
     "wolof": "Explicitly deferred",
-    "google_business_profile": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile."
+    "google_business_profile": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
+    "stripe_live_acceptance": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.",
+    "stripe_release_scope": "Preserve completed billing code, existing agreements and unchanged billing regressions. Stripe live acceptance is not a blanket blocker for the non-Stripe release; isolate any actual Stripe-dependent feature and do not claim provider completion."
   },
   "requirements": [
     {
@@ -5705,8 +5707,8 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Reuse the identified existing Stripe sandbox once its protected secret and event-routing review are configured; verify setup/cancel/fresh masked readback and unchanged commercial terms. Recognized inherited178 and explicit187 scheduled-agreement handling is implemented, while BILL-02–04 current/future effectiveness, phase transition and invoice acceptance remain provider/hosted gates. Unknown, ambiguous and unsupported one-off schedules still refuse safely. Apply reviewed migrations through protected release controls and finish current CI/hosted checks; production is not claimed changed.",
-      "external_blocker": "Confirmed exact existing customer/subscription in separate Girlz Culture sandbox; failed live-account request cannot access sandbox objects. Isolated sandbox runtime/credential configuration and actual provider acceptance are outstanding; no production credential or association was changed.",
+      "remaining": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately. Preserve existing billing and completed corrections; do not troubleshoot, configure or test the live provider during this pause. Resume the existing-account setup/update/cancel/masked-default persistence and commercial-term checks only in the separate Stripe phase. Retain applicable unchanged local regression and reviewed schema dependency checks.",
+      "external_blocker": "Paused by founder, not a blanket non-Stripe release blocker. Existing sandbox key and isolated event routing remain owner-controlled setup for the separate phase; see MANUAL-CONFIGURATION-HANDOFF.md. No production credential, subscription or association changed.",
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IMPLEMENTED",
@@ -5772,7 +5774,9 @@
           "evidence": [],
           "remaining": "Connect existing evidence to this complete journey; no whole-feature acceptance yet."
         }
-      ]
+      ],
+      "founder_directed_pause": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.",
+      "stripe_live_acceptance_blocks_non_stripe_release": false
     },
     {
       "id": "BILL-02",
@@ -5822,8 +5826,8 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete the existing protected sandbox setup/cancel/masked-readback verification with isolated event routing, unchanged commercial terms and current/future method effectiveness for supported schedules. Verify phase transition/subsequent invoice behavior without inventing a charge guarantee; unknown or ambiguous schedules remain review-required. Pass final compiled/required CI and protected migration/release gates. Production unchanged.",
-      "external_blocker": "Exact stored customer/subscription were identified read-only in the separate Girlz Culture sandbox. Secure existing-key configuration in billing-sandbox and isolated webhook event routing remain pending; actual setup/cancel/provider readback has not passed. No production credential, association or configuration was changed.",
+      "remaining": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately. Preserve existing billing and completed corrections; do not troubleshoot, configure or test the live provider during this pause. Resume the existing-account setup/update/cancel/masked-default persistence and commercial-term checks only in the separate Stripe phase. Retain applicable unchanged local regression and reviewed schema dependency checks.",
+      "external_blocker": "Paused by founder, not a blanket non-Stripe release blocker. Existing sandbox key and isolated event routing remain owner-controlled setup for the separate phase; see MANUAL-CONFIGURATION-HANDOFF.md. No production credential, subscription or association changed.",
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IMPLEMENTED",
@@ -5889,7 +5893,9 @@
           "evidence": [],
           "remaining": "Connect existing evidence to this complete journey; no whole-feature acceptance yet."
         }
-      ]
+      ],
+      "founder_directed_pause": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.",
+      "stripe_live_acceptance_blocks_non_stripe_release": false
     },
     {
       "id": "BILL-03",
@@ -5936,8 +5942,8 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete the existing protected sandbox setup/cancel/masked-readback verification with isolated event routing, unchanged commercial terms and current/future method effectiveness for supported schedules. Verify phase transition/subsequent invoice behavior without inventing a charge guarantee; unknown or ambiguous schedules remain review-required. Pass final compiled/required CI and protected migration/release gates. Production unchanged.",
-      "external_blocker": "Exact stored customer/subscription were identified read-only in the separate Girlz Culture sandbox. Secure existing-key configuration in billing-sandbox and isolated webhook event routing remain pending; actual setup/cancel/provider readback has not passed. No production credential, association or configuration was changed.",
+      "remaining": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately. Preserve existing billing and completed corrections; do not troubleshoot, configure or test the live provider during this pause. Resume the existing-account setup/update/cancel/masked-default persistence and commercial-term checks only in the separate Stripe phase. Retain applicable unchanged local regression and reviewed schema dependency checks.",
+      "external_blocker": "Paused by founder, not a blanket non-Stripe release blocker. Existing sandbox key and isolated event routing remain owner-controlled setup for the separate phase; see MANUAL-CONFIGURATION-HANDOFF.md. No production credential, subscription or association changed.",
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IMPLEMENTED",
@@ -6003,7 +6009,9 @@
           "evidence": [],
           "remaining": "Connect existing evidence to this complete journey; no whole-feature acceptance yet."
         }
-      ]
+      ],
+      "founder_directed_pause": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.",
+      "stripe_live_acceptance_blocks_non_stripe_release": false
     },
     {
       "id": "BILL-04",
@@ -6050,8 +6058,8 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete the existing protected sandbox setup/cancel/masked-readback verification with isolated event routing, unchanged commercial terms and current/future method effectiveness for supported schedules. Verify phase transition/subsequent invoice behavior without inventing a charge guarantee; unknown or ambiguous schedules remain review-required. Pass final compiled/required CI and protected migration/release gates. Production unchanged.",
-      "external_blocker": "Exact stored customer/subscription were identified read-only in the separate Girlz Culture sandbox. Secure existing-key configuration in billing-sandbox and isolated webhook event routing remain pending; actual setup/cancel/provider readback has not passed. No production credential, association or configuration was changed.",
+      "remaining": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately. Preserve existing billing and completed corrections; do not troubleshoot, configure or test the live provider during this pause. Resume the existing-account setup/update/cancel/masked-default persistence and commercial-term checks only in the separate Stripe phase. Retain applicable unchanged local regression and reviewed schema dependency checks.",
+      "external_blocker": "Paused by founder, not a blanket non-Stripe release blocker. Existing sandbox key and isolated event routing remain owner-controlled setup for the separate phase; see MANUAL-CONFIGURATION-HANDOFF.md. No production credential, subscription or association changed.",
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IMPLEMENTED",
@@ -6117,7 +6125,9 @@
           "evidence": [],
           "remaining": "Connect existing evidence to this complete journey; no whole-feature acceptance yet."
         }
-      ]
+      ],
+      "founder_directed_pause": "Founder-directed pause—remaining Stripe configuration and live provider acceptance will be handled separately.",
+      "stripe_live_acceptance_blocks_non_stripe_release": false
     },
     {
       "id": "FIN-01",
@@ -20643,13 +20653,18 @@
         "src/lib/businessFinanceData.ts",
         "src/lib/businessFinanceExportServer.ts",
         "src/lib/financeDailyClose.ts",
-        "tests/browser/business-finance-tabs.spec.ts"
+        "tests/browser/business-finance-tabs.spec.ts",
+        "src/lib/businessFinanceReport.ts",
+        "tests/p0-business-finance-export.test.mjs",
+        "docs/dashboard-redesign/FINANCE-BOOTH-EXPORT-ACCEPTANCE.md"
       ],
       "changes": [
-        "Finances now uses six compact connected workspaces with URL-backed tab/period/search/balance state and retained unsaved entries. Daily close derives completion, receipts, methods, refunds and expense figures from the same authorized ledger as exports. Wide PDF sections retain all columns in readable dated continuation tables."
+        "Finances now uses six compact connected workspaces with URL-backed tab/period/search/balance state and retained unsaved entries. Daily close derives completion, receipts, methods, refunds and expense figures from the same authorized ledger as exports. Wide PDF sections retain all columns in readable dated continuation tables.",
+        "Booth-renter export summaries now preserve canonical per-professional rent due and received in PDF/XLSX, separately from service sales and compensation. Existing ledger math, scope authorization and original names remain unchanged."
       ],
       "verification": [
-        "AUTOMATED ONLY: populated Finance tab journeys 8/8 Chromium/WebKit across EN/FR/ES/zh-CN and 390/768/844/1440; existing Finance/deposit combined run36/36. Core/export8/8; TypeScript/focusedlint/build pass. French phone and French/Chinese rendered PDF examined. work/redesign-evidence/finance-tabs-populated-final.log,finance-tabs-export-final.log,finance-tabs-reports-after. No live acceptance."
+        "AUTOMATED ONLY: populated Finance tab journeys 8/8 Chromium/WebKit across EN/FR/ES/zh-CN and 390/768/844/1440; existing Finance/deposit combined run36/36. Core/export8/8; TypeScript/focusedlint/build pass. French phone and French/Chinese rendered PDF examined. work/redesign-evidence/finance-tabs-populated-final.log,finance-tabs-export-final.log,finance-tabs-reports-after. No live acceptance.",
+        "AUTOMATED ONLY: missing booth report columns reproduced2/2 before; corrected full export file8/8,0skip, TypeScript/lint/independent review pass. Actual8 affected PDF pages and8 XLSX sheets inspected across business/own scopes and EN/FR/ES/zh-CN. Exact partial payment, period edges, numeric cells, empty/zero and foreign-business rejection covered. FINANCE-BOOTH-EXPORT-ACCEPTANCE.md; provider/hosted/current-source build/CI remain separate."
       ],
       "live_evidence": [],
       "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
@@ -25311,5 +25326,11 @@
     "benchmark_status": "The historical transport failure is recovered. Actual retained public BLS v2 bytes supply31 numeric months plus the explicit October2025 missing observation, with exact provenance and no fabricated/interpolated values.18 focused Node checks pass; the saved snapshot is generated from retained bytes without another network call. Build199 and12 unique compiled Money/BLS browser cases now pass, including fixed-time fresh numbers and expired-number absence while the missing month remains visible. Independent UI/copy/test review and scoped lint pass. The national US-city-average personal-care-services CPI is an index, not a local service price, recommended dollar amount, own profit or competitor dataset. Final new-commit CI and hosted/remaining visual acceptance stay separate.",
     "current_ci": "Fresh read at2026-09-19T19:35Z for exact332a716b50034807ea05e28d2147d1dfc930647c: required verification run35461160203 PASS, with1337 broad browser passes/5 skipped in54.6min and focused20+5+23+56 passes. Release run35461160051 passed all three browser shards and owner localization, but its final release-candidate job FAILED: prelaunch27 passed/1 WebKit390x844 failure at the initial /site-access horizontal-overflow assertion. Evidence: ci-332a716-required-verify.log, ci-332a716-release-gate.log and ci-332a716-final-check-rollup.json. Subsequent deterministic loading-boundary evidence and the reviewed test-only readiness correction have30/30 local passes. The original CI failure is preserved and updated-commit CI is pending; local success does not change that job result. These exact-head checks do not verify the later uncommitted batch. Protected billing and production migration jobs remained skipped; no production application is implied.",
     "production_confirmation": "Fresh read-only tool observation approximately2026-09-19T19:58Z confirms deployment6aac503fa5eacb00089c6d87, commitd37cbf4ef3954063797946b7508352470653a739 and production_locked=true. Exact timestamp was not retained. This deployment/lock confirmation is separate from the last15:51:23Z migration metadata comparison; it does not refresh the inferred37 pending migration count."
+  },
+  "latest_execution_instruction": {
+    "source": "founder-execution-2026-09-19.md",
+    "read_in_full": true,
+    "original_scope_unchanged": true,
+    "all201_groups_retained": true
   }
 }

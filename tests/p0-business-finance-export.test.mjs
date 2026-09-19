@@ -16,6 +16,65 @@ const books={
 };
 const input={salonId:salon,business:'Test Beauty 丽人',scope:'business',books,names:new Map([['stylist-A','Test Stylist']]),period,generatedAt:at};
 
+function boothBooks() {
+ return {
+  sales:[{...books.sales[0],id:'sale:booth',stylist_id:'stylist-booth',compensation:{kind:'booth',version:'booth-v1'}}],
+  payments:[],expenses:[],
+  obligations:[
+   {id:'rent:current',salon_id:salon,stylist_id:'stylist-booth',due_at:at,kind:'booth_rent',amount_cents:20000,arrangement_version:'booth-v1'},
+   {id:'rent:prior',salon_id:salon,stylist_id:'stylist-booth',due_at:'2026-09-01T03:59:59Z',kind:'booth_rent',amount_cents:90000,arrangement_version:'booth-v1'},
+  ],
+  compensation_payments:[
+   {id:'rent:paid',salon_id:salon,stylist_id:'stylist-booth',occurred_at:at,obligation_id:'rent:current',kind:'booth_rent',amount_cents:7500,method:'transfer'},
+   {id:'rent:future',salon_id:salon,stylist_id:'stylist-booth',occurred_at:'2026-10-01T04:00:00Z',obligation_id:'rent:current',kind:'booth_rent',amount_cents:12500,method:'cash'},
+  ],
+ };
+}
+
+test('booth-renter PDF and spreadsheet summaries retain rent due and received without treating them as compensation',async()=>{
+ const ownBooks=boothBooks(),names=new Map([['stylist-booth','Original Booth 丽人']]);
+ const canonical=summarizeOperatingBooks(salon,ownBooks,period);
+ assert.equal(canonical.business_sales_cents,0,'The professional retains their service income');
+ assert.equal(canonical.completed_service_sales_cents,10000);
+ assert.equal(canonical.recorded_profit_cents,20000,'Rent earned is counted once; receiving part is not additional income');
+ assert.equal(canonical.cash_received_cents,0,'Customer receipts do not include rent receipts');
+ for(const scope of ['business','own'])for(const locale of ['en','fr','es','zh-CN']){
+  const report=buildFinanceReport({...input,books:ownBooks,names,scope,locale});
+  const section=report.sections.find(row=>row.key==='stylists');
+  for(const label of ['Booth rent due','Booth rent received'])assert.ok(section.headers.includes(financeReportText(locale,label)),`Missing ${label} in ${scope}/${locale} export`);
+  const values=section.rows[0].map(item=>item.value);
+  assert.deepEqual(values,['Original Booth 丽人',1,100,0,0,0,200,75]);
+  assert.deepEqual(report.period,period);assert.equal(report.currency,'USD');
+  const groups=financePdfColumnGroups(section.headers.length);
+  assert.ok(groups.every(group=>group.length<=5&&group[0]===0));
+  assert.deepEqual(groups.flatMap(group=>group.slice(1).map(index=>values[index])),values.slice(1),'PDF continuation retains each rent column and repeats the professional');
+  const summary=report.sections.find(row=>row.key==='summary').rows;
+  if(scope==='business')assert.equal(summary.find(row=>row[0].value===financeReportText(locale,'Recorded profit'))[1].value,200);
+  else for(const forbidden of ['Recorded profit','Business-owned sales','Operating expenses'])assert.equal(summary.some(row=>row[0].value===financeReportText(locale,forbidden)),false);
+  const xlsx=await financeSpreadsheet(report),pdf=await financePdf(report);
+  assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
+  const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(xlsx);
+  const sheet=workbook.getWorksheet(financeReportText(locale,'Stylist earnings'));
+  assert.deepEqual(sheet.getRow(5).values.slice(1),section.headers);
+  assert.deepEqual(sheet.getRow(6).values.slice(1),values);
+  assert.equal(sheet.getCell('G6').type,ExcelJS.ValueType.Number);assert.equal(sheet.getCell('H6').type,ExcelJS.ValueType.Number);
+  assert.equal(sheet.getCell('A3').value,'2026-09-01 - 2026-09-30 | America/New_York | USD');
+  if(process.env.FINANCE_REPORT_OUTPUT){mkdirSync(process.env.FINANCE_REPORT_OUTPUT,{recursive:true});writeFileSync(path.join(process.env.FINANCE_REPORT_OUTPUT,`booth-${scope}-${locale}.pdf`),pdf);writeFileSync(path.join(process.env.FINANCE_REPORT_OUTPUT,`booth-${scope}-${locale}.xlsx`),xlsx);}
+ }
+});
+
+test('booth-renter report columns retain real zero and reject foreign rent before rendering',()=>{
+ const ownBooks=boothBooks();ownBooks.compensation_payments=[];
+ const report=buildFinanceReport({...input,books:ownBooks,names:new Map([['stylist-booth','Original Booth 丽人']]),locale:'en'});
+ assert.deepEqual(report.sections.find(row=>row.key==='stylists').rows[0].slice(-2).map(item=>item.value),[200,0]);
+ for(const key of ['obligations','compensation_payments']){
+  const mixed=boothBooks();mixed[key][0].salon_id='business-B';
+  assert.throws(()=>buildFinanceReport({...input,books:mixed,locale:'en'}),/FINANCE_ACCESS_DENIED/);
+ }
+ const empty=buildFinanceReport({...input,books:{sales:[],payments:[],expenses:[],obligations:[],compensation_payments:[]},locale:'en'});
+ assert.deepEqual(empty.sections.find(row=>row.key==='stylists').rows,[]);
+});
+
 test('wide daily-close PDFs retain all figures and repeat the date in readable continuation tables',()=>{
  const daily=buildFinanceReport({...input,locale:'fr'}).sections.find(section=>section.key==='daily');
  assert.ok(daily.headers.length>6);

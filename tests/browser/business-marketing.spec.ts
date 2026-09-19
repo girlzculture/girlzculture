@@ -54,6 +54,25 @@ test.describe('Business marketing offer dates',()=>{
    expect(pageErrors).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
   });
  }
+ test('Business marketing desktop assistant opening preserves offer draft focus',async({page},info)=>{
+  const f=await p0OwnerFixture(page,{populated:true});await page.setViewportSize({width:1279,height:900});await page.goto('/salon/dashboard/promotions/new');
+  const editor=page.locator('#promotion-editor'),title=editor.locator('[name="title"]'),headline=editor.locator('[name="public_headline"]');
+  await headline.fill('Own headline');await title.fill('Own draft');await expect(title).toHaveValue('Own draft');await expect(title).toBeFocused();
+  await title.evaluate((element:HTMLInputElement)=>element.setSelectionRange(4,4));
+  const assistant=page.getByRole('dialog',{name:'GC Assistant',exact:true});await expect(assistant).not.toBeVisible();
+  // Crossing the real docking breakpoint opens the same native desktop dialog
+  // as delayed startup. Opening a passive dock must not redirect ongoing input.
+  await page.setViewportSize({width:1280,height:900});await expect(assistant).toBeVisible();
+  const focus=await title.evaluate((element:HTMLInputElement)=>({retained:document.activeElement===element,selectionStart:element.selectionStart,selectionEnd:element.selectionEnd,activeTag:document.activeElement?.tagName,activeLabel:document.activeElement?.getAttribute('aria-label')}));
+  await info.attach('automatic-dock-focus',{body:JSON.stringify(focus),contentType:'application/json'});
+  await page.screenshot({path:info.outputPath('offer-automatic-dock-focus.png')});
+  expect(focus.retained,'Automatic desktop docking must preserve the active offer input').toBe(true);expect(focus.selectionStart).toBe(4);expect(focus.selectionEnd).toBe(4);
+  await page.keyboard.insertText('reviewed ');await expect(title).toHaveValue('Own reviewed draft');await expect(headline).toHaveValue('Own headline');
+  await assistant.getByRole('button',{name:'Close GC Assistant',exact:true}).click();await expect(assistant).not.toBeVisible();
+  await page.getByRole('button',{name:'GC Assistant',exact:true}).click();await expect(assistant).toBeVisible();
+  expect(await assistant.evaluate(element=>element.contains(document.activeElement)),'An explicit assistant launch should move focus into its dialog').toBe(true);
+  expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
+ });
  test('Business marketing offer dates reject unavailable wall times before saving',async({page})=>{
   const f=await p0OwnerFixture(page,{populated:true});await page.goto('/salon/dashboard/promotions/new');const editor=page.locator('#promotion-editor');
   await editor.locator('[name="title"]').fill('Own draft');await editor.locator('[name="public_headline"]').fill('Own draft');await editor.locator('[name="timezone"]').fill('America/New_York');

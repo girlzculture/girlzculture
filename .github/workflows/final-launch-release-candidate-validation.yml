@@ -64,7 +64,7 @@ jobs:
         run: npm run test:p0:core
       - name: Verify subscription payment-method isolation and no-charge boundary
         if: ${{ !cancelled() }}
-        run: node --test tests/subscription-payment-method.test.mjs tests/subscription-payment-explicit.test.mjs tests/subscription-mutation-guard.test.mjs tests/subscription-downgrade.test.mjs
+        run: node --test tests/subscription-payment-method.test.mjs tests/subscription-payment-explicit.test.mjs tests/subscription-mutation-guard.test.mjs tests/subscription-downgrade.test.mjs scripts/billing-sandbox-success.test.mjs
       - name: Verify isolated business demo scenarios
         if: ${{ !cancelled() }}
         run: node --test tests/business-demo-scenarios.test.mjs
@@ -340,7 +340,7 @@ jobs:
       - name: Install locked dependencies without provider credentials
         run: npm ci
       - name: Check sandbox safety gates without provider access
-        run: node --test scripts/billing-sandbox-guards.test.mjs
+        run: node --test scripts/billing-sandbox-guards.test.mjs scripts/billing-sandbox-success.test.mjs
       - name: Verify the complete schema on an isolated local database
         if: ${{ inputs.billing_sandbox_mode == 'setup-cancel' }}
         env:

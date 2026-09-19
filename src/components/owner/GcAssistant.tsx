@@ -114,6 +114,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const { locale, translateSource: t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
+  const explicitOpen = useRef(false);
   const conversationOptions = useRef<HTMLDetailsElement>(null);
   const appearanceSection = useRef<HTMLFieldSetElement>(null);
   const handledAppearanceRequest = useRef(0);
@@ -196,9 +197,15 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   useEffect(() => {
     const panel = dialog.current;
     if (!panel) return;
-    if (!hasSession || !open) { if (panel.open) panel.close(); return; }
+    if (!hasSession || !open) { explicitOpen.current = false; if (panel.open) panel.close(); return; }
+    const active = document.activeElement;
+    const retainFocus = desktop && !explicitOpen.current && active instanceof HTMLElement && active !== document.body && !panel.contains(active);
+    explicitOpen.current = false;
     if (panel.open) panel.close();
     if (desktop) panel.show(); else panel.showModal();
+    // Native show() moves focus even for a passive desktop dock. Restore the
+    // existing editor synchronously, before another keyboard event can arrive.
+    if (retainFocus && active.isConnected) active.focus({ preventScroll: true });
   }, [desktop, open, hasSession]);
   useEffect(() => {
     if (!appearanceRequest || handledAppearanceRequest.current === appearanceRequest || !open || !hasSession || !business?.isOwner || !dialog.current?.open) return;
@@ -328,7 +335,13 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       setAppearanceNotice("Assistant appearance could not be saved. Try again."); setAppearanceReference(error instanceof OwnerActionError ? error.reference : "");
     } finally { if (generation === actorGeneration.current) setAppearanceBusy(false); }
   }
-  return <AssistantBusinessBinding.Provider value={bindBusiness}><AssistantOpenContext.Provider value={{ open: button => { launcher.current = button; desktopClosed.current = false; setOpen(true); }, openAppearance: button => { launcher.current = button; desktopClosed.current = false; setOpen(true); setAppearanceRequest(value => value + 1); }, expanded: open && hasSession, docked: desktop && open && hasSession, avatar }}>{children}
+  function openFromLauncher(button: HTMLButtonElement) {
+    launcher.current = button; desktopClosed.current = false;
+    explicitOpen.current = !dialog.current?.open;
+    setOpen(true);
+    if (dialog.current?.open) dialog.current.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  }
+  return <AssistantBusinessBinding.Provider value={bindBusiness}><AssistantOpenContext.Provider value={{ open: openFromLauncher, openAppearance: button => { openFromLauncher(button); setAppearanceRequest(value => value + 1); }, expanded: open && hasSession, docked: desktop && open && hasSession, avatar }}>{children}
     <dialog ref={dialog} aria-labelledby="gc-assistant-title" aria-describedby="gc-assistant-description" aria-modal={!desktop} onClose={() => { if (dialog.current?.open) return; setOpen(false); if (desktopMode.current) desktopClosed.current = true; setDictationSession(value => value + 1); launcher.current?.focus(); }} className={`gc-assistant-panel fixed inset-auto m-0 overflow-hidden border border-border bg-white p-0 font-sans text-text-primary ${desktop ? "bottom-4 right-4 top-20 z-30 h-auto max-h-none w-[320px] max-w-none rounded-2xl shadow-sm" : "bottom-0 right-0 h-[92dvh] max-h-[920px] w-full max-w-[680px] rounded-t-2xl shadow-xl backdrop:bg-black/30 sm:bottom-4 sm:right-4 sm:h-[min(860px,calc(100dvh-2rem))] sm:w-[calc(100%-2rem)] sm:rounded-2xl"}`}>
       <div className="flex h-full flex-col bg-white">
         <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-5">
