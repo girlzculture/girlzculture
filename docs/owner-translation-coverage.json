@@ -10,8 +10,8 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 2771,
-  "excluded_code_count": 197,
+  "candidate_count": 2790,
+  "excluded_code_count": 200,
   "intentional_untranslated": [
     "Girlz Culture",
     "Girlz",
@@ -99,21 +99,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 2501,
-      "covered": 2501,
+      "source_count": 2517,
+      "covered": 2517,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 2501,
-      "covered": 2501,
+      "source_count": 2517,
+      "covered": 2517,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 2501,
-      "covered": 1739,
-      "missing_count": 762,
+      "source_count": 2517,
+      "covered": 1738,
+      "missing_count": 779,
       "missing": [
         {
           "source": "{value0} appointments · {value1} cancellations · {value2} no-shows",
@@ -226,6 +226,17 @@
           ]
         },
         {
+          "source": "A payment method update is in progress. You can resume it below.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 98,
+              "kind": "localized-source",
+              "context": "0670231e167fa9168c4a97c0831b02162c096363d33511748e45e41016396c9e"
+            }
+          ]
+        },
+        {
           "source": "About these totals",
           "occurrences": [
             {
@@ -291,7 +302,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1661,
+              "line": 1656,
               "kind": "literal",
               "context": "5f57d7fe617ef1672d186a49d2d088797119802ce266d41491668148daa7f97c"
             }
@@ -313,7 +324,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2695,
+              "line": 2690,
               "kind": "literal",
               "context": "2d879c6e2e3e46b12221e3d9b1c5e1148e2444a2a933d44b6c3e1243bc769dc0"
             }
@@ -375,7 +386,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2412,
+              "line": 2407,
               "kind": "literal",
               "context": "ede20eb75e91e3e2135f402642d57ebeab87456bd0a6cada85c39c71df895e90"
             }
@@ -593,7 +604,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2683,
+              "line": 2678,
               "kind": "literal",
               "context": "7921fe3da94ab8fbb9eb472db903eb33c4c4f62cf5fbe9ee229200e8825a25c7"
             }
@@ -671,7 +682,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1675,
+              "line": 1670,
               "kind": "literal",
               "context": "6f4718b1b41ac44718d329864c96fbe8be0186809e441002bd3487019abe9f95"
             }
@@ -1470,7 +1481,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1648,
+              "line": 1643,
               "kind": "literal",
               "context": "f09ed99c1b512ad79032b1a9fe17af091e586136d5d08b18b663c97ad88d57d7"
             }
@@ -1509,7 +1520,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2683,
+              "line": 2678,
               "kind": "literal",
               "context": "b7be196fe8fcff9867f361c380905525dad9c76572b0c93e16db1e6c8558d202"
             }
@@ -1520,7 +1531,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2696,
+              "line": 2691,
               "kind": "literal",
               "context": "c94de22f4e83803e384df65aa2cdd01d046bf3fa77eb38c1c1b83fb798ddd2d1"
             }
@@ -1649,7 +1660,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1665,
+              "line": 1660,
               "kind": "literal",
               "context": "9f45daf208f1103a1cb3e9590d342c7ddb20de8c0a2d789d373a01a110ecbac9"
             }
@@ -1666,7 +1677,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1662,
+              "line": 1657,
               "kind": "literal",
               "context": "ffe15357ad13db26c57a6d74440bf016374f6118056a0203ea91497ff2056996"
             }
@@ -1725,6 +1736,17 @@
               "line": 30,
               "kind": "literal",
               "context": "7c427b950161fc925d7647228f562b91d38ae33e2b0da1fd43c60df1bf36c2a5"
+            }
+          ]
+        },
+        {
+          "source": "Checking secure payment settings…",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 94,
+              "kind": "localized-source",
+              "context": "b4d9d3dea0550b278896e454bd8c87f1c0b32f1e9c25910b9055d0e8f449aa9c"
             }
           ]
         },
@@ -2234,7 +2256,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1681,
+              "line": 1676,
               "kind": "literal",
               "context": "9adbedc5a26e28e4288b89d1221451ff65187ebaf598b739186337f3292277ea"
             },
@@ -2575,6 +2597,17 @@
               "line": 61,
               "kind": "localized-source",
               "context": "141efa1163a726fca79c2a4fd903b2131076ed20eedf8a31b7fa80e6f6279898"
+            }
+          ]
+        },
+        {
+          "source": "Current subscription default",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 96,
+              "kind": "localized-source",
+              "context": "140e0833e2c65e5b6c12b4685109257f6af2668b04107742ff7601ac7eae089a"
             }
           ]
         },
@@ -3349,7 +3382,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3513,
+              "line": 3508,
               "kind": "jsx-attribute",
               "context": "822f23f9fb31d64fff97649eaf7b3156948e86f980294eff41b2e429c0075a9f"
             },
@@ -3549,13 +3582,13 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3788,
+              "line": 3783,
               "kind": "jsx-attribute",
               "context": "038889eb9d71b04f35d95e03e5707f852b15ace30940c0a52c34ef97889053b3"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3797,
+              "line": 3792,
               "kind": "jsx-attribute",
               "context": "038889eb9d71b04f35d95e03e5707f852b15ace30940c0a52c34ef97889053b3"
             }
@@ -3810,7 +3843,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2305,
+              "line": 2300,
               "kind": "literal",
               "context": "43d366342c15248d8bf939154d49d914f725e832af655475411ad3b0b3333989"
             }
@@ -3832,7 +3865,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2305,
+              "line": 2300,
               "kind": "literal",
               "context": "3b7a0bbd7becd23fa1d6fa81fea380228479d9cf53568dae6469eb98a27879f2"
             }
@@ -3954,7 +3987,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1672,
+              "line": 1667,
               "kind": "literal",
               "context": "83670f8e5bc083ddfc872ef07f3d28ce39892f1b736fad06a6d2a2ffa4023094"
             }
@@ -4054,7 +4087,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1681,
+              "line": 1676,
               "kind": "literal",
               "context": "c08b1ae1441f95b9b4e7f78aa3ac5d3dac88dc502dc9a8bd917137885491741e"
             }
@@ -4315,19 +4348,19 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1648,
+              "line": 1643,
               "kind": "literal",
               "context": "ae85115295a4e5c469359b9475729a1227754a0ffac1c83ed45e51ac7787ecc8"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1652,
+              "line": 1647,
               "kind": "literal",
               "context": "e9b9ccf0745d627e7013483e1ca529d1884d403e8fb56f87acaee17817e98b28"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1672,
+              "line": 1667,
               "kind": "literal",
               "context": "f471ae2f564145b211eb648568a4660acb3a0f5b88e82532d081d1eb342ebfdf"
             }
@@ -4338,7 +4371,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1675,
+              "line": 1670,
               "kind": "literal",
               "context": "32c9906e73aa11cabf23f08333e48ede623ab8270c93571bab2d00c32182a8ec"
             }
@@ -4444,7 +4477,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1667,
+              "line": 1662,
               "kind": "literal",
               "context": "ef8f50369498e8fababb3e08f4c745e7b3e9a081af8c3595e0b03fe7bf326227"
             }
@@ -4455,7 +4488,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1872,
+              "line": 1867,
               "kind": "jsx-attribute",
               "context": "c7a87c6c9c0bb3d2e52e2cfaf2b08c1a0a7e07377380099deea6da36b4bc8590"
             }
@@ -4466,7 +4499,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1658,
+              "line": 1653,
               "kind": "jsx-attribute",
               "context": "73d5c743f7f88fde6d7037eb9f452d157159d34288bf35e71357f9717455f267"
             }
@@ -4477,7 +4510,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2693,
+              "line": 2688,
               "kind": "literal",
               "context": "5eb00975e5eb1fd10f4b67b309b437f4f05c48a285ec8918a0991d511db925b9"
             }
@@ -4654,7 +4687,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1670,
+              "line": 1665,
               "kind": "literal",
               "context": "ae71bf8eff767e34394a75cb2e783019e4973bc50518174cb6c31fe853557b51"
             }
@@ -4982,6 +5015,17 @@
               "line": 16,
               "kind": "localized-source",
               "context": "7b3a1e7dd754cac6157d53153d7dadb30cca8abc9a3939ccdce6869385ae4a33"
+            }
+          ]
+        },
+        {
+          "source": "No saved default payment method.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 97,
+              "kind": "literal",
+              "context": "4b454d8e01ffb547835ef0397f4369e44e9003c69c868d71b1cdb24b0e438ea1"
             }
           ]
         },
@@ -5570,6 +5614,51 @@
           ]
         },
         {
+          "source": "Payment method details are currently unavailable.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 97,
+              "kind": "literal",
+              "context": "4b454d8e01ffb547835ef0397f4369e44e9003c69c868d71b1cdb24b0e438ea1"
+            }
+          ]
+        },
+        {
+          "source": "Payment method update cancelled. Your existing method is unchanged.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 54,
+              "kind": "literal",
+              "context": "f5989c2059245565cc20a13c64ce6e27940e4ee2ff7951fa50aa39a3d1f22d59"
+            },
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 59,
+              "kind": "literal",
+              "context": "3542adfa4040dd53ecf06f8f7f63fa7bbf67ecdce698a6639f71fd5f3abb8428"
+            }
+          ]
+        },
+        {
+          "source": "Payment method update expired. Start a new update to change your method.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 54,
+              "kind": "literal",
+              "context": "f9d4e71f620043c624f99a57619e3d1185149d4ef1857c96630be3b0daa89cbb"
+            },
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 59,
+              "kind": "literal",
+              "context": "33a5f175679a98a1cd3c398f2045716e6ad69a0164dfb3d3446458216790754e"
+            }
+          ]
+        },
+        {
           "source": "Payment methods",
           "occurrences": [
             {
@@ -5588,6 +5677,17 @@
               "line": 128,
               "kind": "localized-source",
               "context": "dec14ee1436be23e31973627ce9363b2de1abbe40de37ec4e39184f7e0f44e07"
+            }
+          ]
+        },
+        {
+          "source": "Payment settings could not be verified.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 67,
+              "kind": "literal",
+              "context": "8349758aaad2e52e4752153cac38bd4bb5d5adadbb6abab03ac1822bac323f38"
             }
           ]
         },
@@ -5741,7 +5841,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessPolicies.tsx",
-              "line": 61,
+              "line": 76,
               "kind": "localized-source",
               "context": "e6d878d0a663145f493d5fe660615e631cd4142985878f53b4dc695e0e5738e6"
             }
@@ -5852,7 +5952,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1189,
+              "line": 1190,
               "kind": "jsx-text",
               "context": "63966ca1de968261040db1db1a27d189df51626d0df2d6c095207e7a41ac83bd"
             }
@@ -5935,7 +6035,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2304,
+              "line": 2299,
               "kind": "literal",
               "context": "25c3351a3b7228a468ddeb778bfc90f2ad122c4756d035dc73948118a0ffce13"
             },
@@ -6499,6 +6599,17 @@
           ]
         },
         {
+          "source": "Refresh payment status",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 90,
+              "kind": "localized-source",
+              "context": "f539191e88e0fc1be932928a84575ac15a0ef171b1c9ec4e33c0c0ef9f8d4fc6"
+            }
+          ]
+        },
+        {
           "source": "Regular hours",
           "occurrences": [
             {
@@ -6514,7 +6625,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2688,
+              "line": 2683,
               "kind": "literal",
               "context": "be5df7bbebf9698c67f74089f92afd215b0cd677df2f9d4668b0d1a4aec4c8ab"
             }
@@ -6775,7 +6886,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessPolicies.tsx",
-              "line": 60,
+              "line": 75,
               "kind": "localized-source",
               "context": "b6c8366265f3f9e9428ad3acdcf226bae852e823aceac490248b4acdbcc44b94"
             }
@@ -6852,13 +6963,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3788,
+              "line": 3783,
               "kind": "jsx-attribute",
               "context": "98aded13f10d3e216581f500b8ad928d1ca50b7849fa7c72c8e9b26023f7bf51"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3797,
+              "line": 3792,
               "kind": "jsx-attribute",
               "context": "b1cbfeab3c92cf3ce2c45322e65c06d2b440f0ce3772452152f8cf90d68cba7c"
             }
@@ -7324,6 +7435,17 @@
           ]
         },
         {
+          "source": "Securely replace the method used for this subscription. This action does not create a purchase, upgrade or charge. Existing invoices and scheduled billing still apply.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 88,
+              "kind": "localized-source",
+              "context": "f38388a6d28c55802a1ee958a2289232ee5af30860a17af9f0292497f61e8d6a"
+            }
+          ]
+        },
+        {
           "source": "See what clients are saying, respond and grow your reputation.",
           "occurrences": [
             {
@@ -7560,7 +7682,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1675,
+              "line": 1670,
               "kind": "literal",
               "context": "dae6d564a837b4ddf21ab116897069858cc60a8c420290e165dceb8cb1aab31e"
             }
@@ -7732,7 +7854,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1675,
+              "line": 1670,
               "kind": "literal",
               "context": "8d765e907e8c80d91ed09f9e5db6c89d2820a408d440b02db300d47ad48d0dde"
             }
@@ -7997,6 +8119,39 @@
           ]
         },
         {
+          "source": "Stripe has already completed this update. Refresh its status.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 59,
+              "kind": "literal",
+              "context": "e8fcedd7fad719bca48d733343bbe899760b85d40ab6876d060881009e9c4deb"
+            }
+          ]
+        },
+        {
+          "source": "Stripe returned an invalid payment settings link.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 43,
+              "kind": "literal",
+              "context": "e3e3a3337ca6bb7373ad8073ffea3b384470584a37dea4ab1f70b377fcdc86a5"
+            }
+          ]
+        },
+        {
+          "source": "Stripe test mode",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 100,
+              "kind": "localized-source",
+              "context": "ce9e1ffff3300d341413b5e7809c6764abc17778f8f108cd100a8312f2ce2ea6"
+            }
+          ]
+        },
+        {
           "source": "Stylist earnings",
           "occurrences": [
             {
@@ -8004,6 +8159,23 @@
               "line": 131,
               "kind": "localized-source",
               "context": "ad20f7a036fbb7d8e0930275f60124f797baad3801236c830ce3e1990643ff12"
+            }
+          ]
+        },
+        {
+          "source": "Subscription payment method",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 84,
+              "kind": "localized-source",
+              "context": "a40c946207ef36d24699ff07ab2049e3e55a2b24becf3ddb1d5bd2574909eb0b"
+            },
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 87,
+              "kind": "localized-source",
+              "context": "a40c946207ef36d24699ff07ab2049e3e55a2b24becf3ddb1d5bd2574909eb0b"
             }
           ]
         },
@@ -8385,6 +8557,40 @@
           ]
         },
         {
+          "source": "The payment method update is still being verified. Refresh its status.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 38,
+              "kind": "literal",
+              "context": "dc92b0789f61a85569d16d2a9e348f7ec4900ae0729b2444239dfbfa62061ad9"
+            },
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 54,
+              "kind": "literal",
+              "context": "f5989c2059245565cc20a13c64ce6e27940e4ee2ff7951fa50aa39a3d1f22d59"
+            },
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 59,
+              "kind": "literal",
+              "context": "33a5f175679a98a1cd3c398f2045716e6ad69a0164dfb3d3446458216790754e"
+            }
+          ]
+        },
+        {
+          "source": "The payment settings return link is invalid.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 50,
+              "kind": "literal",
+              "context": "37e26fbb7c52932c6883fa21632add8f98f9703a39010e3e0eab7f130668b3c1"
+            }
+          ]
+        },
+        {
           "source": "The PDF contains summaries; the spreadsheet also includes payment and sale records for this period.",
           "occurrences": [
             {
@@ -8490,7 +8696,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 525,
+              "line": 526,
               "kind": "literal",
               "context": "47aaaecbb8c003cb3e5b8d62b384309c789b44b80151667057071f950b7a499a"
             }
@@ -9339,7 +9545,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1780,
+              "line": 1775,
               "kind": "literal",
               "context": "fb845e8a1748410bb4ab30207615e8dd06a743b962d0e909ad6cde54decfc4ad"
             }
@@ -9633,6 +9839,23 @@
           ]
         },
         {
+          "source": "Your subscription payment method was saved and verified.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 38,
+              "kind": "literal",
+              "context": "dc92b0789f61a85569d16d2a9e348f7ec4900ae0729b2444239dfbfa62061ad9"
+            },
+            {
+              "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+              "line": 54,
+              "kind": "literal",
+              "context": "9577aa71ef57d56a6b856587cb3b73c6efe59543280955c3fe43fba56fb89701"
+            }
+          ]
+        },
+        {
           "source": "Your written message is kept in its original language.",
           "occurrences": [
             {
@@ -9646,14 +9869,14 @@
       ]
     },
     "es": {
-      "source_count": 2501,
-      "covered": 2501,
+      "source_count": 2517,
+      "covered": 2517,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 2501,
-      "covered": 2501,
+      "source_count": 2517,
+      "covered": 2517,
       "missing_count": 0,
       "missing": []
     }

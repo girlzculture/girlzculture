@@ -1247,6 +1247,8 @@ const memoryOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verif
 if (memoryOutput) process.stdout.write(`${memoryOutput}\n`);
 const redesignOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-dashboard-redesign.sql")], "Dashboard business isolation and metadata assertions");
 if (redesignOutput) process.stdout.write(`${redesignOutput}\n`);
+const paymentMethodOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscription-payment-method.sql")], "Subscription payment-method attempts, ownership and lease assertions");
+if (paymentMethodOutput) process.stdout.write(`${paymentMethodOutput}\n`);
 const businessFinanceOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-finances.sql")], "Business finance isolation and reconciliation assertions");
 if (businessFinanceOutput) process.stdout.write(`${businessFinanceOutput}\n`);
 const businessDepositOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-deposits.sql")], "Business deposit, attendance and protected-offer assertions");

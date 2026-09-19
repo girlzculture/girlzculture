@@ -7,11 +7,17 @@ const generic = new Set(['braid', 'hair', 'service', 'services', 'style', 'style
 const tokens = (value: string) => normalize(value).split(/\s+/u).filter(Boolean).map(token => aliases[token] || token);
 function closeSpelling(left: string, right: string) {
   if (left === right) return true;
+  // A partial token is a candidate, never a resolved write target. Requiring
+  // four characters avoids broad matches from short words such as "bo".
+  if (left.length >= 4 && right.startsWith(left)) return true;
   if (left.length < 4 || right.length < 4 || Math.abs(left.length - right.length) > 1) return false;
   const rows = [Array.from({ length: right.length + 1 }, (_, index) => index)];
   for (let i = 1; i <= left.length; i++) {
     const row = [i];
-    for (let j = 1; j <= right.length; j++) row[j] = Math.min(row[j - 1] + 1, rows[i - 1][j] + 1, rows[i - 1][j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1));
+    for (let j = 1; j <= right.length; j++) {
+      row[j] = Math.min(row[j - 1] + 1, rows[i - 1][j] + 1, rows[i - 1][j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && left[i - 1] === right[j - 2] && left[i - 2] === right[j - 1]) row[j] = Math.min(row[j], rows[i - 2][j - 2] + 1);
+    }
     rows.push(row);
   }
   return rows[left.length][right.length] <= 1;

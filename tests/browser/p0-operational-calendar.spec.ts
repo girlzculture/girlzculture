@@ -15,9 +15,10 @@ test.use({ serviceWorkers: 'block' });
 // The failed CI trace moved the viewport by 64px during Review's pointer
 // sequence. Guard the correction directly and exercise a native pointer click
 // after a 64px reposition. Center the initial target clear of fixed navigation.
-// Firefox commits even non-animated scroll coordinates on its next layout;
-// measure only after that position is reached, rather than clicking an old
-// coordinate (which can activate a different control). No click retry/DOM submit.
+// Use native scrolling after Playwright establishes the target is stable.
+// A JS scrollTo result can be transient in Firefox: CI observed 779px, then
+// the page was back at 604px before the next command. Native wheel input
+// avoids subtracting from that stale baseline. No click retry or DOM submit.
 for (const viewport of [
   { width: 1440, height: 900 }, { width: 768, height: 900 },
   { width: 390, height: 844 }, { width: 844, height: 390 },
@@ -29,7 +30,7 @@ for (const viewport of [
     const posts: unknown[] = [];
     async function waitForScroll(top: number) {
       try {
-        await page.waitForFunction(target => Math.abs(scrollY - target) < 1, top, { polling: 'raf', timeout: 5000 });
+        await page.waitForFunction(target => Math.abs(scrollY - target) < 0.01, top, { polling: 'raf', timeout: 5000 });
       } catch (error) {
         await testInfo.attach('calendar-scroll-position', { body: JSON.stringify(await page.evaluate(target => ({ target, scrollY, documentTop: document.documentElement.scrollTop, bodyTop: document.body.scrollTop, viewport: innerHeight, height: document.documentElement.scrollHeight, behavior: getComputedStyle(document.documentElement).scrollBehavior, focused: document.activeElement?.tagName }), top)), contentType: 'application/json' });
         throw error;
@@ -64,26 +65,27 @@ for (const viewport of [
       await expect(review).toBeEnabled();
       expect(await review.evaluate(button => (button as HTMLButtonElement).form!.checkValidity())).toBe(true);
       await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
-      const centeredTop = await review.evaluate(button => {
+      await review.scrollIntoViewIfNeeded();
+      const centered = await review.evaluate(button => {
         const rect = button.getBoundingClientRect();
-        const top = Math.max(0, Math.min(document.documentElement.scrollHeight - innerHeight, scrollY + rect.y + rect.height / 2 - innerHeight / 2));
-        window.scrollTo({ top });
-        return top;
+        const delta = Math.round(Math.max(0, Math.min(document.documentElement.scrollHeight - innerHeight, scrollY + rect.y + rect.height / 2 - innerHeight / 2)) - scrollY);
+        return { previous: scrollY, delta, top: scrollY + delta };
       });
-      await waitForScroll(centeredTop);
-      const position = await review.evaluate(() => {
-        const previous = scrollY;
-        const top = Math.max(0, previous - 64);
-        window.scrollTo({ top });
-        return { top, previous };
-      });
-      expect(position.previous - position.top).toBe(64);
-      await waitForScroll(position.top);
+      await page.mouse.move(viewport.width / 2, viewport.height / 2);
+      await page.mouse.wheel(0, centered.delta);
+      await waitForScroll(centered.top);
+      const previous = await page.evaluate(() => scrollY);
+      expect(previous).toBe(centered.top);
+      await page.mouse.wheel(0, -64);
+      await waitForScroll(previous - 64);
+      expect(await page.evaluate(before => before - scrollY, previous)).toBe(64);
       const point = await review.evaluate(button => {
         const rect = button.getBoundingClientRect();
         const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
-        return { x, y, targetIsReview: button.contains(document.elementFromPoint(x, y)) };
+        const hit = document.elementFromPoint(x, y);
+        return { x, y, scrollY, hitTag: hit?.tagName ?? null, targetIsReview: button.contains(hit) };
       });
+      await testInfo.attach('calendar-scroll-staging', { body: JSON.stringify({ centered, previous, point }), contentType: 'application/json' });
       expect(point.targetIsReview, 'Review must not be covered by fixed navigation').toBe(true);
       await page.mouse.move(point.x, point.y);
       await page.mouse.down();

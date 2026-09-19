@@ -6,13 +6,14 @@ const actor = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const requestId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 function fixture(options = {}) {
   const calls = []; const saved = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active', current_period_end: '2099-01-01T00:00:00Z' }], gc_assistant_requests: [], styles: [], bookings: [], ...options.tables };
+  const tables = { subscriptions: [{ salon_id: business, status: 'active', current_period_end: '2099-01-01T00:00:00Z' }], gc_assistant_requests: [], styles: [], bookings: [], test_data_registry: [], ...options.tables };
   const admin = {
     async rpc(name, args) {
       calls.push({ name, args });
       if (name === 'p0_actor_has_permission') return { data: options.allowed !== false };
       if (name === 'get_public_content_page') return { data: (options.knowledge || []).find(page => page.slug === args.p_slug) || null };
       if (name === 'is_marketplace_visible') return options.visibilityError ? { error: { code: 'unavailable' } } : { data: options.visible ?? true };
+      if (name === 'is_salon_profile_public') return options.visibilityError ? { error: { code: 'unavailable' } } : { data: options.profileVisible ?? options.visible ?? true };
       if (name === 'save_gc_assistant_request') { saved.push(args.p_request); return { data: args.p_request }; }
       if (name === 'confirm_gc_assistant_request') return { data: { verified: true, result: {} } };
       throw Error(`Unexpected RPC ${name}`);
@@ -96,6 +97,26 @@ test('service aliases and typos return the actual record without declaring disti
   assert.equal(typo.request.result.services[0].id, 'own-knotless');
 });
 
+test('ordinary partial names and adjacent spelling swaps retrieve scoped candidates without merging distinct braid techniques', async () => {
+  const f = fixture({ tables: { styles: [
+    { id: 'own-boho', salon_id: business, name: 'Boho / Goddess Braids', base_price: 250 },
+    { id: 'own-knotless', salon_id: business, name: 'Knotless Braids', base_price: 180 },
+    { id: 'own-box', salon_id: business, name: 'Box Braids', base_price: 190 },
+    { id: 'foreign', salon_id: 'other-business', name: 'Boho Mermaid Braids', base_price: 999 },
+  ] } });
+  for (const [query, expected, price] of [['booh braids', 'own-boho', 250], ['knotl braids', 'own-knotless', 180], ['bohemian braids', 'own-boho', 250], ['trenzas boho', 'own-boho', 250], ['tresses boho', 'own-boho', 250]]) {
+    const result = (await f.run('get_services_and_prices', { query })).request.result;
+    assert.equal(result.services[0]?.id, expected, query);
+    assert.equal(result.services[0].base_price, price);
+    assert.equal(result.inventory_total, 3);
+    assert.equal(result.match_status, 'related');
+    assert.doesNotMatch(JSON.stringify(result.services), /foreign|999|Mermaid/);
+  }
+  const distinct = (await f.run('get_services_and_prices', { query: 'mermaid braids' })).request.result;
+  assert.equal(distinct.match_status, 'no_match');
+  assert.equal(distinct.inventory_total, 3);
+});
+
 test('bookings are read only for the resolved business and requested interval', async () => {
   const f = fixture({ tables: { bookings: [
     { salon_id: business, appointment_datetime: '2026-09-20T15:00:00Z', guest_name: 'Save' },
@@ -156,7 +177,7 @@ test('photo counts use only the authenticated business and distinguish unique sa
   assert.equal(media.publicly_visible, false);
   assert.equal(media.published_gallery_count, 0);
   assert.doesNotMatch(JSON.stringify(response), /private-other|private-cover/);
-  assert.equal(f.calls.find(call => call.name === 'is_marketplace_visible').args.target_salon_id, business);
+  assert.equal(f.calls.find(call => call.name === 'is_salon_profile_public').args.target_salon_id, business);
   assert.equal(f.saved[0].permission, 'photos');
   await assert.rejects(f.run('get_business_media', { salon_id: 'other-business' }), /ASSISTANT_INVALID_INPUT/);
 });
@@ -170,6 +191,18 @@ test('photo reads fail closed without permission and retain unknown publication 
   assert.equal(result.gallery_count, 1);
   assert.equal(result.publicly_visible, null);
   assert.equal(result.published_gallery_count, null);
+});
+
+test('saved-photo visibility follows the public profile even when booking discovery is paused and still excludes registered tests', async () => {
+  const f = fixture({ visible: false, profileVisible: true, tables: { salons: [{ id: business, gallery_photos: ['own-photo'] }], test_data_registry: [{ id: 'other-test', record_type: 'salon', record_id: 'other-business' }] } });
+  const result = (await f.run('get_business_media', {})).request.result;
+  assert.equal(result.gallery_count, 1);
+  assert.equal(result.publicly_visible, true, 'closing bookings must not claim the readable public profile is unpublished');
+  assert.equal(result.published_gallery_count, 1);
+  const registered = fixture({ profileVisible: true, tables: { salons: [{ id: business, gallery_photos: ['own-photo'] }], test_data_registry: [{ id: 'own-test', record_type: 'salon', record_id: business }] } });
+  const hidden = (await registered.run('get_business_media', {})).request.result;
+  assert.equal(hidden.gallery_count, 1);
+  assert.equal(hidden.publicly_visible, false);
 });
 
 test('owner platform guidance never retrieves a different public business page', async () => {

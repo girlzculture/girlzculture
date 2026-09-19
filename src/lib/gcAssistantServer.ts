@@ -12,6 +12,7 @@ import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gcAssistantPresentation";
 import { matchBusinessCatalog } from "@/lib/businessCatalogSearch";
 import { businessMediaInventory } from "@/lib/businessMediaInventory";
+import { isRegisteredTestBusiness } from "@/lib/marketplaceEligibilityServer";
 import { readBusinessDepositRule } from "@/lib/businessDepositServer";
 import { bookingDepositTerms } from "@/lib/businessDepositRules";
 import { readBusinessClientCard } from "@/lib/businessClientServer";
@@ -105,10 +106,15 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
     const media = await admin.from("salons").select("gallery_photos,cover_photo_url,logo_url,photo_metadata").eq("id", salon.id).maybeSingle();
     if (media.error) throw media.error;
     if (!media.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
-    const visible = await admin.rpc("is_marketplace_visible", { target_salon_id: salon.id });
+    // Pausing bookings/discovery does not unpublish the readable profile.
+    // Match the public page's profile and registered-test checks instead.
+    const [visible, registeredTest] = await Promise.all([
+      admin.rpc("is_salon_profile_public", { target_salon_id: salon.id }),
+      isRegisteredTestBusiness(admin, salon.id).catch(() => null),
+    ]);
     // A visibility check failure must not erase verified saved counts or claim
     // that the business is unpublished. Unknown is represented explicitly.
-    return businessMediaInventory(media.data, !visible.error && typeof visible.data === "boolean" ? visible.data : null);
+    return businessMediaInventory(media.data, !visible.error && typeof visible.data === "boolean" && registeredTest !== null ? visible.data && !registeredTest : null);
   }
   if (tool === "get_business_policies") {
     const result = await admin.from("business_policy_revisions").select("id,policy,version,source_locale,published_at").eq("salon_id", salon.id).eq("id", salon.business_policy_revision_id || "00000000-0000-0000-0000-000000000000").maybeSingle();

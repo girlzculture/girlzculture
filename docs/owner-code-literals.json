@@ -1326,6 +1326,10 @@
         {
           "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
           "context": "0ac0abcddd255d903bf32439a42aa1f1b7281cf20bc1e2cecfebefe5d13122b2"
+        },
+        {
+          "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         }
       ]
     },
@@ -2298,6 +2302,10 @@
         {
           "file": "src/components/owner/BusinessMorningBrief.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -3104,6 +3112,36 @@
         {
           "file": "src/components/owner/BusinessMorningBrief.tsx",
           "context": "89fb09c3ea4deaefee37a9de36722d261c87462492cfe33ab11591b0e8aadd1e"
+        }
+      ]
+    },
+    {
+      "source": "· {value0}/{value1}",
+      "reason": "Masked card suffix or numeric expiration punctuation; no translatable words. Only this reviewed renderer context is exempt.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+          "context": "964b7fb97c7387ad38b3b00e049776b7a8fe78b9e6422b6df2f878a4722e5915"
+        }
+      ]
+    },
+    {
+      "source": "•••• {value0}",
+      "reason": "Masked card suffix or numeric expiration punctuation; no translatable words. Only this reviewed renderer context is exempt.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SubscriptionPaymentMethod.tsx",
+          "context": "fbe17531057ef89ab34c066b694dced64641d6d20ffd8ed4add13c5ba45445a7"
+        }
+      ]
+    },
+    {
+      "source": "noopener noreferrer",
+      "reason": "Link relationship security attributes, not UI copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessPolicies.tsx",
+          "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
         }
       ]
     }

@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; Google code and Morning Brief automated only; live Google founder-deferred; full 201-group release not complete",
+  "status": "IN PROGRESS; operational correction checkpoint locally verified; full 201-group release remains unpublished",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -3235,7 +3235,8 @@
         "Optimistic turn, separate loader, exact-reference failure/retry, stable retry ID, next-draft preservation, synchronous duplicate-submit guard, IME/multiline handling and scroll retention."
       ],
       "verification": [
-        "Baseline failed before response arrived; corrected 18/18 browser checks plus five actor/session tests. Timeout/offline and actual mobile keyboard/live checks still required."
+        "Baseline failed before response arrived; corrected 18/18 browser checks plus five actor/session tests. Timeout/offline and actual mobile keyboard/live checks still required.",
+        "18 existing chat interaction cases pass across Chromium/WebKit and desktop/phone/tablet/landscape, covering immediate user message, pending state, recoverable error, one submit and IME. No new live-provider acceptance claimed."
       ],
       "live_evidence": [],
       "detailed_clause": "CHAT-01 — Immediately insert submitted messages, clear the composer, and show a separate assistant loading state; implement and verify every interaction below.",
@@ -3334,10 +3335,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Scoped service search ranks aliases/typos while retaining real record identities and prices."
+        "Scoped service search ranks aliases/typos while retaining real record identities and prices.",
+        "Bounded partial-token/transposition matching returns real authorized service candidates without rewriting names/prices. Answer generation now receives conversational/page context while reauthorizing prior request IDs and current professional assignment before transcript reaches the model. Photo visibility follows the actual same-business public profile, including booking-paused profiles."
       ],
       "verification": [
-        "tests/p0-assistant-execution.test.mjs: related styles and literal wildcard regressions"
+        "tests/p0-assistant-execution.test.mjs: related styles and literal wildcard regressions",
+        "See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md: 68 focused server checks, final 20 execution/photo checks and 18 existing Chromium/WebKit chat interaction cases pass. Actual hosted service/photo/follow-up isolation acceptance remains pending; no invented facts or new live provider calls."
       ],
       "live_evidence": [],
       "detailed_clause": "NL-01 — Accept everyday wording, abbreviations, common service aliases, punctuation differences, misspellings, spoken rambling and multilingual phrasing. “How much is boho braids?” should search relevant current-business service names, including compound names such as Boho / Knotless Braids when present. A missing exact string is not a reason to stop searching.",
@@ -3436,10 +3439,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Distinctive service names remain separate; related matches are not exact identities."
+        "Distinctive service names remain separate; related matches are not exact identities.",
+        "Bounded partial-token/transposition matching returns real authorized service candidates without rewriting names/prices. Answer generation now receives conversational/page context while reauthorizing prior request IDs and current professional assignment before transcript reaches the model. Photo visibility follows the actual same-business public profile, including booking-paused profiles."
       ],
       "verification": [
-        "14 execution tests passed"
+        "14 execution tests passed",
+        "See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md: 68 focused server checks, final 20 execution/photo checks and 18 existing Chromium/WebKit chat interaction cases pass. Actual hosted service/photo/follow-up isolation acceptance remains pending; no invented facts or new live provider calls."
       ],
       "live_evidence": [],
       "detailed_clause": "NL-02 — Resolve wording to real catalog records. Search broadly enough within the authorized business, rank plausible matches and return their actual names, prices, price ranges and relevant options. Do not blindly equate all Boho, Goddess, Mermaid, Box and Knotless services; they may be distinct records or variants. For an informational question, list plausible matches and their prices when useful. Ask a short clarification only when a meaningful distinction remains; a change or booking must use the intended specific record.",
@@ -3538,10 +3543,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Photo lookup and follow-up facts reach planning/answer generation; revoked Photos permission strips them."
+        "Photo lookup and follow-up facts reach planning/answer generation; revoked Photos permission strips them.",
+        "Bounded partial-token/transposition matching returns real authorized service candidates without rewriting names/prices. Answer generation now receives conversational/page context while reauthorizing prior request IDs and current professional assignment before transcript reaches the model. Photo visibility follows the actual same-business public profile, including booking-paused profiles."
       ],
       "verification": [
-        "31 planning tests passed; live provider check pending"
+        "31 planning tests passed; live provider check pending",
+        "See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md: 68 focused server checks, final 20 execution/photo checks and 18 existing Chromium/WebKit chat interaction cases pass. Actual hosted service/photo/follow-up isolation acceptance remains pending; no invented facts or new live provider calls."
       ],
       "live_evidence": [],
       "detailed_clause": "NL-03 — Preserve intent across follow-ups. “My photos” after a question about photo counts still means count the owner's saved business photos. “That service” should resolve from the active conversation. Changing pages should update context without erasing the question. The current page guides relevance but does not limit access to other authorized modules of the same business.",
@@ -3639,8 +3646,12 @@
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Bounded partial-token/transposition matching returns real authorized service candidates without rewriting names/prices. Answer generation now receives conversational/page context while reauthorizing prior request IDs and current professional assignment before transcript reaches the model. Photo visibility follows the actual same-business public profile, including booking-paused profiles."
+      ],
+      "verification": [
+        "See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md: 68 focused server checks, final 20 execution/photo checks and 18 existing Chromium/WebKit chat interaction cases pass. Actual hosted service/photo/follow-up isolation acceptance remains pending; no invented facts or new live provider calls."
+      ],
       "live_evidence": [],
       "detailed_clause": "NL-04 — Answer first, then offer a relevant next action if helpful. Avoid long explanations of how the assistant works, speculation about why a previous answer was wrong, and questions asking the owner to supply facts already held by the platform. After a correction, reread authoritative data and acknowledge the corrected fact plainly.",
       "detailed_clause_line": 244,
@@ -3738,10 +3749,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Inventory totals are distinct from filtered matches; saved photo counts are distinct from public visibility unknown/false."
+        "Inventory totals are distinct from filtered matches; saved photo counts are distinct from public visibility unknown/false.",
+        "Bounded partial-token/transposition matching returns real authorized service candidates without rewriting names/prices. Answer generation now receives conversational/page context while reauthorizing prior request IDs and current professional assignment before transcript reaches the model. Photo visibility follows the actual same-business public profile, including booking-paused profiles."
       ],
       "verification": [
-        "14 execution tests passed"
+        "14 execution tests passed",
+        "See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md: 68 focused server checks, final 20 execution/photo checks and 18 existing Chromium/WebKit chat interaction cases pass. Actual hosted service/photo/follow-up isolation acceptance remains pending; no invented facts or new live provider calls."
       ],
       "live_evidence": [],
       "detailed_clause": "NL-05 — Distinguish zero records, zero search matches, unavailable data and an unsuccessful lookup. A failed or empty tool response must not become “you have no services/photos/bookings” without evidence. Use concise error language with retry when a read fails. Never invent a price, count, policy or calculation to avoid admitting a failure.",
@@ -5144,9 +5157,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Public policy disclosure/link code exists; end-to-end revised policy acceptance pending."
+        "Public policy disclosure/link code exists; end-to-end revised policy acceptance pending.",
+        "Current published policy is fetched separately if newer drafts push it beyond the 30-row history. Missing current policy fails closed. Save/publish requires fresh readback and links to the canonical public policy. Booking acknowledgement opens the policy in the clicked visible review panel instead of the hidden desktop duplicate."
       ],
-      "verification": [],
+      "verification": [
+        "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed."
+      ],
       "live_evidence": [],
       "detailed_clause": "POL-06 — Publish a clear Business Policy link on the public business page. Link the applicable published policy from a required acknowledgement checkbox during booking before completion. Customers must be able to read it on mobile without losing their booking progress. Retain the policy version/reference associated with the acknowledgement rather than retrospectively changing what an existing booking agreed to.",
       "detailed_clause_line": 294,
@@ -5244,10 +5260,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Legacy prose and enum terms converted in the original source language without rewriting published revisions or dropping retained fields."
+        "Legacy prose and enum terms converted in the original source language without rewriting published revisions or dropping retained fields.",
+        "Current published policy is fetched separately if newer drafts push it beyond the 30-row history. Missing current policy fails closed. Save/publish requires fresh readback and links to the canonical public policy. Booking acknowledgement opens the policy in the clicked visible review panel instead of the hidden desktop duplicate."
       ],
       "verification": [
-        "Three editor/conversion tests plus four disclosure tests pass; historical and live acceptance still pending."
+        "Three editor/conversion tests plus four disclosure tests pass; historical and live acceptance still pending.",
+        "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed."
       ],
       "live_evidence": [],
       "detailed_clause": "POL-07 — Carry existing saved policy content into the new editor without loss. The interface simplification must not silently change already enforced deposit, cancellation or platform booking rules. Identify any structured settings the transaction engine still relies on and reconcile the published narrative with actual behavior as part of implementation.",
@@ -5345,8 +5363,12 @@
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Current published policy is fetched separately if newer drafts push it beyond the 30-row history. Missing current policy fails closed. Save/publish requires fresh readback and links to the canonical public policy. Booking acknowledgement opens the policy in the clicked visible review panel instead of the hidden desktop duplicate."
+      ],
+      "verification": [
+        "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed."
+      ],
       "live_evidence": [],
       "detailed_clause": "POL-08 — Acceptance follows the full path: edit → save/review → publish → refresh → public policy link → booking acknowledgement, including a failed-save recovery. The owner must be able to preview exactly what customers will read.",
       "detailed_clause_line": 298,
@@ -5436,16 +5458,25 @@
       "source_line": 597,
       "implementation_paths": [
         "src/app/api/stripe/portal/route.ts",
-        "src/components/owner/OwnerDashboardApp.tsx"
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/SubscriptionPaymentMethod.tsx",
+        "src/lib/subscriptionPaymentMethodServer.ts",
+        "supabase/migrations/20260919015517_subscription_payment_method_update_attempts.sql"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Narrow safe portal diagnostics and error helpers added; actual provider failure/root cause remains unproved."
+        "Local uncommitted payment-method workflow uses an existing-customer Checkout setup session, durable guarded attempts, exact subscription association and authoritative masked readback. Cancellation, recovery, owner transfer and duplicate completion are guarded. No charge, purchase, upgrade, new subscription or proration operation is created by this flow."
       ],
-      "verification": [],
-      "live_evidence": [],
+      "verification": [
+        "AUTOMATED ONLY: 38 Node checks; 18 Chromium/WebKit billing cases across four locales/viewports including reproduced catalog-hydration duplicate-submit regression; full173 local migration snapshot plus SQL assertions; TypeScript/build/lint and2516/2516 release-language inventory pass. Evidence: SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. Live Stripe acceptance remains blocked by the existing association.",
+        "Latest AUTOMATED ONLY:40 Node tests;24 Chromium/WebKit payment-method browsers; build and scoped lint PASS. Three terminal-return cases failed on the old build and pass after correction; translation-hydration regressions remain covered. EN/FR/ES/zh-CN each2517/2517. Full173 checkpoint local SQL passed (final2 assertions resumed after local DB-name correction). See SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. No real payment-method update passed yet."
+      ],
+      "live_evidence": [
+        "Read-only Stripe request log req_C4uqPzlk0YSOjl, 2026-09-17 22:17:21 UTC: POST /v1/billing_portal/sessions HTTP400, resource_missing, invalid_request_error, param customer. The referenced customer is absent from the connected account; direct subscription lookup also reports no such subscription. This establishes the provider failure, not the correct replacement association. No provider or production database write.",
+        "Founder confirmed sandbox origin. Read-only Stripe dashboard found exact stored customer and active subscription in separate Girlz Culture sandbox with matching business metadata; live account had resource_missing. Account/context mismatch established, no provider or production-data writes."
+      ],
       "evidence": [
         "Read-only production Engine event b19ef999-8b7b-4a21-811f-6e1de5a443cf: two /api/stripe/portal failures, Sep17 22:17 and23:34UTC, STRIPE_PROVIDER_FAILURE:400. Provider reason absent. No diagnosis of account/card/configuration cause is yet proven."
       ],
@@ -5458,8 +5489,8 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Reported subscription payment-method incident is not resolved. Safe diagnostics exist; identify the specific Stripe portal failure and verify correct existing customer, no app-initiated charge, default-method readback and cancellation.",
-      "external_blocker": null,
+      "remaining": "Configure isolated existing sandbox verification; prove setup/cancel/readback and unchanged commercial terms. Safely support scheduled agreements, apply reviewed migration and pass final release gates. Production unchanged.",
+      "external_blocker": "Confirmed exact existing customer/subscription in separate Girlz Culture sandbox; failed live-account request cannot access sandbox objects. Isolated sandbox runtime/credential configuration and actual provider acceptance are outstanding; no production credential or association was changed.",
       "requirement_kind": "product",
       "assessment": "partial",
       "implementation_status": "IN_PROGRESS",
@@ -5538,27 +5569,37 @@
       "source_line": 598,
       "implementation_paths": [
         "src/app/api/stripe/portal/route.ts",
-        "src/components/owner/OwnerDashboardApp.tsx"
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/components/owner/SubscriptionPaymentMethod.tsx",
+        "src/lib/subscriptionPaymentMethodServer.ts",
+        "supabase/migrations/20260919015517_subscription_payment_method_update_attempts.sql"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
-      "live_evidence": [],
+      "blocker": "Implementation and full workflow acceptance are in progress; no completion claimed.",
+      "changes": [
+        "Local uncommitted payment-method workflow uses an existing-customer Checkout setup session, durable guarded attempts, exact subscription association and authoritative masked readback. Cancellation, recovery, owner transfer and duplicate completion are guarded. No charge, purchase, upgrade, new subscription or proration operation is created by this flow."
+      ],
+      "verification": [
+        "AUTOMATED ONLY: 38 Node checks; 18 Chromium/WebKit billing cases across four locales/viewports including reproduced catalog-hydration duplicate-submit regression; full173 local migration snapshot plus SQL assertions; TypeScript/build/lint and2516/2516 release-language inventory pass. Evidence: SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. Live Stripe acceptance remains blocked by the existing association.",
+        "Latest AUTOMATED ONLY:40 Node tests;24 Chromium/WebKit payment-method browsers; build and scoped lint PASS. Three terminal-return cases failed on the old build and pass after correction; translation-hydration regressions remain covered. EN/FR/ES/zh-CN each2517/2517. Full173 checkpoint local SQL passed (final2 assertions resumed after local DB-name correction). See SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. No real payment-method update passed yet."
+      ],
+      "live_evidence": [
+        "Founder confirmed sandbox origin. Read-only Stripe dashboard found exact stored customer and active subscription in separate Girlz Culture sandbox with matching business metadata; live account had resource_missing. Account/context mismatch established, no provider or production-data writes."
+      ],
       "detailed_clause": "BILL-02 — Let the authorized business owner update the payment method attached to the correct existing subscription/billing customer. Do not create a new subscription, immediate purchase, upgrade, proration or payment merely to save a replacement method. Updating the card must not itself charge the owner.",
       "detailed_clause_line": 304,
       "previous_tracking": {
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Reported subscription payment-method incident is not resolved. Safe diagnostics exist; identify the specific Stripe portal failure and verify correct existing customer, no app-initiated charge, default-method readback and cancellation.",
-      "external_blocker": null,
+      "remaining": "Configure isolated existing sandbox verification; prove setup/cancel/readback and unchanged commercial terms. Safely support scheduled agreements, apply reviewed migration and pass final release gates. Production unchanged.",
+      "external_blocker": "Confirmed exact existing customer/subscription in separate Girlz Culture sandbox; failed live-account request cannot access sandbox objects. Isolated sandbox runtime/credential configuration and actual provider acceptance are outstanding; no production credential or association was changed.",
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -13150,10 +13191,12 @@
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "My Page opens the editor beneath actual cover/logo and section tabs; obsolete landing cards removed."
+        "My Page opens the editor beneath actual cover/logo and section tabs; obsolete landing cards removed.",
+        "Current published policy is fetched separately if newer drafts push it beyond the 30-row history. Missing current policy fails closed. Save/publish requires fresh readback and links to the canonical public policy. Booking acknowledgement opens the policy in the clicked visible review panel instead of the hidden desktop duplicate."
       ],
       "verification": [
-        "390px edit-save-refresh browser check passed; other widths running"
+        "390px edit-save-refresh browser check passed; other widths running",
+        "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed."
       ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-02 | My Page | Cover/profile editing, tabbed content, correct public synchronization, policies/preparation, walk-ins and mobile More. |",
@@ -14956,27 +14999,37 @@
       "implementation_paths": [
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
-        "tests/browser/p0-owner-inventory.spec.ts"
+        "tests/browser/p0-owner-inventory.spec.ts",
+        "src/components/owner/SubscriptionPaymentMethod.tsx",
+        "src/lib/subscriptionPaymentMethodServer.ts",
+        "supabase/migrations/20260919015517_subscription_payment_method_update_attempts.sql"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
-      "live_evidence": [],
+      "blocker": "Implementation and full workflow acceptance are in progress; no completion claimed.",
+      "changes": [
+        "Local uncommitted payment-method workflow uses an existing-customer Checkout setup session, durable guarded attempts, exact subscription association and authoritative masked readback. Cancellation, recovery, owner transfer and duplicate completion are guarded. No charge, purchase, upgrade, new subscription or proration operation is created by this flow."
+      ],
+      "verification": [
+        "AUTOMATED ONLY: 38 Node checks; 18 Chromium/WebKit billing cases across four locales/viewports including reproduced catalog-hydration duplicate-submit regression; full173 local migration snapshot plus SQL assertions; TypeScript/build/lint and2516/2516 release-language inventory pass. Evidence: SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. Live Stripe acceptance remains blocked by the existing association.",
+        "Latest AUTOMATED ONLY:40 Node tests;24 Chromium/WebKit payment-method browsers; build and scoped lint PASS. Three terminal-return cases failed on the old build and pass after correction; translation-hydration regressions remain covered. EN/FR/ES/zh-CN each2517/2517. Full173 checkpoint local SQL passed (final2 assertions resumed after local DB-name correction). See SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. No real payment-method update passed yet."
+      ],
+      "live_evidence": [
+        "Founder confirmed sandbox origin. Read-only Stripe dashboard found exact stored customer and active subscription in separate Girlz Culture sandbox with matching business metadata; live account had resource_missing. Account/context mismatch established, no provider or production-data writes."
+      ],
       "detailed_clause": "| PAGE-13 | Subscription | Plan/entitlement information, repaired payment-method management and unchanged billing for a method-only update. |",
       "detailed_clause_line": 510,
       "previous_tracking": {
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete this page and all its detail/edit/dialog states against the reference, four languages and actual feature clauses; component passes alone do not close the page requirement.",
-      "external_blocker": null,
+      "remaining": "Configure isolated existing sandbox verification; prove setup/cancel/readback and unchanged commercial terms. Safely support scheduled agreements, apply reviewed migration and pass final release gates. Production unchanged.",
+      "external_blocker": "Confirmed exact existing customer/subscription in separate Girlz Culture sandbox; failed live-account request cannot access sandbox objects. Isolated sandbox runtime/credential configuration and actual provider acceptance are outstanding; no production credential or association was changed.",
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -19194,8 +19247,8 @@
       "source_line": 575,
       "added_specification": "software-first-2026-09-18",
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "NOT STARTED",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
       "verification_status": "UNVERIFIED",
       "release_status": "NOT RELEASED",
       "implementation_paths": [
@@ -19204,7 +19257,9 @@
         "src/app/api/salon/onboarding/route.ts",
         "src/components/SalonApplication.tsx"
       ],
-      "changes": [],
+      "changes": [
+        "Separate local in-progress draft source/review/apply slice stores private provenance and explicit owner review, with an unpublished new-business hold and four-language manual fallback. Source-provider extraction, complete live-business application, SQL/browser acceptance and entry wiring remain under implementation; do not treat this as finished zero-setup onboarding."
+      ],
       "verification": [],
       "live_evidence": [],
       "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
@@ -19313,7 +19368,9 @@
         "section": "2, 2A, 2B",
         "text": "Latest explicit decisions override broader-category/root/public-opening/pricing-permission language. Four release languages; Wolof deferred. Own-business data only."
       },
-      "progress_status": "Not started"
+      "progress_status": "In progress",
+      "state": "IN_PROGRESS",
+      "blocker": "Implementation and full workflow acceptance are in progress; no completion claimed."
     },
     {
       "id": "SF-VOICE",
@@ -24496,12 +24553,11 @@
     }
   ],
   "progress_audit": {
-    "at": "2026-09-18T23:40:01.583Z",
-    "commit": "b8271a8ffe92a2383c1e9ce205388520babe8f85",
+    "at": "2026-09-19T04:00:58.490669+00:00",
     "counts": {
-      "In progress": 156,
-      "Not started": 20,
-      "Implemented / unverified": 19,
+      "In progress": 158,
+      "Not started": 17,
+      "Implemented / unverified": 20,
       "Completed / verified": 1,
       "Explicitly deferred": 5
     },
@@ -24509,19 +24565,21 @@
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
     "uncommitted": true,
-    "uncommitted_summary": "Appointment waitlist with local SQL/concurrency and browser evidence; deferred-input review fix; customer harness correction; Google live deferral and activation checklist. No production change.",
+    "uncommitted_summary": "This operational checkpoint is prepared for commit; standalone onboarding/marketing work remains locally uncommitted. Production unchanged.",
     "production_checked_at": "2026-09-18T19:25:03.226Z",
     "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
     "production_deployment": "6aac503fa5eacb00089c6d87",
     "production_locked": true,
     "original140_counts": {
-      "In progress": 103,
-      "Not started": 17,
+      "In progress": 105,
+      "Not started": 15,
       "Implemented / unverified": 19,
       "Completed / verified": 1
     },
     "total": 201,
-    "current_work": "Google disabled integration automated verification and mobile bookings visibility correction complete locally; corrected-source CI pending push. Continue remaining software-first features and hosted acceptance."
+    "current_work": "Operational checkpoint verified:24 billing browsers plus6 public-policy browsers,72 assistant/policy server cases,40 billing cases and173 local migrations/assertions. Exact Stripe sandbox association identified; isolated provider acceptance remains. Onboarding and marketing implementation continues separately; full201 release unfinished.",
+    "parent_commit": "4bf477de17d45473d19c3462ce42697c72a43acb",
+    "checkpoint": "Operational code and evidence accompany this Git checkpoint; onboarding and marketing changes remain locally uncommitted."
   },
   "latest_authority": {
     "source": "founder-software-first-2026-09-18.md",
@@ -24532,11 +24590,11 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-19T01:11:50.482Z",
-    "head": "8479deffa87de217f55f1dffb4559cf635896893 (previous pushed checkpoint)",
+    "at": "2026-09-19T03:11:59.625384+00:00",
+    "head": "Operational correction checkpoint follows 4bf477de17d45473d19c3462ce42697c72a43acb; use containing Git commit for exact source.",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
     "provider_access": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
-    "local_checkpoint": "Morning Brief, semantic disabled styling and finance UTC fixture correction verified locally; committed with this checkpoint"
+    "local_checkpoint": "Operational corrections passed focused checks; sandbox association diagnosed; onboarding/marketing and full release unfinished."
   }
 }

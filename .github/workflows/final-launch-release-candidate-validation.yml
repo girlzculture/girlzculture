@@ -54,10 +54,15 @@ jobs:
       - name: Exercise strict P0 tool, policy, message and launch boundaries
         if: ${{ !cancelled() }}
         run: npm run test:p0:core
+      - name: Verify subscription payment-method isolation and no-charge boundary
+        if: ${{ !cancelled() }}
+        run: node --test tests/subscription-payment-method.test.mjs
 
   browser-acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Run 35412096899: shard 3 passed 277 tests in 42m, but setup and artifact
+    # upload exceeded the old 45m job envelope. Per-test timeouts stay unchanged.
+    timeout-minutes: 60
     permissions:
       contents: read
     strategy:

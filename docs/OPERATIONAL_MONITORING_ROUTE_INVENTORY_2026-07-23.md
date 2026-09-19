@@ -159,7 +159,7 @@ Updated: 2026-09-18. This inventory covers 150 API route files and is enforced b
 | `/api/stripe/commerce-checkout` | POST | provider-backed | Covered |
 | `/api/stripe/commerce-status` | GET | provider-backed | Covered |
 | `/api/stripe/pickup-reservation` | POST | provider-backed | Covered |
-| `/api/stripe/portal` | POST | provider-backed | Covered |
+| `/api/stripe/portal` | POST, GET | provider-backed | Covered |
 | `/api/stripe/subscription/change` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/checkout` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/lifecycle` | POST | provider-backed | Covered |

@@ -2,6 +2,37 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
 
+test('policy load includes the current own-business revision beyond thirty newer drafts and gives its canonical public anchor', async () => {
+  const current = { id: 'current-policy', salon_id: 'business-a', policy: { business_policy_text: 'Retained published terms' }, version: 1, created_at: '2020-01-01', published_at: '2020-01-01' };
+  const records = [...Array.from({ length: 31 }, (_, i) => ({ id: `draft-${i}`, salon_id: 'business-a', created_at: `2030-${String(i).padStart(2, '0')}`, published_at: null })), current,
+    { ...current, id: 'foreign', salon_id: 'business-b', policy: { business_policy_text: 'PRIVATE B terms' } }];
+  const context = { salon: { id: 'business-a', slug: 'business-a', vanity_slug: 'studio-a', business_policy_revision_id: current.id }, user: { id: 'actor-a' }, admin: { from(table) {
+    assert.equal(table, 'business_policy_revisions');
+    const filters = []; let limit = Infinity, single = false;
+    const q = { select() { return q; }, eq(key, value) { filters.push(row => row[key] === value); return q; }, order() { return q; }, limit(n) { limit = n; return q; }, maybeSingle() { single = true; return q; },
+      then(resolve) { const rows = records.filter(row => filters.every(filter => filter(row))).slice(0, limit); return Promise.resolve({ data: single ? rows[0] || null : rows }).then(resolve); } }; return q;
+  } } };
+  const load = typescriptLoader(process.cwd(), {
+    '@/lib/supabaseAdmin': { requireSalonPermission: async () => context },
+    '@/lib/requestSecurity': { enforceRateLimit() {}, RateLimitError: class extends Error {} },
+    '@/lib/operationalMonitoring': { withOperationalMonitoring: (_profile, handler) => handler, routeMonitoringProfile() {} },
+    '@/lib/platformErrors': { capturePlatformError: async () => 'CURRENT-REFERENCE', safeFailure: (_message, id, status = 500, details = {}) => Response.json({ request_id: id, ...details }, { status }) },
+  }, { Error, SyntaxError });
+  const { GET } = load('src/app/api/salon/policies/route.ts');
+  const response = await GET(new Request('http://localhost/api/salon/policies'));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.revisions.find(row => row.id === body.current)?.policy.business_policy_text, 'Retained published terms');
+  assert.equal(body.public_policy_path, '/studio-a#business-policies');
+  assert.doesNotMatch(JSON.stringify(body), /PRIVATE B/);
+  context.salon.business_policy_revision_id = 'foreign';
+  const foreign = await GET(new Request('http://localhost/api/salon/policies'));
+  assert.equal(foreign.status, 500, 'a missing own published revision must not enable saving blank defaults');
+  const error = await foreign.json();
+  assert.equal(error.code, 'POLICY_UNAVAILABLE');
+  assert.equal(error.request_id, 'CURRENT-REFERENCE');
+});
+
 for (const method of ['GET', 'POST']) test(`policy ${method} failure retains the authenticated Engine context and exact incident reference`, async () => {
   const incidents = [];
   const reference = '44000000-0000-4000-8000-000000000001';

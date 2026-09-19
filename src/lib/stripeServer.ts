@@ -56,7 +56,7 @@ export function stripeConfigured() {
 export async function stripeRequest<T>(
   path: string,
   values: Record<string, string | number | boolean | null | undefined>,
-  options?: { idempotencyKey?: string },
+  options?: { idempotencyKey?: string; signal?: AbortSignal; onResponse?: (evidence: { requestId: string | null }) => void },
 ) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
@@ -78,6 +78,7 @@ export async function stripeRequest<T>(
       },
       body: form,
       cache: "no-store",
+      signal: options?.signal,
     });
   } catch (error) {
     throw stripeProviderError(
@@ -88,6 +89,8 @@ export async function stripeRequest<T>(
   }
 
   let data: T;
+  const responseRequestId = response.headers.get("request-id") || "";
+  options?.onResponse?.({ requestId: /^req_[A-Za-z0-9]{1,120}$/.test(responseRequestId) ? responseRequestId : null });
   try {
     data = (await response.json()) as T;
   } catch (error) {
@@ -115,7 +118,7 @@ export async function stripeRequest<T>(
   return data;
 }
 
-export async function stripeGet<T>(path: string) {
+export async function stripeGet<T>(path: string, options?: { signal?: AbortSignal }) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
 
@@ -124,6 +127,7 @@ export async function stripeGet<T>(path: string) {
     response = await fetch(`${STRIPE_API}${path}`, {
       headers: { Authorization: `Bearer ${secret}` },
       cache: "no-store",
+      signal: options?.signal,
     });
   } catch (error) {
     throw stripeProviderError(

@@ -4,6 +4,7 @@ import { enforceRateLimit, RateLimitError } from "@/lib/requestSecurity";
 import { PolicyInputError, validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { isSubscriptionActive } from "@/lib/plans";
+import { salonPublicPath } from "@/lib/salonVanity";
 import { withOperationalMonitoring, routeMonitoringProfile } from "@/lib/operationalMonitoring";
 
 const headers = { "Cache-Control": "private, no-store" };
@@ -28,9 +29,24 @@ async function handle(request: Request) {
     context = await requireSalonPermission(request, "my_page");
     const { admin, salon, user } = context;
     if (request.method === "GET") {
-      const result = await admin.from("business_policy_revisions").select("id,policy,source_locale,version,created_at,published_at").eq("salon_id", salon.id).order("created_at", { ascending: false }).limit(30);
+      const fields = "id,policy,source_locale,version,created_at,published_at";
+      const result = await admin.from("business_policy_revisions").select(fields).eq("salon_id", salon.id).order("created_at", { ascending: false }).limit(30);
       if (result.error) throw result.error;
-      return Response.json({ revisions: result.data, current: salon.business_policy_revision_id || null }, { headers });
+      const revisions = result.data || [];
+      // Drafts can push the live revision out of the history page. Always
+      // retrieve it by the authenticated business before enabling the editor.
+      const current = salon.business_policy_revision_id || null;
+      if (current) {
+        let published = revisions.find(row => row.id === current);
+        if (!published) {
+          const existing = await admin.from("business_policy_revisions").select(fields).eq("salon_id", salon.id).eq("id", current).maybeSingle();
+          if (existing.error) throw existing.error;
+          published = existing.data || undefined;
+          if (published) revisions.push(published);
+        }
+        if (!published?.published_at) throw new Error("POLICY_CURRENT_UNAVAILABLE");
+      }
+      return Response.json({ revisions, current, public_policy_path: salon.slug ? `${salonPublicPath(String(salon.slug), salon.vanity_slug ? String(salon.vanity_slug) : null)}#business-policies` : null }, { headers });
     }
     enforceRateLimit(request, `business-policies:${user.id}`, 20, 60_000);
     const subscription = await admin.from("subscriptions").select("status,current_period_end").eq("salon_id", salon.id).maybeSingle();

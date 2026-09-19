@@ -38,9 +38,15 @@ function fixture(options = {}) {
           if (table === 'gc_assistant_requests') {
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'salon_id' && row[2] === 'business-A'));
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'requested_by' && row[2] === 'owner-A'));
-            return { data: history };
+            const requested = filters.find(row => row[0] === 'in' && row[1] === 'id')[2];
+            return { data: history.filter(row => requested.includes(row.id)) };
           }
           if (table === 'master_styles') return { data: options.catalog || [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Knotless Braids' }] };
+          if (table === 'bookings') {
+            assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'salon_id' && row[2] === 'business-A'));
+            assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'stylist_id' && row[2] === options.assigned));
+            return { data: options.assignedBookingAvailable ? { id: booking.id } : null };
+          }
           if (table === 'ai_usage_events') { updates.push(mutation); return { data: null }; }
           throw Error(`Unexpected table ${table}`);
         }).then(resolve, reject); },
@@ -70,7 +76,7 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
   return { run, calls, requests, updates };
 }
 
@@ -485,4 +491,59 @@ test('reassigned appointment history and its transcript cannot reach a follow-up
  const f=fixture({assigned:'professional-A',historyReadDenied,historyRead:{bookings:[],total:0},history:[{tool:'get_bookings',permission:'bookings',arguments:{start:'2026-09-24T00:00:00Z',end:'2026-09-25T00:00:00Z'},result:{bookings:[{guest_name:'REASSIGNED_PRIVATE_CLIENT'}],total:1}}],conversation:[{role:'assistant',text:'REASSIGNED_PRIVATE_CLIENT has an appointment.'}]});
  await f.run('en','What about that appointment?');assert.doesNotMatch(JSON.stringify(f.requests),/REASSIGNED_PRIVATE_CLIENT/);const sent=JSON.parse(f.requests[0].messages[1].content);assert.deepEqual(sent.conversation,[]);assert.equal(sent.previous.length,historyReadDenied?0:1);assert.equal(f.calls.filter(c=>c.refresh==='get_bookings').length,1);
  }
+});
+
+test('answer generation retains follow-up intent while excluding older lookup facts', async () => {
+  const history = [
+    { id: 'older', tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Silk Press' }, result: { services: [{ name: 'Silk Press', base_price: 120 }] } },
+    { id: 'current', tool: 'get_business_media', permission: 'photos', arguments: {}, result: { gallery_count: 3, distinct_saved_images: 4 } },
+  ];
+  for (const locale of ['en', 'fr', 'es', 'zh-CN']) {
+    const f = fixture({ history, previousRequestIds: ['current'], conversationRequestIds: ['older'], answerOnly: true, page: 'products',
+      conversation: [{ role: 'user', text: 'How many photos do I have saved?' }, { role: 'assistant', text: 'Which photos?' }], output: { reply: 'Fixture response.' } });
+    await f.run(locale, 'They are in my photos');
+    const facts = JSON.parse(f.requests[0].messages[1].content);
+    assert.match(JSON.stringify(facts.conversation), /How many photos do I have saved/);
+    assert.equal(facts.active_dashboard_section, 'products');
+    assert.equal(facts.previous.length, 1);
+    assert.equal(facts.previous[0].tool, 'get_business_media');
+    assert.equal(facts.previous[0].result.gallery_count, 3);
+    assert.doesNotMatch(JSON.stringify(facts.previous), /Silk Press|120/);
+    assert.ok(f.calls.some(call => call.refresh === 'get_services_and_prices'));
+  }
+});
+
+test('answer transcripts are discarded for foreign, revoked, reassigned or changed historical reads before provider input', async () => {
+  const history = [
+    { id: 'older', tool: 'get_services_and_prices', permission: 'styles', arguments: { query: '' }, result: { services: [{ name: 'Private older detail' }] } },
+    { id: 'current', tool: 'get_business_media', permission: 'photos', arguments: {}, result: { gallery_count: 2 } },
+  ];
+  for (const restriction of [{ conversationRequestIds: ['foreign-business-B'] }, { denied: ['styles'] }, { historyReadDenied: true }, { historyRead: { services: [{ name: 'Changed service' }] } }]) {
+    const f = fixture({ history, previousRequestIds: ['current'], conversationRequestIds: ['older'], answerOnly: true,
+      conversation: [{ role: 'assistant', text: 'Private older detail' }], output: { reply: 'Fixture response.' }, ...restriction });
+    await f.run('en', 'Those photos');
+    const facts = JSON.parse(f.requests[0].messages[1].content);
+    assert.deepEqual(facts.conversation, []);
+    assert.equal(facts.previous.length, 1);
+    assert.equal(facts.previous[0].result.gallery_count, 2);
+    assert.doesNotMatch(JSON.stringify(facts), /Private older detail|Changed service/);
+  }
+});
+
+test('a prepared action transcript is reauthorized after professional reassignment in both planner and answer phases', async () => {
+  for (const answerOnly of [false, true]) for (const assignedBookingAvailable of [false, true]) {
+    const f = fixture({ assigned: 'professional-A', assignedBookingAvailable, answerOnly,
+      previousRequestIds: answerOnly ? ['current'] : ['draft'], conversationRequestIds: answerOnly ? ['draft'] : undefined,
+      conversation: [{ role: 'assistant', text: 'Private prepared client detail' }],
+      output: answerOnly ? { reply: 'Fixture answer.' } : undefined,
+      history: [
+        { id: 'draft', tool: 'prepare_customer_message', permission: 'bookings', arguments: { booking_id: booking.id, body: 'Private draft' }, result: null },
+        { id: 'current', tool: 'get_business_media', permission: 'photos', arguments: {}, result: { gallery_count: 2 } },
+      ] });
+    await f.run('en', 'Tell me more');
+    const facts = JSON.parse(f.requests[0].messages[1].content);
+    assert.equal(facts.conversation.length, assignedBookingAvailable ? 1 : 0);
+    if (!assignedBookingAvailable) assert.doesNotMatch(JSON.stringify(facts), /Private prepared client detail|Private draft/);
+    assert.doesNotMatch(JSON.stringify(facts.previous), /Private draft/);
+  }
 });

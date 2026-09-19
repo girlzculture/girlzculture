@@ -16,6 +16,7 @@ import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
 import BusinessOverview from "@/components/owner/BusinessOverview";
 import ProductsWorkspace from "@/components/owner/ProductsWorkspace";
 import BusinessFinances from "@/components/owner/BusinessFinances";
+import SubscriptionPaymentMethod from "@/components/owner/SubscriptionPaymentMethod";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { intlLocale } from "@/i18n/catalog";
@@ -1458,15 +1459,9 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           );
         })}
       </div>
+      {c.subscription?.stripe_customer_id && c.access === null ? <SubscriptionPaymentMethod key={String(c.salon.id)} disabled={Boolean(busy)} /> : null}
       {c.subscription?.stripe_customer_id ? (
         <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            disabled={Boolean(busy)}
-            onClick={() => void action("/api/stripe/portal", "portal")}
-            className="rounded-[8px] border border-magenta px-5 py-3 text-xs font-bold text-magenta"
-          >
-            {busy === "portal" ? "Opening billing…" : "Manage payment method"}
-          </button>
           {c.subscriptionActive && !cancellationScheduled ? (
             <button
               disabled={Boolean(busy)}

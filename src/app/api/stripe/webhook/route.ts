@@ -12,6 +12,7 @@ import { completeCommerceCheckout } from "@/lib/commerceCheckoutServer";
 import { completePickupReservation } from "@/lib/pickupReservationsServer";
 import { productRefundSummary } from "@/lib/productCommerceCore";
 import { existingAgreementPlan, subscriptionPriceSnapshot, type SubscriptionPriceItem } from "@/lib/subscriptionAgreement";
+import { completeSubscriptionPaymentMethod } from "@/lib/subscriptionPaymentMethodServer";
 
 type StripeLine = {
   amount?: number;
@@ -928,6 +929,18 @@ async function POSTHandler(request: Request) {
   if (!shouldProcess) return Response.json({ received: true, duplicate: true });
   try {
     const object = eventObject;
+    const paymentMethodSetup = object.mode === "setup" && object.metadata?.type === "subscription_payment_method"
+      && ["checkout.session.completed","checkout.session.expired"].includes(event.type);
+    const previousKeys=Object.keys(event.data.previous_attributes || {});
+    const paymentMethodOnlyChange=event.type === "customer.subscription.updated"
+      && previousKeys.length === 1 && previousKeys[0] === "default_payment_method";
+    if (paymentMethodSetup) {
+      if (!object.id) throw new Error("PAYMENT_METHOD_WEBHOOK_SESSION_MISSING");
+      const result=await completeSubscriptionPaymentMethod(admin,object.id);
+      // Do not acknowledge a competing return handler until its leased work is
+      // durable. Stripe retry then observes the completed attempt safely.
+      if ("pending" in result && result.pending) throw new Error("PAYMENT_METHOD_COMPLETION_PENDING");
+    } else if (!paymentMethodOnlyChange) {
     await syncBookingRefund(event,object);
     await syncBookingTransferReversal(event, object);
     await syncProductOrderRefund(event, object);
@@ -969,6 +982,7 @@ async function POSTHandler(request: Request) {
     }
     if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) await syncSubscription(object);
     if (event.type.startsWith("subscription_schedule.")) await syncScheduleState(object, event.type);
+    }
     const { error: processedError } = await admin
       .from("stripe_webhook_events")
       .update({

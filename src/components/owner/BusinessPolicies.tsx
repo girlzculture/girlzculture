@@ -31,20 +31,34 @@ export default function BusinessPolicies() {
   const [loaded, setLoaded] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sourceLocale, setSourceLocale] = useState<string>(locale);
+  const [publicPolicyPath, setPublicPolicyPath] = useState<string | null>(null);
+  const applyReadback = useCallback((result: { revisions?: Revision[]; current?: string | null; public_policy_path?: string | null }, expectedRevision?: string) => {
+    if (!Array.isArray(result.revisions)) throw new Error("POLICY_UNAVAILABLE");
+    const current = result.revisions.find(item => item.id === result.current);
+    if (result.current && !current?.published_at || expectedRevision && current?.id !== expectedRevision) throw new Error("POLICY_UNAVAILABLE");
+    setRevisions(result.revisions);
+    if (current) {
+      setPolicy({ ...POLICY_DEFAULTS, ...current.policy, business_policy_text: businessPolicyText(current.policy, text => DASHBOARD_SOURCE_MESSAGES[current.source_locale]?.[text] || text) });
+      setSourceLocale(current.source_locale);
+    } else setPolicy({ ...POLICY_DEFAULTS, business_policy_text: "" });
+    setPublicPolicyPath(result.public_policy_path?.startsWith("/") && !result.public_policy_path.startsWith("//") ? result.public_policy_path : null);
+  }, []);
   const call = useCallback(async (body?: Record<string, unknown>) => {
     const session = await getSessionForScope("salon");
     if (!session) throw new Error("AUTH_REQUIRED");
     const response = await fetch("/api/salon/policies", { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store" });
     return readOwnerResponse(response, "POLICY_UNAVAILABLE");
   }, []);
-  useEffect(() => { let active = true; void call().then(result => { if (active) { setRevisions(result.revisions); const current = result.revisions.find((item: Revision) => item.id === result.current); if (current) { setPolicy({ ...POLICY_DEFAULTS, ...current.policy, business_policy_text: businessPolicyText(current.policy, text => DASHBOARD_SOURCE_MESSAGES[current.source_locale]?.[text] || text) }); setSourceLocale(current.source_locale); } else setPolicy({ ...POLICY_DEFAULTS, business_policy_text: "" }); setLoaded(true); setNotice(""); setReference(""); } }).catch(error => { if (active) { setNotice("Business policies are temporarily unavailable."); setReference(error instanceof OwnerActionError ? error.reference : ""); } }); return () => { active = false; }; }, [call, loadAttempt]);
+  useEffect(() => { let active = true; void call().then(result => { if (active) { applyReadback(result); setLoaded(true); setNotice(""); setReference(""); } }).catch(error => { if (active) { setNotice("Business policies are temporarily unavailable."); setReference(error instanceof OwnerActionError ? error.reference : ""); } }); return () => { active = false; }; }, [call, applyReadback, loadAttempt]);
   async function save(publish: boolean) {
     if (!loaded || busy) return;
     setBusy(true); setNotice(""); setReference("");
     try {
       if (publish && preview && reviewed) {
         const result = await call({ action: "publish", revision_id: preview.revision.id, digest: preview.digest, expected_revision: preview.expected_revision, confirm: true, platform_rules_acknowledged: true, source_reviewed: true });
-        setRevisions(rows => [result.revision, ...rows.filter(row => row.id !== result.revision.id)]); setPreview(null); setReviewed(false); setNotice("Business policies published.");
+        if (result.verified !== true || !result.revision?.id) throw new Error("POLICY_UNAVAILABLE");
+        applyReadback(await call(), result.revision.id);
+        setPreview(null); setReviewed(false); setNotice("Business policies published.");
       } else if (!publish) {
         const result = await call({ action: "draft", locale: sourceLocale, policy }); setPreview(result); setReviewed(false); setNotice("Draft saved. Review before publishing.");
       }
@@ -55,6 +69,7 @@ export default function BusinessPolicies() {
     } finally { setBusy(false); }
   }
   return <section className="space-y-6"><div><Link href="/salon/dashboard/my-page" className="text-sm underline">{t("Back to My Page")}</Link><h1 className="mt-3 font-serif text-3xl text-plum">{t("Your Business Policies")}</h1><p className="mt-2 text-sm">{t("Set clear expectations for appointments. Changes apply to future bookings after you publish.")}</p></div><PlatformPolicyNotice /><p className="text-sm">{t("Business refund and satisfaction terms apply to services and amounts handled directly by this business. Girlz Culture deposits, payment processes and mandatory protections remain governed by platform rules and applicable law.")}</p>
+    {publicPolicyPath && revisions.some(row => row.published_at) ? <Link href={publicPolicyPath} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-semibold underline">{t("View Public Page")}</Link> : null}
     <p role="status" className="text-sm">{t(notice)}</p>
     {reference ? <p className="break-words text-xs">{t("Support reference")}: <span data-no-translate>{reference}</span></p> : null}
     {!loaded && notice ? <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="min-h-11 rounded-lg border border-border px-4">{t("Retry loading policies")}</button> : null}
