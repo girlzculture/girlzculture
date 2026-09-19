@@ -137,11 +137,12 @@ html {
   background: var(--background);
 }
 
-/* Native focus scrolling must finish before an appointment control is clicked.
-   An in-flight page animation can move Review between pointerdown and pointerup,
+/* Native focus scrolling must finish before an editor control is clicked.
+   An in-flight page animation can move Save or Review during pointer activation,
    preventing the browser from submitting an otherwise valid form. */
 html:has([data-manual-appointment-editor]),
-html:has([data-owner-workspace]) {
+html:has([data-owner-workspace]),
+html:has([data-referral-campaign-editor]) {
   scroll-behavior: auto;
 }
 

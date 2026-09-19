@@ -59,8 +59,9 @@ test('Referral configuration denies a settings administrator without platform-ow
  await page.goto('/admin/settings');await expect(page.getByRole('link',{name:/Referral campaigns/})).toHaveCount(0);await page.goto('/admin/settings/referrals');await expect(page.getByRole('main').getByRole('alert')).toHaveText('Only a Super Admin can configure referral campaigns.');await expect(page.getByRole('button',{name:'New inactive campaign',exact:true})).toHaveCount(0);expect(calls).toBe(0);
 });
 
-for(const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,1000],['zh-CN',844,390]] as const){
- test(`Referral configuration saves final terms inactive and verifies refresh in ${locale}`,async({page},info)=>{
+for(const [locale,width,height,nativeScroll] of [['en',390,844,false],['fr',768,1024,false],['es',1440,1000,false],['zh-CN',844,390,false],['zh-CN',844,390,true]] as const){
+ test(nativeScroll?'Referral configuration preserves native Save activation during landscape repositioning':`Referral configuration saves final terms inactive and verifies refresh in ${locale}`,async({page},info)=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});
   const auth=await p0OwnerFixture(page,{locale,role:'admin'}),t=(value:string)=>referralCopy(locale,value);const provider=process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL||'http://127.0.0.1:3105';
   await page.addInitScript(({key,session})=>localStorage.setItem(key,JSON.stringify(session)),{key:buildAuthStorageKeys(provider).admin,session:auth.session});
   await page.route('**/api/admin/verify',route=>route.fulfill({json:{is_super_admin:true}}));await page.route('**/api/admin/data?**',route=>route.fulfill({json:{admin_users:[]}}));await page.route('**/api/admin/inbox-counts',route=>route.fulfill({json:{support:0,complaints:0}}));
@@ -76,7 +77,53 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,10
   await page.setViewportSize({width,height});await page.goto('/admin/settings');await page.getByRole('link',{name:new RegExp(t('Referral campaigns'))}).click();await expect(page).toHaveURL(/\/admin\/settings\/referrals$/);const panel=page.getByRole('region',{name:t('Referral campaign configuration'),exact:true});await panel.getByRole('button',{name:t('New inactive campaign'),exact:true}).click();
   await panel.getByLabel(t('Campaign title'),{exact:true}).fill('Final draft GC176');await panel.getByRole('combobox',{name:t('Recipient'),exact:true}).selectOption('referred');
   for(const [label,value] of [['Reward amount (USD cents)','700'],['Minimum qualifying payment (USD cents)','8900'],['Qualification window (days)','30'],['Review hold (days)','14'],['Maximum rewards per referring business','5'],['Campaign start (UTC)','2026-10-01T09:00'],['Campaign end (UTC)','2026-11-01T09:00']])await panel.getByLabel(t(label),{exact:true}).fill(value);
-  await panel.getByRole('button',{name:t('Save inactive campaign'),exact:true}).click();await expect(panel.getByRole('status')).toContainText(t('Campaign draft saved and verified. It remains inactive.'));expect(actions).toEqual(['save']);
+  const save=panel.getByRole('button',{name:t('Save inactive campaign'),exact:true});
+  // Preserve native pointer/validation evidence for the CI landscape failure.
+  // This probe changes neither scrolling nor focus and never submits the form.
+  await save.evaluate(button=>{
+   const events:unknown[]=[];
+   const capture=(event:Event)=>{
+    if(events.length>=40)return;
+    const rect=button.getBoundingClientRect(),target=event.target as HTMLElement;
+    events.push({type:event.type,target:target.tagName,isSave:target===button,scrollY,top:rect.top,bottom:rect.bottom,active:document.activeElement?.tagName,...(event instanceof MouseEvent?{x:event.clientX,y:event.clientY}:{}),validity:[...(button as HTMLButtonElement).form!.elements].filter((element):element is HTMLInputElement=>element instanceof HTMLInputElement).map(input=>({type:input.type,valid:input.validity.valid,missing:input.validity.valueMissing,badInput:input.validity.badInput,stepMismatch:input.validity.stepMismatch}))});
+   };
+   const kinds=['pointerdown','pointerup','click','submit','invalid'];for(const kind of kinds)document.addEventListener(kind,capture,true);
+   Object.assign(window,{referralPointerProbe:{events,cleanup:()=>{for(const kind of kinds)document.removeEventListener(kind,capture,true);}}});
+  });
+  try{
+   if(nativeScroll){
+    // Reproduce the original trace's 64px native viewport movement. Start the
+    // default-behavior scroll before pressing the pointer, then release after
+    // that same scroll reaches its endpoint. No motion is injected mid-click.
+    const staging=await save.evaluate(button=>{
+     const rect=button.getBoundingClientRect();
+     const target=Math.round(Math.min(document.documentElement.scrollHeight-innerHeight,scrollY+rect.top+rect.height/2-innerHeight/2));
+     const previous=target-64;
+     window.scrollTo({top:previous,behavior:'instant'});
+     return {previous,target};
+    });
+    expect(staging.previous).toBeGreaterThanOrEqual(0);
+    await page.waitForFunction(top=>scrollY===top,staging.previous,{polling:'raf',timeout:5000});
+    const point=await save.evaluate((button,target)=>{
+     window.scrollTo({top:target});
+     const rect=button.getBoundingClientRect(),x=rect.x+rect.width/2,y=rect.y+rect.height/2;
+     return {x,y,scrollY,hit:button.contains(document.elementFromPoint(x,y))};
+    },staging.target);
+    await info.attach('referral-native-scroll-staging',{body:JSON.stringify({staging,point}),contentType:'application/json'});
+    expect(point.hit).toBe(true);
+    await page.mouse.move(point.x,point.y);await page.mouse.down();
+    await page.waitForFunction(top=>scrollY===top,staging.target,{polling:'raf',timeout:5000});
+    await page.mouse.up();
+   }else await save.click();
+   await expect(panel.getByRole('status')).toContainText(t('Campaign draft saved and verified. It remains inactive.'));expect(actions).toEqual(['save']);
+   if(nativeScroll){
+    const events=await page.evaluate(()=>(window as unknown as {referralPointerProbe:{events:{type:string;isSave:boolean}[]}}).referralPointerProbe.events);
+    expect(events.filter(event=>['pointerdown','pointerup','click'].includes(event.type)).map(event=>({type:event.type,isSave:event.isSave}))).toEqual([{type:'pointerdown',isSave:true},{type:'pointerup',isSave:true},{type:'click',isSave:true}]);
+    expect(events.filter(event=>event.type==='submit')).toHaveLength(1);
+    expect(events.filter(event=>event.type==='invalid')).toEqual([]);
+   }
+  }
+  finally{const diagnostic=page.isClosed()?'Page closed before native diagnostic collection':await page.evaluate(()=>{const probe=(window as unknown as {referralPointerProbe:{events:unknown[];cleanup:()=>void}}).referralPointerProbe;probe.cleanup();return{events:probe.events,scrollY,scrollBehavior:getComputedStyle(document.documentElement).scrollBehavior};}).catch(()=>'Page closed during native diagnostic collection');await info.attach('referral-native-save-events',{body:JSON.stringify(diagnostic),contentType:'application/json'});}
   await page.reload();await panel.getByRole('button',{name:`Final draft GC176 · ${t('inactive')}`,exact:true}).click();await expect(panel.getByLabel(t('Reward amount (USD cents)'),{exact:true})).toHaveValue('700');await expect(panel.getByRole('combobox',{name:t('Recipient'),exact:true})).toHaveValue('referred');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await panel.screenshot({path:info.outputPath(`referral-configuration-${locale}-${width}.png`)});
   expect(campaigns[0].status).toBe('inactive');expect(actions).toEqual(['save']);
  });

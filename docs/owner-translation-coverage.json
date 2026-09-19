@@ -1373,7 +1373,7 @@
             },
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 376,
+              "line": 389,
               "kind": "localized-source",
               "context": "56b71b42a9026b1d4cd01c159c059e7fe1baeb969aec6e38386230b6e7ebc2d8"
             }
@@ -1384,7 +1384,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 328,
+              "line": 335,
               "kind": "literal",
               "context": "00fd13f1de115c662dc8c4598ac29ddbc32bec0e2ba3cb1eadd243c286b4994c"
             }
@@ -1395,7 +1395,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 324,
+              "line": 331,
               "kind": "literal",
               "context": "8641b3ed1eb55e3414c135c371b7c8f350718ff33daed904f0594de0bb3b30ed"
             }
@@ -3504,7 +3504,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 350,
+              "line": 363,
               "kind": "localized-source",
               "context": "893363b5197767512aab8e2f7c03b5df10615aac7c4742e6cc2a59f1326329da"
             }
@@ -5021,7 +5021,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 346,
+              "line": 359,
               "kind": "localized-source",
               "context": "08bce5ba8cfc63315ad26af1b07ceb6970ad44fbdfbe7fd603a4193d948bcaf7"
             }
@@ -8620,7 +8620,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 406,
+              "line": 419,
               "kind": "literal",
               "context": "11453a8922529bcf61a328dbea50c2f3448891e5769b8105dda4c71d6409e074"
             }
@@ -9469,7 +9469,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 390,
+              "line": 403,
               "kind": "localized-source",
               "context": "9423aae02f54d0be039aa884df3a84731900e694ae87550c4600dd4cb1e2f182"
             }
@@ -9569,7 +9569,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 423,
+              "line": 436,
               "kind": "localized-source",
               "context": "70f3c6dc82e3c3ec785809e920123dbf4250ed5bc87eb4a63802377e7911bb77"
             }
@@ -11882,7 +11882,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 307,
+              "line": 314,
               "kind": "literal",
               "context": "c65734bb57e75ff28ee122cc8d0eb531058b55175312865bdd05eb7dd5185057"
             }
@@ -11893,7 +11893,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 305,
+              "line": 312,
               "kind": "literal",
               "context": "d217ce5bbdce33be96afd5686d613ca45a5ef8a8f9711cf595db60da71fd5a7a"
             }
@@ -12276,7 +12276,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 399,
+              "line": 412,
               "kind": "localized-source",
               "context": "b833fb7a62212ebfccbf38c112f2e5cc1ca10e473ecd5ced3cc8963d90cf25d8"
             }
@@ -13009,7 +13009,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 357,
+              "line": 370,
               "kind": "localized-source",
               "context": "bdf8b47480ed4d28952226e2bf11c2e3cb283f7ca574b4568d8841bb27934250"
             }
@@ -13297,7 +13297,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/GcAssistant.tsx",
-              "line": 337,
+              "line": 350,
               "kind": "localized-source",
               "context": "d739be7dca2c6ef4c7fee885d9a127a574fcfff8db07ea452012755143391b23"
             }
